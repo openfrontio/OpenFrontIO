@@ -828,7 +828,7 @@ export class DefaultConfig implements Config {
         case Difficulty.Easy:
           return 18_750 * strength;
         case Difficulty.Medium:
-          return 25_000 * strength;
+          return 25_000 * strength; // Like humans
         case Difficulty.Hard:
           return 31_250 * strength;
         case Difficulty.Impossible:
@@ -861,7 +861,7 @@ export class DefaultConfig implements Config {
       case Difficulty.Easy:
         return maxTroops * 0.75;
       case Difficulty.Medium:
-        return maxTroops * 1;
+        return maxTroops * 1; // Like humans
       case Difficulty.Hard:
         return maxTroops * 1.25;
       case Difficulty.Impossible:
@@ -887,7 +887,7 @@ export class DefaultConfig implements Config {
           toAdd *= 0.95;
           break;
         case Difficulty.Medium:
-          toAdd *= 1;
+          toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
           toAdd *= 1.05;
