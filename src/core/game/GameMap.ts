@@ -80,6 +80,7 @@ export class GameMapImpl implements GameMap {
     height: number,
     terrainData: Uint8Array,
     private numLandTiles_: number,
+    stateBuffer?: ArrayBufferLike,
   ) {
     if (terrainData.length !== width * height) {
       throw new Error(
@@ -89,7 +90,17 @@ export class GameMapImpl implements GameMap {
     this.width_ = width;
     this.height_ = height;
     this.terrain = terrainData;
-    this.state = new Uint16Array(width * height);
+    if (stateBuffer !== undefined) {
+      const state = new Uint16Array(stateBuffer);
+      if (state.length !== width * height) {
+        throw new Error(
+          `State buffer length ${state.length} doesn't match dimensions ${width}x${height}`,
+        );
+      }
+      this.state = state;
+    } else {
+      this.state = new Uint16Array(width * height);
+    }
     // Precompute the LUTs
     let ref = 0;
     this.refToX = new Array(width * height);
