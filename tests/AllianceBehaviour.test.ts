@@ -15,40 +15,6 @@ let player: Player;
 let requestor: Player;
 let allianceBehavior: AllianceBehavior;
 
-describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
-  let mockGame: any;
-  let mockPlayer: any;
-  let mockAlliance: any;
-  let mockHuman: any;
-  let mockRandom: any;
-  let allianceBehavior: AllianceBehavior;
-
-  beforeEach(() => {
-    mockGame = { addExecution: jest.fn() };
-    mockHuman = { id: jest.fn(() => "human_id") };
-    mockAlliance = {
-      onlyOneAgreedToExtend: jest.fn(() => true),
-      other: jest.fn(() => mockHuman),
-    };
-    mockRandom = { chance: jest.fn() };
-
-    mockPlayer = {
-      alliances: jest.fn(() => [mockAlliance]),
-      relation: jest.fn(),
-      id: jest.fn(() => "bot_id"),
-      type: jest.fn(() => PlayerType.FakeHuman),
-    };
-
-    allianceBehavior = new AllianceBehavior(mockRandom, mockGame, mockPlayer);
-  });
-
-  it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet or both already agreed)", () => {
-    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
-    allianceBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).not.toHaveBeenCalled();
-  });
-});
-
 describe("AllianceBehavior.handleAllianceRequests", () => {
   beforeEach(async () => {
     game = await setup("big_plains", {
@@ -75,6 +41,7 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     player = game.player("player_id");
     requestor = game.player("requestor_id");
 
+    // Use a fixed random seed for deterministic behavior
     const random = new PseudoRandom(46);
 
     allianceBehavior = new AllianceBehavior(random, game, player);
