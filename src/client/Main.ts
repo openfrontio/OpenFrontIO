@@ -7,6 +7,8 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
@@ -36,14 +38,9 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  isInIframe,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -116,7 +113,7 @@ class Client {
 
   constructor() {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -285,7 +282,7 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
+    if ((await userAuth()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
@@ -499,7 +496,6 @@ class Client {
         },
         turnstileToken: await this.getTurnstileToken(lobby),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
         clientID: lobby.clientID,
         isSpectator: lobby.isSpectator,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
@@ -651,46 +647,6 @@ class Client {
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromCookie(): string {
-  const COOKIE_NAME = "player_persistent_id";
-
-  // Try to get existing cookie
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
-    if (cookieName === COOKIE_NAME) {
-      return cookieValue;
-    }
-  }
-
-  // If no cookie exists, create new ID and set cookie
-  const newID = generateCryptoRandomUUID();
-  document.cookie = [
-    `${COOKIE_NAME}=${newID}`,
-    `max-age=${5 * 365 * 24 * 60 * 60}`, // 5 years
-    "path=/",
-    "SameSite=Strict",
-    "Secure",
-  ].join(";");
-
-  return newID;
-}
 
 async function getTurnstileToken(): Promise<{
   token: string;
