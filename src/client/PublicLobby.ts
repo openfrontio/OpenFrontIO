@@ -174,13 +174,18 @@ export class PublicLobby extends LitElement {
             <div class="text-lg md:text-2xl font-semibold">
               ${translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-red-300">
-              <span class="text-sm text-red-800 bg-white rounded-sm px-1"
+            <div class="text-md font-medium text-white-400">
+              <span
+                class="text-sm ${this.isLobbyHighlighted
+                  ? "text-red-800"
+                  : "text-red-800"} bg-white rounded-sm px-1 mr-1"
                 >${modeLabel}</span
               >
               ${teamDetailLabel
                 ? html`<span
-                    class="text-sm text-red-800 bg-white rounded-sm px-1 ml-1"
+                    class="text-sm ${this.isLobbyHighlighted
+                      ? "text-red-800"
+                      : "text-red-800"} bg-white rounded-sm px-1 ml-1"
                     >${teamDetailLabel}</span
                   >`
                 : ""}
@@ -193,10 +198,10 @@ export class PublicLobby extends LitElement {
           </div>
 
           <div>
-            <div class="text-md font-medium text-red-300">
+            <div class="text-md font-medium text-white-400">
               ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
-            <div class="text-md font-medium text-red-300">${timeDisplay}</div>
+            <div class="text-md font-medium text-white-400">${timeDisplay}</div>
           </div>
         </div>
       </button>
