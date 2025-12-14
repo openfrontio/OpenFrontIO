@@ -454,6 +454,7 @@ export async function startWorker() {
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
+          clientMsg.isSpectator ?? false,
         );
 
         const wasFound = gm.joinClient(client, clientMsg.gameID);

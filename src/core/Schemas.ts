@@ -27,6 +27,7 @@ export type ClientID = string;
 
 export type Intent =
   | SpawnIntent
+  | JoinSpectatorIntent
   | AttackIntent
   | CancelAttackIntent
   | BoatAttackIntent
@@ -52,6 +53,7 @@ export type Intent =
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
+export type JoinSpectatorIntent = z.infer<typeof JoinSpectatorIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
 export type EmbargoAllIntent = z.infer<typeof EmbargoAllIntentSchema>;
 export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
@@ -127,6 +129,7 @@ export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export interface GameInfo {
   gameID: GameID;
   clients?: ClientInfo[];
+  spectators?: ClientInfo[];
   numClients?: number;
   msUntilStart?: number;
   gameConfig?: GameConfig;
@@ -134,6 +137,7 @@ export interface GameInfo {
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
+  isSpectator?: boolean;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -240,6 +244,10 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
   tile: z.number(),
+});
+
+export const JoinSpectatorIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("join_spectator"),
 });
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
@@ -354,6 +362,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
+  JoinSpectatorIntentSchema,
   MarkDisconnectedIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
@@ -535,6 +544,7 @@ export const ClientJoinMessageSchema = z.object({
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
   turnstileToken: z.string().nullable(),
+  isSpectator: z.boolean().optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({

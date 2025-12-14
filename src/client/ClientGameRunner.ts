@@ -58,6 +58,7 @@ export interface LobbyConfig {
   clientID: ClientID;
   gameID: GameID;
   turnstileToken: string | null;
+  isSpectator?: boolean;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -345,6 +346,13 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+
+        if (this.lobby.isSpectator) {
+          this.transport.publishIntent({
+            type: "join_spectator",
+            clientID: this.lobby.clientID,
+          });
+        }
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {

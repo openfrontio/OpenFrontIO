@@ -646,10 +646,19 @@ export class GameServer {
   public gameInfo(): GameInfo {
     return {
       gameID: this.id,
-      clients: this.activeClients.map((c) => ({
-        username: c.username,
-        clientID: c.clientID,
-      })),
+      clients: this.activeClients
+        .filter((c) => !c.isSpectator)
+        .map((c) => ({
+          username: c.username,
+          clientID: c.clientID,
+        })),
+      spectators: this.activeClients
+        .filter((c) => c.isSpectator)
+        .map((c) => ({
+          username: c.username,
+          clientID: c.clientID,
+          isSpectator: true,
+        })),
       gameConfig: this.gameConfig,
       msUntilStart: this.isPublic()
         ? this.createdAt + this.config.gameCreationRate()
@@ -699,6 +708,9 @@ export class GameServer {
 
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
+      if (client.isSpectator) {
+        continue;
+      }
       const isDisconnected = this.isClientDisconnected(clientID);
       if (!isDisconnected && now - client.lastPing > this.disconnectedTimeout) {
         this.markClientDisconnected(clientID, true);

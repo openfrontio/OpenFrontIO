@@ -660,6 +660,10 @@ export class Transport {
     });
   }
 
+  public publishIntent(intent: Intent) {
+    this.sendIntent(intent);
+  }
+
   private sendIntent(intent: Intent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
