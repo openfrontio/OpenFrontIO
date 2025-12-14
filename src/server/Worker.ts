@@ -24,8 +24,10 @@ import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -317,7 +319,7 @@ export async function startWorker() {
         if (clientMsg.type === "ping") {
           // Ignore ping
           return;
-        } else if (clientMsg.type !== "join") {
+        } else if (clientMsg.type !== "join" && clientMsg.type !== "rejoin") {
           log.warn(
             `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
           );
@@ -335,12 +337,34 @@ export async function startWorker() {
 
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token, config);
-        if (result === false) {
-          log.warn("Unauthorized: Invalid token");
-          ws.close(1002, "Unauthorized");
+        if (result.type === "error") {
+          log.warn(`Invalid token: ${result.message}`, {
+            clientID: clientMsg.clientID,
+          });
+          ws.close(
+            1002,
+            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
+          );
           return;
         }
         const { persistentId, claims } = result;
+
+        if (clientMsg.type === "rejoin") {
+          log.info("rejoining game", {
+            gameID: clientMsg.gameID,
+            clientID: clientMsg.clientID,
+            persistentID: persistentId,
+          });
+          const wasFound = gm.rejoinClient(ws, persistentId, clientMsg);
+
+          if (!wasFound) {
+            log.warn(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            ws.close(1002, "Game not found");
+          }
+          return;
+        }
 
         let roles: string[] | undefined;
         let flares: string[] | undefined;
@@ -355,13 +379,18 @@ export async function startWorker() {
         } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token, config);
-          if (result === false) {
-            log.warn("Unauthorized: Invalid session");
-            ws.close(1002, "Unauthorized");
+          if (result.type === "error") {
+            log.warn(`Unauthorized: ${result.message}`, {
+              clientID: clientMsg.clientID,
+            });
+            ws.close(
+              1002,
+              `Unauthorized: user me fetch failed for client ${clientMsg.clientID}`,
+            );
             return;
           }
-          roles = result.player.roles;
-          flares = result.player.flares;
+          roles = result.response.player.roles;
+          flares = result.response.player.flares;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -389,6 +418,31 @@ export async function startWorker() {
           return;
         }
 
+        if (config.env() !== GameEnv.Dev) {
+          const turnstileResult = await verifyTurnstileToken(
+            ip,
+            clientMsg.turnstileToken,
+            config.turnstileSecretKey(),
+          );
+          switch (turnstileResult.status) {
+            case "approved":
+              break;
+            case "rejected":
+              log.warn("Unauthorized: Turnstile token rejected", {
+                clientID: clientMsg.clientID,
+                reason: turnstileResult.reason,
+              });
+              ws.close(1002, "Unauthorized: Turnstile token rejected");
+              return;
+            case "error":
+              // Fail open, allow the client to join.
+              log.error("Turnstile token error", {
+                clientID: clientMsg.clientID,
+                reason: turnstileResult.reason,
+              });
+          }
+        }
+
         // Create client and add to game
         const client = new Client(
           clientMsg.clientID,
@@ -402,11 +456,7 @@ export async function startWorker() {
           cosmeticResult.cosmetics,
         );
 
-        const wasFound = gm.addClient(
-          client,
-          clientMsg.gameID,
-          clientMsg.lastTurn,
-        );
+        const wasFound = gm.joinClient(client, clientMsg.gameID);
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);

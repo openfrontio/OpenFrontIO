@@ -8,6 +8,19 @@ export class GameStartingModal extends LitElement {
   isVisible = false;
 
   static styles = css`
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(4px);
+      z-index: 9998;
+    }
+
+    .overlay.visible {
+      display: block;
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -117,6 +130,7 @@ export class GameStartingModal extends LitElement {
 
   render() {
     return html`
+      <div class="overlay ${this.isVisible ? "visible" : ""}"></div>
       <div class="modal ${this.isVisible ? "visible" : ""}">
         <div class="copyright">© OpenFront and Contributors</div>
         <a
