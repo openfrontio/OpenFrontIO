@@ -826,13 +826,13 @@ export class DefaultConfig implements Config {
 
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * strength;
+          return 18_750 * strength;
         case Difficulty.Medium:
-          return 5_000 * strength;
+          return 25_000 * strength; // Like humans
         case Difficulty.Hard:
-          return 20_000 * strength;
+          return 31_250 * strength;
         case Difficulty.Impossible:
-          return 50_000 * strength;
+          return 37_500 * strength;
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -859,13 +859,13 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.5;
+        return maxTroops * 0.75;
       case Difficulty.Medium:
-        return maxTroops * 1;
+        return maxTroops * 1; // Like humans
       case Difficulty.Hard:
-        return maxTroops * 1.5;
+        return maxTroops * 1.25;
       case Difficulty.Impossible:
-        return maxTroops * 2;
+        return maxTroops * 1.5;
     }
   }
 
@@ -884,16 +884,16 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.FakeHuman) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.9;
+          toAdd *= 0.95;
           break;
         case Difficulty.Medium:
-          toAdd *= 1;
+          toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
-          toAdd *= 1.1;
+          toAdd *= 1.05;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.2;
+          toAdd *= 1.1;
           break;
       }
     }
