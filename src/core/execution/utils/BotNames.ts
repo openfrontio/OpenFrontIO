@@ -281,10 +281,15 @@ export const COMMUNITY_FULL_ELF_NAMES = [
   "MiraCZ the FP Elf",
   "aPuddle best Elf",
   "lucas the sound Elf",
+  "Fulayon the YT Elf",
+  "Drew durnell YT Elf",
+  "The Spiffing Brit YT Elf",
+  "Ultimus Rex YT Elf",
+  "MizuUmi the YT Elf",
 ];
 export const SPECIAL_FULL_ELF_NAMES = [
   "Santa",
-  "Rudolf the Red-Nosed Reindeer",
+  "Rudolf the Reindeer",
   "Frosty the Snowman",
   "Hermey the Elf",
   "Ivan the Elf",
@@ -297,11 +302,13 @@ export const SPECIAL_FULL_ELF_NAMES = [
   "Glorfindel",
 ];
 export const COMMUNITY_PREFIXES = [
+  "The Sparkling Elf",
+  "Valentino",
+  "Mr Cube",
+  "Nukeman",
   "Baguette Bot",
   "Kiwi",
   "FakeNeo",
-  "Nash",
-  "1brucben",
   "Toyatak",
   "Readix",
   "Danny",
