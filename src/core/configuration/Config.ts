@@ -100,10 +100,11 @@ export interface Config {
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
   attackTilesPerTick(
-    attckTroops: number,
+    attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
     numAdjacentTilesWithEnemy: number,
+    defenderTotalBorderTiles?: number,
   ): number;
   attackLogic(
     gm: Game,
@@ -111,6 +112,7 @@ export interface Config {
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
+    borderEngagedFraction?: number,
   ): {
     attackerTroopLoss: number;
     defenderTroopLoss: number;

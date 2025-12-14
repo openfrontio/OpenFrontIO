@@ -1,7 +1,7 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
+import { calculateBoundingBox, simpleHash } from "../Util";
 
 interface ClusterTraversalState {
   visited: Uint32Array;
@@ -119,158 +119,28 @@ export class PlayerExecution implements Execution {
 
   private removeClusters() {
     const clusters = this.calculateClusters();
-    clusters.sort((a, b) => b.size - a.size);
 
-    const main = clusters.shift();
-    if (main === undefined) throw new Error("No clusters");
-    this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
-    const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
-      this.removeCluster(main);
-    }
-
-    for (const cluster of clusters) {
-      if (this.isSurrounded(cluster)) {
-        this.removeCluster(cluster);
-      }
-    }
-  }
-
-  private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
-    const enemies = new Set<number>();
-    for (const tile of cluster) {
-      let hasUnownedNeighbor = false;
-      if (this.mg.isOceanShore(tile) || this.mg.isOnEdgeOfMap(tile)) {
-        return false;
-      }
-      this.mg.forEachNeighbor(tile, (n) => {
-        if (!this.mg.hasOwner(n)) {
-          hasUnownedNeighbor = true;
-          return;
-        }
-        const ownerId = this.mg.ownerID(n);
-        if (ownerId !== this.player.smallID()) {
-          enemies.add(ownerId);
-        }
-      });
-      if (hasUnownedNeighbor) {
-        return false;
-      }
-      if (enemies.size !== 1) {
-        return false;
-      }
-    }
-    if (enemies.size !== 1) {
-      return false;
-    }
-    const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
-    const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
-    if (inscribed(enemyBox, clusterBox)) {
-      return enemy;
-    }
-    return false;
-  }
-
-  private isSurrounded(cluster: Set<TileRef>): boolean {
-    const enemyTiles = new Set<TileRef>();
-    for (const tr of cluster) {
-      if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
-        return false;
-      }
-      this.mg.forEachNeighbor(tr, (n) => {
-        const owner = this.mg.owner(n);
-        if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
-          enemyTiles.add(n);
-        }
-      });
-    }
-    if (enemyTiles.size === 0) {
-      return false;
-    }
-    const enemyBox = calculateBoundingBox(this.mg, enemyTiles);
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
-    return inscribed(enemyBox, clusterBox);
-  }
-
-  private removeCluster(cluster: Set<TileRef>) {
-    if (
-      Array.from(cluster).some(
-        (t) => this.mg?.ownerID(t) !== this.player?.smallID(),
-      )
-    ) {
-      // Other removeCluster operations could change tile owners,
-      // so double check.
+    if (clusters.length === 0) {
+      this.player.largestClusterBoundingBox = null;
       return;
     }
 
-    const capturing = this.getCapturingPlayer(cluster);
-    if (capturing === null) {
-      return;
+    // Find the largest cluster with a single linear scan (O(n)).
+    let largestIndex = 0;
+    let largestSize = clusters[0].size;
+    for (let i = 1; i < clusters.length; i++) {
+      const size = clusters[i].size;
+      if (size > largestSize) {
+        largestSize = size;
+        largestIndex = i;
+      }
     }
 
-    const firstTile = cluster.values().next().value;
-    if (!firstTile) {
-      return;
-    }
-
-    const tiles = this.floodFillWithGen(
-      this.bumpGeneration(),
-      this.traversalState().visited,
-      [firstTile],
-      (tile, cb) => this.mg.forEachNeighbor(tile, cb),
-      (tile) => this.mg.ownerID(tile) === this.player.smallID(),
+    const largestCluster = clusters[largestIndex];
+    this.player.largestClusterBoundingBox = calculateBoundingBox(
+      this.mg,
+      largestCluster,
     );
-
-    if (this.player.numTilesOwned() === tiles.size) {
-      this.mg.conquerPlayer(capturing, this.player);
-    }
-
-    for (const tile of tiles) {
-      capturing.conquer(tile);
-    }
-  }
-
-  private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
-    const neighbors = new Map<Player, number>();
-    for (const t of cluster) {
-      this.mg.forEachNeighbor(t, (neighbor) => {
-        const owner = this.mg.owner(neighbor);
-        if (
-          owner.isPlayer() &&
-          owner !== this.player &&
-          !owner.isFriendly(this.player)
-        ) {
-          neighbors.set(owner, (neighbors.get(owner) ?? 0) + 1);
-        }
-      });
-    }
-
-    // If there are no enemies, return null
-    if (neighbors.size === 0) {
-      return null;
-    }
-
-    // Get the largest attack from the neighbors
-    let largestNeighborAttack: Player | null = null;
-    let largestTroopCount = 0;
-    for (const [neighbor] of neighbors) {
-      for (const attack of neighbor.outgoingAttacks()) {
-        if (attack.target() === this.player) {
-          if (attack.troops() > largestTroopCount) {
-            largestTroopCount = attack.troops();
-            largestNeighborAttack = neighbor;
-          }
-        }
-      }
-    }
-
-    if (largestNeighborAttack !== null) {
-      return largestNeighborAttack;
-    }
-
-    // There are no ongoing attacks, so find the enemy with the largest border.
-    return getMode(neighbors);
   }
 
   private calculateClusters(): Set<TileRef>[] {

@@ -649,6 +649,7 @@ export class DefaultConfig implements Config {
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
+    borderEngagedFraction?: number,
   ): {
     attackerTroopLoss: number;
     defenderTroopLoss: number;
@@ -741,7 +742,17 @@ export class DefaultConfig implements Config {
           largeDefenderAttackDebuff *
           largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        defenderTroopLoss: (() => {
+          const baseLoss = defender.troops() / defender.numTilesOwned();
+          const f = Math.max(0, Math.min(borderEngagedFraction ?? 0, 1));
+
+          // Full annexation: border fully engaged = massive troop loss
+          if (f >= 1) return baseLoss * 5.0;
+
+          // Option A: scale defender losses up as engagement increases (0.5x..2.0x)
+          // Keep baseline loss at least as high as the original system, but ramp up with engagement (1.0x..2.0x).
+          return baseLoss * (1.0 + 1.0 * f);
+        })(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
@@ -768,11 +779,30 @@ export class DefaultConfig implements Config {
     attacker: Player,
     defender: Player | TerraNullius,
     numAdjacentTilesWithEnemy: number,
+    defenderTotalBorderTiles?: number,
   ): number {
     if (defender.isPlayer()) {
+      const f = defenderTotalBorderTiles
+        ? Math.min(numAdjacentTilesWithEnemy / defenderTotalBorderTiles, 1)
+        : 0;
+
+      // Full annexation: if the attack engages the entire defender border, conquest becomes very cheap.
+      if (f >= 1) {
+        return (
+          within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
+          numAdjacentTilesWithEnemy *
+          10
+        );
+      }
+
+      // Option A: engaged fraction curve. Low f => slow; high f => fast.
+      // Tune: don't slow down baseline attacks. f=0 -> 1.0x, f=0.5 -> 1.5x, f=1 -> 3.0x (clamped; annex handled above).
+      const engagedMultiplier = Math.max(1.0, Math.min(1.0 + 2.0 * f * f, 3.0));
+
       return (
         within(((5 * attackTroops) / defender.troops()) * 2, 0.01, 0.5) *
         numAdjacentTilesWithEnemy *
+        engagedMultiplier *
         3
       );
     } else {

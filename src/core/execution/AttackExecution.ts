@@ -239,7 +239,8 @@ export class AttackExecution implements Execution {
         troopCount,
         this._owner,
         this.target,
-        this.attack.borderSize() + this.random.nextInt(0, 5),
+        this.attack.borderSize(),
+        this.target.isPlayer() ? this.target.borderTiles().size : undefined,
       );
 
     while (numTilesPerTick > 0) {
@@ -269,6 +270,15 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
+      //border engagement fraction f = engagedBorder / defenderBorder (clamped to [0, 1]).
+      const defenderBorderTiles = this.target.isPlayer()
+        ? this.target.borderTiles().size
+        : 0;
+      const borderEngagedFraction =
+        defenderBorderTiles > 0
+          ? Math.min(this.attack.borderSize() / defenderBorderTiles, 1)
+          : 0;
+
       const { attackerTroopLoss, defenderTroopLoss, tilesPerTickUsed } = this.mg
         .config()
         .attackLogic(
@@ -277,6 +287,7 @@ export class AttackExecution implements Execution {
           this._owner,
           this.target,
           tileToConquer,
+          borderEngagedFraction,
         );
       numTilesPerTick -= tilesPerTickUsed;
       troopCount -= attackerTroopLoss;
