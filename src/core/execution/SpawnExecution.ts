@@ -88,18 +88,21 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
-      const isOtherPlayerSpawnedNearby = this.mg.allPlayers().some((player) => {
-        const spawnTile = player.spawnTile();
+      const isOtherPlayerSpawnedNearby = this.mg
+        .allPlayers()
+        .filter((player) => player.id() !== this.playerInfo.id)
+        .some((player) => {
+          const spawnTile = player.spawnTile();
 
-        if (spawnTile === undefined) {
-          return false;
-        }
+          if (spawnTile === undefined) {
+            return false;
+          }
 
-        return (
-          this.mg.manhattanDist(spawnTile, tile) <
-          this.mg.config().minDistanceBetweenPlayers()
-        );
-      });
+          return (
+            this.mg.manhattanDist(spawnTile, tile) <
+            this.mg.config().minDistanceBetweenPlayers()
+          );
+        });
 
       if (isOtherPlayerSpawnedNearby) {
         continue;
