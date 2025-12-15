@@ -17,7 +17,7 @@ export class SantaFx implements Fx {
     theme?: Theme,
   ) {
     const distance = Math.abs(endX - startX);
-    const duration = distance / this.speed;
+    const duration = Math.max(distance / this.speed, 1);
 
     this.spriteFx = new SpriteFx(
       animatedSpriteLoader,
