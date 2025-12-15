@@ -6,7 +6,7 @@ import {
   Player,
   PlayerID,
 } from "../game/Game";
-import { toInt } from "../Util";
+import { assertNever, toInt } from "../Util";
 
 export class DonateGoldExecution implements Execution {
   private recipient: Player;
@@ -69,7 +69,7 @@ export class DonateGoldExecution implements Execution {
       case Difficulty.Impossible:
         return 25_000;
       default:
-        return 2_500;
+        assertNever(difficulty);
     }
   }
 

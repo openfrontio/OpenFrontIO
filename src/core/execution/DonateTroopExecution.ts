@@ -1,5 +1,6 @@
 import { Difficulty, Execution, Game, Player, PlayerID } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
+import { assertNever } from "../Util";
 
 export class DonateTroopsExecution implements Execution {
   private recipient: Player;
@@ -84,10 +85,7 @@ export class DonateTroopsExecution implements Execution {
           recipientMaxTroops / 5,
         );
       default:
-        return this.random.nextInt(
-          recipientMaxTroops / 13,
-          recipientMaxTroops / 11,
-        );
+        assertNever(difficulty);
     }
   }
 
