@@ -293,7 +293,7 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {{username}}",
+    "remove_player": "Remove {username}",
     "spectators_count": "{count} spectator(s) watching"
   },
   "team_colors": {
@@ -671,15 +671,15 @@
     "title_with_name": "Send Troops to {name}",
     "available_tooltip": "Your current available troops",
     "min_keep": "Min keep",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Troops slider",
-    "capacity_note": "Receiver can accept only {{amount}} right now."
+    "capacity_note": "Receiver can accept only {amount} right now."
   },
   "send_gold_modal": {
     "title_with_name": "Send Gold to {name}",
     "available_tooltip": "Your current available gold",
     "aria_slider": "Amount slider",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",

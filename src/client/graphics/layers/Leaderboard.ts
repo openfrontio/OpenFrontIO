@@ -73,6 +73,12 @@ export class Leaderboard extends LitElement implements Layer {
 
   private async updateSpectatorCount() {
     if (this.game === null) return;
+    // TODO(evapelle): Use intent system instead of polling.
+    // When a spectator joins, emit a "SpectatorJoined" intent which updates
+    // the `Game` object via an execution (e.g., `game.addSpectator(...)`).
+    // Likewise, when a player dies they should become a spectator.
+    // Then add a `GameDataUpdate` so data is transferred from `Game` => `GameView`,
+    // removing the need for this client-side fetch.
     try {
       const gameID = this.game.gameID();
       const config = await getServerConfigFromClient();
