@@ -1,0 +1,435 @@
+<!doctype html>
+<html class="writer-html5" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Getting Started - OpenFront docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
+    />
+
+    <script>
+      // Current page data
+      var mkdocs_page_name = "Getting Started";
+      var mkdocs_page_input_path = "getting_started.md";
+      var mkdocs_page_url = null;
+    </script>
+
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </head>
+
+  <body class="wy-body-for-nav" role="document">
+    <div class="wy-grid-for-nav">
+      <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+        <div class="wy-side-scroll">
+          <div class="wy-side-nav-search">
+            <a href=".." class="icon icon-home"> OpenFront docs </a>
+            <div role="search">
+              <form
+                id="rtd-search-form"
+                class="wy-form"
+                action="../search.html"
+                method="get"
+              >
+                <input
+                  type="text"
+                  name="q"
+                  placeholder="Search docs"
+                  aria-label="Search docs"
+                  title="Type search term here"
+                />
+              </form>
+            </div>
+          </div>
+
+          <div
+            class="wy-menu wy-menu-vertical"
+            data-spy="affix"
+            role="navigation"
+            aria-label="Navigation menu"
+          >
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="..">Home</a>
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../API/">API reference</a>
+              </li>
+            </ul>
+            <ul class="current">
+              <li class="toctree-l1 current">
+                <a class="reference internal current" href="#"
+                  >Getting Started</a
+                >
+                <ul class="current">
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#prerequisites"
+                      >Prerequisites</a
+                    >
+                  </li>
+                  <li class="toctree-l2">
+                    <a
+                      class="reference internal"
+                      href="#discussing-with-the-community"
+                      >Discussing with the community</a
+                    >
+                  </li>
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#making-the-change"
+                      >Making the change</a
+                    >
+                    <ul>
+                      <li class="toctree-l3">
+                        <a class="reference internal" href="#setup">Setup</a>
+                      </li>
+                      <li class="toctree-l3">
+                        <a class="reference internal" href="#editing-files"
+                          >Editing files</a
+                        >
+                      </li>
+                      <li class="toctree-l3">
+                        <a class="reference internal" href="#cleaning-up"
+                          >Cleaning up</a
+                        >
+                      </li>
+                      <li class="toctree-l3">
+                        <a
+                          class="reference internal"
+                          href="#publishing-your-change"
+                          >Publishing your change</a
+                        >
+                      </li>
+                    </ul>
+                  </li>
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#next-steps"
+                      >Next steps</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../contribute/"
+                  >Contributing</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../develop/"
+                  >Development reference</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../client/"
+                  >Client reference</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../server/"
+                  >Server reference</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../core/">Core reference</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+        <nav
+          class="wy-nav-top"
+          role="navigation"
+          aria-label="Mobile navigation menu"
+        >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">OpenFront docs</a>
+        </nav>
+        <div class="wy-nav-content">
+          <div class="rst-content">
+            <div role="navigation" aria-label="breadcrumbs navigation">
+              <ul class="wy-breadcrumbs">
+                <li>
+                  <a href=".." class="icon icon-home" aria-label="Docs"></a>
+                </li>
+                <li class="breadcrumb-item active">Getting Started</li>
+                <li class="wy-breadcrumbs-aside"></li>
+              </ul>
+              <hr />
+            </div>
+            <div
+              role="main"
+              class="document"
+              itemscope="itemscope"
+              itemtype="http://schema.org/Article"
+            >
+              <div class="section" itemprop="articleBody">
+                <h1 id="getting-started">Getting Started</h1>
+                <h2 id="prerequisites">Prerequisites</h2>
+                <ul>
+                  <li>git</li>
+                  <li>npm (v10.9.2 or higher)</li>
+                  <li>A modern browser with developer tools</li>
+                  <li>github account</li>
+                  <li>discord account</li>
+                </ul>
+                <p>
+                  Before you start, make sure you have all of these tools
+                  installed and ready to be used
+                </p>
+                <p>Test by running in your terminal (or command prompt)</p>
+                <pre><code class="language-bash">git --help
+npm --help
+</code></pre>
+                <p>
+                  You should see some help output. If you do, move on. If you
+                  don't try restarting your terminal, restarting your device, or
+                  reinstalling the tools.
+                </p>
+                <h2 id="discussing-with-the-community">
+                  Discussing with the community
+                </h2>
+                <p>
+                  If you would like to make a change, especially a larger one
+                  (like a new feature, a large rewrite, or similar), you will
+                  need to discuss with the contributors and the maintainers on
+                  IF the change should be implemented, and potentially HOW it
+                  should be implemented. You may make a change without this
+                  discussion, but there is a much larger chance that it will
+                  require a lot of changes, or be straight up rejected.
+                </p>
+                <p>
+                  The first step to becoming active in the community as a
+                  contributor is to request to join the development discord over
+                  at [https://discord.gg/K9zernJB5z]. It usually takes up to a
+                  few days to get accepted.
+                </p>
+                <p>
+                  In the meantime while waiting, you can open an issue on the
+                  issues page. Make sure to fill it out thoroughly. You can then
+                  ask to be assigned in the comments of the issue.
+                </p>
+                <p>
+                  Once you know what kind of changes you would like to make, you
+                  can move on to the next section.
+                </p>
+                <h2 id="making-the-change">Making the change</h2>
+                <p>
+                  If you are new to git, the first author of this file
+                  recommends you check out
+                  <a href="https://learngitbranching.js.org/?locale=en_US"
+                    >this website</a
+                  >
+                  for a visual way of learning how to use it.
+                </p>
+                <h3 id="setup">Setup</h3>
+                <p>
+                  In github, fork
+                  <a href="https://github.com/openfrontio/OpenFrontIO"
+                    >the repo</a
+                  >
+                  onto your account.
+                </p>
+                <p>
+                  <img
+                    alt="the fork button on the github interface"
+                    src="../res/github_fork.png"
+                  />
+                </p>
+                <p>
+                  Clone the repo, go into it, and set the upstream to the
+                  original repo.
+                </p>
+                <pre><code class="language-bash">git clone https://github.com/YourUsername/OpenFrontIO.git
+cd OpenFrontIO
+git remote add upstream https://github.com/openfrontio/OpenFrontIO.git
+</code></pre>
+                <p>Install dependencies</p>
+                <pre><code class="language-bash">npm i
+</code></pre>
+                <p>
+                  Before making a change, make sure your local repo is up to
+                  date on the upstream and update your origin.
+                </p>
+                <pre><code class="language-bash">git checkout main
+git fetch upstream --rebase
+git push
+</code></pre>
+                <p>
+                  If you would like to make a new change, create a new branch,
+                  and <code>checkout</code> into it
+                </p>
+                <pre><code class="language-bash">git checkout -b awesomefeature
+</code></pre>
+                <h3 id="editing-files">Editing files</h3>
+                <p>You can now make a change and make a commit</p>
+                <pre><code class="language-bash">git commit -m &quot;add XYZ feature&quot; path/to/file.ts
+</code></pre>
+                <p>
+                  To test your change in-game, you can run any of the following
+                </p>
+                <pre><code class="language-bash">npm run dev
+</code></pre>
+                <pre><code class="language-bash">npm run start:client
+</code></pre>
+                <pre><code class="language-bash">npm run start:server-dev
+</code></pre>
+                <h3 id="cleaning-up">Cleaning up</h3>
+                <p>
+                  Before publishing make sure to test your change manually, and
+                  then with npm, as you want to avoid creating regressions.
+                </p>
+                <pre><code class="language-bash">npm run test
+</code></pre>
+                <p>
+                  Make sure your format also matches the one employed by the
+                  rest of the codebase
+                </p>
+                <pre><code class="language-bash">npm run format
+</code></pre>
+                <p>or alternatively</p>
+                <pre><code class="language-bash">npx prettier --write path/to/file
+</code></pre>
+                <p>Lastly, make sure to lint your code</p>
+                <pre><code class="language-bash">npm run lint
+</code></pre>
+                <pre><code class="language-bash">npm run lint:fix
+</code></pre>
+                <p>Don't forget to commit your changes</p>
+                <pre><code class="language-bash">git commit . -m &quot;format&quot;
+</code></pre>
+                <h3 id="publishing-your-change">Publishing your change</h3>
+                <p>
+                  Once you are happy with your commits, format your changes, and
+                  push them to origin. You cannot push directly to upstream (the
+                  official repo).
+                </p>
+                <pre><code class="language-bash">git push
+</code></pre>
+                <p>
+                  Now, go to your repo on github, and create a pull request from
+                  your branch
+                  <code>YourUserName/OpenFrontIO/awesomefeature</code> to the
+                  main repo <code>OpenFrontIO/OpenFrontIO/main</code>.
+                </p>
+                <p>
+                  Make sure to fill out the description properly before making a
+                  PR. If you are not ready to be reviewed yet, you can submit a
+                  "draft PR". As you push changes on your branch, the PR will be
+                  updated to match.
+                </p>
+                <p>
+                  coderabbitai will then comment on your PR and suggest changes.
+                  If the changes are sensible, implement them.
+                </p>
+                <p>
+                  Afterwards, if your PR is set as ready to be reviewed (not a
+                  draft) one of the maintainers will come and comment any needed
+                  changes. Discuss them further or implement the changes, and
+                  wait for another review.
+                </p>
+                <p>
+                  Hopefully, afterwards, your change will be accepted, merged
+                  into main, and then later on, pushed out in an update to the
+                  live game!
+                </p>
+                <h2 id="next-steps">Next steps</h2>
+                <ul>
+                  <li>
+                    To learn more about our contribution guidelines, check out
+                    <a href="../contribute/">the contribution page</a>
+                  </li>
+                  <li>
+                    To learn more about the structure of the codebase, go to
+                    <a href="../develop/">the development reference</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <footer>
+              <div
+                class="rst-footer-buttons"
+                role="navigation"
+                aria-label="Footer Navigation"
+              >
+                <a
+                  href="../API/"
+                  class="btn btn-neutral float-left"
+                  title="API reference"
+                  ><span class="icon icon-circle-arrow-left"></span> Previous</a
+                >
+                <a
+                  href="../contribute/"
+                  class="btn btn-neutral float-right"
+                  title="Contributing"
+                  >Next <span class="icon icon-circle-arrow-right"></span
+                ></a>
+              </div>
+
+              <hr />
+
+              <div role="contentinfo">
+                <!-- Copyright etc -->
+              </div>
+
+              Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a
+              <a href="https://github.com/readthedocs/sphinx_rtd_theme"
+                >theme</a
+              >
+              provided by <a href="https://readthedocs.org">Read the Docs</a>.
+            </footer>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="rst-versions" role="note" aria-label="Versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span
+          ><a href="../API/" style="color: #fcfcfc">&laquo; Previous</a></span
+        >
+
+        <span
+          ><a href="../contribute/" style="color: #fcfcfc"
+            >Next &raquo;</a
+          ></span
+        >
+      </span>
+    </div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>
+      var base_url = "..";
+    </script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../search/main.js"></script>
+    <script>
+      jQuery(function () {
+        SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script>
+  </body>
+</html>

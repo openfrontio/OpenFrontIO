@@ -21,6 +21,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   Turn,
+  UsernameSchema,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -145,6 +146,26 @@ export class GameServer {
       });
       return;
     }
+
+    // new code
+    this.log.info(UsernameSchema.safeParse(client.username).success);
+    this.log.info(
+      "==============================================================================================================client.username).success",
+    );
+    if (!UsernameSchema.safeParse(client.username).success) {
+      this.log.warn("cannot add client, invalid username", {
+        clientID: client.clientID,
+      });
+
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "invalid-username",
+        } satisfies ServerErrorMessage),
+      );
+      return;
+    }
+    // end of new code
 
     if (
       this.gameConfig.maxPlayers &&

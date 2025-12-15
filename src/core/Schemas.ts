@@ -209,7 +209,11 @@ export const ID = z
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-export const UsernameSchema = SafeString;
+export const UsernameSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_ \[\]üÜ]+$/u)
+  .min(3)
+  .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(

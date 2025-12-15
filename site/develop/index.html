@@ -1,0 +1,333 @@
+<!doctype html>
+<html class="writer-html5" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Development reference - OpenFront docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
+    />
+
+    <script>
+      // Current page data
+      var mkdocs_page_name = "Development reference";
+      var mkdocs_page_input_path = "develop.md";
+      var mkdocs_page_url = null;
+    </script>
+
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </head>
+
+  <body class="wy-body-for-nav" role="document">
+    <div class="wy-grid-for-nav">
+      <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+        <div class="wy-side-scroll">
+          <div class="wy-side-nav-search">
+            <a href=".." class="icon icon-home"> OpenFront docs </a>
+            <div role="search">
+              <form
+                id="rtd-search-form"
+                class="wy-form"
+                action="../search.html"
+                method="get"
+              >
+                <input
+                  type="text"
+                  name="q"
+                  placeholder="Search docs"
+                  aria-label="Search docs"
+                  title="Type search term here"
+                />
+              </form>
+            </div>
+          </div>
+
+          <div
+            class="wy-menu wy-menu-vertical"
+            data-spy="affix"
+            role="navigation"
+            aria-label="Navigation menu"
+          >
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="..">Home</a>
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../API/">API reference</a>
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../getting_started/"
+                  >Getting Started</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../contribute/"
+                  >Contributing</a
+                >
+              </li>
+            </ul>
+            <ul class="current">
+              <li class="toctree-l1 current">
+                <a class="reference internal current" href="#"
+                  >Development reference</a
+                >
+                <ul class="current">
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#introduction"
+                      >Introduction</a
+                    >
+                  </li>
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#project-structure"
+                      >Project Structure</a
+                    >
+                  </li>
+                  <li class="toctree-l2">
+                    <a class="reference internal" href="#technologies-used"
+                      >Technologies used</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../client/"
+                  >Client reference</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../server/"
+                  >Server reference</a
+                >
+              </li>
+            </ul>
+            <ul>
+              <li class="toctree-l1">
+                <a class="reference internal" href="../core/">Core reference</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+        <nav
+          class="wy-nav-top"
+          role="navigation"
+          aria-label="Mobile navigation menu"
+        >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">OpenFront docs</a>
+        </nav>
+        <div class="wy-nav-content">
+          <div class="rst-content">
+            <div role="navigation" aria-label="breadcrumbs navigation">
+              <ul class="wy-breadcrumbs">
+                <li>
+                  <a href=".." class="icon icon-home" aria-label="Docs"></a>
+                </li>
+                <li class="breadcrumb-item active">Development reference</li>
+                <li class="wy-breadcrumbs-aside"></li>
+              </ul>
+              <hr />
+            </div>
+            <div
+              role="main"
+              class="document"
+              itemscope="itemscope"
+              itemtype="http://schema.org/Article"
+            >
+              <div class="section" itemprop="articleBody">
+                <h1 id="development-reference">Development reference</h1>
+                <p>
+                  If you would like to contribute, first, check out the
+                  <a href="../contribute/">contribution page</a>, and then check
+                  out the
+                  <a href="../getting_started/">Getting Started guide</a> to
+                  learn how to set up a local copy of the repository.
+                </p>
+                <h2 id="introduction">Introduction</h2>
+                <p>
+                  This project started as a fork of WarFront (not to be confused
+                  with FrontWars), by evanpelle. It is written in TypeScript,
+                  which is like JavaScript, but with static typing. As of
+                  writing, the project is deployed as a website at openfront.io,
+                  with a planned release on Steam.
+                </p>
+                <h2 id="project-structure">Project Structure</h2>
+                <ul>
+                  <li>
+                    <code>/docs</code> - The documentation you're reading right
+                    now!
+                  </li>
+                  <li>
+                    <code>/resources</code> - Static assets (images, maps, etc.)
+                  </li>
+                  <li>
+                    <code>/proprietary</code> - Non free static assets (music)
+                  </li>
+                  <li>
+                    <code>/map-generator</code> - A tool used to create maps for
+                    the game
+                  </li>
+                  <li>
+                    <code>/tests</code> -
+                    <a href="https://jestjs.io/">Jest</a> tests for
+                    <a href="https://en.wikipedia.org/wiki/Regression_testing"
+                      >regression</a
+                    >
+                    prevention
+                  </li>
+                  <li><code>/src</code> - The source code</li>
+                  <li>
+                    <code>./core</code> -
+                    <a href="../core/">Shared game logic</a>
+                    <ul>
+                      <li>
+                        <code>./game</code> - Files managing in-memory game
+                        state, map loading, and utilities for game management
+                      </li>
+                      <li>
+                        <code>./configuration</code> - Different presets to be
+                        used by other parts of the code
+                      </li>
+                      <li>
+                        <code>./execution</code> - Logic controllers for
+                        different parts of the game
+                      </li>
+                      <li>
+                        <code>./worker</code> - Isolation of long-running or
+                        async tasks to a worker context
+                      </li>
+                      <li>
+                        <code>./pathfinding</code> - Different algorithms for
+                        navigation
+                      </li>
+                      <li>
+                        <code>./validations</code> - Utilities for sanitizing
+                        user content (like usernames)
+                      </li>
+                      <li>
+                        <code>./utilities</code> - Generic core helper functions
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <code>./client</code> -
+                    <a href="../client/">Frontend game client</a>
+                    <ul>
+                      <li><code>./graphics</code> - 2D rendering</li>
+                      <li>
+                        <code>./components</code> - Custom HTML components
+                      </li>
+                      <li><code>./styles</code> - CSS used by the client</li>
+                      <li>
+                        <code>./data</code> - json data accessed by the client
+                        (like countries)
+                      </li>
+                      <li><code>./sound</code> - Sound management</li>
+                      <li>
+                        <code>./utilities</code> - Generic client helper
+                        functions
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <code>./server</code> -
+                    <a href="../server/">Backend game server</a>
+                  </li>
+                </ul>
+                <h2 id="technologies-used">Technologies used</h2>
+                <ul>
+                  <li>
+                    <a href="https://lit.dev/">Lit</a> for creating usable html
+                    objects (usually <code>TemplateResult</code>) from strings.
+                  </li>
+                </ul>
+                <p><img alt="" src="../res/sample.png" /></p>
+              </div>
+            </div>
+            <footer>
+              <div
+                class="rst-footer-buttons"
+                role="navigation"
+                aria-label="Footer Navigation"
+              >
+                <a
+                  href="../contribute/"
+                  class="btn btn-neutral float-left"
+                  title="Contributing"
+                  ><span class="icon icon-circle-arrow-left"></span> Previous</a
+                >
+                <a
+                  href="../client/"
+                  class="btn btn-neutral float-right"
+                  title="Client reference"
+                  >Next <span class="icon icon-circle-arrow-right"></span
+                ></a>
+              </div>
+
+              <hr />
+
+              <div role="contentinfo">
+                <!-- Copyright etc -->
+              </div>
+
+              Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a
+              <a href="https://github.com/readthedocs/sphinx_rtd_theme"
+                >theme</a
+              >
+              provided by <a href="https://readthedocs.org">Read the Docs</a>.
+            </footer>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="rst-versions" role="note" aria-label="Versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span
+          ><a href="../contribute/" style="color: #fcfcfc"
+            >&laquo; Previous</a
+          ></span
+        >
+
+        <span
+          ><a href="../client/" style="color: #fcfcfc">Next &raquo;</a></span
+        >
+      </span>
+    </div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>
+      var base_url = "..";
+    </script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../search/main.js"></script>
+    <script>
+      jQuery(function () {
+        SphinxRtdTheme.Navigation.enable(true);
+      });
+    </script>
+  </body>
+</html>
