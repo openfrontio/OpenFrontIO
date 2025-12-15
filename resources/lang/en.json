@@ -312,7 +312,12 @@
     "trios": "Trios",
     "quads": "Quads",
     "ranked_matchmaking": "Ranked Matchmaking",
-    "quick_match": "Lobby"
+    "quick_match": "Lobby",
+    "login_required": "Please log in with Discord to join matchmaking"
+  },
+  "duel": {
+    "surrender": "Surrender",
+    "surrender_confirmation": "Are you sure you want to surrender? Your opponent will win the game."
   },
   "username": {
     "enter_username": "Enter your username",

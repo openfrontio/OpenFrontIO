@@ -1,11 +1,11 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
+import { GameMode, GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { PauseGameIntentEvent } from "../../Transport";
+import { PauseGameIntentEvent, SendSurrenderIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -15,6 +15,8 @@ import FastForwardIconSolid from "/images/FastForwardIconSolidWhite.svg?url";
 import pauseIcon from "/images/PauseIconWhite.svg?url";
 import playIcon from "/images/PlayIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
+
+const MIN_GAME_TICKS_FOR_SURRENDER = 3000;
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
@@ -128,6 +130,32 @@ export class GameRightSidebar extends LitElement implements Layer {
     );
   }
 
+  private onSurrenderButtonClick() {
+    const isConfirmed = confirm(translateText("duel.surrender_confirmation"));
+    if (!isConfirmed) return;
+    this.eventBus.emit(new SendSurrenderIntentEvent());
+  }
+
+  private isDuelMode(): boolean {
+    return this.game?.config()?.gameConfig()?.gameMode === GameMode.Duel;
+  }
+
+  private canSurrender(): boolean {
+    if (
+      !this.isDuelMode() ||
+      this._isSinglePlayer ||
+      this.hasWinner ||
+      this.game.myPlayer()?.isAlive() !== true
+    ) {
+      return false;
+    }
+
+    // Check minimum game time (after spawn phase)
+    const ticksSinceSpawnPhase =
+      this.game.ticks() - this.game.config().numSpawnPhaseTurns();
+    return ticksSinceSpawnPhase >= MIN_GAME_TICKS_FOR_SURRENDER;
+  }
+
   render() {
     if (this.game === undefined) return html``;
 
@@ -153,7 +181,7 @@ export class GameRightSidebar extends LitElement implements Layer {
         <div class="cursor-pointer" @click=${this.onSettingsButtonClick}>
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
-
+        ${this.maybeRenderSurrenderButton()}
         <div class="cursor-pointer" @click=${this.onExitButtonClick}>
           <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
@@ -193,4 +221,21 @@ export class GameRightSidebar extends LitElement implements Layer {
         : ""}
     `;
   }
+
+  maybeRenderSurrenderButton() {
+    if (!this.canSurrender()) {
+      return html``;
+    }
+    return html`
+      <div class="flex justify-center mt-2">
+        <button
+          class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded cursor-pointer"
+          @click=${this.onSurrenderButtonClick}
+        >
+          ${translateText("duel.surrender")}
+        </button>
+      </div>
+    `;
+  }
 }
+

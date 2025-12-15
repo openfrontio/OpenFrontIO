@@ -24,6 +24,7 @@ import { PauseExecution } from "./PauseExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
+import { SurrenderExecution } from "./SurrenderExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -131,6 +132,10 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "surrender":
+        return new SurrenderExecution(player);
+      case "kick_player":
+        return new NoOpExecution();
       default:
         throw new Error(`intent type ${intent} not found`);
     }

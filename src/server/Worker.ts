@@ -25,7 +25,6 @@ import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
-import { MapPlaylist } from "./MapPlaylist";
 import { selectMapForRanked } from "./MapSelection";
 import { MatchmakingPoller } from "./MatchmakingPoller";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -37,7 +36,6 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
-const playlist = new MapPlaylist(true);
 
 // Worker setup
 export async function startWorker() {
@@ -582,12 +580,25 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      // TODO: Only allow specified players to join the game.
-      console.log(`Creating game ${gameId}`);
-      const game = gm.createGame(gameId, playlist.gameConfig());
+      const assignment = data.assignment;
+      log.info(`Creating game ${gameId} with assignment`, assignment.config);
+
+      // Select map based on player count and mode
+      const selectedMap = selectMapForRanked({
+        playerCount: assignment.config.playerCount,
+        gameMode:
+          assignment.config.gameMode === "ffa" ? GameMode.FFA : GameMode.Team,
+        queueType: assignment.config.queueType,
+        matchMode: assignment.config.gameMode,
+      });
+
+      // Build full game config using assignment config
+      const gameConfig = buildRankedGameConfig(selectedMap, assignment.config);
+
+      const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.
-        console.log(`Starting game ${gameId}`);
+        log.info(`Starting game ${gameId}`);
         game.start();
       }, 5000);
     }

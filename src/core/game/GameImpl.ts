@@ -149,7 +149,8 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode === GameMode.FFA) {
+    const mode = this.config().gameConfig().gameMode;
+    if (mode === GameMode.FFA || mode === GameMode.Duel) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
