@@ -864,7 +864,7 @@ export class PlayerImpl implements Player {
       );
     }
 
-    const cost = this.mg.unitInfo(type).cost(this);
+    const cost = this.mg.unitInfo(type).cost(this.mg, this);
     const b = new UnitImpl(
       type,
       this.mg,
@@ -911,7 +911,9 @@ export class PlayerImpl implements Player {
     if (this.mg.config().isUnitDisabled(unit.type())) {
       return false;
     }
-    if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
+    if (
+      this._gold < this.mg.config().unitInfo(unit.type()).cost(this.mg, this)
+    ) {
       return false;
     }
     if (unit.owner() !== this) {
@@ -921,7 +923,7 @@ export class PlayerImpl implements Player {
   }
 
   upgradeUnit(unit: Unit) {
-    const cost = this.mg.unitInfo(unit.type()).cost(this);
+    const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
@@ -944,7 +946,7 @@ export class PlayerImpl implements Player {
             ? false
             : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this),
+        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
       } as BuildableUnit;
     });
   }
@@ -958,7 +960,7 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this);
+    const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;
     }

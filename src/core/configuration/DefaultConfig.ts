@@ -487,7 +487,12 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MIRV:
         return {
-          cost: this.costWrapper(() => 35_000_000, UnitType.MIRV),
+          cost: (game: Game, player: Player) => {
+            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+              return 0n;
+            }
+            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+          },
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -567,14 +572,15 @@ export class DefaultConfig implements Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (p: Player) => bigint {
-    return (p: Player) => {
-      if (p.type() === PlayerType.Human && this.infiniteGold()) {
+  ): (g: Game, p: Player) => bigint {
+    return (game: Game, player: Player) => {
+      if (player.type() === PlayerType.Human && this.infiniteGold()) {
         return 0n;
       }
       const numUnits = types.reduce(
         (acc, type) =>
-          acc + Math.min(p.unitsOwned(type), p.unitsConstructed(type)),
+          acc +
+          Math.min(player.unitsOwned(type), player.unitsConstructed(type)),
         0,
       );
       return BigInt(costFn(numUnits));
