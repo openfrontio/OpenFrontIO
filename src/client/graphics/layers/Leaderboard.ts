@@ -189,7 +189,9 @@ export class Leaderboard extends LitElement implements Layer {
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
-            <div class="py-1 md:py-2 text-center border-b border-slate-500">
+            <div
+              class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+            >
               ${translateText("leaderboard.player")}
             </div>
             <div
