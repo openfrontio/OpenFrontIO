@@ -21,7 +21,6 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   Turn,
-  UsernameSchema,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";

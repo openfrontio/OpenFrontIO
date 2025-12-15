@@ -122,7 +122,8 @@ export function validateUsername(username: string): {
       };
     }
 
-    if (errType === "invalid_format") {
+    // Invalid regex, or any other issue
+    else {
       return {
         isValid: false,
         error: translateText("username.invalid_chars", {
