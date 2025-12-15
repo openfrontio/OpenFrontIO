@@ -141,11 +141,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Montreal,
     GameMapType.GulfOfStLawrence,
     GameMapType.Lisbon,
-<<<<<<< HEAD
-    GameMapType.Manicouagan,
-=======
     GameMapType.NewYorkCity,
->>>>>>> 0b9b347933a1779ee900a3edc6c57714fda4de8c
+    GameMapType.Manicouagan,
   ],
   fantasy: [
     GameMapType.Pangaea,

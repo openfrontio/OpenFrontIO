@@ -218,11 +218,8 @@
     "fourislands": "Four Islands",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
-<<<<<<< HEAD
+    "svalmel": "Svalmel",
     "manicouagan": "Manicouagan"
-=======
-    "svalmel": "Svalmel"
->>>>>>> 0b9b347933a1779ee900a3edc6c57714fda4de8c
   },
   "map_categories": {
     "continental": "Continental",
