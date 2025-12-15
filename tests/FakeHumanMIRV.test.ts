@@ -66,9 +66,8 @@ describe("FakeHuman MIRV Retaliation", () => {
     fakehuman.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
 
     // Give both players enough gold for MIRVs
-    attacker.addGold(100_000_000n);
-    fakehuman.addGold(100_000_000n);
-
+    attacker.addGold(1_000_000_000n);
+    fakehuman.addGold(1_000_000_000n);
     // Verify preconditions
     expect(attacker.units(UnitType.MissileSilo)).toHaveLength(1);
     expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
