@@ -123,12 +123,7 @@ export function validateUsername(username: string): {
 
     // Invalid regex, or any other issue
     else {
-      return {
-        isValid: false,
-        error: translateText("username.invalid_chars", {
-          max: MAX_USERNAME_LENGTH,
-        }),
-      };
+      return { isValid: false, error: translateText("username.invalid_chars") };
     }
   }
 
