@@ -18,21 +18,21 @@ import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
-import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { EmojiExecution } from "./EmojiExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { calculateTerritoryCenter, closestTwoTiles } from "./Util";
-import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
+import { AllianceBehavior } from "./utils/AllianceBehavior";
+import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
+  private allianceBehavior: AllianceBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -42,7 +42,6 @@ export class FakeHumanExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
-  private readonly lastEmojiSent = new Map<Player, Tick>();
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
@@ -177,7 +176,7 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (this.behavior === null) {
+    if (this.behavior === null || this.allianceBehavior === null) {
       // Player is unavailable during init()
       this.behavior = new BotBehavior(
         this.random,
@@ -187,6 +186,11 @@ export class FakeHumanExecution implements Execution {
         this.reserveRatio,
         this.expandRatio,
       );
+      this.allianceBehavior = new AllianceBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
 
       // Send an attack on the first tick
       this.behavior.forceSendAttack(this.mg.terraNullius());
@@ -194,8 +198,8 @@ export class FakeHumanExecution implements Execution {
     }
 
     this.updateRelationsFromEmbargos();
-    this.behavior.handleAllianceRequests();
-    this.behavior.handleAllianceExtensionRequests();
+    this.allianceBehavior.handleAllianceRequests();
+    this.allianceBehavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
     this.considerMIRV();
@@ -203,26 +207,46 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeAttack() {
-    if (this.player === null || this.behavior === null) {
+    if (
+      this.player === null ||
+      this.behavior === null ||
+      this.allianceBehavior === null
+    ) {
       throw new Error("not initialized");
     }
 
-    const enemyborder = Array.from(this.player.borderTiles())
+    const border = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-    const borderPlayers = enemyborder.map((t) =>
-      this.mg.playerBySmallID(this.mg.ownerID(t)),
+    const borderingPlayers = [
+      ...new Set(
+        border
+          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
+    const borderingFriends = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === true,
     );
-    const borderingEnemies = borderPlayers
-      .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+    const borderingEnemies = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === false,
+    );
 
-    if (enemyborder.length === 0) {
+    // Attack TerraNullius but not nuked territory
+    const hasNonNukedTerraNullius = border.some(
+      (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
+    );
+    if (hasNonNukedTerraNullius) {
+      this.behavior.sendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    if (borderingEnemies.length === 0) {
       if (this.random.chance(5)) {
-        this.sendBoatRandomly(borderingEnemies);
+        this.sendBoatRandomly();
       }
     } else {
       if (this.random.chance(10)) {
@@ -230,57 +254,23 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      if (borderPlayers.some((o) => !o.isPlayer())) {
-        this.behavior.sendAttack(this.mg.terraNullius());
-        return;
-      }
-
-      // 5% chance to send a random alliance request
-      if (this.random.chance(20)) {
-        const toAlly = this.random.randElement(borderingEnemies);
-        if (this.player.canSendAllianceRequest(toAlly)) {
-          this.mg.addExecution(
-            new AllianceRequestExecution(this.player, toAlly.id()),
-          );
-        }
-      }
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
     }
 
-    this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
 
-    const enemy = this.behavior.selectEnemy(borderingEnemies);
-    if (!enemy) return;
-    this.maybeSendEmoji(enemy);
-    this.maybeSendNuke(enemy);
-    if (this.player.sharesBorderWith(enemy)) {
-      this.behavior.sendAttack(enemy);
-    } else {
-      this.maybeSendBoatAttack(enemy);
-    }
+    this.behavior.attackBestTarget(borderingFriends, borderingEnemies);
+
+    this.maybeSendNuke(this.behavior.findBestNukeTarget(borderingEnemies));
   }
 
-  private maybeSendEmoji(enemy: Player) {
-    if (this.player === null) throw new Error("not initialized");
-    if (enemy.type() !== PlayerType.Human) return;
-    const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
-    if (this.mg.ticks() - lastSent <= 300) return;
-    this.lastEmojiSent.set(enemy, this.mg.ticks());
-    this.mg.addExecution(
-      new EmojiExecution(
-        this.player,
-        enemy.id(),
-        this.random.randElement(EMOJI_HECKLE),
-      ),
-    );
-  }
-
-  private maybeSendNuke(other: Player) {
+  private maybeSendNuke(other: Player | null) {
     if (this.player === null) throw new Error("not initialized");
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
+      other === null ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to fakehumans and humans)
       this.player.isOnSameTeam(other)
     ) {
@@ -326,7 +316,7 @@ export class FakeHumanExecution implements Execution {
       }
     }
     if (bestTile !== null) {
-      this.sendNuke(bestTile, nukeType);
+      this.sendNuke(bestTile, nukeType, other);
     }
   }
 
@@ -344,11 +334,13 @@ export class FakeHumanExecution implements Execution {
   private sendNuke(
     tile: TileRef,
     nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+    targetPlayer: Player,
   ) {
     if (this.player === null) throw new Error("not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
+    this.behavior?.maybeSendEmoji(targetPlayer);
   }
 
   private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
@@ -397,30 +389,6 @@ export class FakeHumanExecution implements Execution {
       .reduce((prev, cur) => prev + cur, 0);
 
     return tileValue;
-  }
-
-  private maybeSendBoatAttack(other: Player) {
-    if (this.player === null) throw new Error("not initialized");
-    if (this.player.isFriendly(other)) return;
-    const closest = closestTwoTiles(
-      this.mg,
-      Array.from(this.player.borderTiles()).filter((t) =>
-        this.mg.isOceanShore(t),
-      ),
-      Array.from(other.borderTiles()).filter((t) => this.mg.isOceanShore(t)),
-    );
-    if (closest === null) {
-      return;
-    }
-    this.mg.addExecution(
-      new TransportShipExecution(
-        this.player,
-        other.id(),
-        closest.y,
-        this.player.troops() / 5,
-        null,
-      ),
-    );
   }
 
   private handleUnits() {
@@ -594,10 +562,10 @@ export class FakeHumanExecution implements Execution {
 
   private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.player);
+    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
-  sendBoatRandomly(borderingEnemies: Player[]) {
+  sendBoatRandomly(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),
@@ -884,7 +852,7 @@ export class FakeHumanExecution implements Execution {
   private maybeSendMIRV(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
-    this.maybeSendEmoji(enemy);
+    this.behavior?.maybeSendEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {

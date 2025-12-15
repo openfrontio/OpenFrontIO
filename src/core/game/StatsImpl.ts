@@ -26,7 +26,7 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, TerraNullius } from "./Game";
+import { Player, TerraNullius, UnitType } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -41,6 +41,12 @@ function _bigint(value: BigIntLike): bigint {
 
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
+
+  private _numMirvLaunched: bigint = 0n;
+
+  numMirvsLaunched(): bigint {
+    return this._numMirvLaunched;
+  }
 
   getPlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
@@ -217,6 +223,9 @@ export class StatsImpl implements Stats {
     target: Player | TerraNullius,
     type: NukeType,
   ): void {
+    if (type === UnitType.MIRV) {
+      this._numMirvLaunched++;
+    }
     this._addBomb(player, type, BOMB_INDEX_LAUNCH, 1);
   }
 

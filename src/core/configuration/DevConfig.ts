@@ -1,10 +1,17 @@
-import { UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
+  turnstileSiteKey(): string {
+    return "1x00000000000000000000AA";
+  }
+
+  turnstileSecretKey(): string {
+    return "1x0000000000000000000000000000000AA";
+  }
+
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -57,31 +64,4 @@ export class DevConfig extends DefaultConfig {
   ) {
     super(sc, gc, us, isReplay);
   }
-
-  unitInfo(type: UnitType): UnitInfo {
-    const info = super.unitInfo(type);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const oldCost = info.cost;
-    // info.cost = (p: Player) => oldCost(p) / 1000000000;
-    return info;
-  }
-
-  // tradeShipSpawnRate(): number {
-  //   return 10;
-  // }
-
-  // percentageTilesOwnedToWin(): number {
-  //     return 1
-  // }
-
-  // boatMaxDistance(): number {
-  //     return 5000
-  // }
-
-  //   numBots(): number {
-  //     return 0;
-  //   }
-  //   spawnNPCs(): boolean {
-  //     return false;
-  //   }
 }

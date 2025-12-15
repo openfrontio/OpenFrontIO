@@ -1,6 +1,7 @@
 import { Execution, Game, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { BotBehavior } from "./utils/BotBehavior";
 
 export class BotExecution implements Execution {
@@ -56,9 +57,27 @@ export class BotExecution implements Execution {
       return;
     }
 
-    this.behavior.handleAllianceRequests();
-    this.behavior.handleAllianceExtensionRequests();
+    this.acceptAllAllianceRequests();
     this.maybeAttack();
+  }
+
+  private acceptAllAllianceRequests() {
+    // Accept all alliance requests
+    for (const req of this.bot.incomingAllianceRequests()) {
+      req.accept();
+    }
+
+    // Accept all alliance extension requests
+    for (const alliance of this.bot.alliances()) {
+      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
+      // Skip if no expiration yet/ ally didn't request extension yet / bot already agreed to extend
+      if (!alliance.onlyOneAgreedToExtend()) continue;
+
+      const human = alliance.other(this.bot);
+      this.mg.addExecution(
+        new AllianceExtensionExecution(this.bot, human.id()),
+      );
+    }
   }
 
   private maybeAttack() {
@@ -89,11 +108,7 @@ export class BotExecution implements Execution {
       this.neighborsTerraNullius = false;
     }
 
-    this.behavior.forgetOldEnemies();
-    const enemy = this.behavior.selectRandomEnemy();
-    if (!enemy) return;
-    if (!this.bot.sharesBorderWith(enemy)) return;
-    this.behavior.sendAttack(enemy);
+    this.behavior.attackRandomTarget();
   }
 
   isActive(): boolean {

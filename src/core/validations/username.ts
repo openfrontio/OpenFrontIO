@@ -22,7 +22,7 @@ const matcher = new RegExpMatcher({
 export const MIN_USERNAME_LENGTH = 3;
 export const MAX_USERNAME_LENGTH = 27;
 
-const validPattern = /^[a-zA-Z0-9_[\] 🐈🍀üÜ]+$/u;
+const validPattern = /^[a-zA-Z0-9_[\] üÜ]+$/u; // Don't allow more than in UserNameSchema
 
 const shadowNames = [
   "NicePeopleOnly",
@@ -54,7 +54,7 @@ export function isProfaneUsername(username: string): boolean {
  *
  * Removing bad clan tags won't hurt existing clans nor cause desyncs:
  * - full name including clan tag was overwritten in the past, if any part of name was bad
- * - only each seperate local player name with a profane clan tag will remain, no clan team assignment
+ * - only each separate local player name with a profane clan tag will remain, no clan team assignment
  *
  * Examples:
  * - "GoodName" -> "GoodName"
@@ -123,9 +123,7 @@ export function validateUsername(username: string): {
   if (!validPattern.test(username)) {
     return {
       isValid: false,
-      error: translateText("username.invalid_chars", {
-        max: MAX_USERNAME_LENGTH,
-      }),
+      error: translateText("username.invalid_chars"),
     };
   }
 

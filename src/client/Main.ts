@@ -2,9 +2,13 @@ import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
@@ -34,18 +38,14 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  isInIframe,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
   interface Window {
+    turnstile: any;
     enableAds: boolean;
     PageOS: {
       session: {
@@ -105,9 +105,18 @@ class Client {
 
   private gutterAds: GutterAds;
 
+  private turnstileTokenPromise: Promise<{
+    token: string;
+    createdAt: number;
+  }> | null = null;
+
   constructor() {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    // Prefetch turnstile token so it is available when
+    // the user joins a lobby.
+    this.turnstileTokenPromise = getTurnstileToken();
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -272,7 +281,7 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
+    if ((await userAuth()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
@@ -484,8 +493,8 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
+        turnstileToken: await this.getTurnstileToken(lobby),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -493,6 +502,10 @@ class Client {
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
+        if (this.usernameInput) {
+          // fix edge case where username-validation-error is re-rendered and hidden tag removed
+          this.usernameInput.validationError = "";
+        }
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
@@ -596,6 +609,40 @@ class Client {
       }
     }, 100);
   }
+
+  private async getTurnstileToken(
+    lobby: JoinLobbyEvent,
+  ): Promise<string | null> {
+    const config = await getServerConfigFromClient();
+    if (
+      config.env() === GameEnv.Dev ||
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+    ) {
+      return null;
+    }
+
+    if (this.turnstileTokenPromise === null) {
+      console.log("No prefetched turnstile token, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
+    }
+
+    const token = await this.turnstileTokenPromise;
+    // Clear promise so a new token is fetched next time
+    this.turnstileTokenPromise = null;
+    if (!token) {
+      console.log("No turnstile token");
+      return null;
+    }
+
+    const tokenTTL = 3 * 60 * 1000;
+    if (Date.now() < token.createdAt + tokenTTL) {
+      console.log("Prefetched turnstile token is valid");
+      return token.token;
+    } else {
+      console.log("Turnstile token expired, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
+    }
+  }
 }
 
 // Initialize the client when the DOM is loaded
@@ -603,42 +650,42 @@ document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
 
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromCookie(): string {
-  const COOKIE_NAME = "player_persistent_id";
-
-  // Try to get existing cookie
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
-    if (cookieName === COOKIE_NAME) {
-      return cookieValue;
-    }
+async function getTurnstileToken(): Promise<{
+  token: string;
+  createdAt: number;
+}> {
+  // Wait for Turnstile script to load (handles slow connections)
+  let attempts = 0;
+  while (typeof window.turnstile === "undefined" && attempts < 100) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    attempts++;
   }
 
-  // If no cookie exists, create new ID and set cookie
-  const newID = generateCryptoRandomUUID();
-  document.cookie = [
-    `${COOKIE_NAME}=${newID}`,
-    `max-age=${5 * 365 * 24 * 60 * 60}`, // 5 years
-    "path=/",
-    "SameSite=Strict",
-    "Secure",
-  ].join(";");
+  if (typeof window.turnstile === "undefined") {
+    throw new Error("Failed to load Turnstile script");
+  }
 
-  return newID;
+  const config = await getServerConfigFromClient();
+  const widgetId = window.turnstile.render("#turnstile-container", {
+    sitekey: config.turnstileSiteKey(),
+    size: "normal",
+    appearance: "interaction-only",
+    theme: "light",
+  });
+
+  return new Promise((resolve, reject) => {
+    window.turnstile.execute(widgetId, {
+      callback: (token: string) => {
+        window.turnstile.remove(widgetId);
+        console.log(`Turnstile token received: ${token}`);
+        resolve({ token, createdAt: Date.now() });
+      },
+      "error-callback": (errorCode: string) => {
+        window.turnstile.remove(widgetId);
+        console.error(`Turnstile error: ${errorCode}`);
+        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        reject(new Error(`Turnstile failed: ${errorCode}`));
+      },
+    });
+  });
 }
