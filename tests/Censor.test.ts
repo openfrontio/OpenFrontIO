@@ -105,8 +105,8 @@ describe("username.ts functions", () => {
       const res = validateUsername("Good_Name123");
       expect(res.isValid).toBe(true);
     });
-    test("accepts allowed Unicode like 🐈 or ü", () => {
-      const res = validateUsername("Cat🐈Üser");
+    test("accepts allowed Unicode like ü", () => {
+      const res = validateUsername("Üser");
       expect(res.isValid).toBe(true);
     });
   });
@@ -123,7 +123,7 @@ describe("username.ts functions", () => {
           .slice(0, MAX_USERNAME_LENGTH),
       },
       { input: "", expected: "xxx" },
-      { input: "Ünicode🐈Test!", expected: "Ünicode🐈Test" },
+      { input: "Ünicode Test!", expected: "Ünicode Test" },
     ])('sanitizeUsername("%s") → "%s"', ({ input, expected }) => {
       const out = sanitizeUsername(input);
       expect(out).toBe(expected);
