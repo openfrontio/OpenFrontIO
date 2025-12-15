@@ -22,7 +22,7 @@ const matcher = new RegExpMatcher({
 export const MIN_USERNAME_LENGTH = 3;
 export const MAX_USERNAME_LENGTH = 27;
 
-const validPattern = /^[a-zA-Z0-9_[\] 🐈🍀üÜ]+$/u;
+const validPattern = /^[a-zA-Z0-9_[\] üÜ]+$/u; // Don't allow more than in UserNameSchema
 
 const shadowNames = [
   "NicePeopleOnly",
@@ -123,9 +123,7 @@ export function validateUsername(username: string): {
   if (!validPattern.test(username)) {
     return {
       isValid: false,
-      error: translateText("username.invalid_chars", {
-        max: MAX_USERNAME_LENGTH,
-      }),
+      error: translateText("username.invalid_chars"),
     };
   }
 
