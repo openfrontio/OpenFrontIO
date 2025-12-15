@@ -148,6 +148,9 @@ export class SpriteFactory {
     const { type, stage } = options;
     const { scale } = this.transformHandler;
 
+    this.renderSprites =
+      this.game.config().userSettings()?.structureSprites() ?? true;
+
     if (type === "icon" || type === "dot") {
       const texture = this.createTexture(
         structureType,

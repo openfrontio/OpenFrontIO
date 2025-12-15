@@ -2,9 +2,10 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
+import { getPlayToken } from "./Auth";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { getPlayToken, JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
@@ -53,7 +54,7 @@ export class MatchmakingModal extends LitElement {
     const config = await getServerConfigFromClient();
 
     this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
-    this.socket.onopen = () => {
+    this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
       setTimeout(() => {
         // Set a delay so the user can see the "connecting" message,
@@ -64,7 +65,7 @@ export class MatchmakingModal extends LitElement {
       this.socket?.send(
         JSON.stringify({
           type: "auth",
-          playToken: getPlayToken(),
+          playToken: await getPlayToken(),
         }),
       );
     };

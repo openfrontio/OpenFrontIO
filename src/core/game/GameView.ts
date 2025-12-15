@@ -382,8 +382,13 @@ export class PlayerView {
 
   totalUnitLevels(type: UnitType): number {
     return this.units(type)
+      .filter((unit) => !unit.isUnderConstruction())
       .map((unit) => unit.level())
       .reduce((a, b) => a + b, 0);
+  }
+
+  isMe(): boolean {
+    return this.smallID() === this.game.myPlayer()?.smallID();
   }
 
   isAlliedWith(other: PlayerView): boolean {

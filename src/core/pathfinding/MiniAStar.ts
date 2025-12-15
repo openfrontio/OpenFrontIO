@@ -104,7 +104,7 @@ function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
   if (cellSrc !== undefined) {
     const srcIndex = findCell(upscaled, cellSrc);
     if (srcIndex === -1) {
-      // didnt find the start tile in the path
+      // didn't find the start tile in the path
       upscaled.unshift(cellSrc);
     } else if (srcIndex !== 0) {
       // found start tile but not at the start
@@ -115,7 +115,7 @@ function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
 
   const dstIndex = findCell(upscaled, cellDst);
   if (dstIndex === -1) {
-    // didnt find the dst tile in the path
+    // didn't find the dst tile in the path
     upscaled.push(cellDst);
   } else if (dstIndex !== upscaled.length - 1) {
     // found dst tile but not at the end

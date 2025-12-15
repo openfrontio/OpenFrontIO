@@ -98,9 +98,11 @@ export enum GameMapType {
   Japan = "Japan",
   Pluto = "Pluto",
   Montreal = "Montreal",
+  NewYorkCity = "New York City",
   Achiran = "Achiran",
   BaikalNukeWars = "Baikal (Nuke Wars)",
   FourIslands = "Four Islands",
+  Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
@@ -139,7 +141,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Montreal,
     GameMapType.GulfOfStLawrence,
     GameMapType.Lisbon,
+<<<<<<< HEAD
     GameMapType.Manicouagan,
+=======
+    GameMapType.NewYorkCity,
+>>>>>>> 0b9b347933a1779ee900a3edc6c57714fda4de8c
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -149,6 +155,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
+    GameMapType.Svalmel,
   ],
 };
 
@@ -670,6 +677,15 @@ export interface Game extends GameMap {
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
+  // Zero-allocation neighbor iteration (cardinal only) to avoid creating arrays
+  forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void;
+  // Zero-allocation neighbor iteration for performance-critical cluster calculation
+  // Alternative to neighborsWithDiag() that returns arrays
+  // Avoids creating intermediate arrays and uses a callback for better performance
+  forEachNeighborWithDiag(
+    tile: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void;
 
   // Player Management
   player(id: PlayerID): Player;
