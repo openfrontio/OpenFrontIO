@@ -23,6 +23,7 @@ import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
+import { SurrenderExecution } from "./SurrenderExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -123,6 +124,10 @@ export class Executor {
         );
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
+      case "surrender":
+        return new SurrenderExecution(player);
+      case "kick_player":
+        return new NoOpExecution();
       default:
         throw new Error(`intent type ${intent} not found`);
     }

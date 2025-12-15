@@ -7,7 +7,7 @@ export interface MatchAssignment {
   players: string[]; // Player tokens
   config: {
     queueType: "ranked" | "unranked";
-    gameMode: "ffa" | "team";
+    gameMode: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
     playerCount: number;
     teamConfig?: TeamCountConfig;
   };
