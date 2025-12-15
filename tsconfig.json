@@ -27,7 +27,7 @@
     "src/**/*",
     "resources/**/*",
     "proprietary/**/*",
-    "generated/**/*",
+    "src/generated/**/*",
     "tests/**/*",
     "src/scripts"
   ],

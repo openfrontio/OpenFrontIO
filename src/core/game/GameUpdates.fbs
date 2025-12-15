@@ -1,0 +1,308 @@
+// GameUpdates FlatBuffer Schema
+
+namespace GameUpdates;
+
+// Basic types
+table TileRef {
+  x: int;
+  y: int;
+}
+
+table NameViewData {
+  name: string;
+  display_name: string;
+  color: uint;
+}
+
+// Enums
+enum GameUpdateType : byte {
+  Tile = 0,
+  Unit = 1,
+  Player = 2,
+  DisplayEvent = 3,
+  DisplayChatEvent = 4,
+  AllianceRequest = 5,
+  AllianceRequestReply = 6,
+  BrokeAlliance = 7,
+  AllianceExpired = 8,
+  AllianceExtension = 9,
+  TargetPlayer = 10,
+  Emoji = 11,
+  Win = 12,
+  Hash = 13,
+  UnitIncoming = 14,
+  BonusEvent = 15,
+  RailroadEvent = 16,
+  ConquestEvent = 17,
+  EmbargoEvent = 18
+}
+
+enum RailType : byte {
+  VERTICAL = 0,
+  HORIZONTAL = 1,
+  TOP_LEFT = 2,
+  TOP_RIGHT = 3,
+  BOTTOM_LEFT = 4,
+  BOTTOM_RIGHT = 5
+}
+
+enum UnitType : byte {
+  Infantry = 0,
+  Tank = 1,
+  Ship = 2,
+  Plane = 3,
+  Nuke = 4,
+  Train = 5
+}
+
+enum TrainType : byte {
+  Passenger = 0,
+  Freight = 1
+}
+
+enum PlayerType : byte {
+  Human = 0,
+  Bot = 1,
+  Spectator = 2
+}
+
+enum MessageType : byte {
+  Info = 0,
+  Warning = 1,
+  Error = 2,
+  Success = 3
+}
+
+// Update structures
+table TileUpdate {
+  tile_ref: TileRef;
+  owner_id: int = -1;
+  troops: int;
+  gold: long;
+  is_city: bool;
+  is_capital: bool;
+  has_train_station: bool;
+}
+
+table TileUpdateWrapper {
+  update: TileUpdate;
+}
+
+table UnitUpdate {
+  unit_type: UnitType;
+  troops: int;
+  id: int;
+  owner_id: int;
+  last_owner_id: int = -1;
+  pos: TileRef;
+  last_pos: TileRef;
+  is_active: bool;
+  reached_target: bool;
+  retreating: bool;
+  targetable: bool;
+  marked_for_deletion: int = -1;
+  target_unit_id: int = -1;
+  target_tile: TileRef;
+  health: int = 100;
+  under_construction: bool = false;
+  missile_timer_queue: [int];
+  level: int = 1;
+  has_train_station: bool = false;
+  train_type: TrainType;
+  loaded: bool = false;
+}
+
+table AttackUpdate {
+  attacker_id: int;
+  target_id: int;
+  troops: int;
+  id: string;
+  retreating: bool;
+}
+
+table EmojiMessage {
+  player_id: int;
+  emoji: string;
+  target_player_id: int = -1;
+  tick: int;
+}
+
+table AllianceView {
+  id: int;
+  other: int;
+  created_at: int;
+  expires_at: int;
+  has_extension_request: bool;
+}
+
+table PlayerUpdate {
+  name_view_data: NameViewData;
+  client_id: string;
+  name: string;
+  display_name: string;
+  id: int;
+  team: int = -1;
+  small_id: int;
+  player_type: PlayerType;
+  is_alive: bool;
+  is_disconnected: bool;
+  tiles_owned: int;
+  gold: long;
+  troops: int;
+  allies: [int];
+  embargoes: [int];
+  is_traitor: bool;
+  traitor_remaining_ticks: int = -1;
+  targets: [int];
+  outgoing_emojis: [EmojiMessage];
+  outgoing_attacks: [AttackUpdate];
+  incoming_attacks: [AttackUpdate];
+  outgoing_alliance_requests: [int];
+  alliances: [AllianceView];
+  has_spawned: bool;
+  betrayals: int;
+  last_delete_unit_tick: int;
+}
+
+table AllianceRequestUpdate {
+  requestor_id: int;
+  recipient_id: int;
+  created_at: int;
+}
+
+table AllianceRequestReplyUpdate {
+  request: AllianceRequestUpdate;
+  accepted: bool;
+}
+
+table BrokeAllianceUpdate {
+  traitor_id: int;
+  betrayed_id: int;
+}
+
+table AllianceExpiredUpdate {
+  player1_id: int;
+  player2_id: int;
+}
+
+table AllianceExtensionUpdate {
+  player_id: int;
+  alliance_id: int;
+}
+
+table TargetPlayerUpdate {
+  player_id: int;
+  target_id: int;
+}
+
+table EmojiUpdate {
+  emoji: EmojiMessage;
+}
+
+table DisplayMessageUpdate {
+  message: string;
+  message_type: MessageType;
+  gold_amount: long = 0;
+  player_id: int = -1;
+  params_keys: [string];
+  params_values: [string];
+}
+
+table DisplayChatMessageUpdate {
+  key: string;
+  category: string;
+  target: string;
+  player_id: int = -1;
+  is_from: bool;
+  recipient: string;
+}
+
+table WinUpdate {
+  all_players_stats: string; // JSON serialized
+  winner: string; // JSON serialized
+}
+
+table HashUpdate {
+  tick: int;
+  hash: int;
+}
+
+table UnitIncomingUpdate {
+  unit_id: int;
+  message: string;
+  message_type: MessageType;
+  player_id: int;
+}
+
+table BonusEventUpdate {
+  player: int;
+  tile: TileRef;
+  gold: int;
+  troops: int;
+}
+
+table RailTile {
+  tile: TileRef;
+  rail_type: RailType;
+}
+
+table RailroadUpdate {
+  is_active: bool;
+  rail_tiles: [RailTile];
+}
+
+table ConquestUpdate {
+  conqueror_id: int;
+  conquered_id: int;
+  gold: long;
+}
+
+table EmbargoUpdate {
+  event: string; // "start" or "stop"
+  player_id: int;
+  embargoed_id: int;
+}
+
+table ErrorUpdate {
+  err_msg: string;
+  stack: string;
+}
+
+// Union for all update types
+union GameUpdateUnion {
+  TileUpdateWrapper,
+  UnitUpdate,
+  PlayerUpdate,
+  AllianceRequestUpdate,
+  AllianceRequestReplyUpdate,
+  BrokeAllianceUpdate,
+  AllianceExpiredUpdate,
+  DisplayMessageUpdate,
+  DisplayChatMessageUpdate,
+  TargetPlayerUpdate,
+  EmojiUpdate,
+  WinUpdate,
+  HashUpdate,
+  UnitIncomingUpdate,
+  AllianceExtensionUpdate,
+  BonusEventUpdate,
+  RailroadUpdate,
+  ConquestUpdate,
+  EmbargoUpdate
+}
+
+table GameUpdate {
+  type: GameUpdateType;
+  update: GameUpdateUnion;
+}
+
+table GameUpdateViewData {
+  tick: int;
+  updates: [GameUpdate];
+  packed_tile_updates: [ulong];
+  player_name_view_data_keys: [string];
+  player_name_view_data_values: [NameViewData];
+  tick_execution_duration: float = 0.0;
+}
+
+root_type GameUpdateViewData;

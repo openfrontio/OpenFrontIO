@@ -18,7 +18,8 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "prepare": "husky",
-    "gen-maps": "cd map-generator && go run . && npm run format"
+    "gen-maps": "cd map-generator && go run . && npm run format",
+    "gen:fb": "flatc --ts -o ./src/generated ./src/core/game/GameUpdates.fbs"
   },
   "lint-staged": {
     "**/*": [
@@ -121,6 +122,7 @@
     "express": "^4.21.1",
     "express-rate-limit": "^7.5.0",
     "fastpriorityqueue": "^0.7.5",
+    "flatbuffers": "^25.9.23",
     "howler": "^2.2.4",
     "intl-messageformat": "^10.7.16",
     "ip-anonymize": "^0.1.0",
