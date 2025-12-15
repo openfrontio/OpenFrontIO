@@ -57,7 +57,6 @@ export function isProfaneUsername(username: string): boolean {
  *
  * Examples:
  * - "GoodName" -> "GoodName"
- * - "Good$Name" -> "GoodName"
  * - "BadName" -> "Censored"
  * - "[CLAN]GoodName" -> "[CLAN]GoodName"
  * - "[CLaN]BadName" -> "[CLaN] Censored"
