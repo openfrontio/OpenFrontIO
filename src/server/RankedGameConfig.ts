@@ -34,7 +34,11 @@ export function buildRankedGameConfig(
     gameMode === "duos" ||
     gameMode === "trios" ||
     gameMode === "quads";
-  const mode = isTeamMode ? GameMode.Team : GameMode.FFA;
+  const mode = isDuel
+    ? GameMode.Duel
+    : isTeamMode
+      ? GameMode.Team
+      : GameMode.FFA;
 
   // Determine team configuration based on game mode
   let teamConfig: TeamCountConfig | undefined = matchConfig.teamConfig;
@@ -55,7 +59,7 @@ export function buildRankedGameConfig(
 
     bots: 400,
     difficulty: Difficulty.Medium,
-    disableNPCs: isDuel ? true : false,
+    disableNPCs: true,
 
     // Donation rules
     donateGold: isTeamMode,

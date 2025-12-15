@@ -58,19 +58,6 @@ export class RankedQueue extends LitElement {
   }
 
   /**
-   * Get the current player's ELO for the selected game mode
-   * Returns null for unranked modes (duos, trios, quads, unranked ffa)
-   */
-  private get currentPlayerElo(): number | null {
-    if (this.queueType === "unranked") {
-      return null; // No ELO for unranked modes
-    }
-    return this.gameMode === "duel"
-      ? this.playerEloByMode.duel
-      : this.playerEloByMode.ffa;
-  }
-
-  /**
    * Check if the current mode is a ranked mode (has ELO tracking)
    */
   private get isRankedMode(): boolean {
@@ -94,7 +81,7 @@ export class RankedQueue extends LitElement {
       const userMe = await getUserMe();
       if (userMe !== false) {
         // Use eloByMode if available, fall back to elo for backward compatibility
-        const eloByMode = (userMe.player as any).eloByMode;
+        const eloByMode = userMe.player.eloByMode;
         if (eloByMode) {
           this.playerEloByMode = {
             ffa: eloByMode.ffa ?? null,
@@ -167,21 +154,22 @@ export class RankedQueue extends LitElement {
       // Get authentication information
       const loginResult = await userAuth();
       if (loginResult === false) {
-        throw new Error("Please log in to join ranked matchmaking");
+        throw new Error(translateText("ranked_queue.login_required"));
+      }
+
+      // Check if user is actually logged in (not just a guest with persistent ID)
+      const userMe = await getUserMe();
+      if (userMe === false || (!userMe.user.discord && !userMe.user.email)) {
+        throw new Error(translateText("ranked_queue.login_required"));
       }
 
       const token = loginResult.jwt;
 
-      // Determine WebSocket URL based on environment
-      const matchmakingBase = process?.env?.MATCHMAKING_WS_URL;
-      const wsUrl = matchmakingBase
-        ? `${matchmakingBase}/matchmaking/join`
-        : (() => {
-            const apiBase = getApiBase();
-            const protocol = apiBase.startsWith("https://") ? "wss:" : "ws:";
-            const host = apiBase.replace(/^https?:\/\//, "");
-            return `${protocol}//${host}/matchmaking/join`;
-          })();
+      // Determine WebSocket URL based on apiBase
+      const apiBase = getApiBase();
+      const protocol = apiBase.startsWith("https://") ? "wss:" : "ws:";
+      const host = apiBase.replace(/^https?:\/\//, "");
+      const wsUrl = `${protocol}//${host}/matchmaking/join`;
 
       console.log("Connecting to matchmaking WebSocket:", wsUrl);
       this.ws = new WebSocket(wsUrl);
@@ -295,7 +283,7 @@ export class RankedQueue extends LitElement {
     }
   }
 
-  private handleMatchFound(gameId: string, assignment: any) {
+  private handleMatchFound(gameId: string, _assignment: any) {
     console.log(`Match found! Joining game ${gameId}`);
 
     // Set URL hash to trigger automatic join
@@ -454,7 +442,15 @@ export class RankedQueue extends LitElement {
                       "c-button--disabled": this.inQueue || this.isConnecting,
                     })}
                   >
-                    ${translateText("ranked_queue.ffa")}
+                    <div class="flex flex-col items-center">
+                      <span>${translateText("ranked_queue.ffa")}</span>
+                      <span class="text-xs opacity-70"
+                        >${this.isLoadingElo
+                          ? "..."
+                          : (this.playerEloByMode.ffa ?? 1500)}
+                        ELO</span
+                      >
+                    </div>
                   </button>
                   <button
                     @click=${() => this.setGameMode("duel")}
@@ -466,7 +462,15 @@ export class RankedQueue extends LitElement {
                       "c-button--disabled": this.inQueue || this.isConnecting,
                     })}
                   >
-                    ${translateText("ranked_queue.duel")}
+                    <div class="flex flex-col items-center">
+                      <span>${translateText("ranked_queue.duel")}</span>
+                      <span class="text-xs opacity-70"
+                        >${this.isLoadingElo
+                          ? "..."
+                          : (this.playerEloByMode.duel ?? 1500)}
+                        ELO</span
+                      >
+                    </div>
                   </button>
                 </div>
               `
@@ -522,24 +526,6 @@ export class RankedQueue extends LitElement {
                   </button>
                 </div>
               `}
-
-          <!-- ELO Display for ranked modes -->
-          ${this.isRankedMode
-            ? html`
-                <div class="text-center text-white">
-                  ${this.isLoadingElo
-                    ? html`<span class="opacity-70"
-                        >${translateText("ranked_queue.loading_elo")}</span
-                      >`
-                    : this.currentPlayerElo !== null
-                      ? html`<span
-                          >${translateText("ranked_queue.your_elo")}
-                          <strong>${this.currentPlayerElo}</strong></span
-                        >`
-                      : ""}
-                </div>
-              `
-            : ""}
 
           <!-- Join Queue Button -->
           <button

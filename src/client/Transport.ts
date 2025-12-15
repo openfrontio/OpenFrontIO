@@ -174,6 +174,8 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+export class SendSurrenderIntentEvent implements GameEvent {}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -257,6 +259,10 @@ export class Transport {
 
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
+    );
+
+    this.eventBus.on(SendSurrenderIntentEvent, () =>
+      this.onSendSurrenderIntent(),
     );
   }
 
@@ -657,6 +663,13 @@ export class Transport {
       type: "kick_player",
       clientID: this.lobbyConfig.clientID,
       target: event.target,
+    });
+  }
+
+  private onSendSurrenderIntent() {
+    this.sendIntent({
+      type: "surrender",
+      clientID: this.lobbyConfig.clientID,
     });
   }
 
