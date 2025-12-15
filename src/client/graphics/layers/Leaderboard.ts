@@ -12,7 +12,7 @@ interface Entry {
   position: number;
   score: string;
   gold: string;
-  troops: string;
+  maxTroops: string;
   isMyPlayer: boolean;
   isOnSameTeam: boolean;
   player: PlayerView;
@@ -44,7 +44,7 @@ export class Leaderboard extends LitElement implements Layer {
   private showTopFive = true;
 
   @state()
-  private _sortKey: "tiles" | "gold" | "troops" = "tiles";
+  private _sortKey: "tiles" | "gold" | "maxtroops" = "tiles";
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
@@ -63,7 +63,7 @@ export class Leaderboard extends LitElement implements Layer {
     }
   }
 
-  private setSort(key: "tiles" | "gold" | "troops") {
+  private setSort(key: "tiles" | "gold" | "maxtroops") {
     if (this._sortKey === key) {
       this._sortOrder = this._sortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -82,14 +82,16 @@ export class Leaderboard extends LitElement implements Layer {
     const compare = (a: number, b: number) =>
       this._sortOrder === "asc" ? a - b : b - a;
 
+    const maxTroops = (p: PlayerView) => this.game!.config().maxTroops(p);
+
     switch (this._sortKey) {
       case "gold":
         sorted = sorted.sort((a, b) =>
           compare(Number(a.gold()), Number(b.gold())),
         );
         break;
-      case "troops":
-        sorted = sorted.sort((a, b) => compare(a.troops(), b.troops()));
+      case "maxtroops":
+        sorted = sorted.sort((a, b) => compare(maxTroops(a), maxTroops(b)));
         break;
       default:
         sorted = sorted.sort((a, b) =>
@@ -106,7 +108,7 @@ export class Leaderboard extends LitElement implements Layer {
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const troops = player.troops() / 10;
+      const maxTroops = this.game!.config().maxTroops(player) / 10;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -114,7 +116,7 @@ export class Leaderboard extends LitElement implements Layer {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
-        troops: renderNumber(troops),
+        maxTroops: renderNumber(maxTroops),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -136,7 +138,7 @@ export class Leaderboard extends LitElement implements Layer {
       }
 
       if (myPlayer.isAlive()) {
-        const myPlayerTroops = myPlayer.troops() / 10;
+        const myPlayerMaxTroops = this.game!.config().maxTroops(myPlayer) / 10;
         this.players.pop();
         this.players.push({
           name: myPlayer.displayName(),
@@ -145,7 +147,7 @@ export class Leaderboard extends LitElement implements Layer {
             myPlayer.numTilesOwned() / this.game.numLandTiles(),
           ),
           gold: renderNumber(myPlayer.gold()),
-          troops: renderNumber(myPlayerTroops),
+          maxTroops: renderNumber(myPlayerMaxTroops),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,
@@ -181,7 +183,7 @@ export class Leaderboard extends LitElement implements Layer {
       >
         <div
           class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 75px;"
+          style="grid-template-columns: 30px 100px 70px 55px 105px;"
         >
           <div class="contents font-bold bg-gray-700/50">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
@@ -191,7 +193,7 @@ export class Leaderboard extends LitElement implements Layer {
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
@@ -202,7 +204,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
@@ -213,11 +215,11 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
-              @click=${() => this.setSort("troops")}
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap truncate"
+              @click=${() => this.setSort("maxtroops")}
             >
-              ${translateText("leaderboard.troops")}
-              ${this._sortKey === "troops"
+              ${translateText("leaderboard.maxtroops")}
+              ${this._sortKey === "maxtroops"
                 ? this._sortOrder === "asc"
                   ? "⬆️"
                   : "⬇️"
@@ -250,7 +252,7 @@ export class Leaderboard extends LitElement implements Layer {
                   ${player.gold}
                 </div>
                 <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.troops}
+                  ${player.maxTroops}
                 </div>
               </div>
             `,
