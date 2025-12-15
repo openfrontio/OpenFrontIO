@@ -35,8 +35,6 @@ import {
   fixProfaneUsername,
   isProfaneUsername,
   MAX_USERNAME_LENGTH,
-  MIN_USERNAME_LENGTH,
-  sanitizeUsername,
   validateUsername,
 } from "../src/core/validations/username";
 
@@ -105,30 +103,9 @@ describe("username.ts functions", () => {
       const res = validateUsername("Good_Name123");
       expect(res.isValid).toBe(true);
     });
-    test("accepts allowed Unicode like 🐈 or ü", () => {
-      const res = validateUsername("Cat🐈Üser");
+    test("accepts allowed Unicode like ü", () => {
+      const res = validateUsername("Üser");
       expect(res.isValid).toBe(true);
-    });
-  });
-
-  describe("sanitizeUsername", () => {
-    test.each([
-      { input: "GoodName", expected: "GoodName" },
-      { input: "a!", expected: "axx" },
-      { input: "a$%b", expected: "abx" },
-      {
-        input: "abc".repeat(10),
-        expected: "abc"
-          .repeat(Math.floor(MAX_USERNAME_LENGTH / 3))
-          .slice(0, MAX_USERNAME_LENGTH),
-      },
-      { input: "", expected: "xxx" },
-      { input: "Ünicode🐈Test!", expected: "Ünicode🐈Test" },
-    ])('sanitizeUsername("%s") → "%s"', ({ input, expected }) => {
-      const out = sanitizeUsername(input);
-      expect(out).toBe(expected);
-      expect(out.length).toBeGreaterThanOrEqual(MIN_USERNAME_LENGTH);
-      expect(out.length).toBeLessThanOrEqual(MAX_USERNAME_LENGTH);
     });
   });
 });
