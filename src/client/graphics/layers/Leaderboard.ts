@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { translateText } from "../../../client/Utils";
+import { renderTroops, translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
@@ -108,7 +108,7 @@ export class Leaderboard extends LitElement implements Layer {
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const maxTroops = this.game!.config().maxTroops(player) / 10;
+      const maxTroops = this.game!.config().maxTroops(player);
       return {
         name: player.displayName(),
         position: index + 1,
@@ -116,7 +116,7 @@ export class Leaderboard extends LitElement implements Layer {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
-        maxTroops: renderNumber(maxTroops),
+        maxTroops: renderTroops(maxTroops),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -138,7 +138,7 @@ export class Leaderboard extends LitElement implements Layer {
       }
 
       if (myPlayer.isAlive()) {
-        const myPlayerMaxTroops = this.game!.config().maxTroops(myPlayer) / 10;
+        const myPlayerMaxTroops = this.game!.config().maxTroops(myPlayer);
         this.players.pop();
         this.players.push({
           name: myPlayer.displayName(),
@@ -147,7 +147,7 @@ export class Leaderboard extends LitElement implements Layer {
             myPlayer.numTilesOwned() / this.game.numLandTiles(),
           ),
           gold: renderNumber(myPlayer.gold()),
-          maxTroops: renderNumber(myPlayerMaxTroops),
+          maxTroops: renderTroops(myPlayerMaxTroops),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,
