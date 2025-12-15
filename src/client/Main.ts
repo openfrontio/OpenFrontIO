@@ -504,6 +504,10 @@ class Client {
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
+        if (this.usernameInput) {
+          // fix edge case where username-validation-error is re-rendered and hidden tag removed
+          this.usernameInput.validationError = "";
+        }
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
