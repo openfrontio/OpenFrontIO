@@ -1,3 +1,5 @@
+import type { EventBus } from "./core/EventBus";
+
 declare module "*.png" {
   const content: string;
   export default content;
@@ -44,4 +46,11 @@ declare module "*.xml" {
 declare module "*.mp3" {
   const value: string;
   export default value;
+}
+
+declare global {
+  interface Window {
+    __eventBus?: EventBus;
+    __username?: string;
+  }
 }

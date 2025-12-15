@@ -21,11 +21,11 @@ export class LobbyChatPanel extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener("lobby-chat:message", this.onIncoming as any);
-    const globalBus = (window as any).__eventBus as EventBus | undefined;
+    const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
     }
-    this.username = (window as any).__username ?? null;
+    this.username = window.__username ?? null;
     document.addEventListener("event-bus:ready", this.onBusReady as any);
   }
 
@@ -52,18 +52,18 @@ export class LobbyChatPanel extends LitElement {
   };
 
   private onBusReady = () => {
-    const globalBus = (window as any).__eventBus as EventBus | undefined;
+    const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
     }
-    this.username ??= (window as any).__username ?? null;
+    this.username ??= window.__username ?? null;
   };
 
   private sendMessage() {
     const text = this.inputText.trim();
     if (!text) return;
     if (!this.bus) {
-      const globalBus = (window as any).__eventBus as EventBus | undefined;
+      const globalBus = window.__eventBus;
       if (globalBus) {
         this.bus = globalBus;
       }
