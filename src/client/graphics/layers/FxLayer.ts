@@ -34,8 +34,8 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
-  private lastSantaTime = 0;
-  private santaInterval = 60_000; // ms
+  private lastSantaTick = 0;
+  private santaIntervalTicks = 60 * 10; // one each minute
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -77,11 +77,11 @@ export class FxLayer implements Layer {
   }
 
   private spawnSantaIfNeeded() {
-    const now = Date.now();
-    if (now - this.lastSantaTime < this.santaInterval) {
+    const currentTick = this.game.ticks();
+    if (currentTick - this.lastSantaTick < this.santaIntervalTicks) {
       return;
     }
-    this.lastSantaTime = now;
+    this.lastSantaTick = currentTick;
     // Santa enters left side, exits right
     const margin = 50;
     const startX = -margin;

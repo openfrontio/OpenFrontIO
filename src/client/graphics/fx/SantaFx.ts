@@ -39,9 +39,7 @@ export class SantaFx implements Fx {
 
     const x = this.startX + Math.floor((this.endX - this.startX) * t);
     const y = this.startY;
-
-    (this.spriteFx as any).x = x;
-    (this.spriteFx as any).y = y;
+    this.spriteFx.setPosition(x, y);
 
     return this.spriteFx.renderTick(frameTime, ctx);
   }
