@@ -39,6 +39,11 @@ Licensed under [Open Data Commons Open Database License (ODbL)](https://opendata
 [Geographicus Rare Antique Maps](https://www.geographicus.com/P/AntiqueMap/newyorkcity-usgs-1915)
 [Public Domain](https://www.geographicus.com/P/faq)
 
+### OpenTopography
+
+Copernicus Global Digital Elevation Models distributed by OpenTopography.
+Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://opentopography.org/usageterms)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
