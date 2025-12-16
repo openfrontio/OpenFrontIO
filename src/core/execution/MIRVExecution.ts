@@ -45,9 +45,6 @@ export class MirvExecution implements Execution {
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
-    // Record stats
-    this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
-
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
       const alliance = this.player.allianceWith(this.targetPlayer);
@@ -71,6 +68,7 @@ export class MirvExecution implements Execution {
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
       });
+      this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
       const x = Math.floor(
         (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
       );
