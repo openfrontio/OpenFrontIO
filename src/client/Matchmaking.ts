@@ -2,9 +2,10 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
+import { getPlayToken } from "./Auth";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { getPlayToken, JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
@@ -53,7 +54,7 @@ export class MatchmakingModal extends LitElement {
     const config = await getServerConfigFromClient();
 
     this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
-    this.socket.onopen = () => {
+    this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
       setTimeout(() => {
         // Set a delay so the user can see the "connecting" message,
@@ -64,7 +65,7 @@ export class MatchmakingModal extends LitElement {
       this.socket?.send(
         JSON.stringify({
           type: "auth",
-          playToken: getPlayToken(),
+          playToken: await getPlayToken(),
         }),
       );
     };
@@ -172,7 +173,7 @@ export class MatchmakingButton extends LitElement {
       <div class="z-[9999]">
         <button
           @click="${this.open}"
-          class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
+          class="w-full h-16 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-offset-4"
           title="${translateText("matchmaking_modal.title")}"
         >
           Matchmaking

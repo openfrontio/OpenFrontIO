@@ -10,13 +10,13 @@ import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { getUserMe } from "../../Api";
 import "../../components/PatternButton";
 import {
   fetchCosmetics,
   handlePurchase,
   patternRelationship,
 } from "../../Cosmetics";
-import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 

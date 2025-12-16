@@ -17,9 +17,9 @@ import {
   getClanTag,
   replacer,
 } from "../core/Util";
+import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { getPersistentID } from "./Main";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
