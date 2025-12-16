@@ -31,7 +31,7 @@
   background-repeat: no-repeat;
   top: -15px;
   right: -15px;
-  z-index: 10000; /* Above snowflakes */
+  z-index: 1000;
 }
 
 @keyframes snowflake-fall {
