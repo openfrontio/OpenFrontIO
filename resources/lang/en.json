@@ -273,7 +273,8 @@
     "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams",
-    "players_per_team": "of {num}"
+    "players_per_team": "of {num}",
+    "following_game": "Following Game"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",

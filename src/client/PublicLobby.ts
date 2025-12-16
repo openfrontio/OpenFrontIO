@@ -149,12 +149,42 @@ export class PublicLobby extends LitElement {
       : modeLabel;
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
+    const nextMapName = lobby.gameConfig.nextMap
+      ? translateText(
+          `map.${lobby.gameConfig.nextMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+        )
+      : "";
+
+    // Calculate details for Next Game
+    const nextGameMode = lobby.gameConfig.nextGameMode;
+    const nextTeamCount =
+      nextGameMode === GameMode.Team
+        ? (lobby.gameConfig.nextPlayerTeams ?? 0)
+        : null;
+    const nextMaxPlayers = lobby.gameConfig.nextMaxPlayers ?? 0;
+    const nextTeamSize = this.getTeamSize(nextTeamCount, nextMaxPlayers);
+    const nextTeamTotal = this.getTeamTotal(
+      nextTeamCount,
+      nextTeamSize,
+      nextMaxPlayers,
+    );
+    const nextModeLabel = nextGameMode
+      ? this.getModeLabel(nextGameMode, nextTeamCount, nextTeamTotal)
+      : "";
+    const nextTeamDetailLabel = nextGameMode
+      ? this.getTeamDetailLabel(
+          nextGameMode,
+          nextTeamCount,
+          nextTeamTotal,
+          nextTeamSize,
+        )
+      : null;
 
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
+        class="isolate grid h-60 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
           ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
           : "bg-gradient-to-r from-red-800 to-red-700"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
@@ -197,6 +227,31 @@ export class PublicLobby extends LitElement {
             </div>
             <div class="text-md font-medium text-white-400">${timeDisplay}</div>
           </div>
+          ${lobby.gameConfig.nextMap
+            ? html` <div
+                class="col-span-full border-t border-white/20 pt-2 mt-2 flex flex-col items-end"
+              >
+                <div
+                  class="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1"
+                >
+                  ${translateText("public_lobby.following_game")}
+                </div>
+                <div
+                  class="text-sm font-medium text-white-300 flex items-center justify-end gap-1"
+                >
+                  <span class="text-xs text-red-800 bg-white rounded-sm px-1"
+                    >${nextModeLabel}</span
+                  >
+                  ${nextTeamDetailLabel
+                    ? html`<span
+                        class="text-xs text-red-800 bg-white rounded-sm px-1"
+                        >${nextTeamDetailLabel}</span
+                      >`
+                    : ""}
+                  <span>${nextMapName}</span>
+                </div>
+              </div>`
+            : ""}
         </div>
       </button>
     `;
