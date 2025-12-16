@@ -18,7 +18,8 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "prepare": "husky",
-    "gen-maps": "cd map-generator && go run . && npm run format"
+    "gen-maps": "cd map-generator && go run . && npm run format",
+    "install": "npm ci --ignore-scripts"
   },
   "lint-staged": {
     "**/*": [
