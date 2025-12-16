@@ -2,110 +2,133 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class AttackUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class AttackUpdate implements flatbuffers.IUnpackableObject<AttackUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): AttackUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):AttackUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsAttackUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AttackUpdate,
-  ): AttackUpdate {
-    return (obj || new AttackUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsAttackUpdate(bb:flatbuffers.ByteBuffer, obj?:AttackUpdate):AttackUpdate {
+  return (obj || new AttackUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsAttackUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AttackUpdate,
-  ): AttackUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new AttackUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsAttackUpdate(bb:flatbuffers.ByteBuffer, obj?:AttackUpdate):AttackUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new AttackUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  attackerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+attackerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  targetId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+targetId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  troops(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+troops():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  id(): string | null;
-  id(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  id(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+id():string|null
+id(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+id(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  retreating(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+retreating():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  static startAttackUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(5);
-  }
+static startAttackUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(5);
+}
 
-  static addAttackerId(builder: flatbuffers.Builder, attackerId: number) {
-    builder.addFieldInt32(0, attackerId, 0);
-  }
+static addAttackerId(builder:flatbuffers.Builder, attackerId:number) {
+  builder.addFieldInt32(0, attackerId, 0);
+}
 
-  static addTargetId(builder: flatbuffers.Builder, targetId: number) {
-    builder.addFieldInt32(1, targetId, 0);
-  }
+static addTargetId(builder:flatbuffers.Builder, targetId:number) {
+  builder.addFieldInt32(1, targetId, 0);
+}
 
-  static addTroops(builder: flatbuffers.Builder, troops: number) {
-    builder.addFieldInt32(2, troops, 0);
-  }
+static addTroops(builder:flatbuffers.Builder, troops:number) {
+  builder.addFieldInt32(2, troops, 0);
+}
 
-  static addId(builder: flatbuffers.Builder, idOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(3, idOffset, 0);
-  }
+static addId(builder:flatbuffers.Builder, idOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, idOffset, 0);
+}
 
-  static addRetreating(builder: flatbuffers.Builder, retreating: boolean) {
-    builder.addFieldInt8(4, +retreating, +false);
-  }
+static addRetreating(builder:flatbuffers.Builder, retreating:boolean) {
+  builder.addFieldInt8(4, +retreating, +false);
+}
 
-  static endAttackUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endAttackUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createAttackUpdate(
-    builder: flatbuffers.Builder,
-    attackerId: number,
-    targetId: number,
-    troops: number,
-    idOffset: flatbuffers.Offset,
-    retreating: boolean,
-  ): flatbuffers.Offset {
-    AttackUpdate.startAttackUpdate(builder);
-    AttackUpdate.addAttackerId(builder, attackerId);
-    AttackUpdate.addTargetId(builder, targetId);
-    AttackUpdate.addTroops(builder, troops);
-    AttackUpdate.addId(builder, idOffset);
-    AttackUpdate.addRetreating(builder, retreating);
-    return AttackUpdate.endAttackUpdate(builder);
-  }
+static createAttackUpdate(builder:flatbuffers.Builder, attackerId:number, targetId:number, troops:number, idOffset:flatbuffers.Offset, retreating:boolean):flatbuffers.Offset {
+  AttackUpdate.startAttackUpdate(builder);
+  AttackUpdate.addAttackerId(builder, attackerId);
+  AttackUpdate.addTargetId(builder, targetId);
+  AttackUpdate.addTroops(builder, troops);
+  AttackUpdate.addId(builder, idOffset);
+  AttackUpdate.addRetreating(builder, retreating);
+  return AttackUpdate.endAttackUpdate(builder);
+}
+
+unpack(): AttackUpdateT {
+  return new AttackUpdateT(
+    this.attackerId(),
+    this.targetId(),
+    this.troops(),
+    this.id(),
+    this.retreating()
+  );
+}
+
+
+unpackTo(_o: AttackUpdateT): void {
+  _o.attackerId = this.attackerId();
+  _o.targetId = this.targetId();
+  _o.troops = this.troops();
+  _o.id = this.id();
+  _o.retreating = this.retreating();
+}
+}
+
+export class AttackUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public attackerId: number = 0,
+  public targetId: number = 0,
+  public troops: number = 0,
+  public id: string|Uint8Array|null = null,
+  public retreating: boolean = false
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const id = (this.id !== null ? builder.createString(this.id!) : 0);
+
+  return AttackUpdate.createAttackUpdate(builder,
+    this.attackerId,
+    this.targetId,
+    this.troops,
+    id,
+    this.retreating
+  );
+}
 }

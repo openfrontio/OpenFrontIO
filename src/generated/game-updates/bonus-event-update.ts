@@ -2,87 +2,115 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { TileRef } from "../game-updates/tile-ref.js";
 
-export class BonusEventUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class BonusEventUpdate implements flatbuffers.IUnpackableObject<BonusEventUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): BonusEventUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):BonusEventUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsBonusEventUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: BonusEventUpdate,
-  ): BonusEventUpdate {
-    return (obj || new BonusEventUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsBonusEventUpdate(bb:flatbuffers.ByteBuffer, obj?:BonusEventUpdate):BonusEventUpdate {
+  return (obj || new BonusEventUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsBonusEventUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: BonusEventUpdate,
-  ): BonusEventUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new BonusEventUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsBonusEventUpdate(bb:flatbuffers.ByteBuffer, obj?:BonusEventUpdate):BonusEventUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new BonusEventUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  player(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+player():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  tile(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+tile():bigint {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt64(this.bb_pos + offset) : BigInt('0');
+}
 
-  gold(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+gold():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  troops(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+troops():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startBonusEventUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(4);
-  }
+static startBonusEventUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
 
-  static addPlayer(builder: flatbuffers.Builder, player: number) {
-    builder.addFieldInt32(0, player, 0);
-  }
+static addPlayer(builder:flatbuffers.Builder, player:number) {
+  builder.addFieldInt32(0, player, 0);
+}
 
-  static addTile(builder: flatbuffers.Builder, tileOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(1, tileOffset, 0);
-  }
+static addTile(builder:flatbuffers.Builder, tile:bigint) {
+  builder.addFieldInt64(1, tile, BigInt('0'));
+}
 
-  static addGold(builder: flatbuffers.Builder, gold: number) {
-    builder.addFieldInt32(2, gold, 0);
-  }
+static addGold(builder:flatbuffers.Builder, gold:number) {
+  builder.addFieldInt32(2, gold, 0);
+}
 
-  static addTroops(builder: flatbuffers.Builder, troops: number) {
-    builder.addFieldInt32(3, troops, 0);
-  }
+static addTroops(builder:flatbuffers.Builder, troops:number) {
+  builder.addFieldInt32(3, troops, 0);
+}
 
-  static endBonusEventUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endBonusEventUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createBonusEventUpdate(builder:flatbuffers.Builder, player:number, tile:bigint, gold:number, troops:number):flatbuffers.Offset {
+  BonusEventUpdate.startBonusEventUpdate(builder);
+  BonusEventUpdate.addPlayer(builder, player);
+  BonusEventUpdate.addTile(builder, tile);
+  BonusEventUpdate.addGold(builder, gold);
+  BonusEventUpdate.addTroops(builder, troops);
+  return BonusEventUpdate.endBonusEventUpdate(builder);
+}
+
+unpack(): BonusEventUpdateT {
+  return new BonusEventUpdateT(
+    this.player(),
+    this.tile(),
+    this.gold(),
+    this.troops()
+  );
+}
+
+
+unpackTo(_o: BonusEventUpdateT): void {
+  _o.player = this.player();
+  _o.tile = this.tile();
+  _o.gold = this.gold();
+  _o.troops = this.troops();
+}
+}
+
+export class BonusEventUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public player: number = 0,
+  public tile: bigint = BigInt('0'),
+  public gold: number = 0,
+  public troops: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return BonusEventUpdate.createBonusEventUpdate(builder,
+    this.player,
+    this.tile,
+    this.gold,
+    this.troops
+  );
+}
 }

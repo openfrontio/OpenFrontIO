@@ -2,86 +2,101 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class AllianceRequestUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class AllianceRequestUpdate implements flatbuffers.IUnpackableObject<AllianceRequestUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): AllianceRequestUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):AllianceRequestUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsAllianceRequestUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceRequestUpdate,
-  ): AllianceRequestUpdate {
-    return (obj || new AllianceRequestUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsAllianceRequestUpdate(bb:flatbuffers.ByteBuffer, obj?:AllianceRequestUpdate):AllianceRequestUpdate {
+  return (obj || new AllianceRequestUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsAllianceRequestUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceRequestUpdate,
-  ): AllianceRequestUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new AllianceRequestUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsAllianceRequestUpdate(bb:flatbuffers.ByteBuffer, obj?:AllianceRequestUpdate):AllianceRequestUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new AllianceRequestUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  requestorId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+requestorId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  recipientId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+recipientId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  createdAt(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+createdAt():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startAllianceRequestUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(3);
-  }
+static startAllianceRequestUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(3);
+}
 
-  static addRequestorId(builder: flatbuffers.Builder, requestorId: number) {
-    builder.addFieldInt32(0, requestorId, 0);
-  }
+static addRequestorId(builder:flatbuffers.Builder, requestorId:number) {
+  builder.addFieldInt32(0, requestorId, 0);
+}
 
-  static addRecipientId(builder: flatbuffers.Builder, recipientId: number) {
-    builder.addFieldInt32(1, recipientId, 0);
-  }
+static addRecipientId(builder:flatbuffers.Builder, recipientId:number) {
+  builder.addFieldInt32(1, recipientId, 0);
+}
 
-  static addCreatedAt(builder: flatbuffers.Builder, createdAt: number) {
-    builder.addFieldInt32(2, createdAt, 0);
-  }
+static addCreatedAt(builder:flatbuffers.Builder, createdAt:number) {
+  builder.addFieldInt32(2, createdAt, 0);
+}
 
-  static endAllianceRequestUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endAllianceRequestUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createAllianceRequestUpdate(
-    builder: flatbuffers.Builder,
-    requestorId: number,
-    recipientId: number,
-    createdAt: number,
-  ): flatbuffers.Offset {
-    AllianceRequestUpdate.startAllianceRequestUpdate(builder);
-    AllianceRequestUpdate.addRequestorId(builder, requestorId);
-    AllianceRequestUpdate.addRecipientId(builder, recipientId);
-    AllianceRequestUpdate.addCreatedAt(builder, createdAt);
-    return AllianceRequestUpdate.endAllianceRequestUpdate(builder);
-  }
+static createAllianceRequestUpdate(builder:flatbuffers.Builder, requestorId:number, recipientId:number, createdAt:number):flatbuffers.Offset {
+  AllianceRequestUpdate.startAllianceRequestUpdate(builder);
+  AllianceRequestUpdate.addRequestorId(builder, requestorId);
+  AllianceRequestUpdate.addRecipientId(builder, recipientId);
+  AllianceRequestUpdate.addCreatedAt(builder, createdAt);
+  return AllianceRequestUpdate.endAllianceRequestUpdate(builder);
+}
+
+unpack(): AllianceRequestUpdateT {
+  return new AllianceRequestUpdateT(
+    this.requestorId(),
+    this.recipientId(),
+    this.createdAt()
+  );
+}
+
+
+unpackTo(_o: AllianceRequestUpdateT): void {
+  _o.requestorId = this.requestorId();
+  _o.recipientId = this.recipientId();
+  _o.createdAt = this.createdAt();
+}
+}
+
+export class AllianceRequestUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public requestorId: number = 0,
+  public recipientId: number = 0,
+  public createdAt: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return AllianceRequestUpdate.createAllianceRequestUpdate(builder,
+    this.requestorId,
+    this.recipientId,
+    this.createdAt
+  );
+}
 }

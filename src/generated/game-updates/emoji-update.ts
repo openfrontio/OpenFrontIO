@@ -2,72 +2,76 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { EmojiMessage } from "../game-updates/emoji-message.js";
+import { EmojiMessage, EmojiMessageT } from '../game-updates/emoji-message.js';
 
-export class EmojiUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class EmojiUpdate implements flatbuffers.IUnpackableObject<EmojiUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): EmojiUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):EmojiUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsEmojiUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: EmojiUpdate,
-  ): EmojiUpdate {
-    return (obj || new EmojiUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsEmojiUpdate(bb:flatbuffers.ByteBuffer, obj?:EmojiUpdate):EmojiUpdate {
+  return (obj || new EmojiUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsEmojiUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: EmojiUpdate,
-  ): EmojiUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new EmojiUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsEmojiUpdate(bb:flatbuffers.ByteBuffer, obj?:EmojiUpdate):EmojiUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new EmojiUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  emoji(obj?: EmojiMessage): EmojiMessage | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? (obj || new EmojiMessage()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+emoji(obj?:EmojiMessage):EmojiMessage|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? (obj || new EmojiMessage()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
 
-  static startEmojiUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(1);
-  }
+static startEmojiUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
 
-  static addEmoji(
-    builder: flatbuffers.Builder,
-    emojiOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, emojiOffset, 0);
-  }
+static addEmoji(builder:flatbuffers.Builder, emojiOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, emojiOffset, 0);
+}
 
-  static endEmojiUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endEmojiUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createEmojiUpdate(
-    builder: flatbuffers.Builder,
-    emojiOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    EmojiUpdate.startEmojiUpdate(builder);
-    EmojiUpdate.addEmoji(builder, emojiOffset);
-    return EmojiUpdate.endEmojiUpdate(builder);
-  }
+static createEmojiUpdate(builder:flatbuffers.Builder, emojiOffset:flatbuffers.Offset):flatbuffers.Offset {
+  EmojiUpdate.startEmojiUpdate(builder);
+  EmojiUpdate.addEmoji(builder, emojiOffset);
+  return EmojiUpdate.endEmojiUpdate(builder);
+}
+
+unpack(): EmojiUpdateT {
+  return new EmojiUpdateT(
+    (this.emoji() !== null ? this.emoji()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: EmojiUpdateT): void {
+  _o.emoji = (this.emoji() !== null ? this.emoji()!.unpack() : null);
+}
+}
+
+export class EmojiUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public emoji: EmojiMessageT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const emoji = (this.emoji !== null ? this.emoji!.pack(builder) : 0);
+
+  return EmojiUpdate.createEmojiUpdate(builder,
+    emoji
+  );
+}
 }

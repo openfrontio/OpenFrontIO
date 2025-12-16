@@ -2,73 +2,87 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class HashUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class HashUpdate implements flatbuffers.IUnpackableObject<HashUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): HashUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):HashUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsHashUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: HashUpdate,
-  ): HashUpdate {
-    return (obj || new HashUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsHashUpdate(bb:flatbuffers.ByteBuffer, obj?:HashUpdate):HashUpdate {
+  return (obj || new HashUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsHashUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: HashUpdate,
-  ): HashUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new HashUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsHashUpdate(bb:flatbuffers.ByteBuffer, obj?:HashUpdate):HashUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new HashUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  tick(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+tick():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  hash(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+hash():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startHashUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startHashUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addTick(builder: flatbuffers.Builder, tick: number) {
-    builder.addFieldInt32(0, tick, 0);
-  }
+static addTick(builder:flatbuffers.Builder, tick:number) {
+  builder.addFieldInt32(0, tick, 0);
+}
 
-  static addHash(builder: flatbuffers.Builder, hash: number) {
-    builder.addFieldInt32(1, hash, 0);
-  }
+static addHash(builder:flatbuffers.Builder, hash:number) {
+  builder.addFieldInt32(1, hash, 0);
+}
 
-  static endHashUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endHashUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createHashUpdate(
-    builder: flatbuffers.Builder,
-    tick: number,
-    hash: number,
-  ): flatbuffers.Offset {
-    HashUpdate.startHashUpdate(builder);
-    HashUpdate.addTick(builder, tick);
-    HashUpdate.addHash(builder, hash);
-    return HashUpdate.endHashUpdate(builder);
-  }
+static createHashUpdate(builder:flatbuffers.Builder, tick:number, hash:number):flatbuffers.Offset {
+  HashUpdate.startHashUpdate(builder);
+  HashUpdate.addTick(builder, tick);
+  HashUpdate.addHash(builder, hash);
+  return HashUpdate.endHashUpdate(builder);
+}
+
+unpack(): HashUpdateT {
+  return new HashUpdateT(
+    this.tick(),
+    this.hash()
+  );
+}
+
+
+unpackTo(_o: HashUpdateT): void {
+  _o.tick = this.tick();
+  _o.hash = this.hash();
+}
+}
+
+export class HashUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public tick: number = 0,
+  public hash: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return HashUpdate.createHashUpdate(builder,
+    this.tick,
+    this.hash
+  );
+}
 }

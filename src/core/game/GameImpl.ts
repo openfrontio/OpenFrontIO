@@ -1,3 +1,4 @@
+import { Builder } from "flatbuffers";
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
@@ -33,7 +34,7 @@ import {
   UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -84,6 +85,8 @@ export class GameImpl implements Game {
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
+
+  private builder: Builder | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -201,8 +204,10 @@ export class GameImpl implements Game {
     return this.miniGameMap;
   }
 
-  addUpdate(update: GameUpdate) {
-    (this.updates[update.type] as GameUpdate[]).push(update);
+  addUpdate(buildFn: (builder: Builder) => void) {
+    if (this.builder) {
+      buildFn(this.builder);
+    }
   }
 
   nextUnitID(): number {
@@ -345,7 +350,8 @@ export class GameImpl implements Game {
     return this._ticks;
   }
 
-  executeNextTick(): GameUpdates {
+  executeNextTick(builder: Builder): GameUpdates {
+    this.builder = builder;
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (

@@ -2,141 +2,157 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { TileRef } from "../game-updates/tile-ref.js";
 
-export class TileUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class TileUpdate implements flatbuffers.IUnpackableObject<TileUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): TileUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):TileUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsTileUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TileUpdate,
-  ): TileUpdate {
-    return (obj || new TileUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsTileUpdate(bb:flatbuffers.ByteBuffer, obj?:TileUpdate):TileUpdate {
+  return (obj || new TileUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsTileUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TileUpdate,
-  ): TileUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new TileUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsTileUpdate(bb:flatbuffers.ByteBuffer, obj?:TileUpdate):TileUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TileUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  tileRef(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+tileRef():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readFloat64(this.bb_pos + offset) : 0.0;
+}
 
-  ownerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+ownerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  troops(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+troops():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  gold(): bigint {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt64(this.bb_pos + offset) : BigInt("0");
-  }
+gold():bigint {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt64(this.bb_pos + offset) : BigInt('0');
+}
 
-  isCity(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+isCity():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  isCapital(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 14);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+isCapital():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  hasTrainStation(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 16);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+hasTrainStation():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 16);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  static startTileUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(7);
-  }
+static startTileUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(7);
+}
 
-  static addTileRef(
-    builder: flatbuffers.Builder,
-    tileRefOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, tileRefOffset, 0);
-  }
+static addTileRef(builder:flatbuffers.Builder, tileRef:number) {
+  builder.addFieldFloat64(0, tileRef, 0.0);
+}
 
-  static addOwnerId(builder: flatbuffers.Builder, ownerId: number) {
-    builder.addFieldInt32(1, ownerId, -1);
-  }
+static addOwnerId(builder:flatbuffers.Builder, ownerId:number) {
+  builder.addFieldInt32(1, ownerId, -1);
+}
 
-  static addTroops(builder: flatbuffers.Builder, troops: number) {
-    builder.addFieldInt32(2, troops, 0);
-  }
+static addTroops(builder:flatbuffers.Builder, troops:number) {
+  builder.addFieldInt32(2, troops, 0);
+}
 
-  static addGold(builder: flatbuffers.Builder, gold: bigint) {
-    builder.addFieldInt64(3, gold, BigInt("0"));
-  }
+static addGold(builder:flatbuffers.Builder, gold:bigint) {
+  builder.addFieldInt64(3, gold, BigInt('0'));
+}
 
-  static addIsCity(builder: flatbuffers.Builder, isCity: boolean) {
-    builder.addFieldInt8(4, +isCity, +false);
-  }
+static addIsCity(builder:flatbuffers.Builder, isCity:boolean) {
+  builder.addFieldInt8(4, +isCity, +false);
+}
 
-  static addIsCapital(builder: flatbuffers.Builder, isCapital: boolean) {
-    builder.addFieldInt8(5, +isCapital, +false);
-  }
+static addIsCapital(builder:flatbuffers.Builder, isCapital:boolean) {
+  builder.addFieldInt8(5, +isCapital, +false);
+}
 
-  static addHasTrainStation(
-    builder: flatbuffers.Builder,
-    hasTrainStation: boolean,
-  ) {
-    builder.addFieldInt8(6, +hasTrainStation, +false);
-  }
+static addHasTrainStation(builder:flatbuffers.Builder, hasTrainStation:boolean) {
+  builder.addFieldInt8(6, +hasTrainStation, +false);
+}
 
-  static endTileUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endTileUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createTileUpdate(
-    builder: flatbuffers.Builder,
-    tileRefOffset: flatbuffers.Offset,
-    ownerId: number,
-    troops: number,
-    gold: bigint,
-    isCity: boolean,
-    isCapital: boolean,
-    hasTrainStation: boolean,
-  ): flatbuffers.Offset {
-    TileUpdate.startTileUpdate(builder);
-    TileUpdate.addTileRef(builder, tileRefOffset);
-    TileUpdate.addOwnerId(builder, ownerId);
-    TileUpdate.addTroops(builder, troops);
-    TileUpdate.addGold(builder, gold);
-    TileUpdate.addIsCity(builder, isCity);
-    TileUpdate.addIsCapital(builder, isCapital);
-    TileUpdate.addHasTrainStation(builder, hasTrainStation);
-    return TileUpdate.endTileUpdate(builder);
-  }
+static createTileUpdate(builder:flatbuffers.Builder, tileRef:number, ownerId:number, troops:number, gold:bigint, isCity:boolean, isCapital:boolean, hasTrainStation:boolean):flatbuffers.Offset {
+  TileUpdate.startTileUpdate(builder);
+  TileUpdate.addTileRef(builder, tileRef);
+  TileUpdate.addOwnerId(builder, ownerId);
+  TileUpdate.addTroops(builder, troops);
+  TileUpdate.addGold(builder, gold);
+  TileUpdate.addIsCity(builder, isCity);
+  TileUpdate.addIsCapital(builder, isCapital);
+  TileUpdate.addHasTrainStation(builder, hasTrainStation);
+  return TileUpdate.endTileUpdate(builder);
+}
+
+unpack(): TileUpdateT {
+  return new TileUpdateT(
+    this.tileRef(),
+    this.ownerId(),
+    this.troops(),
+    this.gold(),
+    this.isCity(),
+    this.isCapital(),
+    this.hasTrainStation()
+  );
+}
+
+
+unpackTo(_o: TileUpdateT): void {
+  _o.tileRef = this.tileRef();
+  _o.ownerId = this.ownerId();
+  _o.troops = this.troops();
+  _o.gold = this.gold();
+  _o.isCity = this.isCity();
+  _o.isCapital = this.isCapital();
+  _o.hasTrainStation = this.hasTrainStation();
+}
+}
+
+export class TileUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public tileRef: number = 0.0,
+  public ownerId: number = -1,
+  public troops: number = 0,
+  public gold: bigint = BigInt('0'),
+  public isCity: boolean = false,
+  public isCapital: boolean = false,
+  public hasTrainStation: boolean = false
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return TileUpdate.createTileUpdate(builder,
+    this.tileRef,
+    this.ownerId,
+    this.troops,
+    this.gold,
+    this.isCity,
+    this.isCapital,
+    this.hasTrainStation
+  );
+}
 }

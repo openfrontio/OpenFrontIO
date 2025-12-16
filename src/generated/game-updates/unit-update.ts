@@ -2,322 +2,386 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { TileRef } from "../game-updates/tile-ref.js";
-import { TrainType } from "../game-updates/train-type.js";
-import { UnitType } from "../game-updates/unit-type.js";
+import { TrainType } from '../game-updates/train-type.js';
 
-export class UnitUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class UnitUpdate implements flatbuffers.IUnpackableObject<UnitUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): UnitUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):UnitUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsUnitUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: UnitUpdate,
-  ): UnitUpdate {
-    return (obj || new UnitUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsUnitUpdate(bb:flatbuffers.ByteBuffer, obj?:UnitUpdate):UnitUpdate {
+  return (obj || new UnitUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsUnitUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: UnitUpdate,
-  ): UnitUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new UnitUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsUnitUpdate(bb:flatbuffers.ByteBuffer, obj?:UnitUpdate):UnitUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UnitUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  unitType(): UnitType {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt8(this.bb_pos + offset) : UnitType.Infantry;
-  }
+unitType():string|null
+unitType(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+unitType(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  troops(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+troops():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  id(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+id():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  ownerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+ownerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  lastOwnerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+lastOwnerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  pos(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 14);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+pos():number {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.readFloat64(this.bb_pos + offset) : 0.0;
+}
 
-  lastPos(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 16);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+lastPos():number {
+  const offset = this.bb!.__offset(this.bb_pos, 16);
+  return offset ? this.bb!.readFloat64(this.bb_pos + offset) : 0.0;
+}
 
-  isActive(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 18);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+isActive():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 18);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  reachedTarget(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 20);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+reachedTarget():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 20);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  retreating(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 22);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+retreating():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 22);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  targetable(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 24);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+targetable():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 24);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  markedForDeletion(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 26);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+markedForDeletion():number {
+  const offset = this.bb!.__offset(this.bb_pos, 26);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  targetUnitId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 28);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+targetUnitId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 28);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  targetTile(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 30);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+targetTile():number {
+  const offset = this.bb!.__offset(this.bb_pos, 30);
+  return offset ? this.bb!.readFloat64(this.bb_pos + offset) : 0.0;
+}
 
-  health(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 32);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 100;
-  }
+health():number {
+  const offset = this.bb!.__offset(this.bb_pos, 32);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 100;
+}
 
-  underConstruction(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 34);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+underConstruction():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 34);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  missileTimerQueue(index: number): number | null {
-    const offset = this.bb!.__offset(this.bb_pos, 36);
-    return offset
-      ? this.bb!.readInt32(this.bb!.__vector(this.bb_pos + offset) + index * 4)
-      : 0;
-  }
+missileTimerQueue(index: number):number|null {
+  const offset = this.bb!.__offset(this.bb_pos, 36);
+  return offset ? this.bb!.readInt32(this.bb!.__vector(this.bb_pos + offset) + index * 4) : 0;
+}
 
-  missileTimerQueueLength(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 36);
-    return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-  }
+missileTimerQueueLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 36);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
 
-  missileTimerQueueArray(): Int32Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 36);
-    return offset
-      ? new Int32Array(
-          this.bb!.bytes().buffer,
-          this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset),
-          this.bb!.__vector_len(this.bb_pos + offset),
-        )
-      : null;
-  }
+missileTimerQueueArray():Int32Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 36);
+  return offset ? new Int32Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
+}
 
-  level(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 38);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 1;
-  }
+level():number {
+  const offset = this.bb!.__offset(this.bb_pos, 38);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 1;
+}
 
-  hasTrainStation(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 40);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+hasTrainStation():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 40);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  trainType(): TrainType {
-    const offset = this.bb!.__offset(this.bb_pos, 42);
-    return offset
-      ? this.bb!.readInt8(this.bb_pos + offset)
-      : TrainType.Passenger;
-  }
+trainType():TrainType {
+  const offset = this.bb!.__offset(this.bb_pos, 42);
+  return offset ? this.bb!.readInt8(this.bb_pos + offset) : TrainType.Passenger;
+}
 
-  loaded(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 44);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+loaded():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 44);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  static startUnitUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(21);
-  }
+static startUnitUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(21);
+}
 
-  static addUnitType(builder: flatbuffers.Builder, unitType: UnitType) {
-    builder.addFieldInt8(0, unitType, UnitType.Infantry);
-  }
+static addUnitType(builder:flatbuffers.Builder, unitTypeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, unitTypeOffset, 0);
+}
 
-  static addTroops(builder: flatbuffers.Builder, troops: number) {
-    builder.addFieldInt32(1, troops, 0);
-  }
+static addTroops(builder:flatbuffers.Builder, troops:number) {
+  builder.addFieldInt32(1, troops, 0);
+}
 
-  static addId(builder: flatbuffers.Builder, id: number) {
-    builder.addFieldInt32(2, id, 0);
-  }
+static addId(builder:flatbuffers.Builder, id:number) {
+  builder.addFieldInt32(2, id, 0);
+}
 
-  static addOwnerId(builder: flatbuffers.Builder, ownerId: number) {
-    builder.addFieldInt32(3, ownerId, 0);
-  }
+static addOwnerId(builder:flatbuffers.Builder, ownerId:number) {
+  builder.addFieldInt32(3, ownerId, 0);
+}
 
-  static addLastOwnerId(builder: flatbuffers.Builder, lastOwnerId: number) {
-    builder.addFieldInt32(4, lastOwnerId, -1);
-  }
+static addLastOwnerId(builder:flatbuffers.Builder, lastOwnerId:number) {
+  builder.addFieldInt32(4, lastOwnerId, -1);
+}
 
-  static addPos(builder: flatbuffers.Builder, posOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(5, posOffset, 0);
-  }
+static addPos(builder:flatbuffers.Builder, pos:number) {
+  builder.addFieldFloat64(5, pos, 0.0);
+}
 
-  static addLastPos(
-    builder: flatbuffers.Builder,
-    lastPosOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(6, lastPosOffset, 0);
-  }
+static addLastPos(builder:flatbuffers.Builder, lastPos:number) {
+  builder.addFieldFloat64(6, lastPos, 0.0);
+}
 
-  static addIsActive(builder: flatbuffers.Builder, isActive: boolean) {
-    builder.addFieldInt8(7, +isActive, +false);
-  }
+static addIsActive(builder:flatbuffers.Builder, isActive:boolean) {
+  builder.addFieldInt8(7, +isActive, +false);
+}
 
-  static addReachedTarget(
-    builder: flatbuffers.Builder,
-    reachedTarget: boolean,
-  ) {
-    builder.addFieldInt8(8, +reachedTarget, +false);
-  }
+static addReachedTarget(builder:flatbuffers.Builder, reachedTarget:boolean) {
+  builder.addFieldInt8(8, +reachedTarget, +false);
+}
 
-  static addRetreating(builder: flatbuffers.Builder, retreating: boolean) {
-    builder.addFieldInt8(9, +retreating, +false);
-  }
+static addRetreating(builder:flatbuffers.Builder, retreating:boolean) {
+  builder.addFieldInt8(9, +retreating, +false);
+}
 
-  static addTargetable(builder: flatbuffers.Builder, targetable: boolean) {
-    builder.addFieldInt8(10, +targetable, +false);
-  }
+static addTargetable(builder:flatbuffers.Builder, targetable:boolean) {
+  builder.addFieldInt8(10, +targetable, +false);
+}
 
-  static addMarkedForDeletion(
-    builder: flatbuffers.Builder,
-    markedForDeletion: number,
-  ) {
-    builder.addFieldInt32(11, markedForDeletion, -1);
-  }
+static addMarkedForDeletion(builder:flatbuffers.Builder, markedForDeletion:number) {
+  builder.addFieldInt32(11, markedForDeletion, -1);
+}
 
-  static addTargetUnitId(builder: flatbuffers.Builder, targetUnitId: number) {
-    builder.addFieldInt32(12, targetUnitId, -1);
-  }
+static addTargetUnitId(builder:flatbuffers.Builder, targetUnitId:number) {
+  builder.addFieldInt32(12, targetUnitId, -1);
+}
 
-  static addTargetTile(
-    builder: flatbuffers.Builder,
-    targetTileOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(13, targetTileOffset, 0);
-  }
+static addTargetTile(builder:flatbuffers.Builder, targetTile:number) {
+  builder.addFieldFloat64(13, targetTile, 0.0);
+}
 
-  static addHealth(builder: flatbuffers.Builder, health: number) {
-    builder.addFieldInt32(14, health, 100);
-  }
+static addHealth(builder:flatbuffers.Builder, health:number) {
+  builder.addFieldInt32(14, health, 100);
+}
 
-  static addUnderConstruction(
-    builder: flatbuffers.Builder,
-    underConstruction: boolean,
-  ) {
-    builder.addFieldInt8(15, +underConstruction, +false);
-  }
+static addUnderConstruction(builder:flatbuffers.Builder, underConstruction:boolean) {
+  builder.addFieldInt8(15, +underConstruction, +false);
+}
 
-  static addMissileTimerQueue(
-    builder: flatbuffers.Builder,
-    missileTimerQueueOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(16, missileTimerQueueOffset, 0);
-  }
+static addMissileTimerQueue(builder:flatbuffers.Builder, missileTimerQueueOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(16, missileTimerQueueOffset, 0);
+}
 
-  static createMissileTimerQueueVector(
-    builder: flatbuffers.Builder,
-    data: number[] | Int32Array,
-  ): flatbuffers.Offset;
-  /**
-   * @deprecated This Uint8Array overload will be removed in the future.
-   */
-  static createMissileTimerQueueVector(
-    builder: flatbuffers.Builder,
-    data: number[] | Uint8Array,
-  ): flatbuffers.Offset;
-  static createMissileTimerQueueVector(
-    builder: flatbuffers.Builder,
-    data: number[] | Int32Array | Uint8Array,
-  ): flatbuffers.Offset {
-    builder.startVector(4, data.length, 4);
-    for (let i = data.length - 1; i >= 0; i--) {
-      builder.addInt32(data[i]!);
-    }
-    return builder.endVector();
+static createMissileTimerQueueVector(builder:flatbuffers.Builder, data:number[]|Int32Array):flatbuffers.Offset;
+/**
+ * @deprecated This Uint8Array overload will be removed in the future.
+ */
+static createMissileTimerQueueVector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset;
+static createMissileTimerQueueVector(builder:flatbuffers.Builder, data:number[]|Int32Array|Uint8Array):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addInt32(data[i]!);
   }
+  return builder.endVector();
+}
 
-  static startMissileTimerQueueVector(
-    builder: flatbuffers.Builder,
-    numElems: number,
-  ) {
-    builder.startVector(4, numElems, 4);
-  }
+static startMissileTimerQueueVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
 
-  static addLevel(builder: flatbuffers.Builder, level: number) {
-    builder.addFieldInt32(17, level, 1);
-  }
+static addLevel(builder:flatbuffers.Builder, level:number) {
+  builder.addFieldInt32(17, level, 1);
+}
 
-  static addHasTrainStation(
-    builder: flatbuffers.Builder,
-    hasTrainStation: boolean,
-  ) {
-    builder.addFieldInt8(18, +hasTrainStation, +false);
-  }
+static addHasTrainStation(builder:flatbuffers.Builder, hasTrainStation:boolean) {
+  builder.addFieldInt8(18, +hasTrainStation, +false);
+}
 
-  static addTrainType(builder: flatbuffers.Builder, trainType: TrainType) {
-    builder.addFieldInt8(19, trainType, TrainType.Passenger);
-  }
+static addTrainType(builder:flatbuffers.Builder, trainType:TrainType) {
+  builder.addFieldInt8(19, trainType, TrainType.Passenger);
+}
 
-  static addLoaded(builder: flatbuffers.Builder, loaded: boolean) {
-    builder.addFieldInt8(20, +loaded, +false);
-  }
+static addLoaded(builder:flatbuffers.Builder, loaded:boolean) {
+  builder.addFieldInt8(20, +loaded, +false);
+}
 
-  static endUnitUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endUnitUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUnitUpdate(builder:flatbuffers.Builder, unitTypeOffset:flatbuffers.Offset, troops:number, id:number, ownerId:number, lastOwnerId:number, pos:number, lastPos:number, isActive:boolean, reachedTarget:boolean, retreating:boolean, targetable:boolean, markedForDeletion:number, targetUnitId:number, targetTile:number, health:number, underConstruction:boolean, missileTimerQueueOffset:flatbuffers.Offset, level:number, hasTrainStation:boolean, trainType:TrainType, loaded:boolean):flatbuffers.Offset {
+  UnitUpdate.startUnitUpdate(builder);
+  UnitUpdate.addUnitType(builder, unitTypeOffset);
+  UnitUpdate.addTroops(builder, troops);
+  UnitUpdate.addId(builder, id);
+  UnitUpdate.addOwnerId(builder, ownerId);
+  UnitUpdate.addLastOwnerId(builder, lastOwnerId);
+  UnitUpdate.addPos(builder, pos);
+  UnitUpdate.addLastPos(builder, lastPos);
+  UnitUpdate.addIsActive(builder, isActive);
+  UnitUpdate.addReachedTarget(builder, reachedTarget);
+  UnitUpdate.addRetreating(builder, retreating);
+  UnitUpdate.addTargetable(builder, targetable);
+  UnitUpdate.addMarkedForDeletion(builder, markedForDeletion);
+  UnitUpdate.addTargetUnitId(builder, targetUnitId);
+  UnitUpdate.addTargetTile(builder, targetTile);
+  UnitUpdate.addHealth(builder, health);
+  UnitUpdate.addUnderConstruction(builder, underConstruction);
+  UnitUpdate.addMissileTimerQueue(builder, missileTimerQueueOffset);
+  UnitUpdate.addLevel(builder, level);
+  UnitUpdate.addHasTrainStation(builder, hasTrainStation);
+  UnitUpdate.addTrainType(builder, trainType);
+  UnitUpdate.addLoaded(builder, loaded);
+  return UnitUpdate.endUnitUpdate(builder);
+}
+
+unpack(): UnitUpdateT {
+  return new UnitUpdateT(
+    this.unitType(),
+    this.troops(),
+    this.id(),
+    this.ownerId(),
+    this.lastOwnerId(),
+    this.pos(),
+    this.lastPos(),
+    this.isActive(),
+    this.reachedTarget(),
+    this.retreating(),
+    this.targetable(),
+    this.markedForDeletion(),
+    this.targetUnitId(),
+    this.targetTile(),
+    this.health(),
+    this.underConstruction(),
+    this.bb!.createScalarList<number>(this.missileTimerQueue.bind(this), this.missileTimerQueueLength()),
+    this.level(),
+    this.hasTrainStation(),
+    this.trainType(),
+    this.loaded()
+  );
+}
+
+
+unpackTo(_o: UnitUpdateT): void {
+  _o.unitType = this.unitType();
+  _o.troops = this.troops();
+  _o.id = this.id();
+  _o.ownerId = this.ownerId();
+  _o.lastOwnerId = this.lastOwnerId();
+  _o.pos = this.pos();
+  _o.lastPos = this.lastPos();
+  _o.isActive = this.isActive();
+  _o.reachedTarget = this.reachedTarget();
+  _o.retreating = this.retreating();
+  _o.targetable = this.targetable();
+  _o.markedForDeletion = this.markedForDeletion();
+  _o.targetUnitId = this.targetUnitId();
+  _o.targetTile = this.targetTile();
+  _o.health = this.health();
+  _o.underConstruction = this.underConstruction();
+  _o.missileTimerQueue = this.bb!.createScalarList<number>(this.missileTimerQueue.bind(this), this.missileTimerQueueLength());
+  _o.level = this.level();
+  _o.hasTrainStation = this.hasTrainStation();
+  _o.trainType = this.trainType();
+  _o.loaded = this.loaded();
+}
+}
+
+export class UnitUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public unitType: string|Uint8Array|null = null,
+  public troops: number = 0,
+  public id: number = 0,
+  public ownerId: number = 0,
+  public lastOwnerId: number = -1,
+  public pos: number = 0.0,
+  public lastPos: number = 0.0,
+  public isActive: boolean = false,
+  public reachedTarget: boolean = false,
+  public retreating: boolean = false,
+  public targetable: boolean = false,
+  public markedForDeletion: number = -1,
+  public targetUnitId: number = -1,
+  public targetTile: number = 0.0,
+  public health: number = 100,
+  public underConstruction: boolean = false,
+  public missileTimerQueue: (number)[] = [],
+  public level: number = 1,
+  public hasTrainStation: boolean = false,
+  public trainType: TrainType = TrainType.Passenger,
+  public loaded: boolean = false
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const unitType = (this.unitType !== null ? builder.createString(this.unitType!) : 0);
+  const missileTimerQueue = UnitUpdate.createMissileTimerQueueVector(builder, this.missileTimerQueue);
+
+  return UnitUpdate.createUnitUpdate(builder,
+    unitType,
+    this.troops,
+    this.id,
+    this.ownerId,
+    this.lastOwnerId,
+    this.pos,
+    this.lastPos,
+    this.isActive,
+    this.reachedTarget,
+    this.retreating,
+    this.targetable,
+    this.markedForDeletion,
+    this.targetUnitId,
+    this.targetTile,
+    this.health,
+    this.underConstruction,
+    missileTimerQueue,
+    this.level,
+    this.hasTrainStation,
+    this.trainType,
+    this.loaded
+  );
+}
 }

@@ -1,9 +1,13 @@
+import {
+  GameUpdateType,
+  RailTileT,
+  RailType,
+} from "../../generated/game-updates";
 import { TrainExecution } from "../execution/TrainExecution";
 import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { Railroad } from "./Railroad";
 
 /**
@@ -113,10 +117,9 @@ export class TrainStation {
       (r) => r.from === station || r.to === station,
     );
     if (toRemove) {
-      const railTiles: RailTile[] = toRemove.tiles.map((tile) => ({
-        tile,
-        railType: RailType.VERTICAL,
-      }));
+      const railTiles: RailTileT[] = toRemove.tiles.map(
+        (tile) => new RailTileT(tile, RailType.VERTICAL),
+      );
       this.mg.addUpdate({
         type: GameUpdateType.RailroadEvent,
         isActive: false,

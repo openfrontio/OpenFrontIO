@@ -2,97 +2,108 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class NameViewData {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class NameViewData implements flatbuffers.IUnpackableObject<NameViewDataT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): NameViewData {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):NameViewData {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsNameViewData(
-    bb: flatbuffers.ByteBuffer,
-    obj?: NameViewData,
-  ): NameViewData {
-    return (obj || new NameViewData()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsNameViewData(bb:flatbuffers.ByteBuffer, obj?:NameViewData):NameViewData {
+  return (obj || new NameViewData()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsNameViewData(
-    bb: flatbuffers.ByteBuffer,
-    obj?: NameViewData,
-  ): NameViewData {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new NameViewData()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsNameViewData(bb:flatbuffers.ByteBuffer, obj?:NameViewData):NameViewData {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new NameViewData()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  name(): string | null;
-  name(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  name(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  displayName(): string | null;
-  displayName(
-    optionalEncoding: flatbuffers.Encoding,
-  ): string | Uint8Array | null;
-  displayName(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+displayName():string|null
+displayName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+displayName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  color(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
-  }
+color():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
 
-  static startNameViewData(builder: flatbuffers.Builder) {
-    builder.startObject(3);
-  }
+static startNameViewData(builder:flatbuffers.Builder) {
+  builder.startObject(3);
+}
 
-  static addName(builder: flatbuffers.Builder, nameOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(0, nameOffset, 0);
-  }
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
 
-  static addDisplayName(
-    builder: flatbuffers.Builder,
-    displayNameOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, displayNameOffset, 0);
-  }
+static addDisplayName(builder:flatbuffers.Builder, displayNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, displayNameOffset, 0);
+}
 
-  static addColor(builder: flatbuffers.Builder, color: number) {
-    builder.addFieldInt32(2, color, 0);
-  }
+static addColor(builder:flatbuffers.Builder, color:number) {
+  builder.addFieldInt32(2, color, 0);
+}
 
-  static endNameViewData(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endNameViewData(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createNameViewData(
-    builder: flatbuffers.Builder,
-    nameOffset: flatbuffers.Offset,
-    displayNameOffset: flatbuffers.Offset,
-    color: number,
-  ): flatbuffers.Offset {
-    NameViewData.startNameViewData(builder);
-    NameViewData.addName(builder, nameOffset);
-    NameViewData.addDisplayName(builder, displayNameOffset);
-    NameViewData.addColor(builder, color);
-    return NameViewData.endNameViewData(builder);
-  }
+static createNameViewData(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, displayNameOffset:flatbuffers.Offset, color:number):flatbuffers.Offset {
+  NameViewData.startNameViewData(builder);
+  NameViewData.addName(builder, nameOffset);
+  NameViewData.addDisplayName(builder, displayNameOffset);
+  NameViewData.addColor(builder, color);
+  return NameViewData.endNameViewData(builder);
+}
+
+unpack(): NameViewDataT {
+  return new NameViewDataT(
+    this.name(),
+    this.displayName(),
+    this.color()
+  );
+}
+
+
+unpackTo(_o: NameViewDataT): void {
+  _o.name = this.name();
+  _o.displayName = this.displayName();
+  _o.color = this.color();
+}
+}
+
+export class NameViewDataT implements flatbuffers.IGeneratedObject {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public displayName: string|Uint8Array|null = null,
+  public color: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const displayName = (this.displayName !== null ? builder.createString(this.displayName!) : 0);
+
+  return NameViewData.createNameViewData(builder,
+    name,
+    displayName,
+    this.color
+  );
+}
 }

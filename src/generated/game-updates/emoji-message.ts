@@ -2,105 +2,119 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class EmojiMessage {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class EmojiMessage implements flatbuffers.IUnpackableObject<EmojiMessageT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): EmojiMessage {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):EmojiMessage {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsEmojiMessage(
-    bb: flatbuffers.ByteBuffer,
-    obj?: EmojiMessage,
-  ): EmojiMessage {
-    return (obj || new EmojiMessage()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsEmojiMessage(bb:flatbuffers.ByteBuffer, obj?:EmojiMessage):EmojiMessage {
+  return (obj || new EmojiMessage()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsEmojiMessage(
-    bb: flatbuffers.ByteBuffer,
-    obj?: EmojiMessage,
-  ): EmojiMessage {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new EmojiMessage()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsEmojiMessage(bb:flatbuffers.ByteBuffer, obj?:EmojiMessage):EmojiMessage {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new EmojiMessage()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  playerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+playerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  emoji(): string | null;
-  emoji(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  emoji(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+emoji():string|null
+emoji(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+emoji(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  targetPlayerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+targetPlayerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  tick(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+tick():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startEmojiMessage(builder: flatbuffers.Builder) {
-    builder.startObject(4);
-  }
+static startEmojiMessage(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
 
-  static addPlayerId(builder: flatbuffers.Builder, playerId: number) {
-    builder.addFieldInt32(0, playerId, 0);
-  }
+static addPlayerId(builder:flatbuffers.Builder, playerId:number) {
+  builder.addFieldInt32(0, playerId, 0);
+}
 
-  static addEmoji(
-    builder: flatbuffers.Builder,
-    emojiOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, emojiOffset, 0);
-  }
+static addEmoji(builder:flatbuffers.Builder, emojiOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, emojiOffset, 0);
+}
 
-  static addTargetPlayerId(
-    builder: flatbuffers.Builder,
-    targetPlayerId: number,
-  ) {
-    builder.addFieldInt32(2, targetPlayerId, -1);
-  }
+static addTargetPlayerId(builder:flatbuffers.Builder, targetPlayerId:number) {
+  builder.addFieldInt32(2, targetPlayerId, -1);
+}
 
-  static addTick(builder: flatbuffers.Builder, tick: number) {
-    builder.addFieldInt32(3, tick, 0);
-  }
+static addTick(builder:flatbuffers.Builder, tick:number) {
+  builder.addFieldInt32(3, tick, 0);
+}
 
-  static endEmojiMessage(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endEmojiMessage(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createEmojiMessage(
-    builder: flatbuffers.Builder,
-    playerId: number,
-    emojiOffset: flatbuffers.Offset,
-    targetPlayerId: number,
-    tick: number,
-  ): flatbuffers.Offset {
-    EmojiMessage.startEmojiMessage(builder);
-    EmojiMessage.addPlayerId(builder, playerId);
-    EmojiMessage.addEmoji(builder, emojiOffset);
-    EmojiMessage.addTargetPlayerId(builder, targetPlayerId);
-    EmojiMessage.addTick(builder, tick);
-    return EmojiMessage.endEmojiMessage(builder);
-  }
+static createEmojiMessage(builder:flatbuffers.Builder, playerId:number, emojiOffset:flatbuffers.Offset, targetPlayerId:number, tick:number):flatbuffers.Offset {
+  EmojiMessage.startEmojiMessage(builder);
+  EmojiMessage.addPlayerId(builder, playerId);
+  EmojiMessage.addEmoji(builder, emojiOffset);
+  EmojiMessage.addTargetPlayerId(builder, targetPlayerId);
+  EmojiMessage.addTick(builder, tick);
+  return EmojiMessage.endEmojiMessage(builder);
+}
+
+unpack(): EmojiMessageT {
+  return new EmojiMessageT(
+    this.playerId(),
+    this.emoji(),
+    this.targetPlayerId(),
+    this.tick()
+  );
+}
+
+
+unpackTo(_o: EmojiMessageT): void {
+  _o.playerId = this.playerId();
+  _o.emoji = this.emoji();
+  _o.targetPlayerId = this.targetPlayerId();
+  _o.tick = this.tick();
+}
+}
+
+export class EmojiMessageT implements flatbuffers.IGeneratedObject {
+constructor(
+  public playerId: number = 0,
+  public emoji: string|Uint8Array|null = null,
+  public targetPlayerId: number = -1,
+  public tick: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const emoji = (this.emoji !== null ? builder.createString(this.emoji!) : 0);
+
+  return EmojiMessage.createEmojiMessage(builder,
+    this.playerId,
+    emoji,
+    this.targetPlayerId,
+    this.tick
+  );
+}
 }

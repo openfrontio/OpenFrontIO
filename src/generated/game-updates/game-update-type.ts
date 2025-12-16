@@ -21,5 +21,5 @@ export enum GameUpdateType {
   BonusEvent = 15,
   RailroadEvent = 16,
   ConquestEvent = 17,
-  EmbargoEvent = 18,
+  EmbargoEvent = 18
 }

@@ -2,74 +2,76 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { TileUpdate } from "../game-updates/tile-update.js";
+import { TileUpdate, TileUpdateT } from '../game-updates/tile-update.js';
 
-export class TileUpdateWrapper {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class TileUpdateWrapper implements flatbuffers.IUnpackableObject<TileUpdateWrapperT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): TileUpdateWrapper {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):TileUpdateWrapper {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsTileUpdateWrapper(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TileUpdateWrapper,
-  ): TileUpdateWrapper {
-    return (obj || new TileUpdateWrapper()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsTileUpdateWrapper(bb:flatbuffers.ByteBuffer, obj?:TileUpdateWrapper):TileUpdateWrapper {
+  return (obj || new TileUpdateWrapper()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsTileUpdateWrapper(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TileUpdateWrapper,
-  ): TileUpdateWrapper {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new TileUpdateWrapper()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsTileUpdateWrapper(bb:flatbuffers.ByteBuffer, obj?:TileUpdateWrapper):TileUpdateWrapper {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TileUpdateWrapper()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  update(obj?: TileUpdate): TileUpdate | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? (obj || new TileUpdate()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+update(obj?:TileUpdate):TileUpdate|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? (obj || new TileUpdate()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
 
-  static startTileUpdateWrapper(builder: flatbuffers.Builder) {
-    builder.startObject(1);
-  }
+static startTileUpdateWrapper(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
 
-  static addUpdate(
-    builder: flatbuffers.Builder,
-    updateOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, updateOffset, 0);
-  }
+static addUpdate(builder:flatbuffers.Builder, updateOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, updateOffset, 0);
+}
 
-  static endTileUpdateWrapper(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endTileUpdateWrapper(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createTileUpdateWrapper(
-    builder: flatbuffers.Builder,
-    updateOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    TileUpdateWrapper.startTileUpdateWrapper(builder);
-    TileUpdateWrapper.addUpdate(builder, updateOffset);
-    return TileUpdateWrapper.endTileUpdateWrapper(builder);
-  }
+static createTileUpdateWrapper(builder:flatbuffers.Builder, updateOffset:flatbuffers.Offset):flatbuffers.Offset {
+  TileUpdateWrapper.startTileUpdateWrapper(builder);
+  TileUpdateWrapper.addUpdate(builder, updateOffset);
+  return TileUpdateWrapper.endTileUpdateWrapper(builder);
+}
+
+unpack(): TileUpdateWrapperT {
+  return new TileUpdateWrapperT(
+    (this.update() !== null ? this.update()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: TileUpdateWrapperT): void {
+  _o.update = (this.update() !== null ? this.update()!.unpack() : null);
+}
+}
+
+export class TileUpdateWrapperT implements flatbuffers.IGeneratedObject {
+constructor(
+  public update: TileUpdateT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const update = (this.update !== null ? this.update!.pack(builder) : 0);
+
+  return TileUpdateWrapper.createTileUpdateWrapper(builder,
+    update
+  );
+}
 }

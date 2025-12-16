@@ -5,5 +5,5 @@
 export enum PlayerType {
   Human = 0,
   Bot = 1,
-  Spectator = 2,
+  Spectator = 2
 }

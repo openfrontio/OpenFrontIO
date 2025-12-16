@@ -2,144 +2,156 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class DisplayChatMessageUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class DisplayChatMessageUpdate implements flatbuffers.IUnpackableObject<DisplayChatMessageUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): DisplayChatMessageUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):DisplayChatMessageUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsDisplayChatMessageUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: DisplayChatMessageUpdate,
-  ): DisplayChatMessageUpdate {
-    return (obj || new DisplayChatMessageUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsDisplayChatMessageUpdate(bb:flatbuffers.ByteBuffer, obj?:DisplayChatMessageUpdate):DisplayChatMessageUpdate {
+  return (obj || new DisplayChatMessageUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsDisplayChatMessageUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: DisplayChatMessageUpdate,
-  ): DisplayChatMessageUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new DisplayChatMessageUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsDisplayChatMessageUpdate(bb:flatbuffers.ByteBuffer, obj?:DisplayChatMessageUpdate):DisplayChatMessageUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new DisplayChatMessageUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  key(): string | null;
-  key(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  key(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+key():string|null
+key(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+key(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  category(): string | null;
-  category(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  category(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+category():string|null
+category(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+category(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  target(): string | null;
-  target(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  target(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+target():string|null
+target(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+target(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  playerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+playerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  isFrom(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+isFrom():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  recipient(): string | null;
-  recipient(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  recipient(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 14);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+recipient():string|null
+recipient(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+recipient(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  static startDisplayChatMessageUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(6);
-  }
+static startDisplayChatMessageUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(6);
+}
 
-  static addKey(builder: flatbuffers.Builder, keyOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(0, keyOffset, 0);
-  }
+static addKey(builder:flatbuffers.Builder, keyOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, keyOffset, 0);
+}
 
-  static addCategory(
-    builder: flatbuffers.Builder,
-    categoryOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, categoryOffset, 0);
-  }
+static addCategory(builder:flatbuffers.Builder, categoryOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, categoryOffset, 0);
+}
 
-  static addTarget(
-    builder: flatbuffers.Builder,
-    targetOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(2, targetOffset, 0);
-  }
+static addTarget(builder:flatbuffers.Builder, targetOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, targetOffset, 0);
+}
 
-  static addPlayerId(builder: flatbuffers.Builder, playerId: number) {
-    builder.addFieldInt32(3, playerId, -1);
-  }
+static addPlayerId(builder:flatbuffers.Builder, playerId:number) {
+  builder.addFieldInt32(3, playerId, -1);
+}
 
-  static addIsFrom(builder: flatbuffers.Builder, isFrom: boolean) {
-    builder.addFieldInt8(4, +isFrom, +false);
-  }
+static addIsFrom(builder:flatbuffers.Builder, isFrom:boolean) {
+  builder.addFieldInt8(4, +isFrom, +false);
+}
 
-  static addRecipient(
-    builder: flatbuffers.Builder,
-    recipientOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(5, recipientOffset, 0);
-  }
+static addRecipient(builder:flatbuffers.Builder, recipientOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, recipientOffset, 0);
+}
 
-  static endDisplayChatMessageUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endDisplayChatMessageUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createDisplayChatMessageUpdate(
-    builder: flatbuffers.Builder,
-    keyOffset: flatbuffers.Offset,
-    categoryOffset: flatbuffers.Offset,
-    targetOffset: flatbuffers.Offset,
-    playerId: number,
-    isFrom: boolean,
-    recipientOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    DisplayChatMessageUpdate.startDisplayChatMessageUpdate(builder);
-    DisplayChatMessageUpdate.addKey(builder, keyOffset);
-    DisplayChatMessageUpdate.addCategory(builder, categoryOffset);
-    DisplayChatMessageUpdate.addTarget(builder, targetOffset);
-    DisplayChatMessageUpdate.addPlayerId(builder, playerId);
-    DisplayChatMessageUpdate.addIsFrom(builder, isFrom);
-    DisplayChatMessageUpdate.addRecipient(builder, recipientOffset);
-    return DisplayChatMessageUpdate.endDisplayChatMessageUpdate(builder);
-  }
+static createDisplayChatMessageUpdate(builder:flatbuffers.Builder, keyOffset:flatbuffers.Offset, categoryOffset:flatbuffers.Offset, targetOffset:flatbuffers.Offset, playerId:number, isFrom:boolean, recipientOffset:flatbuffers.Offset):flatbuffers.Offset {
+  DisplayChatMessageUpdate.startDisplayChatMessageUpdate(builder);
+  DisplayChatMessageUpdate.addKey(builder, keyOffset);
+  DisplayChatMessageUpdate.addCategory(builder, categoryOffset);
+  DisplayChatMessageUpdate.addTarget(builder, targetOffset);
+  DisplayChatMessageUpdate.addPlayerId(builder, playerId);
+  DisplayChatMessageUpdate.addIsFrom(builder, isFrom);
+  DisplayChatMessageUpdate.addRecipient(builder, recipientOffset);
+  return DisplayChatMessageUpdate.endDisplayChatMessageUpdate(builder);
+}
+
+unpack(): DisplayChatMessageUpdateT {
+  return new DisplayChatMessageUpdateT(
+    this.key(),
+    this.category(),
+    this.target(),
+    this.playerId(),
+    this.isFrom(),
+    this.recipient()
+  );
+}
+
+
+unpackTo(_o: DisplayChatMessageUpdateT): void {
+  _o.key = this.key();
+  _o.category = this.category();
+  _o.target = this.target();
+  _o.playerId = this.playerId();
+  _o.isFrom = this.isFrom();
+  _o.recipient = this.recipient();
+}
+}
+
+export class DisplayChatMessageUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public key: string|Uint8Array|null = null,
+  public category: string|Uint8Array|null = null,
+  public target: string|Uint8Array|null = null,
+  public playerId: number = -1,
+  public isFrom: boolean = false,
+  public recipient: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const key = (this.key !== null ? builder.createString(this.key!) : 0);
+  const category = (this.category !== null ? builder.createString(this.category!) : 0);
+  const target = (this.target !== null ? builder.createString(this.target!) : 0);
+  const recipient = (this.recipient !== null ? builder.createString(this.recipient!) : 0);
+
+  return DisplayChatMessageUpdate.createDisplayChatMessageUpdate(builder,
+    key,
+    category,
+    target,
+    this.playerId,
+    this.isFrom,
+    recipient
+  );
+}
 }

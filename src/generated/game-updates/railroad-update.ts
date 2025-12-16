@@ -2,105 +2,107 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { RailTile } from "../game-updates/rail-tile.js";
+import { RailTile, RailTileT } from '../game-updates/rail-tile.js';
 
-export class RailroadUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class RailroadUpdate implements flatbuffers.IUnpackableObject<RailroadUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): RailroadUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):RailroadUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsRailroadUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: RailroadUpdate,
-  ): RailroadUpdate {
-    return (obj || new RailroadUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsRailroadUpdate(bb:flatbuffers.ByteBuffer, obj?:RailroadUpdate):RailroadUpdate {
+  return (obj || new RailroadUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsRailroadUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: RailroadUpdate,
-  ): RailroadUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new RailroadUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsRailroadUpdate(bb:flatbuffers.ByteBuffer, obj?:RailroadUpdate):RailroadUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new RailroadUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  isActive(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+isActive():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  railTiles(index: number, obj?: RailTile): RailTile | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? (obj || new RailTile()).__init(
-          this.bb!.__indirect(
-            this.bb!.__vector(this.bb_pos + offset) + index * 4,
-          ),
-          this.bb!,
-        )
-      : null;
-  }
+railTiles(index: number, obj?:RailTile):RailTile|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? (obj || new RailTile()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
 
-  railTilesLength(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-  }
+railTilesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
 
-  static startRailroadUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startRailroadUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addIsActive(builder: flatbuffers.Builder, isActive: boolean) {
-    builder.addFieldInt8(0, +isActive, +false);
-  }
+static addIsActive(builder:flatbuffers.Builder, isActive:boolean) {
+  builder.addFieldInt8(0, +isActive, +false);
+}
 
-  static addRailTiles(
-    builder: flatbuffers.Builder,
-    railTilesOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, railTilesOffset, 0);
-  }
+static addRailTiles(builder:flatbuffers.Builder, railTilesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, railTilesOffset, 0);
+}
 
-  static createRailTilesVector(
-    builder: flatbuffers.Builder,
-    data: flatbuffers.Offset[],
-  ): flatbuffers.Offset {
-    builder.startVector(4, data.length, 4);
-    for (let i = data.length - 1; i >= 0; i--) {
-      builder.addOffset(data[i]!);
-    }
-    return builder.endVector();
+static createRailTilesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
   }
+  return builder.endVector();
+}
 
-  static startRailTilesVector(builder: flatbuffers.Builder, numElems: number) {
-    builder.startVector(4, numElems, 4);
-  }
+static startRailTilesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
 
-  static endRailroadUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endRailroadUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createRailroadUpdate(
-    builder: flatbuffers.Builder,
-    isActive: boolean,
-    railTilesOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    RailroadUpdate.startRailroadUpdate(builder);
-    RailroadUpdate.addIsActive(builder, isActive);
-    RailroadUpdate.addRailTiles(builder, railTilesOffset);
-    return RailroadUpdate.endRailroadUpdate(builder);
-  }
+static createRailroadUpdate(builder:flatbuffers.Builder, isActive:boolean, railTilesOffset:flatbuffers.Offset):flatbuffers.Offset {
+  RailroadUpdate.startRailroadUpdate(builder);
+  RailroadUpdate.addIsActive(builder, isActive);
+  RailroadUpdate.addRailTiles(builder, railTilesOffset);
+  return RailroadUpdate.endRailroadUpdate(builder);
+}
+
+unpack(): RailroadUpdateT {
+  return new RailroadUpdateT(
+    this.isActive(),
+    this.bb!.createObjList<RailTile, RailTileT>(this.railTiles.bind(this), this.railTilesLength())
+  );
+}
+
+
+unpackTo(_o: RailroadUpdateT): void {
+  _o.isActive = this.isActive();
+  _o.railTiles = this.bb!.createObjList<RailTile, RailTileT>(this.railTiles.bind(this), this.railTilesLength());
+}
+}
+
+export class RailroadUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public isActive: boolean = false,
+  public railTiles: (RailTileT)[] = []
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const railTiles = RailroadUpdate.createRailTilesVector(builder, builder.createObjectOffsetList(this.railTiles));
+
+  return RailroadUpdate.createRailroadUpdate(builder,
+    this.isActive,
+    railTiles
+  );
+}
 }

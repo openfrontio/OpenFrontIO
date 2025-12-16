@@ -8,5 +8,5 @@ export enum RailType {
   TOP_LEFT = 2,
   TOP_RIGHT = 3,
   BOTTOM_LEFT = 4,
-  BOTTOM_RIGHT = 5,
+  BOTTOM_RIGHT = 5
 }

@@ -2,206 +2,190 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { MessageType } from "../game-updates/message-type.js";
 
-export class DisplayMessageUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class DisplayMessageUpdate implements flatbuffers.IUnpackableObject<DisplayMessageUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): DisplayMessageUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):DisplayMessageUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsDisplayMessageUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: DisplayMessageUpdate,
-  ): DisplayMessageUpdate {
-    return (obj || new DisplayMessageUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsDisplayMessageUpdate(bb:flatbuffers.ByteBuffer, obj?:DisplayMessageUpdate):DisplayMessageUpdate {
+  return (obj || new DisplayMessageUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsDisplayMessageUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: DisplayMessageUpdate,
-  ): DisplayMessageUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new DisplayMessageUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsDisplayMessageUpdate(bb:flatbuffers.ByteBuffer, obj?:DisplayMessageUpdate):DisplayMessageUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new DisplayMessageUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  message(): string | null;
-  message(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  message(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+message():string|null
+message(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+message(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  messageType(): MessageType {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt8(this.bb_pos + offset) : MessageType.Info;
-  }
+messageType():string|null
+messageType(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+messageType(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  goldAmount(): bigint {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt64(this.bb_pos + offset) : BigInt("0");
-  }
+goldAmount():bigint {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt64(this.bb_pos + offset) : BigInt('0');
+}
 
-  playerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
-  }
+playerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : -1;
+}
 
-  paramsKeys(index: number): string;
-  paramsKeys(
-    index: number,
-    optionalEncoding: flatbuffers.Encoding,
-  ): string | Uint8Array;
-  paramsKeys(
-    index: number,
-    optionalEncoding?: any,
-  ): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset
-      ? this.bb!.__string(
-          this.bb!.__vector(this.bb_pos + offset) + index * 4,
-          optionalEncoding,
-        )
-      : null;
-  }
+paramsKeys(index: number):string
+paramsKeys(index: number,optionalEncoding:flatbuffers.Encoding):string|Uint8Array
+paramsKeys(index: number,optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__string(this.bb!.__vector(this.bb_pos + offset) + index * 4, optionalEncoding) : null;
+}
 
-  paramsKeysLength(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-  }
+paramsKeysLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
 
-  paramsValues(index: number): string;
-  paramsValues(
-    index: number,
-    optionalEncoding: flatbuffers.Encoding,
-  ): string | Uint8Array;
-  paramsValues(
-    index: number,
-    optionalEncoding?: any,
-  ): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 14);
-    return offset
-      ? this.bb!.__string(
-          this.bb!.__vector(this.bb_pos + offset) + index * 4,
-          optionalEncoding,
-        )
-      : null;
-  }
+paramsValues(index: number):string
+paramsValues(index: number,optionalEncoding:flatbuffers.Encoding):string|Uint8Array
+paramsValues(index: number,optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__string(this.bb!.__vector(this.bb_pos + offset) + index * 4, optionalEncoding) : null;
+}
 
-  paramsValuesLength(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 14);
-    return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-  }
+paramsValuesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
 
-  static startDisplayMessageUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(6);
-  }
+static startDisplayMessageUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(6);
+}
 
-  static addMessage(
-    builder: flatbuffers.Builder,
-    messageOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, messageOffset, 0);
-  }
+static addMessage(builder:flatbuffers.Builder, messageOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, messageOffset, 0);
+}
 
-  static addMessageType(
-    builder: flatbuffers.Builder,
-    messageType: MessageType,
-  ) {
-    builder.addFieldInt8(1, messageType, MessageType.Info);
-  }
+static addMessageType(builder:flatbuffers.Builder, messageTypeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, messageTypeOffset, 0);
+}
 
-  static addGoldAmount(builder: flatbuffers.Builder, goldAmount: bigint) {
-    builder.addFieldInt64(2, goldAmount, BigInt("0"));
-  }
+static addGoldAmount(builder:flatbuffers.Builder, goldAmount:bigint) {
+  builder.addFieldInt64(2, goldAmount, BigInt('0'));
+}
 
-  static addPlayerId(builder: flatbuffers.Builder, playerId: number) {
-    builder.addFieldInt32(3, playerId, -1);
-  }
+static addPlayerId(builder:flatbuffers.Builder, playerId:number) {
+  builder.addFieldInt32(3, playerId, -1);
+}
 
-  static addParamsKeys(
-    builder: flatbuffers.Builder,
-    paramsKeysOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(4, paramsKeysOffset, 0);
-  }
+static addParamsKeys(builder:flatbuffers.Builder, paramsKeysOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(4, paramsKeysOffset, 0);
+}
 
-  static createParamsKeysVector(
-    builder: flatbuffers.Builder,
-    data: flatbuffers.Offset[],
-  ): flatbuffers.Offset {
-    builder.startVector(4, data.length, 4);
-    for (let i = data.length - 1; i >= 0; i--) {
-      builder.addOffset(data[i]!);
-    }
-    return builder.endVector();
+static createParamsKeysVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
   }
+  return builder.endVector();
+}
 
-  static startParamsKeysVector(builder: flatbuffers.Builder, numElems: number) {
-    builder.startVector(4, numElems, 4);
-  }
+static startParamsKeysVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
 
-  static addParamsValues(
-    builder: flatbuffers.Builder,
-    paramsValuesOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(5, paramsValuesOffset, 0);
-  }
+static addParamsValues(builder:flatbuffers.Builder, paramsValuesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, paramsValuesOffset, 0);
+}
 
-  static createParamsValuesVector(
-    builder: flatbuffers.Builder,
-    data: flatbuffers.Offset[],
-  ): flatbuffers.Offset {
-    builder.startVector(4, data.length, 4);
-    for (let i = data.length - 1; i >= 0; i--) {
-      builder.addOffset(data[i]!);
-    }
-    return builder.endVector();
+static createParamsValuesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
   }
+  return builder.endVector();
+}
 
-  static startParamsValuesVector(
-    builder: flatbuffers.Builder,
-    numElems: number,
-  ) {
-    builder.startVector(4, numElems, 4);
-  }
+static startParamsValuesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
 
-  static endDisplayMessageUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endDisplayMessageUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createDisplayMessageUpdate(
-    builder: flatbuffers.Builder,
-    messageOffset: flatbuffers.Offset,
-    messageType: MessageType,
-    goldAmount: bigint,
-    playerId: number,
-    paramsKeysOffset: flatbuffers.Offset,
-    paramsValuesOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    DisplayMessageUpdate.startDisplayMessageUpdate(builder);
-    DisplayMessageUpdate.addMessage(builder, messageOffset);
-    DisplayMessageUpdate.addMessageType(builder, messageType);
-    DisplayMessageUpdate.addGoldAmount(builder, goldAmount);
-    DisplayMessageUpdate.addPlayerId(builder, playerId);
-    DisplayMessageUpdate.addParamsKeys(builder, paramsKeysOffset);
-    DisplayMessageUpdate.addParamsValues(builder, paramsValuesOffset);
-    return DisplayMessageUpdate.endDisplayMessageUpdate(builder);
-  }
+static createDisplayMessageUpdate(builder:flatbuffers.Builder, messageOffset:flatbuffers.Offset, messageTypeOffset:flatbuffers.Offset, goldAmount:bigint, playerId:number, paramsKeysOffset:flatbuffers.Offset, paramsValuesOffset:flatbuffers.Offset):flatbuffers.Offset {
+  DisplayMessageUpdate.startDisplayMessageUpdate(builder);
+  DisplayMessageUpdate.addMessage(builder, messageOffset);
+  DisplayMessageUpdate.addMessageType(builder, messageTypeOffset);
+  DisplayMessageUpdate.addGoldAmount(builder, goldAmount);
+  DisplayMessageUpdate.addPlayerId(builder, playerId);
+  DisplayMessageUpdate.addParamsKeys(builder, paramsKeysOffset);
+  DisplayMessageUpdate.addParamsValues(builder, paramsValuesOffset);
+  return DisplayMessageUpdate.endDisplayMessageUpdate(builder);
+}
+
+unpack(): DisplayMessageUpdateT {
+  return new DisplayMessageUpdateT(
+    this.message(),
+    this.messageType(),
+    this.goldAmount(),
+    this.playerId(),
+    this.bb!.createScalarList<string>(this.paramsKeys.bind(this), this.paramsKeysLength()),
+    this.bb!.createScalarList<string>(this.paramsValues.bind(this), this.paramsValuesLength())
+  );
+}
+
+
+unpackTo(_o: DisplayMessageUpdateT): void {
+  _o.message = this.message();
+  _o.messageType = this.messageType();
+  _o.goldAmount = this.goldAmount();
+  _o.playerId = this.playerId();
+  _o.paramsKeys = this.bb!.createScalarList<string>(this.paramsKeys.bind(this), this.paramsKeysLength());
+  _o.paramsValues = this.bb!.createScalarList<string>(this.paramsValues.bind(this), this.paramsValuesLength());
+}
+}
+
+export class DisplayMessageUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public message: string|Uint8Array|null = null,
+  public messageType: string|Uint8Array|null = null,
+  public goldAmount: bigint = BigInt('0'),
+  public playerId: number = -1,
+  public paramsKeys: (string)[] = [],
+  public paramsValues: (string)[] = []
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const message = (this.message !== null ? builder.createString(this.message!) : 0);
+  const messageType = (this.messageType !== null ? builder.createString(this.messageType!) : 0);
+  const paramsKeys = DisplayMessageUpdate.createParamsKeysVector(builder, builder.createObjectOffsetList(this.paramsKeys));
+  const paramsValues = DisplayMessageUpdate.createParamsValuesVector(builder, builder.createObjectOffsetList(this.paramsValues));
+
+  return DisplayMessageUpdate.createDisplayMessageUpdate(builder,
+    message,
+    messageType,
+    this.goldAmount,
+    this.playerId,
+    paramsKeys,
+    paramsValues
+  );
+}
 }

@@ -4,5 +4,5 @@
 
 export enum TrainType {
   Passenger = 0,
-  Freight = 1,
+  Freight = 1
 }

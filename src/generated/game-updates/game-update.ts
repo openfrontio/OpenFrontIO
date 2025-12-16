@@ -2,97 +2,134 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { GameUpdateType } from "../game-updates/game-update-type.js";
-import { GameUpdateUnion } from "../game-updates/game-update-union.js";
+import { AllianceExpiredUpdate, AllianceExpiredUpdateT } from '../game-updates/alliance-expired-update.js';
+import { AllianceExtensionUpdate, AllianceExtensionUpdateT } from '../game-updates/alliance-extension-update.js';
+import { AllianceRequestReplyUpdate, AllianceRequestReplyUpdateT } from '../game-updates/alliance-request-reply-update.js';
+import { AllianceRequestUpdate, AllianceRequestUpdateT } from '../game-updates/alliance-request-update.js';
+import { BonusEventUpdate, BonusEventUpdateT } from '../game-updates/bonus-event-update.js';
+import { BrokeAllianceUpdate, BrokeAllianceUpdateT } from '../game-updates/broke-alliance-update.js';
+import { ConquestUpdate, ConquestUpdateT } from '../game-updates/conquest-update.js';
+import { DisplayChatMessageUpdate, DisplayChatMessageUpdateT } from '../game-updates/display-chat-message-update.js';
+import { DisplayMessageUpdate, DisplayMessageUpdateT } from '../game-updates/display-message-update.js';
+import { EmbargoUpdate, EmbargoUpdateT } from '../game-updates/embargo-update.js';
+import { EmojiUpdate, EmojiUpdateT } from '../game-updates/emoji-update.js';
+import { GameUpdateUnion, unionToGameUpdateUnion, unionListToGameUpdateUnion } from '../game-updates/game-update-union.js';
+import { HashUpdate, HashUpdateT } from '../game-updates/hash-update.js';
+import { PlayerUpdate, PlayerUpdateT } from '../game-updates/player-update.js';
+import { RailroadUpdate, RailroadUpdateT } from '../game-updates/railroad-update.js';
+import { TargetPlayerUpdate, TargetPlayerUpdateT } from '../game-updates/target-player-update.js';
+import { TileUpdateWrapper, TileUpdateWrapperT } from '../game-updates/tile-update-wrapper.js';
+import { UnitIncomingUpdate, UnitIncomingUpdateT } from '../game-updates/unit-incoming-update.js';
+import { UnitUpdate, UnitUpdateT } from '../game-updates/unit-update.js';
+import { WinUpdate, WinUpdateT } from '../game-updates/win-update.js';
 
-export class GameUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class GameUpdate implements flatbuffers.IUnpackableObject<GameUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): GameUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):GameUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsGameUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: GameUpdate,
-  ): GameUpdate {
-    return (obj || new GameUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsGameUpdate(bb:flatbuffers.ByteBuffer, obj?:GameUpdate):GameUpdate {
+  return (obj || new GameUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsGameUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: GameUpdate,
-  ): GameUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new GameUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsGameUpdate(bb:flatbuffers.ByteBuffer, obj?:GameUpdate):GameUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new GameUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  type(): GameUpdateType {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? this.bb!.readInt8(this.bb_pos + offset)
-      : GameUpdateType.Tile;
-  }
+type():string|null
+type(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+type(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  updateType(): GameUpdateUnion {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.readUint8(this.bb_pos + offset)
-      : GameUpdateUnion.NONE;
-  }
+updateType():GameUpdateUnion {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint8(this.bb_pos + offset) : GameUpdateUnion.NONE;
+}
 
-  update<T extends flatbuffers.Table>(obj: any): any | null {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
-  }
+update<T extends flatbuffers.Table>(obj:any):any|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
+}
 
-  static startGameUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(3);
-  }
+static startGameUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(3);
+}
 
-  static addType(builder: flatbuffers.Builder, type: GameUpdateType) {
-    builder.addFieldInt8(0, type, GameUpdateType.Tile);
-  }
+static addType(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, typeOffset, 0);
+}
 
-  static addUpdateType(
-    builder: flatbuffers.Builder,
-    updateType: GameUpdateUnion,
-  ) {
-    builder.addFieldInt8(1, updateType, GameUpdateUnion.NONE);
-  }
+static addUpdateType(builder:flatbuffers.Builder, updateType:GameUpdateUnion) {
+  builder.addFieldInt8(1, updateType, GameUpdateUnion.NONE);
+}
 
-  static addUpdate(
-    builder: flatbuffers.Builder,
-    updateOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(2, updateOffset, 0);
-  }
+static addUpdate(builder:flatbuffers.Builder, updateOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, updateOffset, 0);
+}
 
-  static endGameUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endGameUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createGameUpdate(
-    builder: flatbuffers.Builder,
-    type: GameUpdateType,
-    updateType: GameUpdateUnion,
-    updateOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    GameUpdate.startGameUpdate(builder);
-    GameUpdate.addType(builder, type);
-    GameUpdate.addUpdateType(builder, updateType);
-    GameUpdate.addUpdate(builder, updateOffset);
-    return GameUpdate.endGameUpdate(builder);
-  }
+static createGameUpdate(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset, updateType:GameUpdateUnion, updateOffset:flatbuffers.Offset):flatbuffers.Offset {
+  GameUpdate.startGameUpdate(builder);
+  GameUpdate.addType(builder, typeOffset);
+  GameUpdate.addUpdateType(builder, updateType);
+  GameUpdate.addUpdate(builder, updateOffset);
+  return GameUpdate.endGameUpdate(builder);
+}
+
+unpack(): GameUpdateT {
+  return new GameUpdateT(
+    this.type(),
+    this.updateType(),
+    (() => {
+      const temp = unionToGameUpdateUnion(this.updateType(), this.update.bind(this));
+      if(temp === null) { return null; }
+      return temp.unpack()
+  })()
+  );
+}
+
+
+unpackTo(_o: GameUpdateT): void {
+  _o.type = this.type();
+  _o.updateType = this.updateType();
+  _o.update = (() => {
+      const temp = unionToGameUpdateUnion(this.updateType(), this.update.bind(this));
+      if(temp === null) { return null; }
+      return temp.unpack()
+  })();
+}
+}
+
+export class GameUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public type: string|Uint8Array|null = null,
+  public updateType: GameUpdateUnion = GameUpdateUnion.NONE,
+  public update: AllianceExpiredUpdateT|AllianceExtensionUpdateT|AllianceRequestReplyUpdateT|AllianceRequestUpdateT|BonusEventUpdateT|BrokeAllianceUpdateT|ConquestUpdateT|DisplayChatMessageUpdateT|DisplayMessageUpdateT|EmbargoUpdateT|EmojiUpdateT|HashUpdateT|PlayerUpdateT|RailroadUpdateT|TargetPlayerUpdateT|TileUpdateWrapperT|UnitIncomingUpdateT|UnitUpdateT|WinUpdateT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const type = (this.type !== null ? builder.createString(this.type!) : 0);
+  const update = builder.createObjectOffset(this.update);
+
+  return GameUpdate.createGameUpdate(builder,
+    type,
+    this.updateType,
+    update
+  );
+}
 }

@@ -2,81 +2,88 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { RailType } from "../game-updates/rail-type.js";
-import { TileRef } from "../game-updates/tile-ref.js";
+import { RailType } from '../game-updates/rail-type.js';
 
-export class RailTile {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class RailTile implements flatbuffers.IUnpackableObject<RailTileT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): RailTile {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):RailTile {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsRailTile(
-    bb: flatbuffers.ByteBuffer,
-    obj?: RailTile,
-  ): RailTile {
-    return (obj || new RailTile()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsRailTile(bb:flatbuffers.ByteBuffer, obj?:RailTile):RailTile {
+  return (obj || new RailTile()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsRailTile(
-    bb: flatbuffers.ByteBuffer,
-    obj?: RailTile,
-  ): RailTile {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new RailTile()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsRailTile(bb:flatbuffers.ByteBuffer, obj?:RailTile):RailTile {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new RailTile()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  tile(obj?: TileRef): TileRef | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? (obj || new TileRef()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+tile():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readFloat64(this.bb_pos + offset) : 0.0;
+}
 
-  railType(): RailType {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt8(this.bb_pos + offset) : RailType.VERTICAL;
-  }
+railType():RailType {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt8(this.bb_pos + offset) : RailType.VERTICAL;
+}
 
-  static startRailTile(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startRailTile(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addTile(builder: flatbuffers.Builder, tileOffset: flatbuffers.Offset) {
-    builder.addFieldOffset(0, tileOffset, 0);
-  }
+static addTile(builder:flatbuffers.Builder, tile:number) {
+  builder.addFieldFloat64(0, tile, 0.0);
+}
 
-  static addRailType(builder: flatbuffers.Builder, railType: RailType) {
-    builder.addFieldInt8(1, railType, RailType.VERTICAL);
-  }
+static addRailType(builder:flatbuffers.Builder, railType:RailType) {
+  builder.addFieldInt8(1, railType, RailType.VERTICAL);
+}
 
-  static endRailTile(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endRailTile(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createRailTile(
-    builder: flatbuffers.Builder,
-    tileOffset: flatbuffers.Offset,
-    railType: RailType,
-  ): flatbuffers.Offset {
-    RailTile.startRailTile(builder);
-    RailTile.addTile(builder, tileOffset);
-    RailTile.addRailType(builder, railType);
-    return RailTile.endRailTile(builder);
-  }
+static createRailTile(builder:flatbuffers.Builder, tile:number, railType:RailType):flatbuffers.Offset {
+  RailTile.startRailTile(builder);
+  RailTile.addTile(builder, tile);
+  RailTile.addRailType(builder, railType);
+  return RailTile.endRailTile(builder);
+}
+
+unpack(): RailTileT {
+  return new RailTileT(
+    this.tile(),
+    this.railType()
+  );
+}
+
+
+unpackTo(_o: RailTileT): void {
+  _o.tile = this.tile();
+  _o.railType = this.railType();
+}
+}
+
+export class RailTileT implements flatbuffers.IGeneratedObject {
+constructor(
+  public tile: number = 0.0,
+  public railType: RailType = RailType.VERTICAL
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return RailTile.createRailTile(builder,
+    this.tile,
+    this.railType
+  );
+}
 }

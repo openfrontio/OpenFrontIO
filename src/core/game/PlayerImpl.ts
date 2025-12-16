@@ -1,4 +1,6 @@
+import { Builder } from "flatbuffers";
 import { renderNumber, renderTroops } from "../../client/Utils";
+import { GameUpdates } from "../../generated/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -38,12 +40,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  PlayerUpdate,
-} from "./GameUpdates";
+import { GameUpdateType } from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -119,66 +116,191 @@ export class PlayerImpl implements Player {
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
-  toUpdate(): PlayerUpdate {
-    const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
-      ar.recipient().id(),
-    );
+  toUpdate(): (builder: Builder) => void {
+    return (builder: Builder) => {
+      const outgoingAllianceRequests = this.outgoingAllianceRequests().map(
+        (ar) => ar.recipient().id(),
+      );
+      // Create all strings first
+      const clientIDOffset = builder.createString(this.clientID());
+      const nameOffset = builder.createString(this.name());
+      const displayNameOffset = builder.createString(this.displayName());
+      const playerTypeOffset = builder.createString(this.type());
 
-    return {
-      type: GameUpdateType.Player,
-      clientID: this.clientID(),
-      name: this.name(),
-      displayName: this.displayName(),
-      id: this.id(),
-      team: this.team() ?? undefined,
-      smallID: this.smallID(),
-      playerType: this.type(),
-      isAlive: this.isAlive(),
-      isDisconnected: this.isDisconnected(),
-      tilesOwned: this.numTilesOwned(),
-      gold: this._gold,
-      troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
-      isTraitor: this.isTraitor(),
-      traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      outgoingAllianceRequests: outgoingAllianceRequests,
-      alliances: this.alliances().map(
-        (a) =>
-          ({
-            id: a.id(),
-            other: a.other(this).id(),
-            createdAt: a.createdAt(),
-            expiresAt: a.expiresAt(),
-            hasExtensionRequest:
-              a.expiresAt() <=
-              this.mg.ticks() +
-                this.mg.config().allianceExtensionPromptOffset(),
-          }) satisfies AllianceView,
-      ),
-      hasSpawned: this.hasSpawned(),
-      betrayals: this._betrayalCount,
-      lastDeleteUnitTick: this.lastDeleteUnitTick,
+      // Create NameViewData
+      const nameViewDataNameOffset = builder.createString(this.name());
+      const nameViewDataDisplayNameOffset = builder.createString(
+        this.displayName(),
+      );
+      GameUpdates.NameViewData.startNameViewData(builder);
+      GameUpdates.NameViewData.addName(builder, nameViewDataNameOffset);
+      GameUpdates.NameViewData.addDisplayName(
+        builder,
+        nameViewDataDisplayNameOffset,
+      );
+      GameUpdates.NameViewData.addColor(builder, 0); // You'll need to provide the actual color value
+      const nameViewDataOffset =
+        GameUpdates.NameViewData.endNameViewData(builder);
+
+      // Create allies vector
+      const allies = this.alliances().map((a) => a.other(this).smallID());
+      const alliesOffset = GameUpdates.PlayerUpdate.createAlliesVector(
+        builder,
+        allies,
+      );
+
+      // Create embargoes vector
+      const embargoes = [...this.embargoes.keys()].map((p) =>
+        parseInt(p.toString()),
+      );
+      const embargoesOffset = GameUpdates.PlayerUpdate.createEmbargoesVector(
+        builder,
+        embargoes,
+      );
+
+      // Create targets vector
+      const targets = this.targets().map((p) => p.smallID());
+      const targetsOffset = GameUpdates.PlayerUpdate.createTargetsVector(
+        builder,
+        targets,
+      );
+
+      // Create outgoing emojis
+      const outgoingEmojisOffsets = this.outgoingEmojis().map((emoji) => {
+        const emojiStrOffset = builder.createString(emoji.emoji);
+        GameUpdates.EmojiMessage.startEmojiMessage(builder);
+        GameUpdates.EmojiMessage.addPlayerId(builder, emoji.player_id);
+        GameUpdates.EmojiMessage.addEmoji(builder, emojiStrOffset);
+        GameUpdates.EmojiMessage.addTargetPlayerId(
+          builder,
+          emoji.target_player_id ?? -1,
+        );
+        GameUpdates.EmojiMessage.addTick(builder, emoji.tick);
+        return GameUpdates.EmojiMessage.endEmojiMessage(builder);
+      });
+      const outgoingEmojisVectorOffset =
+        GameUpdates.PlayerUpdate.createOutgoingEmojisVector(
+          builder,
+          outgoingEmojisOffsets,
+        );
+
+      // Create outgoing attacks
+      const outgoingAttacksOffsets = this._outgoingAttacks.map((a) => {
+        const idOffset = builder.createString(a.id());
+        GameUpdates.AttackUpdate.startAttackUpdate(builder);
+        GameUpdates.AttackUpdate.addAttackerId(builder, a.attacker().smallID());
+        GameUpdates.AttackUpdate.addTargetId(builder, a.target().smallID());
+        GameUpdates.AttackUpdate.addTroops(builder, a.troops());
+        GameUpdates.AttackUpdate.addId(builder, idOffset);
+        GameUpdates.AttackUpdate.addRetreating(builder, a.retreating());
+        return GameUpdates.AttackUpdate.endAttackUpdate(builder);
+      });
+      const outgoingAttacksVectorOffset =
+        GameUpdates.PlayerUpdate.createOutgoingAttacksVector(
+          builder,
+          outgoingAttacksOffsets,
+        );
+
+      // Create incoming attacks
+      const incomingAttacksOffsets = this._incomingAttacks.map((a) => {
+        const idOffset = builder.createString(a.id());
+        GameUpdates.AttackUpdate.startAttackUpdate(builder);
+        GameUpdates.AttackUpdate.addAttackerId(builder, a.attacker().smallID());
+        GameUpdates.AttackUpdate.addTargetId(builder, a.target().smallID());
+        GameUpdates.AttackUpdate.addTroops(builder, a.troops());
+        GameUpdates.AttackUpdate.addId(builder, idOffset);
+        GameUpdates.AttackUpdate.addRetreating(builder, a.retreating());
+        return GameUpdates.AttackUpdate.endAttackUpdate(builder);
+      });
+      const incomingAttacksVectorOffset =
+        GameUpdates.PlayerUpdate.createIncomingAttacksVector(
+          builder,
+          incomingAttacksOffsets,
+        );
+
+      // Create outgoing alliance requests vector
+      const outgoingAllianceRequestsOffset =
+        GameUpdates.PlayerUpdate.createOutgoingAllianceRequestsVector(
+          builder,
+          outgoingAllianceRequests, // You need to provide this variable
+        );
+
+      // Create alliances
+      const alliancesOffsets = this.alliances().map((a) => {
+        GameUpdates.AllianceView.startAllianceView(builder);
+        GameUpdates.AllianceView.addId(builder, a.id());
+        GameUpdates.AllianceView.addOther(builder, a.other(this).id());
+        GameUpdates.AllianceView.addCreatedAt(builder, a.createdAt());
+        GameUpdates.AllianceView.addExpiresAt(builder, a.expiresAt());
+        GameUpdates.AllianceView.addHasExtensionRequest(
+          builder,
+          a.expiresAt() <=
+            this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset(),
+        );
+        return GameUpdates.AllianceView.endAllianceView(builder);
+      });
+      const alliancesVectorOffset =
+        GameUpdates.PlayerUpdate.createAlliancesVector(
+          builder,
+          alliancesOffsets,
+        );
+
+      // Build the PlayerUpdate
+      GameUpdates.PlayerUpdate.startPlayerUpdate(builder);
+      GameUpdates.PlayerUpdate.addNameViewData(builder, nameViewDataOffset);
+      GameUpdates.PlayerUpdate.addClientId(builder, clientIDOffset);
+      GameUpdates.PlayerUpdate.addName(builder, nameOffset);
+      GameUpdates.PlayerUpdate.addDisplayName(builder, displayNameOffset);
+      GameUpdates.PlayerUpdate.addId(builder, this.id());
+
+      const team = this.team();
+      if (team !== null && team !== undefined) {
+        GameUpdates.PlayerUpdate.addTeam(builder, team);
+      }
+
+      GameUpdates.PlayerUpdate.addSmallId(builder, this.smallID());
+      GameUpdates.PlayerUpdate.addPlayerType(builder, playerTypeOffset);
+      GameUpdates.PlayerUpdate.addIsAlive(builder, this.isAlive());
+      GameUpdates.PlayerUpdate.addIsDisconnected(
+        builder,
+        this.isDisconnected(),
+      );
+      GameUpdates.PlayerUpdate.addTilesOwned(builder, this.numTilesOwned());
+      GameUpdates.PlayerUpdate.addGold(builder, this._gold);
+      GameUpdates.PlayerUpdate.addTroops(builder, this.troops());
+      GameUpdates.PlayerUpdate.addAllies(builder, alliesOffset);
+      GameUpdates.PlayerUpdate.addEmbargoes(builder, embargoesOffset);
+      GameUpdates.PlayerUpdate.addIsTraitor(builder, this.isTraitor());
+      GameUpdates.PlayerUpdate.addTraitorRemainingTicks(
+        builder,
+        this.getTraitorRemainingTicks(),
+      );
+      GameUpdates.PlayerUpdate.addTargets(builder, targetsOffset);
+      GameUpdates.PlayerUpdate.addOutgoingEmojis(
+        builder,
+        outgoingEmojisVectorOffset,
+      );
+      GameUpdates.PlayerUpdate.addOutgoingAttacks(
+        builder,
+        outgoingAttacksVectorOffset,
+      );
+      GameUpdates.PlayerUpdate.addIncomingAttacks(
+        builder,
+        incomingAttacksVectorOffset,
+      );
+      GameUpdates.PlayerUpdate.addOutgoingAllianceRequests(
+        builder,
+        outgoingAllianceRequestsOffset,
+      );
+      GameUpdates.PlayerUpdate.addAlliances(builder, alliancesVectorOffset);
+      GameUpdates.PlayerUpdate.addHasSpawned(builder, this.hasSpawned());
+      GameUpdates.PlayerUpdate.addBetrayals(builder, this._betrayalCount);
+      GameUpdates.PlayerUpdate.addLastDeleteUnitTick(
+        builder,
+        this.lastDeleteUnitTick,
+      );
+
+      return GameUpdates.PlayerUpdate.endPlayerUpdate(builder);
     };
   }
 

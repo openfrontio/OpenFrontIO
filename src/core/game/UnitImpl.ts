@@ -1,3 +1,5 @@
+import { Builder } from "flatbuffers";
+import { UnitUpdate } from "../../generated/game-updates";
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
@@ -12,7 +14,6 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
@@ -116,31 +117,50 @@ export class UnitImpl implements Unit {
   id() {
     return this._id;
   }
+  toUpdate(): (builder: Builder) => void {
+    return (builder: Builder) => {
+      // Create vectors (arrays)
+      const missileTimerOffset = UnitUpdate.createMissileTimerQueueVector(
+        builder,
+        this._missileTimerQueue,
+      );
 
-  toUpdate(): UnitUpdate {
-    return {
-      type: GameUpdateType.Unit,
-      unitType: this._type,
-      id: this._id,
-      troops: this._troops,
-      ownerID: this._owner.smallID(),
-      lastOwnerID: this._lastOwner?.smallID(),
-      isActive: this._active,
-      reachedTarget: this._reachedTarget,
-      retreating: this._retreating,
-      pos: this._tile,
-      markedForDeletion: this._deletionAt ?? false,
-      targetable: this._targetable,
-      lastPos: this._lastTile,
-      health: this.hasHealth() ? Number(this._health) : undefined,
-      underConstruction: this._underConstruction,
-      targetUnitId: this._targetUnit?.id() ?? undefined,
-      targetTile: this.targetTile() ?? undefined,
-      missileTimerQueue: this._missileTimerQueue,
-      level: this.level(),
-      hasTrainStation: this._hasTrainStation,
-      trainType: this._trainType,
-      loaded: this._loaded,
+      // Create the table
+      UnitUpdate.startUnitUpdate(builder);
+      UnitUpdate.addUnitType(builder, builder.createString(this._type));
+      UnitUpdate.addId(builder, this._id);
+      UnitUpdate.addTroops(builder, this._troops);
+      UnitUpdate.addOwnerId(builder, this._owner.smallID());
+      if (this._lastOwner) {
+        UnitUpdate.addLastOwnerId(builder, this._lastOwner.smallID());
+      }
+      UnitUpdate.addIsActive(builder, this._active);
+      UnitUpdate.addReachedTarget(builder, this._reachedTarget);
+      UnitUpdate.addRetreating(builder, this._retreating);
+      UnitUpdate.addPos(builder, this._tile); // Just pass the bigint directly
+      UnitUpdate.addLastPos(builder, this._lastTile);
+      UnitUpdate.addMarkedForDeletion(builder, this._deletionAt ?? -1);
+      UnitUpdate.addTargetable(builder, this._targetable);
+      if (this.hasHealth()) {
+        UnitUpdate.addHealth(builder, Number(this._health));
+      }
+      UnitUpdate.addUnderConstruction(builder, this._underConstruction);
+      if (this._targetUnit) {
+        UnitUpdate.addTargetUnitId(builder, this._targetUnit.id());
+      }
+      const targetTile = this.targetTile();
+      if (targetTile !== undefined) {
+        UnitUpdate.addTargetTile(builder, targetTile);
+      }
+      UnitUpdate.addMissileTimerQueue(builder, missileTimerOffset);
+      UnitUpdate.addLevel(builder, this.level());
+      UnitUpdate.addHasTrainStation(builder, this._hasTrainStation);
+      if (this._trainType !== undefined) {
+        UnitUpdate.addTrainType(builder, builder.createString(this._trainType));
+      }
+      if (this._loaded !== undefined) {
+        UnitUpdate.addLoaded(builder, this._loaded);
+      }
     };
   }
 

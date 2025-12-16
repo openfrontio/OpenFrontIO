@@ -2,75 +2,87 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class TargetPlayerUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class TargetPlayerUpdate implements flatbuffers.IUnpackableObject<TargetPlayerUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): TargetPlayerUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):TargetPlayerUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsTargetPlayerUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TargetPlayerUpdate,
-  ): TargetPlayerUpdate {
-    return (obj || new TargetPlayerUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsTargetPlayerUpdate(bb:flatbuffers.ByteBuffer, obj?:TargetPlayerUpdate):TargetPlayerUpdate {
+  return (obj || new TargetPlayerUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsTargetPlayerUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: TargetPlayerUpdate,
-  ): TargetPlayerUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new TargetPlayerUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsTargetPlayerUpdate(bb:flatbuffers.ByteBuffer, obj?:TargetPlayerUpdate):TargetPlayerUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TargetPlayerUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  playerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+playerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  targetId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+targetId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startTargetPlayerUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startTargetPlayerUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addPlayerId(builder: flatbuffers.Builder, playerId: number) {
-    builder.addFieldInt32(0, playerId, 0);
-  }
+static addPlayerId(builder:flatbuffers.Builder, playerId:number) {
+  builder.addFieldInt32(0, playerId, 0);
+}
 
-  static addTargetId(builder: flatbuffers.Builder, targetId: number) {
-    builder.addFieldInt32(1, targetId, 0);
-  }
+static addTargetId(builder:flatbuffers.Builder, targetId:number) {
+  builder.addFieldInt32(1, targetId, 0);
+}
 
-  static endTargetPlayerUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endTargetPlayerUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createTargetPlayerUpdate(
-    builder: flatbuffers.Builder,
-    playerId: number,
-    targetId: number,
-  ): flatbuffers.Offset {
-    TargetPlayerUpdate.startTargetPlayerUpdate(builder);
-    TargetPlayerUpdate.addPlayerId(builder, playerId);
-    TargetPlayerUpdate.addTargetId(builder, targetId);
-    return TargetPlayerUpdate.endTargetPlayerUpdate(builder);
-  }
+static createTargetPlayerUpdate(builder:flatbuffers.Builder, playerId:number, targetId:number):flatbuffers.Offset {
+  TargetPlayerUpdate.startTargetPlayerUpdate(builder);
+  TargetPlayerUpdate.addPlayerId(builder, playerId);
+  TargetPlayerUpdate.addTargetId(builder, targetId);
+  return TargetPlayerUpdate.endTargetPlayerUpdate(builder);
+}
+
+unpack(): TargetPlayerUpdateT {
+  return new TargetPlayerUpdateT(
+    this.playerId(),
+    this.targetId()
+  );
+}
+
+
+unpackTo(_o: TargetPlayerUpdateT): void {
+  _o.playerId = this.playerId();
+  _o.targetId = this.targetId();
+}
+}
+
+export class TargetPlayerUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public playerId: number = 0,
+  public targetId: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return TargetPlayerUpdate.createTargetPlayerUpdate(builder,
+    this.playerId,
+    this.targetId
+  );
+}
 }

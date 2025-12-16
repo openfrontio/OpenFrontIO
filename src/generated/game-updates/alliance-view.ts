@@ -2,109 +2,133 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class AllianceView {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class AllianceView implements flatbuffers.IUnpackableObject<AllianceViewT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): AllianceView {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):AllianceView {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsAllianceView(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceView,
-  ): AllianceView {
-    return (obj || new AllianceView()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsAllianceView(bb:flatbuffers.ByteBuffer, obj?:AllianceView):AllianceView {
+  return (obj || new AllianceView()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsAllianceView(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceView,
-  ): AllianceView {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new AllianceView()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsAllianceView(bb:flatbuffers.ByteBuffer, obj?:AllianceView):AllianceView {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new AllianceView()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  id(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+id():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  other(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+other():string|null
+other(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+other(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  createdAt(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+createdAt():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  expiresAt(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+expiresAt():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  hasExtensionRequest(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 12);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+hasExtensionRequest():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  static startAllianceView(builder: flatbuffers.Builder) {
-    builder.startObject(5);
-  }
+static startAllianceView(builder:flatbuffers.Builder) {
+  builder.startObject(5);
+}
 
-  static addId(builder: flatbuffers.Builder, id: number) {
-    builder.addFieldInt32(0, id, 0);
-  }
+static addId(builder:flatbuffers.Builder, id:number) {
+  builder.addFieldInt32(0, id, 0);
+}
 
-  static addOther(builder: flatbuffers.Builder, other: number) {
-    builder.addFieldInt32(1, other, 0);
-  }
+static addOther(builder:flatbuffers.Builder, otherOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, otherOffset, 0);
+}
 
-  static addCreatedAt(builder: flatbuffers.Builder, createdAt: number) {
-    builder.addFieldInt32(2, createdAt, 0);
-  }
+static addCreatedAt(builder:flatbuffers.Builder, createdAt:number) {
+  builder.addFieldInt32(2, createdAt, 0);
+}
 
-  static addExpiresAt(builder: flatbuffers.Builder, expiresAt: number) {
-    builder.addFieldInt32(3, expiresAt, 0);
-  }
+static addExpiresAt(builder:flatbuffers.Builder, expiresAt:number) {
+  builder.addFieldInt32(3, expiresAt, 0);
+}
 
-  static addHasExtensionRequest(
-    builder: flatbuffers.Builder,
-    hasExtensionRequest: boolean,
-  ) {
-    builder.addFieldInt8(4, +hasExtensionRequest, +false);
-  }
+static addHasExtensionRequest(builder:flatbuffers.Builder, hasExtensionRequest:boolean) {
+  builder.addFieldInt8(4, +hasExtensionRequest, +false);
+}
 
-  static endAllianceView(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endAllianceView(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createAllianceView(
-    builder: flatbuffers.Builder,
-    id: number,
-    other: number,
-    createdAt: number,
-    expiresAt: number,
-    hasExtensionRequest: boolean,
-  ): flatbuffers.Offset {
-    AllianceView.startAllianceView(builder);
-    AllianceView.addId(builder, id);
-    AllianceView.addOther(builder, other);
-    AllianceView.addCreatedAt(builder, createdAt);
-    AllianceView.addExpiresAt(builder, expiresAt);
-    AllianceView.addHasExtensionRequest(builder, hasExtensionRequest);
-    return AllianceView.endAllianceView(builder);
-  }
+static createAllianceView(builder:flatbuffers.Builder, id:number, otherOffset:flatbuffers.Offset, createdAt:number, expiresAt:number, hasExtensionRequest:boolean):flatbuffers.Offset {
+  AllianceView.startAllianceView(builder);
+  AllianceView.addId(builder, id);
+  AllianceView.addOther(builder, otherOffset);
+  AllianceView.addCreatedAt(builder, createdAt);
+  AllianceView.addExpiresAt(builder, expiresAt);
+  AllianceView.addHasExtensionRequest(builder, hasExtensionRequest);
+  return AllianceView.endAllianceView(builder);
+}
+
+unpack(): AllianceViewT {
+  return new AllianceViewT(
+    this.id(),
+    this.other(),
+    this.createdAt(),
+    this.expiresAt(),
+    this.hasExtensionRequest()
+  );
+}
+
+
+unpackTo(_o: AllianceViewT): void {
+  _o.id = this.id();
+  _o.other = this.other();
+  _o.createdAt = this.createdAt();
+  _o.expiresAt = this.expiresAt();
+  _o.hasExtensionRequest = this.hasExtensionRequest();
+}
+}
+
+export class AllianceViewT implements flatbuffers.IGeneratedObject {
+constructor(
+  public id: number = 0,
+  public other: string|Uint8Array|null = null,
+  public createdAt: number = 0,
+  public expiresAt: number = 0,
+  public hasExtensionRequest: boolean = false
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const other = (this.other !== null ? builder.createString(this.other!) : 0);
+
+  return AllianceView.createAllianceView(builder,
+    this.id,
+    other,
+    this.createdAt,
+    this.expiresAt,
+    this.hasExtensionRequest
+  );
+}
 }

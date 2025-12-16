@@ -1,13 +1,8 @@
+import { GameUpdate, GameUpdateType, PlayerUpdate, UnitUpdate } from "../../generated/game-updates";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
-import {
-  GameUpdate,
-  GameUpdateType,
-  PlayerUpdate,
-  UnitUpdate,
-} from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
@@ -188,7 +183,7 @@ export interface UnitInfo {
   experimental?: boolean;
 }
 
-export enum UnitType {
+export enum   UnitType {
   TransportShip = "Transport",
   Warship = "Warship",
   Shell = "Shell",

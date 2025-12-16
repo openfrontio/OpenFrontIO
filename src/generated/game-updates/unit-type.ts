@@ -8,5 +8,5 @@ export enum UnitType {
   Ship = 2,
   Plane = 3,
   Nuke = 4,
-  Train = 5,
+  Train = 5
 }

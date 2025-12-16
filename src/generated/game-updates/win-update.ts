@@ -2,89 +2,94 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-export class WinUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+
+export class WinUpdate implements flatbuffers.IUnpackableObject<WinUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): WinUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):WinUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsWinUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: WinUpdate,
-  ): WinUpdate {
-    return (obj || new WinUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsWinUpdate(bb:flatbuffers.ByteBuffer, obj?:WinUpdate):WinUpdate {
+  return (obj || new WinUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsWinUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: WinUpdate,
-  ): WinUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new WinUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsWinUpdate(bb:flatbuffers.ByteBuffer, obj?:WinUpdate):WinUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new WinUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  allPlayersStats(): string | null;
-  allPlayersStats(
-    optionalEncoding: flatbuffers.Encoding,
-  ): string | Uint8Array | null;
-  allPlayersStats(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+allPlayersStats():string|null
+allPlayersStats(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+allPlayersStats(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  winner(): string | null;
-  winner(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  winner(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+winner():string|null
+winner(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+winner(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  static startWinUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startWinUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addAllPlayersStats(
-    builder: flatbuffers.Builder,
-    allPlayersStatsOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, allPlayersStatsOffset, 0);
-  }
+static addAllPlayersStats(builder:flatbuffers.Builder, allPlayersStatsOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, allPlayersStatsOffset, 0);
+}
 
-  static addWinner(
-    builder: flatbuffers.Builder,
-    winnerOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, winnerOffset, 0);
-  }
+static addWinner(builder:flatbuffers.Builder, winnerOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, winnerOffset, 0);
+}
 
-  static endWinUpdate(builder: flatbuffers.Builder): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endWinUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createWinUpdate(
-    builder: flatbuffers.Builder,
-    allPlayersStatsOffset: flatbuffers.Offset,
-    winnerOffset: flatbuffers.Offset,
-  ): flatbuffers.Offset {
-    WinUpdate.startWinUpdate(builder);
-    WinUpdate.addAllPlayersStats(builder, allPlayersStatsOffset);
-    WinUpdate.addWinner(builder, winnerOffset);
-    return WinUpdate.endWinUpdate(builder);
-  }
+static createWinUpdate(builder:flatbuffers.Builder, allPlayersStatsOffset:flatbuffers.Offset, winnerOffset:flatbuffers.Offset):flatbuffers.Offset {
+  WinUpdate.startWinUpdate(builder);
+  WinUpdate.addAllPlayersStats(builder, allPlayersStatsOffset);
+  WinUpdate.addWinner(builder, winnerOffset);
+  return WinUpdate.endWinUpdate(builder);
+}
+
+unpack(): WinUpdateT {
+  return new WinUpdateT(
+    this.allPlayersStats(),
+    this.winner()
+  );
+}
+
+
+unpackTo(_o: WinUpdateT): void {
+  _o.allPlayersStats = this.allPlayersStats();
+  _o.winner = this.winner();
+}
+}
+
+export class WinUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public allPlayersStats: string|Uint8Array|null = null,
+  public winner: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const allPlayersStats = (this.allPlayersStats !== null ? builder.createString(this.allPlayersStats!) : 0);
+  const winner = (this.winner !== null ? builder.createString(this.winner!) : 0);
+
+  return WinUpdate.createWinUpdate(builder,
+    allPlayersStats,
+    winner
+  );
+}
 }

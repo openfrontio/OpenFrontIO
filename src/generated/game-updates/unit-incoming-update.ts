@@ -2,109 +2,122 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { MessageType } from "../game-updates/message-type.js";
 
-export class UnitIncomingUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class UnitIncomingUpdate implements flatbuffers.IUnpackableObject<UnitIncomingUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): UnitIncomingUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):UnitIncomingUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsUnitIncomingUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: UnitIncomingUpdate,
-  ): UnitIncomingUpdate {
-    return (obj || new UnitIncomingUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsUnitIncomingUpdate(bb:flatbuffers.ByteBuffer, obj?:UnitIncomingUpdate):UnitIncomingUpdate {
+  return (obj || new UnitIncomingUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsUnitIncomingUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: UnitIncomingUpdate,
-  ): UnitIncomingUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new UnitIncomingUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsUnitIncomingUpdate(bb:flatbuffers.ByteBuffer, obj?:UnitIncomingUpdate):UnitIncomingUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UnitIncomingUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  unitId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+unitId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  message(): string | null;
-  message(optionalEncoding: flatbuffers.Encoding): string | Uint8Array | null;
-  message(optionalEncoding?: any): string | Uint8Array | null {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset
-      ? this.bb!.__string(this.bb_pos + offset, optionalEncoding)
-      : null;
-  }
+message():string|null
+message(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+message(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  messageType(): MessageType {
-    const offset = this.bb!.__offset(this.bb_pos, 8);
-    return offset ? this.bb!.readInt8(this.bb_pos + offset) : MessageType.Info;
-  }
+messageType():string|null
+messageType(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+messageType(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
 
-  playerId(): number {
-    const offset = this.bb!.__offset(this.bb_pos, 10);
-    return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
-  }
+playerId():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
 
-  static startUnitIncomingUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(4);
-  }
+static startUnitIncomingUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
 
-  static addUnitId(builder: flatbuffers.Builder, unitId: number) {
-    builder.addFieldInt32(0, unitId, 0);
-  }
+static addUnitId(builder:flatbuffers.Builder, unitId:number) {
+  builder.addFieldInt32(0, unitId, 0);
+}
 
-  static addMessage(
-    builder: flatbuffers.Builder,
-    messageOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(1, messageOffset, 0);
-  }
+static addMessage(builder:flatbuffers.Builder, messageOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, messageOffset, 0);
+}
 
-  static addMessageType(
-    builder: flatbuffers.Builder,
-    messageType: MessageType,
-  ) {
-    builder.addFieldInt8(2, messageType, MessageType.Info);
-  }
+static addMessageType(builder:flatbuffers.Builder, messageTypeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, messageTypeOffset, 0);
+}
 
-  static addPlayerId(builder: flatbuffers.Builder, playerId: number) {
-    builder.addFieldInt32(3, playerId, 0);
-  }
+static addPlayerId(builder:flatbuffers.Builder, playerId:number) {
+  builder.addFieldInt32(3, playerId, 0);
+}
 
-  static endUnitIncomingUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endUnitIncomingUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createUnitIncomingUpdate(
-    builder: flatbuffers.Builder,
-    unitId: number,
-    messageOffset: flatbuffers.Offset,
-    messageType: MessageType,
-    playerId: number,
-  ): flatbuffers.Offset {
-    UnitIncomingUpdate.startUnitIncomingUpdate(builder);
-    UnitIncomingUpdate.addUnitId(builder, unitId);
-    UnitIncomingUpdate.addMessage(builder, messageOffset);
-    UnitIncomingUpdate.addMessageType(builder, messageType);
-    UnitIncomingUpdate.addPlayerId(builder, playerId);
-    return UnitIncomingUpdate.endUnitIncomingUpdate(builder);
-  }
+static createUnitIncomingUpdate(builder:flatbuffers.Builder, unitId:number, messageOffset:flatbuffers.Offset, messageTypeOffset:flatbuffers.Offset, playerId:number):flatbuffers.Offset {
+  UnitIncomingUpdate.startUnitIncomingUpdate(builder);
+  UnitIncomingUpdate.addUnitId(builder, unitId);
+  UnitIncomingUpdate.addMessage(builder, messageOffset);
+  UnitIncomingUpdate.addMessageType(builder, messageTypeOffset);
+  UnitIncomingUpdate.addPlayerId(builder, playerId);
+  return UnitIncomingUpdate.endUnitIncomingUpdate(builder);
+}
+
+unpack(): UnitIncomingUpdateT {
+  return new UnitIncomingUpdateT(
+    this.unitId(),
+    this.message(),
+    this.messageType(),
+    this.playerId()
+  );
+}
+
+
+unpackTo(_o: UnitIncomingUpdateT): void {
+  _o.unitId = this.unitId();
+  _o.message = this.message();
+  _o.messageType = this.messageType();
+  _o.playerId = this.playerId();
+}
+}
+
+export class UnitIncomingUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public unitId: number = 0,
+  public message: string|Uint8Array|null = null,
+  public messageType: string|Uint8Array|null = null,
+  public playerId: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const message = (this.message !== null ? builder.createString(this.message!) : 0);
+  const messageType = (this.messageType !== null ? builder.createString(this.messageType!) : 0);
+
+  return UnitIncomingUpdate.createUnitIncomingUpdate(builder,
+    this.unitId,
+    message,
+    messageType,
+    this.playerId
+  );
+}
 }

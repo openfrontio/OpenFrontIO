@@ -2,12 +2,6 @@
 
 namespace GameUpdates;
 
-// Basic types
-table TileRef {
-  x: int;
-  y: int;
-}
-
 table NameViewData {
   name: string;
   display_name: string;
@@ -60,12 +54,6 @@ enum TrainType : byte {
   Freight = 1
 }
 
-enum PlayerType : byte {
-  Human = 0,
-  Bot = 1,
-  Spectator = 2
-}
-
 enum MessageType : byte {
   Info = 0,
   Warning = 1,
@@ -75,7 +63,7 @@ enum MessageType : byte {
 
 // Update structures
 table TileUpdate {
-  tile_ref: TileRef;
+  tile_ref: double; // TileRef
   owner_id: int = -1;
   troops: int;
   gold: long;
@@ -89,20 +77,20 @@ table TileUpdateWrapper {
 }
 
 table UnitUpdate {
-  unit_type: UnitType;
+  unit_type: string; // enum UnitType
   troops: int;
   id: int;
   owner_id: int;
   last_owner_id: int = -1;
-  pos: TileRef;
-  last_pos: TileRef;
+  pos: double; // TileRef
+  last_pos: double; // TileRef
   is_active: bool;
   reached_target: bool;
   retreating: bool;
   targetable: bool;
   marked_for_deletion: int = -1;
   target_unit_id: int = -1;
-  target_tile: TileRef;
+  target_tile: double; // TileRef
   health: int = 100;
   under_construction: bool = false;
   missile_timer_queue: [int];
@@ -129,7 +117,7 @@ table EmojiMessage {
 
 table AllianceView {
   id: int;
-  other: int;
+  other: string;
   created_at: int;
   expires_at: int;
   has_extension_request: bool;
@@ -143,7 +131,7 @@ table PlayerUpdate {
   id: int;
   team: int = -1;
   small_id: int;
-  player_type: PlayerType;
+  player_type: string; // enum PlayerType: Human, Bot, Spectator
   is_alive: bool;
   is_disconnected: bool;
   tiles_owned: int;
@@ -201,7 +189,7 @@ table EmojiUpdate {
 
 table DisplayMessageUpdate {
   message: string;
-  message_type: MessageType;
+  message_type: string; // enum MessageType: Info, Warning, Error, Success
   gold_amount: long = 0;
   player_id: int = -1;
   params_keys: [string];
@@ -230,19 +218,19 @@ table HashUpdate {
 table UnitIncomingUpdate {
   unit_id: int;
   message: string;
-  message_type: MessageType;
+  message_type: string; // enum MessageType: Info, Warning, Error, Success
   player_id: int;
 }
 
 table BonusEventUpdate {
   player: int;
-  tile: TileRef;
+  tile: long; // TileRef
   gold: int;
   troops: int;
 }
 
 table RailTile {
-  tile: TileRef;
+  tile: double; // TileRef
   rail_type: RailType;
 }
 
@@ -292,7 +280,7 @@ union GameUpdateUnion {
 }
 
 table GameUpdate {
-  type: GameUpdateType;
+  type: string; // enum GameUpdateType: Tile, Unit, Player, DisplayEvent, DisplayChatEvent, AllianceRequest, AllianceRequestReply, BrokeAlliance, AllianceExpired, AllianceExtension, TargetPlayer, Emoji, Win, Hash, UnitIncoming, BonusEvent, RailroadEvent, ConquestEvent, EmbargoEvent
   update: GameUpdateUnion;
 }
 

@@ -1,5 +1,12 @@
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateViewData,
+  PlayerUpdate,
+} from "../../generated/game-updates";
+import { GameUpdateType } from "../../generated/game-updates/game-update-type";
 import { Config } from "../configuration/Config";
 import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
@@ -26,14 +33,6 @@ import {
   UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  PlayerUpdate,
-  UnitUpdate,
-} from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
@@ -194,7 +193,7 @@ export class PlayerView {
     public nameData: NameViewData,
     public cosmetics: PlayerCosmetics,
   ) {
-    if (data.clientID === game.myClientID()) {
+    if (data.clientId() === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
       this.anonymousName = createRandomName(
@@ -301,8 +300,8 @@ export class PlayerView {
     return this.game.worker.playerBorderTiles(this.id());
   }
 
-  outgoingAttacks(): AttackUpdate[] {
-    return this.data.outgoingAttacks;
+  *outgoingAttacks(): AttackUpdate[] {
+    return this.data.outgoingAttacks();
   }
 
   incomingAttacks(): AttackUpdate[] {
@@ -327,25 +326,25 @@ export class PlayerView {
   }
 
   smallID(): number {
-    return this.data.smallID;
+    return this.data.smallId();
   }
 
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.name()!;
   }
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.data.name;
+      : this.data.name()!;
   }
 
   clientID(): ClientID | null {
-    return this.data.clientID;
+    return this.data.clientId()!;
   }
   id(): PlayerID {
-    return this.data.id;
+    return this.data.id();
   }
   team(): Team | null {
     return this.data.team ?? null;
@@ -360,7 +359,7 @@ export class PlayerView {
     return true;
   }
   numTilesOwned(): number {
-    return this.data.tilesOwned;
+    return this.data.tilesOwned();
   }
   allies(): PlayerView[] {
     return this.data.allies.map(
@@ -373,11 +372,11 @@ export class PlayerView {
     );
   }
   gold(): Gold {
-    return this.data.gold;
+    return this.data.gold();
   }
 
   troops(): number {
-    return this.data.troops;
+    return this.data.troops();
   }
 
   totalUnitLevels(type: UnitType): number {
@@ -407,8 +406,11 @@ export class PlayerView {
     return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
   }
 
-  alliances(): AllianceView[] {
-    return this.data.alliances;
+  *alliances(): Generator<AllianceView> {
+    const length = this.data.alliesLength();
+    for (let i = 0; i < length; i++) {
+      yield this.data.alliances(i)!;
+    }
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
@@ -442,14 +444,14 @@ export class PlayerView {
   }
 
   hasSpawned(): boolean {
-    return this.data.hasSpawned;
+    return this.data.hasSpawned();
   }
   isDisconnected(): boolean {
-    return this.data.isDisconnected;
+    return this.data.isDisconnected();
   }
 
   lastDeleteUnitTick(): Tick {
-    return this.data.lastDeleteUnitTick;
+    return this.data.lastDeleteUnitTick();
   }
 
   deleteUnitCooldown(): number {
@@ -657,7 +659,7 @@ export class GameView implements GameMap {
 
   ticks(): Tick {
     if (this.lastUpdate === null) return 0;
-    return this.lastUpdate.tick;
+    return this.lastUpdate.tick();
   }
   inSpawnPhase(): boolean {
     return this.ticks() <= this._config.numSpawnPhaseTurns();

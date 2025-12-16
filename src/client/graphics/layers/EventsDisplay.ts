@@ -285,23 +285,23 @@ export class EventsDisplay extends LitElement implements Layer {
 
     for (const alliance of myPlayer.alliances()) {
       if (
-        alliance.expiresAt >
+        alliance.expiresAt() >
         this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
       ) {
         continue;
       }
 
       if (
-        (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
+        (this.alliancesCheckedAt.get(alliance.id()) ?? 0) >=
         this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
       ) {
         // We've already displayed a message for this alliance.
         continue;
       }
 
-      this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
+      this.alliancesCheckedAt.set(alliance.id(), this.game.ticks());
 
-      const other = this.game.player(alliance.other) as PlayerView;
+      const other = this.game.player(alliance.other()!) as PlayerView;
       if (!other.isAlive()) continue;
 
       this.addEvent({

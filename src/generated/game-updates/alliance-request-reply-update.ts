@@ -2,85 +2,90 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import * as flatbuffers from "flatbuffers";
+import * as flatbuffers from 'flatbuffers';
 
-import { AllianceRequestUpdate } from "../game-updates/alliance-request-update.js";
+import { AllianceRequestUpdate, AllianceRequestUpdateT } from '../game-updates/alliance-request-update.js';
 
-export class AllianceRequestReplyUpdate {
-  bb: flatbuffers.ByteBuffer | null = null;
+
+export class AllianceRequestReplyUpdate implements flatbuffers.IUnpackableObject<AllianceRequestReplyUpdateT> {
+  bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i: number, bb: flatbuffers.ByteBuffer): AllianceRequestReplyUpdate {
-    this.bb_pos = i;
-    this.bb = bb;
-    return this;
-  }
+  __init(i:number, bb:flatbuffers.ByteBuffer):AllianceRequestReplyUpdate {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
 
-  static getRootAsAllianceRequestReplyUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceRequestReplyUpdate,
-  ): AllianceRequestReplyUpdate {
-    return (obj || new AllianceRequestReplyUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getRootAsAllianceRequestReplyUpdate(bb:flatbuffers.ByteBuffer, obj?:AllianceRequestReplyUpdate):AllianceRequestReplyUpdate {
+  return (obj || new AllianceRequestReplyUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  static getSizePrefixedRootAsAllianceRequestReplyUpdate(
-    bb: flatbuffers.ByteBuffer,
-    obj?: AllianceRequestReplyUpdate,
-  ): AllianceRequestReplyUpdate {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-    return (obj || new AllianceRequestReplyUpdate()).__init(
-      bb.readInt32(bb.position()) + bb.position(),
-      bb,
-    );
-  }
+static getSizePrefixedRootAsAllianceRequestReplyUpdate(bb:flatbuffers.ByteBuffer, obj?:AllianceRequestReplyUpdate):AllianceRequestReplyUpdate {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new AllianceRequestReplyUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
 
-  request(obj?: AllianceRequestUpdate): AllianceRequestUpdate | null {
-    const offset = this.bb!.__offset(this.bb_pos, 4);
-    return offset
-      ? (obj || new AllianceRequestUpdate()).__init(
-          this.bb!.__indirect(this.bb_pos + offset),
-          this.bb!,
-        )
-      : null;
-  }
+request(obj?:AllianceRequestUpdate):AllianceRequestUpdate|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? (obj || new AllianceRequestUpdate()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
 
-  accepted(): boolean {
-    const offset = this.bb!.__offset(this.bb_pos, 6);
-    return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
-  }
+accepted():boolean {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
+}
 
-  static startAllianceRequestReplyUpdate(builder: flatbuffers.Builder) {
-    builder.startObject(2);
-  }
+static startAllianceRequestReplyUpdate(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
 
-  static addRequest(
-    builder: flatbuffers.Builder,
-    requestOffset: flatbuffers.Offset,
-  ) {
-    builder.addFieldOffset(0, requestOffset, 0);
-  }
+static addRequest(builder:flatbuffers.Builder, requestOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, requestOffset, 0);
+}
 
-  static addAccepted(builder: flatbuffers.Builder, accepted: boolean) {
-    builder.addFieldInt8(1, +accepted, +false);
-  }
+static addAccepted(builder:flatbuffers.Builder, accepted:boolean) {
+  builder.addFieldInt8(1, +accepted, +false);
+}
 
-  static endAllianceRequestReplyUpdate(
-    builder: flatbuffers.Builder,
-  ): flatbuffers.Offset {
-    const offset = builder.endObject();
-    return offset;
-  }
+static endAllianceRequestReplyUpdate(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
 
-  static createAllianceRequestReplyUpdate(
-    builder: flatbuffers.Builder,
-    requestOffset: flatbuffers.Offset,
-    accepted: boolean,
-  ): flatbuffers.Offset {
-    AllianceRequestReplyUpdate.startAllianceRequestReplyUpdate(builder);
-    AllianceRequestReplyUpdate.addRequest(builder, requestOffset);
-    AllianceRequestReplyUpdate.addAccepted(builder, accepted);
-    return AllianceRequestReplyUpdate.endAllianceRequestReplyUpdate(builder);
-  }
+static createAllianceRequestReplyUpdate(builder:flatbuffers.Builder, requestOffset:flatbuffers.Offset, accepted:boolean):flatbuffers.Offset {
+  AllianceRequestReplyUpdate.startAllianceRequestReplyUpdate(builder);
+  AllianceRequestReplyUpdate.addRequest(builder, requestOffset);
+  AllianceRequestReplyUpdate.addAccepted(builder, accepted);
+  return AllianceRequestReplyUpdate.endAllianceRequestReplyUpdate(builder);
+}
+
+unpack(): AllianceRequestReplyUpdateT {
+  return new AllianceRequestReplyUpdateT(
+    (this.request() !== null ? this.request()!.unpack() : null),
+    this.accepted()
+  );
+}
+
+
+unpackTo(_o: AllianceRequestReplyUpdateT): void {
+  _o.request = (this.request() !== null ? this.request()!.unpack() : null);
+  _o.accepted = this.accepted();
+}
+}
+
+export class AllianceRequestReplyUpdateT implements flatbuffers.IGeneratedObject {
+constructor(
+  public request: AllianceRequestUpdateT|null = null,
+  public accepted: boolean = false
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const request = (this.request !== null ? this.request!.pack(builder) : 0);
+
+  return AllianceRequestReplyUpdate.createAllianceRequestReplyUpdate(builder,
+    request,
+    this.accepted
+  );
+}
 }

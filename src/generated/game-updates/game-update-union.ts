@@ -2,25 +2,26 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import { AllianceExpiredUpdate } from "../game-updates/alliance-expired-update.js";
-import { AllianceExtensionUpdate } from "../game-updates/alliance-extension-update.js";
-import { AllianceRequestReplyUpdate } from "../game-updates/alliance-request-reply-update.js";
-import { AllianceRequestUpdate } from "../game-updates/alliance-request-update.js";
-import { BonusEventUpdate } from "../game-updates/bonus-event-update.js";
-import { BrokeAllianceUpdate } from "../game-updates/broke-alliance-update.js";
-import { ConquestUpdate } from "../game-updates/conquest-update.js";
-import { DisplayChatMessageUpdate } from "../game-updates/display-chat-message-update.js";
-import { DisplayMessageUpdate } from "../game-updates/display-message-update.js";
-import { EmbargoUpdate } from "../game-updates/embargo-update.js";
-import { EmojiUpdate } from "../game-updates/emoji-update.js";
-import { HashUpdate } from "../game-updates/hash-update.js";
-import { PlayerUpdate } from "../game-updates/player-update.js";
-import { RailroadUpdate } from "../game-updates/railroad-update.js";
-import { TargetPlayerUpdate } from "../game-updates/target-player-update.js";
-import { TileUpdateWrapper } from "../game-updates/tile-update-wrapper.js";
-import { UnitIncomingUpdate } from "../game-updates/unit-incoming-update.js";
-import { UnitUpdate } from "../game-updates/unit-update.js";
-import { WinUpdate } from "../game-updates/win-update.js";
+import { AllianceExpiredUpdate, AllianceExpiredUpdateT } from '../game-updates/alliance-expired-update.js';
+import { AllianceExtensionUpdate, AllianceExtensionUpdateT } from '../game-updates/alliance-extension-update.js';
+import { AllianceRequestReplyUpdate, AllianceRequestReplyUpdateT } from '../game-updates/alliance-request-reply-update.js';
+import { AllianceRequestUpdate, AllianceRequestUpdateT } from '../game-updates/alliance-request-update.js';
+import { BonusEventUpdate, BonusEventUpdateT } from '../game-updates/bonus-event-update.js';
+import { BrokeAllianceUpdate, BrokeAllianceUpdateT } from '../game-updates/broke-alliance-update.js';
+import { ConquestUpdate, ConquestUpdateT } from '../game-updates/conquest-update.js';
+import { DisplayChatMessageUpdate, DisplayChatMessageUpdateT } from '../game-updates/display-chat-message-update.js';
+import { DisplayMessageUpdate, DisplayMessageUpdateT } from '../game-updates/display-message-update.js';
+import { EmbargoUpdate, EmbargoUpdateT } from '../game-updates/embargo-update.js';
+import { EmojiUpdate, EmojiUpdateT } from '../game-updates/emoji-update.js';
+import { HashUpdate, HashUpdateT } from '../game-updates/hash-update.js';
+import { PlayerUpdate, PlayerUpdateT } from '../game-updates/player-update.js';
+import { RailroadUpdate, RailroadUpdateT } from '../game-updates/railroad-update.js';
+import { TargetPlayerUpdate, TargetPlayerUpdateT } from '../game-updates/target-player-update.js';
+import { TileUpdateWrapper, TileUpdateWrapperT } from '../game-updates/tile-update-wrapper.js';
+import { UnitIncomingUpdate, UnitIncomingUpdateT } from '../game-updates/unit-incoming-update.js';
+import { UnitUpdate, UnitUpdateT } from '../game-updates/unit-update.js';
+import { WinUpdate, WinUpdateT } from '../game-updates/win-update.js';
+
 
 export enum GameUpdateUnion {
   NONE = 0,
@@ -42,253 +43,64 @@ export enum GameUpdateUnion {
   BonusEventUpdate = 16,
   RailroadUpdate = 17,
   ConquestUpdate = 18,
-  EmbargoUpdate = 19,
+  EmbargoUpdate = 19
 }
 
 export function unionToGameUpdateUnion(
   type: GameUpdateUnion,
-  accessor: (
-    obj:
-      | AllianceExpiredUpdate
-      | AllianceExtensionUpdate
-      | AllianceRequestReplyUpdate
-      | AllianceRequestUpdate
-      | BonusEventUpdate
-      | BrokeAllianceUpdate
-      | ConquestUpdate
-      | DisplayChatMessageUpdate
-      | DisplayMessageUpdate
-      | EmbargoUpdate
-      | EmojiUpdate
-      | HashUpdate
-      | PlayerUpdate
-      | RailroadUpdate
-      | TargetPlayerUpdate
-      | TileUpdateWrapper
-      | UnitIncomingUpdate
-      | UnitUpdate
-      | WinUpdate,
-  ) =>
-    | AllianceExpiredUpdate
-    | AllianceExtensionUpdate
-    | AllianceRequestReplyUpdate
-    | AllianceRequestUpdate
-    | BonusEventUpdate
-    | BrokeAllianceUpdate
-    | ConquestUpdate
-    | DisplayChatMessageUpdate
-    | DisplayMessageUpdate
-    | EmbargoUpdate
-    | EmojiUpdate
-    | HashUpdate
-    | PlayerUpdate
-    | RailroadUpdate
-    | TargetPlayerUpdate
-    | TileUpdateWrapper
-    | UnitIncomingUpdate
-    | UnitUpdate
-    | WinUpdate
-    | null,
-):
-  | AllianceExpiredUpdate
-  | AllianceExtensionUpdate
-  | AllianceRequestReplyUpdate
-  | AllianceRequestUpdate
-  | BonusEventUpdate
-  | BrokeAllianceUpdate
-  | ConquestUpdate
-  | DisplayChatMessageUpdate
-  | DisplayMessageUpdate
-  | EmbargoUpdate
-  | EmojiUpdate
-  | HashUpdate
-  | PlayerUpdate
-  | RailroadUpdate
-  | TargetPlayerUpdate
-  | TileUpdateWrapper
-  | UnitIncomingUpdate
-  | UnitUpdate
-  | WinUpdate
-  | null {
-  switch (GameUpdateUnion[type]) {
-    case "NONE":
-      return null;
-    case "TileUpdateWrapper":
-      return accessor(new TileUpdateWrapper())! as TileUpdateWrapper;
-    case "UnitUpdate":
-      return accessor(new UnitUpdate())! as UnitUpdate;
-    case "PlayerUpdate":
-      return accessor(new PlayerUpdate())! as PlayerUpdate;
-    case "AllianceRequestUpdate":
-      return accessor(new AllianceRequestUpdate())! as AllianceRequestUpdate;
-    case "AllianceRequestReplyUpdate":
-      return accessor(
-        new AllianceRequestReplyUpdate(),
-      )! as AllianceRequestReplyUpdate;
-    case "BrokeAllianceUpdate":
-      return accessor(new BrokeAllianceUpdate())! as BrokeAllianceUpdate;
-    case "AllianceExpiredUpdate":
-      return accessor(new AllianceExpiredUpdate())! as AllianceExpiredUpdate;
-    case "DisplayMessageUpdate":
-      return accessor(new DisplayMessageUpdate())! as DisplayMessageUpdate;
-    case "DisplayChatMessageUpdate":
-      return accessor(
-        new DisplayChatMessageUpdate(),
-      )! as DisplayChatMessageUpdate;
-    case "TargetPlayerUpdate":
-      return accessor(new TargetPlayerUpdate())! as TargetPlayerUpdate;
-    case "EmojiUpdate":
-      return accessor(new EmojiUpdate())! as EmojiUpdate;
-    case "WinUpdate":
-      return accessor(new WinUpdate())! as WinUpdate;
-    case "HashUpdate":
-      return accessor(new HashUpdate())! as HashUpdate;
-    case "UnitIncomingUpdate":
-      return accessor(new UnitIncomingUpdate())! as UnitIncomingUpdate;
-    case "AllianceExtensionUpdate":
-      return accessor(
-        new AllianceExtensionUpdate(),
-      )! as AllianceExtensionUpdate;
-    case "BonusEventUpdate":
-      return accessor(new BonusEventUpdate())! as BonusEventUpdate;
-    case "RailroadUpdate":
-      return accessor(new RailroadUpdate())! as RailroadUpdate;
-    case "ConquestUpdate":
-      return accessor(new ConquestUpdate())! as ConquestUpdate;
-    case "EmbargoUpdate":
-      return accessor(new EmbargoUpdate())! as EmbargoUpdate;
-    default:
-      return null;
+  accessor: (obj:AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate) => AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate|null
+): AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate|null {
+  switch(GameUpdateUnion[type]) {
+    case 'NONE': return null; 
+    case 'TileUpdateWrapper': return accessor(new TileUpdateWrapper())! as TileUpdateWrapper;
+    case 'UnitUpdate': return accessor(new UnitUpdate())! as UnitUpdate;
+    case 'PlayerUpdate': return accessor(new PlayerUpdate())! as PlayerUpdate;
+    case 'AllianceRequestUpdate': return accessor(new AllianceRequestUpdate())! as AllianceRequestUpdate;
+    case 'AllianceRequestReplyUpdate': return accessor(new AllianceRequestReplyUpdate())! as AllianceRequestReplyUpdate;
+    case 'BrokeAllianceUpdate': return accessor(new BrokeAllianceUpdate())! as BrokeAllianceUpdate;
+    case 'AllianceExpiredUpdate': return accessor(new AllianceExpiredUpdate())! as AllianceExpiredUpdate;
+    case 'DisplayMessageUpdate': return accessor(new DisplayMessageUpdate())! as DisplayMessageUpdate;
+    case 'DisplayChatMessageUpdate': return accessor(new DisplayChatMessageUpdate())! as DisplayChatMessageUpdate;
+    case 'TargetPlayerUpdate': return accessor(new TargetPlayerUpdate())! as TargetPlayerUpdate;
+    case 'EmojiUpdate': return accessor(new EmojiUpdate())! as EmojiUpdate;
+    case 'WinUpdate': return accessor(new WinUpdate())! as WinUpdate;
+    case 'HashUpdate': return accessor(new HashUpdate())! as HashUpdate;
+    case 'UnitIncomingUpdate': return accessor(new UnitIncomingUpdate())! as UnitIncomingUpdate;
+    case 'AllianceExtensionUpdate': return accessor(new AllianceExtensionUpdate())! as AllianceExtensionUpdate;
+    case 'BonusEventUpdate': return accessor(new BonusEventUpdate())! as BonusEventUpdate;
+    case 'RailroadUpdate': return accessor(new RailroadUpdate())! as RailroadUpdate;
+    case 'ConquestUpdate': return accessor(new ConquestUpdate())! as ConquestUpdate;
+    case 'EmbargoUpdate': return accessor(new EmbargoUpdate())! as EmbargoUpdate;
+    default: return null;
   }
 }
 
 export function unionListToGameUpdateUnion(
-  type: GameUpdateUnion,
-  accessor: (
-    index: number,
-    obj:
-      | AllianceExpiredUpdate
-      | AllianceExtensionUpdate
-      | AllianceRequestReplyUpdate
-      | AllianceRequestUpdate
-      | BonusEventUpdate
-      | BrokeAllianceUpdate
-      | ConquestUpdate
-      | DisplayChatMessageUpdate
-      | DisplayMessageUpdate
-      | EmbargoUpdate
-      | EmojiUpdate
-      | HashUpdate
-      | PlayerUpdate
-      | RailroadUpdate
-      | TargetPlayerUpdate
-      | TileUpdateWrapper
-      | UnitIncomingUpdate
-      | UnitUpdate
-      | WinUpdate,
-  ) =>
-    | AllianceExpiredUpdate
-    | AllianceExtensionUpdate
-    | AllianceRequestReplyUpdate
-    | AllianceRequestUpdate
-    | BonusEventUpdate
-    | BrokeAllianceUpdate
-    | ConquestUpdate
-    | DisplayChatMessageUpdate
-    | DisplayMessageUpdate
-    | EmbargoUpdate
-    | EmojiUpdate
-    | HashUpdate
-    | PlayerUpdate
-    | RailroadUpdate
-    | TargetPlayerUpdate
-    | TileUpdateWrapper
-    | UnitIncomingUpdate
-    | UnitUpdate
-    | WinUpdate
-    | null,
-  index: number,
-):
-  | AllianceExpiredUpdate
-  | AllianceExtensionUpdate
-  | AllianceRequestReplyUpdate
-  | AllianceRequestUpdate
-  | BonusEventUpdate
-  | BrokeAllianceUpdate
-  | ConquestUpdate
-  | DisplayChatMessageUpdate
-  | DisplayMessageUpdate
-  | EmbargoUpdate
-  | EmojiUpdate
-  | HashUpdate
-  | PlayerUpdate
-  | RailroadUpdate
-  | TargetPlayerUpdate
-  | TileUpdateWrapper
-  | UnitIncomingUpdate
-  | UnitUpdate
-  | WinUpdate
-  | null {
-  switch (GameUpdateUnion[type]) {
-    case "NONE":
-      return null;
-    case "TileUpdateWrapper":
-      return accessor(index, new TileUpdateWrapper())! as TileUpdateWrapper;
-    case "UnitUpdate":
-      return accessor(index, new UnitUpdate())! as UnitUpdate;
-    case "PlayerUpdate":
-      return accessor(index, new PlayerUpdate())! as PlayerUpdate;
-    case "AllianceRequestUpdate":
-      return accessor(
-        index,
-        new AllianceRequestUpdate(),
-      )! as AllianceRequestUpdate;
-    case "AllianceRequestReplyUpdate":
-      return accessor(
-        index,
-        new AllianceRequestReplyUpdate(),
-      )! as AllianceRequestReplyUpdate;
-    case "BrokeAllianceUpdate":
-      return accessor(index, new BrokeAllianceUpdate())! as BrokeAllianceUpdate;
-    case "AllianceExpiredUpdate":
-      return accessor(
-        index,
-        new AllianceExpiredUpdate(),
-      )! as AllianceExpiredUpdate;
-    case "DisplayMessageUpdate":
-      return accessor(
-        index,
-        new DisplayMessageUpdate(),
-      )! as DisplayMessageUpdate;
-    case "DisplayChatMessageUpdate":
-      return accessor(
-        index,
-        new DisplayChatMessageUpdate(),
-      )! as DisplayChatMessageUpdate;
-    case "TargetPlayerUpdate":
-      return accessor(index, new TargetPlayerUpdate())! as TargetPlayerUpdate;
-    case "EmojiUpdate":
-      return accessor(index, new EmojiUpdate())! as EmojiUpdate;
-    case "WinUpdate":
-      return accessor(index, new WinUpdate())! as WinUpdate;
-    case "HashUpdate":
-      return accessor(index, new HashUpdate())! as HashUpdate;
-    case "UnitIncomingUpdate":
-      return accessor(index, new UnitIncomingUpdate())! as UnitIncomingUpdate;
-    case "AllianceExtensionUpdate":
-      return accessor(
-        index,
-        new AllianceExtensionUpdate(),
-      )! as AllianceExtensionUpdate;
-    case "BonusEventUpdate":
-      return accessor(index, new BonusEventUpdate())! as BonusEventUpdate;
-    case "RailroadUpdate":
-      return accessor(index, new RailroadUpdate())! as RailroadUpdate;
-    case "ConquestUpdate":
-      return accessor(index, new ConquestUpdate())! as ConquestUpdate;
-    case "EmbargoUpdate":
-      return accessor(index, new EmbargoUpdate())! as EmbargoUpdate;
-    default:
-      return null;
+  type: GameUpdateUnion, 
+  accessor: (index: number, obj:AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate) => AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate|null, 
+  index: number
+): AllianceExpiredUpdate|AllianceExtensionUpdate|AllianceRequestReplyUpdate|AllianceRequestUpdate|BonusEventUpdate|BrokeAllianceUpdate|ConquestUpdate|DisplayChatMessageUpdate|DisplayMessageUpdate|EmbargoUpdate|EmojiUpdate|HashUpdate|PlayerUpdate|RailroadUpdate|TargetPlayerUpdate|TileUpdateWrapper|UnitIncomingUpdate|UnitUpdate|WinUpdate|null {
+  switch(GameUpdateUnion[type]) {
+    case 'NONE': return null; 
+    case 'TileUpdateWrapper': return accessor(index, new TileUpdateWrapper())! as TileUpdateWrapper;
+    case 'UnitUpdate': return accessor(index, new UnitUpdate())! as UnitUpdate;
+    case 'PlayerUpdate': return accessor(index, new PlayerUpdate())! as PlayerUpdate;
+    case 'AllianceRequestUpdate': return accessor(index, new AllianceRequestUpdate())! as AllianceRequestUpdate;
+    case 'AllianceRequestReplyUpdate': return accessor(index, new AllianceRequestReplyUpdate())! as AllianceRequestReplyUpdate;
+    case 'BrokeAllianceUpdate': return accessor(index, new BrokeAllianceUpdate())! as BrokeAllianceUpdate;
+    case 'AllianceExpiredUpdate': return accessor(index, new AllianceExpiredUpdate())! as AllianceExpiredUpdate;
+    case 'DisplayMessageUpdate': return accessor(index, new DisplayMessageUpdate())! as DisplayMessageUpdate;
+    case 'DisplayChatMessageUpdate': return accessor(index, new DisplayChatMessageUpdate())! as DisplayChatMessageUpdate;
+    case 'TargetPlayerUpdate': return accessor(index, new TargetPlayerUpdate())! as TargetPlayerUpdate;
+    case 'EmojiUpdate': return accessor(index, new EmojiUpdate())! as EmojiUpdate;
+    case 'WinUpdate': return accessor(index, new WinUpdate())! as WinUpdate;
+    case 'HashUpdate': return accessor(index, new HashUpdate())! as HashUpdate;
+    case 'UnitIncomingUpdate': return accessor(index, new UnitIncomingUpdate())! as UnitIncomingUpdate;
+    case 'AllianceExtensionUpdate': return accessor(index, new AllianceExtensionUpdate())! as AllianceExtensionUpdate;
+    case 'BonusEventUpdate': return accessor(index, new BonusEventUpdate())! as BonusEventUpdate;
+    case 'RailroadUpdate': return accessor(index, new RailroadUpdate())! as RailroadUpdate;
+    case 'ConquestUpdate': return accessor(index, new ConquestUpdate())! as ConquestUpdate;
+    case 'EmbargoUpdate': return accessor(index, new EmbargoUpdate())! as EmbargoUpdate;
+    default: return null;
   }
 }

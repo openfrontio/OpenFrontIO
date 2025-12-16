@@ -1,3 +1,5 @@
+import { ErrorUpdate } from "../../generated/game-updates/error-update";
+import { GameUpdateViewData } from "../../generated/game-updates/game-update-view-data";
 import {
   Cell,
   PlayerActions,
@@ -6,7 +8,6 @@ import {
   PlayerProfile,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";

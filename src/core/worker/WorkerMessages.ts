@@ -5,7 +5,7 @@ import {
   PlayerProfile,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import { GameUpdateViewData } from "../../generated/game-updates/game-update-view-data";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
