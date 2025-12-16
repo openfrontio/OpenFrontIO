@@ -254,6 +254,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);
     let relationHtml: TemplateResult | null = null;
+    const maxTroops = this.game.config().maxTroops(player);
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
@@ -356,6 +357,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     ${translateText("player_info_overlay.troops")}
                     <span class="ml-auto mr-0 font-bold">
                       ${renderTroops(player.troops())}
+                    </span>
+                  </div>`
+                : ""}
+              ${maxTroops >= 1
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.maxtroops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(maxTroops)}
                     </span>
                   </div>`
                 : ""}
