@@ -70,10 +70,10 @@ export class OModal extends LitElement {
       backdrop-filter: blur(8px);
     }
   `;
+
   public open() {
     this.isModalOpen = true;
   }
-
   public close() {
     this.isModalOpen = false;
     this.dispatchEvent(
