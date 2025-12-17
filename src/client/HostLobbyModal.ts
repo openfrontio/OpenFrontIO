@@ -556,7 +556,7 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.nationCount}
+            ${this.disableNPCs ? 0 : this.nationCount}
             ${
               this.nationCount === 1
                 ? translateText("host_modal.nation_player")
