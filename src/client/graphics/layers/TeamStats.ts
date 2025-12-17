@@ -134,45 +134,45 @@ export class TeamStats extends LitElement implements Layer {
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/50">
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+            <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>
             ${this.showUnits
               ? html`
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.launchers")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.sams")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.warships")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.cities")}
                   </div>
                 `
               : html`
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.owned")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.gold")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.maxtroops")}
                   </div>
