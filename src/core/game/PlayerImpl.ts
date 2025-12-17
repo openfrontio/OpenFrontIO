@@ -9,7 +9,6 @@ import {
   toInt,
   within,
 } from "../Util";
-import { sanitizeUsername } from "../validations/username";
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
@@ -111,7 +110,7 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private readonly _team: Team | null,
   ) {
-    this._name = sanitizeUsername(playerInfo.name);
+    this._name = playerInfo.name;
     this._troops = toInt(startTroops);
     this._gold = 0n;
     this._displayName = this._name;

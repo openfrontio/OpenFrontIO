@@ -218,7 +218,8 @@
     "fourislands": "Four Islands",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
-    "svalmel": "Svalmel"
+    "svalmel": "Svalmel",
+    "manicouagan": "Manicouagan"
   },
   "map_categories": {
     "continental": "Continental",
@@ -562,7 +563,7 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops",
+    "maxtroops": "Max troops",
     "launchers": "Launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -578,6 +579,7 @@
     "team": "Team",
     "alliance_timeout": "Alliance ends in",
     "troops": "Troops",
+    "maxtroops": "Max troops",
     "a_troops": "Attacking troops",
     "gold": "Gold",
     "ports": "Ports",

@@ -88,10 +88,10 @@ export function nukeFxFactory(
     radiusFactor: number;
     density: number;
   }> = [
-    { type: FxType.MiniFire, radiusFactor: 1.0, density: 1 / 25 },
-    { type: FxType.MiniSmoke, radiusFactor: 1.0, density: 1 / 28 },
+    { type: FxType.HappyElf, radiusFactor: 1.0, density: 1 / 25 },
+    { type: FxType.SadElf, radiusFactor: 1.0, density: 1 / 28 },
     { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
-    { type: FxType.MiniSmokeAndFire, radiusFactor: 0.9, density: 1 / 70 },
+    { type: FxType.Snowman, radiusFactor: 0.9, density: 1 / 70 },
   ];
 
   for (const { type, radiusFactor, density } of debrisPlan) {

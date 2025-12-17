@@ -662,23 +662,17 @@ For more information on this, and how to apply and follow the GNU AGPL, see
 
 === ADDITIONAL TERMS (AGPL v3 Section 7) ===
 
-Attribution Requirement:
+Copyright Preservation Requirement (Section 7(b)):
 
-All versions of this software, including modified versions, must display 
-attribution to the original OpenFront project prominently on the main menu 
-or initial title screen where it is clearly visible to users.
+OpenFront displays copyright notices in the footer and on the 
+loading screen. Modified versions must preserve the copyright 
+notice "© OpenFront and Contributors" in reasonably 
+visible locations such as the footer, loading screen, splash screen,
+or main menu.
 
-The attribution must include one of the following text statements:
-- "Based on OpenFront"
-- "Derived from OpenFront"
-- "Powered by OpenFront"
-- "Fork of OpenFront"
+Prohibition of Misrepresentation (Section 7(c)):
 
-This attribution text must be reasonably prominent and clearly readable.
-A link to https://openfront.io may be included alongside the attribution.
-
-Modified versions may use their own game title and branding, but may not 
-use "OpenFront" as the primary title or imply official endorsement.
-
-These attribution requirements are additional terms under Section 7 of 
-the GNU Affero General Public License v3, which governs this software.
+Modified versions may not misrepresent their origin or 
+relationship to the OpenFront project. Modified versions must 
+not use "OpenFront" as their primary title or imply official 
+endorsement without permission.

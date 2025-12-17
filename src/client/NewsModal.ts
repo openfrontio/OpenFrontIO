@@ -3,6 +3,7 @@ import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import changelog from "../../resources/changelog.md";
 import megaphone from "../../resources/images/Megaphone.svg";
+import santaHatIcon from "../../resources/images/SantaHat.webp";
 import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
@@ -166,6 +167,10 @@ export class NewsButton extends LitElement {
             src="${megaphone}"
             alt=${translateText("news.title")}
           />
+          <div
+            class="santa-hat-overlay absolute bg-contain bg-no-repeat pointer-events-none"
+            style="background-image: url('${santaHatIcon}')"
+          ></div>
         </button>
       </div>
       <news-modal></news-modal>

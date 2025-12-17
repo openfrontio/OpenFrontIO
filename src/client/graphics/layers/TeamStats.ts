@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { renderNumber, translateText } from "../../Utils";
+import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 interface TeamEntry {
@@ -11,7 +11,7 @@ interface TeamEntry {
   isMyTeam: boolean;
   totalScoreStr: string;
   totalGold: string;
-  totalTroops: string;
+  totalMaxTroops: string;
   totalSAMs: string;
   totalLaunchers: string;
   totalWarShips: string;
@@ -71,7 +71,7 @@ export class TeamStats extends LitElement implements Layer {
     this.teams = Object.entries(grouped)
       .map(([teamStr, teamPlayers]) => {
         let totalGold = 0n;
-        let totalTroops = 0;
+        let totalMaxTroops = 0;
         let totalScoreSort = 0;
         let totalSAMs = 0;
         let totalLaunchers = 0;
@@ -80,7 +80,7 @@ export class TeamStats extends LitElement implements Layer {
 
         for (const p of teamPlayers) {
           if (p.isAlive()) {
-            totalTroops += p.troops();
+            totalMaxTroops += this.game.config().maxTroops(p);
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
             totalLaunchers += p.totalUnitLevels(UnitType.MissileSilo);
@@ -100,7 +100,7 @@ export class TeamStats extends LitElement implements Layer {
           totalScoreStr: formatPercentage(totalScorePercent),
           totalScoreSort,
           totalGold: renderNumber(totalGold),
-          totalTroops: renderNumber(totalTroops / 10),
+          totalMaxTroops: renderTroops(totalMaxTroops),
           players: teamPlayers,
 
           totalLaunchers: renderNumber(totalLaunchers),
@@ -134,47 +134,47 @@ export class TeamStats extends LitElement implements Layer {
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/50">
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+            <div class="p-1.5 md:p-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>
             ${this.showUnits
               ? html`
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.launchers")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.sams")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.warships")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.cities")}
                   </div>
                 `
               : html`
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.owned")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
                     ${translateText("leaderboard.gold")}
                   </div>
                   <div
-                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                    class="p-1.5 md:p-2.5 text-center border-b border-slate-500"
                   >
-                    ${translateText("leaderboard.troops")}
+                    ${translateText("leaderboard.maxtroops")}
                   </div>
                 `}
           </div>
@@ -221,7 +221,7 @@ export class TeamStats extends LitElement implements Layer {
                       ${team.totalGold}
                     </div>
                     <div class="py-1.5 border-b border-slate-500">
-                      ${team.totalTroops}
+                      ${team.totalMaxTroops}
                     </div>
                   </div>
                 `,

@@ -69,6 +69,11 @@ export class SpriteFx implements Fx {
     }
   }
 
+  public setPosition(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
+  }
+
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
     if (!this.animatedSprite) return false;
 

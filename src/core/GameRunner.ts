@@ -29,7 +29,7 @@ import {
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { sanitize, simpleHash } from "./Util";
+import { simpleHash } from "./Util";
 import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
@@ -48,9 +48,7 @@ export async function createGameRunner(
 
   const humans = gameStart.players.map((p) => {
     return new PlayerInfo(
-      p.clientID === clientID
-        ? sanitize(p.username)
-        : censorNameWithClanTag(p.username),
+      p.clientID === clientID ? p.username : censorNameWithClanTag(p.username),
       PlayerType.Human,
       p.clientID,
       random.nextID(),
