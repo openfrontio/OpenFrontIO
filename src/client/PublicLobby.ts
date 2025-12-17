@@ -143,6 +143,11 @@ export class PublicLobby extends LitElement {
       teamTotal,
       teamSize,
     );
+
+    const fullModeLabel = teamDetailLabel
+      ? `${modeLabel} ${teamDetailLabel}`
+      : modeLabel;
+
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
@@ -176,14 +181,8 @@ export class PublicLobby extends LitElement {
             </div>
             <div class="text-md font-medium text-white-400">
               <span class="text-sm text-red-800 bg-white rounded-sm px-1 mr-1"
-                >${modeLabel}</span
+                >${fullModeLabel}</span
               >
-              ${teamDetailLabel
-                ? html`<span
-                    class="text-sm text-red-800 bg-white rounded-sm px-1 ml-1"
-                    >${teamDetailLabel}</span
-                  >`
-                : ""}
               <span
                 >${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
