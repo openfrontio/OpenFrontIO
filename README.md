@@ -57,8 +57,10 @@ For license history, see [LICENSING.md](LICENSING.md).
 2. **Install dependencies**
 
    ```bash
-   npm i
+   npm run inst
    ```
+
+   Do NOT use `npm install` nor `npm i` but instead use our `npm run inst`. It runs the safer `npm ci --ignore-scripts` to install dependencies exactly according to the versions in `package-lock.json` and doesn't run scripts. This can prevent being hit by a supply chain attack.
 
 ## 🎮 Running the Game
 
