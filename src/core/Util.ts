@@ -317,6 +317,7 @@ export const emojiTable = [
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
   ["🏭", "🚂", "❓", "🐔", "🐀"],
+  ["🎁", "🌟", "🎅", "🎄", "⛄"],
 ] as const;
 // 2d to 1d array
 export const flattenedEmojiTable = emojiTable.flat();
