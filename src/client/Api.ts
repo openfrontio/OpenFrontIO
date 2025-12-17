@@ -5,6 +5,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
 
 export async function fetchPlayerById(
@@ -141,4 +142,38 @@ export function hasLinkedAccount(
     (userMeResponse.user?.discord !== undefined ||
       userMeResponse.user?.email !== undefined)
   );
+}
+
+export async function fetchGameById(
+  gameId: string,
+): Promise<AnalyticsRecord | false> {
+  try {
+    const url = `${getApiBase()}/game/${gameId}`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchGameById: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = AnalyticsRecordSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchGameById: Zod validation failed", parsed.error);
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchGameById: request failed", err);
+    return false;
+  }
 }

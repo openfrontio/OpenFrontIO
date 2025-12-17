@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { GameEndInfo } from "../core/Schemas";
 import { GameMapType } from "../core/game/Game";
+import { fetchGameById } from "./Api";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UsernameInput } from "./UsernameInput";
 import { renderDuration, translateText } from "./Utils";
@@ -13,7 +14,6 @@ import {
 import "./components/baseComponents/ranking/PlayerRow";
 import "./components/baseComponents/ranking/RankingControls";
 import "./components/baseComponents/ranking/RankingHeader";
-import { fetchGameById } from "./jwt";
 
 @customElement("game-info-modal")
 export class GameInfoModal extends LitElement {
