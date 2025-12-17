@@ -492,7 +492,7 @@ export class DefaultConfig implements Config {
             if (player.type() === PlayerType.Human && this.infiniteGold()) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return 25_000_000n + game.stats().numMirvsLaunched() * 25_000_000n;
           },
           territoryBound: false,
         };
