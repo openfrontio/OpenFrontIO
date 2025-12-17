@@ -370,7 +370,7 @@ export class DefaultConfig implements Config {
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
       case "ally":
-        return 50_000n;
+        return 35_000n;
       case "team":
       case "other":
         return 25_000n;
