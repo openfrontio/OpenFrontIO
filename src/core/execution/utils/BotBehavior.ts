@@ -24,7 +24,7 @@ const EMOJI_ASSIST_ACCEPT = (["👍", "⛵", "🤝", "🎯"] as const).map(emoji
 const EMOJI_RELATION_TOO_LOW = (["🥱", "🤦‍♂️"] as const).map(emojiId);
 const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
-const EMOJI_HECKLE = (["🎁", "😡"] as const).map(emojiId);
+const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
 export class BotBehavior {
   private botAttackTroopsSent: number = 0;
