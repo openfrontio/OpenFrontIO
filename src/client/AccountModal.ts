@@ -5,19 +5,14 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
+import { fetchPlayerById, getUserMe } from "./Api";
+import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import {
-  discordLogin,
-  fetchPlayerById,
-  getApiBase,
-  getUserMe,
-  logOut,
-} from "./jwt";
 import { isInIframe, translateText } from "./Utils";
 
 @customElement("account-modal")
@@ -30,10 +25,7 @@ export class AccountModal extends LitElement {
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
 
-  private loggedInEmail: string | null = null;
-  private loggedInDiscord: string | null = null;
   private userMeResponse: UserMeResponse | null = null;
-  private playerId: string | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
 
@@ -44,8 +36,7 @@ export class AccountModal extends LitElement {
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         this.userMeResponse = customEvent.detail as UserMeResponse;
-        this.playerId = this.userMeResponse?.player?.publicId;
-        if (this.playerId === undefined) {
+        if (this.userMeResponse?.player?.publicId === undefined) {
           this.statsTree = null;
           this.recentGames = [];
         }
@@ -67,29 +58,88 @@ export class AccountModal extends LitElement {
         id="account-modal"
         title="${translateText("account_modal.title") || "Account"}"
       >
-        ${this.renderInner()}
+        ${this.isLoadingUser
+          ? html`
+              <div
+                class="flex flex-col items-center justify-center p-6 text-white"
+              >
+                <p class="mb-2">
+                  ${translateText("account_modal.fetching_account")}
+                </p>
+                <div
+                  class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
+                ></div>
+              </div>
+            `
+          : this.renderInner()}
       </o-modal>
     `;
   }
 
   private renderInner() {
-    if (this.isLoadingUser) {
-      return html`
-        <div class="flex flex-col items-center justify-center p-6 text-white">
-          <p class="mb-2">${translateText("account_modal.fetching_account")}</p>
-          <div
-            class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
-          ></div>
-        </div>
-      `;
-    }
-    if (this.loggedInDiscord) {
-      return this.renderLoggedInDiscord();
-    } else if (this.loggedInEmail) {
-      return this.renderLoggedInEmail();
+    if (this.userMeResponse?.user) {
+      return this.renderAccountInfo();
     } else {
       return this.renderLoginOptions();
     }
+  }
+
+  private renderAccountInfo() {
+    return html`
+      <div class="p-6">
+        <div class="mb-4">
+          <p class="text-white mb-4 text-center">
+            ${translateText("account_modal.player_id", {
+              id:
+                this.userMeResponse?.player?.publicId ??
+                translateText("account_modal.not_found"),
+            })}
+          </p>
+        </div>
+        <div class="mb-4 text-center">
+          <p class="text-white mb-4">${this.renderLoggedInAs()}</p>
+        </div>
+        <div class="flex flex-col items-center mt-2 mb-4">
+          <discord-user-header
+            .data=${this.userMeResponse?.user?.discord ?? null}
+          ></discord-user-header>
+        </div>
+        ${this.renderPlayerStats()}
+      </div>
+    `;
+  }
+
+  private renderLoggedInAs(): TemplateResult {
+    const me = this.userMeResponse?.user;
+    if (me?.discord) {
+      return html`<p>
+          ${translateText("account_modal.linked_account", {
+            account_name: me.discord.global_name ?? "",
+          })}
+        </p>
+        ${this.renderLogoutButton()}`;
+    } else if (me?.email) {
+      return html`<p>
+          ${translateText("account_modal.linked_account", {
+            account_name: me.email,
+          })}
+        </p>
+        ${this.renderLogoutButton()}`;
+    }
+    return this.renderLoginOptions();
+  }
+
+  private renderPlayerStats(): TemplateResult {
+    return html`
+      <player-stats-tree-view
+        .statsTree=${this.statsTree}
+      ></player-stats-tree-view>
+      <hr class="w-2/3 border-gray-600 my-2" />
+      <game-list
+        .games=${this.recentGames}
+        .onViewGame=${(id: string) => this.viewGame(id)}
+      ></game-list>
+    `;
   }
 
   private viewGame(gameId: string): void {
@@ -103,46 +153,7 @@ export class AccountModal extends LitElement {
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   }
 
-  private renderLoggedInDiscord() {
-    return html`
-      <div class="p-6">
-        <div class="mb-4 text-center">
-          <p class="text-white mb-4">
-            Logged in with Discord as ${this.loggedInDiscord}
-          </p>
-          ${this.logoutButton()}
-        </div>
-        <div class="flex flex-col items-center mt-2 mb-4">
-          <discord-user-header
-            .data=${this.userMeResponse?.user?.discord ?? null}
-          ></discord-user-header>
-          <player-stats-tree-view
-            .statsTree=${this.statsTree}
-          ></player-stats-tree-view>
-          <hr class="w-2/3 border-gray-600 my-2" />
-          <game-list
-            .games=${this.recentGames}
-            .onViewGame=${(id: string) => this.viewGame(id)}
-          ></game-list>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderLoggedInEmail(): TemplateResult {
-    return html`
-      <div class="p-6">
-        <div class="mb-4">
-          <p class="text-white text-center mb-4">
-            Logged in as ${this.loggedInEmail}
-          </p>
-        </div>
-        ${this.logoutButton()}
-      </div>
-    `;
-  }
-
-  private logoutButton(): TemplateResult {
+  private renderLogoutButton(): TemplateResult {
     return html`
       <button
         @click="${this.handleLogout}"
@@ -157,10 +168,6 @@ export class AccountModal extends LitElement {
     return html`
       <div class="p-6">
         <div class="mb-6">
-          <h3 class="text-lg font-medium text-white mb-4 text-center">
-            Choose your login method
-          </h3>
-
           <!-- Discord Login Button -->
           <div class="mb-6">
             <button
@@ -195,7 +202,6 @@ export class AccountModal extends LitElement {
               for="email"
               class="block text-sm font-medium text-white mb-2"
             >
-              Recover account by email
             </label>
             <input
               type="email"
@@ -225,6 +231,12 @@ export class AccountModal extends LitElement {
           </button>
         </div>
       </div>
+      <button
+        @click="${this.handleLogout}"
+        class="px-3 py-1 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+      >
+        ${translateText("account_modal.clear_session")}
+      </button>
     `;
   }
 
@@ -235,41 +247,19 @@ export class AccountModal extends LitElement {
 
   private async handleSubmit() {
     if (!this.email) {
-      alert("Please enter an email address");
+      alert(translateText("account_modal.enter_email_address"));
       return;
     }
 
-    try {
-      const apiBase = getApiBase();
-      const response = await fetch(`${apiBase}/magic-link`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          redirectDomain: window.location.origin,
+    const success = await sendMagicLink(this.email);
+    if (success) {
+      alert(
+        translateText("account_modal.recovery_email_sent", {
           email: this.email,
         }),
-      });
-
-      if (response.ok) {
-        alert(
-          translateText("account_modal.recovery_email_sent", {
-            email: this.email,
-          }),
-        );
-        this.close();
-      } else {
-        console.error(
-          "Failed to send recovery email:",
-          response.status,
-          response.statusText,
-        );
-        alert("Failed to send recovery email. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error sending recovery email:", error);
-      alert("Error sending recovery email. Please try again.");
+      );
+    } else {
+      alert(translateText("account_modal.failed_to_send_recovery_email"));
     }
   }
 
@@ -284,14 +274,10 @@ export class AccountModal extends LitElement {
     void getUserMe()
       .then((userMe) => {
         if (userMe) {
-          this.loggedInEmail = userMe.user.email ?? null;
-          this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
-          if (this.playerId) {
-            this.loadFromApi(this.playerId);
+          this.userMeResponse = userMe;
+          if (this.userMeResponse?.player?.publicId) {
+            this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
-        } else {
-          this.loggedInEmail = null;
-          this.loggedInDiscord = null;
         }
         this.isLoadingUser = false;
         this.requestUpdate();
@@ -315,9 +301,9 @@ export class AccountModal extends LitElement {
     window.location.reload();
   }
 
-  private async loadFromApi(playerId: string): Promise<void> {
+  private async loadPlayerProfile(publicId: string): Promise<void> {
     try {
-      const data = await fetchPlayerById(playerId);
+      const data = await fetchPlayerById(publicId);
       if (!data) {
         this.requestUpdate();
         return;
@@ -382,18 +368,18 @@ export class AccountButton extends LitElement {
 
     let buttonTitle = "";
     if (this.loggedInEmail) {
-      buttonTitle = translateText("account_modal.logged_in_as", {
-        email: this.loggedInEmail,
+      buttonTitle = translateText("account_modal.linked_account", {
+        account_name: this.loggedInEmail,
       });
     } else if (this.loggedInDiscord) {
-      buttonTitle = translateText("account_modal.logged_in_with_discord");
+      buttonTitle = translateText("account_modal.linked_account");
     }
 
     return html`
       <div class="fixed top-4 right-4 z-[9998]">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
+          class="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-offset-4"
           title="${buttonTitle}"
         >
           ${this.renderIcon()}

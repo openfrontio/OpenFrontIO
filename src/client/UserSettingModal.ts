@@ -180,16 +180,6 @@ export class UserSettingModal extends LitElement {
     }
   }
 
-  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
-    const value = e.detail?.value;
-    if (typeof value === "number") {
-      const ratio = value / 100;
-      localStorage.setItem("settings.troopRatio", ratio.toString());
-    } else {
-      console.warn("Slider event missing detail.value", e);
-    }
-  }
-
   private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;

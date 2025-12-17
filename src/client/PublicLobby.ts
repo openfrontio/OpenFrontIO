@@ -143,6 +143,11 @@ export class PublicLobby extends LitElement {
       teamTotal,
       teamSize,
     );
+
+    const fullModeLabel = teamDetailLabel
+      ? `${modeLabel} ${teamDetailLabel}`
+      : modeLabel;
+
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
@@ -151,8 +156,8 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
+          : "bg-gradient-to-r from-red-800 to-red-700"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -174,34 +179,23 @@ export class PublicLobby extends LitElement {
             <div class="text-lg md:text-2xl font-semibold">
               ${translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-blue-100">
-              <span
-                class="text-sm ${this.isLobbyHighlighted
-                  ? "text-green-600"
-                  : "text-blue-600"} bg-white rounded-sm px-1"
-                >${modeLabel}</span
+            <div class="text-md font-medium text-white-400">
+              <span class="text-sm text-red-800 bg-white rounded-sm px-1 mr-1"
+                >${fullModeLabel}</span
               >
-              ${teamDetailLabel
-                ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
-                    >${teamDetailLabel}</span
-                  >`
-                : ""}
               <span
                 >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
                 )}</span
               >
             </div>
           </div>
 
           <div>
-            <div class="text-md font-medium text-blue-100">
+            <div class="text-md font-medium text-white-400">
               ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
-            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
+            <div class="text-md font-medium text-white-400">${timeDisplay}</div>
           </div>
         </div>
       </button>

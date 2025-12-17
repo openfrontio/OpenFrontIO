@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -49,6 +49,7 @@ import {
 } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { UIState } from "../UIState";
 
 interface GameEvent {
   description: string;
@@ -75,6 +76,7 @@ interface GameEvent {
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
+  public uiState: UIState;
 
   private active: boolean = false;
   private events: GameEvent[] = [];
@@ -98,6 +100,17 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
   ]);
+
+  @query(".events-container")
+  private _eventsContainer?: HTMLDivElement;
+  private _shouldScrollToBottom = true;
+
+  updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    if (this._eventsContainer && this._shouldScrollToBottom) {
+      this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+    }
+  }
 
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
@@ -189,6 +202,14 @@ export class EventsDisplay extends LitElement implements Layer {
 
   tick() {
     this.active = true;
+
+    if (this._eventsContainer) {
+      const el = this._eventsContainer;
+      this._shouldScrollToBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 5;
+    } else {
+      this._shouldScrollToBottom = true;
+    }
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this._isVisible = true;
@@ -744,8 +765,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    // Launch counterattack with the same number of troops as the incoming attack
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
+    const counterTroops = Math.min(
+      attack.troops,
+      this.uiState.attackRatio * myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private renderIncomingAttacks() {
@@ -1040,7 +1064,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full sm:rounded-b-lg"
+                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full sm:rounded-b-lg events-container"
               >
                 <div>
                   <table
