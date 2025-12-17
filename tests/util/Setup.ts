@@ -8,9 +8,9 @@ import {
   GameMode,
   GameType,
   PlayerInfo,
-  PlayerType,
 } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
+import { PlayerType } from "../../src/core/game/GameUpdates";
 import {
   genTerrainFromBin,
   MapManifest,

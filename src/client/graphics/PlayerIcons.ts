@@ -11,7 +11,7 @@ import nukeWhiteIcon from "../../../resources/images/NukeIconWhite.svg";
 import questionMarkIcon from "../../../resources/images/QuestionMarkIcon.svg";
 import targetIcon from "../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../resources/images/TraitorIcon.svg";
-import { AllPlayers, nukeTypes } from "../../core/game/Game";
+import { nukeTypes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
 
 export type PlayerIconId =
@@ -114,15 +114,14 @@ export function getPlayerIcons(
       .outgoingEmojis()
       .filter(
         (emoji) =>
-          emoji.recipientID === AllPlayers ||
-          emoji.recipientID === myPlayer?.smallID(),
+          emoji.allPlayers ?? emoji.recipientId === myPlayer?.smallID(),
       );
 
     if (emojis.length > 0) {
       icons.push({
         id: "emoji",
         kind: "emoji",
-        text: emojis[0].message,
+        text: emojis[0].emoji,
       });
     }
   }

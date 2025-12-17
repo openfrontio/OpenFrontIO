@@ -1,4 +1,5 @@
-import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
+import { MessageType } from "../game/GameUpdates";
 
 export class DeleteUnitExecution implements Execution {
   private active: boolean = true;

@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
-import { Cell, UnitType } from "../../../core/game/Game";
+import { Cell } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 

@@ -11,16 +11,15 @@ import {
   HumansVsNations,
   Player,
   PlayerInfo,
-  PlayerType,
   Quads,
   TerrainType,
   TerraNullius,
   Tick,
   Trios,
   UnitInfo,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { PlayerType, UnitType } from "../game/GameUpdates";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";

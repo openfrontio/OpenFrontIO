@@ -1,5 +1,6 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameUpdates";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 

@@ -10,9 +10,9 @@ import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
-import { Cell, UnitType } from "../../../core/game/Game";
+import { AllUnitTypes, Cell } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameUpdateType, UnitType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord("rgb(150,150,150)");
@@ -32,7 +32,7 @@ interface UnitRenderConfig {
 export class StructureLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private unitIcons: Map<string, HTMLImageElement> = new Map();
+  private unitIcons: Map<UnitType, HTMLImageElement> = new Map();
   private theme: Theme;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
@@ -84,7 +84,7 @@ export class StructureLayer implements Layer {
     this.loadIconData();
   }
 
-  private loadIcon(unitType: string, config: UnitRenderConfig) {
+  private loadIcon(unitType: UnitType, config: UnitRenderConfig) {
     const image = new Image();
     image.src = config.icon;
     image.onload = () => {
@@ -99,8 +99,11 @@ export class StructureLayer implements Layer {
   }
 
   private loadIconData() {
-    Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
-      this.loadIcon(unitType, config);
+    AllUnitTypes.forEach((unitType) => {
+      const config = this.unitConfigs[unitType];
+      if (config) {
+        this.loadIcon(unitType, this.unitConfigs[unitType]!);
+      }
     });
   }
 
@@ -110,9 +113,10 @@ export class StructureLayer implements Layer {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    const unitUpdates =
+      updates !== null ? (updates[GameUpdateType.Unit]?.updates ?? []) : [];
     for (const u of unitUpdates) {
-      const unit = this.game.unit(u.id);
+      const unit = this.game.unit(u.unit!.id);
       if (unit === undefined) continue;
       this.handleUnitRendering(unit);
     }

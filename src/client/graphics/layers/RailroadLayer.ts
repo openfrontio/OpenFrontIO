@@ -45,9 +45,9 @@ export class RailroadLayer implements Layer {
   tick() {
     const updates = this.game.updatesSinceLastTick();
     const railUpdates =
-      updates !== null ? updates[GameUpdateType.RailroadEvent] : [];
+      updates !== null ? updates[GameUpdateType.RailroadEvent].updates : [];
     for (const rail of railUpdates) {
-      this.handleRailroadRendering(rail);
+      this.handleRailroadRendering(rail.railroad!);
     }
   }
 

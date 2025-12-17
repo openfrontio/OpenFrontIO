@@ -1,6 +1,6 @@
 // renderUnitTypeOptions.ts
 import { html, TemplateResult } from "lit";
-import { UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/GameUpdates";
 import { translateText } from "../Utils";
 
 export interface UnitTypeRenderContext {

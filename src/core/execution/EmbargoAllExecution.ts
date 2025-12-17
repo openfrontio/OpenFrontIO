@@ -1,4 +1,5 @@
-import { Execution, Game, Player, PlayerType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
+import { PlayerType } from "../game/GameUpdates";
 
 export class EmbargoAllExecution implements Execution {
   constructor(

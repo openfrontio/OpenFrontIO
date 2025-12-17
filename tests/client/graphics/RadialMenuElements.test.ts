@@ -9,8 +9,8 @@ import {
   rootMenuElement,
   Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
-import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { UnitType } from "../../../src/core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
 jest.mock("../../../src/client/Utils", () => ({

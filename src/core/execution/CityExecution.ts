@@ -1,4 +1,5 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
+import { UnitType } from "../game/GameUpdates";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {

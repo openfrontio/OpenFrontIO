@@ -1,10 +1,10 @@
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
+  UnitType,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
@@ -45,29 +45,31 @@ export class FxLayer implements Layer {
     this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.[GameUpdateType.Unit]?.updates.map((update) =>
+        this.game.unit(update.unit!.id),
+      )
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.BonusEvent]?.forEach((bonusEvent) => {
-        if (bonusEvent === undefined) return;
-        this.onBonusEvent(bonusEvent);
+      ?.[GameUpdateType.BonusEvent]?.updates.forEach((update) => {
+        if (update === undefined) return;
+        this.onBonusEvent(update.bonusEvent!);
       });
 
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
+      ?.[GameUpdateType.RailroadEvent]?.updates.forEach((update) => {
         if (update === undefined) return;
-        this.onRailroadEvent(update);
+        this.onRailroadEvent(update.railroad!);
       });
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
+      ?.[GameUpdateType.ConquestEvent]?.updates.forEach((update) => {
         if (update === undefined) return;
-        this.onConquestEvent(update);
+        this.onConquestEvent(update.conquest!);
       });
   }
 
@@ -249,7 +251,7 @@ export class FxLayer implements Layer {
 
   onConquestEvent(conquest: ConquestUpdate) {
     // Only display fx for the current player
-    const conqueror = this.game.player(conquest.conquerorId);
+    const conqueror = this.game.playerBySmallID(conquest.conquerorId);
     if (conqueror !== this.game.myPlayer()) {
       return;
     }

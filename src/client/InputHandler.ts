@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { UnitType } from "../core/game/GameUpdates";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";

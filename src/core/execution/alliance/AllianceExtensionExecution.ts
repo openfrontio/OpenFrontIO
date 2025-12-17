@@ -1,10 +1,5 @@
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  PlayerID,
-} from "../../game/Game";
+import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import { MessageType } from "../../game/GameUpdates";
 
 export class AllianceExtensionExecution implements Execution {
   constructor(

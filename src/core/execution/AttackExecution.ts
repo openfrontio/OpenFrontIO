@@ -3,14 +3,13 @@ import {
   Attack,
   Execution,
   Game,
-  MessageType,
   Player,
   PlayerID,
-  PlayerType,
   TerrainType,
   TerraNullius,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, PlayerType } from "../game/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 

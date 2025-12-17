@@ -1,18 +1,21 @@
-import { simpleHash, toInt, withinInt } from "../Util";
+import { toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
-  MessageType,
   Player,
   Tick,
-  TrainType,
   TrajectoryTile,
   Unit,
   UnitInfo,
-  UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import {
+  GameUpdateType,
+  MessageType,
+  TrainType,
+  UnitType,
+  UnitUpdate,
+} from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
@@ -123,13 +126,13 @@ export class UnitImpl implements Unit {
       unitType: this._type,
       id: this._id,
       troops: this._troops,
-      ownerID: this._owner.smallID(),
-      lastOwnerID: this._lastOwner?.smallID(),
+      ownerId: this._owner.smallID(),
+      lastOwnerId: this._lastOwner?.smallID(),
       isActive: this._active,
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
-      markedForDeletion: this._deletionAt ?? false,
+      markedForDeletion: this._deletionAt ?? undefined,
       targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
@@ -325,7 +328,7 @@ export class UnitImpl implements Unit {
   }
 
   hash(): number {
-    return this.tile() + simpleHash(this.type()) * this._id;
+    return this.tile() + this.type() * this._id;
   }
 
   toString(): string {

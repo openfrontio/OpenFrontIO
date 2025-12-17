@@ -3,10 +3,10 @@ import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
-import { MessageType } from "../../../core/game/Game";
 import {
   DisplayMessageUpdate,
   GameUpdateType,
+  MessageType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
@@ -57,8 +57,8 @@ export class ChatDisplay extends LitElement implements Layer {
     if (event.messageType !== MessageType.CHAT) return;
     const myPlayer = this.game.myPlayer();
     if (
-      event.playerID !== null &&
-      (!myPlayer || myPlayer.smallID() !== event.playerID)
+      event.playerId !== null &&
+      (!myPlayer || myPlayer.smallID() !== event.playerId)
     ) {
       return;
     }
@@ -76,31 +76,26 @@ export class ChatDisplay extends LitElement implements Layer {
   tick() {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    if (updates === null) return;
-    const messages = updates[GameUpdateType.DisplayEvent] as
-      | DisplayMessageUpdate[]
-      | undefined;
-
-    if (messages) {
-      for (const msg of messages) {
-        if (msg.messageType === MessageType.CHAT) {
-          const myPlayer = this.game.myPlayer();
-          if (
-            msg.playerID !== null &&
-            (!myPlayer || myPlayer.smallID() !== msg.playerID)
-          ) {
-            continue;
-          }
-
-          this.chatEvents = [
-            ...this.chatEvents,
-            {
-              description: msg.message,
-              unsafeDescription: true,
-              createdAt: this.game.ticks(),
-            },
-          ];
+    for (const update of updates?.[GameUpdateType.DisplayEvent]?.updates ??
+      []) {
+      const msg = update.displayMessage!;
+      if (msg.messageType === MessageType.CHAT) {
+        const myPlayer = this.game.myPlayer();
+        if (
+          msg.playerId !== null &&
+          (!myPlayer || myPlayer.smallID() !== msg.playerId)
+        ) {
+          continue;
         }
+
+        this.chatEvents = [
+          ...this.chatEvents,
+          {
+            description: msg.message,
+            unsafeDescription: true,
+            createdAt: this.game.ticks(),
+          },
+        ];
       }
     }
 

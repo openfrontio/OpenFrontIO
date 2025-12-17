@@ -1,8 +1,8 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
@@ -67,7 +67,7 @@ export class UnitLayer implements Layer {
   tick() {
     const unitIds = this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
+      ?.[GameUpdateType.Unit]?.updates.map((unit) => unit.unit!.id);
 
     this.updateUnitsSprites(unitIds ?? []);
   }

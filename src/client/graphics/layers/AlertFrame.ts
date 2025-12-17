@@ -108,8 +108,8 @@ export class AlertFrame extends LitElement implements Layer {
     // Check for BrokeAllianceUpdate events
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
-        this.onBrokeAllianceUpdate(update as BrokeAllianceUpdate);
+      ?.[GameUpdateType.BrokeAlliance]?.updates.forEach((update) => {
+        this.onBrokeAllianceUpdate(update.brokeAlliance!);
       });
 
     // Check for new incoming attacks
@@ -125,7 +125,7 @@ export class AlertFrame extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    const betrayed = this.game.playerBySmallID(update.betrayedID);
+    const betrayed = this.game.playerBySmallID(update.betrayedId);
 
     // Only trigger alert if the current player is the betrayed one
     if (betrayed === myPlayer) {
@@ -154,8 +154,8 @@ export class AlertFrame extends LitElement implements Layer {
     // Track when we attack other players (not terra nullius)
     for (const attack of outgoingAttacks) {
       // Only track attacks on players (targetID !== 0 means it's a player, not unclaimed land)
-      if (attack.targetID !== 0 && !attack.retreating) {
-        const existingTick = this.outgoingAttackTicks.get(attack.targetID);
+      if (attack.targetId !== 0 && !attack.retreating) {
+        const existingTick = this.outgoingAttackTicks.get(attack.targetId);
 
         // Only update timestamp if:
         // 1. This is a new attack (not in map yet), OR
@@ -164,7 +164,7 @@ export class AlertFrame extends LitElement implements Layer {
           existingTick === undefined ||
           currentTick - existingTick >= RETALIATION_WINDOW_TICKS
         ) {
-          this.outgoingAttackTicks.set(attack.targetID, currentTick);
+          this.outgoingAttackTicks.set(attack.targetId, currentTick);
         }
       }
     }
@@ -199,7 +199,7 @@ export class AlertFrame extends LitElement implements Layer {
       // Only alert for non-retreating attacks
       if (!attack.retreating && !this.seenAttackIds.has(attack.id)) {
         // Check if this is a retaliation (we attacked them recently)
-        const ourAttackTick = this.outgoingAttackTicks.get(attack.attackerID);
+        const ourAttackTick = this.outgoingAttackTicks.get(attack.attackerId);
         const isRetaliation =
           ourAttackTick !== undefined &&
           currentTick - ourAttackTick < RETALIATION_WINDOW_TICKS;

@@ -1,5 +1,6 @@
 import { PlayerSpawner } from "../../../../src/core/execution/utils/PlayerSpawner";
-import { PlayerInfo, PlayerType } from "../../../../src/core/game/Game";
+import { PlayerInfo } from "../../../../src/core/game/Game";
+import { PlayerType } from "../../../../src/core/game/GameUpdates";
 import { setup } from "../../../util/Setup";
 
 describe("PlayerSpawner", () => {

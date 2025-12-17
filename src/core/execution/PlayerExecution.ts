@@ -1,6 +1,7 @@
 import { Config } from "../configuration/Config";
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameUpdates";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
 interface ClusterTraversalState {

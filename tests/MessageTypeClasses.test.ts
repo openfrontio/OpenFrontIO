@@ -1,5 +1,5 @@
 import { getMessageTypeClasses, severityColors } from "../src/client/Utils";
-import { MessageType } from "../src/core/game/Game";
+import { MessageType } from "../src/core/game/GameUpdates";
 
 describe("getMessageTypeClasses", () => {
   // Spy on console.warn to track when the default case is hit

@@ -7,8 +7,6 @@ import {
   Attack,
   Cell,
   Game,
-  GameUpdates,
-  NameViewData,
   Nation,
   Player,
   PlayerActions,
@@ -16,15 +14,15 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerProfile,
-  PlayerType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
-  GameUpdateType,
   GameUpdateViewData,
+  NameViewData,
+  PlayerType,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -134,17 +132,14 @@ export class GameRunner {
     );
     this.currTurn++;
 
-    let updates: GameUpdates;
-    let tickExecutionDuration: number = 0;
+    let updates: GameUpdateViewData;
 
     try {
-      const startTime = performance.now();
       updates = this.game.executeNextTick();
-      const endTime = performance.now();
-      tickExecutionDuration = endTime - startTime;
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Game tick error:", error.message);
+        console.error("Stack trace:", error.stack);
         this.callBack({
           errMsg: error.message,
           stack: error.stack,
@@ -173,17 +168,7 @@ export class GameRunner {
       });
     }
 
-    // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
-    updates[GameUpdateType.Tile] = [];
-
-    this.callBack({
-      tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
-      updates: updates,
-      playerNameViewData: this.playerViewData,
-      tickExecutionDuration: tickExecutionDuration,
-    });
+    this.callBack(updates);
     this.isExecuting = false;
   }
 

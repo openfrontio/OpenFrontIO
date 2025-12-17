@@ -10,19 +10,15 @@ import {
   Cell,
   ColoredTeams,
   Duos,
-  EmojiMessage,
   Execution,
   Game,
   GameMode,
-  GameUpdates,
   HumansVsNations,
-  MessageType,
   MutableAlliance,
   Nation,
   Player,
   PlayerID,
   PlayerInfo,
-  PlayerType,
   Quads,
   Team,
   TerrainType,
@@ -30,10 +26,18 @@ import {
   Trios,
   Unit,
   UnitInfo,
-  UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import {
+  EmojiMessage,
+  GameUpdate,
+  GameUpdates,
+  GameUpdateType,
+  GameUpdateViewData,
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -75,7 +79,7 @@ export class GameImpl implements Game {
   private nextPlayerID = 1;
   private _nextUnitID = 1;
 
-  private updates: GameUpdates = createGameUpdatesMap();
+  private gameViewData = createGameUpdateViewData();
   private unitGrid: UnitGrid;
 
   private playerTeams: Team[];
@@ -197,12 +201,17 @@ export class GameImpl implements Game {
   map(): GameMap {
     return this._map;
   }
+
   miniMap(): GameMap {
     return this.miniGameMap;
   }
 
+  addTileUpdate(tile: TileRef) {
+    this.gameViewData.tileUpdates.push(Number(this.toTileUpdate(tile)));
+  }
+
   addUpdate(update: GameUpdate) {
-    (this.updates[update.type] as GameUpdate[]).push(update);
+    this.gameViewData.updates[update.type].updates.push(update);
   }
 
   nextUnitID(): number {
@@ -219,10 +228,7 @@ export class GameImpl implements Game {
       return;
     }
     this._map.setFallout(tile, value);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.addTileUpdate(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -311,8 +317,14 @@ export class GameImpl implements Game {
 
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
-      accepted: true,
+      allianceRequestReply: {
+        request: {
+          requestorId: requestor.smallID(),
+          recipientId: recipient.smallID(),
+          createdAt: request.createdAt(),
+        },
+        accepted: true,
+      },
     });
   }
 
@@ -325,8 +337,14 @@ export class GameImpl implements Game {
     );
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
-      accepted: false,
+      allianceRequestReply: {
+        request: {
+          requestorId: request.requestor().smallID(),
+          recipientId: request.recipient().smallID(),
+          createdAt: request.createdAt(),
+        },
+        accepted: false,
+      },
     });
   }
 
@@ -345,8 +363,8 @@ export class GameImpl implements Game {
     return this._ticks;
   }
 
-  executeNextTick(): GameUpdates {
-    this.updates = createGameUpdatesMap();
+  executeNextTick(): GameUpdateViewData {
+    this.gameViewData = createGameUpdateViewData();
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
@@ -377,12 +395,14 @@ export class GameImpl implements Game {
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
         type: GameUpdateType.Hash,
-        tick: this.ticks(),
-        hash: this.hash(),
+        hash: {
+          tick: this.ticks(),
+          hash: this.hash(),
+        },
       });
     }
     this._ticks++;
-    return this.updates;
+    return this.gameViewData;
   }
 
   private hash(): number {
@@ -556,10 +576,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.addTileUpdate(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -577,10 +594,7 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.addTileUpdate(tile);
   }
 
   private updateBorders(tile: TileRef) {
@@ -616,8 +630,10 @@ export class GameImpl implements Game {
   target(targeter: Player, target: Player) {
     this.addUpdate({
       type: GameUpdateType.TargetPlayer,
-      playerID: targeter.smallID(),
-      targetID: target.smallID(),
+      targetPlayer: {
+        playerId: targeter.smallID(),
+        targetId: target.smallID(),
+      },
     });
   }
 
@@ -647,8 +663,10 @@ export class GameImpl implements Game {
     this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
-      traitorID: breaker.smallID(),
-      betrayedID: other.smallID(),
+      brokeAlliance: {
+        traitorId: breaker.smallID(),
+        betrayedId: other.smallID(),
+      },
     });
   }
 
@@ -666,23 +684,29 @@ export class GameImpl implements Game {
     this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
-      player1ID: alliance.requestor().smallID(),
-      player2ID: alliance.recipient().smallID(),
+      allianceExpired: {
+        player1Id: alliance.requestor().smallID(),
+        player2Id: alliance.recipient().smallID(),
+      },
     });
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
       type: GameUpdateType.Emoji,
-      emoji: msg,
+      emoji: {
+        emoji: msg,
+      },
     });
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner: this.makeWinner(winner),
-      allPlayersStats,
+      win: {
+        winner: JSON.stringify(this.makeWinner(winner)),
+        stats: JSON.stringify(allPlayersStats),
+      },
     });
   }
 
@@ -718,7 +742,7 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
-    params?: Record<string, string | number>,
+    params?: Record<string, string>,
   ): void {
     let id: number | null = null;
     if (playerID !== null) {
@@ -726,11 +750,13 @@ export class GameImpl implements Game {
     }
     this.addUpdate({
       type: GameUpdateType.DisplayEvent,
-      messageType: type,
-      message: message,
-      playerID: id,
-      goldAmount: goldAmount,
-      params: params,
+      displayMessage: {
+        message: message,
+        messageType: type,
+        playerId: id ?? undefined,
+        goldAmount: Number(goldAmount),
+        params: params ?? {},
+      },
     });
   }
 
@@ -748,12 +774,14 @@ export class GameImpl implements Game {
     }
     this.addUpdate({
       type: GameUpdateType.DisplayChatEvent,
-      key: message,
-      category: category,
-      target: target,
-      playerID: id,
-      isFrom,
-      recipient: recipient,
+      displayChatMessage: {
+        key: message,
+        category: category,
+        target: target,
+        playerId: id ?? undefined,
+        isFrom: isFrom,
+        recipient: recipient,
+      },
     });
   }
 
@@ -767,10 +795,12 @@ export class GameImpl implements Game {
 
     this.addUpdate({
       type: GameUpdateType.UnitIncoming,
-      unitID: unitID,
-      message: message,
-      messageType: type,
-      playerID: id,
+      unitIncoming: {
+        unitId: unitID,
+        message: message,
+        messageType: type,
+        playerId: id,
+      },
     });
   }
 
@@ -964,9 +994,11 @@ export class GameImpl implements Game {
     conquered.removeGold(gold);
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
-      conquerorId: conqueror.id(),
-      conqueredId: conquered.id(),
-      gold,
+      conquest: {
+        conquerorId: conqueror.smallID(),
+        conqueredId: conquered.smallID(),
+        gold: Number(gold),
+      },
     });
 
     // Record stats
@@ -975,12 +1007,25 @@ export class GameImpl implements Game {
 }
 
 // Or a more dynamic approach that will catch new enum values:
-const createGameUpdatesMap = (): GameUpdates => {
-  const map = {} as GameUpdates;
+const createGameUpdatesMap = (): Record<GameUpdateType, GameUpdates> => {
+  const map = {} as Record<GameUpdateType, GameUpdates>;
   Object.values(GameUpdateType)
     .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
     .forEach((key) => {
-      map[key as GameUpdateType] = [];
+      map[key as GameUpdateType] = {
+        type: key as GameUpdateType,
+        updates: [],
+      };
     });
   return map;
+};
+
+const createGameUpdateViewData = (): GameUpdateViewData => {
+  return {
+    tick: 0,
+    updates: createGameUpdatesMap(),
+    tileUpdates: [],
+    playerNameViewData: {},
+    tickExecutionDuration: undefined,
+  };
 };

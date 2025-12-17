@@ -13,13 +13,9 @@ import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.s
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import {
-  BuildableUnit,
-  Gold,
-  PlayerActions,
-  UnitType,
-} from "../../../core/game/Game";
+import { BuildableUnit, Gold, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import {
   CloseViewEvent,

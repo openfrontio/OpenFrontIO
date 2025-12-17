@@ -1,5 +1,5 @@
 import IntlMessageFormat from "intl-messageformat";
-import { MessageType } from "../core/game/Game";
+import { MessageType } from "../core/game/GameUpdates";
 import { LangSelector } from "./LangSelector";
 
 export function renderDuration(totalSeconds: number): string {

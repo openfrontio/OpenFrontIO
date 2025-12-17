@@ -2,14 +2,13 @@ import {
   Execution,
   Game,
   isStructureType,
-  MessageType,
   Player,
   TerraNullius,
   TrajectoryTile,
   Unit,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, UnitType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";

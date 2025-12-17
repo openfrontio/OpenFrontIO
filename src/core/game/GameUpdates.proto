@@ -1,0 +1,337 @@
+syntax = "proto3";
+
+package game;
+
+enum PlayerType {
+  Bot = 0;
+  Human = 1;
+  FakeHuman = 2;
+}
+
+enum UnitType {
+  TransportShip = 0;
+  Warship = 1;
+  Shell = 2;
+  SAMMissile = 3;
+  Port = 4;
+  AtomBomb = 5;
+  HydrogenBomb = 6;
+  TradeShip = 7;
+  MissileSilo = 8;
+  DefensePost = 9;
+  SAMLauncher = 10;
+  City = 11;
+  MIRV = 12;
+  MIRVWarhead = 13;
+  Train = 14;
+  Factory = 15;
+}
+
+enum TrainType {
+  Engine = 0;
+  Carriage = 1;
+}
+
+message NameViewData {
+  int32 x = 1;
+  int32 y = 2;
+  int32 size = 3;
+}
+
+message EmojiMessage {
+  int32 sender_id = 1;
+  string emoji = 2;
+  oneof recipient {
+    bool allPlayers = 3;
+    int32 recipient_id = 4;
+  }
+  int32 createdAt = 5;
+}
+
+// Enums
+enum GameUpdateType {
+  Tile = 0;
+  Unit = 1;
+  Player = 2;
+  DisplayEvent = 3;
+  DisplayChatEvent = 4;
+  AllianceRequest = 5;
+  AllianceRequestReply = 6;
+  BrokeAlliance = 7;
+  AllianceExpired = 8;
+  AllianceExtension = 9;
+  TargetPlayer = 10;
+  Emoji = 11;
+  Win = 12;
+  Hash = 13;
+  UnitIncoming = 14;
+  BonusEvent = 15;
+  RailroadEvent = 16;
+  ConquestEvent = 17;
+  EmbargoEvent = 18;
+}
+
+enum MessageType {
+  messageTypeUnspecified = 0;
+  ATTACK_FAILED = 1;
+  ATTACK_CANCELLED = 2;
+  ATTACK_REQUEST = 3;
+  CONQUERED_PLAYER = 4;
+  MIRV_INBOUND = 5;
+  NUKE_INBOUND = 6;
+  HYDROGEN_BOMB_INBOUND = 7;
+  NAVAL_INVASION_INBOUND = 8;
+  SAM_MISS = 9;
+  SAM_HIT = 10;
+  CAPTURED_ENEMY_UNIT = 11;
+  UNIT_CAPTURED_BY_ENEMY = 12;
+  UNIT_DESTROYED = 13;
+  ALLIANCE_ACCEPTED = 14;
+  ALLIANCE_REJECTED = 15;
+  ALLIANCE_REQUEST = 16;
+  ALLIANCE_BROKEN = 17;
+  ALLIANCE_EXPIRED = 18;
+  SENT_GOLD_TO_PLAYER = 19;
+  RECEIVED_GOLD_FROM_PLAYER = 20;
+  RECEIVED_GOLD_FROM_TRADE = 21;
+  SENT_TROOPS_TO_PLAYER = 22;
+  RECEIVED_TROOPS_FROM_PLAYER = 23;
+  CHAT = 24;
+  RENEW_ALLIANCE = 25;
+}
+
+enum MessageCategory {
+  messageCategoryUnspecified = 0;
+  ATTACK = 1;
+  NUKE = 2;
+  ALLIANCE = 3;
+  TRADE = 4;
+  CHAT_CATEGORY = 5;
+}
+
+enum RailType {
+  vertical = 0;
+  horizontal = 1;
+  topLeft = 2;
+  topRight = 3;
+  bottomLeft = 4;
+  bottomRight = 5;
+}
+
+// Update messages
+message BonusEventUpdate {
+  string player = 1;
+  int64 tile = 2;  // TileRef encoded as int64
+  int64 gold = 3;
+  int64 troops = 4;
+}
+
+message RailTile {
+  int64 tile = 1;  // TileRef encoded as int64
+  RailType rail_type = 2;
+}
+
+message RailroadUpdate {
+  bool is_active = 1;
+  repeated RailTile rail_tiles = 2;
+}
+
+message ConquestUpdate {
+  int32 conqueror_id = 1;
+  int32 conquered_id = 2;
+  int64 gold = 3;
+}
+
+message UnitUpdate {
+  GameUpdateType type = 22;
+  UnitType unit_type = 1;
+  int32 troops = 2;
+  int32 id = 3;
+  int32 owner_id = 4;
+  optional int32 last_owner_id = 5;
+  int64 pos = 6;  // TileRef encoded as int64
+  int64 last_pos = 7;  // TileRef encoded as int64
+  bool is_active = 8;
+  bool reached_target = 9;
+  bool retreating = 10;
+  bool targetable = 11;
+  oneof marked_for_deletion_value {
+    int32 marked_for_deletion = 12;
+  }
+  optional int32 target_unit_id = 13;  // Only for trade ships
+  optional int64 target_tile = 14;  // TileRef encoded as int64, only for nukes
+  optional int32 health = 15;
+  optional bool under_construction = 16;
+  repeated int32 missile_timer_queue = 17;
+  int32 level = 18;
+  bool has_train_station = 19;
+  optional TrainType train_type = 20;  // Only for trains
+  optional bool loaded = 21;  // Only for trains
+}
+
+message AttackUpdate {
+  int32 attacker_id = 1;
+  int32 target_id = 2;
+  int32 troops = 3;
+  string id = 4;
+  bool retreating = 5;
+}
+
+message AllianceView {
+  int32 id = 1;
+  string other = 2;
+  int32 created_at = 3;
+  int32 expires_at = 4;
+  bool has_extension_request = 5;
+}
+
+message PlayerUpdate {
+  optional NameViewData name_view_data = 1;
+  optional string client_id = 2;
+  string name = 3;
+  string display_name = 4;
+  string id = 5;
+  optional string team = 6;
+  int32 small_id = 7;
+  PlayerType player_type = 8;
+  bool is_alive = 9;
+  bool is_disconnected = 10;
+  int32 tiles_owned = 11;
+  uint64 gold = 12;
+  int32 troops = 13;
+  repeated int32 allies = 14;
+  repeated string embargoes = 15;
+  bool is_traitor = 16;
+  optional int32 traitor_remaining_ticks = 17;
+  repeated int32 targets = 18;
+  repeated EmojiMessage outgoing_emojis = 19;
+  repeated AttackUpdate outgoing_attacks = 20;
+  repeated AttackUpdate incoming_attacks = 21;
+  repeated string outgoing_alliance_requests = 22;
+  repeated AllianceView alliances = 23;
+  bool has_spawned = 24;
+  int32 betrayals = 25;
+  int32 last_delete_unit_tick = 26;
+}
+
+message AllianceRequestUpdate {
+  int32 requestor_id = 1;
+  int32 recipient_id = 2;
+  int32 created_at = 3;
+}
+
+message AllianceRequestReplyUpdate {
+  AllianceRequestUpdate request = 1;
+  bool accepted = 2;
+}
+
+message BrokeAllianceUpdate {
+  int32 traitor_id = 1;
+  int32 betrayed_id = 2;
+}
+
+message AllianceExpiredUpdate {
+  int32 player1_id = 1;
+  int32 player2_id = 2;
+}
+
+message AllianceExtensionUpdate {
+  string player_id = 1;
+  int32 alliance_id = 2;
+}
+
+message TargetPlayerUpdate {
+  int32 player_id = 1;
+  int32 target_id = 2;
+}
+
+message EmojiUpdate {
+  EmojiMessage emoji = 1;
+}
+
+message DisplayMessageUpdate {
+  string message = 1;
+  MessageType message_type = 2;
+  optional int64 gold_amount = 3;
+  optional int64 player_id = 4;
+  map<string, string> params = 5;
+}
+
+message DisplayChatMessageUpdate {
+  string key = 1;
+  string category = 2;
+  optional string target = 3;
+  optional int32 player_id = 4;
+  bool is_from = 5;
+  string recipient = 6;
+}
+
+message WinUpdate {
+  string winner = 1;
+  string stats = 2;
+}
+
+message HashUpdate {
+  int32 tick = 1;
+  int32 hash = 2;
+}
+
+message UnitIncomingUpdate {
+  int32 unit_id = 1;
+  string message = 2;
+  MessageType message_type = 3;
+  int32 player_id = 4;
+}
+
+message EmbargoUpdate {
+  enum EmbargoEvent {
+    start = 0;
+    stop = 1;
+  }
+  EmbargoEvent event = 1;
+  int32 player_id = 2;
+  int32 embargoed_id = 3;
+}
+
+// Main GameUpdate message using oneof for polymorphism
+message GameUpdate {
+  GameUpdateType type = 1;
+  oneof update {
+    UnitUpdate unit = 3;
+    PlayerUpdate player = 4;
+    AllianceRequestUpdate alliance_request = 5;
+    AllianceRequestReplyUpdate alliance_request_reply = 6;
+    BrokeAllianceUpdate broke_alliance = 7;
+    AllianceExpiredUpdate alliance_expired = 8;
+    DisplayMessageUpdate display_message = 9;
+    DisplayChatMessageUpdate display_chat_message = 10;
+    TargetPlayerUpdate target_player = 11;
+    EmojiUpdate emoji = 12;
+    WinUpdate win = 13;
+    HashUpdate hash = 14;
+    UnitIncomingUpdate unit_incoming = 15;
+    AllianceExtensionUpdate alliance_extension = 16;
+    BonusEventUpdate bonus_event = 17;
+    RailroadUpdate railroad = 18;
+    ConquestUpdate conquest = 19;
+    EmbargoUpdate embargo = 20;
+  }
+}
+
+message GameUpdates {
+  GameUpdateType type = 1;
+  repeated GameUpdate updates = 2;
+}
+
+message GameUpdateViewData {
+  int32 tick = 1;
+  map<int32, GameUpdates> updates = 2;
+  repeated int64 tile_updates = 3;
+  map<string, NameViewData> player_name_view_data = 4;
+  optional double tick_execution_duration = 5;
+}
+
+message ErrorUpdate {
+  string err_msg = 1;
+  optional string stack = 2;
+}

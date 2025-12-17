@@ -1,5 +1,5 @@
 import { ConquestUpdate } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
@@ -17,7 +17,7 @@ export function conquestFxFactory(
   game: GameView,
 ): Fx[] {
   const conquestFx: Fx[] = [];
-  const conquered = game.player(conquest.conqueredId);
+  const conquered = game.playerBySmallID(conquest.conqueredId) as PlayerView;
   const x = conquered.nameLocation().x;
   const y = conquered.nameLocation().y;
 

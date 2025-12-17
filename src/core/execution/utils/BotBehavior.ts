@@ -2,11 +2,11 @@ import {
   Difficulty,
   Game,
   Player,
-  PlayerType,
   Relation,
   TerraNullius,
   Tick,
 } from "../../game/Game";
+import { PlayerType } from "../../game/GameUpdates";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
   boundingBoxCenter,

@@ -2,15 +2,13 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import {
-  Cell,
-  ColoredTeams,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../../../core/game/Game";
+import { Cell, ColoredTeams, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import {
+  GameUpdateType,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -87,8 +85,8 @@ export class TerritoryLayer implements Layer {
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    unitUpdates.forEach((update) => {
+    updates[GameUpdateType.Unit]?.updates.forEach((u) => {
+      const update = u.unit!;
       if (update.unitType === UnitType.DefensePost) {
         // Only update borders if the defense post is not under construction
         if (update.underConstruction) {
@@ -101,8 +99,8 @@ export class TerritoryLayer implements Layer {
           .forEach((t) => {
             if (
               this.game.isBorder(t) &&
-              (this.game.ownerID(t) === update.ownerID ||
-                this.game.ownerID(t) === update.lastOwnerID)
+              (this.game.ownerID(t) === update.ownerId ||
+                this.game.ownerID(t) === update.lastOwnerId)
             ) {
               this.enqueueTile(t);
             }
@@ -113,33 +111,42 @@ export class TerritoryLayer implements Layer {
     // Detect alliance mutations
     const myPlayer = this.game.myPlayer();
     if (myPlayer) {
-      updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
-        const territory = this.game.playerBySmallID(update.betrayedID);
+      updates?.[GameUpdateType.BrokeAlliance]?.updates.forEach((update) => {
+        const brokeAllianceUpdate = update.brokeAlliance!;
+        const territory = this.game.playerBySmallID(
+          brokeAllianceUpdate.betrayedId,
+        );
         if (territory && territory instanceof PlayerView) {
           this.redrawBorder(territory);
         }
       });
 
-      updates?.[GameUpdateType.AllianceRequestReply]?.forEach((update) => {
-        if (
-          update.accepted &&
-          (update.request.requestorID === myPlayer.smallID() ||
-            update.request.recipientID === myPlayer.smallID())
-        ) {
-          const territoryId =
-            update.request.requestorID === myPlayer.smallID()
-              ? update.request.recipientID
-              : update.request.requestorID;
-          const territory = this.game.playerBySmallID(territoryId);
-          if (territory && territory instanceof PlayerView) {
-            this.redrawBorder(territory);
+      updates?.[GameUpdateType.AllianceRequestReply]?.updates.forEach(
+        (update) => {
+          const au = update.allianceRequestReply!;
+          if (
+            au.accepted &&
+            (au.request!.requestorId === myPlayer.smallID() ||
+              au.request!.recipientId === myPlayer.smallID())
+          ) {
+            const territoryId =
+              au.request!.requestorId === myPlayer.smallID()
+                ? au.request!.recipientId
+                : au.request!.requestorId;
+            const territory = this.game.playerBySmallID(territoryId);
+            if (territory && territory instanceof PlayerView) {
+              this.redrawBorder(territory);
+            }
           }
-        }
-      });
-      updates?.[GameUpdateType.EmbargoEvent]?.forEach((update) => {
-        const player = this.game.playerBySmallID(update.playerID) as PlayerView;
+        },
+      );
+      updates?.[GameUpdateType.EmbargoEvent]?.updates.forEach((update) => {
+        const embargoUpdate = update.embargo!;
+        const player = this.game.playerBySmallID(
+          embargoUpdate.playerId,
+        ) as PlayerView;
         const embargoed = this.game.playerBySmallID(
-          update.embargoedID,
+          embargoUpdate.embargoedId,
         ) as PlayerView;
 
         if (

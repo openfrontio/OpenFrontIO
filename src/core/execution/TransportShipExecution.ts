@@ -2,14 +2,13 @@ import { renderTroops } from "../../client/Utils";
 import {
   Execution,
   Game,
-  MessageType,
   Player,
   PlayerID,
   TerraNullius,
   Unit,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, UnitType } from "../game/GameUpdates";
 import { targetTransportTile } from "../game/TransportShipUtils";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";

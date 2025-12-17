@@ -1,5 +1,6 @@
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameUpdates";
 
 export class MoveWarshipExecution implements Execution {
   constructor(

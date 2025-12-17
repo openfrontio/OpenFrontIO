@@ -7,14 +7,13 @@ import {
   Nation,
   Player,
   PlayerID,
-  PlayerType,
   Relation,
   TerrainType,
   Tick,
   Unit,
-  UnitType,
 } from "../game/Game";
 import { TileRef, euclDistFN } from "../game/GameMap";
+import { PlayerType, UnitType } from "../game/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";

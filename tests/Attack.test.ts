@@ -1,14 +1,9 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";

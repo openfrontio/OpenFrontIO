@@ -11,7 +11,8 @@ import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
+import { Gold, PlayerActions } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,

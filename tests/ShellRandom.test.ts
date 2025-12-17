@@ -1,13 +1,8 @@
 import { DefensePostExecution } from "../src/core/execution/DefensePostExecution";
 import { ShellExecution } from "../src/core/execution/ShellExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 
 const coastX = 7;

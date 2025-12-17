@@ -1,4 +1,5 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
+import { UnitType } from "../game/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";

@@ -1,13 +1,6 @@
-import {
-  Execution,
-  Game,
-  isUnit,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, isUnit, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, UnitType } from "../game/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 

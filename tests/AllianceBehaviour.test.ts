@@ -4,9 +4,9 @@ import {
   Game,
   Player,
   PlayerInfo,
-  PlayerType,
   Tick,
 } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 

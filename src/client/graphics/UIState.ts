@@ -1,4 +1,4 @@
-import { UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/GameUpdates";
 
 export interface UIState {
   attackRatio: number;

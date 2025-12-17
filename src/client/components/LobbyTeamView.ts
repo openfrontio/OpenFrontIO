@@ -8,11 +8,11 @@ import {
   GameMode,
   HumansVsNations,
   PlayerInfo,
-  PlayerType,
   Quads,
   Team,
   Trios,
 } from "../../core/game/Game";
+import { PlayerType } from "../../core/game/GameUpdates";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";

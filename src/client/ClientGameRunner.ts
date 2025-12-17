@@ -1,6 +1,7 @@
 import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
+  AllPlayersStats,
   ClientID,
   GameID,
   GameRecord,
@@ -8,18 +9,19 @@ import {
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
+  Winner,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { PlayerActions } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
-  HashUpdate,
+  UnitType,
   WinUpdate,
 } from "../core/game/GameUpdates";
 import { GameView, PlayerView } from "../core/game/GameView";
@@ -241,18 +243,20 @@ export class ClientGameRunner {
     if (this.myPlayer === null) {
       return;
     }
+    const stats = JSON.parse(update.stats) as AllPlayersStats;
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
-        stats: update.allPlayersStats[this.lobby.clientID],
+        stats: stats[this.lobby.clientID],
       },
     ];
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
+    const winner = JSON.parse(update.winner) as Winner;
     const record = createPartialGameRecord(
       this.lobby.gameStartInfo.gameID,
       this.lobby.gameStartInfo.config,
@@ -261,7 +265,7 @@ export class ClientGameRunner {
       [],
       startTime(),
       Date.now(),
-      update.winner,
+      winner,
       this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
@@ -310,8 +314,10 @@ export class ClientGameRunner {
         return;
       }
       this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+      gu.updates[GameUpdateType.Hash].updates.forEach((update) => {
+        this.eventBus.emit(
+          new SendHashEvent(update.hash!.tick, update.hash!.hash),
+        );
       });
       this.gameView.update(gu);
       this.renderer.tick();
@@ -324,7 +330,7 @@ export class ClientGameRunner {
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
 
-      if (gu.updates[GameUpdateType.Win].length > 0) {
+      if (gu.updates[GameUpdateType.Win]?.updates.length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });

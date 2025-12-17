@@ -1,13 +1,8 @@
 import { NukeMagnitude } from "../../src/core/configuration/Config";
 import { DefaultConfig } from "../../src/core/configuration/DefaultConfig";
-import {
-  Game,
-  Player,
-  TerraNullius,
-  Tick,
-  UnitType,
-} from "../../src/core/game/Game";
+import { Game, Player, TerraNullius, Tick } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
+import { UnitType } from "../../src/core/game/GameUpdates";
 
 export class TestConfig extends DefaultConfig {
   private _proximityBonusPortsNb: number = 0;

@@ -1,4 +1,5 @@
-import { ColoredTeams, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { ColoredTeams, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 import { assignTeams } from "../src/core/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];

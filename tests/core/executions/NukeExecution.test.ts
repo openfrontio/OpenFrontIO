@@ -1,11 +1,6 @@
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../../src/core/game/Game";
+import { PlayerType, UnitType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";

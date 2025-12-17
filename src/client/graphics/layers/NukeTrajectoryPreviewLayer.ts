@@ -1,6 +1,6 @@
 import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
 import { GhostStructureChangedEvent, MouseMoveEvent } from "../../InputHandler";

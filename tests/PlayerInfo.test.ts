@@ -1,4 +1,5 @@
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 
 describe("PlayerInfo", () => {
   describe("clan", () => {

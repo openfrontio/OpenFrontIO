@@ -51,7 +51,7 @@ describe("UILayer", () => {
     };
     const event = { isSelected: true, unit };
     ui.drawSelectionBox = jest.fn();
-    ui["onUnitSelection"](event as UnitSelectionEvent);
+    ui["onUnitSelection"](event as unknown as UnitSelectionEvent);
     expect(ui.drawSelectionBox).toHaveBeenCalledWith(unit);
   });
 

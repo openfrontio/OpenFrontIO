@@ -8,30 +8,30 @@ import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
-  EmojiMessage,
-  GameUpdates,
   Gold,
-  NameViewData,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
-  PlayerType,
   Team,
   TerrainType,
   TerraNullius,
   Tick,
-  TrainType,
   UnitInfo,
-  UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
+  EmojiMessage,
+  GameUpdates,
   GameUpdateType,
   GameUpdateViewData,
+  NameViewData,
+  PlayerType,
   PlayerUpdate,
+  TrainType,
+  UnitType,
   UnitUpdate,
 } from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
@@ -88,7 +88,7 @@ export class UnitView {
   }
 
   markedForDeletion(): number | false {
-    return this.data.markedForDeletion;
+    return this.data.markedForDeletion ?? false;
   }
 
   type(): UnitType {
@@ -107,7 +107,7 @@ export class UnitView {
     return this.data.pos;
   }
   owner(): PlayerView {
-    return this.gameView.playerBySmallID(this.data.ownerID)! as PlayerView;
+    return this.gameView.playerBySmallID(this.data.ownerId)! as PlayerView;
   }
   isActive(): boolean {
     return this.data.isActive;
@@ -194,7 +194,7 @@ export class PlayerView {
     public nameData: NameViewData,
     public cosmetics: PlayerCosmetics,
   ) {
-    if (data.clientID === game.myClientID()) {
+    if (data.clientId === game.myClientID()) {
       this.anonymousName = this.data.name;
     } else {
       this.anonymousName = createRandomName(
@@ -239,7 +239,7 @@ export class PlayerView {
       .structureColors(this._territoryColor);
 
     const maybeFocusedBorderColor =
-      this.game.myClientID() === this.data.clientID
+      this.game.myClientID() === this.data.clientId
         ? this.game.config().theme().focusedBorderColor()
         : defaultBorderColor;
 
@@ -327,7 +327,7 @@ export class PlayerView {
   }
 
   smallID(): number {
-    return this.data.smallID;
+    return this.data.smallId;
   }
 
   name(): string {
@@ -342,7 +342,7 @@ export class PlayerView {
   }
 
   clientID(): ClientID | null {
-    return this.data.clientID;
+    return this.data.clientId ?? null;
   }
   id(): PlayerID {
     return this.data.id;
@@ -373,7 +373,7 @@ export class PlayerView {
     );
   }
   gold(): Gold {
-    return this.data.gold;
+    return BigInt(this.data.gold);
   }
 
   troops(): number {
@@ -412,7 +412,7 @@ export class PlayerView {
   }
 
   hasEmbargoAgainst(other: PlayerView): boolean {
-    return this.data.embargoes.has(other.id());
+    return this.data.embargoes.some((id) => id === other.id());
   }
 
   hasEmbargo(other: PlayerView): boolean {
@@ -506,8 +506,8 @@ export class GameView implements GameMap {
     return this._map.isOnEdgeOfMap(ref);
   }
 
-  public updatesSinceLastTick(): GameUpdates | null {
-    return this.lastUpdate?.updates ?? null;
+  public updatesSinceLastTick(): { [key: number]: GameUpdates } {
+    return this.lastUpdate!.updates;
   }
 
   public update(gu: GameUpdateViewData) {
@@ -517,34 +517,36 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
+    this.lastUpdate.tileUpdates.forEach((tu) => {
+      this.updatedTiles.push(this.updateTile(BigInt(tu)));
     });
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
-    gu.updates[GameUpdateType.Player].forEach((pu) => {
-      this.smallIDToID.set(pu.smallID, pu.id);
-      const player = this._players.get(pu.id);
-      if (player !== undefined) {
-        player.data = pu;
-        player.nameData = gu.playerNameViewData[pu.id];
-      } else {
-        this._players.set(
-          pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
-        );
-      }
-    });
+    gu.updates[GameUpdateType.Player].updates
+      .map((pu) => pu.player!)
+      .forEach((pu) => {
+        this.smallIDToID.set(pu.smallId, pu.id);
+        const player = this._players.get(pu.id);
+        if (player !== undefined) {
+          player.data = pu;
+          player.nameData = gu.playerNameViewData[pu.id];
+        } else {
+          this._players.set(
+            pu.id,
+            new PlayerView(
+              this,
+              pu,
+              gu.playerNameViewData[pu.id],
+              // First check human by clientID, then check nation by name.
+              this._cosmetics.get(pu.clientId ?? "") ??
+                this._cosmetics.get(pu.name) ??
+                {},
+            ),
+          );
+        }
+      });
 
     this._myPlayer ??= this.playerByClientID(this._myClientID);
 
@@ -552,16 +554,17 @@ export class GameView implements GameMap {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
     }
-    gu.updates[GameUpdateType.Unit].forEach((update) => {
-      let unit = this._units.get(update.id);
+    gu.updates[GameUpdateType.Unit].updates.forEach((update) => {
+      const ud = update.unit!;
+      let unit = this._units.get(ud.id);
       if (unit !== undefined) {
-        unit.update(update);
+        unit.update(ud);
       } else {
-        unit = new UnitView(this, update);
-        this._units.set(update.id, unit);
+        unit = new UnitView(this, ud);
+        this._units.set(ud.id, unit);
         this.unitGrid.addUnit(unit);
       }
-      if (!update.isActive) {
+      if (!ud.isActive) {
         this.unitGrid.removeUnit(unit);
       } else if (unit.tile() !== unit.lastTile()) {
         this.unitGrid.updateUnitCell(unit);

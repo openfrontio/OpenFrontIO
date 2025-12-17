@@ -315,12 +315,17 @@ export class WinModal extends LitElement implements Layer {
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
-    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
-    winUpdates.forEach((wu) => {
+    const winUpdates =
+      updates !== null ? updates[GameUpdateType.Win].updates : [];
+    winUpdates.forEach((update) => {
+      const wu = update.win!;
+
       if (wu.winner === undefined) {
         // ...
       } else if (wu.winner[0] === "team") {
-        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        this.eventBus.emit(
+          new SendWinnerEvent(JSON.parse(wu.winner), JSON.parse(wu.stats)),
+        );
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
@@ -337,7 +342,7 @@ export class WinModal extends LitElement implements Layer {
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           this.eventBus.emit(
-            new SendWinnerEvent(["player", winnerClient], wu.allPlayersStats),
+            new SendWinnerEvent(["player", winnerClient], JSON.parse(wu.stats)),
           );
         }
         if (

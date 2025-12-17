@@ -1,5 +1,6 @@
 import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 

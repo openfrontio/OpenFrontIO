@@ -1,5 +1,6 @@
-import { Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Game, PlayerInfo } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { PlayerType } from "../game/GameUpdates";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";

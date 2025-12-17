@@ -11,15 +11,13 @@ import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
-import {
-  PlayerProfile,
-  PlayerType,
-  Relation,
-  Unit,
-  UnitType,
-} from "../../../core/game/Game";
+import { PlayerProfile, Relation, Unit } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { AllianceView } from "../../../core/game/GameUpdates";
+import {
+  AllianceView,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import {

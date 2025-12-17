@@ -1,5 +1,6 @@
-import { Game, Player, Relation, UnitType } from "../../game/Game";
+import { Game, Player, Relation } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { UnitType } from "../../game/GameUpdates";
 import { closestTile, closestTwoTiles } from "../Util";
 
 export function structureSpawnTileValue(

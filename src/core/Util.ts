@@ -16,6 +16,7 @@ import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
 } from "./execution/utils/BotNames";
+import { PlayerType } from "./game/GameUpdates";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -290,10 +291,10 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
 
 export function createRandomName(
   name: string,
-  playerType: string,
+  playerType: PlayerType,
 ): string | null {
   let randomName: string | null = null;
-  if (playerType === "HUMAN") {
+  if (playerType === PlayerType.Human) {
     const hash = simpleHash(name);
     const prefixIndex = hash % BOT_NAME_PREFIXES.length;
     const suffixIndex =

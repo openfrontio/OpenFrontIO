@@ -1,11 +1,5 @@
-import {
-  AllPlayers,
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  PlayerType,
-} from "../game/Game";
+import { AllPlayers, Execution, Game, Player, PlayerID } from "../game/Game";
+import { PlayerType } from "../game/GameUpdates";
 import { flattenedEmojiTable } from "../Util";
 
 export class EmojiExecution implements Execution {

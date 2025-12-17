@@ -1,14 +1,8 @@
 import { DeleteUnitExecution } from "../src/core/execution/DeleteUnitExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, Unit } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

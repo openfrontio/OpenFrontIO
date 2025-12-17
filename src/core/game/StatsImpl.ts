@@ -26,7 +26,8 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, TerraNullius, UnitType } from "./Game";
+import { Player, TerraNullius } from "./Game";
+import { UnitType } from "./GameUpdates";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;

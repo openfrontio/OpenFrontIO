@@ -1,5 +1,6 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game, Player, PlayerInfo } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { PlayerType } from "../game/GameUpdates";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
 import { getSpawnTiles } from "./Util";

@@ -1,14 +1,8 @@
 import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
-import {
-  AllPlayers,
-  GameType,
-  Gold,
-  PlayerID,
-  Tick,
-  UnitType,
-} from "../core/game/Game";
+import { AllPlayers, GameType, Gold, PlayerID, Tick } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { UnitType } from "../core/game/GameUpdates";
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,

@@ -1,6 +1,5 @@
 import type { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameUpdateType, UnitType } from "../../../core/game/GameUpdates";
 import type { GameView, PlayerView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
@@ -76,7 +75,8 @@ export class SAMRadiusLayer implements Layer {
     if (unitUpdates) {
       let hasChanges = false;
 
-      for (const update of unitUpdates) {
+      for (const u of unitUpdates?.updates ?? []) {
+        const update = u.unit!;
         const unit = this.game.unit(update.id);
         if (unit && unit.type() === UnitType.SAMLauncher) {
           const wasTracked = this.samLaunchers.has(update.id);

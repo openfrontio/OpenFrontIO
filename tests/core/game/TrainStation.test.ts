@@ -1,5 +1,6 @@
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
-import { Game, Player, Unit, UnitType } from "../../../src/core/game/Game";
+import { Game, Player, Unit } from "../../../src/core/game/Game";
+import { UnitType } from "../../../src/core/game/GameUpdates";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 jest.mock("../../../src/core/game/Game");

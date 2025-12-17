@@ -27,7 +27,7 @@ export class RailroadExecution implements Execution {
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(tiles[0], tiles[1])
-          : RailType.VERTICAL,
+          : RailType.vertical,
     });
     for (let i = 1; i < tiles.length - 1; i++) {
       const direction = this.computeDirection(
@@ -45,7 +45,7 @@ export class RailroadExecution implements Execution {
               tiles[tiles.length - 1],
               tiles[tiles.length - 2],
             )
-          : RailType.VERTICAL,
+          : RailType.vertical,
     });
   }
 
@@ -58,14 +58,14 @@ export class RailroadExecution implements Execution {
     const dx = nextX - x;
     const dy = nextY - y;
 
-    if (dx === 0 && dy === 0) return RailType.VERTICAL; // No movement
+    if (dx === 0 && dy === 0) return RailType.vertical; // No movement
 
     if (dx === 0) {
-      return RailType.VERTICAL;
+      return RailType.vertical;
     } else if (dy === 0) {
-      return RailType.HORIZONTAL;
+      return RailType.horizontal;
     }
-    return RailType.VERTICAL;
+    return RailType.vertical;
   }
 
   private computeDirection(
@@ -90,25 +90,25 @@ export class RailroadExecution implements Execution {
 
     // Straight line
     if (dx1 === dx2 && dy1 === dy2) {
-      if (dx1 !== 0) return RailType.HORIZONTAL;
-      if (dy1 !== 0) return RailType.VERTICAL;
+      if (dx1 !== 0) return RailType.horizontal;
+      if (dy1 !== 0) return RailType.vertical;
     }
 
     // Turn (corner) cases
     if ((dx1 === 0 && dx2 !== 0) || (dx1 !== 0 && dx2 === 0)) {
       // Now figure out which type of corner
-      if (dx1 === 0 && dx2 === 1 && dy1 === -1) return RailType.BOTTOM_RIGHT;
-      if (dx1 === 0 && dx2 === -1 && dy1 === -1) return RailType.BOTTOM_LEFT;
-      if (dx1 === 0 && dx2 === 1 && dy1 === 1) return RailType.TOP_RIGHT;
-      if (dx1 === 0 && dx2 === -1 && dy1 === 1) return RailType.TOP_LEFT;
+      if (dx1 === 0 && dx2 === 1 && dy1 === -1) return RailType.bottomRight;
+      if (dx1 === 0 && dx2 === -1 && dy1 === -1) return RailType.bottomLeft;
+      if (dx1 === 0 && dx2 === 1 && dy1 === 1) return RailType.topRight;
+      if (dx1 === 0 && dx2 === -1 && dy1 === 1) return RailType.topLeft;
 
-      if (dx1 === 1 && dx2 === 0 && dy2 === -1) return RailType.TOP_LEFT;
-      if (dx1 === -1 && dx2 === 0 && dy2 === -1) return RailType.TOP_RIGHT;
-      if (dx1 === 1 && dx2 === 0 && dy2 === 1) return RailType.BOTTOM_LEFT;
-      if (dx1 === -1 && dx2 === 0 && dy2 === 1) return RailType.BOTTOM_RIGHT;
+      if (dx1 === 1 && dx2 === 0 && dy2 === -1) return RailType.topLeft;
+      if (dx1 === -1 && dx2 === 0 && dy2 === -1) return RailType.topRight;
+      if (dx1 === 1 && dx2 === 0 && dy2 === 1) return RailType.bottomLeft;
+      if (dx1 === -1 && dx2 === 0 && dy2 === 1) return RailType.bottomRight;
     }
     console.warn(`Invalid rail segment: ${dx1}:${dy1}, ${dx2}:${dy2}`);
-    return RailType.VERTICAL;
+    return RailType.vertical;
   }
 
   tick(ticks: number): void {
@@ -144,8 +144,10 @@ export class RailroadExecution implements Execution {
     if (updatedRailTiles) {
       this.mg.addUpdate({
         type: GameUpdateType.RailroadEvent,
-        isActive: true,
-        railTiles: updatedRailTiles,
+        railroad: {
+          isActive: true,
+          railTiles: updatedRailTiles,
+        },
       });
     }
   }

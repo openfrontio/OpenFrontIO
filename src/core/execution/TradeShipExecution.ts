@@ -1,13 +1,7 @@
 import { renderNumber } from "../../client/Utils";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, UnitType } from "../game/GameUpdates";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";

@@ -14,35 +14,38 @@ import {
   Alliance,
   AllianceRequest,
   AllPlayers,
+  AllUnitTypes,
   Attack,
   BuildableUnit,
   Cell,
   ColoredTeams,
   Embargo,
-  EmojiMessage,
   Gold,
-  MessageType,
   MutableAlliance,
   Player,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
-  PlayerType,
   Relation,
   Team,
   TerraNullius,
   Tick,
   Unit,
   UnitParams,
-  UnitType,
+  UnitParamsMap,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
+  EmbargoUpdate_EmbargoEvent,
+  EmojiMessage,
+  GameUpdate,
   GameUpdateType,
-  PlayerUpdate,
+  MessageType,
+  PlayerType,
+  UnitType,
 } from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
@@ -119,66 +122,66 @@ export class PlayerImpl implements Player {
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
-  toUpdate(): PlayerUpdate {
-    const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
-      ar.recipient().id(),
-    );
-
+  toUpdate(): GameUpdate {
     return {
       type: GameUpdateType.Player,
-      clientID: this.clientID(),
-      name: this.name(),
-      displayName: this.displayName(),
-      id: this.id(),
-      team: this.team() ?? undefined,
-      smallID: this.smallID(),
-      playerType: this.type(),
-      isAlive: this.isAlive(),
-      isDisconnected: this.isDisconnected(),
-      tilesOwned: this.numTilesOwned(),
-      gold: this._gold,
-      troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
-      isTraitor: this.isTraitor(),
-      traitorRemainingTicks: this.getTraitorRemainingTicks(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      outgoingAllianceRequests: outgoingAllianceRequests,
-      alliances: this.alliances().map(
-        (a) =>
-          ({
+      player: {
+        clientId: this.clientID() ?? undefined,
+        name: this.name(),
+        displayName: this.displayName(),
+        id: this.id(),
+        team: this.team() ?? undefined,
+        smallId: this.smallID(),
+        playerType: this.type(),
+        isAlive: this.isAlive(),
+        isDisconnected: this.isDisconnected(),
+        tilesOwned: this.numTilesOwned(),
+        gold: Number(this._gold),
+        troops: this.troops(),
+        allies: this.alliances().map((a) => a.other(this).smallID()),
+        embargoes: [...this.embargoes.keys()].map((p) => p.toString()),
+        isTraitor: this.isTraitor(),
+        traitorRemainingTicks: this.getTraitorRemainingTicks(),
+        targets: this.targets().map((p) => p.smallID()),
+        outgoingEmojis: this.outgoingEmojis(),
+        outgoingAttacks: this._outgoingAttacks.map((a) => {
+          return {
+            attackerId: a.attacker().smallID(),
+            targetId: a.target().smallID(),
+            troops: a.troops(),
             id: a.id(),
-            other: a.other(this).id(),
-            createdAt: a.createdAt(),
-            expiresAt: a.expiresAt(),
-            hasExtensionRequest:
-              a.expiresAt() <=
-              this.mg.ticks() +
-                this.mg.config().allianceExtensionPromptOffset(),
-          }) satisfies AllianceView,
-      ),
-      hasSpawned: this.hasSpawned(),
-      betrayals: this._betrayalCount,
-      lastDeleteUnitTick: this.lastDeleteUnitTick,
+            retreating: a.retreating(),
+          } satisfies AttackUpdate;
+        }),
+        incomingAttacks: this._incomingAttacks.map((a) => {
+          return {
+            attackerId: a.attacker().smallID(),
+            targetId: a.target().smallID(),
+            troops: a.troops(),
+            id: a.id(),
+            retreating: a.retreating(),
+          } satisfies AttackUpdate;
+        }),
+        outgoingAllianceRequests: this.outgoingAllianceRequests().map((ar) =>
+          ar.recipient().id(),
+        ),
+        alliances: this.alliances().map(
+          (a) =>
+            ({
+              id: a.id(),
+              other: a.other(this).id(),
+              createdAt: a.createdAt(),
+              expiresAt: a.expiresAt(),
+              hasExtensionRequest:
+                a.expiresAt() <=
+                this.mg.ticks() +
+                  this.mg.config().allianceExtensionPromptOffset(),
+            }) satisfies AllianceView,
+        ),
+        hasSpawned: this.hasSpawned(),
+        betrayals: this._betrayalCount,
+        lastDeleteUnitTick: this.lastDeleteUnitTick,
+      },
     };
   }
 
@@ -553,9 +556,10 @@ export class PlayerImpl implements Player {
       throw Error(`Cannot send emoji to oneself: ${this}`);
     }
     const msg: EmojiMessage = {
-      message: emoji,
-      senderID: this.smallID(),
-      recipientID: recipient === AllPlayers ? recipient : recipient.smallID(),
+      emoji: emoji,
+      senderId: this.smallID(),
+      allPlayers: recipient === AllPlayers,
+      recipientId: recipient === AllPlayers ? undefined : recipient.smallID(),
       createdAt: this.mg.ticks(),
     };
     this.outgoingEmojis_.push(msg);
@@ -578,9 +582,9 @@ export class PlayerImpl implements Player {
     }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
-    const prevMsgs = this.outgoingEmojis_.filter(
-      (msg) => msg.recipientID === recipientID,
-    );
+    const prevMsgs = this.outgoingEmojis_.filter((msg) => {
+      return msg.allPlayers ?? msg.recipientId === recipientID;
+    });
     for (const msg of prevMsgs) {
       if (
         this.mg.ticks() - msg.createdAt <
@@ -740,9 +744,11 @@ export class PlayerImpl implements Player {
 
     this.mg.addUpdate({
       type: GameUpdateType.EmbargoEvent,
-      event: "start",
-      playerID: this.smallID(),
-      embargoedID: other.smallID(),
+      embargo: {
+        playerId: this.smallID(),
+        embargoedId: other.smallID(),
+        event: EmbargoUpdate_EmbargoEvent.start,
+      },
     });
 
     this.embargoes.set(other.id(), {
@@ -756,9 +762,11 @@ export class PlayerImpl implements Player {
     this.embargoes.delete(other.id());
     this.mg.addUpdate({
       type: GameUpdateType.EmbargoEvent,
-      event: "stop",
-      playerID: this.smallID(),
-      embargoedID: other.smallID(),
+      embargo: {
+        playerId: this.smallID(),
+        embargoedId: other.smallID(),
+        event: EmbargoUpdate_EmbargoEvent.stop,
+      },
     });
   }
 
@@ -808,10 +816,12 @@ export class PlayerImpl implements Player {
     if (tile) {
       this.mg.addUpdate({
         type: GameUpdateType.BonusEvent,
-        player: this.id(),
-        tile,
-        gold: Number(toAdd),
-        troops: 0,
+        bonusEvent: {
+          player: this.id(),
+          tile,
+          gold: Number(toAdd),
+          troops: 0,
+        },
       });
     }
   }
@@ -855,7 +865,7 @@ export class PlayerImpl implements Player {
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
-    params: UnitParams<T>,
+    params: UnitParams<keyof UnitParamsMap>,
   ): Unit {
     if (this.mg.config().isUnitDisabled(type)) {
       throw new Error(
@@ -930,7 +940,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
+    return AllUnitTypes.map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
@@ -1076,7 +1086,7 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
+    const types = AllUnitTypes.filter((unitTypeValue) => {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 

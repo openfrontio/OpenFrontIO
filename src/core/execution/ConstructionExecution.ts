@@ -1,5 +1,6 @@
-import { Execution, Game, Player, Tick, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Tick, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameUpdates";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";

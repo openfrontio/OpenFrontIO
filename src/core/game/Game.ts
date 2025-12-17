@@ -3,9 +3,14 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
+  EmojiMessage,
   GameUpdate,
-  GameUpdateType,
-  PlayerUpdate,
+  GameUpdateViewData,
+  MessageCategory,
+  MessageType,
+  PlayerType,
+  TrainType,
+  UnitType,
   UnitUpdate,
 } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
@@ -25,14 +30,9 @@ export type Gold = bigint;
 
 export const AllPlayers = "AllPlayers" as const;
 
-// export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
-// Create a type that maps GameUpdateType to its corresponding update type
-type UpdateTypeMap<T extends GameUpdateType> = Extract<GameUpdate, { type: T }>;
-
-// Then use it to create the record type
-export type GameUpdates = {
-  [K in GameUpdateType]: UpdateTypeMap<K>[];
-};
+export const AllUnitTypes = Object.values(UnitType).filter(
+  (v): v is UnitType => typeof v === "number",
+) as UnitType[];
 
 export interface MapPos {
   x: number;
@@ -188,30 +188,6 @@ export interface UnitInfo {
   experimental?: boolean;
 }
 
-export enum UnitType {
-  TransportShip = "Transport",
-  Warship = "Warship",
-  Shell = "Shell",
-  SAMMissile = "SAMMissile",
-  Port = "Port",
-  AtomBomb = "Atom Bomb",
-  HydrogenBomb = "Hydrogen Bomb",
-  TradeShip = "Trade Ship",
-  MissileSilo = "Missile Silo",
-  DefensePost = "Defense Post",
-  SAMLauncher = "SAM Launcher",
-  City = "City",
-  MIRV = "MIRV",
-  MIRVWarhead = "MIRV Warhead",
-  Train = "Train",
-  Factory = "Factory",
-}
-
-export enum TrainType {
-  Engine = "Engine",
-  Carriage = "Carriage",
-}
-
 const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.City,
   UnitType.DefensePost,
@@ -290,7 +266,7 @@ export interface UnitParamsMap {
 }
 
 // Type helper to get params type for a specific unit type
-export type UnitParams<T extends UnitType> = UnitParamsMap[T];
+export type UnitParams<T extends keyof UnitParamsMap> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
 
@@ -345,12 +321,6 @@ export enum TerrainType {
   Mountain,
   Lake,
   Ocean,
-}
-
-export enum PlayerType {
-  Bot = "BOT",
-  Human = "HUMAN",
-  FakeHuman = "FAKEHUMAN",
 }
 
 export interface Execution {
@@ -579,7 +549,7 @@ export interface Player {
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
-    params: UnitParams<T>,
+    params: UnitParams<keyof UnitParamsMap>,
   ): Unit;
 
   // Returns the existing unit that can be upgraded,
@@ -660,7 +630,7 @@ export interface Player {
   executeRetreat(attackID: string): void;
 
   // Misc
-  toUpdate(): PlayerUpdate;
+  toUpdate(): GameUpdate;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
@@ -704,7 +674,7 @@ export interface Game extends GameMap {
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
-  executeNextTick(): GameUpdates;
+  executeNextTick(): GameUpdateViewData;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 
@@ -799,52 +769,8 @@ export interface PlayerInteraction {
   allianceExpiresAt?: Tick;
 }
 
-export interface EmojiMessage {
-  message: string;
-  senderID: number;
-  recipientID: number | typeof AllPlayers;
-  createdAt: Tick;
-}
-
-export enum MessageType {
-  ATTACK_FAILED,
-  ATTACK_CANCELLED,
-  ATTACK_REQUEST,
-  CONQUERED_PLAYER,
-  MIRV_INBOUND,
-  NUKE_INBOUND,
-  HYDROGEN_BOMB_INBOUND,
-  NAVAL_INVASION_INBOUND,
-  SAM_MISS,
-  SAM_HIT,
-  CAPTURED_ENEMY_UNIT,
-  UNIT_CAPTURED_BY_ENEMY,
-  UNIT_DESTROYED,
-  ALLIANCE_ACCEPTED,
-  ALLIANCE_REJECTED,
-  ALLIANCE_REQUEST,
-  ALLIANCE_BROKEN,
-  ALLIANCE_EXPIRED,
-  SENT_GOLD_TO_PLAYER,
-  RECEIVED_GOLD_FROM_PLAYER,
-  RECEIVED_GOLD_FROM_TRADE,
-  SENT_TROOPS_TO_PLAYER,
-  RECEIVED_TROOPS_FROM_PLAYER,
-  CHAT,
-  RENEW_ALLIANCE,
-}
-
-// Message categories used for filtering events in the EventsDisplay
-export enum MessageCategory {
-  ATTACK = "ATTACK",
-  NUKE = "NUKE",
-  ALLIANCE = "ALLIANCE",
-  TRADE = "TRADE",
-  CHAT = "CHAT",
-}
-
 // Ensures that all message types are included in a category
-export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
+export const MESSAGE_TYPE_CATEGORIES: Record<number, MessageCategory> = {
   [MessageType.ATTACK_FAILED]: MessageCategory.ATTACK,
   [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
   [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
@@ -869,7 +795,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
   [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
-  [MessageType.CHAT]: MessageCategory.CHAT,
+  [MessageType.CHAT]: MessageCategory.CHAT_CATEGORY,
 } as const;
 
 /**
@@ -877,10 +803,4 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
  */
 export function getMessageCategory(messageType: MessageType): MessageCategory {
   return MESSAGE_TYPE_CATEGORIES[messageType];
-}
-
-export interface NameViewData {
-  x: number;
-  y: number;
-  size: number;
 }

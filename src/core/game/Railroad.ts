@@ -13,12 +13,14 @@ export class Railroad {
   delete(game: Game) {
     const railTiles: RailTile[] = this.tiles.map((tile) => ({
       tile,
-      railType: RailType.VERTICAL,
+      railType: RailType.vertical,
     }));
     game.addUpdate({
       type: GameUpdateType.RailroadEvent,
-      isActive: false,
-      railTiles,
+      railroad: {
+        isActive: false,
+        railTiles,
+      },
     });
     this.from.removeRailroad(this);
     this.to.removeRailroad(this);

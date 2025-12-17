@@ -1,4 +1,5 @@
-import { Cell, Game, NameViewData, Player } from "../../core/game/Game";
+import { Cell, Game, Player } from "../../core/game/Game";
+import { NameViewData } from "../../core/game/GameUpdates";
 import { calculateBoundingBox } from "../../core/Util";
 
 export interface Point {

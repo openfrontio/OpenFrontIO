@@ -12,9 +12,9 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-  UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { UnitType } from "../core/game/GameUpdates";
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";

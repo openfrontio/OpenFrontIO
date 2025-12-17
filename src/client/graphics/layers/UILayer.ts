@@ -1,8 +1,7 @@
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameUpdateType, UnitType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { UnitSelectionEvent } from "../../InputHandler";
@@ -71,7 +70,9 @@ export class UILayer implements Layer {
 
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.[GameUpdateType.Unit]?.updates.map((unit) =>
+        this.game.unit(unit.unit!.id),
+      )
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);

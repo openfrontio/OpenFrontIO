@@ -15,10 +15,10 @@ import {
   AllPlayers,
   PlayerActions,
   PlayerProfile,
-  PlayerType,
   Relation,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { PlayerType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";

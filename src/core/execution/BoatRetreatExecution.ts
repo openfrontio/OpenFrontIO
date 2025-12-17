@@ -1,4 +1,5 @@
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
+import { UnitType } from "../game/GameUpdates";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;

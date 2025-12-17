@@ -1,13 +1,7 @@
 import { FakeHumanExecution } from "../src/core/execution/FakeHumanExecution";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import {
-  Cell,
-  GameMode,
-  Nation,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Cell, GameMode, Nation, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

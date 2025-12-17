@@ -1,5 +1,6 @@
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Player, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 
 describe("Territory management", () => {

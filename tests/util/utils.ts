@@ -4,7 +4,8 @@
 // If you also need execution use function below. Does not work with things not
 
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { Game, Player, UnitType } from "../../src/core/game/Game";
+import { Game, Player } from "../../src/core/game/Game";
+import { UnitType } from "../../src/core/game/GameUpdates";
 
 // built via UI (e.g.: trade ships)
 export function constructionExecution(

@@ -1,6 +1,7 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { UnitType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";

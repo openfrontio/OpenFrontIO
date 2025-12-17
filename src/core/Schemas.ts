@@ -17,8 +17,8 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-  UnitType,
 } from "./game/Game";
+import { UnitType } from "./game/GameUpdates";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 

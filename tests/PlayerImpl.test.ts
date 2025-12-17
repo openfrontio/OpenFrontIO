@@ -1,10 +1,5 @@
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 
 let game: Game;

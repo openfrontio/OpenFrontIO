@@ -1,7 +1,8 @@
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
-import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { MessageType, PlayerType } from "../src/core/game/GameUpdates";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

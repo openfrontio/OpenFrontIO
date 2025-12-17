@@ -1,9 +1,5 @@
-import {
-  ColoredTeams,
-  Game,
-  GameMode,
-  PlayerType,
-} from "../src/core/game/Game";
+import { ColoredTeams, Game, GameMode } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameUpdates";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

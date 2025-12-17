@@ -1,10 +1,5 @@
-import {
-  Difficulty,
-  Game,
-  Player,
-  PlayerType,
-  Relation,
-} from "../../game/Game";
+import { Difficulty, Game, Player, Relation } from "../../game/Game";
+import { PlayerType } from "../../game/GameUpdates";
 import { PseudoRandom } from "../../PseudoRandom";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";

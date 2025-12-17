@@ -3,14 +3,8 @@ import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnecte
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import {
-  Game,
-  GameMode,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, GameMode, Player, PlayerInfo } from "../src/core/game/Game";
+import { PlayerType, UnitType } from "../src/core/game/GameUpdates";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
@@ -72,7 +66,7 @@ describe("Disconnected", () => {
     test("should include disconnected state in player update", () => {
       player1.markDisconnected(true);
       const update = player1.toUpdate();
-      expect(update.isDisconnected).toBe(true);
+      expect(update.player!.isDisconnected).toBe(true);
     });
   });
 
@@ -146,7 +140,7 @@ describe("Disconnected", () => {
       player1.markDisconnected(true);
       executeTicks(game, 3);
       const update = player1.toUpdate();
-      expect(update.isDisconnected).toBe(true);
+      expect(update.player!.isDisconnected).toBe(true);
     });
   });
 

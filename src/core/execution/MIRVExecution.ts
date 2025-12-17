@@ -1,13 +1,6 @@
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  TerraNullius,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, TerraNullius, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { MessageType, UnitType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";

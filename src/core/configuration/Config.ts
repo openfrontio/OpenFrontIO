@@ -12,9 +12,9 @@ import {
   TerraNullius,
   Tick,
   UnitInfo,
-  UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameUpdates";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
