@@ -365,12 +365,12 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 20;
+    return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
       case "ally":
-        return 50_000n;
+        return 35_000n;
       case "team":
       case "other":
         return 25_000n;
