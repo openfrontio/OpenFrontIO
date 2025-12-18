@@ -9,6 +9,7 @@ import {
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
+  assertNever,
   boundingBoxCenter,
   calculateBoundingBoxCenter,
   flattenedEmojiTable,
@@ -26,7 +27,7 @@ const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
 const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
-export class BotBehavior {
+export class AiAttackBehavior {
   private botAttackTroopsSent: number = 0;
   private readonly lastEmojiSent = new Map<Player, Tick>();
 
@@ -233,8 +234,11 @@ export class BotBehavior {
       case Difficulty.Hard:
         return 4;
       // On impossible difficulty, attack as much bots as possible in parallel
-      default:
+      case Difficulty.Impossible: {
         return 100;
+      }
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -380,7 +384,7 @@ export class BotBehavior {
       if (!neighbor.isPlayer()) continue;
       if (this.player.isFriendly(neighbor)) continue;
       if (
-        neighbor.type() === PlayerType.FakeHuman ||
+        neighbor.type() === PlayerType.Nation ||
         neighbor.type() === PlayerType.Human
       ) {
         if (this.random.chance(2) || difficulty === Difficulty.Easy) {

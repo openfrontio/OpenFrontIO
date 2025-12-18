@@ -287,19 +287,6 @@ export class DefaultConfig implements Config {
     return this._userSettings;
   }
 
-  difficultyModifier(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1;
-      case Difficulty.Medium:
-        return 3;
-      case Difficulty.Hard:
-        return 9;
-      case Difficulty.Impossible:
-        return 18;
-    }
-  }
-
   cityTroopIncrease(): number {
     return 250_000;
   }
@@ -332,8 +319,8 @@ export class DefaultConfig implements Config {
     return this._gameConfig.playerTeams ?? 0;
   }
 
-  spawnNPCs(): boolean {
-    return !this._gameConfig.disableNPCs;
+  spawnNations(): boolean {
+    return !this._gameConfig.disableNations;
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
@@ -712,7 +699,7 @@ export class DefaultConfig implements Config {
         mag *= 0.8;
       }
       if (
-        attacker.type() === PlayerType.FakeHuman &&
+        attacker.type() === PlayerType.Nation &&
         defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
@@ -816,9 +803,9 @@ export class DefaultConfig implements Config {
   }
 
   useNationStrengthForStartManpower(): boolean {
-    // Currently disabled: FakeHumans became harder to play against due to AI improvements
+    // Currently disabled: Nations became harder to play against due to AI improvements
     // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
-    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
+    // Re-enabling this without rebalancing Nation difficulty elsewhere may make them overpowered
     return false;
   }
 
@@ -826,7 +813,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
-    if (playerInfo.playerType === PlayerType.FakeHuman) {
+    if (playerInfo.playerType === PlayerType.Nation) {
       const strength = this.useNationStrengthForStartManpower()
         ? (playerInfo.nationStrength ?? 1)
         : 1;
@@ -888,7 +875,7 @@ export class DefaultConfig implements Config {
       toAdd *= 0.6;
     }
 
-    if (player.type() === PlayerType.FakeHuman) {
+    if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
           toAdd *= 0.95;
