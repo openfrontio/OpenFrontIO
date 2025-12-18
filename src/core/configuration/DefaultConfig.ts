@@ -827,6 +827,8 @@ export class DefaultConfig implements Config {
           return 31_250 * strength;
         case Difficulty.Impossible:
           return 37_500 * strength;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -860,6 +862,8 @@ export class DefaultConfig implements Config {
         return maxTroops * 1.25;
       case Difficulty.Impossible:
         return maxTroops * 1.5;
+      default:
+        assertNever(this._gameConfig.difficulty);
     }
   }
 
@@ -889,6 +893,8 @@ export class DefaultConfig implements Config {
         case Difficulty.Impossible:
           toAdd *= 1.1;
           break;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
 
