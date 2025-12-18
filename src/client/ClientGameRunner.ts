@@ -7,6 +7,7 @@ import {
   GameStartInfo,
   PlayerCosmeticRefs,
   PlayerRecord,
+  ServerLobbyChatMessage,
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
@@ -64,6 +65,18 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
+function isValidLobbyChatMessage(
+  message: ServerMessage,
+): message is ServerLobbyChatMessage {
+  if (message.type !== "lobby_chat") return false;
+  const candidate = message as Record<string, unknown>;
+  return (
+    typeof candidate.username === "string" &&
+    typeof candidate.isHost === "boolean" &&
+    typeof candidate.text === "string"
+  );
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
@@ -72,6 +85,12 @@ export function joinLobby(
 ): () => void {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
+  );
+
+  window.__eventBus = eventBus;
+  window.__username = lobbyConfig.playerName;
+  document.dispatchEvent(
+    new CustomEvent("event-bus:ready", { bubbles: true, composed: true }),
   );
 
   const userSettings: UserSettings = new UserSettings();
@@ -143,6 +162,23 @@ export function joinLobby(
           "error_modal.connection_error",
         );
       }
+    }
+    if (message.type === "lobby_chat") {
+      if (!isValidLobbyChatMessage(message)) {
+        console.error("Malformed lobby_chat message:", message);
+        return;
+      }
+      document.dispatchEvent(
+        new CustomEvent("lobby-chat:message", {
+          detail: {
+            username: message.username,
+            isHost: message.isHost,
+            text: message.text,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   };
   transport.connect(onconnect, onmessage);

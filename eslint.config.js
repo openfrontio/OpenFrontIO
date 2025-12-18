@@ -25,6 +25,7 @@ export default [
         projectService: {
           allowDefaultProject: [
             "__mocks__/fileMock.js",
+            "__mocks__/jose.js",
             "eslint.config.js",
             "jest.config.ts",
             "postcss.config.js",

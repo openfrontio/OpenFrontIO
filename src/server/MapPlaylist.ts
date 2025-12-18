@@ -94,6 +94,7 @@ export class MapPlaylist {
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Normal,
       difficulty: Difficulty.Medium,
+      chatEnabled: false,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
