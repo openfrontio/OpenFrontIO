@@ -9,7 +9,7 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import { GameID, GameInfo } from "../core/Schemas";
+import { GameID, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -124,62 +124,39 @@ export class PublicLobby extends LitElement {
     // Format time to show minutes and seconds
     const timeDisplay = renderDuration(timeRemaining);
 
-    const teamCount =
-      lobby.gameConfig.gameMode === GameMode.Team
-        ? (lobby.gameConfig.playerTeams ?? 0)
-        : null;
+    const {
+      modeLabel,
+      teamDetailLabel,
+      mapName: currentMapName,
+    } = this.getGameDisplayDetails(
+      lobby.gameConfig.gameMap,
+      lobby.gameConfig.gameMode,
+      lobby.gameConfig.playerTeams,
+      lobby.gameConfig.maxPlayers,
+    );
 
-    const maxPlayers = lobby.gameConfig.maxPlayers ?? 0;
-    const teamSize = this.getTeamSize(teamCount, maxPlayers);
-    const teamTotal = this.getTeamTotal(teamCount, teamSize, maxPlayers);
-    const modeLabel = this.getModeLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
-    );
-    const teamDetailLabel = this.getTeamDetailLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
-      teamSize,
-    );
+
 
     const fullModeLabel = teamDetailLabel
       ? `${modeLabel} ${teamDetailLabel}`
       : modeLabel;
-
     const mapImageSrc = this.mapImages.get(lobby.gameID);
-    const nextMapName = lobby.gameConfig.nextMap
-      ? translateText(
-          `map.${lobby.gameConfig.nextMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-        )
-      : "";
 
     // Calculate details for Next Game
-    const nextGameMode = lobby.gameConfig.nextGameMode;
-    const nextTeamCount =
-      nextGameMode === GameMode.Team
-        ? (lobby.gameConfig.nextPlayerTeams ?? 0)
-        : null;
-    const nextMaxPlayers = lobby.gameConfig.nextMaxPlayers ?? 0;
-    const nextTeamSize = this.getTeamSize(nextTeamCount, nextMaxPlayers);
-    const nextTeamTotal = this.getTeamTotal(
-      nextTeamCount,
-      nextTeamSize,
-      nextMaxPlayers,
+    const {
+      modeLabel: nextModeLabel,
+      teamDetailLabel: nextTeamDetailLabel,
+      mapName: nextMapName,
+    } = this.getGameDisplayDetails(
+      lobby.gameConfig.nextMap,
+      lobby.gameConfig.nextGameMode,
+      lobby.gameConfig.nextPlayerTeams,
+      lobby.gameConfig.nextMaxPlayers,
     );
-    const nextModeLabel = nextGameMode
-      ? this.getModeLabel(nextGameMode, nextTeamCount, nextTeamTotal)
-      : "";
-    const nextTeamDetailLabel = nextGameMode
-      ? this.getTeamDetailLabel(
-          nextGameMode,
-          nextTeamCount,
-          nextTeamTotal,
-          nextTeamSize,
-        )
-      : null;
 
+    const fullNextModeLabel = nextTeamDetailLabel
+      ? `${nextModeLabel} ${nextTeamDetailLabel}`
+      : nextModeLabel;
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
@@ -213,11 +190,7 @@ export class PublicLobby extends LitElement {
               <span class="text-sm text-red-800 bg-white rounded-sm px-1 mr-1"
                 >${fullModeLabel}</span
               >
-              <span
-                >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-                )}</span
-              >
+              <span>${currentMapName}</span>
             </div>
           </div>
 
@@ -240,14 +213,8 @@ export class PublicLobby extends LitElement {
                   class="text-sm font-medium text-white-300 flex items-center justify-end gap-1"
                 >
                   <span class="text-xs text-red-800 bg-white rounded-sm px-1"
-                    >${nextModeLabel}</span
+                    >${fullNextModeLabel}</span
                   >
-                  ${nextTeamDetailLabel
-                    ? html`<span
-                        class="text-xs text-red-800 bg-white rounded-sm px-1"
-                        >${nextTeamDetailLabel}</span
-                      >`
-                    : ""}
                   <span>${nextMapName}</span>
                 </div>
               </div>`
@@ -322,6 +289,37 @@ export class PublicLobby extends LitElement {
     }
 
     return null;
+  }
+
+  private getGameDisplayDetails(
+    gameMap?: string,
+    gameMode?: GameMode,
+    playerTeams?: TeamCountConfig,
+    maxPlayers?: number,
+  ) {
+    const teamCount = gameMode === GameMode.Team ? (playerTeams ?? 0) : null;
+
+    const totalMaxPlayers = maxPlayers ?? 0;
+    const teamSize = this.getTeamSize(teamCount, totalMaxPlayers);
+    const teamTotal = this.getTeamTotal(teamCount, teamSize, totalMaxPlayers);
+
+    const modeLabel = gameMode
+      ? this.getModeLabel(gameMode, teamCount, teamTotal)
+      : "";
+
+    const teamDetailLabel = gameMode
+      ? this.getTeamDetailLabel(gameMode, teamCount, teamTotal, teamSize)
+      : null;
+
+    const mapName = gameMap
+      ? translateText(`map.${gameMap.toLowerCase().replace(/[\s.]+/g, "")}`)
+      : "";
+
+    return {
+      modeLabel,
+      teamDetailLabel,
+      mapName,
+    };
   }
 
   private lobbyClicked(lobby: GameInfo) {
