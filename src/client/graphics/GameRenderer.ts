@@ -118,6 +118,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
+  eventsDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -244,7 +245,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),

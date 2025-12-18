@@ -220,7 +220,7 @@ export class SinglePlayerModal extends LitElement {
                             ${typeof o === "string"
                               ? o === HumansVsNations
                                 ? translateText("public_lobby.teams_hvn")
-                                : translateText(`public_lobby.teams_${o}`)
+                                : translateText(`host_modal.teams_${o}`)
                               : translateText(`public_lobby.teams`, { num: o })}
                           </div>
                         </div>

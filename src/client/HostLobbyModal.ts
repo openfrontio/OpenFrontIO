@@ -312,7 +312,7 @@ export class HostLobbyModal extends LitElement {
                               ${typeof o === "string"
                                 ? o === HumansVsNations
                                   ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`public_lobby.teams_${o}`)
+                                  : translateText(`host_modal.teams_${o}`)
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
@@ -556,7 +556,7 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.nationCount}
+            ${this.disableNPCs ? 0 : this.nationCount}
             ${
               this.nationCount === 1
                 ? translateText("host_modal.nation_player")
