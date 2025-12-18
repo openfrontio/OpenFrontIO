@@ -148,7 +148,7 @@ export async function fetchGameById(
   gameId: string,
 ): Promise<AnalyticsRecord | false> {
   try {
-    const url = `${getApiBase()}/game/${gameId}`;
+    const url = `${getApiBase()}/game/${encodeURIComponent(gameId)}`;
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
