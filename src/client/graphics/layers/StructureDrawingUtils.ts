@@ -110,7 +110,12 @@ export class SpriteFactory {
     ghostStage: PIXI.Container,
     pos: { x: number; y: number },
     structureType: UnitType,
-  ): PIXI.Container {
+  ): {
+    container: PIXI.Container;
+    priceText: PIXI.BitmapText;
+    priceBg: PIXI.Graphics;
+    priceBox: { height: number; y: number; paddingX: number; minWidth: number };
+  } {
     const parentContainer = new PIXI.Container();
     const texture = this.createTexture(
       structureType,
@@ -162,7 +167,12 @@ export class SpriteFactory {
       Math.min(1, this.transformHandler.scale / ICON_SCALE_FACTOR_ZOOMED_OUT),
     );
     ghostStage.addChild(parentContainer);
-    return parentContainer;
+    return {
+      container: parentContainer,
+      priceText,
+      priceBg,
+      priceBox: { height: boxHeight, y: boxY, paddingX, minWidth },
+    };
   }
 
   // --- internal helpers ---
