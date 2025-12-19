@@ -38,7 +38,7 @@ export class HostLobbyModal extends LitElement {
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs = false;
+  @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
@@ -312,7 +312,7 @@ export class HostLobbyModal extends LitElement {
                               ${typeof o === "string"
                                 ? o === HumansVsNations
                                   ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`public_lobby.teams_${o}`)
+                                  : translateText(`host_modal.teams_${o}`)
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
@@ -358,17 +358,17 @@ export class HostLobbyModal extends LitElement {
                   )
                     ? html`
                         <label
-                          for="disable-npcs"
-                          class="option-card ${this.disableNPCs
+                          for="disable-nations"
+                          class="option-card ${this.disableNations
                             ? "selected"
                             : ""}"
                         >
                           <div class="checkbox-icon"></div>
                           <input
                             type="checkbox"
-                            id="disable-npcs"
-                            @change=${this.handleDisableNPCsChange}
-                            .checked=${this.disableNPCs}
+                            id="disable-nations"
+                            @change=${this.handleDisableNationsChange}
+                            .checked=${this.disableNations}
                           />
                           <div class="option-card-title">
                             ${translateText("host_modal.disable_nations")}
@@ -556,7 +556,7 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.nationCount}
+            ${this.disableNations ? 0 : this.nationCount}
             ${
               this.nationCount === 1
                 ? translateText("host_modal.nation_player")
@@ -569,7 +569,7 @@ export class HostLobbyModal extends LitElement {
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
-            .nationCount=${this.disableNPCs ? 0 : this.nationCount}
+            .nationCount=${this.disableNations ? 0 : this.nationCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
         </div>
@@ -735,9 +735,9 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleDisableNPCsChange(e: Event) {
-    this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    console.log(`updating disable npcs to ${this.disableNPCs}`);
+  private async handleDisableNationsChange(e: Event) {
+    this.disableNations = Boolean((e.target as HTMLInputElement).checked);
+    console.log(`updating disable nations to ${this.disableNations}`);
     this.putGameConfig();
   }
 
@@ -779,10 +779,10 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                disableNPCs: false,
+                disableNations: false,
               }
             : {
-                disableNPCs: this.disableNPCs,
+                disableNations: this.disableNations,
               }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,

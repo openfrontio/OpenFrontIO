@@ -276,7 +276,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private identityChipProps(type: PlayerType) {
     switch (type) {
-      case PlayerType.FakeHuman:
+      case PlayerType.Nation:
         return {
           labelKey: "player_type.nation",
           aria: "Nation player",
@@ -388,7 +388,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderRelationPillIfNation(other: PlayerView, my: PlayerView) {
-    if (other.type() !== PlayerType.FakeHuman) return html``;
+    if (other.type() !== PlayerType.Nation) return html``;
     if (other.isTraitor()) return html``;
     if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
     if (!this.otherProfile || !my) return html``;

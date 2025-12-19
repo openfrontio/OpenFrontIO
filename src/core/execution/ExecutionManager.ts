@@ -16,9 +16,9 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
+import { NationExecution } from "./NationExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
@@ -136,10 +136,10 @@ export class Executor {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
-  fakeHumanExecutions(): Execution[] {
+  nationExecutions(): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(new FakeHumanExecution(this.gameID, nation));
+      execs.push(new NationExecution(this.gameID, nation));
     }
     return execs;
   }

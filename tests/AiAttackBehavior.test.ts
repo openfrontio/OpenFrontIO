@@ -1,13 +1,13 @@
-import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
+import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 
-describe("BotBehavior Attack Behavior", () => {
+describe("Ai Attack Behavior", () => {
   let game: Game;
   let bot: Player;
   let human: Player;
-  let botBehavior: BotBehavior;
+  let attackBehavior: AiAttackBehavior;
 
   // Helper function for basic test setup
   async function setupTestEnvironment() {
@@ -52,7 +52,7 @@ describe("BotBehavior Attack Behavior", () => {
       testGame.executeNextTick();
     }
 
-    const behavior = new BotBehavior(
+    const behavior = new AiAttackBehavior(
       new PseudoRandom(42),
       testGame,
       testBot,
@@ -85,7 +85,7 @@ describe("BotBehavior Attack Behavior", () => {
     game = env.testGame;
     bot = env.testBot;
     human = env.testHuman;
-    botBehavior = env.behavior;
+    attackBehavior = env.behavior;
   });
 
   test("bot cannot attack allied player", () => {
@@ -99,7 +99,7 @@ describe("BotBehavior Attack Behavior", () => {
     const attacksBefore = bot.outgoingAttacks().length;
 
     // Attempt attack (should be blocked)
-    botBehavior.sendAttack(human);
+    attackBehavior.sendAttack(human);
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
@@ -116,7 +116,7 @@ describe("BotBehavior Attack Behavior", () => {
     // Create nation
     const nationInfo = new PlayerInfo(
       "nation_test",
-      PlayerType.FakeHuman,
+      PlayerType.Nation,
       null,
       "nation_test",
     );
@@ -128,7 +128,7 @@ describe("BotBehavior Attack Behavior", () => {
 
     nation.addTroops(1000);
 
-    const nationBehavior = new BotBehavior(
+    const nationBehavior = new AiAttackBehavior(
       new PseudoRandom(42),
       game,
       nation,

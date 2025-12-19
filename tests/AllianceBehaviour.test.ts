@@ -1,4 +1,4 @@
-import { AllianceBehavior } from "../src/core/execution/utils/AllianceBehavior";
+import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import {
   AllianceRequest,
   Game,
@@ -13,7 +13,7 @@ import { setup } from "./util/Setup";
 let game: Game;
 let player: Player;
 let requestor: Player;
-let allianceBehavior: AllianceBehavior;
+let allianceBehavior: NationAllianceBehavior;
 
 describe("AllianceBehavior.handleAllianceRequests", () => {
   beforeEach(async () => {
@@ -44,7 +44,7 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     // Use a fixed random seed for deterministic behavior
     const random = new PseudoRandom(46);
 
-    allianceBehavior = new AllianceBehavior(random, game, player);
+    allianceBehavior = new NationAllianceBehavior(random, game, player);
   });
 
   function setupAllianceRequest({
@@ -142,7 +142,7 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
   let mockAlliance: any;
   let mockHuman: any;
   let mockRandom: any;
-  let allianceBehavior: AllianceBehavior;
+  let allianceBehavior: NationAllianceBehavior;
 
   beforeEach(() => {
     mockGame = { addExecution: jest.fn() };
@@ -157,10 +157,14 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
       alliances: jest.fn(() => [mockAlliance]),
       relation: jest.fn(),
       id: jest.fn(() => "bot_id"),
-      type: jest.fn(() => PlayerType.FakeHuman),
+      type: jest.fn(() => PlayerType.Nation),
     };
 
-    allianceBehavior = new AllianceBehavior(mockRandom, mockGame, mockPlayer);
+    allianceBehavior = new NationAllianceBehavior(
+      mockRandom,
+      mockGame,
+      mockPlayer,
+    );
   });
 
   it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet or both already agreed)", () => {
