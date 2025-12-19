@@ -124,11 +124,21 @@ export class SpriteFactory {
     sprite.alpha = 0.5;
     parentContainer.addChild(sprite);
 
+    const priceText = new PIXI.BitmapText({
+      text: "125K",
+      style: { fontFamily: "round_6x6_modified", fontSize: 12 },
+    });
+    priceText.anchor.set(0.5);
     const priceGroup = new PIXI.Container();
-    const boxWidth = 40;
     const boxHeight = 18;
     const boxY =
       (sprite.height > 0 ? sprite.height / 2 : 16) + boxHeight / 2 + 4;
+
+    // a way to resize the pill horizontally based on the text width
+    const paddingX = 8;
+    const minWidth = 32;
+    const textWidth = priceText.width;
+    const boxWidth = Math.max(minWidth, textWidth + paddingX * 2);
 
     const priceBg = new PIXI.Graphics();
     priceBg
@@ -141,11 +151,6 @@ export class SpriteFactory {
       )
       .fill({ color: 0x000000, alpha: 0.65 });
 
-    const priceText = new PIXI.BitmapText({
-      text: "1.50M",
-      style: { fontFamily: "round_6x6_modified", fontSize: 12 },
-    });
-    priceText.anchor.set(0.5);
     priceText.position.set(0, boxY);
 
     priceGroup.addChild(priceBg);
