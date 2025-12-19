@@ -30,6 +30,7 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
+    "game_info": "Game info",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -179,6 +180,29 @@
     "win_loss_ratio": "Win/Loss",
     "rank": "Rank"
   },
+  "game_info_modal": {
+    "title": "Game info",
+    "players": "Players",
+    "atoms": "Atoms",
+    "hydros": "Hydros",
+    "mirv": "MIRV",
+    "bombs": "Bombs",
+    "total_gold": "Total",
+    "all_gold": "All gold",
+    "trade": "Trade",
+    "conquest_gold": "Conquered player gold",
+    "stolen_gold": "Stolen with warships",
+    "num_of_conquests": "Number of conquered players",
+    "duration": "Duration",
+    "survival_time": "Survival time",
+    "war": "War",
+    "economy": "Economy",
+    "conquests": "Conquests",
+    "pirate": "Pirate",
+    "conquered": "Conquered",
+    "loading_game_info": "Loading game stats",
+    "no_winner": "This game ended with no winner"
+  },
   "map": {
     "map": "Map",
     "world": "World",
@@ -292,7 +316,10 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {username}"
+    "remove_player": "Remove {username}",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)"
   },
   "team_colors": {
     "red": "Red",
@@ -798,6 +825,7 @@
     "mode_team": "Team",
     "view": "View",
     "details": "Details",
+    "ranking": "Ranking",
     "started": "Started",
     "map": "Map",
     "difficulty": "Difficulty",

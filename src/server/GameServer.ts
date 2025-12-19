@@ -90,8 +90,8 @@ export class GameServer {
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNPCs !== undefined) {
-      this.gameConfig.disableNPCs = gameConfig.disableNPCs;
+    if (gameConfig.disableNations !== undefined) {
+      this.gameConfig.disableNations = gameConfig.disableNations;
     }
     if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;

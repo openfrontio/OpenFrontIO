@@ -6,10 +6,11 @@ import {
   Relation,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";
 
-export class AllianceBehavior {
+export class NationAllianceBehavior {
   constructor(
     private random: PseudoRandom,
     private game: Game,
@@ -52,8 +53,10 @@ export class AllianceBehavior {
           return this.random.chance(30);
         case Difficulty.Hard:
           return this.random.chance(25);
-        default:
+        case Difficulty.Impossible:
           return this.random.chance(20);
+        default:
+          assertNever(difficulty);
       }
     };
 
@@ -116,8 +119,10 @@ export class AllianceBehavior {
         return this.random.chance(20); // 5% chance to be confused on medium
       case Difficulty.Hard:
         return this.random.chance(40); // 2.5% chance to be confused on hard
-      default:
+      case Difficulty.Impossible:
         return false; // No confusion on impossible
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -137,7 +142,7 @@ export class AllianceBehavior {
           this.game.config().maxTroops(otherPlayer) >
             this.game.config().maxTroops(this.player) * 2
         );
-      default: {
+      case Difficulty.Impossible: {
         // On impossible we check for multiple factors and try to not mess with stronger players (we want to steamroll over weaklings)
         const otherHasMoreTroops =
           otherPlayer.troops() > this.player.troops() * 1.5;
@@ -150,6 +155,8 @@ export class AllianceBehavior {
           otherPlayer.numTilesOwned() > this.player.numTilesOwned() * 1.5;
         return otherHasMoreTroops || otherHasMoreMaxTroops || otherHasMoreTiles;
       }
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -160,7 +167,8 @@ export class AllianceBehavior {
         return false; // On easy we never think we have enough alliances
       case Difficulty.Medium:
         return this.player.alliances().length >= this.random.nextInt(5, 8);
-      default: {
+      case Difficulty.Hard:
+      case Difficulty.Impossible: {
         // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
         const borderingPlayers = this.player
           .neighbors()
@@ -181,6 +189,8 @@ export class AllianceBehavior {
         }
         return this.player.alliances().length >= this.random.nextInt(2, 5);
       }
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -195,11 +205,13 @@ export class AllianceBehavior {
           this.player.relation(otherPlayer) === Relation.Friendly &&
           this.random.nextInt(0, 100) >= 17
         );
-      default:
+      case Difficulty.Impossible:
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
           this.random.nextInt(0, 100) >= 33
         );
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -222,11 +234,13 @@ export class AllianceBehavior {
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(75, 85) / 100)
         );
-      default:
+      case Difficulty.Impossible:
         return (
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(80, 90) / 100)
         );
+      default:
+        assertNever(difficulty);
     }
   }
 }
