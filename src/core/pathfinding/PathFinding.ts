@@ -109,7 +109,7 @@ export class PathFinder {
   private path_idx: number = 0;
   private aStar: AStar<TileRef>;
   private computeFinished = true;
-  
+
   // For dynamic source recomputation
   private lastRecomputeCheckIdx: number = 0;
   private sourceRecomputeInterval: number = 0; // 0 = disabled
