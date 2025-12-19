@@ -350,7 +350,7 @@ export enum TerrainType {
 export enum PlayerType {
   Bot = "BOT",
   Human = "HUMAN",
-  FakeHuman = "FAKEHUMAN",
+  Nation = "NATION",
 }
 
 export interface Execution {

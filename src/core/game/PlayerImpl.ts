@@ -444,7 +444,7 @@ export class PlayerImpl implements Player {
 
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
-    this._betrayalCount++; // Keep count for FakeHumans too
+    this._betrayalCount++; // Keep count for Nations too
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);
