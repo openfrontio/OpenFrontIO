@@ -185,25 +185,33 @@ export class PathFinder {
         if (
           this.sourceRecomputeInterval > 0 &&
           this.path !== null &&
-          this.path_idx - this.lastRecomputeCheckIdx >= this.sourceRecomputeInterval
+          this.path_idx - this.lastRecomputeCheckIdx >=
+            this.sourceRecomputeInterval
         ) {
           if (this.path_idx < this.path.length) {
-            const waypoint = this.path[this.path_idx];
-            const betterSrc = this.findBetterSource(waypoint, this.dst!);
-            if (
-              betterSrc !== null &&
-              this.game.manhattanDist(betterSrc, this.dst!) <
-                this.game.manhattanDist(waypoint, this.dst!)
-            ) {
-              // Found a better source, recompute from waypoint to dst
-              this.lastRecomputeCheckIdx = this.path_idx;
-              this.curr = waypoint;
-              this.aStar = this.newAStar(waypoint, dst);
-              this.computeFinished = false;
-              return this.nextTile(curr, dst);
-            } else {
-              this.lastRecomputeCheckIdx = this.path_idx;
+            const betterSrc = this.findBetterSource(curr, this.dst!);
+            if (betterSrc !== null) {
+              // Calculate if detouring to betterSrc is worthwhile
+              const currentPathCost = this.game.manhattanDist(curr, this.dst!);
+              const detourCost =
+                this.game.manhattanDist(curr, betterSrc) +
+                this.game.manhattanDist(betterSrc, this.dst!);
+
+              // Only recompute if the detour actually improves the total distance
+              if (detourCost < currentPathCost) {
+                // Found a better source that's worth detouring to
+                this.lastRecomputeCheckIdx = this.path_idx;
+                this.curr = betterSrc;
+                this.dst = dst;
+                this.path = null;
+                this.path_idx = 0;
+                this.aStar = this.newAStar(betterSrc, dst);
+                this.computeFinished = false;
+                // Return next step toward betterSrc, then will follow new path
+                return this.nextTile(curr, dst);
+              }
             }
+            this.lastRecomputeCheckIdx = this.path_idx;
           }
         }
 
@@ -253,18 +261,17 @@ export class PathFinder {
     return false;
   }
 
-  private findBetterSource(waypoint: TileRef, dst: TileRef): TileRef | null {
-    // Search for a better source near the current waypoint
+  private findBetterSource(curr: TileRef, dst: TileRef): TileRef | null {
+    // Search for a better source near the current position
     const searchRadius = 30;
-    const searchDist = this.game.manhattanDist(waypoint, dst);
 
     let bestSource: TileRef | null = null;
-    let bestDistance = searchDist;
+    let bestDetourCost = this.game.manhattanDist(curr, dst);
 
     // Check neighbors and nearby tiles
     const nearby = this.game.bfs(
-      waypoint,
-      (_, t: TileRef) => this.game.manhattanDist(waypoint, t) <= searchRadius,
+      curr,
+      (_, t: TileRef) => this.game.manhattanDist(curr, t) <= searchRadius,
     );
 
     for (const tile of nearby) {
@@ -273,10 +280,14 @@ export class PathFinder {
         continue;
       }
 
-      const distance = this.game.manhattanDist(tile, dst);
-      if (distance < bestDistance) {
+      // Calculate total detour cost: distance to source + source to destination
+      const detourCost =
+        this.game.manhattanDist(curr, tile) +
+        this.game.manhattanDist(tile, dst);
+
+      if (detourCost < bestDetourCost) {
         bestSource = tile;
-        bestDistance = distance;
+        bestDetourCost = detourCost;
       }
     }
 
