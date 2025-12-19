@@ -109,17 +109,25 @@ export class PathFinder {
   private path_idx: number = 0;
   private aStar: AStar<TileRef>;
   private computeFinished = true;
+  
+  // For dynamic source recomputation
+  private lastRecomputeCheckIdx: number = 0;
+  private sourceRecomputeInterval: number = 0; // 0 = disabled
 
   private constructor(
     private game: Game,
     private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
-  ) {}
+    sourceRecomputeInterval: number = 0,
+  ) {
+    this.sourceRecomputeInterval = sourceRecomputeInterval;
+  }
 
   public static Mini(
     game: Game,
     iterations: number,
     waterPath: boolean = true,
     maxTries: number = 20,
+    sourceRecomputeInterval: number = 0,
   ) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
@@ -131,7 +139,7 @@ export class PathFinder {
         maxTries,
         waterPath,
       );
-    });
+    }, sourceRecomputeInterval);
   }
 
   nextTile(
@@ -159,10 +167,41 @@ export class PathFinder {
         this.dst = dst;
         this.path = null;
         this.path_idx = 0;
+        this.lastRecomputeCheckIdx = 0;
         this.aStar = this.newAStar(curr, dst);
         this.computeFinished = false;
         return this.nextTile(curr, dst);
       } else {
+        // Check if we should recompute the source at waypoints
+        if (
+          this.sourceRecomputeInterval > 0 &&
+          this.path !== null &&
+          this.path_idx - this.lastRecomputeCheckIdx >= this.sourceRecomputeInterval
+        ) {
+          const waypointIdx = Math.floor(this.path_idx);
+          if (waypointIdx < this.path.length) {
+            const waypoint = this.path[waypointIdx];
+            const betterSrc = this.findBetterSource(waypoint, this.dst!);
+            if (
+              betterSrc !== null &&
+              this.game.manhattanDist(betterSrc, this.dst!) <
+                this.game.manhattanDist(curr, this.dst!)
+            ) {
+              // Found a better source, recompute from this waypoint
+              this.lastRecomputeCheckIdx = this.path_idx;
+              this.curr = waypoint;
+              this.dst = dst;
+              this.path = null;
+              this.path_idx = 0;
+              this.aStar = this.newAStar(betterSrc, dst);
+              this.computeFinished = false;
+              return this.nextTile(curr, dst);
+            } else {
+              this.lastRecomputeCheckIdx = this.path_idx;
+            }
+          }
+        }
+
         const tile = this.path?.[this.path_idx++];
         if (tile === undefined) {
           throw new Error("missing tile");
@@ -178,6 +217,7 @@ export class PathFinder {
 
         // exclude first tile
         this.path_idx = 1;
+        this.lastRecomputeCheckIdx = 1;
 
         return this.nextTile(curr, dst);
       case PathFindResultType.Pending:
@@ -206,5 +246,31 @@ export class PathFinder {
       return true;
     }
     return false;
+  }
+
+  private findBetterSource(waypoint: TileRef, dst: TileRef): TileRef | null {
+    // Search for a better source near the current waypoint
+    // This helps find closer coastal points for maritime routes
+    const searchRadius = 30;
+    const searchDist = this.game.manhattanDist(waypoint, dst);
+
+    let bestSource: TileRef | null = null;
+    let bestDistance = searchDist;
+
+    // Check neighbors and nearby tiles
+    const nearby = this.game.bfs(
+      waypoint,
+      (_, t: TileRef) => this.game.manhattanDist(waypoint, t) <= searchRadius,
+    );
+
+    for (const tile of nearby) {
+      const distance = this.game.manhattanDist(tile, dst);
+      if (distance < bestDistance) {
+        bestSource = tile;
+        bestDistance = distance;
+      }
+    }
+
+    return bestSource;
   }
 }

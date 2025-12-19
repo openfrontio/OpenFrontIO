@@ -70,7 +70,12 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
+    // PathFinder.Mini(game, iterations, waterPath, maxTries, sourceRecomputeInterval)
+    // - iterations: 10,000 - max iterations per compute call (higher = more thorough but slower)
+    // - waterPath: true - allow pathfinding through water (needed for ocean routes)
+    // - maxTries: 100 - max number of compute attempts before giving up
+    // - sourceRecomputeInterval: 50 - check for better coastal start points every 50 tiles traveled
+    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100, 50);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
