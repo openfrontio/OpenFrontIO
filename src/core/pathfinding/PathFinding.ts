@@ -208,7 +208,7 @@ export class PathFinder {
                 this.aStar = this.newAStar(betterSrc, dst);
                 this.computeFinished = false;
                 // Return next step toward betterSrc, then will follow new path
-                return this.nextTile(curr, dst);
+                return this.nextTile(betterSrc, dst);
               }
             }
             this.lastRecomputeCheckIdx = this.path_idx;
