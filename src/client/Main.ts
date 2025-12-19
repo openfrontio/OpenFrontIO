@@ -11,6 +11,7 @@ import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
+import { isFeatureEnabled, loadConfig } from "./Config";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -111,11 +112,14 @@ class Client {
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
-  }> | null = null;
+  } | null> | null = null;
 
   constructor() {}
 
   async initialize(): Promise<void> {
+    // Load configuration first
+    await loadConfig();
+
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -701,7 +705,11 @@ function removeSnowflakes() {
   }
 }
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Load configuration first
+  const { loadConfig } = await import("./Config");
+  await loadConfig();
+
   new Client().initialize();
 
   // Initially enable snowflakes if not in-game
@@ -712,7 +720,13 @@ document.addEventListener("DOMContentLoaded", () => {
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
-}> {
+} | null> {
+  // Skip Turnstile if cloudflare feature is disabled
+  if (!isFeatureEnabled("cloudflare")) {
+    console.log("Cloudflare/Turnstile disabled, skipping token fetch");
+    return null;
+  }
+
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
   while (typeof window.turnstile === "undefined" && attempts < 100) {

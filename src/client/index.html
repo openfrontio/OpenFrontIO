@@ -129,56 +129,6 @@
     <script>
       document.documentElement.className = "preload";
     </script>
-
-    <!-- Cloudflare Turnstile -->
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
-
-    <!-- Publift/Fuse ads -->
-    <script
-      async
-      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
-    ></script>
-
-    <script>
-      window.googletag = window.googletag || { cmd: [] };
-      googletag.cmd.push(function () {
-        googletag.pubads().set("page_url", "http://openfront.io ");
-      });
-    </script>
-
-    <!-- Analytics -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=AW-16702609763"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-
-      gtag("js", new Date());
-      gtag("config", "AW-16702609763");
-    </script>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-WQGQQ8RDN4");
-    </script>
   </head>
 
   <body
@@ -481,7 +431,9 @@
         ></div>
         <button
           class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-          onclick="document.getElementById('language-modal').classList.add('hidden')"
+          onclick="
+            document.getElementById('language-modal').classList.add('hidden')
+          "
         >
           Close
         </button>
@@ -496,12 +448,5 @@
         });
       });
     </script>
-
-    <!-- Analytics -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
-    ></script>
   </body>
 </html>

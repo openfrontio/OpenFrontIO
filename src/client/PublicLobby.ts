@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { isFeatureEnabled } from "./Config";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -32,6 +33,10 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // Skip fetching if public lobbies are disabled
+    if (!isFeatureEnabled("publicLobbies")) {
+      return;
+    }
     this.fetchAndUpdateLobbies();
     this.lobbiesInterval = window.setInterval(
       () => this.fetchAndUpdateLobbies(),
@@ -112,6 +117,11 @@ export class PublicLobby extends LitElement {
   }
 
   render() {
+    // Don't render if public lobbies are disabled
+    if (!isFeatureEnabled("publicLobbies")) {
+      return html``;
+    }
+
     if (this.lobbies.length === 0) return html``;
 
     const lobby = this.lobbies[0];
