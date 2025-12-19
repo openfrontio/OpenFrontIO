@@ -70,20 +70,6 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    // PathFinder.Mini(game, iterations, waterPath, maxTries, sourceRecomputeInterval, isValidSource)
-    // - iterations: 10,000 - max iterations per compute call (higher = more thorough but slower)
-    // - waterPath: true - allow pathfinding through water (needed for ocean routes)
-    // - maxTries: 100 - max number of compute attempts before giving up
-    // - sourceRecomputeInterval: 50 - check for better coastal start points every 50 tiles traveled
-    // - isValidSource: validates tiles are shore tiles (required for transport ship spawning)
-    this.pathFinder = PathFinder.Mini(
-      mg,
-      10_000,
-      true,
-      100,
-      50,
-      (tile: TileRef) => mg.isShore(tile) && mg.owner(tile) === this.attacker,
-    );
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -151,6 +137,22 @@ export class TransportShipExecution implements Execution {
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
     });
+
+    // PathFinder.Mini(game, iterations, waterPath, maxTries, sourceRecomputeInterval, isValidSource)
+    // - iterations: 10,000 - max iterations per compute call (higher = more thorough but slower)
+    // - waterPath: true - allow pathfinding through water (needed for ocean routes)
+    // - maxTries: 100 - max number of compute attempts before giving up
+    // - sourceRecomputeInterval: 50 - check for better coastal start points every 50 tiles traveled
+    // - isValidSource: validates tiles are shore tiles owned by current boat owner (handles ownership changes)
+    this.pathFinder = PathFinder.Mini(
+      mg,
+      10_000,
+      true,
+      100,
+      50,
+      (tile: TileRef) =>
+        mg.isShore(tile) && mg.owner(tile) === this.boat.owner(),
+    );
 
     if (this.dst !== null) {
       this.boat.setTargetTile(this.dst);
