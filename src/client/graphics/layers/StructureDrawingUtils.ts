@@ -123,6 +123,36 @@ export class SpriteFactory {
     sprite.anchor.set(0.5);
     sprite.alpha = 0.5;
     parentContainer.addChild(sprite);
+
+    // Small placeholder price pill beneath the ghost icon
+    const priceGroup = new PIXI.Container();
+    const boxWidth = 40;
+    const boxHeight = 18;
+    const boxY =
+      (sprite.height > 0 ? sprite.height / 2 : 16) + boxHeight / 2 + 4;
+
+    const priceBg = new PIXI.Graphics();
+    priceBg.beginFill(0x000000, 0.65);
+    priceBg.drawRoundedRect(
+      -boxWidth / 2,
+      boxY - boxHeight / 2,
+      boxWidth,
+      boxHeight,
+      4,
+    );
+    priceBg.endFill();
+
+    const priceText = new PIXI.BitmapText({
+      text: "1.50M",
+      style: { fontFamily: "round_6x6_modified", fontSize: 12 },
+    });
+    priceText.anchor.set(0.5);
+    priceText.position.set(0, boxY);
+
+    priceGroup.addChild(priceBg);
+    priceGroup.addChild(priceText);
+    parentContainer.addChild(priceGroup);
+
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(
       Math.min(1, this.transformHandler.scale / ICON_SCALE_FACTOR_ZOOMED_OUT),
