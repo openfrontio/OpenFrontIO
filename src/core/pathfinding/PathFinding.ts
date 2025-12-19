@@ -113,13 +113,16 @@ export class PathFinder {
   // For dynamic source recomputation
   private lastRecomputeCheckIdx: number = 0;
   private sourceRecomputeInterval: number = 0; // 0 = disabled
+  private isValidSource: ((tile: TileRef) => boolean) | null = null;
 
   private constructor(
     private game: Game,
     private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
     sourceRecomputeInterval: number = 0,
+    isValidSource: ((tile: TileRef) => boolean) | null = null,
   ) {
     this.sourceRecomputeInterval = sourceRecomputeInterval;
+    this.isValidSource = isValidSource;
   }
 
   public static Mini(
@@ -128,18 +131,24 @@ export class PathFinder {
     waterPath: boolean = true,
     maxTries: number = 20,
     sourceRecomputeInterval: number = 0,
+    isValidSource: ((tile: TileRef) => boolean) | null = null,
   ) {
-    return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
-      return new MiniAStar(
-        game.map(),
-        game.miniMap(),
-        curr,
-        dst,
-        iterations,
-        maxTries,
-        waterPath,
-      );
-    }, sourceRecomputeInterval);
+    return new PathFinder(
+      game,
+      (curr: TileRef, dst: TileRef) => {
+        return new MiniAStar(
+          game.map(),
+          game.miniMap(),
+          curr,
+          dst,
+          iterations,
+          maxTries,
+          waterPath,
+        );
+      },
+      sourceRecomputeInterval,
+      isValidSource,
+    );
   }
 
   nextTile(
@@ -178,22 +187,18 @@ export class PathFinder {
           this.path !== null &&
           this.path_idx - this.lastRecomputeCheckIdx >= this.sourceRecomputeInterval
         ) {
-          const waypointIdx = Math.floor(this.path_idx);
-          if (waypointIdx < this.path.length) {
-            const waypoint = this.path[waypointIdx];
+          if (this.path_idx < this.path.length) {
+            const waypoint = this.path[this.path_idx];
             const betterSrc = this.findBetterSource(waypoint, this.dst!);
             if (
               betterSrc !== null &&
               this.game.manhattanDist(betterSrc, this.dst!) <
-                this.game.manhattanDist(curr, this.dst!)
+                this.game.manhattanDist(waypoint, this.dst!)
             ) {
-              // Found a better source, recompute from this waypoint
+              // Found a better source, recompute from waypoint to dst
               this.lastRecomputeCheckIdx = this.path_idx;
               this.curr = waypoint;
-              this.dst = dst;
-              this.path = null;
-              this.path_idx = 0;
-              this.aStar = this.newAStar(betterSrc, dst);
+              this.aStar = this.newAStar(waypoint, dst);
               this.computeFinished = false;
               return this.nextTile(curr, dst);
             } else {
@@ -250,7 +255,6 @@ export class PathFinder {
 
   private findBetterSource(waypoint: TileRef, dst: TileRef): TileRef | null {
     // Search for a better source near the current waypoint
-    // This helps find closer coastal points for maritime routes
     const searchRadius = 30;
     const searchDist = this.game.manhattanDist(waypoint, dst);
 
@@ -264,6 +268,11 @@ export class PathFinder {
     );
 
     for (const tile of nearby) {
+      // Validate tile using provided validation function
+      if (this.isValidSource && !this.isValidSource(tile)) {
+        continue;
+      }
+
       const distance = this.game.manhattanDist(tile, dst);
       if (distance < bestDistance) {
         bestSource = tile;
