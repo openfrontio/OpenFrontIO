@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 1396,
-    "num_land_tiles": 933706,
+    "num_land_tiles": 933571,
     "width": 2000
   },
   "map16x": {
     "height": 349,
-    "num_land_tiles": 55009,
+    "num_land_tiles": 54975,
     "width": 500
   },
   "map4x": {
     "height": 698,
-    "num_land_tiles": 228914,
+    "num_land_tiles": 228849,
     "width": 1000
   },
   "name": "Britannia",
