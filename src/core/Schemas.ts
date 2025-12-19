@@ -164,7 +164,7 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
-  disableNPCs: z.boolean(),
+  disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -209,7 +209,11 @@ export const ID = z
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-export const UsernameSchema = SafeString;
+export const UsernameSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .min(3)
+  .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(

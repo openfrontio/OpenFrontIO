@@ -30,6 +30,7 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
+    "game_info": "Game info",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -179,6 +180,29 @@
     "win_loss_ratio": "Win/Loss",
     "rank": "Rank"
   },
+  "game_info_modal": {
+    "title": "Game info",
+    "players": "Players",
+    "atoms": "Atoms",
+    "hydros": "Hydros",
+    "mirv": "MIRV",
+    "bombs": "Bombs",
+    "total_gold": "Total",
+    "all_gold": "All gold",
+    "trade": "Trade",
+    "conquest_gold": "Conquered player gold",
+    "stolen_gold": "Stolen with warships",
+    "num_of_conquests": "Number of conquered players",
+    "duration": "Duration",
+    "survival_time": "Survival time",
+    "war": "War",
+    "economy": "Economy",
+    "conquests": "Conquests",
+    "pirate": "Pirate",
+    "conquered": "Conquered",
+    "loading_game_info": "Loading game stats",
+    "no_winner": "This game ended with no winner"
+  },
   "map": {
     "map": "Map",
     "world": "World",
@@ -218,7 +242,8 @@
     "fourislands": "Four Islands",
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
-    "svalmel": "Svalmel"
+    "svalmel": "Svalmel",
+    "manicouagan": "Manicouagan"
   },
   "map_categories": {
     "continental": "Continental",
@@ -291,7 +316,10 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {username}"
+    "remove_player": "Remove {username}",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)"
   },
   "team_colors": {
     "red": "Red",
@@ -357,7 +385,6 @@
     "left_click_menu": "Left Click Menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "performance_overlay_label": "Performance Overlay",
@@ -557,7 +584,7 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops",
+    "maxtroops": "Max troops",
     "launchers": "Launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -573,6 +600,7 @@
     "team": "Team",
     "alliance_timeout": "Alliance ends in",
     "troops": "Troops",
+    "maxtroops": "Max troops",
     "a_troops": "Attacking troops",
     "gold": "Gold",
     "ports": "Ports",
@@ -797,6 +825,7 @@
     "mode_team": "Team",
     "view": "View",
     "details": "Details",
+    "ranking": "Ranking",
     "started": "Started",
     "map": "Map",
     "difficulty": "Difficulty",

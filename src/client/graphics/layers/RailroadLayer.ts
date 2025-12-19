@@ -1,5 +1,6 @@
 import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
@@ -9,6 +10,7 @@ import {
   RailType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { AlternateViewEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
@@ -23,6 +25,7 @@ export class RailroadLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private theme: Theme;
+  private alternativeView = false;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
@@ -33,6 +36,7 @@ export class RailroadLayer implements Layer {
 
   constructor(
     private game: GameView,
+    private eventBus: EventBus,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -88,6 +92,12 @@ export class RailroadLayer implements Layer {
   }
 
   init() {
+    this.eventBus.on(AlternateViewEvent, (e) => {
+      this.alternativeView = e.alternateView;
+      for (const { tile } of this.existingRailroads.values()) {
+        this.paintRail(tile);
+      }
+    });
     this.redraw();
   }
 
@@ -244,9 +254,14 @@ export class RailroadLayer implements Layer {
     }
     const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
-    const color = recipient
+    let color = recipient
       ? recipient.borderColor()
       : colord("rgba(255,255,255,1)");
+
+    if (this.alternativeView && recipient?.isMe()) {
+      color = colord("#00ff00");
+    }
+
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
   }

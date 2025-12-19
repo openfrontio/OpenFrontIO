@@ -1,5 +1,4 @@
 import {
-  AllianceRequest,
   Difficulty,
   Game,
   Player,
@@ -10,11 +9,11 @@ import {
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
+  assertNever,
   boundingBoxCenter,
   calculateBoundingBoxCenter,
   flattenedEmojiTable,
 } from "../../Util";
-import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 import { TransportShipExecution } from "../TransportShipExecution";
@@ -28,7 +27,7 @@ const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
 const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
-export class BotBehavior {
+export class AiAttackBehavior {
   private botAttackTroopsSent: number = 0;
   private readonly lastEmojiSent = new Map<Player, Tick>();
 
@@ -40,38 +39,6 @@ export class BotBehavior {
     private reserveRatio: number,
     private expandRatio: number,
   ) {}
-
-  handleAllianceRequests() {
-    for (const req of this.player.incomingAllianceRequests()) {
-      if (shouldAcceptAllianceRequest(this.player, req)) {
-        req.accept();
-      } else {
-        req.reject();
-      }
-    }
-  }
-
-  handleAllianceExtensionRequests() {
-    for (const alliance of this.player.alliances()) {
-      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
-      // Skip if no expiration yet/ ally didn't request extension yet/ bot already agreed to extend
-      if (!alliance.onlyOneAgreedToExtend()) continue;
-
-      // Nation is either Friendly or Neutral as an ally. Bot has no attitude
-      // If Friendly or Bot, always agree to extend. If Neutral, have random chance decide
-      const human = alliance.other(this.player);
-      if (
-        this.player.type() === PlayerType.FakeHuman &&
-        this.player.relation(human) === Relation.Neutral
-      ) {
-        if (!this.random.chance(1.5)) continue;
-      }
-
-      this.game.addExecution(
-        new AllianceExtensionExecution(this.player, human.id()),
-      );
-    }
-  }
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
@@ -267,8 +234,11 @@ export class BotBehavior {
       case Difficulty.Hard:
         return 4;
       // On impossible difficulty, attack as much bots as possible in parallel
-      default:
+      case Difficulty.Impossible: {
         return 100;
+      }
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -414,7 +384,7 @@ export class BotBehavior {
       if (!neighbor.isPlayer()) continue;
       if (this.player.isFriendly(neighbor)) continue;
       if (
-        neighbor.type() === PlayerType.FakeHuman ||
+        neighbor.type() === PlayerType.Nation ||
         neighbor.type() === PlayerType.Human
       ) {
         if (this.random.chance(2) || difficulty === Difficulty.Easy) {
@@ -570,20 +540,4 @@ export class BotBehavior {
       ),
     );
   }
-}
-
-function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  if (player.relation(request.requestor()) < Relation.Neutral) {
-    return false; // Reject if hasMalice
-  }
-  if (request.requestor().isTraitor()) {
-    return false; // Reject if isTraitor
-  }
-  if (request.requestor().numTilesOwned() > player.numTilesOwned() * 3) {
-    return true; // Accept if requestorIsMuchLarger
-  }
-  if (request.requestor().alliances().length >= 3) {
-    return false; // Reject if tooManyAlliances
-  }
-  return true; // Accept otherwise
 }

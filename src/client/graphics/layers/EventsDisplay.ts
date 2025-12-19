@@ -49,6 +49,7 @@ import {
 } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { UIState } from "../UIState";
 
 interface GameEvent {
   description: string;
@@ -75,6 +76,7 @@ interface GameEvent {
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
+  public uiState: UIState;
 
   private active: boolean = false;
   private events: GameEvent[] = [];
@@ -763,8 +765,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    // Launch counterattack with the same number of troops as the incoming attack
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
+    const counterTroops = Math.min(
+      attack.troops,
+      this.uiState.attackRatio * myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private renderIncomingAttacks() {

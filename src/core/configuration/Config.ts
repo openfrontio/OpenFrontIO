@@ -1,7 +1,6 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
 import {
-  Difficulty,
   Game,
   GameMapType,
   GameMode,
@@ -82,7 +81,7 @@ export interface Config {
   theme(): Theme;
   percentageTilesOwnedToWin(): number;
   numBots(): number;
-  spawnNPCs(): boolean;
+  spawnNations(): boolean;
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
@@ -160,7 +159,6 @@ export interface Config {
   defensePostDefenseBonus(): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
-  difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
   warshipShellAttackRate(): number;
   warshipTargettingRange(): number;

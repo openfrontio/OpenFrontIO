@@ -17,20 +17,21 @@ import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
-import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { MirvExecution } from "./MIRVExecution";
+import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { calculateTerritoryCenter, closestTwoTiles } from "./Util";
-import { BotBehavior } from "./utils/BotBehavior";
+import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
-export class FakeHumanExecution implements Execution {
+export class NationExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
+  private attackBehavior: AiAttackBehavior | null = null;
+  private allianceBehavior: NationAllianceBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -71,7 +72,7 @@ export class FakeHumanExecution implements Execution {
 
   constructor(
     private gameID: GameID,
-    private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
+    private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -172,9 +173,9 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (this.behavior === null) {
+    if (this.attackBehavior === null || this.allianceBehavior === null) {
       // Player is unavailable during init()
-      this.behavior = new BotBehavior(
+      this.attackBehavior = new AiAttackBehavior(
         this.random,
         this.mg,
         this.player,
@@ -182,15 +183,20 @@ export class FakeHumanExecution implements Execution {
         this.reserveRatio,
         this.expandRatio,
       );
+      this.allianceBehavior = new NationAllianceBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
 
       // Send an attack on the first tick
-      this.behavior.forceSendAttack(this.mg.terraNullius());
+      this.attackBehavior.forceSendAttack(this.mg.terraNullius());
       return;
     }
 
     this.updateRelationsFromEmbargos();
-    this.behavior.handleAllianceRequests();
-    this.behavior.handleAllianceExtensionRequests();
+    this.allianceBehavior.handleAllianceRequests();
+    this.allianceBehavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
     this.considerMIRV();
@@ -198,7 +204,11 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeAttack() {
-    if (this.player === null || this.behavior === null) {
+    if (
+      this.player === null ||
+      this.attackBehavior === null ||
+      this.allianceBehavior === null
+    ) {
       throw new Error("not initialized");
     }
 
@@ -208,10 +218,13 @@ export class FakeHumanExecution implements Execution {
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-    const borderingPlayers = border
-      .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
-      .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+    const borderingPlayers = [
+      ...new Set(
+        border
+          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
     const borderingFriends = borderingPlayers.filter(
       (o) => this.player?.isFriendly(o) === true,
     );
@@ -224,7 +237,7 @@ export class FakeHumanExecution implements Execution {
       (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
     );
     if (hasNonNukedTerraNullius) {
-      this.behavior.sendAttack(this.mg.terraNullius());
+      this.attackBehavior.sendAttack(this.mg.terraNullius());
       return;
     }
 
@@ -238,22 +251,16 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      // 5% chance to send a random alliance request
-      if (this.random.chance(20)) {
-        const toAlly = this.random.randElement(borderingEnemies);
-        if (this.player.canSendAllianceRequest(toAlly)) {
-          this.mg.addExecution(
-            new AllianceRequestExecution(this.player, toAlly.id()),
-          );
-        }
-      }
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
     }
 
-    this.behavior.assistAllies();
+    this.attackBehavior.assistAllies();
 
-    this.behavior.attackBestTarget(borderingFriends, borderingEnemies);
+    this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
 
-    this.maybeSendNuke(this.behavior.findBestNukeTarget(borderingEnemies));
+    this.maybeSendNuke(
+      this.attackBehavior.findBestNukeTarget(borderingEnemies),
+    );
   }
 
   private maybeSendNuke(other: Player | null) {
@@ -263,7 +270,7 @@ export class FakeHumanExecution implements Execution {
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
       other === null ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to fakehumans and humans)
+      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
       this.player.isOnSameTeam(other)
     ) {
       return;
@@ -332,7 +339,7 @@ export class FakeHumanExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
-    this.behavior?.maybeSendEmoji(targetPlayer);
+    this.attackBehavior?.maybeSendEmoji(targetPlayer);
   }
 
   private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
@@ -554,7 +561,7 @@ export class FakeHumanExecution implements Execution {
 
   private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.player);
+    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
   sendBoatRandomly(borderingEnemies: Player[] = []) {
@@ -650,7 +657,7 @@ export class FakeHumanExecution implements Execution {
       return false;
     }
 
-    if (this.random.chance(FakeHumanExecution.MIRV_HESITATION_ODDS)) {
+    if (this.random.chance(NationExecution.MIRV_HESITATION_ODDS)) {
       this.triggerMIRVCooldown();
       return false;
     }
@@ -702,7 +709,7 @@ export class FakeHumanExecution implements Execution {
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
         const teamShare = teamTerritory / totalLand;
-        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD) {
+        if (teamShare >= NationExecution.VICTORY_DENIAL_TEAM_THRESHOLD) {
           // Only consider the largest team member as the target when team exceeds threshold
           let largestMember: Player | null = null;
           let largestTiles = -1;
@@ -721,7 +728,7 @@ export class FakeHumanExecution implements Execution {
         }
       } else {
         const share = p.numTilesOwned() / totalLand;
-        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+        if (share >= NationExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
           severity = share;
       }
       if (severity > 0) {
@@ -747,13 +754,13 @@ export class FakeHumanExecution implements Execution {
 
     const topPlayer = allPlayers[0];
 
-    if (topPlayer.cityCount <= FakeHumanExecution.STEAMROLL_MIN_LEADER_CITIES)
+    if (topPlayer.cityCount <= NationExecution.STEAMROLL_MIN_LEADER_CITIES)
       return null;
 
     const secondHighest = allPlayers[1].cityCount;
 
     const threshold =
-      secondHighest * FakeHumanExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
+      secondHighest * NationExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
 
     if (topPlayer.cityCount >= threshold) {
       return validTargets.some((p) => p === topPlayer.p) ? topPlayer.p : null;
@@ -819,7 +826,7 @@ export class FakeHumanExecution implements Execution {
   private maybeSendMIRV(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
-    this.behavior?.maybeSendEmoji(enemy);
+    this.attackBehavior?.maybeSendEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
@@ -845,7 +852,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private removeOldMIRVEvents() {
-    const maxAge = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
+    const maxAge = NationExecution.MIRV_COOLDOWN_TICKS;
     const tick = this.mg.ticks();
     while (
       this.lastMIRVSent.length > 0 &&

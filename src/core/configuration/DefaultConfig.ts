@@ -70,6 +70,7 @@ const numPlayersConfig = {
   [GameMapType.Italia]: [50, 30, 20],
   [GameMapType.Japan]: [20, 15, 10],
   [GameMapType.Lisbon]: [50, 40, 30],
+  [GameMapType.Manicouagan]: [60, 40, 30],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
@@ -286,19 +287,6 @@ export class DefaultConfig implements Config {
     return this._userSettings;
   }
 
-  difficultyModifier(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1;
-      case Difficulty.Medium:
-        return 3;
-      case Difficulty.Hard:
-        return 9;
-      case Difficulty.Impossible:
-        return 18;
-    }
-  }
-
   cityTroopIncrease(): number {
     return 250_000;
   }
@@ -331,8 +319,8 @@ export class DefaultConfig implements Config {
     return this._gameConfig.playerTeams ?? 0;
   }
 
-  spawnNPCs(): boolean {
-    return !this._gameConfig.disableNPCs;
+  spawnNations(): boolean {
+    return !this._gameConfig.disableNations;
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
@@ -369,7 +357,7 @@ export class DefaultConfig implements Config {
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
       case "ally":
-        return 50_000n;
+        return 35_000n;
       case "team":
       case "other":
         return 25_000n;
@@ -487,7 +475,12 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MIRV:
         return {
-          cost: this.costWrapper(() => 35_000_000, UnitType.MIRV),
+          cost: (game: Game, player: Player) => {
+            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+              return 0n;
+            }
+            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+          },
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -567,14 +560,15 @@ export class DefaultConfig implements Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (p: Player) => bigint {
-    return (p: Player) => {
-      if (p.type() === PlayerType.Human && this.infiniteGold()) {
+  ): (g: Game, p: Player) => bigint {
+    return (game: Game, player: Player) => {
+      if (player.type() === PlayerType.Human && this.infiniteGold()) {
         return 0n;
       }
       const numUnits = types.reduce(
         (acc, type) =>
-          acc + Math.min(p.unitsOwned(type), p.unitsConstructed(type)),
+          acc +
+          Math.min(player.unitsOwned(type), player.unitsConstructed(type)),
         0,
       );
       return BigInt(costFn(numUnits));
@@ -708,7 +702,7 @@ export class DefaultConfig implements Config {
         mag *= 0.8;
       }
       if (
-        attacker.type() === PlayerType.FakeHuman &&
+        attacker.type() === PlayerType.Nation &&
         defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
@@ -812,9 +806,9 @@ export class DefaultConfig implements Config {
   }
 
   useNationStrengthForStartManpower(): boolean {
-    // Currently disabled: FakeHumans became harder to play against due to AI improvements
+    // Currently disabled: Nations became harder to play against due to AI improvements
     // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
-    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
+    // Re-enabling this without rebalancing Nation difficulty elsewhere may make them overpowered
     return false;
   }
 
@@ -822,20 +816,22 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
-    if (playerInfo.playerType === PlayerType.FakeHuman) {
+    if (playerInfo.playerType === PlayerType.Nation) {
       const strength = this.useNationStrengthForStartManpower()
         ? (playerInfo.nationStrength ?? 1)
         : 1;
 
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * strength;
+          return 18_750 * strength;
         case Difficulty.Medium:
-          return 5_000 * strength;
+          return 25_000 * strength; // Like humans
         case Difficulty.Hard:
-          return 20_000 * strength;
+          return 31_250 * strength;
         case Difficulty.Impossible:
-          return 50_000 * strength;
+          return 37_500 * strength;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -862,13 +858,15 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.5;
+        return maxTroops * 0.75;
       case Difficulty.Medium:
-        return maxTroops * 1;
+        return maxTroops * 1; // Like humans
       case Difficulty.Hard:
-        return maxTroops * 1.5;
+        return maxTroops * 1.25;
       case Difficulty.Impossible:
-        return maxTroops * 2;
+        return maxTroops * 1.5;
+      default:
+        assertNever(this._gameConfig.difficulty);
     }
   }
 
@@ -884,20 +882,22 @@ export class DefaultConfig implements Config {
       toAdd *= 0.6;
     }
 
-    if (player.type() === PlayerType.FakeHuman) {
+    if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.9;
+          toAdd *= 0.95;
           break;
         case Difficulty.Medium:
-          toAdd *= 1;
+          toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
-          toAdd *= 1.1;
+          toAdd *= 1.05;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.2;
+          toAdd *= 1.1;
           break;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
 

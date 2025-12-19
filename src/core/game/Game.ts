@@ -105,6 +105,7 @@ export enum GameMapType {
   Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
   Lisbon = "Lisbon",
+  Manicouagan = "Manicouagan",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -141,6 +142,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.GulfOfStLawrence,
     GameMapType.Lisbon,
     GameMapType.NewYorkCity,
+    GameMapType.Manicouagan,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -175,7 +177,7 @@ export enum GameMapSize {
 }
 
 export interface UnitInfo {
-  cost: (player: Player) => Gold;
+  cost: (game: Game, player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -348,7 +350,7 @@ export enum TerrainType {
 export enum PlayerType {
   Bot = "BOT",
   Human = "HUMAN",
-  FakeHuman = "FAKEHUMAN",
+  Nation = "NATION",
 }
 
 export interface Execution {
@@ -754,7 +756,6 @@ export interface Game extends GameMap {
   nations(): Nation[];
 
   numTilesWithFallout(): number;
-  // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
 
   addUpdate(update: GameUpdate): void;
