@@ -254,16 +254,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);
     let relationHtml: TemplateResult | null = null;
+    const maxTroops = this.game.config().maxTroops(player);
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (
-      player.type() === PlayerType.FakeHuman &&
-      myPlayer !== null &&
-      !isAllied
-    ) {
+    if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
@@ -298,7 +295,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       case PlayerType.Bot:
         playerType = translateText("player_type.bot");
         break;
-      case PlayerType.FakeHuman:
+      case PlayerType.Nation:
         playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:
@@ -356,6 +353,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     ${translateText("player_info_overlay.troops")}
                     <span class="ml-auto mr-0 font-bold">
                       ${renderTroops(player.troops())}
+                    </span>
+                  </div>`
+                : ""}
+              ${maxTroops >= 1
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.maxtroops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(maxTroops)}
                     </span>
                   </div>`
                 : ""}
@@ -467,7 +475,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
+        class="block lg:flex fixed top-[150px] right-4 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div

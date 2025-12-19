@@ -1,4 +1,5 @@
 import { Logger } from "winston";
+import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
 import {
   Difficulty,
@@ -7,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { GameConfig, GameID } from "../core/Schemas";
+import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -25,10 +26,23 @@ export class GameManager {
     return this.games.get(id) ?? null;
   }
 
-  addClient(client: Client, gameID: GameID, lastTurn: number): boolean {
+  joinClient(client: Client, gameID: GameID): boolean {
     const game = this.games.get(gameID);
     if (game) {
-      game.addClient(client, lastTurn);
+      game.joinClient(client);
+      return true;
+    }
+    return false;
+  }
+
+  rejoinClient(
+    ws: WebSocket,
+    persistentID: string,
+    msg: ClientRejoinMessage,
+  ): boolean {
+    const game = this.games.get(msg.gameID);
+    if (game) {
+      game.rejoinClient(ws, persistentID, msg);
       return true;
     }
     return false;
@@ -51,7 +65,7 @@ export class GameManager {
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Medium,
-        disableNPCs: false,
+        disableNations: false,
         infiniteGold: false,
         infiniteTroops: false,
         maxTimerValue: undefined,

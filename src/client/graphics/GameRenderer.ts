@@ -113,6 +113,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
+  eventsDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -239,7 +240,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
@@ -311,7 +312,11 @@ export class GameRenderer {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
-    document.body.appendChild(this.canvas);
+    // only append the canvas if it's not already in the document to avoid reparenting side-effects
+    if (!document.body.contains(this.canvas)) {
+      document.body.appendChild(this.canvas);
+    }
+
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 

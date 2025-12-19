@@ -1,5 +1,6 @@
 import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
@@ -9,6 +10,7 @@ import {
   RailType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { AlternateViewEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
@@ -23,13 +25,18 @@ export class RailroadLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private theme: Theme;
+  private alternativeView = false;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
+  private railTileIndex = new Map<TileRef, number>();
+  private lastRailColorUpdate = 0;
+  private readonly railColorIntervalMs = 50;
 
   constructor(
     private game: GameView,
+    private eventBus: EventBus,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -49,7 +56,21 @@ export class RailroadLayer implements Layer {
   }
 
   updateRailColors() {
-    const maxTilesPerFrame = this.railTileList.length / 60;
+    if (this.railTileList.length === 0) {
+      return;
+    }
+    // Throttle color checks so we do not re-evaluate on every frame
+    const now = performance.now();
+    if (now - this.lastRailColorUpdate < this.railColorIntervalMs) {
+      return;
+    }
+    this.lastRailColorUpdate = now;
+
+    // Spread work over multiple frames to avoid large bursts when many rails exist
+    const maxTilesPerFrame = Math.max(
+      1,
+      Math.ceil(this.railTileList.length / 120),
+    );
     let checked = 0;
 
     while (checked < maxTilesPerFrame && this.railTileList.length > 0) {
@@ -58,20 +79,25 @@ export class RailroadLayer implements Layer {
       if (railRef) {
         const currentOwner = this.game.owner(tile)?.id() ?? null;
         if (railRef.lastOwnerId !== currentOwner) {
+          // Repaint only when the owner changed to keep colors in sync
           railRef.lastOwnerId = currentOwner;
           this.paintRail(railRef.tile);
         }
       }
 
-      this.nextRailIndexToCheck++;
-      if (this.nextRailIndexToCheck >= this.railTileList.length) {
-        this.nextRailIndexToCheck = 0;
-      }
+      this.nextRailIndexToCheck =
+        (this.nextRailIndexToCheck + 1) % this.railTileList.length;
       checked++;
     }
   }
 
   init() {
+    this.eventBus.on(AlternateViewEvent, (e) => {
+      this.alternativeView = e.alternateView;
+      for (const { tile } of this.existingRailroads.values()) {
+        this.paintRail(tile);
+      }
+    });
     this.redraw();
   }
 
@@ -95,22 +121,49 @@ export class RailroadLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    this.updateRailColors();
     const scale = this.transformHandler.scale;
     if (scale <= 1) {
       return;
     }
+    if (this.existingRailroads.size === 0) {
+      return;
+    }
+    this.updateRailColors();
     const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
     const alpha = Math.max(0, Math.min(1, rawAlpha));
+
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const padding = 2; // small margin so edges do not pop
+    const visLeft = Math.max(0, topLeft.x - padding);
+    const visTop = Math.max(0, topLeft.y - padding);
+    const visRight = Math.min(this.game.width(), bottomRight.x + padding);
+    const visBottom = Math.min(this.game.height(), bottomRight.y + padding);
+    const visWidth = Math.max(0, visRight - visLeft);
+    const visHeight = Math.max(0, visBottom - visTop);
+    if (visWidth === 0 || visHeight === 0) {
+      return;
+    }
+
+    const srcX = visLeft * 2;
+    const srcY = visTop * 2;
+    const srcW = visWidth * 2;
+    const srcH = visHeight * 2;
+
+    const dstX = -this.game.width() / 2 + visLeft;
+    const dstY = -this.game.height() / 2 + visTop;
 
     context.save();
     context.globalAlpha = alpha;
     context.drawImage(
       this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
+      srcX,
+      srcY,
+      srcW,
+      srcH,
+      dstX,
+      dstY,
+      visWidth,
+      visHeight,
     );
     context.restore();
   }
@@ -139,6 +192,7 @@ export class RailroadLayer implements Layer {
         numOccurence: 1,
         lastOwnerId: currentOwner,
       });
+      this.railTileIndex.set(railRoad.tile, this.railTileList.length);
       this.railTileList.push(railRoad.tile);
       this.paintRail(railRoad);
     }
@@ -150,7 +204,7 @@ export class RailroadLayer implements Layer {
 
     if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railRoad.tile);
-      this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
+      this.removeRailTile(railRoad.tile);
       if (this.context === undefined) throw new Error("Not initialized");
       if (this.game.isWater(railRoad.tile)) {
         this.context.clearRect(
@@ -170,6 +224,24 @@ export class RailroadLayer implements Layer {
     }
   }
 
+  private removeRailTile(tile: TileRef) {
+    const idx = this.railTileIndex.get(tile);
+    if (idx === undefined) return;
+
+    const lastIndex = this.railTileList.length - 1;
+    const lastTile = this.railTileList[lastIndex];
+
+    this.railTileList[idx] = lastTile;
+    this.railTileIndex.set(lastTile, idx);
+
+    this.railTileList.pop();
+    this.railTileIndex.delete(tile);
+
+    if (this.nextRailIndexToCheck >= this.railTileList.length) {
+      this.nextRailIndexToCheck = 0;
+    }
+  }
+
   paintRail(railRoad: RailTile) {
     if (this.context === undefined) throw new Error("Not initialized");
     const { tile } = railRoad;
@@ -182,9 +254,14 @@ export class RailroadLayer implements Layer {
     }
     const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
-    const color = recipient
+    let color = recipient
       ? recipient.borderColor()
       : colord("rgba(255,255,255,1)");
+
+    if (this.alternativeView && recipient?.isMe()) {
+      color = colord("#00ff00");
+    }
+
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
   }

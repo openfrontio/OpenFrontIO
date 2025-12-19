@@ -14,10 +14,12 @@
     "perf": "npx tsx tests/perf/*.ts",
     "test:coverage": "jest --coverage",
     "format": "prettier --ignore-unknown --write .",
+    "format:map-generator": "cd map-generator && go fmt .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "prepare": "husky",
-    "gen-maps": "cd map-generator && go run . && npm run format"
+    "gen-maps": "cd map-generator && go run . && npm run format",
+    "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {
     "**/*": [

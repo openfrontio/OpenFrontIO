@@ -88,6 +88,7 @@ export type ClientMessage =
   | ClientPingMessage
   | ClientIntentMessage
   | ClientJoinMessage
+  | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage;
 export type ServerMessage =
@@ -110,6 +111,7 @@ export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
+export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
@@ -162,7 +164,7 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
-  disableNPCs: z.boolean(),
+  disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -207,7 +209,11 @@ export const ID = z
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-export const UsernameSchema = SafeString;
+export const UsernameSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .min(3)
+  .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(
@@ -529,10 +535,18 @@ export const ClientJoinMessageSchema = z.object({
   clientID: ID,
   token: TokenSchema, // WARNING: PII
   gameID: ID,
-  lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
+  turnstileToken: z.string().nullable(),
+});
+
+export const ClientRejoinMessageSchema = z.object({
+  type: z.literal("rejoin"),
+  gameID: ID,
+  clientID: ID,
+  lastTurn: z.number(),
+  token: TokenSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
@@ -540,6 +554,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
+  ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
 ]);
