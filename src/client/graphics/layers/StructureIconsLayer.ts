@@ -25,10 +25,10 @@ import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
+import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import { renderNumber } from "../../Utils";
 import {
   DOTS_ZOOM_THRESHOLD,
   ICON_SCALE_FACTOR_ZOOMED_IN,

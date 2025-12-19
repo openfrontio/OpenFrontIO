@@ -147,13 +147,7 @@ export class SpriteFactory {
 
     const priceBg = new PIXI.Graphics();
     priceBg
-      .roundRect(
-        -boxWidth / 2,
-        boxY - boxHeight / 2,
-        boxWidth,
-        boxHeight,
-        4,
-      )
+      .roundRect(-boxWidth / 2, boxY - boxHeight / 2, boxWidth, boxHeight, 4)
       .fill({ color: 0x000000, alpha: 0.65 });
 
     priceText.position.set(0, boxY);
