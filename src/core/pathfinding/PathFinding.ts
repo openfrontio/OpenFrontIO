@@ -130,7 +130,7 @@ export class PathFinder {
     iterations: number,
     waterPath: boolean = true,
     maxTries: number = 20,
-    sourceRecomputeInterval: number = 0,
+    sourceRecomputeInterval: number = 20,
     isValidSource: ((tile: TileRef) => boolean) | null = null,
   ) {
     return new PathFinder(
