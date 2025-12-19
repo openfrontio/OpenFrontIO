@@ -124,7 +124,6 @@ export class SpriteFactory {
     sprite.alpha = 0.5;
     parentContainer.addChild(sprite);
 
-    // Small placeholder price pill beneath the ghost icon
     const priceGroup = new PIXI.Container();
     const boxWidth = 40;
     const boxHeight = 18;
@@ -132,15 +131,15 @@ export class SpriteFactory {
       (sprite.height > 0 ? sprite.height / 2 : 16) + boxHeight / 2 + 4;
 
     const priceBg = new PIXI.Graphics();
-    priceBg.beginFill(0x000000, 0.65);
-    priceBg.drawRoundedRect(
-      -boxWidth / 2,
-      boxY - boxHeight / 2,
-      boxWidth,
-      boxHeight,
-      4,
-    );
-    priceBg.endFill();
+    priceBg
+      .roundRect(
+        -boxWidth / 2,
+        boxY - boxHeight / 2,
+        boxWidth,
+        boxHeight,
+        4,
+      )
+      .fill({ color: 0x000000, alpha: 0.65 });
 
     const priceText = new PIXI.BitmapText({
       text: "1.50M",
