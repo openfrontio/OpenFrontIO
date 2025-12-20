@@ -9,6 +9,7 @@ import {
   PlayerID,
   PlayerType,
   Relation,
+  TerrainType,
   Tick,
   Unit,
   UnitType,
