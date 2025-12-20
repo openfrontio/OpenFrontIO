@@ -742,39 +742,61 @@ export class NationExecution implements Execution {
   private counterWarshipInfestation(): void {
     if (this.player === null) return;
 
+    if (!this.shouldCounterWarshipInfestation()) {
+      return;
+    }
+
+    const isTeamGame = this.player.team() !== null;
+
+    if (!this.isRichPlayer(isTeamGame)) {
+      return;
+    }
+
+    const target = this.findWarshipInfestationCounterTarget(isTeamGame);
+    if (target !== null) {
+      this.buildCounterWarship(target);
+    }
+  }
+
+  private shouldCounterWarshipInfestation(): boolean {
+    if (this.player === null) return false;
+
     // Only the smart nations can do this
     const { difficulty } = this.mg.config().gameConfig();
     if (
       difficulty !== Difficulty.Hard &&
       difficulty !== Difficulty.Impossible
     ) {
-      return;
+      return false;
     }
 
     // Quit early if there aren't many warships in the game
     if (this.mg.unitCount(UnitType.Warship) <= 10) {
-      return;
+      return false;
     }
 
     // Quit early if we can't afford a warship
     if (this.cost(UnitType.Warship) > this.player.gold()) {
-      return;
+      return false;
     }
 
     // Quit early if we don't have a port to send warships from
     if (this.player.units(UnitType.Port).length === 0) {
-      return;
+      return false;
     }
 
     // Don't send too many warships
     if (this.player.units(UnitType.Warship).length >= 10) {
-      return;
+      return false;
     }
 
-    // Determine if we're in a team game
-    const isTeamGame = this.player.team() !== null;
+    return true;
+  }
 
-    // Check if current player is one of the 3 richest (We don't want poor nations to use their precious gold on this)
+  // Check if current player is one of the 3 richest (We don't want poor nations to use their precious gold on this)
+  private isRichPlayer(isTeamGame: boolean): boolean {
+    if (this.player === null) return false;
+
     const players = this.mg.players().filter((p) => {
       if (!p.isAlive() || p.type() === PlayerType.Human) return false;
       return isTeamGame ? p.team() === this.player!.team() : true;
@@ -782,109 +804,126 @@ export class NationExecution implements Execution {
     const topThree = players
       .sort((a, b) => Number(b.gold() - a.gold()))
       .slice(0, 3);
-    const isRich = topThree.some((p) => p.id() === this.player!.id());
+    return topThree.some((p) => p.id() === this.player!.id());
+  }
 
-    if (!isRich) {
-      return;
-    }
+  private findWarshipInfestationCounterTarget(
+    isTeamGame: boolean,
+  ): { player: Player; warship: Unit } | null {
+    return isTeamGame
+      ? this.findTeamGameWarshipTarget()
+      : this.findFreeForAllWarshipTarget();
+  }
 
-    // Find enemies with too many warships (=> early warning sign of a warship infestation)
-    let targetPlayer: Player | null = null;
-    let targetWarship: Unit | null = null;
+  private findTeamGameWarshipTarget(): {
+    player: Player;
+    warship: Unit;
+  } | null {
+    if (this.player === null) return null;
 
-    if (isTeamGame) {
-      // In team games, check enemy teams
-      const enemyTeamWarships = new Map<
-        string,
-        { count: number; team: string; players: Player[] }
-      >();
+    const enemyTeamWarships = new Map<
+      string,
+      { count: number; team: string; players: Player[] }
+    >();
 
-      for (const p of this.mg.players().filter((p) => p.isAlive())) {
-        // Skip friendly players (our team and allies)
-        if (this.player.isFriendly(p) || p.id() === this.player.id()) {
-          continue;
-        }
-
-        const team = p.team();
-        if (team === null) continue;
-
-        const teamKey = team.toString();
-        const warshipCount = p.units(UnitType.Warship).length;
-
-        if (!enemyTeamWarships.has(teamKey)) {
-          enemyTeamWarships.set(teamKey, {
-            count: 0,
-            team: teamKey,
-            players: [],
-          });
-        }
-        const teamData = enemyTeamWarships.get(teamKey)!;
-        teamData.count += warshipCount;
-        teamData.players.push(p);
+    for (const p of this.mg.players().filter((p) => p.isAlive())) {
+      // Skip friendly players (our team and allies)
+      if (this.player.isFriendly(p) || p.id() === this.player.id()) {
+        continue;
       }
 
-      // Find team with more than 15 warships
-      for (const [, teamData] of enemyTeamWarships.entries()) {
-        if (teamData.count > 15) {
-          // Find player in that team with most warships
-          const playerWithMostWarships = teamData.players.reduce(
-            (max, p) => {
-              const count = p.units(UnitType.Warship).length;
-              const maxCount = max ? max.units(UnitType.Warship).length : 0;
-              return count > maxCount ? p : max;
-            },
-            null as Player | null,
-          );
+      const team = p.team();
+      if (team === null) continue;
 
-          if (playerWithMostWarships) {
-            const warships = playerWithMostWarships.units(UnitType.Warship);
-            if (warships.length > 3) {
-              targetPlayer = playerWithMostWarships;
-              targetWarship = this.random.randElement(warships);
-              break;
-            }
+      const teamKey = team.toString();
+      const warshipCount = p.units(UnitType.Warship).length;
+
+      if (!enemyTeamWarships.has(teamKey)) {
+        enemyTeamWarships.set(teamKey, {
+          count: 0,
+          team: teamKey,
+          players: [],
+        });
+      }
+      const teamData = enemyTeamWarships.get(teamKey)!;
+      teamData.count += warshipCount;
+      teamData.players.push(p);
+    }
+
+    // Find team with more than 15 warships
+    for (const [, teamData] of enemyTeamWarships.entries()) {
+      if (teamData.count > 15) {
+        // Find player in that team with most warships
+        const playerWithMostWarships = teamData.players.reduce(
+          (max, p) => {
+            const count = p.units(UnitType.Warship).length;
+            const maxCount = max ? max.units(UnitType.Warship).length : 0;
+            return count > maxCount ? p : max;
+          },
+          null as Player | null,
+        );
+
+        if (playerWithMostWarships) {
+          const warships = playerWithMostWarships.units(UnitType.Warship);
+          if (warships.length > 3) {
+            return {
+              player: playerWithMostWarships,
+              warship: this.random.randElement(warships),
+            };
           }
         }
       }
-    } else {
-      // In non-team games, check individual players
-      const enemies = this.mg
-        .players()
-        .filter(
-          (p) =>
-            p.isAlive() &&
-            !this.player!.isFriendly(p) &&
-            p.id() !== this.player!.id(),
-        );
+    }
 
-      for (const enemy of enemies) {
-        const enemyWarships = enemy.units(UnitType.Warship);
-        if (enemyWarships.length > 10) {
-          targetPlayer = enemy;
-          targetWarship = this.random.randElement(enemyWarships);
-          break;
-        }
+    return null;
+  }
+
+  private findFreeForAllWarshipTarget(): {
+    player: Player;
+    warship: Unit;
+  } | null {
+    if (this.player === null) return null;
+
+    const enemies = this.mg
+      .players()
+      .filter(
+        (p) =>
+          p.isAlive() &&
+          !this.player!.isFriendly(p) &&
+          p.id() !== this.player!.id(),
+      );
+
+    for (const enemy of enemies) {
+      const enemyWarships = enemy.units(UnitType.Warship);
+      if (enemyWarships.length > 10) {
+        return {
+          player: enemy,
+          warship: this.random.randElement(enemyWarships),
+        };
       }
     }
 
-    // If we found a target, build and send a new warship to attack it
-    if (targetPlayer !== null && targetWarship !== null) {
-      const canBuild = this.player.canBuild(
+    return null;
+  }
+
+  private buildCounterWarship(target: { player: Player; warship: Unit }): void {
+    if (this.player === null) return;
+
+    const canBuild = this.player.canBuild(
+      UnitType.Warship,
+      target.warship.tile(),
+    );
+    if (canBuild === false) {
+      return;
+    }
+
+    this.mg.addExecution(
+      new ConstructionExecution(
+        this.player,
         UnitType.Warship,
-        targetWarship.tile(),
-      );
-      if (canBuild === false) {
-        return;
-      }
-
-      this.mg.addExecution(
-        new ConstructionExecution(
-          this.player,
-          UnitType.Warship,
-          targetWarship.tile(),
-        ),
-      );
-    }
+        target.warship.tile(),
+      ),
+    );
   }
 
   isActive(): boolean {
