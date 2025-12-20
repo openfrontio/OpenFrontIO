@@ -4,74 +4,62 @@
     {
       "coordinates": [800, 430],
       "flag": "quebec",
-      "name": "Laval",
-      "strength": 2
+      "name": "Laval"
     },
     {
       "coordinates": [1110, 930],
       "flag": "quebec",
-      "name": "Royal Mount park",
-      "strength": 1
+      "name": "Royal Mount park"
     },
     {
       "coordinates": [1220, 1360],
       "flag": "quebec",
-      "name": "Hochelaga Archipelago",
-      "strength": 2
+      "name": "Hochelaga Archipelago"
     },
     {
       "coordinates": [1080, 980],
       "flag": "ca",
-      "name": "Westmount",
-      "strength": 1
+      "name": "Westmount"
     },
     {
       "coordinates": [1400, 1000],
       "flag": "quebec",
-      "name": "Saint-Lambert",
-      "strength": 1
+      "name": "Saint-Lambert"
     },
     {
       "coordinates": [500, 130],
       "flag": "quebec",
-      "name": "Blainville",
-      "strength": 1
+      "name": "Blainville"
     },
     {
       "coordinates": [350, 650],
       "flag": "quebec",
-      "name": "Saint-Eustache",
-      "strength": 1
+      "name": "Saint-Eustache"
     },
     {
       "coordinates": [200, 1350],
       "flag": "quebec",
-      "name": "Perrot Island",
-      "strength": 1
+      "name": "Perrot Island"
     },
     {
       "coordinates": [25, 950],
       "flag": "quebec",
-      "name": "Kanesatake Lands",
-      "strength": 1
+      "name": "Kanesatake Lands"
     },
     {
       "coordinates": [50, 450],
       "flag": "quebec",
-      "name": "Mirabel",
-      "strength": 1
+      "name": "Mirabel"
     },
     {
       "coordinates": [650, 1450],
       "flag": "quebec",
-      "name": "Chateauguay",
-      "strength": 1
+      "name": "Chateauguay"
     },
     {
       "coordinates": [1330, 300],
       "flag": "quebec",
-      "name": "Pointe-aux-Trembles",
-      "strength": 1
+      "name": "Pointe-aux-Trembles"
     }
   ]
 }
