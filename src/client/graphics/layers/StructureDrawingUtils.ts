@@ -131,7 +131,7 @@ export class SpriteFactory {
     parentContainer.addChild(sprite);
 
     const priceText = new PIXI.BitmapText({
-      text: "",
+      text: "125K",
       style: { fontFamily: "round_6x6_modified", fontSize: 12 },
     });
     priceText.anchor.set(0.5);
