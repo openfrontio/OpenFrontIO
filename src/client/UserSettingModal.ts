@@ -421,7 +421,7 @@ export class UserSettingModal extends LitElement {
         action="toggleView"
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
+        defaultKey="Backslash"
         .value=${this.keybinds["toggleView"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
