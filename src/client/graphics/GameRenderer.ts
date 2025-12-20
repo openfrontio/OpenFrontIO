@@ -241,6 +241,7 @@ export function createRenderer(
   if (!(pauseOverlay instanceof PauseOverlay)) {
     console.error("pause overlay not found");
   }
+  pauseOverlay.game = game;
   pauseOverlay.eventBus = eventBus;
 
   // When updating these layers please be mindful of the order.

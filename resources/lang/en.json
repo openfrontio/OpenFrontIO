@@ -741,7 +741,8 @@
     "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
   },
   "pause": {
-    "game_paused": "Game paused by Lobby Creator"
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",
