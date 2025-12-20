@@ -318,7 +318,7 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleStructureSprites}
       ></setting-toggle>
 
-      <!-- 💰 Ghost Price Pill -->
+      <!-- 💰 Cursor Price Pill -->
       <setting-toggle
         label="${translateText("user_setting.cursor_cost_label_label")}"
         description="${translateText("user_setting.cursor_cost_label_desc")}"
