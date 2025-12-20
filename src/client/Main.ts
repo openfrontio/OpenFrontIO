@@ -14,6 +14,7 @@ import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import { isDevFeatureEnabled, loadDevConfig } from "./DevConfig";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
@@ -111,13 +112,16 @@ class Client {
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
-  }> | null = null;
+  } | null> | null = null;
 
   constructor() {}
 
   async initialize(): Promise<void> {
+    // Load dev config first
+    await loadDevConfig();
+
     // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
+    // the user joins a lobby (skip if cloudflare disabled).
     this.turnstileTokenPromise = getTurnstileToken();
 
     const gameVersion = document.getElementById(
@@ -712,7 +716,13 @@ document.addEventListener("DOMContentLoaded", () => {
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
-}> {
+} | null> {
+  // Skip Turnstile if cloudflare feature is disabled
+  if (!isDevFeatureEnabled("cloudflare")) {
+    console.log("Cloudflare/Turnstile disabled via config, skipping");
+    return null;
+  }
+
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
   while (typeof window.turnstile === "undefined" && attempts < 100) {

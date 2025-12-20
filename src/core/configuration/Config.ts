@@ -65,6 +65,7 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
+  enablePublicGames(): boolean;
 }
 
 export interface NukeMagnitude {
