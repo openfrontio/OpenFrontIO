@@ -11,7 +11,7 @@ export class SpawnExecution implements Execution {
   private random: PseudoRandom;
   active: boolean = true;
   private mg: Game;
-  private static readonly MAX_SPAWN_TRIES = 10_000;
+  private static readonly MAX_SPAWN_TRIES = 1_000;
 
   constructor(
     gameID: GameID,
