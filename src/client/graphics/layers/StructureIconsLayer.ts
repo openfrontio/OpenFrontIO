@@ -271,8 +271,7 @@ export class StructureIconsLayer implements Layer {
         const unit = actions.buildableUnits.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
-        const showPrice =
-          this.game.config().userSettings()?.cursorCostLabel?.() ?? true;
+        const showPrice = this.game.config().userSettings().cursorCostLabel();
         if (!unit) {
           Object.assign(this.ghostUnit.buildableUnit, {
             canBuild: false,
@@ -418,8 +417,7 @@ export class StructureIconsLayer implements Layer {
       range: null,
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
-    const showPrice =
-      this.game.config().userSettings()?.cursorCostLabel?.() ?? true;
+    const showPrice = this.game.config().userSettings().cursorCostLabel();
     this.updateGhostPrice(0, showPrice);
     const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
     this.updateGhostRange(baseLevel);
