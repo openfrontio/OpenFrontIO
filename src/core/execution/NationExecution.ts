@@ -738,7 +738,7 @@ export class NationExecution implements Execution {
   }
 
   // Prevent warship infestations: if current player is one of the 3 richest and an enemy has too many warships, send a counter-warship
-  // What is an warship infestation? A player tries do dominate the entire ocean to block all trade and transport boats
+  // What is a warship infestation? A player tries do dominate the entire ocean to block all trade and transport boats
   private counterWarshipInfestation(): void {
     if (this.player === null) return;
 
