@@ -6,6 +6,7 @@ coverage/
 TODO.txt
 resources/images/.DS_Store
 resources/.DS_Store
+resources/certs/
 .env*
 .DS_Store
 .clinic/

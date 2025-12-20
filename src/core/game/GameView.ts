@@ -41,6 +41,10 @@ import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
 
+const FRIENDLY_TINT_TARGET = { r: 0, g: 255, b: 0, a: 1 };
+const EMBARGO_TINT_TARGET = { r: 255, g: 0, b: 0, a: 1 };
+const BORDER_TINT_RATIO = 0.35;
+
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
@@ -184,9 +188,17 @@ export class PlayerView {
 
   private _territoryColor: Colord;
   private _borderColor: Colord;
+
   // Update here to include structure light and dark colors
   private _structureColors: { light: Colord; dark: Colord };
-  private _defendedBorderColors: { light: Colord; dark: Colord };
+
+  // Pre-computed border color variants
+  private _borderColorNeutral: Colord;
+  private _borderColorFriendly: Colord;
+  private _borderColorEmbargo: Colord;
+  private _borderColorDefendedNeutral: { light: Colord; dark: Colord };
+  private _borderColorDefendedFriendly: { light: Colord; dark: Colord };
+  private _borderColorDefendedEmbargo: { light: Colord; dark: Colord };
 
   constructor(
     private game: GameView,
@@ -248,11 +260,56 @@ export class PlayerView {
         this.cosmetics.color?.color ??
         maybeFocusedBorderColor.toHex(),
     );
+    const theme = this.game.config().theme();
+    const baseRgb = this._borderColor.toRgb();
 
-    this._defendedBorderColors = this.game
-      .config()
-      .theme()
-      .defendedBorderColors(this._borderColor);
+    // Neutral is just the base color
+    this._borderColorNeutral = this._borderColor;
+
+    // Compute friendly tint
+    this._borderColorFriendly = colord({
+      r: Math.round(
+        baseRgb.r * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.r * BORDER_TINT_RATIO,
+      ),
+      g: Math.round(
+        baseRgb.g * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.g * BORDER_TINT_RATIO,
+      ),
+      b: Math.round(
+        baseRgb.b * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.b * BORDER_TINT_RATIO,
+      ),
+      a: baseRgb.a,
+    });
+
+    // Compute embargo tint
+    this._borderColorEmbargo = colord({
+      r: Math.round(
+        baseRgb.r * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.r * BORDER_TINT_RATIO,
+      ),
+      g: Math.round(
+        baseRgb.g * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.g * BORDER_TINT_RATIO,
+      ),
+      b: Math.round(
+        baseRgb.b * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.b * BORDER_TINT_RATIO,
+      ),
+      a: baseRgb.a,
+    });
+
+    // Pre-compute defended variants
+    this._borderColorDefendedNeutral = theme.defendedBorderColors(
+      this._borderColorNeutral,
+    );
+    this._borderColorDefendedFriendly = theme.defendedBorderColors(
+      this._borderColorFriendly,
+    );
+    this._borderColorDefendedEmbargo = theme.defendedBorderColors(
+      this._borderColorEmbargo,
+    );
 
     this.decoder =
       pattern === undefined
@@ -275,18 +332,74 @@ export class PlayerView {
     return this._structureColors;
   }
 
+  /**
+   * Border color for a tile:
+   * - Tints by neighbor relations (embargo → red, friendly → green, else neutral).
+   * - If defended, applies theme checkerboard to the tinted color.
+   */
   borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
-    if (tile === undefined || !isDefended) {
+    if (tile === undefined) {
       return this._borderColor;
+    }
+
+    const { hasEmbargo, hasFriendly } = this.borderRelationFlags(tile);
+
+    let baseColor: Colord;
+    let defendedColors: { light: Colord; dark: Colord };
+
+    if (hasEmbargo) {
+      baseColor = this._borderColorEmbargo;
+      defendedColors = this._borderColorDefendedEmbargo;
+    } else if (hasFriendly) {
+      baseColor = this._borderColorFriendly;
+      defendedColors = this._borderColorDefendedFriendly;
+    } else {
+      baseColor = this._borderColorNeutral;
+      defendedColors = this._borderColorDefendedNeutral;
+    }
+
+    if (!isDefended) {
+      return baseColor;
     }
 
     const x = this.game.x(tile);
     const y = this.game.y(tile);
     const lightTile =
       (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
-    return lightTile
-      ? this._defendedBorderColors.light
-      : this._defendedBorderColors.dark;
+    return lightTile ? defendedColors.light : defendedColors.dark;
+  }
+
+  /**
+   * Border relation flags for a tile, used by both CPU and WebGL renderers.
+   */
+  borderRelationFlags(tile: TileRef): {
+    hasEmbargo: boolean;
+    hasFriendly: boolean;
+  } {
+    const mySmallID = this.smallID();
+    let hasEmbargo = false;
+    let hasFriendly = false;
+
+    for (const n of this.game.neighbors(tile)) {
+      if (!this.game.hasOwner(n)) {
+        continue;
+      }
+
+      const otherOwner = this.game.owner(n);
+      if (!otherOwner.isPlayer() || otherOwner.smallID() === mySmallID) {
+        continue;
+      }
+
+      if (this.hasEmbargo(otherOwner)) {
+        hasEmbargo = true;
+        break;
+      }
+
+      if (this.isFriendly(otherOwner) || otherOwner.isFriendly(this)) {
+        hasFriendly = true;
+      }
+    }
+    return { hasEmbargo, hasFriendly };
   }
 
   async actions(tile?: TileRef): Promise<PlayerActions> {
@@ -479,6 +592,8 @@ export class GameView implements GameMap {
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
 
   private _map: GameMap;
+  private readonly usesSharedTileState: boolean;
+  private readonly terraNullius = new TerraNulliusImpl();
 
   constructor(
     public worker: WorkerClient,
@@ -487,8 +602,10 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
     private humans: Player[],
+    usesSharedTileState: boolean = false,
   ) {
     this._map = this._mapData.gameMap;
+    this.usesSharedTileState = usesSharedTileState;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
@@ -517,9 +634,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    if (this.usesSharedTileState) {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        const tileRef = Number(tu);
+        this.updatedTiles.push(tileRef);
+      });
+    } else {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        this.updatedTiles.push(this.updateTile(tu));
+      });
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
@@ -625,11 +749,11 @@ export class GameView implements GameMap {
 
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id === 0) {
-      return new TerraNulliusImpl();
+      return this.terraNullius;
     }
     const playerId = this.smallIDToID.get(id);
     if (playerId === undefined) {
-      throw new Error(`small id ${id} not found`);
+      return this.terraNullius;
     }
     return this.player(playerId);
   }
@@ -729,13 +853,21 @@ export class GameView implements GameMap {
     return this._map.hasOwner(ref);
   }
   setOwnerID(ref: TileRef, playerId: number): void {
-    return this._map.setOwnerID(ref, playerId);
+    this._map.setOwnerID(ref, playerId);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
   }
   setFallout(ref: TileRef, value: boolean): void {
-    return this._map.setFallout(ref, value);
+    this._map.setFallout(ref, value);
+  }
+
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+
+  setDefended(ref: TileRef, value: boolean): void {
+    this._map.setDefended(ref, value);
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
@@ -759,7 +891,7 @@ export class GameView implements GameMap {
     return this._map.terrainType(ref);
   }
   forEachTile(fn: (tile: TileRef) => void): void {
-    return this._map.forEachTile(fn);
+    this._map.forEachTile(fn);
   }
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
@@ -784,6 +916,18 @@ export class GameView implements GameMap {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  hasSharedTileState(): boolean {
+    return this.usesSharedTileState;
+  }
+
+  sharedStateBuffer(): SharedArrayBuffer | undefined {
+    if (!this.usesSharedTileState) {
+      return undefined;
+    }
+    const buffer = this._mapData.sharedStateBuffer;
+    return buffer instanceof SharedArrayBuffer ? buffer : undefined;
   }
 
   focusedPlayer(): PlayerView | null {

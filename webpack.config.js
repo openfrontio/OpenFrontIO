@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
+import fs from "fs";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -9,11 +10,138 @@ import webpack from "webpack";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const crossOriginHeaders = {
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Origin-Agent-Cluster": "?1",
+};
+
+const devHttpsEnabled =
+  process.env.DEV_HTTPS === "1" ||
+  (process.env.DEV_HTTPS ?? "").toLowerCase() === "true";
+
+const devKeyPath =
+  process.env.DEV_KEY ?? path.resolve(__dirname, "resources/certs/dev.key");
+const devCertPath =
+  process.env.DEV_CERT ?? path.resolve(__dirname, "resources/certs/dev.crt");
+
+const addProxyHeaders = (proxyRes) => {
+  Object.entries(crossOriginHeaders).forEach(([key, value]) => {
+    proxyRes.headers[key] = value;
+  });
+};
+
+const buildDevProxyConfig = () =>
+  [
+    // WebSocket proxies
+    {
+      context: ["/socket"],
+      target: "ws://localhost:3000",
+      ws: true,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    // Worker WebSocket proxies - using direct paths without /socket suffix
+    {
+      context: ["/w0"],
+      target: "ws://localhost:3001",
+      ws: true,
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    {
+      context: ["/w1"],
+      target: "ws://localhost:3002",
+      ws: true,
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    {
+      context: ["/w2"],
+      target: "ws://localhost:3003",
+      ws: true,
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    // Worker proxies for HTTP requests
+    {
+      context: ["/w0"],
+      target: "http://localhost:3001",
+      pathRewrite: { "^/w0": "" },
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    {
+      context: ["/w1"],
+      target: "http://localhost:3002",
+      pathRewrite: { "^/w1": "" },
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    {
+      context: ["/w2"],
+      target: "http://localhost:3003",
+      pathRewrite: { "^/w2": "" },
+      secure: false,
+      changeOrigin: true,
+      logLevel: "debug",
+    },
+    // Original API endpoints
+    {
+      context: [
+        "/api/env",
+        "/api/game",
+        "/api/public_lobbies",
+        "/api/join_game",
+        "/api/start_game",
+        "/api/create_game",
+        "/api/archive_singleplayer_game",
+        "/api/auth/callback",
+        "/api/auth/discord",
+        "/api/kick_player",
+      ],
+      target: "http://localhost:3000",
+      secure: false,
+      changeOrigin: true,
+    },
+  ].map((proxyEntry) => ({
+    onProxyRes: addProxyHeaders,
+    ...proxyEntry,
+  }));
+
+const getHttpsServerConfig = () => {
+  if (!devHttpsEnabled) return undefined;
+
+  try {
+    return {
+      type: "https",
+      options: {
+        key: fs.readFileSync(devKeyPath),
+        cert: fs.readFileSync(devCertPath),
+      },
+    };
+  } catch (error) {
+    console.error(
+      `DEV_HTTPS enabled but could not read cert/key at ${devCertPath} / ${devKeyPath}`,
+      error,
+    );
+    throw error;
+  }
+};
+
 const gitCommit =
   process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
+  const serverConfig = isProduction ? undefined : getHttpsServerConfig();
+  const proxyConfig = isProduction ? [] : buildDevProxyConfig();
 
   return {
     entry: "./src/client/Main.ts",
@@ -173,6 +301,8 @@ export default async (env, argv) => {
     devServer: isProduction
       ? {}
       : {
+          server: serverConfig,
+          headers: crossOriginHeaders,
           devMiddleware: { writeToDisk: true },
           static: {
             directory: path.join(__dirname, "static"),
@@ -180,84 +310,7 @@ export default async (env, argv) => {
           historyApiFallback: true,
           compress: true,
           port: 9000,
-          proxy: [
-            // WebSocket proxies
-            {
-              context: ["/socket"],
-              target: "ws://localhost:3000",
-              ws: true,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Worker WebSocket proxies - using direct paths without /socket suffix
-            {
-              context: ["/w0"],
-              target: "ws://localhost:3001",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w1"],
-              target: "ws://localhost:3002",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w2"],
-              target: "ws://localhost:3003",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Worker proxies for HTTP requests
-            {
-              context: ["/w0"],
-              target: "http://localhost:3001",
-              pathRewrite: { "^/w0": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w1"],
-              target: "http://localhost:3002",
-              pathRewrite: { "^/w1": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w2"],
-              target: "http://localhost:3003",
-              pathRewrite: { "^/w2": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Original API endpoints
-            {
-              context: [
-                "/api/env",
-                "/api/game",
-                "/api/public_lobbies",
-                "/api/join_game",
-                "/api/start_game",
-                "/api/create_game",
-                "/api/archive_singleplayer_game",
-                "/api/auth/callback",
-                "/api/auth/discord",
-                "/api/kick_player",
-              ],
-              target: "http://localhost:3000",
-              secure: false,
-              changeOrigin: true,
-            },
-          ],
+          proxy: proxyConfig,
         },
   };
 };
