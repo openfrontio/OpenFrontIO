@@ -802,31 +802,20 @@ export class DefaultConfig implements Config {
     }
   }
 
-  useNationStrengthForStartManpower(): boolean {
-    // Currently disabled: Nations became harder to play against due to AI improvements
-    // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
-    // Re-enabling this without rebalancing Nation difficulty elsewhere may make them overpowered
-    return false;
-  }
-
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
     if (playerInfo.playerType === PlayerType.Nation) {
-      const strength = this.useNationStrengthForStartManpower()
-        ? (playerInfo.nationStrength ?? 1)
-        : 1;
-
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750 * strength;
+          return 18_750;
         case Difficulty.Medium:
-          return 25_000 * strength; // Like humans
+          return 25_000; // Like humans
         case Difficulty.Hard:
-          return 31_250 * strength;
+          return 31_250;
         case Difficulty.Impossible:
-          return 37_500 * strength;
+          return 37_500;
         default:
           assertNever(this._gameConfig.difficulty);
       }

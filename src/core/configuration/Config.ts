@@ -94,7 +94,6 @@ export interface Config {
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
-  useNationStrengthForStartManpower(): boolean;
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
