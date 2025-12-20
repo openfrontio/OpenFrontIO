@@ -249,6 +249,8 @@ export class GameMapImpl implements GameMap {
     return this.magnitude(ref) < 10 ? 2 : 1;
   }
 
+  // if updating these magnitude values, also update
+  // `../../../map-generator/map_generator.go` `getThumbnailColor`
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
