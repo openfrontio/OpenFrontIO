@@ -376,6 +376,8 @@
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",
     "structure_sprites_desc": "Toggle structure sprites",
+    "cursor_cost_label_label": "Cursor Build Cost",
+    "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "lobby_id_visibility_label": "Hidden Lobby IDs",
