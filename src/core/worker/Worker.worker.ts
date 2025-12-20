@@ -67,6 +67,17 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         const gr = await gameRunner;
         await gr.addTurn(message.turn);
+
+        // Check for pause intent and notify main thread
+        const pauseIntent = message.turn.intents.find(
+          (intent) => intent.type === "toggle_pause",
+        );
+        if (pauseIntent && "paused" in pauseIntent) {
+          sendMessage({
+            type: "pause_state",
+            paused: pauseIntent.paused,
+          });
+        }
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;

@@ -123,6 +123,9 @@ export class Executor {
         );
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
+      case "toggle_pause":
+        // Pause is handled server-side by stopping turn execution
+        return new NoOpExecution();
       default:
         throw new Error(`intent type ${intent} not found`);
     }

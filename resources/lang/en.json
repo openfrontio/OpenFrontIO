@@ -740,6 +740,9 @@
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
   },
+  "pause": {
+    "game_paused": "Game paused by Lobby Creator"
+  },
   "territory_patterns": {
     "title": "Skins",
     "colors": "Colors",

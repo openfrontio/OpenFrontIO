@@ -9,7 +9,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { PauseGameEvent } from "../../Transport";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -19,6 +19,7 @@ import { ShowSettingsModalEvent } from "./SettingsModal";
 export class GameRightSidebar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public isLobbyCreator: boolean = false;
 
   @state()
   private _isSinglePlayer: boolean = false;
@@ -95,7 +96,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
   private onExitButtonClick() {
@@ -150,25 +151,35 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   maybeRenderReplayButtons() {
-    if (this._isSinglePlayer || this.game?.config()?.isReplay()) {
-      return html` <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
-          <img
-            src=${FastForwardIconSolid}
-            alt="replay"
-            width="20"
-            height="20"
-          />
-        </div>
-        <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
-          <img
-            src=${this.isPaused ? playIcon : pauseIcon}
-            alt="play/pause"
-            width="20"
-            height="20"
-          />
-        </div>`;
-    } else {
-      return html``;
-    }
+    const isReplayOrSingleplayer =
+      this._isSinglePlayer || this.game?.config()?.isReplay();
+    const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+
+    return html`
+      ${isReplayOrSingleplayer
+        ? html`
+            <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
+              <img
+                src=${FastForwardIconSolid}
+                alt="replay"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+      ${showPauseButton
+        ? html`
+            <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
+              <img
+                src=${this.isPaused ? playIcon : pauseIcon}
+                alt="play/pause"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+    `;
   }
 }

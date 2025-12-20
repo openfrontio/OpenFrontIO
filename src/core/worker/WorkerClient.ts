@@ -18,6 +18,7 @@ export class WorkerClient {
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
+  private pauseStateCallback?: (paused: boolean) => void;
 
   constructor(
     private gameStartInfo: GameStartInfo,
@@ -40,6 +41,12 @@ export class WorkerClient {
       case "game_update":
         if (this.gameUpdateCallback && message.gameUpdate) {
           this.gameUpdateCallback(message.gameUpdate);
+        }
+        break;
+
+      case "pause_state":
+        if (this.pauseStateCallback) {
+          this.pauseStateCallback(message.paused);
         }
         break;
 
@@ -87,6 +94,10 @@ export class WorkerClient {
       throw new Error("Failed to initialize pathfinder");
     }
     this.gameUpdateCallback = gameUpdate;
+  }
+
+  onPauseStateChange(callback: (paused: boolean) => void) {
+    this.pauseStateCallback = callback;
   }
 
   sendTurn(turn: Turn) {

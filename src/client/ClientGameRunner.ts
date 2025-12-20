@@ -39,6 +39,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  GamePausedEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -194,7 +195,12 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const gameRenderer = createRenderer(
+    canvas,
+    gameView,
+    eventBus,
+    lobbyConfig.gameStartInfo.isLobbyCreator ?? false,
+  );
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -328,6 +334,11 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
+
+    this.worker.onPauseStateChange((paused: boolean) => {
+      this.eventBus.emit(new GamePausedEvent(paused));
+    });
+
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {

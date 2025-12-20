@@ -14,6 +14,7 @@ export type WorkerMessageType =
   | "initialized"
   | "turn"
   | "game_update"
+  | "pause_state"
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
@@ -55,6 +56,11 @@ export interface InitializedMessage extends BaseWorkerMessage {
 export interface GameUpdateMessage extends BaseWorkerMessage {
   type: "game_update";
   gameUpdate: GameUpdateViewData;
+}
+
+export interface PauseStateMessage extends BaseWorkerMessage {
+  type: "pause_state";
+  paused: boolean;
 }
 
 export interface PlayerActionsMessage extends BaseWorkerMessage {
@@ -127,6 +133,7 @@ export type MainThreadMessage =
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | PauseStateMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
