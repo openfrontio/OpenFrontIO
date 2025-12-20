@@ -362,12 +362,12 @@ export class GameServer {
                 const paused = !!clientMsg.intent.paused;
 
                 if (paused) {
-                  // Pausing: send intent while game is still running, then pause
+                  // Pausing: send intent and complete current turn before pause takes effect
                   this.addIntent(clientMsg.intent);
                   this.endTurn();
                   this.isPaused = true;
                 } else {
-                  // Unpausing: unpause first, then send intent
+                  // Unpausing: clear pause flag before sending intent so next turn can execute
                   this.isPaused = false;
                   this.addIntent(clientMsg.intent);
                   this.endTurn();

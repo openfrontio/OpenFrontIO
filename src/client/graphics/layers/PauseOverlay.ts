@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
+import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { GamePausedEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -12,15 +13,22 @@ export class PauseOverlay extends LitElement implements Layer {
   public eventBus: EventBus;
   private isPaused = false;
 
+  private gamePausedHandler = (e: GamePausedEvent) => {
+    this.isPaused = e.paused;
+    this.requestUpdate();
+  };
+
   createRenderRoot() {
     return this;
   }
 
   init() {
-    this.eventBus.on(GamePausedEvent, (e) => {
-      this.isPaused = e.paused;
-      this.requestUpdate();
-    });
+    this.eventBus.on(GamePausedEvent, this.gamePausedHandler);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.eventBus.off(GamePausedEvent, this.gamePausedHandler);
   }
 
   render() {
@@ -41,7 +49,8 @@ export class PauseOverlay extends LitElement implements Layer {
                       border-2 border-gray-600"
         >
           <p class="mx-auto max-w-sm text-center">
-            ${this.game?.config().gameConfig().gameType === "Singleplayer"
+            ${this.game?.config()?.gameConfig()?.gameType ===
+            GameType.Singleplayer
               ? translateText("pause.singleplayer_game_paused")
               : translateText("pause.multiplayer_game_paused")}
           </p>
