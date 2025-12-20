@@ -60,7 +60,8 @@ export class LobbyPresetControls extends LitElement {
   private static normalizePresetConfig(
     config: Partial<LobbyPresetConfig>,
   ): LobbyPresetConfig {
-    const parsed = LobbyPresetConfigSchema.parse(config);
+    const parsedResult = LobbyPresetConfigSchema.safeParse(config);
+    const parsed = parsedResult.success ? parsedResult.data : {};
     return {
       gameMap: parsed.gameMap ?? GameMapType.World,
       useRandomMap: parsed.useRandomMap ?? false,
