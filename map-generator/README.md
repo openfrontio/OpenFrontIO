@@ -4,7 +4,7 @@ This is a tool to generate map files for OpenFront.
 
 ## Installation
 
-1. Install go https://go.dev/doc/install
+1. Install go <https://go.dev/doc/install>
 2. Install dependencies: `go mod download`
 3. Run the generator: `go run .`
 
@@ -67,6 +67,7 @@ Example:
 
 - Islands smaller than 30 tiles (pixels) are automatically removed by the script.
 - Bodies of water smaller than 200 tiles (pixels) are also removed.
+- For details on how pixel values map to terrain types and gameplay mechanics, see [README_TERRAIN.md](README_TERRAIN.md).
 
 ## 🛠️ Development Tools
 

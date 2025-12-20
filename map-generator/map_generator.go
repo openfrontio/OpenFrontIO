@@ -18,7 +18,7 @@ const (
 	minLakeSize   = 200
 )
 
-// Holds resized webp thumbnail image data
+// Holds raw RGBA image data for the thumbnail
 type ThumbData struct {
 	Data   []byte
 	Width  int
@@ -83,6 +83,7 @@ type GeneratorArgs struct {
 //   - alpha < 20 : water
 //   - blue 106 : water
 //   - blue 140-200 : becomes land depending on magnitude value (0-30)
+//   - other blue values : land (magnitude clamped to 0 or 30)
 //
 // Magnitude is determined by (Blue - 140) / 2.
 //
@@ -518,7 +519,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool) {
 //   - Bit 7: Land (1) / Water (0)
 //   - Bit 6: Shoreline
 //   - Bit 5: Ocean
-//   - Bits 0-4: Magnitude (0-31)
+//   - Bits 0-4: Magnitude (0-31). For Water, this is (Distance / 2).
 //
 // Returns the packed data and the count of land tiles.
 func packTerrain(terrain [][]Terrain) (data []byte, numLandTiles int) {
@@ -600,15 +601,15 @@ type RGBA struct {
 // It handles color generation for Water (shoreline vs deep water) and Land
 // (shoreline, plains, highlands, mountains) based on the tile's magnitude.
 //
-// The thumbnail only renders the different terrain types, not the variations
-// within the different terrain types.
+// The thumbnail renders its own set of colors separate from the in-game light/dark
+// color schemes.
 //
-// The in-game colors are defined in `../src/core/game/GameMap.ts` `terrainType“
+// The in-game colors are defined in `../src/core/game/GameMap.ts` `terrainType`
 // and depend on light/dark mode and the tile's magnitude.
 //
-// For thumbnail purposes, the color mapping:
-//   - Water Shoreline: (100, 143, 255)
-//   - Deep Water: Base (70, 132, 180) adjusted by distance to land
+// For thumbnail purposes, the terrain type -> color mapping:
+//   - Water Shoreline: (Transparent)
+//   - Deep Water: (Transparent)
 //   - Land Shoreline: (204, 203, 158)
 //   - Plains (Mag < 10): (190, 220 - 2*Mag, 138)
 //   - Highlands (Mag 10-19): (200 + 2*Mag, 183 + 2*Mag, 138 + 2*Mag)
@@ -680,6 +681,8 @@ func logBinaryAsBits(data []byte, length int) {
 }
 
 // createCombinedBinary combines the info JSON, map data, and mini-map data into a single binary buffer.
+//
+// Note: This function is currently unused by the main workflow, which writes separate files instead.
 // It creates a header with the following structure:
 //   - Bytes 0-3: Version (1)
 //   - Bytes 4-7: Info section offset
@@ -727,6 +730,7 @@ func createCombinedBinary(infoBuffer []byte, mapData []byte, miniMapData []byte)
 
 // writeUint32 writes a 32-bit unsigned integer to the byte slice at the specified offset.
 // It uses Little Endian byte order.
+// Note: This function is currently unused.
 func writeUint32(data []byte, offset int, value uint32) {
 	data[offset] = byte(value & 0xff)
 	data[offset+1] = byte((value >> 8) & 0xff)
@@ -736,12 +740,14 @@ func writeUint32(data []byte, offset int, value uint32) {
 
 // readUint32 reads a 32-bit unsigned integer from the byte slice at the specified offset.
 // It assumes Little Endian byte order.
+// Note: This function is currently unused.
 func readUint32(data []byte, offset int) uint32 {
 	return uint32(data[offset]) | uint32(data[offset+1])<<8 | uint32(data[offset+2])<<16 | uint32(data[offset+3])<<24
 }
 
 // decodeCombinedBinary parses a combined binary buffer into its constituent parts.
 // It validates the header and extracts the Info JSON, Map data, and MiniMap data sections.
+// Note: This function is currently unused.
 func decodeCombinedBinary(data []byte) (*CombinedBinaryHeader, []byte, []byte, []byte, error) {
 	if len(data) < 28 {
 		return nil, nil, nil, nil, fmt.Errorf("data too short for header")
@@ -773,6 +779,7 @@ func decodeCombinedBinary(data []byte) (*CombinedBinaryHeader, []byte, []byte, [
 }
 
 // CombinedBinaryHeader represents the metadata header of the combined map file format.
+// Note: This struct is currently unused.
 type CombinedBinaryHeader struct {
 	Version       uint32
 	InfoOffset    uint32
