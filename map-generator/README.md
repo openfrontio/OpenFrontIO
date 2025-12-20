@@ -75,3 +75,15 @@ Example:
   ```bash
   go fmt .
   ```
+
+- **Output Map Generator Documentation**:
+
+  The map-generator is a cli tool, to get any visibility, we pass `-cmd`. It also
+  does not expose any API, so we use `-u` and `-all` to show all documentation for
+  unexposed values.
+
+  _Known Bug_ Using `-http` does not respect the other flags and only renders the README
+
+  ```bash
+  go doc -cmd -u -all
+  ```
