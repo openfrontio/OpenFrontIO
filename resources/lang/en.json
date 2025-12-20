@@ -68,7 +68,7 @@
     "ui_events_desc": "The Event panel displays the latest events, requests and Quick Chat messages. Some examples are:",
     "ui_events_alliance": "Alliance - Alliance requests can be accepted or rejected. Allies can share resources and troops, but can't attack each other. Clicking Focus moves the view to the player who sent the request.",
     "ui_events_attack": "Attacks - Incoming attacks and your outgoing attacks are shown. Click the message to center the view on the attack, nuke or Boat (transport ship). You can retreat troops by clicking the red X button. This will cost the lives of 25% of your attacking troops. If you retrieve a Boat attack, the boat returns to its starting point and will attack there if the land has been captured since. Nukes can't be retreated once launched.",
-    "ui_events_quickchat": "Quick Chat - You can see sent and recieved chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
+    "ui_events_quickchat": "Quick Chat - You can see sent and received chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
