@@ -85,8 +85,8 @@ export class LobbyNotificationManager {
   private connectWebSocket() {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      // Connect to worker 0 for now - TODO: connect to all workers for comprehensive notifications
-      const wsUrl = `${protocol}//${window.location.host}/w0/`;
+      // Connect via host without worker-specific prefix so LB can route appropriately
+      const wsUrl = `${protocol}//${window.location.host}/`;
 
       this.ws = new WebSocket(wsUrl);
 
