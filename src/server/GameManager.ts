@@ -53,7 +53,13 @@ export class GameManager {
     gameConfig: GameConfig | undefined,
     creatorClientID?: string,
   ) {
-    const config = {
+
+    const game = new GameServer(
+      id,
+      this.log,
+      Date.now(),
+      this.config,
+      {
       donateGold: false,
       donateTroops: false,
       gameMap: GameMapType.World,
@@ -70,14 +76,7 @@ export class GameManager {
       bots: 400,
       disabledUnits: [],
       ...gameConfig,
-    };
-
-    const game = new GameServer(
-      id,
-      this.log,
-      Date.now(),
-      this.config,
-      config,
+    },
       creatorClientID,
     );
     this.games.set(id, game);
