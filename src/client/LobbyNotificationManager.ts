@@ -28,7 +28,10 @@ export class LobbyNotificationManager {
   private resolveWebSocketUrl(): string {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
-    if (window.location.hostname === "localhost" && window.location.port === "9000") {
+    if (
+      window.location.hostname === "localhost" &&
+      window.location.port === "9000"
+    ) {
       return `${protocol}//localhost:3001/w0`;
     }
 
