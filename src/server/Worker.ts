@@ -62,6 +62,9 @@ export async function startWorker() {
 
   const gm = new GameManager(config, log);
   const notificationBroadcaster = new NotificationBroadcaster();
+  const notificationCleanupInterval = setInterval(() => {
+    notificationBroadcaster.cleanup();
+  }, 30000);
   gm.setNotificationBroadcaster(notificationBroadcaster);
 
   if (config.otelEnabled()) {

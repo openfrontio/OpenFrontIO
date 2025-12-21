@@ -102,12 +102,13 @@ export class LobbyNotificationModal extends LitElement {
       });
     }
 
-    if (this.teamEnabled && this.selectedTeamCounts.size > 0) {
+    if (this.teamEnabled) {
+      const teamCounts = Array.from(this.selectedTeamCounts);
       criteria.push({
         gameMode: "Team",
         minPlayers: this.teamMinPlayers,
         maxPlayers: this.teamMaxPlayers,
-        teamCounts: Array.from(this.selectedTeamCounts),
+        ...(teamCounts.length ? { teamCounts } : {}),
       });
     }
 

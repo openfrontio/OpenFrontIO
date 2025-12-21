@@ -20,6 +20,10 @@ export class LobbyNotificationManager {
   private isOnLobbyPage = false;
   private reconnectTimer: number | null = null;
   private audioContext: AudioContext | null = null;
+  private handlePopState = () => this.checkIfOnLobbyPage();
+  private handleGameEnded = () => {
+    setTimeout(() => this.checkIfOnLobbyPage(), 100);
+  };
 
   constructor() {
     this.loadSettings();
@@ -35,12 +39,10 @@ export class LobbyNotificationManager {
 
     // Monitor URL changes to detect when user is on lobby page
     this.checkIfOnLobbyPage();
-    window.addEventListener("popstate", () => this.checkIfOnLobbyPage());
+    window.addEventListener("popstate", this.handlePopState);
 
     // Also monitor for custom navigation events if they exist
-    window.addEventListener("game-ended", () => {
-      setTimeout(() => this.checkIfOnLobbyPage(), 100);
-    });
+    window.addEventListener("game-ended", this.handleGameEnded);
   }
 
   private checkIfOnLobbyPage() {
@@ -85,11 +87,7 @@ export class LobbyNotificationManager {
   private connectWebSocket() {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      // Connect via host without worker-specific prefix so LB can route appropriately
-      // Avoid trailing slash to prevent NS_ERROR_ILLEGAL_VALUE in Firefox on malformed URLs
       const wsUrl = `${protocol}//${window.location.host}`;
-
-      // Firefox can throw synchronously if URL is invalid; catch to avoid unhandled errors
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -350,6 +348,8 @@ export class LobbyNotificationManager {
       "notification-settings-changed",
       this.handleSettingsChanged,
     );
+    window.removeEventListener("popstate", this.handlePopState);
+    window.removeEventListener("game-ended", this.handleGameEnded);
     this.dismissNotification();
   }
 }
