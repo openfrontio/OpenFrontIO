@@ -84,12 +84,13 @@ export class SettingGroup extends LitElement {
       min-width: 0 !important;
       max-width: none !important;
       break-inside: avoid;
-      margin-bottom: 12px;
     }
 
-    /* Remove bottom margin from last items to avoid extra space */
-    .setting-group__content.columns ::slotted(*:last-child) {
-      margin-bottom: 0;
+    /* Add vertical gap between items in columns mode */
+    .setting-group__content.columns ::slotted(*) {
+      margin-bottom: 12px;
+      display: inline-block;
+      width: 100% !important;
     }
   `;
 
