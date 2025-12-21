@@ -9,7 +9,6 @@ import {
   PlayerID,
   PlayerType,
   Relation,
-  TerrainType,
   Tick,
   Unit,
   UnitType,
@@ -54,7 +53,7 @@ export class NationExecution implements Execution {
   private trackedTradeShips: Set<Unit> = new Set();
 
   constructor(
-    gameID: GameID,
+    private gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
   ) {
     this.random = new PseudoRandom(
@@ -71,6 +70,12 @@ export class NationExecution implements Execution {
     this.mg = mg;
     if (this.random.chance(10)) {
       // this.isTraitor = true
+    }
+
+    if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
+      this.player = this.mg.addPlayer(this.nation.playerInfo);
+    } else {
+      this.player = this.mg.player(this.nation.playerInfo.id);
     }
   }
 
@@ -89,23 +94,15 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (this.mg.inSpawnPhase()) {
-      const rl = this.randomSpawnLand();
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-        return;
-      }
-      this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
+    if (this.player === null) {
       return;
     }
 
-    if (this.player === null) {
-      this.player =
-        this.mg.players().find((p) => p.id() === this.nation.playerInfo.id) ??
-        null;
-      if (this.player === null) {
-        return;
-      }
+    if (this.mg.inSpawnPhase()) {
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
+      );
+      return;
     }
 
     if (!this.player.isAlive()) {
@@ -222,31 +219,6 @@ export class NationExecution implements Execution {
         new ConstructionExecution(this.player, UnitType.Warship, tile),
       );
     }
-  }
-
-  randomSpawnLand(): TileRef | null {
-    const delta = 25;
-    let tries = 0;
-    while (tries < 50) {
-      tries++;
-      const cell = this.nation.spawnCell;
-      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
-      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
-      if (!this.mg.isValidCoord(x, y)) {
-        continue;
-      }
-      const tile = this.mg.ref(x, y);
-      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
-        if (
-          this.mg.terrainType(tile) === TerrainType.Mountain &&
-          this.random.chance(2)
-        ) {
-          continue;
-        }
-        return tile;
-      }
-    }
-    return null;
   }
 
   private updateRelationsFromEmbargos() {
