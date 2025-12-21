@@ -1,6 +1,10 @@
 # MapGenerator
 
-This is a tool to generate map files for OpenFront.
+This is a go-based tool to generate map files for OpenFront.
+
+The map generator reads a PNG image and converts pixels into terrain based primarily on the **Blue** channel.
+Because only blue values are used, B&W and other input formats are fully supported. Many of the maps found in
+`assets/maps/<mapname>` are Grayscale.
 
 ## Installation
 
@@ -11,9 +15,9 @@ This is a tool to generate map files for OpenFront.
 ## Creating a new map
 
 1. Create a new folder in `assets/maps/<map_name>`
-2. Create image.png
-3. Create info.json with name and countries
-4. Add the map name in main.go
+2. Create `assets/maps/<map_name>/image.png`
+3. Create `assets/maps/<map_name>/info.json` with name and countries
+4. Add the map name in `main.go` The `<name>` in `{Name: "<name>"},` should match the `<map-name>` folder at `assets/maps/<map_name>`
 5. Run the generator: `go run .`
 6. Find the output folder at `../resources/maps/<map_name>`
 
@@ -29,15 +33,28 @@ To process a subset of maps, pass a comma-separated list:
 
 ## Create image.png
 
+The map-generator will process your input file at `assets/maps/<map_name>/image.png` to generate the map
+thumbnail and binary files. To create this `png` input file, you can crop the world map:
+
 1. [Download world map (warning very large file)](https://drive.google.com/file/d/1W2oMPj1L5zWRyPhh8LfmnY3_kve-FBR2/view?usp=sharing)
 2. Crop the file (recommend Gimp)
 
-- We recommend roughly 2 million pixels for performance reasons
-- Do not go over 4 million pixels.
+If you are doing work in image editing software or using automated tools, `./map_generator.go` contains documentation for:
+
+- `Pixel` -> `Terrain Type & Magnitude` mapping in `GenerateMap`
+- `Terrain Type` -> `Thumbnail Color` mapping in `getThumbnailColor`
+
+In-Game, terrain is rendered using themes. The color of a tile is determined dynamically based on
+its **Terrain Type** and **Magnitude**. Theme Files:
+
+- `../src/core/configuration/PastelTheme.ts` (Light)
+- `../src/core/configuration/PastelThemeDark.ts` (Dark).
 
 ## Create info.json
 
-- Look at existing info.json for structure
+The map-generator will process your input file at `assets/maps/<map_name>/info.json` to determine the
+position of Nations, their starting coordinates, and any flags.
+
 - [Use country codes found here](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes)
 
 Example:
@@ -55,19 +72,33 @@ Example:
 }
 ```
 
+`name` is a `CamelCaseName` of your map. It is used to enable the map in-game.
+
+## Update `../CREDITS.md`
+
+Add License & Attribution information to `../CREDITS.md`. If you are unsure if
+a map's license can be used, open an issue or ask in Discord before beginning work.
+
+## Adding Flags
+
+TODO
+
 ## To Enable In-Game
 
-- Add a translation for the map name to `resources/lang/en.json`
-- Add the MapDescription `src/client/components/Maps.ts`
-- Add the numPlayersConfig `src/core/configuration/DefaultConfig.ts`
-- Add the GameMapType `src/core/game/Game.ts`
-- To add to the map playlist, modify `src/server/MapPlaylist.ts`
+Using the `name` from your json:
+
+- Add to the MapDescription `../src/client/components/Maps.ts`
+- Add to the numPlayersConfig `../src/core/configuration/DefaultConfig.ts`
+- Add to the mapCategories `../src/core/game/Game.ts`
+- Add to the map playlist `../src/server/MapPlaylist.ts`
+- Add to the `map` translation object in `../resources/lang/en.json`
 
 ## Notes
 
+- Maps should be between 2 - 3 million pixels square (area)
 - Islands smaller than 30 tiles (pixels) are automatically removed by the script.
 - Bodies of water smaller than 200 tiles (pixels) are also removed.
-- For details on how pixel values map to terrain types and gameplay mechanics, see [README_TERRAIN.md](README_TERRAIN.md).
+- The map generator normalizes dimensions to multiples of 4. Any pixels beyond `Width - (Width % 4)` or `Height - (Height % 4)` are cropped.
 
 ## 🛠️ Development Tools
 
@@ -79,12 +110,12 @@ Example:
 
 - **Output Map Generator Documentation**:
 
+  ```bash
+  go doc -cmd -u -all
+  ```
+
   The map-generator is a cli tool, to get any visibility, we pass `-cmd`. It also
   does not expose any API, so we use `-u` and `-all` to show all documentation for
   unexposed values.
 
   _Known Bug_ Using `-http` does not respect the other flags and only renders the README
-
-  ```bash
-  go doc -cmd -u -all
-  ```

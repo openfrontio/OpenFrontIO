@@ -77,21 +77,20 @@ type GeneratorArgs struct {
 //   - Creates a WebP thumbnail
 //   - Packs the map data into binary format for full, 1/2 and 1/4 scale
 //
-// Input pixel color mapping:
+// Red/green pixel values have no impact, only blue values are used
+// For Land tiles, "Magnitude" is determined by `(Blue - 140) / 2“.
+// For Water tiles, "Magnitude" is calculated during generation as the distance to the nearest land.
 //
-//   - red/green pixel values have no impact, only blue values are used
-//   - alpha < 20 : water
-//   - blue 106 : water
-//   - blue 140-200 : becomes land depending on magnitude value (0-30)
-//   - other blue values : land (magnitude clamped to 0 or 30)
-//
-// Magnitude is determined by (Blue - 140) / 2.
-//
-// Land magnitude mapping:
-//
-//   - Plains: Blue 140-159
-//   - Highlands: Blue 160-179
-//   - Mountains: Blue 180-200+
+// Pixel -> Terrain & Magnitude mapping
+// | Input Condition    | Terrain Type    | Magnitude          | Notes                            |
+// | :----------------- | :-------------- | :----------------- | :------------------------------- |
+// | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
+// | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
+// | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
+// | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 									                |
+// | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 									                |
+// | **Blue 179 - 200** | Land (Mountain) | 20 - 30            | 									                |
+// | **Blue > 200**     | Land (Mountain) | 30                 | Clamped to maximum magnitude.    |
 //
 // Misc Notes
 //   - It normalizes map width/height to multiples of 4 for the mini map downscaling.
@@ -610,10 +609,10 @@ type RGBA struct {
 // For thumbnail purposes, the terrain type -> color mapping:
 //   - Water Shoreline: (Transparent)
 //   - Deep Water: (Transparent)
-//   - Land Shoreline: (204, 203, 158)
-//   - Plains (Mag < 10): (190, 220 - 2*Mag, 138)
-//   - Highlands (Mag 10-19): (200 + 2*Mag, 183 + 2*Mag, 138 + 2*Mag)
-//   - Mountains (Mag >= 20): Grayscale (230 + Mag/2)
+//   - Land Shoreline: `rgb(204, 203, 158)`
+//   - Plains (Mag < 10): `rgb(190, 220, 138)` - `rgb(190, 202, 138)`
+//   - Highlands (Mag 10-19): `rgb(220, 203, 158)` - `rgb(238, 221, 176)`
+//   - Mountains (Mag >= 20): `rgb(240, 240, 240)` - `rgb(245, 245, 245)`
 func getThumbnailColor(t Terrain) RGBA {
 	if t.Type == Water {
 		// Shoreline water
