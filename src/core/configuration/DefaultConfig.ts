@@ -252,11 +252,11 @@ export class DefaultConfig implements Config {
   }
 
   samHittingChance(): number {
-    return 0.8;
+    return 1;
   }
 
   samWarheadHittingChance(): number {
-    return 0.5;
+    return 1;
   }
 
   traitorDefenseDebuff(): number {
