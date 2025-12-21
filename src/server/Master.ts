@@ -93,21 +93,25 @@ export async function startMaster() {
       if (readyWorkers.size === config.numWorkers()) {
         log.info("All workers ready, starting game scheduling");
 
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
+        if (config.enablePublicGames()) {
+          const scheduleLobbies = () => {
+            schedulePublicGame(playlist).catch((error) => {
+              log.error("Error scheduling public game:", error);
+            });
+          };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+          setInterval(
+            () =>
+              fetchLobbies().then((lobbies) => {
+                if (lobbies === 0) {
+                  scheduleLobbies();
+                }
+              }),
+            100,
+          );
+        } else {
+          log.info("Public games disabled (ENABLE_PUBLIC_GAMES=false)");
+        }
       }
     }
   });
