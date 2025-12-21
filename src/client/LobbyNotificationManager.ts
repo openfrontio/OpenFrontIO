@@ -46,6 +46,14 @@ export class LobbyNotificationManager {
       return `${protocol}//${envUrl}`;
     }
 
+    // In production, connect to worker subdomain for WebSocket
+    if (window.location.hostname !== "localhost") {
+      const hostname = window.location.hostname;
+      // Extract base domain and add w0- prefix
+      const workerHost = `w0-${hostname}`;
+      return `${protocol}//${workerHost}/w0`;
+    }
+
     return `${protocol}//${window.location.host}`;
   }
 
