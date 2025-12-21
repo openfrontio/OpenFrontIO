@@ -170,7 +170,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   randomSpawn: z.boolean(),
-  maxPlayers: z.number().optional(),
+  maxPlayers: z.number().int().min(2).max(1000).optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),

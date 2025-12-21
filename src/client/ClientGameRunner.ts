@@ -125,6 +125,36 @@ export function joinLobby(
     }
     if (message.type === "error") {
       if (message.error === "full-lobby") {
+        // Parse the message to get the player limit
+        let limitInfo = "";
+        try {
+          if (message.message) {
+            const data = JSON.parse(message.message);
+            if (data.maxPlayers) {
+              limitInfo = translateText("private_lobby.lobby_full", {
+                limit: data.maxPlayers,
+              });
+            }
+          }
+        } catch {
+          limitInfo = translateText("private_lobby.lobby_full", {
+            limit: "?",
+          });
+        }
+
+        // Show the full lobby message
+        if (limitInfo) {
+          showErrorModal(
+            message.error,
+            limitInfo,
+            lobbyConfig.gameID,
+            lobbyConfig.clientID,
+            true,
+            false,
+            "error_modal.connection_error",
+          );
+        }
+
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
             detail: { lobby: lobbyConfig.gameID },
