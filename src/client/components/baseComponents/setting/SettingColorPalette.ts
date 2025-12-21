@@ -72,28 +72,32 @@ export class SettingColorPalette extends LitElement {
   static styles = css`
     :host {
       display: block;
+      width: 100%;
     }
 
     .color-palette {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       background: #1e1e1e;
       border: 1px solid #333;
       border-radius: 10px;
-      padding: 16px;
+      padding: 12px;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     .color-picker {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      min-width: 200px;
+      gap: 10px;
+      width: 160px;
+      flex-shrink: 0;
     }
 
     .color-preview {
       width: 100%;
-      height: 120px;
-      border-radius: 8px;
+      height: 100px;
+      border-radius: 6px;
       position: relative;
       overflow: hidden;
       cursor: crosshair;
@@ -120,8 +124,8 @@ export class SettingColorPalette extends LitElement {
 
     .hue-slider {
       width: 100%;
-      height: 16px;
-      border-radius: 8px;
+      height: 12px;
+      border-radius: 6px;
       background: linear-gradient(
         to right,
         #ff0000,
@@ -138,56 +142,10 @@ export class SettingColorPalette extends LitElement {
 
     .hue-slider__thumb {
       position: absolute;
-      width: 6px;
-      height: 20px;
-      background: white;
-      border-radius: 3px;
-      top: -2px;
-      transform: translateX(-50%);
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-      pointer-events: none;
-    }
-
-    .alpha-slider {
-      width: 100%;
+      width: 4px;
       height: 16px;
-      border-radius: 8px;
-      background:
-        linear-gradient(
-          45deg,
-          #666 25%,
-          transparent 25%,
-          transparent 75%,
-          #666 75%
-        ),
-        linear-gradient(
-          45deg,
-          #666 25%,
-          transparent 25%,
-          transparent 75%,
-          #666 75%
-        );
-      background-size: 8px 8px;
-      background-position:
-        0 0,
-        4px 4px;
-      position: relative;
-      cursor: pointer;
-      overflow: hidden;
-    }
-
-    .alpha-slider__gradient {
-      position: absolute;
-      inset: 0;
-      border-radius: 8px;
-    }
-
-    .alpha-slider__thumb {
-      position: absolute;
-      width: 6px;
-      height: 20px;
       background: white;
-      border-radius: 3px;
+      border-radius: 2px;
       top: -2px;
       transform: translateX(-50%);
       box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
@@ -197,12 +155,12 @@ export class SettingColorPalette extends LitElement {
     .color-input {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .color-input__swatch {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: 2px solid #444;
       flex-shrink: 0;
@@ -212,12 +170,13 @@ export class SettingColorPalette extends LitElement {
       flex: 1;
       background: #2a2a2a;
       border: 1px solid #444;
-      border-radius: 20px;
-      padding: 8px 16px;
+      border-radius: 16px;
+      padding: 6px 10px;
       color: #fff;
       font-family: monospace;
-      font-size: 14px;
+      font-size: 12px;
       text-align: center;
+      min-width: 0;
     }
 
     .color-input__text:focus {
@@ -228,20 +187,22 @@ export class SettingColorPalette extends LitElement {
     .swatch-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      gap: 6px;
       flex: 1;
+      min-width: 0;
     }
 
     .swatch-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
+      gap: 8px;
+      padding: 6px 8px;
       background: #2a2a2a;
       border: 2px solid transparent;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       transition: all 0.2s ease;
+      min-width: 0;
     }
 
     .swatch-item:hover {
@@ -254,9 +215,9 @@ export class SettingColorPalette extends LitElement {
     }
 
     .swatch-item__color {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
       flex-shrink: 0;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
@@ -264,17 +225,18 @@ export class SettingColorPalette extends LitElement {
     .swatch-item__info {
       flex: 1;
       min-width: 0;
+      overflow: hidden;
     }
 
     .swatch-item__name {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
       color: #fff;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .swatch-item__desc {
-      font-size: 11px;
+      font-size: 9px;
       color: #888;
       white-space: nowrap;
       overflow: hidden;
