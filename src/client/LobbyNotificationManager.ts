@@ -1,5 +1,6 @@
 import { GameConfig, ServerLobbyNotificationMessage } from "../core/Schemas";
 import { GameMode } from "../core/game/Game";
+import { translateText } from "./Utils";
 
 interface NotificationSettings {
   ffaEnabled: boolean;
@@ -345,22 +346,24 @@ export class LobbyNotificationManager {
     const gameCapacity = gameConfig.maxPlayers ?? null;
 
     if (gameConfig.gameMode === GameMode.FFA) {
-      return `FFA Game Found!`;
+      return translateText("notification.ffa_game_found");
     } else if (gameConfig.gameMode === GameMode.Team) {
       const playerTeams = gameConfig.playerTeams;
 
       if (playerTeams === "Duos") {
-        return `Duos Game Found!`;
+        return translateText("notification.duos_game_found");
       } else if (playerTeams === "Trios") {
-        return `Trios Game Found!`;
+        return translateText("notification.trios_game_found");
       } else if (playerTeams === "Quads") {
-        return `Quads Game Found!`;
+        return translateText("notification.quads_game_found");
       } else if (typeof playerTeams === "number" && gameCapacity !== null) {
-        return `${playerTeams} Teams Game Found!`;
+        return translateText("notification.teams_game_found", {
+          teams: playerTeams,
+        });
       }
     }
 
-    return "Game Found!";
+    return translateText("notification.game_found");
   }
 
   public destroy() {
