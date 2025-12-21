@@ -1,6 +1,5 @@
 import { GameConfig, GameInfo } from "../core/Schemas";
 import { GameMode } from "../core/game/Game";
-import { translateText } from "./Utils";
 
 interface NotificationSettings {
   ffaEnabled: boolean;
