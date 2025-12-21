@@ -321,16 +321,17 @@ export class LobbyNotificationManager {
 
   private dismissNotification() {
     if (this.lastNotificationElement) {
-      this.lastNotificationElement.classList.add("notification-dismissing");
-      this.lastNotificationElement.classList.remove("notification-visible");
+      const element = this.lastNotificationElement;
+      element.classList.add("notification-dismissing");
+      element.classList.remove("notification-visible");
 
       setTimeout(() => {
-        if (this.lastNotificationElement?.parentNode) {
-          this.lastNotificationElement.parentNode.removeChild(
-            this.lastNotificationElement,
-          );
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
         }
-        this.lastNotificationElement = null;
+        if (this.lastNotificationElement === element) {
+          this.lastNotificationElement = null;
+        }
       }, 300);
     }
 
