@@ -58,7 +58,7 @@ type MapResult struct {
 
 // MapInfo contains the serialized map data and metadata for a specific scale.
 type MapInfo struct {
-	Data         []byte // compressed map data
+	Data         []byte // packed map data
 	Width        int
 	Height       int
 	NumLandTiles int
@@ -87,9 +87,9 @@ type GeneratorArgs struct {
 // | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
 // | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
 // | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
-// | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 									                |
-// | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 									                |
-// | **Blue 179 - 200** | Land (Mountain) | 20 - 30            | 									                |
+// | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 					 					 					 		|
+// | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 					 					 					 		|
+// | **Blue 179 - 200** | Land (Mountain) | 20 - 30            | 				 					 					 			|
 // | **Blue > 200**     | Land (Mountain) | 30                 | Clamped to maximum magnitude.    |
 //
 // Misc Notes
