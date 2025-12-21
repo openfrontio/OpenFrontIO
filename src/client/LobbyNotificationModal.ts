@@ -371,15 +371,15 @@ export class LobbyNotificationModal extends LitElement {
                                   ({
                                     Duos:
                                       translateText(
-                                        "lobby_notification_modal.fixed_duos",
+                                        "host_modal.teams_Duos",
                                       ),
                                     Trios:
                                       translateText(
-                                        "lobby_notification_modal.fixed_trios",
+                                        "host_modal.teams_Trios",
                                       ),
                                     Quads:
                                       translateText(
-                                        "lobby_notification_modal.fixed_quads",
+                                        "host_modal.teams_Quads",
                                       ),
                                   } as Record<string, string>)[mode]
                                 }

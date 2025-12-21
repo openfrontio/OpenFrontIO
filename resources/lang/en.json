@@ -855,9 +855,6 @@
     "deselect_all": "Deselect All",
     "fixed_modes": "Fixed Modes:",
     "variable_modes": "Variable Modes (Number of Teams):",
-    "fixed_duos": "Duos",
-    "fixed_trios": "Trios",
-    "fixed_quads": "Quads",
     "sound_notifications": "Sound Notifications",
     "active": "Notifications Active",
     "enable_hint": "Select a game mode to enable notifications"
