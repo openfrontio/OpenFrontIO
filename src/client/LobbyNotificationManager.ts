@@ -25,6 +25,27 @@ export class LobbyNotificationManager {
     setTimeout(() => this.checkIfOnLobbyPage(), 100);
   };
 
+  private resolveWebSocketUrl(): string {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+    if (window.location.hostname === "localhost" && window.location.port === "9000") {
+      return `${protocol}//localhost:3001/w0`;
+    }
+
+    const envUrl = process.env.WEBSOCKET_URL?.trim();
+    if (envUrl) {
+      if (envUrl.startsWith("ws://") || envUrl.startsWith("wss://")) {
+        return envUrl;
+      }
+      if (envUrl.startsWith("//")) {
+        return `${protocol}${envUrl}`;
+      }
+      return `${protocol}//${envUrl}`;
+    }
+
+    return `${protocol}//${window.location.host}`;
+  }
+
   constructor() {
     this.loadSettings();
     this.setupEventListeners();
@@ -86,8 +107,7 @@ export class LobbyNotificationManager {
 
   private connectWebSocket() {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}`;
+      const wsUrl = this.resolveWebSocketUrl();
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
