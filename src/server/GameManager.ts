@@ -79,7 +79,6 @@ export class GameManager {
       creatorClientID,
     );
     this.games.set(id, game);
-
     return game;
   }
 
