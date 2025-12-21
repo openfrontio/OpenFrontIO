@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 32 40"
+   x="0px"
+   y="0px"
+   version="1.1"
+   id="svg71"
+   sodipodi:docname="CursorPriceIcon.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs75">
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Invert"
+       id="filter207"
+       x="0"
+       y="0"
+       width="1"
+       height="1">
+      <feColorMatrix
+         type="hueRotate"
+         values="180"
+         result="color1"
+         id="feColorMatrix203" />
+      <feColorMatrix
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 -0.21 -0.72 -0.07 2 0 "
+         result="fbSourceGraphic"
+         id="feColorMatrix205" />
+      <feColorMatrix
+         result="fbSourceGraphicAlpha"
+         in="fbSourceGraphic"
+         values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"
+         id="feColorMatrix209" />
+      <feColorMatrix
+         id="feColorMatrix211"
+         type="hueRotate"
+         values="180"
+         result="color1"
+         in="fbSourceGraphic" />
+      <feColorMatrix
+         id="feColorMatrix213"
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 -0.21 -0.72 -0.07 2 0 "
+         result="fbSourceGraphic" />
+      <feColorMatrix
+         result="fbSourceGraphicAlpha"
+         in="fbSourceGraphic"
+         values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"
+         id="feColorMatrix215" />
+      <feColorMatrix
+         id="feColorMatrix217"
+         type="hueRotate"
+         values="180"
+         result="color1"
+         in="fbSourceGraphic" />
+      <feColorMatrix
+         id="feColorMatrix219"
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 -0.21 -0.72 -0.07 2 0 "
+         result="color2" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="namedview73"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     showgrid="false"
+     inkscape:zoom="20.175"
+     inkscape:cx="15.98513"
+     inkscape:cy="20"
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="1913"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg71" />
+  <title
+     id="title59">pay per click, ppc, click, cost per click, mouse</title>
+  <g
+     data-name="Layer 2"
+     id="g65"
+     style="filter:url(#filter207)">
+    <path
+       d="M29.24,19,20.71,16.9a2.73,2.73,0,0,1-.26.43l-.16.26c-.13.19-.27.38-.41.56s-.27.33-.41.49a8.13,8.13,0,0,1-.83.83c-.16.14-.32.28-.49.41l-.56.41-.26.16a2.73,2.73,0,0,1-.43.26L19,29.24a1,1,0,0,0,.86.75H20a1,1,0,0,0,.89-.55l2.86-5.7,5.7-2.86A1,1,0,0,0,29.24,19Z"
+       id="path61" />
+    <path
+       d="M16,17.24A1,1,0,0,1,17.24,16l1.44.36,2,.51a10,10,0,1,0-3.81,3.81l-.51-2ZM11,17V16H10a1,1,0,0,1,0-2h2.5a.5.5,0,0,0,0-1h-1A2.5,2.5,0,0,1,11,8V7a1,1,0,0,1,2,0V8h1a1,1,0,0,1,0,2H11.5a.5.5,0,0,0,0,1h1a2.5,2.5,0,0,1,.5,5v1a1,1,0,0,1-2,0Z"
+       id="path63" />
+  </g>
+  <text
+     x="0"
+     y="47"
+     fill="#000000"
+     font-size="5px"
+     font-weight="bold"
+     font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif"
+     id="text67">Created by Fauzan Adiima</text>
+  <text
+     x="0"
+     y="52"
+     fill="#000000"
+     font-size="5px"
+     font-weight="bold"
+     font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif"
+     id="text69">from the Noun Project</text>
+</svg>

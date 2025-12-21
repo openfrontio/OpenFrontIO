@@ -615,6 +615,9 @@ export class DefaultConfig implements Config {
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
   }
+  minDistanceBetweenPlayers(): number {
+    return 30;
+  }
 
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode === GameMode.Team) {
