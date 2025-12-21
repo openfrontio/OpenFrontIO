@@ -845,14 +845,6 @@
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
   },
-  "notification": {
-    "ffa_game_found": "FFA Game Found!",
-    "duos_game_found": "Duos Game Found!",
-    "trios_game_found": "Trios Game Found!",
-    "quads_game_found": "Quads Game Found!",
-    "teams_game_found": "{teams} Teams Game Found!",
-    "game_found": "Game Found!"
-  },
   "lobby_notification_modal": {
     "title": "Lobby Notifications",
     "capacity_range": "Player capacity range:",

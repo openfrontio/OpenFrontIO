@@ -78,7 +78,6 @@ export class LobbyNotificationManager {
 
         // Check if this lobby matches user preferences
         if (this.matchesPreferences(lobby.gameConfig)) {
-          this.showNotification(lobby.gameConfig);
           this.playNotificationSound();
         }
       }
@@ -175,77 +174,6 @@ export class LobbyNotificationManager {
     }
   }
 
-  private showNotification(gameConfig: GameConfig) {
-    // Dismiss any existing notification
-    this.dismissNotification();
-
-    const notification = document.createElement("div");
-    notification.className = "lobby-notification";
-    notification.textContent = this.getGameDetailsText(gameConfig);
-
-    // Click to dismiss
-    notification.addEventListener("click", () => this.dismissNotification());
-
-    document.body.appendChild(notification);
-    this.lastNotificationElement = notification;
-
-    // Trigger animation
-    setTimeout(() => {
-      notification.classList.add("notification-visible");
-    }, 10);
-
-    // Auto-dismiss after 10 seconds
-    this.notificationTimeout = window.setTimeout(() => {
-      this.dismissNotification();
-    }, 10000);
-  }
-
-  private dismissNotification() {
-    if (this.lastNotificationElement) {
-      const element = this.lastNotificationElement;
-      element.classList.add("notification-dismissing");
-      element.classList.remove("notification-visible");
-
-      setTimeout(() => {
-        if (element.parentNode) {
-          element.parentNode.removeChild(element);
-        }
-        if (this.lastNotificationElement === element) {
-          this.lastNotificationElement = null;
-        }
-      }, 300);
-    }
-
-    if (this.notificationTimeout !== null) {
-      clearTimeout(this.notificationTimeout);
-      this.notificationTimeout = null;
-    }
-  }
-
-  private getGameDetailsText(gameConfig: GameConfig): string {
-    const gameCapacity = gameConfig.maxPlayers ?? null;
-
-    if (gameConfig.gameMode === GameMode.FFA) {
-      return translateText("notification.ffa_game_found");
-    } else if (gameConfig.gameMode === GameMode.Team) {
-      const playerTeams = gameConfig.playerTeams;
-
-      if (playerTeams === "Duos") {
-        return translateText("notification.duos_game_found");
-      } else if (playerTeams === "Trios") {
-        return translateText("notification.trios_game_found");
-      } else if (playerTeams === "Quads") {
-        return translateText("notification.quads_game_found");
-      } else if (typeof playerTeams === "number" && gameCapacity !== null) {
-        return translateText("notification.teams_game_found", {
-          teams: playerTeams,
-        });
-      }
-    }
-
-    return translateText("notification.game_found");
-  }
-
   public destroy() {
     if (this.audioContext) {
       this.audioContext.close();
@@ -257,6 +185,5 @@ export class LobbyNotificationManager {
     );
     window.removeEventListener("popstate", this.handlePopState);
     window.removeEventListener("game-ended", this.handleGameEnded);
-    this.dismissNotification();
   }
 }
