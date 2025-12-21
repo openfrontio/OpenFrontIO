@@ -367,9 +367,7 @@ export class PlayerView {
     const y = this.game.y(tile);
     const lightTile =
       (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
-    return lightTile 
-    ? defendedColors.light 
-    : defendedColors.dark;
+    return lightTile ? defendedColors.light : defendedColors.dark;
   }
 
   /**
