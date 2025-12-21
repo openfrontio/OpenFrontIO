@@ -16,13 +16,6 @@ export class LobbyNotificationManager {
   private settings: NotificationSettings | null = null;
   private audioContext: AudioContext | null = null;
   private seenLobbies: Set<string> = new Set();
-  private handlePopState = () => {
-    // Just clear seen lobbies when navigating to ensure we notify fresh
-    this.seenLobbies.clear();
-  };
-  private handleGameEnded = () => {
-    this.seenLobbies.clear();
-  };
 
   constructor() {
     this.loadSettings();
@@ -34,18 +27,7 @@ export class LobbyNotificationManager {
       "notification-settings-changed",
       this.handleSettingsChanged,
     );
-
-    // Listen to PublicLobby's lobby updates instead of polling ourselves
-    window.addEventListener(
-      "lobbies-updated",
-      this.handleLobbiesUpdated,
-    );
-
-    // Monitor URL changes to detect when user is on lobby page
-    window.addEventListener("popstate", this.handlePopState);
-
-    // Also monitor for custom navigation events if they exist
-    window.addEventListener("game-ended", this.handleGameEnded);
+    window.addEventListener("lobbies-updated", this.handleLobbiesUpdated);
   }
 
   private handleSettingsChanged = (e: Event) => {
@@ -180,7 +162,6 @@ export class LobbyNotificationManager {
       "notification-settings-changed",
       this.handleSettingsChanged,
     );
-    window.removeEventListener("popstate", this.handlePopState);
-    window.removeEventListener("game-ended", this.handleGameEnded);
+    window.removeEventListener("lobbies-updated", this.handleLobbiesUpdated);
   }
 }
