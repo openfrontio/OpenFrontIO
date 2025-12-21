@@ -72,7 +72,7 @@ export class SAMRadiusLayer implements Layer {
         const unit = this.game.unit(update.id);
         if (unit && unit.type() === UnitType.SAMLauncher) {
           if (this.hasChanged(unit)) {
-            this.needsRedraw = true; // A SAM changed: circles shall be recomputed when necessary
+            this.needsRedraw = true; // A SAM changed: radiuses shall be recomputed when necessary
             break;
           }
         }
@@ -91,7 +91,7 @@ export class SAMRadiusLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.visible) {
       if (this.needsRedraw) {
-        // SAM set changed: the circles needs to be updated
+        // SAM changed: the radiuses needs to be updated
         this.computeCircleUnions();
         this.needsRedraw = false;
       }
@@ -115,7 +115,7 @@ export class SAMRadiusLayer implements Layer {
     }
   }
 
-  private hasChanged(unit: UnitView) {
+  private hasChanged(unit: UnitView): boolean {
     const samInfos = this.samLaunchers.get(unit.id());
     const isNew = samInfos === undefined;
     const active = unit.isActive();
