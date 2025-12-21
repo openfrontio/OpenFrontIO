@@ -406,4 +406,6 @@ setting-group .setting-item {
   margin: -1.4rem -1.4rem 0.75rem -1.4rem;
   padding: 0.75rem 1.4rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: calc(100% + 2.8rem);
+  box-sizing: border-box;
 }

@@ -2,8 +2,35 @@
 // Create a config.json in the project root to override these defaults
 
 export interface DevSettingsConfig {
+  display?: {
+    themeMode?: "light" | "dark" | "system";
+  };
+  interface?: {
+    emojis?: boolean;
+    alertFrame?: boolean;
+    territoryPatterns?: boolean;
+  };
+  graphics?: {
+    specialEffects?: boolean;
+    structureSprites?: boolean;
+    cursorCostLabel?: boolean;
+    performanceOverlay?: boolean;
+  };
+  controls?: {
+    leftClickOpensMenu?: boolean;
+    attackRatio?: number;
+  };
+  privacy?: {
+    anonymousNames?: boolean;
+    lobbyIdVisibility?: boolean;
+  };
+  audio?: {
+    backgroundMusicVolume?: number;
+    soundEffectsVolume?: number;
+  };
+  // Legacy flat settings for backwards compatibility
   themeMode?: "light" | "dark" | "system";
-  darkMode?: boolean; // Legacy, use themeMode instead
+  darkMode?: boolean;
   emojis?: boolean;
   alertFrame?: boolean;
   specialEffects?: boolean;
@@ -74,6 +101,7 @@ async function loadConfig(): Promise<DevFeatureConfig> {
 /**
  * Apply settings from config.json to localStorage
  * Only applies if the setting hasn't been modified by the user
+ * Supports both nested (grouped) and flat (legacy) config formats
  */
 function applyConfigSettings(settings: DevSettingsConfig) {
   const applyBool = (key: string, value: boolean | undefined) => {
@@ -94,6 +122,50 @@ function applyConfigSettings(settings: DevSettingsConfig) {
     }
   };
 
+  // Apply nested settings (preferred format)
+  if (settings.display) {
+    applyString("settings.themeMode", settings.display.themeMode);
+  }
+  if (settings.interface) {
+    applyBool("settings.emojis", settings.interface.emojis);
+    applyBool("settings.alertFrame", settings.interface.alertFrame);
+    applyBool(
+      "settings.territoryPatterns",
+      settings.interface.territoryPatterns,
+    );
+  }
+  if (settings.graphics) {
+    applyBool("settings.specialEffects", settings.graphics.specialEffects);
+    applyBool("settings.structureSprites", settings.graphics.structureSprites);
+    applyBool("settings.cursorCostLabel", settings.graphics.cursorCostLabel);
+    applyBool(
+      "settings.performanceOverlay",
+      settings.graphics.performanceOverlay,
+    );
+  }
+  if (settings.controls) {
+    applyBool(
+      "settings.leftClickOpensMenu",
+      settings.controls.leftClickOpensMenu,
+    );
+    applyFloat("settings.attackRatio", settings.controls.attackRatio);
+  }
+  if (settings.privacy) {
+    applyBool("settings.anonymousNames", settings.privacy.anonymousNames);
+    applyBool("settings.lobbyIdVisibility", settings.privacy.lobbyIdVisibility);
+  }
+  if (settings.audio) {
+    applyFloat(
+      "settings.backgroundMusicVolume",
+      settings.audio.backgroundMusicVolume,
+    );
+    applyFloat(
+      "settings.soundEffectsVolume",
+      settings.audio.soundEffectsVolume,
+    );
+  }
+
+  // Also apply flat settings for backwards compatibility
   applyString("settings.themeMode", settings.themeMode);
   applyBool("settings.darkMode", settings.darkMode);
   applyBool("settings.emojis", settings.emojis);
