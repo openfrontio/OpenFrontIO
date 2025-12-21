@@ -91,7 +91,7 @@ export class LobbyNotificationManager {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log("Notification WebSocket connected");
+        console.log(`Notification WebSocket connected to: ${wsUrl}`);
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
@@ -115,8 +115,10 @@ export class LobbyNotificationManager {
         }
       };
 
-      this.ws.onclose = () => {
-        console.log("Notification WebSocket disconnected, reconnecting...");
+      this.ws.onclose = (event) => {
+        console.log(
+          `Notification WebSocket disconnected (code: ${event.code}, reason: ${event.reason || "no reason provided"}), reconnecting in 5s...`,
+        );
         this.ws = null;
         // Reconnect after 5 seconds
         this.reconnectTimer = window.setTimeout(() => {
@@ -125,10 +127,29 @@ export class LobbyNotificationManager {
       };
 
       this.ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        const wsState =
+          this.ws?.readyState === WebSocket.CONNECTING
+            ? "CONNECTING"
+            : this.ws?.readyState === WebSocket.OPEN
+              ? "OPEN"
+              : this.ws?.readyState === WebSocket.CLOSING
+                ? "CLOSING"
+                : this.ws?.readyState === WebSocket.CLOSED
+                  ? "CLOSED"
+                  : "UNKNOWN";
+        console.error(
+          `WebSocket error (state: ${wsState}):`,
+          error instanceof Event ? `Event type: ${error.type}` : String(error),
+        );
+        console.warn(
+          `Failed to connect to notification WebSocket at: ${wsUrl}`,
+        );
       };
     } catch (error) {
-      console.error("Failed to connect WebSocket:", error);
+      console.error(
+        "Failed to create WebSocket connection:",
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
