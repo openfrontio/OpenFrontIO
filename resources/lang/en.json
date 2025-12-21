@@ -852,5 +852,22 @@
     "quads_game_found": "Quads Game Found!",
     "teams_game_found": "{teams} Teams Game Found!",
     "game_found": "Game Found!"
+  },
+  "lobby_notification_modal": {
+    "title": "Lobby Notifications",
+    "capacity_range": "Player capacity range:",
+    "min": "Min:",
+    "max": "Max:",
+    "team_configuration": "Team Configuration:",
+    "select_all": "Select All",
+    "deselect_all": "Deselect All",
+    "fixed_modes": "Fixed Modes:",
+    "variable_modes": "Variable Modes (Number of Teams):",
+    "fixed_duos": "Duos",
+    "fixed_trios": "Trios",
+    "fixed_quads": "Quads",
+    "sound_notifications": "Sound Notifications",
+    "active": "Notifications Active",
+    "enable_hint": "Select a game mode to enable notifications"
   }
 }

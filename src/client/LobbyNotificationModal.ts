@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "./Utils";
 
 export interface LobbyNotificationCriteria {
   gameMode: "FFA" | "Team";
@@ -186,7 +187,7 @@ export class LobbyNotificationModal extends LitElement {
     return html`
       <o-modal
         id="lobbyNotificationModal"
-        title="Lobby Notifications"
+        title="${translateText("lobby_notification_modal.title")}"
         translationKey=""
       >
         <div class="flex flex-col gap-4 text-white">
@@ -199,18 +200,18 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleFFAChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold text-lg">Free For All</span>
+              <span class="font-bold text-lg">${translateText("game_mode.ffa")}</span>
             </label>
 
             ${this.ffaEnabled
               ? html`
                   <div class="ml-7 space-y-3">
                     <div class="text-sm text-gray-300 mb-2">
-                      Player capacity range:
+                      ${translateText("lobby_notification_modal.capacity_range")}
                     </div>
                     <div class="space-y-2">
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">Min:</label>
+                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.min")}</label>
                         <input
                           type="range"
                           min="2"
@@ -233,7 +234,7 @@ export class LobbyNotificationModal extends LitElement {
                         >
                       </div>
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">Max:</label>
+                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.max")}</label>
                         <input
                           type="range"
                           min="2"
@@ -270,18 +271,18 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleTeamChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold text-lg">Team Mode</span>
+              <span class="font-bold text-lg">${translateText("game_mode.teams")}</span>
             </label>
 
             ${this.teamEnabled
               ? html`
                   <div class="ml-7 space-y-3">
                     <div class="text-sm text-gray-300 mb-2">
-                      Player capacity range:
+                      ${translateText("lobby_notification_modal.capacity_range")}
                     </div>
                     <div class="space-y-2">
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">Min:</label>
+                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.min")}</label>
                         <input
                           type="range"
                           min="2"
@@ -304,7 +305,7 @@ export class LobbyNotificationModal extends LitElement {
                         >
                       </div>
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">Max:</label>
+                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.max")}</label>
                         <input
                           type="range"
                           min="2"
@@ -331,27 +332,27 @@ export class LobbyNotificationModal extends LitElement {
                     <div class="mt-4">
                       <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-gray-300"
-                          >Team Configuration:</span
+                          >${translateText("lobby_notification_modal.team_configuration")}</span
                         >
                         <div class="flex gap-2">
                           <button
                             @click=${this.selectAllTeams}
                             class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
                           >
-                            Select All
+                            ${translateText("lobby_notification_modal.select_all")}
                           </button>
                           <button
                             @click=${this.deselectAllTeams}
                             class="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 rounded"
                           >
-                            Deselect All
+                            ${translateText("lobby_notification_modal.deselect_all")}
                           </button>
                         </div>
                       </div>
 
                       <div class="space-y-1 text-sm">
                         <div class="font-semibold text-blue-300 mb-1">
-                          Fixed Modes:
+                          ${translateText("lobby_notification_modal.fixed_modes")}
                         </div>
                         ${["Duos", "Trios", "Quads"].map(
                           (mode) => html`
@@ -365,13 +366,32 @@ export class LobbyNotificationModal extends LitElement {
                                   this.handleTeamCountChange(mode, e)}
                                 class="w-4 h-4"
                               />
-                              <span>${mode}</span>
+                              <span>
+                                ${
+                                  ({
+                                    Duos:
+                                      translateText(
+                                        "lobby_notification_modal.fixed_duos",
+                                      ),
+                                    Trios:
+                                      translateText(
+                                        "lobby_notification_modal.fixed_trios",
+                                      ),
+                                    Quads:
+                                      translateText(
+                                        "lobby_notification_modal.fixed_quads",
+                                      ),
+                                  } as Record<string, string>)[mode]
+                                }
+                              </span>
                             </label>
                           `,
                         )}
 
                         <div class="font-semibold text-green-300 mt-2 mb-1">
-                          Variable Modes (Number of Teams):
+                          ${translateText(
+                            "lobby_notification_modal.variable_modes",
+                          )}
                         </div>
                         ${[2, 3, 4, 5, 6, 7].map(
                           (count) => html`
@@ -385,7 +405,11 @@ export class LobbyNotificationModal extends LitElement {
                                   this.handleTeamCountChange(count, e)}
                                 class="w-4 h-4"
                               />
-                              <span>${count} Teams</span>
+                              <span>
+                                ${translateText("public_lobby.teams", {
+                                  num: count,
+                                })}
+                              </span>
                             </label>
                           `,
                         )}
@@ -405,7 +429,9 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleSoundChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold">Sound Notifications</span>
+              <span class="font-bold">${translateText(
+                "lobby_notification_modal.sound_notifications",
+              )}</span>
             </label>
           </div>
 
@@ -414,9 +440,13 @@ export class LobbyNotificationModal extends LitElement {
             class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center"
           >
             ${this.isEnabled()
-              ? html`<span class="text-green-400">✓ Notifications Active</span>`
+              ? html`<span class="text-green-400">${translateText(
+                    "lobby_notification_modal.active",
+                  )}</span>`
               : html`<span class="text-gray-400"
-                  >Select a game mode to enable notifications</span
+                  >${translateText(
+                    "lobby_notification_modal.enable_hint",
+                  )}</span
                 >`}
           </div>
         </div>
