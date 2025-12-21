@@ -114,6 +114,7 @@ export class SpriteFactory {
     container: PIXI.Container;
     priceText: PIXI.BitmapText;
     priceBg: PIXI.Graphics;
+    priceGroup: PIXI.Container;
     priceBox: { height: number; y: number; paddingX: number; minWidth: number };
   } {
     const parentContainer = new PIXI.Container();
@@ -165,6 +166,7 @@ export class SpriteFactory {
       container: parentContainer,
       priceText,
       priceBg,
+      priceGroup,
       priceBox: { height: boxHeight, y: boxY, paddingX, minWidth },
     };
   }

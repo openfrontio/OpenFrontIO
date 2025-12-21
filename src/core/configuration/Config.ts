@@ -73,8 +73,6 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
-  samHittingChance(): number;
-  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -154,6 +152,7 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
+  minDistanceBetweenPlayers(): number;
   defensePostDefenseBonus(): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;

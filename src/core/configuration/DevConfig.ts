@@ -28,14 +28,6 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
-  samWarheadHittingChance(): number {
-    return 1;
-  }
-
-  samHittingChance(): number {
-    return 1;
-  }
-
   numWorkers(): number {
     return 2;
   }
