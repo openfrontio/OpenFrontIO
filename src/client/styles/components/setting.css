@@ -395,3 +395,15 @@ setting-group .setting-item {
   border-radius: 4px;
   border: 1px solid rgba(255, 200, 0, 0.2);
 }
+
+/* Sticky tabs for settings modal */
+.settings-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(35, 35, 35, 0.95);
+  backdrop-filter: blur(8px);
+  margin: -1.4rem -1.4rem 1rem -1.4rem;
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}

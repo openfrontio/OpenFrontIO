@@ -243,7 +243,7 @@ export class UserSettingModal extends LitElement {
           <div
             class="modal-content user-setting-modal user-setting-modal--wide"
           >
-            <div class="flex mb-4 w-full justify-center">
+            <div class="settings-tabs flex w-full justify-center">
               <button
                 class="flex-1 text-center px-3 py-1 rounded-l
       ${this.settingsMode === "basic"
