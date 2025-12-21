@@ -4,5 +4,21 @@
     "publicLobbies": false,
     "cloudflare": false,
     "ads": false
+  },
+  "settings": {
+    "darkMode": false,
+    "emojis": true,
+    "alertFrame": true,
+    "specialEffects": true,
+    "structureSprites": true,
+    "cursorCostLabel": true,
+    "leftClickOpensMenu": false,
+    "anonymousNames": false,
+    "lobbyIdVisibility": true,
+    "territoryPatterns": true,
+    "performanceOverlay": false,
+    "attackRatio": 0.2,
+    "backgroundMusicVolume": 0,
+    "soundEffectsVolume": 1
   }
 }

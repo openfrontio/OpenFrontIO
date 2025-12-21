@@ -6,6 +6,17 @@
   align-items: center;
 }
 
+.settings-list--grouped {
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Wide modal for settings with groups */
+.user-setting-modal--wide {
+  width: 100%;
+  max-width: 720px;
+}
+
 .setting-item {
   display: flex;
   justify-content: space-between;
@@ -20,6 +31,13 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: background 0.3s ease;
   gap: 12px;
+}
+
+/* Allow flexible sizing inside groups */
+setting-group .setting-item {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
 }
 
 .setting-item.column {

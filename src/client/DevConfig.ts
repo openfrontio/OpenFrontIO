@@ -1,6 +1,23 @@
 // Development configuration for disabling external services
 // Create a config.json in the project root to override these defaults
 
+export interface DevSettingsConfig {
+  darkMode?: boolean;
+  emojis?: boolean;
+  alertFrame?: boolean;
+  specialEffects?: boolean;
+  structureSprites?: boolean;
+  cursorCostLabel?: boolean;
+  leftClickOpensMenu?: boolean;
+  anonymousNames?: boolean;
+  lobbyIdVisibility?: boolean;
+  territoryPatterns?: boolean;
+  performanceOverlay?: boolean;
+  attackRatio?: number;
+  backgroundMusicVolume?: number;
+  soundEffectsVolume?: number;
+}
+
 export interface DevFeatureConfig {
   features: {
     analytics: boolean;
@@ -8,6 +25,7 @@ export interface DevFeatureConfig {
     cloudflare: boolean;
     ads: boolean;
   };
+  settings?: DevSettingsConfig;
 }
 
 const defaultConfig: DevFeatureConfig = {
@@ -32,9 +50,16 @@ async function loadConfig(): Promise<DevFeatureConfig> {
       const config = await response.json();
       const mergedConfig: DevFeatureConfig = {
         features: { ...defaultConfig.features, ...config.features },
+        settings: config.settings,
       };
       cachedConfig = mergedConfig;
       console.log("Loaded dev config from config.json:", mergedConfig);
+
+      // Apply settings to localStorage if provided in config
+      if (config.settings) {
+        applyConfigSettings(config.settings);
+      }
+
       return mergedConfig;
     }
   } catch {
@@ -43,6 +68,39 @@ async function loadConfig(): Promise<DevFeatureConfig> {
 
   cachedConfig = defaultConfig;
   return defaultConfig;
+}
+
+/**
+ * Apply settings from config.json to localStorage
+ * Only applies if the setting hasn't been modified by the user
+ */
+function applyConfigSettings(settings: DevSettingsConfig) {
+  const applyBool = (key: string, value: boolean | undefined) => {
+    if (value !== undefined && localStorage.getItem(key) === null) {
+      localStorage.setItem(key, value.toString());
+    }
+  };
+
+  const applyFloat = (key: string, value: number | undefined) => {
+    if (value !== undefined && localStorage.getItem(key) === null) {
+      localStorage.setItem(key, value.toString());
+    }
+  };
+
+  applyBool("settings.darkMode", settings.darkMode);
+  applyBool("settings.emojis", settings.emojis);
+  applyBool("settings.alertFrame", settings.alertFrame);
+  applyBool("settings.specialEffects", settings.specialEffects);
+  applyBool("settings.structureSprites", settings.structureSprites);
+  applyBool("settings.cursorCostLabel", settings.cursorCostLabel);
+  applyBool("settings.leftClickOpensMenu", settings.leftClickOpensMenu);
+  applyBool("settings.anonymousNames", settings.anonymousNames);
+  applyBool("settings.lobbyIdVisibility", settings.lobbyIdVisibility);
+  applyBool("settings.territoryPatterns", settings.territoryPatterns);
+  applyBool("settings.performanceOverlay", settings.performanceOverlay);
+  applyFloat("settings.attackRatio", settings.attackRatio);
+  applyFloat("settings.backgroundMusicVolume", settings.backgroundMusicVolume);
+  applyFloat("settings.soundEffectsVolume", settings.soundEffectsVolume);
 }
 
 // Auto-load config at module initialization
