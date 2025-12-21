@@ -2,9 +2,8 @@
 
 This is a go-based tool to generate map files for OpenFront.
 
-The map generator reads a PNG image and converts pixels into terrain based primarily on the **Blue** channel.
-Because only blue values are used, B&W and other input formats are fully supported. Many of the maps found in
-`assets/maps/<mapname>` are Grayscale.
+The map generator reads PNG files and converts pixels into terrain based primarily on the **Blue** channel.
+Because only blue values are used, grayscale and other formats are fully supported. Many maps in `assets/maps/<mapname>` are grayscale.
 
 Additional Guides, Tutorials, Scripts, Resources, and Third Party Unofficial Applications can be found on
 the [Official Openfront Wiki](https://openfront.wiki/Map_Making)

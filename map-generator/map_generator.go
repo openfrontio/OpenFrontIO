@@ -75,7 +75,7 @@ type GeneratorArgs struct {
 //   - Maps each pixel to a Terrain type based on its blue value
 //   - Removes small islands and lakes
 //   - Creates a WebP thumbnail
-//   - Packs the map data into binary format for full, 1/2 and 1/4 scale
+//   - Packs the map data into binary format for full scale, 1/4 tile count (half dimensions), and 1/16 tile count (quarter dimensions)
 //
 // Red/green pixel values have no impact, only blue values are used
 // For Land tiles, "Magnitude" is determined by `(Blue - 140) / 2“.
