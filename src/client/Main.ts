@@ -615,7 +615,6 @@ class Client {
     this.gameStop = null;
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
-    this.lobbyNotificationManager?.destroy();
     // Show snowflakes when leaving lobby (back to homepage)
     document.documentElement.classList.remove("in-game");
     enableSnowflakes(); // Restart snowflakes when leaving a game
