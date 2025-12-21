@@ -90,8 +90,7 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage
-  | ClientRegisterNotificationPreferencesMessage;
+  | ClientHashMessage;
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
@@ -119,9 +118,6 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
-export type ClientRegisterNotificationPreferencesMessage = z.infer<
-  typeof ClientRegisterNotificationPreferencesSchema
->;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -566,21 +562,6 @@ export const ClientRejoinMessageSchema = z.object({
   token: TokenSchema,
 });
 
-export const ClientRegisterNotificationPreferencesSchema = z.object({
-  type: z.literal("register_notifications"),
-  preferences: z
-    .object({
-      ffaEnabled: z.boolean(),
-      teamEnabled: z.boolean(),
-      ffaMinPlayers: z.number().optional(),
-      ffaMaxPlayers: z.number().optional(),
-      teamMinPlayers: z.number().optional(),
-      teamMaxPlayers: z.number().optional(),
-      selectedTeamCounts: z.array(z.union([z.string(), z.number()])).optional(),
-    })
-    .nullable(), // null to unregister
-});
-
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
@@ -589,7 +570,6 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
-  ClientRegisterNotificationPreferencesSchema,
 ]);
 
 //
