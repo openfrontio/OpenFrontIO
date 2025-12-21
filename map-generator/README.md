@@ -6,6 +6,9 @@ The map generator reads a PNG image and converts pixels into terrain based prima
 Because only blue values are used, B&W and other input formats are fully supported. Many of the maps found in
 `assets/maps/<mapname>` are Grayscale.
 
+Additional Guides, Tutorials, Scripts, Resources, and Third Party Unofficial Applications can be found on
+the [Official Openfront Wiki](https://openfront.wiki/Map_Making)
+
 ## Installation
 
 1. Install go <https://go.dev/doc/install>
