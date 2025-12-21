@@ -1,4 +1,4 @@
-import { GameConfig, ServerLobbyNotificationMessage } from "../core/Schemas";
+import { GameConfig, GameInfo } from "../core/Schemas";
 import { GameMode } from "../core/game/Game";
 import { translateText } from "./Utils";
 
@@ -14,54 +14,22 @@ interface NotificationSettings {
 }
 
 export class LobbyNotificationManager {
-  private ws: WebSocket | null = null;
   private settings: NotificationSettings | null = null;
   private lastNotificationElement: HTMLElement | null = null;
   private notificationTimeout: number | null = null;
-  private isOnLobbyPage = false;
-  private reconnectTimer: number | null = null;
   private audioContext: AudioContext | null = null;
-  private handlePopState = () => this.checkIfOnLobbyPage();
-  private handleGameEnded = () => {
-    setTimeout(() => this.checkIfOnLobbyPage(), 100);
+  private seenLobbies: Set<string> = new Set();
+  private handlePopState = () => {
+    // Just clear seen lobbies when navigating to ensure we notify fresh
+    this.seenLobbies.clear();
   };
-
-  private resolveWebSocketUrl(): string {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-    if (
-      window.location.hostname === "localhost" &&
-      window.location.port === "9000"
-    ) {
-      return `${protocol}//localhost:3001/w0`;
-    }
-
-    const envUrl = process.env.WEBSOCKET_URL?.trim();
-    if (envUrl) {
-      if (envUrl.startsWith("ws://") || envUrl.startsWith("wss://")) {
-        return envUrl;
-      }
-      if (envUrl.startsWith("//")) {
-        return `${protocol}${envUrl}`;
-      }
-      return `${protocol}//${envUrl}`;
-    }
-
-    // In production, connect to worker subdomain for WebSocket
-    if (window.location.hostname !== "localhost") {
-      const hostname = window.location.hostname;
-      // Extract base domain and add w0- prefix
-      const workerHost = `w0-${hostname}`;
-      return `${protocol}//${workerHost}/w0`;
-    }
-
-    return `${protocol}//${window.location.host}/w0`;
-  }
+  private handleGameEnded = () => {
+    this.seenLobbies.clear();
+  };
 
   constructor() {
     this.loadSettings();
     this.setupEventListeners();
-    this.connectWebSocket();
   }
 
   private setupEventListeners() {
@@ -70,40 +38,22 @@ export class LobbyNotificationManager {
       this.handleSettingsChanged,
     );
 
+    // Listen to PublicLobby's lobby updates instead of polling ourselves
+    window.addEventListener(
+      "lobbies-updated",
+      this.handleLobbiesUpdated,
+    );
+
     // Monitor URL changes to detect when user is on lobby page
-    this.checkIfOnLobbyPage();
     window.addEventListener("popstate", this.handlePopState);
 
     // Also monitor for custom navigation events if they exist
     window.addEventListener("game-ended", this.handleGameEnded);
   }
 
-  private checkIfOnLobbyPage() {
-    const wasOnLobbyPage = this.isOnLobbyPage;
-
-    // Check if we're on the main lobby page
-    const path = window.location.pathname;
-    const hash = window.location.hash;
-    this.isOnLobbyPage =
-      (path === "/" || path === "") &&
-      (hash === "" || hash === "#/" || hash === "#");
-
-    // Register or unregister with server when page status changes
-    if (this.isOnLobbyPage && !wasOnLobbyPage) {
-      this.registerPreferences();
-    } else if (!this.isOnLobbyPage && wasOnLobbyPage) {
-      this.unregisterPreferences();
-    }
-  }
-
   private handleSettingsChanged = (e: Event) => {
     const event = e as CustomEvent<NotificationSettings>;
     this.settings = event.detail;
-
-    // Re-register with server if we're on the lobby page
-    if (this.isOnLobbyPage) {
-      this.registerPreferences();
-    }
   };
 
   private loadSettings() {
@@ -117,136 +67,66 @@ export class LobbyNotificationManager {
     }
   }
 
-  private connectWebSocket() {
-    try {
-      const wsUrl = this.resolveWebSocketUrl();
-      this.ws = new WebSocket(wsUrl);
+  private handleLobbiesUpdated = (e: Event) => {
+    const event = e as CustomEvent<GameInfo[]>;
+    const lobbies = event.detail || [];
 
-      this.ws.onopen = () => {
-        console.log(`Notification WebSocket connected to: ${wsUrl}`);
-        if (this.reconnectTimer) {
-          clearTimeout(this.reconnectTimer);
-          this.reconnectTimer = null;
+    // Check for new lobbies
+    lobbies.forEach((lobby) => {
+      if (!this.seenLobbies.has(lobby.gameID) && lobby.gameConfig) {
+        this.seenLobbies.add(lobby.gameID);
+
+        // Check if this lobby matches user preferences
+        if (this.matchesPreferences(lobby.gameConfig)) {
+          this.showNotification(lobby.gameConfig);
+          this.playNotificationSound();
         }
-        // Register if we're on lobby page and have settings
-        if (this.isOnLobbyPage && this.settings) {
-          this.registerPreferences();
-        }
-      };
+      }
+    });
 
-      this.ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === "lobby_notification") {
-            this.handleLobbyNotification(
-              message as ServerLobbyNotificationMessage,
-            );
-          }
-        } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
-        }
-      };
+    // Clean up old lobbies no longer in the list
+    const currentIds = new Set(lobbies.map((l) => l.gameID));
+    for (const id of this.seenLobbies) {
+      if (!currentIds.has(id)) {
+        this.seenLobbies.delete(id);
+      }
+    }
+  };
 
-      this.ws.onclose = (event) => {
-        console.log(
-          `Notification WebSocket disconnected (code: ${event.code}, reason: ${event.reason || "no reason provided"}), reconnecting in 5s...`,
+  private matchesPreferences(config: GameConfig): boolean {
+    if (!this.settings) return false;
+
+    const gameCapacity = config.maxPlayers ?? 0;
+
+    // Check FFA
+    if (this.settings.ffaEnabled && config.gameMode === GameMode.FFA) {
+      if (gameCapacity < this.settings.ffaMinPlayers) return false;
+      if (gameCapacity > this.settings.ffaMaxPlayers) return false;
+      return true;
+    }
+
+    // Check Team
+    if (this.settings.teamEnabled && config.gameMode === GameMode.Team) {
+      if (gameCapacity < this.settings.teamMinPlayers) return false;
+      if (gameCapacity > this.settings.teamMaxPlayers) return false;
+
+      // Check team configuration
+      if (this.settings.selectedTeamCounts && this.settings.selectedTeamCounts.length > 0) {
+        const playerTeams = config.playerTeams;
+        const matchesTeamCount = this.settings.selectedTeamCounts.some(
+          (selectedCount) => playerTeams === selectedCount,
         );
-        this.ws = null;
-        // Reconnect after 5 seconds
-        this.reconnectTimer = window.setTimeout(() => {
-          this.connectWebSocket();
-        }, 5000);
-      };
+        if (!matchesTeamCount) return false;
+      }
 
-      this.ws.onerror = (error) => {
-        const wsState =
-          this.ws?.readyState === WebSocket.CONNECTING
-            ? "CONNECTING"
-            : this.ws?.readyState === WebSocket.OPEN
-              ? "OPEN"
-              : this.ws?.readyState === WebSocket.CLOSING
-                ? "CLOSING"
-                : this.ws?.readyState === WebSocket.CLOSED
-                  ? "CLOSED"
-                  : "UNKNOWN";
-        console.error(
-          `WebSocket error (state: ${wsState}):`,
-          error instanceof Event ? `Event type: ${error.type}` : String(error),
-        );
-        console.warn(
-          `Failed to connect to notification WebSocket at: ${wsUrl}`,
-        );
-      };
-    } catch (error) {
-      console.error(
-        "Failed to create WebSocket connection:",
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-
-  private registerPreferences() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.settings) {
-      return;
+      return true;
     }
 
-    // Only register if notifications are enabled
-    if (!this.settings.ffaEnabled && !this.settings.teamEnabled) {
-      return;
-    }
-
-    const message = {
-      type: "register_notifications",
-      preferences: {
-        ffaEnabled: this.settings.ffaEnabled,
-        teamEnabled: this.settings.teamEnabled,
-        ffaMinPlayers: this.settings.ffaMinPlayers,
-        ffaMaxPlayers: this.settings.ffaMaxPlayers,
-        teamMinPlayers: this.settings.teamMinPlayers,
-        teamMaxPlayers: this.settings.teamMaxPlayers,
-        selectedTeamCounts: this.settings.selectedTeamCounts,
-      },
-    };
-
-    try {
-      this.ws.send(JSON.stringify(message));
-      console.log("Registered notification preferences with server");
-    } catch (error) {
-      console.error("Failed to register preferences:", error);
-    }
-  }
-
-  private unregisterPreferences() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return;
-    }
-
-    const message = {
-      type: "register_notifications",
-      preferences: null,
-    };
-
-    try {
-      this.ws.send(JSON.stringify(message));
-      console.log("Unregistered notification preferences from server");
-    } catch (error) {
-      console.error("Failed to unregister preferences:", error);
-    }
-  }
-
-  private handleLobbyNotification(message: ServerLobbyNotificationMessage) {
-    if (!this.isOnLobbyPage) return;
-
-    const { gameConfig } = message.gameInfo;
-    if (!gameConfig) return;
-
-    // Show notification
-    this.showNotification(gameConfig);
-    this.playNotificationSound();
+    return false;
   }
 
   private playNotificationSound() {
-    if (!this.settings?.soundEnabled || !this.isOnLobbyPage) {
+    if (!this.settings?.soundEnabled) {
       return;
     }
 
@@ -367,14 +247,6 @@ export class LobbyNotificationManager {
   }
 
   public destroy() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
