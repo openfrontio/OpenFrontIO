@@ -55,7 +55,7 @@ export class LobbyNotificationManager {
       return `${protocol}//${workerHost}/w0`;
     }
 
-    return `${protocol}//${window.location.host}`;
+    return `${protocol}//${window.location.host}/w0`;
   }
 
   constructor() {
