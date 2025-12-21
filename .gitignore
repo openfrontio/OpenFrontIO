@@ -11,4 +11,5 @@ resources/.DS_Store
 config.json
 .clinic/
 CLAUDE.md
+!.project/CLAUDE.md
 .idea/
