@@ -86,8 +86,10 @@ export class LobbyNotificationManager {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       // Connect via host without worker-specific prefix so LB can route appropriately
-      const wsUrl = `${protocol}//${window.location.host}/`;
+      // Avoid trailing slash to prevent NS_ERROR_ILLEGAL_VALUE in Firefox on malformed URLs
+      const wsUrl = `${protocol}//${window.location.host}`;
 
+      // Firefox can throw synchronously if URL is invalid; catch to avoid unhandled errors
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
