@@ -33,7 +33,6 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    // Skip fetching if public lobbies are disabled
     if (!isDevFeatureEnabled("publicLobbies")) {
       return;
     }
@@ -117,11 +116,9 @@ export class PublicLobby extends LitElement {
   }
 
   render() {
-    // Don't render if public lobbies are disabled
     if (!isDevFeatureEnabled("publicLobbies")) {
       return html``;
     }
-
     if (this.lobbies.length === 0) return html``;
 
     const lobby = this.lobbies[0];

@@ -117,11 +117,11 @@ class Client {
   constructor() {}
 
   async initialize(): Promise<void> {
-    // Load dev config first
+    // Load dev config first to set up feature flags
     await loadDevConfig();
 
     // Prefetch turnstile token so it is available when
-    // the user joins a lobby (skip if cloudflare disabled).
+    // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
 
     const gameVersion = document.getElementById(
