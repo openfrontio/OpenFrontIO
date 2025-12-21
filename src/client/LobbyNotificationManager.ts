@@ -19,6 +19,7 @@ export class LobbyNotificationManager {
   private notificationTimeout: number | null = null;
   private isOnLobbyPage = false;
   private reconnectTimer: number | null = null;
+  private audioContext: AudioContext | null = null;
 
   constructor() {
     this.loadSettings();
@@ -199,10 +200,26 @@ export class LobbyNotificationManager {
     this.playBeepSound();
   }
 
+  private getAudioContext(): AudioContext | null {
+    if (this.audioContext) {
+      return this.audioContext;
+    }
+
+    try {
+      this.audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
+      return this.audioContext;
+    } catch (error) {
+      console.error("Failed to create AudioContext:", error);
+      return null;
+    }
+  }
+
   private playBeepSound() {
     try {
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const audioContext = this.getAudioContext();
+      if (!audioContext) return;
+
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -301,6 +318,10 @@ export class LobbyNotificationManager {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
     }
     window.removeEventListener(
       "notification-settings-changed",
