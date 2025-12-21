@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { ThemeMode, UserSettings } from "../core/game/UserSettings";
+import "./components/baseComponents/setting/SettingColorPalette";
 import "./components/baseComponents/setting/SettingGroup";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
@@ -337,18 +338,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.group_colors")}"
         groupId="colors"
       >
-        <div class="cosmetics-placeholder">
-          <div class="cosmetics-placeholder__icon">🌈</div>
-          <div class="cosmetics-placeholder__title">
-            ${translateText("user_setting.colors_title")}
-          </div>
-          <div class="cosmetics-placeholder__desc">
-            ${translateText("user_setting.colors_desc")}
-          </div>
-          <div class="cosmetics-placeholder__note">
-            ${translateText("user_setting.cosmetics_note")}
-          </div>
-        </div>
+        <setting-color-palette disabled></setting-color-palette>
       </setting-group>
     `;
   }
