@@ -200,18 +200,26 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleFFAChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold text-lg">${translateText("game_mode.ffa")}</span>
+              <span class="font-bold text-lg"
+                >${translateText("game_mode.ffa")}</span
+              >
             </label>
 
             ${this.ffaEnabled
               ? html`
                   <div class="ml-7 space-y-3">
                     <div class="text-sm text-gray-300 mb-2">
-                      ${translateText("lobby_notification_modal.capacity_range")}
+                      ${translateText(
+                        "lobby_notification_modal.capacity_range",
+                      )}
                     </div>
                     <div class="space-y-2">
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.min")}</label>
+                        <label class="w-12 text-sm"
+                          >${translateText(
+                            "lobby_notification_modal.min",
+                          )}</label
+                        >
                         <input
                           type="range"
                           min="2"
@@ -234,7 +242,11 @@ export class LobbyNotificationModal extends LitElement {
                         >
                       </div>
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.max")}</label>
+                        <label class="w-12 text-sm"
+                          >${translateText(
+                            "lobby_notification_modal.max",
+                          )}</label
+                        >
                         <input
                           type="range"
                           min="2"
@@ -271,18 +283,26 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleTeamChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold text-lg">${translateText("game_mode.teams")}</span>
+              <span class="font-bold text-lg"
+                >${translateText("game_mode.teams")}</span
+              >
             </label>
 
             ${this.teamEnabled
               ? html`
                   <div class="ml-7 space-y-3">
                     <div class="text-sm text-gray-300 mb-2">
-                      ${translateText("lobby_notification_modal.capacity_range")}
+                      ${translateText(
+                        "lobby_notification_modal.capacity_range",
+                      )}
                     </div>
                     <div class="space-y-2">
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.min")}</label>
+                        <label class="w-12 text-sm"
+                          >${translateText(
+                            "lobby_notification_modal.min",
+                          )}</label
+                        >
                         <input
                           type="range"
                           min="2"
@@ -305,7 +325,11 @@ export class LobbyNotificationModal extends LitElement {
                         >
                       </div>
                       <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm">${translateText("lobby_notification_modal.max")}</label>
+                        <label class="w-12 text-sm"
+                          >${translateText(
+                            "lobby_notification_modal.max",
+                          )}</label
+                        >
                         <input
                           type="range"
                           min="2"
@@ -332,27 +356,35 @@ export class LobbyNotificationModal extends LitElement {
                     <div class="mt-4">
                       <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-gray-300"
-                          >${translateText("lobby_notification_modal.team_configuration")}</span
+                          >${translateText(
+                            "lobby_notification_modal.team_configuration",
+                          )}</span
                         >
                         <div class="flex gap-2">
                           <button
                             @click=${this.selectAllTeams}
                             class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
                           >
-                            ${translateText("lobby_notification_modal.select_all")}
+                            ${translateText(
+                              "lobby_notification_modal.select_all",
+                            )}
                           </button>
                           <button
                             @click=${this.deselectAllTeams}
                             class="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 rounded"
                           >
-                            ${translateText("lobby_notification_modal.deselect_all")}
+                            ${translateText(
+                              "lobby_notification_modal.deselect_all",
+                            )}
                           </button>
                         </div>
                       </div>
 
                       <div class="space-y-1 text-sm">
                         <div class="font-semibold text-blue-300 mb-1">
-                          ${translateText("lobby_notification_modal.fixed_modes")}
+                          ${translateText(
+                            "lobby_notification_modal.fixed_modes",
+                          )}
                         </div>
                         ${["Duos", "Trios", "Quads"].map(
                           (mode) => html`
@@ -367,22 +399,19 @@ export class LobbyNotificationModal extends LitElement {
                                 class="w-4 h-4"
                               />
                               <span>
-                                ${
-                                  ({
-                                    Duos:
-                                      translateText(
-                                        "host_modal.teams_Duos",
-                                      ),
-                                    Trios:
-                                      translateText(
-                                        "host_modal.teams_Trios",
-                                      ),
-                                    Quads:
-                                      translateText(
-                                        "host_modal.teams_Quads",
-                                      ),
-                                  } as Record<string, string>)[mode]
-                                }
+                                ${(
+                                  {
+                                    Duos: translateText(
+                                      "host_modal.teams_Duos",
+                                    ),
+                                    Trios: translateText(
+                                      "host_modal.teams_Trios",
+                                    ),
+                                    Quads: translateText(
+                                      "host_modal.teams_Quads",
+                                    ),
+                                  } as Record<string, string>
+                                )[mode]}
                               </span>
                             </label>
                           `,
@@ -429,9 +458,11 @@ export class LobbyNotificationModal extends LitElement {
                 @change=${this.handleSoundChange}
                 class="w-5 h-5"
               />
-              <span class="font-bold">${translateText(
-                "lobby_notification_modal.sound_notifications",
-              )}</span>
+              <span class="font-bold"
+                >${translateText(
+                  "lobby_notification_modal.sound_notifications",
+                )}</span
+              >
             </label>
           </div>
 
@@ -440,9 +471,9 @@ export class LobbyNotificationModal extends LitElement {
             class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center"
           >
             ${this.isEnabled()
-              ? html`<span class="text-green-400">${translateText(
-                    "lobby_notification_modal.active",
-                  )}</span>`
+              ? html`<span class="text-green-400"
+                  >${translateText("lobby_notification_modal.active")}</span
+                >`
               : html`<span class="text-gray-400"
                   >${translateText(
                     "lobby_notification_modal.enable_hint",
