@@ -94,7 +94,6 @@ export interface Config {
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
-  useNationStrengthForStartManpower(): boolean;
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
@@ -155,6 +154,7 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
+  minDistanceBetweenPlayers(): number;
   defensePostDefenseBonus(): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
