@@ -40,6 +40,7 @@ import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { WarshipRadiusLayer } from "./layers/WarshipRadiusLayer";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -211,6 +212,12 @@ export function createRenderer(
     transformHandler,
     uiState,
   );
+  const warshipRadiusLayer = new WarshipRadiusLayer(
+    game,
+    eventBus,
+    transformHandler,
+    uiState,
+  );
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -243,6 +250,7 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
+    warshipRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
