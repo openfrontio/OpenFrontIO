@@ -65,6 +65,7 @@ export async function startWorker() {
   const notificationCleanupInterval = setInterval(() => {
     notificationBroadcaster.cleanup();
   }, 30000);
+  process.on("exit", () => clearInterval(notificationCleanupInterval));
   gm.setNotificationBroadcaster(notificationBroadcaster);
 
   if (config.otelEnabled()) {
