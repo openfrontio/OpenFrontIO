@@ -11,15 +11,21 @@ import {
 import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
+import { NotificationBroadcaster } from "./NotificationBroadcaster";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
+  private notificationBroadcaster: NotificationBroadcaster | null = null;
 
   constructor(
     private config: ServerConfig,
     private log: Logger,
   ) {
     setInterval(() => this.tick(), 1000);
+  }
+
+  public setNotificationBroadcaster(broadcaster: NotificationBroadcaster) {
+    this.notificationBroadcaster = broadcaster;
   }
 
   public game(id: GameID): GameServer | null {
@@ -53,32 +59,40 @@ export class GameManager {
     gameConfig: GameConfig | undefined,
     creatorClientID?: string,
   ) {
+    const config = {
+      donateGold: false,
+      donateTroops: false,
+      gameMap: GameMapType.World,
+      gameType: GameType.Private,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium,
+      disableNations: false,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: undefined,
+      instantBuild: false,
+      randomSpawn: false,
+      gameMode: GameMode.FFA,
+      bots: 400,
+      disabledUnits: [],
+      ...gameConfig,
+    };
+    
     const game = new GameServer(
       id,
       this.log,
       Date.now(),
       this.config,
-      {
-        donateGold: false,
-        donateTroops: false,
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
-        disableNations: false,
-        infiniteGold: false,
-        infiniteTroops: false,
-        maxTimerValue: undefined,
-        instantBuild: false,
-        randomSpawn: false,
-        gameMode: GameMode.FFA,
-        bots: 400,
-        disabledUnits: [],
-        ...gameConfig,
-      },
+      config,
       creatorClientID,
     );
     this.games.set(id, game);
+    
+    // Broadcast notification to interested clients
+    if (this.notificationBroadcaster) {
+      this.notificationBroadcaster.broadcastGameCreated(id, config);
+    }
+    
     return game;
   }
 

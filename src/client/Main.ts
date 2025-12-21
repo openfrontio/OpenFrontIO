@@ -27,6 +27,11 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import "./LobbyNotificationButton";
+import { LobbyNotificationButton } from "./LobbyNotificationButton";
+import "./LobbyNotificationModal";
+import { LobbyNotificationModal } from "./LobbyNotificationModal";
+import { LobbyNotificationManager } from "./LobbyNotificationManager";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import "./NewsModal";
@@ -98,6 +103,9 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
+  private lobbyNotificationButton: LobbyNotificationButton | null = null;
+  private lobbyNotificationModal: LobbyNotificationModal | null = null;
+  private lobbyNotificationManager: LobbyNotificationManager | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -152,6 +160,26 @@ class Client {
     if (!this.darkModeButton) {
       console.warn("Dark mode button element not found");
     }
+
+    this.lobbyNotificationButton = document.querySelector(
+      "lobby-notification-button",
+    ) as LobbyNotificationButton;
+    if (!this.lobbyNotificationButton) {
+      console.warn("Lobby notification button element not found");
+    }
+
+    this.lobbyNotificationModal = document.querySelector(
+      "lobby-notification-modal",
+    ) as LobbyNotificationModal;
+    if (!this.lobbyNotificationModal) {
+      console.warn("Lobby notification modal element not found");
+    }
+
+    this.lobbyNotificationManager = new LobbyNotificationManager();
+
+    window.addEventListener("open-notification-modal", () => {
+      this.lobbyNotificationModal?.open();
+    });
 
     this.usernameInput = document.querySelector(
       "username-input",

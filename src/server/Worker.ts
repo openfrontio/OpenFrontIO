@@ -29,6 +29,7 @@ import { MapPlaylist } from "./MapPlaylist";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import { NotificationBroadcaster } from "./NotificationBroadcaster";
 
 const config = getServerConfigFromServer();
 
@@ -60,6 +61,8 @@ export async function startWorker() {
   const wss = new WebSocketServer({ server });
 
   const gm = new GameManager(config, log);
+  const notificationBroadcaster = new NotificationBroadcaster();
+  gm.setNotificationBroadcaster(notificationBroadcaster);
 
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
@@ -319,6 +322,10 @@ export async function startWorker() {
         if (clientMsg.type === "ping") {
           // Ignore ping
           return;
+        } else if (clientMsg.type === "register_notifications") {
+          // Handle notification preference registration
+          notificationBroadcaster.registerClient(ws, clientMsg.preferences);
+          return;
         } else if (clientMsg.type !== "join" && clientMsg.type !== "rejoin") {
           log.warn(
             `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
@@ -481,6 +488,7 @@ export async function startWorker() {
       }
     });
     ws.on("close", () => {
+      notificationBroadcaster.unregisterClient(ws);
       ws.removeAllListeners();
     });
   });

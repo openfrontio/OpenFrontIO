@@ -90,14 +90,16 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientRegisterNotificationPreferencesMessage;
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerLobbyNotificationMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -107,6 +109,7 @@ export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
+export type ServerLobbyNotificationMessage = z.infer<typeof ServerLobbyNotificationMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -114,6 +117,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientRegisterNotificationPreferencesMessage = z.infer<typeof ClientRegisterNotificationPreferencesSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -489,6 +493,14 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const ServerLobbyNotificationMessageSchema = z.object({
+  type: z.literal("lobby_notification"),
+  gameInfo: z.object({
+    gameID: ID,
+    gameConfig: GameConfigSchema.optional(),
+  }),
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -496,6 +508,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyNotificationMessageSchema,
 ]);
 
 //
@@ -549,6 +562,19 @@ export const ClientRejoinMessageSchema = z.object({
   token: TokenSchema,
 });
 
+export const ClientRegisterNotificationPreferencesSchema = z.object({
+  type: z.literal("register_notifications"),
+  preferences: z.object({
+    ffaEnabled: z.boolean(),
+    teamEnabled: z.boolean(),
+    ffaMinPlayers: z.number().optional(),
+    ffaMaxPlayers: z.number().optional(),
+    teamMinPlayers: z.number().optional(),
+    teamMaxPlayers: z.number().optional(),
+    selectedTeamCounts: z.array(z.union([z.string(), z.number()])).optional(),
+  }).nullable(), // null to unregister
+});
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientPingMessageSchema,
@@ -557,6 +583,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientRegisterNotificationPreferencesSchema,
 ]);
 
 //
