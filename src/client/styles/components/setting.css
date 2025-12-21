@@ -11,10 +11,19 @@
   gap: 8px;
 }
 
-/* Wide modal for settings with groups */
+/* Wide modal for settings with groups - fixed width for consistency */
 .user-setting-modal--wide {
-  width: 100%;
+  width: 720px;
+  min-width: 720px;
   max-width: 720px;
+}
+
+@media (max-width: 768px) {
+  .user-setting-modal--wide {
+    width: 100%;
+    min-width: auto;
+    max-width: 100%;
+  }
 }
 
 .setting-item {

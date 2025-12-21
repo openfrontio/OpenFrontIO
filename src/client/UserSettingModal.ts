@@ -14,7 +14,7 @@ import "./components/baseComponents/setting/SettingToggle";
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
-  @state() private settingsMode: "display" | "basic" | "keybinds" = "display";
+  @state() private settingsMode: "basic" | "keybinds" | "display" = "basic";
   @state() private keybinds: Record<string, { value: string; key: string }> =
     {};
 
@@ -245,15 +245,6 @@ export class UserSettingModal extends LitElement {
             <div class="flex mb-4 w-full justify-center">
               <button
                 class="flex-1 text-center px-3 py-1 rounded-l
-      ${this.settingsMode === "display"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
-                @click=${() => (this.settingsMode = "display")}
-              >
-                ${translateText("user_setting.tab_display")}
-              </button>
-              <button
-                class="flex-1 text-center px-3 py-1
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -262,7 +253,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="flex-1 text-center px-3 py-1 rounded-r
+                class="flex-1 text-center px-3 py-1
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -270,14 +261,23 @@ export class UserSettingModal extends LitElement {
               >
                 ${translateText("user_setting.tab_keybinds")}
               </button>
+              <button
+                class="flex-1 text-center px-3 py-1 rounded-r
+      ${this.settingsMode === "display"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "display")}
+              >
+                ${translateText("user_setting.tab_display")}
+              </button>
             </div>
 
             <div class="settings-list settings-list--grouped">
-              ${this.settingsMode === "display"
-                ? this.renderDisplaySettings()
-                : this.settingsMode === "basic"
-                  ? this.renderBasicSettings()
-                  : this.renderKeybindSettings()}
+              ${this.settingsMode === "basic"
+                ? this.renderBasicSettings()
+                : this.settingsMode === "keybinds"
+                  ? this.renderKeybindSettings()
+                  : this.renderDisplaySettings()}
             </div>
           </div>
         </div>

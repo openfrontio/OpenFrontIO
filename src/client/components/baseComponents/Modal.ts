@@ -47,7 +47,7 @@ export class OModal extends LitElement {
       border-top-left-radius: 4px;
       border-top-right-radius: 4px;
       font-size: 18px;
-      background: #000000a1;
+      background: rgba(0, 0, 0, 0.9);
       text-align: center;
       color: #fff;
       padding: 1rem 2.4rem 1rem 1.4rem;
@@ -61,7 +61,7 @@ export class OModal extends LitElement {
     }
 
     .c-modal__content {
-      background: #23232382;
+      background: rgba(35, 35, 35, 0.7);
       position: relative;
       color: #fff;
       padding: 1.4rem;
