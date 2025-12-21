@@ -345,11 +345,8 @@ class Client {
       }
     });
 
-    if (this.userSettings.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Apply theme mode (light/dark/system)
+    this.userSettings.applyTheme();
 
     // Attempt to join lobby
     this.handleHash();
