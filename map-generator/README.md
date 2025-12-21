@@ -55,8 +55,6 @@ its **Terrain Type** and **Magnitude**. Theme Files:
 The map-generator will process your input file at `assets/maps/<map_name>/info.json` to determine the
 position of Nations, their starting coordinates, and any flags.
 
-- [Use country codes found here](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes)
-
 Example:
 
 ```json
@@ -72,16 +70,26 @@ Example:
 }
 ```
 
+`coordinates` is x/y position of the nation spawn on the map. Origin is at top left, with x extending right and y extending down
+
 `name` is a `CamelCaseName` of your map. It is used to enable the map in-game.
 
-## Update `../CREDITS.md`
+`flag` is the code for a country
+
+- The full list of supported codes can be seen in `../src/client/data/countries.json` - all ISO_3166 codes are supported, with several additions.
+
+- For quick reference, [Use country codes found here](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes)
+
+## Update CREDITS.md
 
 Add License & Attribution information to `../CREDITS.md`. If you are unsure if
 a map's license can be used, open an issue or ask in Discord before beginning work.
 
 ## Adding Flags
 
-TODO
+Flags can be added to `../resources/flags/<iso_code>.svg`
+
+The country will need to be added to `../src/client/data/countries.json`
 
 ## To Enable In-Game
 
