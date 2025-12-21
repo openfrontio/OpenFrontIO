@@ -109,7 +109,9 @@ export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
-export type ServerLobbyNotificationMessage = z.infer<typeof ServerLobbyNotificationMessageSchema>;
+export type ServerLobbyNotificationMessage = z.infer<
+  typeof ServerLobbyNotificationMessageSchema
+>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -117,7 +119,9 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
-export type ClientRegisterNotificationPreferencesMessage = z.infer<typeof ClientRegisterNotificationPreferencesSchema>;
+export type ClientRegisterNotificationPreferencesMessage = z.infer<
+  typeof ClientRegisterNotificationPreferencesSchema
+>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -564,15 +568,17 @@ export const ClientRejoinMessageSchema = z.object({
 
 export const ClientRegisterNotificationPreferencesSchema = z.object({
   type: z.literal("register_notifications"),
-  preferences: z.object({
-    ffaEnabled: z.boolean(),
-    teamEnabled: z.boolean(),
-    ffaMinPlayers: z.number().optional(),
-    ffaMaxPlayers: z.number().optional(),
-    teamMinPlayers: z.number().optional(),
-    teamMaxPlayers: z.number().optional(),
-    selectedTeamCounts: z.array(z.union([z.string(), z.number()])).optional(),
-  }).nullable(), // null to unregister
+  preferences: z
+    .object({
+      ffaEnabled: z.boolean(),
+      teamEnabled: z.boolean(),
+      ffaMinPlayers: z.number().optional(),
+      ffaMaxPlayers: z.number().optional(),
+      teamMinPlayers: z.number().optional(),
+      teamMaxPlayers: z.number().optional(),
+      selectedTeamCounts: z.array(z.union([z.string(), z.number()])).optional(),
+    })
+    .nullable(), // null to unregister
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

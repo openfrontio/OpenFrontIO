@@ -26,10 +26,10 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { NotificationBroadcaster } from "./NotificationBroadcaster";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
-import { NotificationBroadcaster } from "./NotificationBroadcaster";
 
 const config = getServerConfigFromServer();
 

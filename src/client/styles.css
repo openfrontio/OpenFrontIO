@@ -673,8 +673,12 @@ news-button .active button::after {
   font-weight: 600;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.5);
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(59, 130, 246, 0.5);
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
   opacity: 0;
   min-width: 300px;
   max-width: 500px;
@@ -692,16 +696,23 @@ news-button .active button::after {
 }
 
 @keyframes notificationPulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 0 rgba(59, 130, 246, 0.7);
+  0%,
+  100% {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.5),
+      0 0 0 0 rgba(59, 130, 246, 0.7);
   }
   50% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 8px rgba(59, 130, 246, 0);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.5),
+      0 0 0 8px rgba(59, 130, 246, 0);
   }
 }
 
 .lobby-notification:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border-color: #93c5fd;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 25px rgba(59, 130, 246, 0.7);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    0 0 25px rgba(59, 130, 246, 0.7);
 }

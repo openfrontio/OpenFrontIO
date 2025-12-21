@@ -29,13 +29,13 @@ export class LobbyNotificationManager {
   private setupEventListeners() {
     window.addEventListener(
       "notification-settings-changed",
-      this.handleSettingsChanged
+      this.handleSettingsChanged,
     );
 
     // Monitor URL changes to detect when user is on lobby page
     this.checkIfOnLobbyPage();
     window.addEventListener("popstate", () => this.checkIfOnLobbyPage());
-    
+
     // Also monitor for custom navigation events if they exist
     window.addEventListener("game-ended", () => {
       setTimeout(() => this.checkIfOnLobbyPage(), 100);
@@ -44,7 +44,7 @@ export class LobbyNotificationManager {
 
   private checkIfOnLobbyPage() {
     const wasOnLobbyPage = this.isOnLobbyPage;
-    
+
     // Check if we're on the main lobby page
     const path = window.location.pathname;
     const hash = window.location.hash;
@@ -63,7 +63,7 @@ export class LobbyNotificationManager {
   private handleSettingsChanged = (e: Event) => {
     const event = e as CustomEvent<NotificationSettings>;
     this.settings = event.detail;
-    
+
     // Re-register with server if we're on the lobby page
     if (this.isOnLobbyPage) {
       this.registerPreferences();
@@ -86,7 +86,7 @@ export class LobbyNotificationManager {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       // Connect to worker 0 for now - TODO: connect to all workers for comprehensive notifications
       const wsUrl = `${protocol}//${window.location.host}/w0/`;
-      
+
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -105,7 +105,9 @@ export class LobbyNotificationManager {
         try {
           const message = JSON.parse(event.data);
           if (message.type === "lobby_notification") {
-            this.handleLobbyNotification(message as ServerLobbyNotificationMessage);
+            this.handleLobbyNotification(
+              message as ServerLobbyNotificationMessage,
+            );
           }
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
@@ -181,7 +183,7 @@ export class LobbyNotificationManager {
   private handleLobbyNotification(message: ServerLobbyNotificationMessage) {
     if (!this.isOnLobbyPage) return;
 
-    const { gameID, gameConfig } = message.gameInfo;
+    const { gameConfig } = message.gameInfo;
     if (!gameConfig) return;
 
     // Show notification
@@ -199,7 +201,8 @@ export class LobbyNotificationManager {
 
   private playBeepSound() {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -210,7 +213,10 @@ export class LobbyNotificationManager {
       oscillator.type = "sine";
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.3,
+      );
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
@@ -252,7 +258,7 @@ export class LobbyNotificationManager {
       setTimeout(() => {
         if (this.lastNotificationElement?.parentNode) {
           this.lastNotificationElement.parentNode.removeChild(
-            this.lastNotificationElement
+            this.lastNotificationElement,
           );
         }
         this.lastNotificationElement = null;
@@ -298,7 +304,7 @@ export class LobbyNotificationManager {
     }
     window.removeEventListener(
       "notification-settings-changed",
-      this.handleSettingsChanged
+      this.handleSettingsChanged,
     );
     this.dismissNotification();
   }

@@ -77,11 +77,14 @@ export class LobbyNotificationModal extends LitElement {
         teamMaxPlayers: this.teamMaxPlayers,
         selectedTeamCounts: Array.from(this.selectedTeamCounts),
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
-      
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
+
       // Dispatch event to notify the manager
       window.dispatchEvent(
-        new CustomEvent("notification-settings-changed", { detail: settings })
+        new CustomEvent("notification-settings-changed", { detail: settings }),
       );
     } catch (error) {
       console.error("Failed to save notification settings:", error);
@@ -214,7 +217,7 @@ export class LobbyNotificationModal extends LitElement {
                           .value=${this.ffaMinPlayers.toString()}
                           @input=${(e: Event) => {
                             this.ffaMinPlayers = parseInt(
-                              (e.target as HTMLInputElement).value
+                              (e.target as HTMLInputElement).value,
                             );
                             if (this.ffaMinPlayers > this.ffaMaxPlayers) {
                               this.ffaMaxPlayers = this.ffaMinPlayers;
@@ -224,7 +227,9 @@ export class LobbyNotificationModal extends LitElement {
                           @change=${this.handleSliderChange}
                           class="flex-1"
                         />
-                        <span class="w-12 text-right">${this.ffaMinPlayers}</span>
+                        <span class="w-12 text-right"
+                          >${this.ffaMinPlayers}</span
+                        >
                       </div>
                       <div class="flex items-center gap-4">
                         <label class="w-12 text-sm">Max:</label>
@@ -235,7 +240,7 @@ export class LobbyNotificationModal extends LitElement {
                           .value=${this.ffaMaxPlayers.toString()}
                           @input=${(e: Event) => {
                             this.ffaMaxPlayers = parseInt(
-                              (e.target as HTMLInputElement).value
+                              (e.target as HTMLInputElement).value,
                             );
                             if (this.ffaMaxPlayers < this.ffaMinPlayers) {
                               this.ffaMinPlayers = this.ffaMaxPlayers;
@@ -245,7 +250,9 @@ export class LobbyNotificationModal extends LitElement {
                           @change=${this.handleSliderChange}
                           class="flex-1"
                         />
-                        <span class="w-12 text-right">${this.ffaMaxPlayers}</span>
+                        <span class="w-12 text-right"
+                          >${this.ffaMaxPlayers}</span
+                        >
                       </div>
                     </div>
                   </div>
@@ -281,7 +288,7 @@ export class LobbyNotificationModal extends LitElement {
                           .value=${this.teamMinPlayers.toString()}
                           @input=${(e: Event) => {
                             this.teamMinPlayers = parseInt(
-                              (e.target as HTMLInputElement).value
+                              (e.target as HTMLInputElement).value,
                             );
                             if (this.teamMinPlayers > this.teamMaxPlayers) {
                               this.teamMaxPlayers = this.teamMinPlayers;
@@ -291,7 +298,9 @@ export class LobbyNotificationModal extends LitElement {
                           @change=${this.handleSliderChange}
                           class="flex-1"
                         />
-                        <span class="w-12 text-right">${this.teamMinPlayers}</span>
+                        <span class="w-12 text-right"
+                          >${this.teamMinPlayers}</span
+                        >
                       </div>
                       <div class="flex items-center gap-4">
                         <label class="w-12 text-sm">Max:</label>
@@ -302,7 +311,7 @@ export class LobbyNotificationModal extends LitElement {
                           .value=${this.teamMaxPlayers.toString()}
                           @input=${(e: Event) => {
                             this.teamMaxPlayers = parseInt(
-                              (e.target as HTMLInputElement).value
+                              (e.target as HTMLInputElement).value,
                             );
                             if (this.teamMaxPlayers < this.teamMinPlayers) {
                               this.teamMinPlayers = this.teamMaxPlayers;
@@ -312,13 +321,17 @@ export class LobbyNotificationModal extends LitElement {
                           @change=${this.handleSliderChange}
                           class="flex-1"
                         />
-                        <span class="w-12 text-right">${this.teamMaxPlayers}</span>
+                        <span class="w-12 text-right"
+                          >${this.teamMaxPlayers}</span
+                        >
                       </div>
                     </div>
 
                     <div class="mt-4">
                       <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm text-gray-300">Team Configuration:</span>
+                        <span class="text-sm text-gray-300"
+                          >Team Configuration:</span
+                        >
                         <div class="flex gap-2">
                           <button
                             @click=${this.selectAllTeams}
@@ -336,10 +349,14 @@ export class LobbyNotificationModal extends LitElement {
                       </div>
 
                       <div class="space-y-1 text-sm">
-                        <div class="font-semibold text-blue-300 mb-1">Fixed Modes:</div>
+                        <div class="font-semibold text-blue-300 mb-1">
+                          Fixed Modes:
+                        </div>
                         ${["Duos", "Trios", "Quads"].map(
                           (mode) => html`
-                            <label class="flex items-center gap-2 cursor-pointer">
+                            <label
+                              class="flex items-center gap-2 cursor-pointer"
+                            >
                               <input
                                 type="checkbox"
                                 .checked=${this.selectedTeamCounts.has(mode)}
@@ -349,13 +366,17 @@ export class LobbyNotificationModal extends LitElement {
                               />
                               <span>${mode}</span>
                             </label>
-                          `
+                          `,
                         )}
-                        
-                        <div class="font-semibold text-green-300 mt-2 mb-1">Variable Modes (Number of Teams):</div>
+
+                        <div class="font-semibold text-green-300 mt-2 mb-1">
+                          Variable Modes (Number of Teams):
+                        </div>
                         ${[2, 3, 4, 5, 6, 7].map(
                           (count) => html`
-                            <label class="flex items-center gap-2 cursor-pointer">
+                            <label
+                              class="flex items-center gap-2 cursor-pointer"
+                            >
                               <input
                                 type="checkbox"
                                 .checked=${this.selectedTeamCounts.has(count)}
@@ -365,7 +386,7 @@ export class LobbyNotificationModal extends LitElement {
                               />
                               <span>${count} Teams</span>
                             </label>
-                          `
+                          `,
                         )}
                       </div>
                     </div>
@@ -388,10 +409,14 @@ export class LobbyNotificationModal extends LitElement {
           </div>
 
           <!-- Status Info -->
-          <div class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center">
+          <div
+            class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center"
+          >
             ${this.isEnabled()
               ? html`<span class="text-green-400">✓ Notifications Active</span>`
-              : html`<span class="text-gray-400">Select a game mode to enable notifications</span>`}
+              : html`<span class="text-gray-400"
+                  >Select a game mode to enable notifications</span
+                >`}
           </div>
         </div>
       </o-modal>

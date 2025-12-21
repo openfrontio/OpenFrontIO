@@ -13,11 +13,6 @@ interface NotificationPreferences {
   selectedTeamCounts?: Array<string | number>;
 }
 
-interface RegisteredClient {
-  ws: WebSocket;
-  preferences: NotificationPreferences;
-}
-
 export class NotificationBroadcaster {
   private registeredClients: Map<WebSocket, NotificationPreferences> =
     new Map();
@@ -57,7 +52,10 @@ export class NotificationBroadcaster {
 
     // Broadcast to all matching clients
     for (const [ws, prefs] of this.registeredClients.entries()) {
-      if (ws.readyState === WebSocket.OPEN && this.matchesPreferences(gameConfig, gameCapacity, prefs)) {
+      if (
+        ws.readyState === WebSocket.OPEN &&
+        this.matchesPreferences(gameConfig, gameCapacity, prefs)
+      ) {
         try {
           ws.send(messageStr);
         } catch (error) {
@@ -70,7 +68,7 @@ export class NotificationBroadcaster {
   private matchesPreferences(
     config: GameConfig,
     gameCapacity: number,
-    prefs: NotificationPreferences
+    prefs: NotificationPreferences,
   ): boolean {
     // Check FFA
     if (prefs.ffaEnabled && config.gameMode === GameMode.FFA) {
@@ -106,7 +104,7 @@ export class NotificationBroadcaster {
         const matchesTeamCount = prefs.selectedTeamCounts.some(
           (selectedCount) => {
             return playerTeams === selectedCount;
-          }
+          },
         );
         if (!matchesTeamCount) return false;
       }

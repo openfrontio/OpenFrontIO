@@ -77,7 +77,7 @@ export class GameManager {
       disabledUnits: [],
       ...gameConfig,
     };
-    
+
     const game = new GameServer(
       id,
       this.log,
@@ -87,12 +87,12 @@ export class GameManager {
       creatorClientID,
     );
     this.games.set(id, game);
-    
+
     // Broadcast notification to interested clients
     if (this.notificationBroadcaster) {
       this.notificationBroadcaster.broadcastGameCreated(id, config);
     }
-    
+
     return game;
   }
 
