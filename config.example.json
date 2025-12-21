@@ -6,18 +6,29 @@
     "ads": false
   },
   "settings": {
+    "// Display Settings": "Theme and cosmetics",
     "themeMode": "system",
+
+    "// Interface Settings": "UI elements and visual feedback",
     "emojis": true,
     "alertFrame": true,
+    "territoryPatterns": true,
+
+    "// Graphics Settings": "Visual effects and performance",
     "specialEffects": true,
     "structureSprites": true,
     "cursorCostLabel": true,
+    "performanceOverlay": false,
+
+    "// Controls Settings": "Input and interaction",
     "leftClickOpensMenu": false,
+    "attackRatio": 0.2,
+
+    "// Privacy Settings": "Name and ID visibility",
     "anonymousNames": false,
     "lobbyIdVisibility": true,
-    "territoryPatterns": true,
-    "performanceOverlay": false,
-    "attackRatio": 0.2,
+
+    "// Audio Settings": "Sound volumes",
     "backgroundMusicVolume": 0,
     "soundEffectsVolume": 1
   }

@@ -399,11 +399,11 @@ setting-group .setting-item {
 /* Sticky tabs for settings modal */
 .settings-tabs {
   position: sticky;
-  top: 0;
+  top: -1.4rem;
   z-index: 10;
   background: rgba(35, 35, 35, 0.95);
   backdrop-filter: blur(8px);
-  margin: -1.4rem -1.4rem 1rem -1.4rem;
-  padding: 1rem 1.4rem;
+  margin: -1.4rem -1.4rem 0.75rem -1.4rem;
+  padding: 0.75rem 1.4rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
