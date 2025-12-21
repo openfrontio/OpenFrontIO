@@ -14,8 +14,6 @@ interface NotificationSettings {
 
 export class LobbyNotificationManager {
   private settings: NotificationSettings | null = null;
-  private lastNotificationElement: HTMLElement | null = null;
-  private notificationTimeout: number | null = null;
   private audioContext: AudioContext | null = null;
   private seenLobbies: Set<string> = new Set();
   private handlePopState = () => {
