@@ -603,9 +603,6 @@ type RGBA struct {
 // The thumbnail renders its own set of colors separate from the in-game light/dark
 // color schemes.
 //
-// The in-game colors are defined in `../src/core/game/GameMap.ts` `terrainType`
-// and depend on light/dark mode and the tile's magnitude.
-//
 // For thumbnail purposes, the terrain type -> color mapping:
 //   - Water Shoreline: (Transparent)
 //   - Deep Water: (Transparent)
