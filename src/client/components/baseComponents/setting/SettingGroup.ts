@@ -69,20 +69,27 @@ export class SettingGroup extends LitElement {
     }
 
     .setting-group__content.columns {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      display: block;
+      column-count: 2;
+      column-gap: 12px;
     }
 
     .setting-group__content.columns.collapsed {
       display: none;
     }
 
-    /* Ensure slotted items fill their column */
+    /* Ensure slotted items fill their column and don't break across columns */
     ::slotted(*) {
       width: 100% !important;
       min-width: 0 !important;
       max-width: none !important;
+      break-inside: avoid;
+      margin-bottom: 12px;
+    }
+
+    /* Remove bottom margin from last items to avoid extra space */
+    .setting-group__content.columns ::slotted(*:last-child) {
+      margin-bottom: 0;
     }
   `;
 
