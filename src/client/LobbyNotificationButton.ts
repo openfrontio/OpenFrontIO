@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { translateText } from "./Utils";
 
 @customElement("lobby-notification-button")
 export class LobbyNotificationButton extends LitElement {
@@ -18,7 +19,7 @@ export class LobbyNotificationButton extends LitElement {
   render() {
     return html`
       <button
-        title="Lobby Notifications"
+        title="${translateText("lobby_notification_modal.title")}"
         class="absolute top-0 left-[50px] md:top-[10px] md:left-[60px] border-none bg-none cursor-pointer text-2xl"
         @click=${this.openModal}
       >
