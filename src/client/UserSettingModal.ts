@@ -1,19 +1,20 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
+import { ThemeMode, UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingGroup";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
+import "./components/baseComponents/setting/SettingThemeMode";
 import "./components/baseComponents/setting/SettingToggle";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
-  @state() private settingsMode: "basic" | "keybinds" = "basic";
+  @state() private settingsMode: "display" | "basic" | "keybinds" = "display";
   @state() private keybinds: Record<string, { value: string; key: string }> =
     {};
 
@@ -243,7 +244,16 @@ export class UserSettingModal extends LitElement {
           >
             <div class="flex mb-4 w-full justify-center">
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-l
+                class="flex-1 text-center px-3 py-1 rounded-l
+      ${this.settingsMode === "display"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "display")}
+              >
+                ${translateText("user_setting.tab_display")}
+              </button>
+              <button
+                class="flex-1 text-center px-3 py-1
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -252,7 +262,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-r
+                class="flex-1 text-center px-3 py-1 rounded-r
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -263,9 +273,11 @@ export class UserSettingModal extends LitElement {
             </div>
 
             <div class="settings-list settings-list--grouped">
-              ${this.settingsMode === "basic"
-                ? this.renderBasicSettings()
-                : this.renderKeybindSettings()}
+              ${this.settingsMode === "display"
+                ? this.renderDisplaySettings()
+                : this.settingsMode === "basic"
+                  ? this.renderBasicSettings()
+                  : this.renderKeybindSettings()}
             </div>
           </div>
         </div>
@@ -273,23 +285,82 @@ export class UserSettingModal extends LitElement {
     `;
   }
 
+  private handleThemeModeChange(e: CustomEvent<{ mode: ThemeMode }>) {
+    const mode = e.detail?.mode;
+    if (mode) {
+      this.userSettings.setThemeMode(mode);
+      this.dispatchEvent(
+        new CustomEvent("theme-mode-changed", {
+          detail: { mode },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  private renderDisplaySettings() {
+    return html`
+      <!-- Theme Settings -->
+      <setting-group
+        label="${translateText("user_setting.group_theme")}"
+        groupId="theme"
+      >
+        <setting-theme-mode
+          label="${translateText("user_setting.theme_mode_label")}"
+          description="${translateText("user_setting.theme_mode_desc")}"
+          @change=${this.handleThemeModeChange}
+        ></setting-theme-mode>
+      </setting-group>
+
+      <!-- Cosmetics - Skins -->
+      <setting-group
+        label="${translateText("user_setting.group_skins")}"
+        groupId="skins"
+      >
+        <div class="cosmetics-placeholder">
+          <div class="cosmetics-placeholder__icon">🎨</div>
+          <div class="cosmetics-placeholder__title">
+            ${translateText("user_setting.skins_title")}
+          </div>
+          <div class="cosmetics-placeholder__desc">
+            ${translateText("user_setting.skins_desc")}
+          </div>
+          <div class="cosmetics-placeholder__note">
+            ${translateText("user_setting.cosmetics_note")}
+          </div>
+        </div>
+      </setting-group>
+
+      <!-- Cosmetics - Colors -->
+      <setting-group
+        label="${translateText("user_setting.group_colors")}"
+        groupId="colors"
+      >
+        <div class="cosmetics-placeholder">
+          <div class="cosmetics-placeholder__icon">🌈</div>
+          <div class="cosmetics-placeholder__title">
+            ${translateText("user_setting.colors_title")}
+          </div>
+          <div class="cosmetics-placeholder__desc">
+            ${translateText("user_setting.colors_desc")}
+          </div>
+          <div class="cosmetics-placeholder__note">
+            ${translateText("user_setting.cosmetics_note")}
+          </div>
+        </div>
+      </setting-group>
+    `;
+  }
+
   private renderBasicSettings() {
     return html`
-      <!-- Display Settings -->
+      <!-- Interface Settings -->
       <setting-group
-        label="${translateText("user_setting.group_display")}"
-        groupId="display"
+        label="${translateText("user_setting.group_interface")}"
+        groupId="interface"
         columns
       >
-        <setting-toggle
-          label="${translateText("user_setting.dark_mode_label")}"
-          description="${translateText("user_setting.dark_mode_desc")}"
-          id="dark-mode-toggle"
-          .checked=${this.userSettings.darkMode()}
-          @change=${(e: CustomEvent<{ checked: boolean }>) =>
-            this.toggleDarkMode(e)}
-        ></setting-toggle>
-
         <setting-toggle
           label="${translateText("user_setting.emojis_label")}"
           description="${translateText("user_setting.emojis_desc")}"

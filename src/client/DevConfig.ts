@@ -2,7 +2,8 @@
 // Create a config.json in the project root to override these defaults
 
 export interface DevSettingsConfig {
-  darkMode?: boolean;
+  themeMode?: "light" | "dark" | "system";
+  darkMode?: boolean; // Legacy, use themeMode instead
   emojis?: boolean;
   alertFrame?: boolean;
   specialEffects?: boolean;
@@ -87,6 +88,13 @@ function applyConfigSettings(settings: DevSettingsConfig) {
     }
   };
 
+  const applyString = (key: string, value: string | undefined) => {
+    if (value !== undefined && localStorage.getItem(key) === null) {
+      localStorage.setItem(key, value);
+    }
+  };
+
+  applyString("settings.themeMode", settings.themeMode);
   applyBool("settings.darkMode", settings.darkMode);
   applyBool("settings.emojis", settings.emojis);
   applyBool("settings.alertFrame", settings.alertFrame);

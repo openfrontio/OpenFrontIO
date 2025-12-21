@@ -6,7 +6,7 @@
     "ads": false
   },
   "settings": {
-    "darkMode": false,
+    "themeMode": "system",
     "emojis": true,
     "alertFrame": true,
     "specialEffects": true,
