@@ -251,14 +251,6 @@ export class DefaultConfig implements Config {
     return this._isReplay;
   }
 
-  samHittingChance(): number {
-    return 1;
-  }
-
-  samWarheadHittingChance(): number {
-    return 1;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.5;
   }
