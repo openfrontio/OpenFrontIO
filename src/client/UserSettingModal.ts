@@ -8,6 +8,7 @@ import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
+import "./components/baseComponents/setting/SettingTerritorySkins";
 import "./components/baseComponents/setting/SettingThemeMode";
 import "./components/baseComponents/setting/SettingToggle";
 
@@ -319,18 +320,7 @@ export class UserSettingModal extends LitElement {
         label="${translateText("user_setting.group_skins")}"
         groupId="skins"
       >
-        <div class="cosmetics-placeholder">
-          <div class="cosmetics-placeholder__icon">🎨</div>
-          <div class="cosmetics-placeholder__title">
-            ${translateText("user_setting.skins_title")}
-          </div>
-          <div class="cosmetics-placeholder__desc">
-            ${translateText("user_setting.skins_desc")}
-          </div>
-          <div class="cosmetics-placeholder__note">
-            ${translateText("user_setting.cosmetics_note")}
-          </div>
-        </div>
+        <setting-territory-skins disabled></setting-territory-skins>
       </setting-group>
 
       <!-- Cosmetics - Colors -->
