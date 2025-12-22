@@ -187,7 +187,7 @@ describe("LobbyNotificationManager", () => {
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+      expect((window as any).AudioContext).toHaveBeenCalled();
     });
 
     test("should not match when FFA is disabled", () => {
@@ -204,6 +204,7 @@ describe("LobbyNotificationManager", () => {
       });
       window.dispatchEvent(settingsEvent);
 
+      jest.clearAllMocks();
       const gameConfig: GameConfig = {
         gameMap: GameMapType.World,
         difficulty: Difficulty.Hard,
@@ -232,7 +233,7 @@ describe("LobbyNotificationManager", () => {
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+      expect((window as any).AudioContext).not.toHaveBeenCalled();
     });
   });
 
