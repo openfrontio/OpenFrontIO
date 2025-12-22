@@ -20,7 +20,7 @@ export class LobbyNotificationButton extends LitElement {
     return html`
       <button
         title="${translateText("lobby_notification_modal.title")}"
-        class="absolute top-0 left-[50px] md:top-[10px] md:left-[60px] border-none bg-none cursor-pointer text-2xl"
+        class="absolute top-0 left-[50px] md:top-[10px] md:left-[60px] border-none bg-transparent cursor-pointer text-2xl"
         @click=${this.openModal}
       >
         🔔
