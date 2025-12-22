@@ -285,7 +285,7 @@
     "Easy": "آرام",
     "Medium": "متعادل",
     "Hard": "شدید",
-    "Impossible": "غیر ممکن"
+    "impossible": "غیر ممکن"
   },
   "game_mode": {
     "ffa": "مبارزه آزاد",

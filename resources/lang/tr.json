@@ -253,7 +253,7 @@
     "Easy": "Rahat",
     "Medium": "Dengeli",
     "Hard": "Yoğun",
-    "Impossible": "İmkansız"
+    "impossible": "İmkansız"
   },
   "game_mode": {
     "ffa": "Herkes Tek",

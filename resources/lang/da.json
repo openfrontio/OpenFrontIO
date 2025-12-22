@@ -236,10 +236,10 @@
   },
   "difficulty": {
     "difficulty": "Sværhedsgrad",
-    "Relaxed": "Afslappet",
-    "Balanced": "Balanceret",
-    "Intense": "Intenst",
-    "Impossible": "Umulig"
+    "easy": "Afslappet",
+    "medium": "Balanceret",
+    "hard": "Intenst",
+    "impossible": "Umulig"
   },
   "game_mode": {
     "ffa": "Alle mod Alle",

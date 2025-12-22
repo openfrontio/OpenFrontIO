@@ -253,7 +253,7 @@
     "Easy": "Rento",
     "Medium": "Tasapainotettu",
     "Hard": "Vaikea",
-    "Impossible": "Mahdoton"
+    "impossible": "Mahdoton"
   },
   "game_mode": {
     "ffa": "Kaikki vastaan kaikki",

@@ -195,10 +195,10 @@
   },
   "difficulty": {
     "difficulty": "Obtížnost",
-    "Relaxed": "Relaxační",
-    "Balanced": "Vyvážená",
-    "Intense": "Intenzivní",
-    "Impossible": "Nemožná"
+    "easy": "Relaxační",
+    "medium": "Vyvážená",
+    "hard": "Intenzivní",
+    "impossible": "Nemožná"
   },
   "game_mode": {
     "ffa": "Všichni proti všem",

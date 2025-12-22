@@ -181,10 +181,10 @@
   },
   "difficulty": {
     "difficulty": "wawa",
-    "Relaxed": "lili",
-    "Balanced": "pona",
-    "Intense": "wawa",
-    "Impossible": "ken ala"
+    "easy": "lili",
+    "medium": "pona",
+    "hard": "wawa",
+    "impossible": "ken ala"
   },
   "game_mode": {
     "ffa": "kulupu ala",

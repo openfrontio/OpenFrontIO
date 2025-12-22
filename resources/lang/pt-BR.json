@@ -153,10 +153,10 @@
     "mode": "Modo"
   },
   "difficulty": {
-    "Relaxed": "Relaxado",
-    "Balanced": "Balanceado",
-    "Intense": "Intenso",
-    "Impossible": "Impossível",
+    "easy": "Relaxado",
+    "medium": "Balanceado",
+    "hard": "Intenso",
+    "impossible": "Impossível",
     "difficulty": "Dificuldade"
   },
   "game_starting_modal": {

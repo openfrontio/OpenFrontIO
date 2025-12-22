@@ -285,7 +285,7 @@
     "Easy": "Zrelaksowany",
     "Medium": "Zbalansowany",
     "Hard": "Intensywny",
-    "Impossible": "Niemożliwy"
+    "impossible": "Niemożliwy"
   },
   "game_mode": {
     "ffa": "Każdy na Każdego",

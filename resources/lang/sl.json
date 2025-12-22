@@ -256,7 +256,7 @@
     "Easy": "Sproščeno",
     "Medium": "Balansirano",
     "Hard": "Težko",
-    "Impossible": "Nemogoče"
+    "impossible": "Nemogoče"
   },
   "game_mode": {
     "ffa": "Vsi na vse",

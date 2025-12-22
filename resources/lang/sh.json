@@ -168,10 +168,10 @@
   },
   "difficulty": {
     "difficulty": "Težina",
-    "Relaxed": "Bleja",
-    "Balanced": "Fer",
-    "Intense": "Napeto",
-    "Impossible": "Nemoguće"
+    "easy": "Bleja",
+    "medium": "Fer",
+    "hard": "Napeto",
+    "impossible": "Nemoguće"
   },
   "game_mode": {
     "ffa": "Svako za sebe",

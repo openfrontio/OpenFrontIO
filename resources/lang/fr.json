@@ -255,8 +255,8 @@
     "difficulty": "Difficulté",
     "Easy": "Détendu",
     "Medium": "Équilibré",
-    "Hard": "Intense",
-    "Impossible": "Impossible"
+    "Hard": "hard",
+    "impossible": "impossible"
   },
   "game_mode": {
     "ffa": "Chacun pour soi",

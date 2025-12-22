@@ -231,10 +231,10 @@
   },
   "difficulty": {
     "difficulty": "Svårighetsgrad",
-    "Relaxed": "Avslappnat",
-    "Balanced": "Balanserat",
-    "Intense": "Intensivt",
-    "Impossible": "Omöjligt"
+    "easy": "Avslappnat",
+    "medium": "Balanserat",
+    "hard": "Intensivt",
+    "impossible": "Omöjligt"
   },
   "game_mode": {
     "ffa": "Alla mot alla",

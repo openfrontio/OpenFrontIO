@@ -285,7 +285,7 @@
     "Easy": "簡単",
     "Medium": "普通",
     "Hard": "難しい",
-    "Impossible": "不可能"
+    "impossible": "不可能"
   },
   "game_mode": {
     "ffa": "バトルロワイヤル",

@@ -285,7 +285,7 @@
     "Easy": "Ontspannen",
     "Medium": "Gebalanceerd",
     "Hard": "Intens",
-    "Impossible": "Onmogelijk"
+    "impossible": "Onmogelijk"
   },
   "game_mode": {
     "ffa": "Iedereen tegen elkaar (FFA)",

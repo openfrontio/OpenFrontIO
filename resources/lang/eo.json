@@ -256,7 +256,7 @@
     "Easy": "Senstreĉa",
     "Medium": "Ekvilibriga",
     "Hard": "Intensa",
-    "Impossible": "Neebla"
+    "impossible": "Neebla"
   },
   "game_mode": {
     "ffa": "Ĉiu por si",

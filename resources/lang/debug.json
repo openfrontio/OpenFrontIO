@@ -162,10 +162,10 @@
   },
   "difficulty": {
     "difficulty": "difficulty.difficulty",
-    "Relaxed": "difficulty.Relaxed",
-    "Balanced": "difficulty.Balanced",
-    "Intense": "difficulty.Intense",
-    "Impossible": "difficulty.Impossible"
+    "easy": "difficulty.easy",
+    "medium": "difficulty.medium",
+    "hard": "difficulty.hard",
+    "impossible": "difficulty.impossible"
   },
   "heads_up_message": {
     "choose_spawn": "heads_up_message.choose_spawn",

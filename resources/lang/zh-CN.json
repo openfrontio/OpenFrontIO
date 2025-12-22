@@ -285,7 +285,7 @@
     "Easy": "休闲",
     "Medium": "平衡",
     "Hard": "困难",
-    "Impossible": "地狱"
+    "impossible": "地狱"
   },
   "game_mode": {
     "ffa": "混战",
