@@ -50,7 +50,7 @@ export class PublicLobby extends LitElement {
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
       this.lobbies = await this.fetchLobbies();
-      
+
       // Emit event for LobbyNotificationManager to consume
       window.dispatchEvent(
         new CustomEvent("lobbies-updated", {

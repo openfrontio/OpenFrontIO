@@ -89,7 +89,10 @@ export class LobbyNotificationManager {
       if (gameCapacity > this.settings.teamMaxPlayers) return false;
 
       // Check team configuration
-      if (this.settings.selectedTeamCounts && this.settings.selectedTeamCounts.length > 0) {
+      if (
+        this.settings.selectedTeamCounts &&
+        this.settings.selectedTeamCounts.length > 0
+      ) {
         const playerTeams = config.playerTeams;
         const matchesTeamCount = this.settings.selectedTeamCounts.some(
           (selectedCount) => playerTeams === selectedCount,
