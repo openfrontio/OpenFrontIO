@@ -206,12 +206,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
