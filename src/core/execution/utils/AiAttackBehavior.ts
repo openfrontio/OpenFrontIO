@@ -72,49 +72,90 @@ export class AiAttackBehavior {
     // Maybe save up troops until we reach the trigger ratio
     if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return;
 
-    // Retaliate against incoming attacks (Most important!)
-    const incomingAttackPlayer = this.findIncomingAttackPlayer();
-    if (incomingAttackPlayer) {
-      this.sendAttack(incomingAttackPlayer, true);
-      return;
+    // Get attack strategies in priority order based on difficulty
+    const strategies = this.getAttackStrategies(
+      borderingFriends,
+      borderingEnemies,
+    );
+
+    for (const strategy of strategies) {
+      if (strategy()) return;
     }
+  }
 
-    // Attack bots
-    if (this.attackBots()) return;
+  private getAttackStrategies(
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ): Array<() => boolean> {
+    const { difficulty } = this.game.config().gameConfig();
 
-    // Maybe betray and attack
-    if (this.maybeBetrayAndAttack(borderingFriends)) return;
-
-    // Attack nuked territory
-    if (this.isBorderingNukedTerritory()) {
-      this.sendAttack(this.game.terraNullius());
-      return;
-    }
-
-    // Attack the most hated player with hostile relation
-    const mostHated = this.player.allRelationsSorted()[0];
-    if (
-      mostHated !== undefined &&
-      mostHated.relation === Relation.Hostile &&
-      this.player.isFriendly(mostHated.player) === false
-    ) {
-      this.sendAttack(mostHated.player);
-      return;
-    }
-
-    // Attack the weakest player
-    if (borderingEnemies.length > 0) {
-      this.sendAttack(borderingEnemies[0]);
-      return;
-    }
-
-    // If we don't have bordering enemies, attack someone on an island next to us
-    if (borderingEnemies.length === 0) {
-      const nearestIslandEnemy = this.findNearestIslandEnemy();
-      if (nearestIslandEnemy) {
-        this.sendAttack(nearestIslandEnemy);
-        return;
+    // Define all strategies as functions that return true if they attacked
+    const retaliate = (): boolean => {
+      const attacker = this.findIncomingAttackPlayer();
+      if (attacker) {
+        this.sendAttack(attacker, true);
+        return true;
       }
+      return false;
+    };
+
+    const bots = (): boolean => this.attackBots();
+
+    const betray = (): boolean => this.maybeBetrayAndAttack(borderingFriends);
+
+    const nuked = (): boolean => {
+      if (this.isBorderingNukedTerritory()) {
+        this.sendAttack(this.game.terraNullius());
+        return true;
+      }
+      return false;
+    };
+
+    const hated = (): boolean => {
+      const mostHated = this.player.allRelationsSorted()[0];
+      if (
+        mostHated !== undefined &&
+        mostHated.relation === Relation.Hostile &&
+        this.player.isFriendly(mostHated.player) === false
+      ) {
+        this.sendAttack(mostHated.player);
+        return true;
+      }
+      return false;
+    };
+
+    const weakest = (): boolean => {
+      if (borderingEnemies.length > 0) {
+        this.sendAttack(borderingEnemies[0]);
+        return true;
+      }
+      return false;
+    };
+
+    const island = (): boolean => {
+      if (borderingEnemies.length === 0) {
+        const enemy = this.findNearestIslandEnemy();
+        if (enemy) {
+          this.sendAttack(enemy);
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Return strategies in order based on difficulty
+    // Easy nations get the dumbest order, impossible nations get the smartest order
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return [nuked, bots, retaliate, betray, hated, weakest];
+      case Difficulty.Medium:
+        return [bots, nuked, retaliate, betray, hated, weakest, island];
+      case Difficulty.Hard:
+        return [bots, retaliate, betray, nuked, hated, weakest, island];
+      case Difficulty.Impossible:
+        return [retaliate, bots, betray, hated, nuked, weakest, island];
+      default:
+        assertNever(difficulty);
     }
   }
 
@@ -187,7 +228,7 @@ export class AiAttackBehavior {
 
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
   // sendAttack will do nothing if we don't have enough reserve troops left
-  attackBots(): boolean {
+  private attackBots(): boolean {
     const bots = this.player
       .neighbors()
       .filter(
@@ -216,15 +257,15 @@ export class AiAttackBehavior {
     return this.botAttackTroopsSent > 0;
   }
 
-  getBotAttackMaxParallelism(): number {
+  private getBotAttackMaxParallelism(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
         return 1;
       case Difficulty.Medium:
-        return 2;
+        return this.random.chance(2) ? 1 : 2;
       case Difficulty.Hard:
-        return 4;
+        return 3;
       // On impossible difficulty, attack as much bots as possible in parallel
       case Difficulty.Impossible: {
         return 100;
@@ -234,7 +275,7 @@ export class AiAttackBehavior {
     }
   }
 
-  maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
+  private maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
 
     if (borderingFriends.length > 0) {
@@ -248,7 +289,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  isBorderingNukedTerritory(): boolean {
+  private isBorderingNukedTerritory(): boolean {
     for (const tile of this.player.borderTiles()) {
       for (const neighbor of this.game.neighbors(tile)) {
         if (
@@ -263,7 +304,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  findNearestIslandEnemy(): Player | null {
+  private findNearestIslandEnemy(): Player | null {
     const myBorder = this.player.borderTiles();
     if (myBorder.size === 0) return null;
 
@@ -315,7 +356,7 @@ export class AiAttackBehavior {
     return null;
   }
 
-  getPlayerCenter(player: Player) {
+  private getPlayerCenter(player: Player) {
     if (player.largestClusterBoundingBox) {
       return boundingBoxCenter(player.largestClusterBoundingBox);
     }
@@ -391,8 +432,7 @@ export class AiAttackBehavior {
     }
   }
 
-  // Prevent attacking of humans on lower difficulties
-  private shouldAttack(other: Player | TerraNullius): boolean {
+  shouldAttack(other: Player | TerraNullius): boolean {
     // Always attack Terra Nullius, non-humans and traitors
     if (
       other.isPlayer() === false ||
@@ -402,6 +442,7 @@ export class AiAttackBehavior {
       return true;
     }
 
+    // Prevent attacking of humans on lower difficulties
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy && this.random.chance(2)) {
       return false;
@@ -412,7 +453,7 @@ export class AiAttackBehavior {
     return true;
   }
 
-  sendLandAttack(target: Player | TerraNullius) {
+  private sendLandAttack(target: Player | TerraNullius) {
     const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()
       ? this.reserveRatio
@@ -451,7 +492,7 @@ export class AiAttackBehavior {
     }
   }
 
-  sendBoatAttack(target: Player) {
+  private sendBoatAttack(target: Player) {
     const closest = closestTwoTiles(
       this.game,
       Array.from(this.player.borderTiles()).filter((t) =>
@@ -490,7 +531,7 @@ export class AiAttackBehavior {
     }
   }
 
-  calculateBotAttackTroops(target: Player, maxTroops: number): number {
+  private calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) {
       this.botAttackTroopsSent += maxTroops;
