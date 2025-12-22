@@ -251,14 +251,6 @@ export class DefaultConfig implements Config {
     return this._isReplay;
   }
 
-  samHittingChance(): number {
-    return 0.8;
-  }
-
-  samWarheadHittingChance(): number {
-    return 0.5;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.5;
   }
@@ -614,6 +606,9 @@ export class DefaultConfig implements Config {
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
+  }
+  minDistanceBetweenPlayers(): number {
+    return 30;
   }
 
   percentageTilesOwnedToWin(): number {
