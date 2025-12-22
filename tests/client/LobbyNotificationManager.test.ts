@@ -4,10 +4,10 @@
 import { LobbyNotificationManager } from "../../src/client/LobbyNotificationManager";
 import { GameConfig, GameInfo } from "../../src/core/Schemas";
 import {
-  GameMode,
-  GameMapType,
-  GameMapSize,
   Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
   GameType,
 } from "../../src/core/game/Game";
 
@@ -56,9 +56,9 @@ describe("LobbyNotificationManager", () => {
     };
 
     (window as any).AudioContext = jest.fn().mockReturnValue(mockAudioContext);
-    (window as any).webkitAudioContext = jest.fn().mockReturnValue(
-      mockAudioContext,
-    );
+    (window as any).webkitAudioContext = jest
+      .fn()
+      .mockReturnValue(mockAudioContext);
 
     jest.clearAllMocks();
     manager = new LobbyNotificationManager();
@@ -86,7 +86,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
 
       const newManager = new LobbyNotificationManager();
       expect(newManager).toBeDefined();
@@ -139,9 +142,12 @@ describe("LobbyNotificationManager", () => {
         selectedTeamCounts: [],
       };
 
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       const stored = localStorage.getItem("lobbyNotificationSettings");
-      const parsed = JSON.parse(stored || "{}");
+      const parsed = JSON.parse(stored ?? "{}");
 
       expect(parsed.ffaMinPlayers).toBe(5);
       expect(parsed.ffaEnabled).toBe(true);
@@ -160,7 +166,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager = new LobbyNotificationManager();
     });
 
@@ -189,10 +198,8 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      let notificationPlayed = false;
       const originalAudioContext = (window as any).AudioContext;
       (window as any).AudioContext = jest.fn().mockImplementation(() => {
-        notificationPlayed = true;
         return {
           createOscillator: jest.fn().mockReturnValue({
             connect: jest.fn().mockReturnThis(),
@@ -363,7 +370,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
 
       const settingsEvent = new CustomEvent("notification-settings-changed", {
         detail: settings,
@@ -414,7 +424,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: ["2", "3"],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager = new LobbyNotificationManager();
     });
 
@@ -561,7 +574,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -679,7 +695,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: ["2", "3"],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -731,7 +750,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: ["2", "3", "4"],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -792,7 +814,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -869,7 +894,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -941,7 +969,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -950,11 +981,9 @@ describe("LobbyNotificationManager", () => {
       });
       window.dispatchEvent(settingsEvent);
 
-      (window as any).AudioContext = jest
-        .fn()
-        .mockImplementation(() => {
-          throw new Error("AudioContext not supported");
-        });
+      (window as any).AudioContext = jest.fn().mockImplementation(() => {
+        throw new Error("AudioContext not supported");
+      });
 
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 
@@ -1004,7 +1033,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -1093,7 +1125,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -1205,7 +1240,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 
@@ -1288,10 +1326,7 @@ describe("LobbyNotificationManager", () => {
 
   describe("Cleanup and Destruction", () => {
     test("should remove event listeners on destroy", () => {
-      const removeEventListenerSpy = jest.spyOn(
-        window,
-        "removeEventListener",
-      );
+      const removeEventListenerSpy = jest.spyOn(window, "removeEventListener");
 
       manager.destroy();
 
@@ -1342,7 +1377,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
 
       const testManager = new LobbyNotificationManager();
 
@@ -1466,7 +1504,10 @@ describe("LobbyNotificationManager", () => {
         teamMaxPlayers: 100,
         selectedTeamCounts: [],
       };
-      localStorage.setItem("lobbyNotificationSettings", JSON.stringify(settings));
+      localStorage.setItem(
+        "lobbyNotificationSettings",
+        JSON.stringify(settings),
+      );
       manager.destroy();
       manager = new LobbyNotificationManager();
 

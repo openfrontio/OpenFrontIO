@@ -107,6 +107,16 @@ class Client {
   private lobbyNotificationModal: LobbyNotificationModal | null = null;
   private lobbyNotificationManager: LobbyNotificationManager | null = null;
 
+  // Event listener handlers (stored for cleanup)
+  private handleOpenNotificationModal = () => {
+    this.lobbyNotificationModal?.open();
+  };
+
+  private handleBeforeUnload = () => {
+    console.log("Browser is closing");
+    this.cleanup();
+  };
+
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
@@ -177,9 +187,10 @@ class Client {
 
     this.lobbyNotificationManager = new LobbyNotificationManager();
 
-    window.addEventListener("open-notification-modal", () => {
-      this.lobbyNotificationModal?.open();
-    });
+    window.addEventListener(
+      "open-notification-modal",
+      this.handleOpenNotificationModal,
+    );
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -190,12 +201,7 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
-      console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop();
-      }
-    });
+    window.addEventListener("beforeunload", this.handleBeforeUnload);
 
     const gutterAds = document.querySelector("gutter-ads");
     if (!(gutterAds instanceof GutterAds))
@@ -498,6 +504,21 @@ class Client {
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
+    }
+  }
+
+  private cleanup(): void {
+    // Remove event listeners
+    window.removeEventListener(
+      "open-notification-modal",
+      this.handleOpenNotificationModal,
+    );
+    window.removeEventListener("beforeunload", this.handleBeforeUnload);
+
+    // Destroy the LobbyNotificationManager
+    if (this.lobbyNotificationManager) {
+      this.lobbyNotificationManager.destroy();
+      this.lobbyNotificationManager = null;
     }
   }
 
