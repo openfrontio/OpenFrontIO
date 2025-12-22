@@ -9,6 +9,11 @@ export interface LobbyNotificationCriteria {
   teamCounts?: Array<string | number>;
 }
 
+// Team configuration options - extracted to a constant to reduce duplication and maintenance risk
+const FIXED_TEAM_MODES = ["Duos", "Trios", "Quads"] as const;
+const VARIABLE_TEAM_COUNTS = [2, 3, 4, 5, 6, 7] as const;
+const ALL_TEAM_OPTIONS = [...FIXED_TEAM_MODES, ...VARIABLE_TEAM_COUNTS];
+
 @customElement("lobby-notification-modal")
 export class LobbyNotificationModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -162,17 +167,7 @@ export class LobbyNotificationModal extends LitElement {
   }
 
   private selectAllTeams() {
-    this.selectedTeamCounts = new Set([
-      "Duos",
-      "Trios",
-      "Quads",
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-    ]);
+    this.selectedTeamCounts = new Set(ALL_TEAM_OPTIONS);
     this.requestUpdate();
     this.saveSettings();
   }
@@ -386,7 +381,7 @@ export class LobbyNotificationModal extends LitElement {
                             "lobby_notification_modal.fixed_modes",
                           )}
                         </div>
-                        ${["Duos", "Trios", "Quads"].map(
+                        ${FIXED_TEAM_MODES.map(
                           (mode) => html`
                             <label
                               class="flex items-center gap-2 cursor-pointer"
@@ -422,7 +417,7 @@ export class LobbyNotificationModal extends LitElement {
                             "lobby_notification_modal.variable_modes",
                           )}
                         </div>
-                        ${[2, 3, 4, 5, 6, 7].map(
+                        ${VARIABLE_TEAM_COUNTS.map(
                           (count) => html`
                             <label
                               class="flex items-center gap-2 cursor-pointer"
