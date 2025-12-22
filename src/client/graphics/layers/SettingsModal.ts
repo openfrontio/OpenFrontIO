@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import structureIcon from "../../../../resources/images/CityIconWhite.svg";
+import cursorPriceIcon from "../../../../resources/images/CursorPriceIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -149,6 +150,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+    this.requestUpdate();
+  }
+
+  private onToggleCursorCostLabelButtonClick() {
+    this.userSettings.toggleCursorCostLabel();
     this.requestUpdate();
   }
 
@@ -392,6 +398,31 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.structureSprites()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleCursorCostLabelButtonClick}"
+            >
+              <img
+                src=${cursorPriceIcon}
+                alt="cursorCostLabel"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.cursor_cost_label_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.cursor_cost_label_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.cursorCostLabel()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

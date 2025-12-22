@@ -9,12 +9,12 @@ import {
   PlayerID,
   PlayerType,
   Relation,
-  TerrainType,
   Tick,
   Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef, euclDistFN } from "../game/GameMap";
+import { canBuildTransportShip } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
@@ -51,7 +51,7 @@ export class NationExecution implements Execution {
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
-    gameID: GameID,
+    private gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
   ) {
     this.random = new PseudoRandom(
@@ -68,6 +68,12 @@ export class NationExecution implements Execution {
     this.mg = mg;
     if (this.random.chance(10)) {
       // this.isTraitor = true
+    }
+
+    if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
+      this.player = this.mg.addPlayer(this.nation.playerInfo);
+    } else {
+      this.player = this.mg.player(this.nation.playerInfo.id);
     }
   }
 
@@ -86,23 +92,15 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (this.mg.inSpawnPhase()) {
-      const rl = this.randomSpawnLand();
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-        return;
-      }
-      this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
+    if (this.player === null) {
       return;
     }
 
-    if (this.player === null) {
-      this.player =
-        this.mg.players().find((p) => p.id() === this.nation.playerInfo.id) ??
-        null;
-      if (this.player === null) {
-        return;
-      }
+    if (this.mg.inSpawnPhase()) {
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
+      );
+      return;
     }
 
     if (!this.player.isAlive()) {
@@ -162,31 +160,6 @@ export class NationExecution implements Execution {
     this.mirvBehavior.considerMIRV();
     this.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
-  }
-
-  randomSpawnLand(): TileRef | null {
-    const delta = 25;
-    let tries = 0;
-    while (tries < 50) {
-      tries++;
-      const cell = this.nation.spawnCell;
-      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
-      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
-      if (!this.mg.isValidCoord(x, y)) {
-        continue;
-      }
-      const tile = this.mg.ref(x, y);
-      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
-        if (
-          this.mg.terrainType(tile) === TerrainType.Mountain &&
-          this.random.chance(2)
-        ) {
-          continue;
-        }
-        return tile;
-      }
-    }
-    return null;
   }
 
   private updateRelationsFromEmbargos() {
@@ -467,6 +440,7 @@ export class NationExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
+    const unreachablePlayers = new Set<PlayerID>();
     for (let i = 0; i < 500; i++) {
       const randX = this.random.nextInt(x - 150, x + 150);
       const randY = this.random.nextInt(y - 150, y + 150);
@@ -481,6 +455,10 @@ export class NationExecution implements Execution {
       if (owner === this.player) {
         continue;
       }
+      // Skip players we already know are unreachable (Performance optimization)
+      if (owner.isPlayer() && unreachablePlayers.has(owner.id())) {
+        continue;
+      }
       // Don't send boats to players with which we share a border, that usually looks stupid
       if (owner.isPlayer() && borderingEnemies.includes(owner)) {
         continue;
@@ -489,17 +467,28 @@ export class NationExecution implements Execution {
       if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
         continue;
       }
-      // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+
+      let matchesCriteria = false;
       if (highInterestOnly) {
-        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
-          return randTile;
-        }
+        // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
       } else {
         // Normal targeting: return unowned tiles or tiles owned by non-friendly players
-        if (!owner.isPlayer() || !owner.isFriendly(this.player)) {
-          return randTile;
-        }
+        matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
       }
+      if (!matchesCriteria) {
+        continue;
+      }
+
+      // Validate that we can actually build a transport ship to this target
+      if (canBuildTransportShip(this.mg, this.player, randTile) === false) {
+        if (owner.isPlayer()) {
+          unreachablePlayers.add(owner.id());
+        }
+        continue;
+      }
+
+      return randTile;
     }
     return null;
   }

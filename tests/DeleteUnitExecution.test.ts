@@ -9,11 +9,13 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
 describe("DeleteUnitExecution Security Tests", () => {
   let game: Game;
+  const gameID: GameID = "game_id";
   let player: Player;
   let enemyPlayer: Player;
   let unit: Unit;
@@ -45,8 +47,16 @@ describe("DeleteUnitExecution Security Tests", () => {
     const enemySpawn: TileRef = game.ref(0, 15);
 
     game.addExecution(
-      new SpawnExecution(game.player(player1Info.id).info(), playerSpawn),
-      new SpawnExecution(game.player(player2Info.id).info(), enemySpawn),
+      new SpawnExecution(
+        gameID,
+        game.player(player1Info.id).info(),
+        playerSpawn,
+      ),
+      new SpawnExecution(
+        gameID,
+        game.player(player2Info.id).info(),
+        enemySpawn,
+      ),
     );
 
     while (game.inSpawnPhase()) {
