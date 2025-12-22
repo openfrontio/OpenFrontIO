@@ -26,6 +26,15 @@ export class HelpModal extends LitElement {
     super.disconnectedCallback();
   }
 
+  private isKeybindObject(v: unknown): v is { value: string } {
+    return (
+      typeof v === "object" &&
+      v !== null &&
+      "value" in v &&
+      typeof (v as any).value === "string"
+    );
+  }
+
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
@@ -42,9 +51,7 @@ export class HelpModal extends LitElement {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            if (v && typeof v === "object" && "value" in (v as any)) {
-              return [k, (v as any).value as string];
-            }
+            if (this.isKeybindObject(v)) return [k, v.value];
             if (typeof v === "string") return [k, v];
             return [k, undefined];
           })
