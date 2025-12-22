@@ -120,6 +120,7 @@ export class PublicLobby extends LitElement {
 
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
+    const isStarting = timeRemaining <= 2;
     const timeDisplay = renderDuration(timeRemaining);
 
     const teamCount =
@@ -176,10 +177,12 @@ export class PublicLobby extends LitElement {
           <div>
             <div class="text-lg md:text-2xl font-semibold">
               ${this.currLobby
-                ? html`Joining
-                  ${[0, 1, 2]
-                    .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
-                    .join("")}`
+                ? isStarting
+                  ? html`Starting game…`
+                  : html`Waiting for players
+                    ${[0, 1, 2]
+                      .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
+                      .join("")}`
                 : translateText("public_lobby.join")}
             </div>
             <div class="text-md font-medium text-white-400">
