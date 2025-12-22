@@ -181,9 +181,8 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>
-                  ${this.renderKey(keybinds.moveUp)} ${this.renderKey(
-                    keybinds.moveLeft,
-                  )}
+                  ${this.renderKey(keybinds.moveUp)}
+                  ${this.renderKey(keybinds.moveLeft)}
                   ${this.renderKey(keybinds.moveDown)}
                   ${this.renderKey(keybinds.moveRight)}
                 </td>
