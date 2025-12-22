@@ -508,9 +508,6 @@ class Client {
   }
 
   private cleanup(): void {
-    if (this.gameStop !== null) {
-      this.gameStop();
-    }
     // Remove event listeners
     window.removeEventListener(
       "open-notification-modal",
@@ -522,6 +519,12 @@ class Client {
     if (this.lobbyNotificationManager) {
       this.lobbyNotificationManager.destroy();
       this.lobbyNotificationManager = null;
+    }
+
+    // Stop any ongoing game
+    if (this.gameStop !== null) {
+      this.gameStop();
+      this.gameStop = null;
     }
   }
 
