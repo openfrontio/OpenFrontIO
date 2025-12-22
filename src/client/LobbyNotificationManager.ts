@@ -88,6 +88,7 @@ export class LobbyNotificationManager {
         Duos: 2,
         Trios: 3,
         Quads: 4,
+        "Humans Vs Nations": 1,
       };
 
       // Calculate players per team
