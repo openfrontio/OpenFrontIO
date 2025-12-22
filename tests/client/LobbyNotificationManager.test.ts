@@ -118,7 +118,34 @@ describe("LobbyNotificationManager", () => {
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      // Verify settings were applied by testing behavior
+      const gameConfig: GameConfig = {
+        gameMap: GameMapType.World,
+        difficulty: Difficulty.Hard,
+        donateGold: false,
+        donateTroops: false,
+        gameType: GameType.Private,
+        gameMode: GameMode.FFA,
+        gameMapSize: GameMapSize.Compact,
+        disableNations: false,
+        bots: 0,
+        infiniteGold: false,
+        infiniteTroops: false,
+        instantBuild: false,
+        randomSpawn: false,
+        maxPlayers: 10,
+      };
+
+      const lobbyEvent = new CustomEvent("lobbies-updated", {
+        detail: [{ gameID: "test-lobby", gameConfig, numClients: 5 }],
+      });
+
+      jest.clearAllMocks();
+      window.dispatchEvent(lobbyEvent);
+
+      // Should trigger notification since FFA is enabled in settings
+      expect((window as any).AudioContext).toHaveBeenCalled();
     });
 
     test("should persist settings to localStorage", () => {
