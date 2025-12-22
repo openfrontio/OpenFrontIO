@@ -418,7 +418,6 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
-    public readonly nationStrength?: number,
   ) {
     this.clan = getClanTag(name);
   }
@@ -551,7 +550,8 @@ export interface Player {
   markDisconnected(isDisconnected: boolean): void;
 
   hasSpawned(): boolean;
-  setHasSpawned(hasSpawned: boolean): void;
+  setSpawnTile(spawnTile: TileRef): void;
+  spawnTile(): TileRef | undefined;
 
   // Territory
   tiles(): ReadonlySet<TileRef>;

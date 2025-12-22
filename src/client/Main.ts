@@ -11,10 +11,10 @@ import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
-import { isFeatureEnabled, loadConfig } from "./Config";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import { isDevFeatureEnabled, loadDevConfig } from "./DevConfig";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
@@ -117,8 +117,8 @@ class Client {
   constructor() {}
 
   async initialize(): Promise<void> {
-    // Load configuration first
-    await loadConfig();
+    // Load dev config first to set up feature flags
+    await loadDevConfig();
 
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
@@ -345,11 +345,8 @@ class Client {
       }
     });
 
-    if (this.userSettings.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Apply theme mode (light/dark/system)
+    this.userSettings.applyTheme();
 
     // Attempt to join lobby
     this.handleHash();
@@ -705,11 +702,7 @@ function removeSnowflakes() {
   }
 }
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", async () => {
-  // Load configuration first
-  const { loadConfig } = await import("./Config");
-  await loadConfig();
-
+document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 
   // Initially enable snowflakes if not in-game
@@ -722,8 +715,8 @@ async function getTurnstileToken(): Promise<{
   createdAt: number;
 } | null> {
   // Skip Turnstile if cloudflare feature is disabled
-  if (!isFeatureEnabled("cloudflare")) {
-    console.log("Cloudflare/Turnstile disabled, skipping token fetch");
+  if (!isDevFeatureEnabled("cloudflare")) {
+    console.log("Cloudflare/Turnstile disabled via config, skipping");
     return null;
   }
 

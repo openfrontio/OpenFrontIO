@@ -307,7 +307,7 @@
     "left_click_menu": "Hiiren vasemman napin valikko",
     "left_click_opens_menu": "Hiiren vasen nappi avaa valikon",
     "right_click_opens_menu": "Hiiren oikea nappi avaa valikon",
-    "attack_ratio_label": "⚔️ Hyökkäyksen osuus",
+    "attack_ratio_label": "Hyökkäyksen osuus",
     "attack_ratio_desc": "Mikä osuus joukoistasi lähetetään hyökkäykseen (1–100%)",
     "troop_ratio_desc": "Säädä joukkojen (sotia varten) ja työntekijöiden (tekevät kultaa) määrää (1 - 100%)",
     "territory_patterns_label": "Aluekuviot",

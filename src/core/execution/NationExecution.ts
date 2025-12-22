@@ -9,7 +9,6 @@ import {
   PlayerID,
   PlayerType,
   Relation,
-  TerrainType,
   Tick,
   Unit,
   UnitType,
@@ -19,18 +18,21 @@ import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { MirvExecution } from "./MIRVExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
+import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
-import { calculateTerritoryCenter, closestTwoTiles } from "./Util";
+import { closestTwoTiles } from "./Util";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class NationExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
+  private emojiBehavior: NationEmojiBehavior | null = null;
+  private mirvBehavior: NationMIRVBehavior | null = null;
   private attackBehavior: AiAttackBehavior | null = null;
   private allianceBehavior: NationAllianceBehavior | null = null;
   private mg: Game;
@@ -43,7 +45,6 @@ export class NationExecution implements Execution {
   private expandRatio: number;
 
   private readonly lastNukeSent: [Tick, TileRef][] = [];
-  private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
   // Track our transport ships we currently own
@@ -51,28 +52,8 @@ export class NationExecution implements Execution {
   // Track our trade ships we currently own
   private trackedTradeShips: Set<Unit> = new Set();
 
-  /** MIRV Strategy Constants */
-
-  /** Ticks until MIRV can be attempted again */
-  private static readonly MIRV_COOLDOWN_TICKS = 20;
-
-  /** Odds of aborting a MIRV attempt */
-  private static readonly MIRV_HESITATION_ODDS = 7;
-
-  /** Threshold for team victory denial */
-  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8;
-
-  /** Threshold for individual victory denial */
-  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.65;
-
-  /** Multiplier for steamroll city gap threshold */
-  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.3;
-
-  /** Minimum city count for leader to trigger steam roll detection */
-  private static readonly STEAMROLL_MIN_LEADER_CITIES = 10;
-
   constructor(
-    gameID: GameID,
+    private gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
   ) {
     this.random = new PseudoRandom(
@@ -89,6 +70,154 @@ export class NationExecution implements Execution {
     this.mg = mg;
     if (this.random.chance(10)) {
       // this.isTraitor = true
+    }
+
+    if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
+      this.player = this.mg.addPlayer(this.nation.playerInfo);
+    } else {
+      this.player = this.mg.player(this.nation.playerInfo.id);
+    }
+  }
+
+  tick(ticks: number) {
+    // Ship tracking
+    if (
+      this.player !== null &&
+      this.player.isAlive() &&
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
+      this.trackTransportShipsAndRetaliate();
+      this.trackTradeShipsAndRetaliate();
+    }
+
+    if (ticks % this.attackRate !== this.attackTick) {
+      return;
+    }
+
+    if (this.player === null) {
+      return;
+    }
+
+    if (this.mg.inSpawnPhase()) {
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
+      );
+      return;
+    }
+
+    if (!this.player.isAlive()) {
+      this.active = false;
+      return;
+    }
+
+    if (
+      this.mirvBehavior === null ||
+      this.attackBehavior === null ||
+      this.allianceBehavior === null
+    ) {
+      // Player is unavailable during init()
+      this.emojiBehavior = new NationEmojiBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
+      this.mirvBehavior = new NationMIRVBehavior(
+        this.random,
+        this.mg,
+        this.player,
+        this.emojiBehavior,
+      );
+      this.allianceBehavior = new NationAllianceBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
+      this.attackBehavior = new AiAttackBehavior(
+        this.random,
+        this.mg,
+        this.player,
+        this.triggerRatio,
+        this.reserveRatio,
+        this.expandRatio,
+        this.allianceBehavior,
+        this.emojiBehavior,
+      );
+
+      // Send an attack on the first tick
+      this.attackBehavior.forceSendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    this.updateRelationsFromEmbargos();
+    this.allianceBehavior.handleAllianceRequests();
+    this.allianceBehavior.handleAllianceExtensionRequests();
+    this.handleUnits();
+    this.handleEmbargoesToHostileNations();
+    this.mirvBehavior.considerMIRV();
+    this.maybeAttack();
+  }
+
+  // Send out a warship if our transport ship got captured
+  private trackTransportShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned transport ships to our tracking set
+    this.player
+      .units(UnitType.TransportShip)
+      .forEach((u) => this.trackedTransportShips.add(u));
+
+    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
+    for (const ship of Array.from(this.trackedTransportShips)) {
+      if (!ship.isActive()) {
+        // Distinguish between arrival/retreat and enemy destruction
+        if (ship.wasDestroyedByEnemy()) {
+          this.maybeRetaliateWithWarship(ship.tile());
+        }
+        this.trackedTransportShips.delete(ship);
+      }
+    }
+  }
+
+  // Send out a warship if our trade ship got captured
+  private trackTradeShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned trade ships to our tracking map
+    this.player
+      .units(UnitType.TradeShip)
+      .forEach((u) => this.trackedTradeShips.add(u));
+
+    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
+    for (const ship of Array.from(this.trackedTradeShips)) {
+      if (!ship.isActive()) {
+        this.trackedTradeShips.delete(ship);
+        continue;
+      }
+      if (ship.owner().id() !== this.player.id()) {
+        // Ship was ours and is now owned by someone else -> captured
+        this.maybeRetaliateWithWarship(ship.tile());
+        this.trackedTradeShips.delete(ship);
+      }
+    }
+  }
+
+  private maybeRetaliateWithWarship(tile: TileRef): void {
+    if (this.player === null) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
+    if (
+      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+    ) {
+      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      if (canBuild === false) {
+        return;
+      }
+      this.mg.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, tile),
+      );
     }
   }
 
@@ -113,284 +242,6 @@ export class NationExecution implements Execution {
         this.embargoMalusApplied.delete(other.id());
       }
     });
-  }
-
-  private handleEmbargoesToHostileNations() {
-    const player = this.player;
-    if (player === null) return;
-    const others = this.mg.players().filter((p) => p.id() !== player.id());
-
-    others.forEach((other: Player) => {
-      /* When player is hostile starts embargo. Do not stop until neutral again */
-      if (
-        player.relation(other) <= Relation.Hostile &&
-        !player.hasEmbargoAgainst(other) &&
-        !player.isOnSameTeam(other)
-      ) {
-        player.addEmbargo(other, false);
-      } else if (
-        player.relation(other) >= Relation.Neutral &&
-        player.hasEmbargoAgainst(other)
-      ) {
-        player.stopEmbargo(other);
-      }
-    });
-  }
-
-  tick(ticks: number) {
-    // Ship tracking
-    if (
-      this.player !== null &&
-      this.player.isAlive() &&
-      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
-    ) {
-      this.trackTransportShipsAndRetaliate();
-      this.trackTradeShipsAndRetaliate();
-    }
-
-    if (ticks % this.attackRate !== this.attackTick) {
-      return;
-    }
-
-    if (this.mg.inSpawnPhase()) {
-      const rl = this.randomSpawnLand();
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-        return;
-      }
-      this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
-      return;
-    }
-
-    if (this.player === null) {
-      this.player =
-        this.mg.players().find((p) => p.id() === this.nation.playerInfo.id) ??
-        null;
-      if (this.player === null) {
-        return;
-      }
-    }
-
-    if (!this.player.isAlive()) {
-      this.active = false;
-      return;
-    }
-
-    if (this.attackBehavior === null || this.allianceBehavior === null) {
-      // Player is unavailable during init()
-      this.attackBehavior = new AiAttackBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.triggerRatio,
-        this.reserveRatio,
-        this.expandRatio,
-      );
-      this.allianceBehavior = new NationAllianceBehavior(
-        this.random,
-        this.mg,
-        this.player,
-      );
-
-      // Send an attack on the first tick
-      this.attackBehavior.forceSendAttack(this.mg.terraNullius());
-      return;
-    }
-
-    this.updateRelationsFromEmbargos();
-    this.allianceBehavior.handleAllianceRequests();
-    this.allianceBehavior.handleAllianceExtensionRequests();
-    this.handleUnits();
-    this.handleEmbargoesToHostileNations();
-    this.considerMIRV();
-    this.maybeAttack();
-  }
-
-  private maybeAttack() {
-    if (
-      this.player === null ||
-      this.attackBehavior === null ||
-      this.allianceBehavior === null
-    ) {
-      throw new Error("not initialized");
-    }
-
-    const border = Array.from(this.player.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
-      .filter(
-        (t) =>
-          this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
-      );
-    const borderingPlayers = [
-      ...new Set(
-        border
-          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
-          .filter((o): o is Player => o.isPlayer()),
-      ),
-    ].sort((a, b) => a.troops() - b.troops());
-    const borderingFriends = borderingPlayers.filter(
-      (o) => this.player?.isFriendly(o) === true,
-    );
-    const borderingEnemies = borderingPlayers.filter(
-      (o) => this.player?.isFriendly(o) === false,
-    );
-
-    // Attack TerraNullius but not nuked territory
-    const hasNonNukedTerraNullius = border.some(
-      (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
-    );
-    if (hasNonNukedTerraNullius) {
-      this.attackBehavior.sendAttack(this.mg.terraNullius());
-      return;
-    }
-
-    if (borderingEnemies.length === 0) {
-      if (this.random.chance(5)) {
-        this.sendBoatRandomly();
-      }
-    } else {
-      if (this.random.chance(10)) {
-        this.sendBoatRandomly(borderingEnemies);
-        return;
-      }
-
-      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
-    }
-
-    this.attackBehavior.assistAllies();
-
-    this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-
-    this.maybeSendNuke(
-      this.attackBehavior.findBestNukeTarget(borderingEnemies),
-    );
-  }
-
-  private maybeSendNuke(other: Player | null) {
-    if (this.player === null) throw new Error("not initialized");
-    const silos = this.player.units(UnitType.MissileSilo);
-    if (
-      silos.length === 0 ||
-      this.player.gold() < this.cost(UnitType.AtomBomb) ||
-      other === null ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
-      this.player.isOnSameTeam(other)
-    ) {
-      return;
-    }
-
-    const nukeType =
-      this.player.gold() > this.cost(UnitType.HydrogenBomb)
-        ? UnitType.HydrogenBomb
-        : UnitType.AtomBomb;
-    const range = nukeType === UnitType.HydrogenBomb ? 60 : 15;
-
-    const structures = other.units(
-      UnitType.City,
-      UnitType.DefensePost,
-      UnitType.MissileSilo,
-      UnitType.Port,
-      UnitType.SAMLauncher,
-    );
-    const structureTiles = structures.map((u) => u.tile());
-    const randomTiles = this.randTerritoryTileArray(10);
-    const allTiles = randomTiles.concat(structureTiles);
-
-    let bestTile: TileRef | null = null;
-    let bestValue = 0;
-    this.removeOldNukeEvents();
-    outer: for (const tile of new Set(allTiles)) {
-      if (tile === null) continue;
-      const boundingBox = boundingBoxTiles(this.mg, tile, range)
-        // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
-      for (const t of boundingBox) {
-        // Make sure we nuke away from the border
-        if (this.mg.owner(t) !== other) {
-          continue outer;
-        }
-      }
-      if (!this.player.canBuild(nukeType, tile)) continue;
-      const value = this.nukeTileScore(tile, silos, structures);
-      if (value > bestValue) {
-        bestTile = tile;
-        bestValue = value;
-      }
-    }
-    if (bestTile !== null) {
-      this.sendNuke(bestTile, nukeType, other);
-    }
-  }
-
-  private removeOldNukeEvents() {
-    const maxAge = 500;
-    const tick = this.mg.ticks();
-    while (
-      this.lastNukeSent.length > 0 &&
-      this.lastNukeSent[0][0] + maxAge < tick
-    ) {
-      this.lastNukeSent.shift();
-    }
-  }
-
-  private sendNuke(
-    tile: TileRef,
-    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
-    targetPlayer: Player,
-  ) {
-    if (this.player === null) throw new Error("not initialized");
-    const tick = this.mg.ticks();
-    this.lastNukeSent.push([tick, tile]);
-    this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
-    this.attackBehavior?.maybeSendEmoji(targetPlayer);
-  }
-
-  private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
-    // Potential damage in a 25-tile radius
-    const dist = euclDistFN(tile, 25, false);
-    let tileValue = targets
-      .filter((unit) => dist(this.mg, unit.tile()))
-      .map((unit): number => {
-        switch (unit.type()) {
-          case UnitType.City:
-            return 25_000;
-          case UnitType.DefensePost:
-            return 5_000;
-          case UnitType.MissileSilo:
-            return 50_000;
-          case UnitType.Port:
-            return 10_000;
-          default:
-            return 0;
-        }
-      })
-      .reduce((prev, cur) => prev + cur, 0);
-
-    // Avoid areas defended by SAM launchers
-    const dist50 = euclDistFN(tile, 50, false);
-    tileValue -=
-      50_000 *
-      targets.filter(
-        (unit) =>
-          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
-      ).length;
-
-    // Prefer tiles that are closer to a silo
-    const siloTiles = silos.map((u) => u.tile());
-    const result = closestTwoTiles(this.mg, siloTiles, [tile]);
-    if (result === null) throw new Error("Missing result");
-    const { x: closestSilo } = result;
-    const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
-    const distanceToClosestSilo = Math.sqrt(distanceSquared);
-    tileValue -= distanceToClosestSilo * 30;
-
-    // Don't target near recent targets
-    tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist(this.mg, tile))
-      .map((_) => 1_000_000)
-      .reduce((prev, cur) => prev + cur, 0);
-
-    return tileValue;
   }
 
   private handleUnits() {
@@ -503,41 +354,6 @@ export class NationExecution implements Execution {
     return false;
   }
 
-  private randTerritoryTileArray(numTiles: number): TileRef[] {
-    const boundingBox = calculateBoundingBox(
-      this.mg,
-      this.player!.borderTiles(),
-    );
-    const tiles: TileRef[] = [];
-    for (let i = 0; i < numTiles; i++) {
-      const tile = this.randTerritoryTile(this.player!, boundingBox);
-      if (tile !== null) {
-        tiles.push(tile);
-      }
-    }
-    return tiles;
-  }
-
-  private randTerritoryTile(
-    p: Player,
-    boundingBox: { min: Cell; max: Cell } | null = null,
-  ): TileRef | null {
-    boundingBox ??= calculateBoundingBox(this.mg, p.borderTiles());
-    for (let i = 0; i < 100; i++) {
-      const randX = this.random.nextInt(boundingBox.min.x, boundingBox.max.x);
-      const randY = this.random.nextInt(boundingBox.min.y, boundingBox.max.y);
-      if (!this.mg.isOnMap(new Cell(randX, randY))) {
-        // Sanity check should never happen
-        continue;
-      }
-      const randTile = this.mg.ref(randX, randY);
-      if (this.mg.owner(randTile) === p) {
-        return randTile;
-      }
-    }
-    return null;
-  }
-
   private warshipSpawnTile(portTile: TileRef): TileRef | null {
     const radius = 250;
     for (let attempts = 0; attempts < 50; attempts++) {
@@ -562,9 +378,86 @@ export class NationExecution implements Execution {
     return null;
   }
 
-  private cost(type: UnitType): Gold {
-    if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.mg, this.player);
+  private handleEmbargoesToHostileNations() {
+    const player = this.player;
+    if (player === null) return;
+    const others = this.mg.players().filter((p) => p.id() !== player.id());
+
+    others.forEach((other: Player) => {
+      /* When player is hostile starts embargo. Do not stop until neutral again */
+      if (
+        player.relation(other) <= Relation.Hostile &&
+        !player.hasEmbargoAgainst(other) &&
+        !player.isOnSameTeam(other)
+      ) {
+        player.addEmbargo(other, false);
+      } else if (
+        player.relation(other) >= Relation.Neutral &&
+        player.hasEmbargoAgainst(other)
+      ) {
+        player.stopEmbargo(other);
+      }
+    });
+  }
+
+  private maybeAttack() {
+    if (
+      this.player === null ||
+      this.attackBehavior === null ||
+      this.allianceBehavior === null
+    ) {
+      throw new Error("not initialized");
+    }
+
+    const border = Array.from(this.player.borderTiles())
+      .flatMap((t) => this.mg.neighbors(t))
+      .filter(
+        (t) =>
+          this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
+      );
+    const borderingPlayers = [
+      ...new Set(
+        border
+          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
+    const borderingFriends = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === true,
+    );
+    const borderingEnemies = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === false,
+    );
+
+    // Attack TerraNullius but not nuked territory
+    const hasNonNukedTerraNullius = border.some(
+      (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
+    );
+    if (hasNonNukedTerraNullius) {
+      this.attackBehavior.sendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    if (borderingEnemies.length === 0) {
+      if (this.random.chance(5)) {
+        this.sendBoatRandomly();
+      }
+    } else {
+      if (this.random.chance(10)) {
+        this.sendBoatRandomly(borderingEnemies);
+        return;
+      }
+
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
+    }
+
+    this.attackBehavior.assistAllies();
+
+    this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
+
+    this.maybeSendNuke(
+      this.attackBehavior.findBestNukeTarget(borderingEnemies),
+    );
   }
 
   sendBoatRandomly(borderingEnemies: Player[] = []) {
@@ -598,31 +491,6 @@ export class NationExecution implements Execution {
       ),
     );
     return;
-  }
-
-  randomSpawnLand(): TileRef | null {
-    const delta = 25;
-    let tries = 0;
-    while (tries < 50) {
-      tries++;
-      const cell = this.nation.spawnCell;
-      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
-      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
-      if (!this.mg.isValidCoord(x, y)) {
-        continue;
-      }
-      const tile = this.mg.ref(x, y);
-      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
-        if (
-          this.mg.terrainType(tile) === TerrainType.Mountain &&
-          this.random.chance(2)
-        ) {
-          continue;
-        }
-        return tile;
-      }
-    }
-    return null;
   }
 
   private randomBoatTarget(
@@ -670,288 +538,176 @@ export class NationExecution implements Execution {
     return null;
   }
 
-  // MIRV Strategy Methods
-  private considerMIRV(): boolean {
+  private maybeSendNuke(other: Player | null) {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.units(UnitType.MissileSilo).length === 0) {
-      return false;
-    }
-    if (this.player.gold() < this.cost(UnitType.MIRV)) {
-      return false;
-    }
-
-    this.removeOldMIRVEvents();
-    if (this.lastMIRVSent.length > 0) {
-      return false;
-    }
-
-    if (this.random.chance(NationExecution.MIRV_HESITATION_ODDS)) {
-      this.triggerMIRVCooldown();
-      return false;
+    const silos = this.player.units(UnitType.MissileSilo);
+    if (
+      silos.length === 0 ||
+      this.player.gold() < this.cost(UnitType.AtomBomb) ||
+      other === null ||
+      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
+      this.player.isOnSameTeam(other)
+    ) {
+      return;
     }
 
-    const inboundMIRVSender = this.selectCounterMirvTarget();
-    if (inboundMIRVSender) {
-      this.maybeSendMIRV(inboundMIRVSender);
-      return true;
-    }
+    const nukeType =
+      this.player.gold() > this.cost(UnitType.HydrogenBomb)
+        ? UnitType.HydrogenBomb
+        : UnitType.AtomBomb;
+    const range = nukeType === UnitType.HydrogenBomb ? 60 : 15;
 
-    const victoryDenialTarget = this.selectVictoryDenialTarget();
-    if (victoryDenialTarget) {
-      this.maybeSendMIRV(victoryDenialTarget);
-      return true;
-    }
-
-    const steamrollStopTarget = this.selectSteamrollStopTarget();
-    if (steamrollStopTarget) {
-      this.maybeSendMIRV(steamrollStopTarget);
-      return true;
-    }
-
-    return false;
-  }
-
-  private selectCounterMirvTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
-      this.isInboundMIRVFrom(p),
+    const structures = other.units(
+      UnitType.City,
+      UnitType.DefensePost,
+      UnitType.MissileSilo,
+      UnitType.Port,
+      UnitType.SAMLauncher,
     );
-    if (attackers.length === 0) return null;
-    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-    return attackers[0];
-  }
+    const structureTiles = structures.map((u) => u.tile());
+    const randomTiles = this.randTerritoryTileArray(10);
+    const allTiles = randomTiles.concat(structureTiles);
 
-  private selectVictoryDenialTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const totalLand = this.mg.numLandTiles();
-    if (totalLand === 0) return null;
-    let best: { p: Player; severity: number } | null = null;
-    for (const p of this.getValidMirvTargetPlayers()) {
-      let severity = 0;
-      const team = p.team();
-      if (team !== null) {
-        const teamMembers = this.mg
-          .players()
-          .filter((x) => x.team() === team && x.isPlayer());
-        const teamTerritory = teamMembers
-          .map((x) => x.numTilesOwned())
-          .reduce((a, b) => a + b, 0);
-        const teamShare = teamTerritory / totalLand;
-        if (teamShare >= NationExecution.VICTORY_DENIAL_TEAM_THRESHOLD) {
-          // Only consider the largest team member as the target when team exceeds threshold
-          let largestMember: Player | null = null;
-          let largestTiles = -1;
-          for (const member of teamMembers) {
-            const tiles = member.numTilesOwned();
-            if (tiles > largestTiles) {
-              largestTiles = tiles;
-              largestMember = member;
-            }
-          }
-          if (largestMember === p) {
-            severity = teamShare;
-          } else {
-            severity = 0; // Skip non-largest members
-          }
+    let bestTile: TileRef | null = null;
+    let bestValue = 0;
+    this.removeOldNukeEvents();
+    outer: for (const tile of new Set(allTiles)) {
+      if (tile === null) continue;
+      const boundingBox = boundingBoxTiles(this.mg, tile, range)
+        // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
+        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
+      for (const t of boundingBox) {
+        // Make sure we nuke away from the border
+        if (this.mg.owner(t) !== other) {
+          continue outer;
         }
-      } else {
-        const share = p.numTilesOwned() / totalLand;
-        if (share >= NationExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
-          severity = share;
       }
-      if (severity > 0) {
-        if (best === null || severity > best.severity) best = { p, severity };
+      if (!this.player.canBuild(nukeType, tile)) continue;
+      const value = this.nukeTileScore(tile, silos, structures);
+      if (value > bestValue) {
+        bestTile = tile;
+        bestValue = value;
       }
     }
-    return best ? best.p : null;
+    if (bestTile !== null) {
+      this.sendNuke(bestTile, nukeType, other);
+    }
   }
 
-  private selectSteamrollStopTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const validTargets = this.getValidMirvTargetPlayers();
-
-    if (validTargets.length === 0) return null;
-
-    const allPlayers = this.mg
-      .players()
-      .filter((p) => p.isPlayer())
-      .map((p) => ({ p, cityCount: this.countCities(p) }))
-      .sort((a, b) => b.cityCount - a.cityCount);
-
-    if (allPlayers.length < 2) return null;
-
-    const topPlayer = allPlayers[0];
-
-    if (topPlayer.cityCount <= NationExecution.STEAMROLL_MIN_LEADER_CITIES)
-      return null;
-
-    const secondHighest = allPlayers[1].cityCount;
-
-    const threshold =
-      secondHighest * NationExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
-
-    if (topPlayer.cityCount >= threshold) {
-      return validTargets.some((p) => p === topPlayer.p) ? topPlayer.p : null;
+  private removeOldNukeEvents() {
+    const maxAge = 500;
+    const tick = this.mg.ticks();
+    while (
+      this.lastNukeSent.length > 0 &&
+      this.lastNukeSent[0][0] + maxAge < tick
+    ) {
+      this.lastNukeSent.shift();
     }
+  }
 
+  private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
+    // Potential damage in a 25-tile radius
+    const dist = euclDistFN(tile, 25, false);
+    let tileValue = targets
+      .filter((unit) => dist(this.mg, unit.tile()))
+      .map((unit): number => {
+        switch (unit.type()) {
+          case UnitType.City:
+            return 25_000;
+          case UnitType.DefensePost:
+            return 5_000;
+          case UnitType.MissileSilo:
+            return 50_000;
+          case UnitType.Port:
+            return 10_000;
+          default:
+            return 0;
+        }
+      })
+      .reduce((prev, cur) => prev + cur, 0);
+
+    // Avoid areas defended by SAM launchers
+    const dist50 = euclDistFN(tile, 50, false);
+    tileValue -=
+      50_000 *
+      targets.filter(
+        (unit) =>
+          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+      ).length;
+
+    // Prefer tiles that are closer to a silo
+    const siloTiles = silos.map((u) => u.tile());
+    const result = closestTwoTiles(this.mg, siloTiles, [tile]);
+    if (result === null) throw new Error("Missing result");
+    const { x: closestSilo } = result;
+    const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
+    const distanceToClosestSilo = Math.sqrt(distanceSquared);
+    tileValue -= distanceToClosestSilo * 30;
+
+    // Don't target near recent targets
+    tileValue -= this.lastNukeSent
+      .filter(([_tick, tile]) => dist(this.mg, tile))
+      .map((_) => 1_000_000)
+      .reduce((prev, cur) => prev + cur, 0);
+
+    return tileValue;
+  }
+
+  private sendNuke(
+    tile: TileRef,
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+    targetPlayer: Player,
+  ) {
+    if (
+      this.player === null ||
+      this.attackBehavior === null ||
+      this.emojiBehavior === null
+    )
+      throw new Error("not initialized");
+    const tick = this.mg.ticks();
+    this.lastNukeSent.push([tick, tile]);
+    this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
+    this.emojiBehavior.maybeSendHeckleEmoji(targetPlayer);
+  }
+
+  private randTerritoryTileArray(numTiles: number): TileRef[] {
+    const boundingBox = calculateBoundingBox(
+      this.mg,
+      this.player!.borderTiles(),
+    );
+    const tiles: TileRef[] = [];
+    for (let i = 0; i < numTiles; i++) {
+      const tile = this.randTerritoryTile(this.player!, boundingBox);
+      if (tile !== null) {
+        tiles.push(tile);
+      }
+    }
+    return tiles;
+  }
+
+  private randTerritoryTile(
+    p: Player,
+    boundingBox: { min: Cell; max: Cell } | null = null,
+  ): TileRef | null {
+    boundingBox ??= calculateBoundingBox(this.mg, p.borderTiles());
+    for (let i = 0; i < 100; i++) {
+      const randX = this.random.nextInt(boundingBox.min.x, boundingBox.max.x);
+      const randY = this.random.nextInt(boundingBox.min.y, boundingBox.max.y);
+      if (!this.mg.isOnMap(new Cell(randX, randY))) {
+        // Sanity check should never happen
+        continue;
+      }
+      const randTile = this.mg.ref(randX, randY);
+      if (this.mg.owner(randTile) === p) {
+        return randTile;
+      }
+    }
     return null;
   }
 
-  // MIRV Helper Methods
-  private mirvTargetsCache: {
-    tick: number;
-    players: Player[];
-  } | null = null;
-
-  private getValidMirvTargetPlayers(): Player[] {
-    const MIRV_TARGETS_CACHE_TICKS = 2 * 10; // 2 seconds
+  private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
-
-    if (
-      this.mirvTargetsCache &&
-      this.mg.ticks() - this.mirvTargetsCache.tick < MIRV_TARGETS_CACHE_TICKS
-    ) {
-      return this.mirvTargetsCache.players;
-    }
-
-    const players = this.mg.players().filter((p) => {
-      return (
-        p !== this.player &&
-        p.isPlayer() &&
-        p.type() !== PlayerType.Bot &&
-        !this.player!.isOnSameTeam(p)
-      );
-    });
-
-    this.mirvTargetsCache = { tick: this.mg.ticks(), players };
-    return players;
-  }
-
-  private isInboundMIRVFrom(attacker: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    const enemyMirvs = attacker.units(UnitType.MIRV);
-    for (const mirv of enemyMirvs) {
-      const dst = mirv.targetTile();
-      if (!dst) continue;
-      if (!this.mg.hasOwner(dst)) continue;
-      const owner = this.mg.owner(dst);
-      if (owner === this.player) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private countCities(p: Player): number {
-    return p.unitCount(UnitType.City);
-  }
-
-  private calculateTerritoryCenter(target: Player): TileRef | null {
-    return calculateTerritoryCenter(this.mg, target);
-  }
-
-  // MIRV Execution Methods
-  private maybeSendMIRV(enemy: Player): void {
-    if (this.player === null) throw new Error("not initialized");
-
-    this.attackBehavior?.maybeSendEmoji(enemy);
-
-    const centerTile = this.calculateTerritoryCenter(enemy);
-    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
-      this.sendMIRV(centerTile);
-      return;
-    }
-  }
-
-  private sendMIRV(tile: TileRef): void {
-    if (this.player === null) throw new Error("not initialized");
-    this.triggerMIRVCooldown(tile);
-    this.mg.addExecution(new MirvExecution(this.player, tile));
-  }
-
-  private triggerMIRVCooldown(tile?: TileRef): void {
-    if (this.player === null) throw new Error("not initialized");
-    this.removeOldMIRVEvents();
-    const tick = this.mg.ticks();
-    // Use provided tile or any tile from player's territory for cooldown tracking
-    const cooldownTile =
-      tile ?? Array.from(this.player.tiles())[0] ?? this.mg.ref(0, 0);
-    this.lastMIRVSent.push([tick, cooldownTile]);
-  }
-
-  private removeOldMIRVEvents() {
-    const maxAge = NationExecution.MIRV_COOLDOWN_TICKS;
-    const tick = this.mg.ticks();
-    while (
-      this.lastMIRVSent.length > 0 &&
-      this.lastMIRVSent[0][0] + maxAge <= tick
-    ) {
-      this.lastMIRVSent.shift();
-    }
-  }
-
-  // Send out a warship if our transport ship got captured
-  private trackTransportShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned transport ships to our tracking set
-    this.player
-      .units(UnitType.TransportShip)
-      .forEach((u) => this.trackedTransportShips.add(u));
-
-    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
-    for (const ship of Array.from(this.trackedTransportShips)) {
-      if (!ship.isActive()) {
-        // Distinguish between arrival/retreat and enemy destruction
-        if (ship.wasDestroyedByEnemy()) {
-          this.maybeRetaliateWithWarship(ship.tile());
-        }
-        this.trackedTransportShips.delete(ship);
-      }
-    }
-  }
-
-  // Send out a warship if our trade ship got captured
-  private trackTradeShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned trade ships to our tracking map
-    this.player
-      .units(UnitType.TradeShip)
-      .forEach((u) => this.trackedTradeShips.add(u));
-
-    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
-    for (const ship of Array.from(this.trackedTradeShips)) {
-      if (!ship.isActive()) {
-        this.trackedTradeShips.delete(ship);
-        continue;
-      }
-      if (ship.owner().id() !== this.player.id()) {
-        // Ship was ours and is now owned by someone else -> captured
-        this.maybeRetaliateWithWarship(ship.tile());
-        this.trackedTradeShips.delete(ship);
-      }
-    }
-  }
-
-  private maybeRetaliateWithWarship(tile: TileRef): void {
-    if (this.player === null) return;
-
-    const { difficulty } = this.mg.config().gameConfig();
-    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
-    if (
-      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
-      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
-      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
-    ) {
-      const canBuild = this.player.canBuild(UnitType.Warship, tile);
-      if (canBuild === false) {
-        return;
-      }
-      this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, tile),
-      );
-    }
+    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
   isActive(): boolean {

@@ -296,7 +296,7 @@
     "attack_ratio_label": "Rácio de ataque",
     "attack_ratio_desc": "Qual a percentagem de tropas para enviar num ataque (1–100%)",
     "troop_ratio_desc": "Ajuste o equilíbrio entre tropas (para combate) e trabalhadores (para produção de ouro) (1–100%)",
-    "territory_patterns_label": "🏳️ Padrões do Território",
+    "territory_patterns_label": "Padrões do Território",
     "territory_patterns_desc": "Escolha se deseja exibir os padrões de território no jogo",
     "performance_overlay_label": "Sobreposição de desempenho",
     "performance_overlay_desc": "Alterne a sobreposição de desempenho. Quando habilitada, a sobreposição de desempenho será exibida. Pressione shift-D durante o jogo para alternar.",

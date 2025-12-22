@@ -69,7 +69,7 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
-        return new SpawnExecution(player.info(), intent.tile);
+        return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(
           player,
@@ -128,11 +128,11 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): Execution[] {
+  spawnBots(numBots: number): SpawnExecution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
   }
 
-  spawnPlayers(): Execution[] {
+  spawnPlayers(): SpawnExecution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 

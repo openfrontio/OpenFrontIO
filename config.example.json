@@ -1,13 +1,36 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "OpenFront local development configuration",
   "features": {
     "analytics": false,
     "publicLobbies": false,
     "cloudflare": false,
     "ads": false
   },
-  "development": {
-    "offlineMode": true
+  "settings": {
+    "display": {
+      "themeMode": "system"
+    },
+    "interface": {
+      "emojis": true,
+      "alertFrame": true,
+      "territoryPatterns": true
+    },
+    "graphics": {
+      "specialEffects": true,
+      "structureSprites": true,
+      "cursorCostLabel": true,
+      "performanceOverlay": false
+    },
+    "controls": {
+      "leftClickOpensMenu": false,
+      "attackRatio": 0.2
+    },
+    "privacy": {
+      "anonymousNames": false,
+      "lobbyIdVisibility": true
+    },
+    "audio": {
+      "backgroundMusicVolume": 0,
+      "soundEffectsVolume": 1
+    }
   }
 }

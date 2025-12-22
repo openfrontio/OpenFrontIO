@@ -243,4 +243,27 @@ export class NationAllianceBehavior {
         assertNever(difficulty);
     }
   }
+
+  // Betray friends if we have 10 times more troops than them
+  // TODO: Implement better and deeper strategies, for example:
+  // Check impact on relations with other players
+  // Check value of targets territory
+  // Check if target is distracted
+  // Check the targets territory size
+  maybeBetray(otherPlayer: Player): boolean {
+    if (
+      this.player.isAlliedWith(otherPlayer) &&
+      this.player.troops() >= otherPlayer.troops() * 10
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+    return false;
+  }
+
+  private betray(target: Player): void {
+    const alliance = this.player.allianceWith(target);
+    if (!alliance) return;
+    this.player.breakAlliance(alliance);
+  }
 }

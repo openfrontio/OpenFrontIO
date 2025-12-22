@@ -49,7 +49,6 @@ Example:
     {
       "coordinates": [396, 364],
       "name": "United States",
-      "strength": 3,
       "flag": "us"
     }
   ]

@@ -129,6 +129,80 @@
     <script>
       document.documentElement.className = "preload";
     </script>
+
+    <!-- Dev config check - blocks external scripts in dev mode -->
+    <script>
+      (function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/config.json", false); // Synchronous request
+        try {
+          xhr.send();
+          if (xhr.status === 200) {
+            window.__devConfig = JSON.parse(xhr.responseText);
+            console.log("Dev config loaded:", window.__devConfig);
+          }
+        } catch (e) {
+          // No config.json, use production defaults
+        }
+      })();
+    </script>
+
+    <!-- Cloudflare Turnstile (conditionally loaded) -->
+    <script>
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.cloudflare !== false
+      ) {
+        var s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
+      }
+    </script>
+
+    <!-- Publift/Fuse ads (conditionally loaded) -->
+    <script>
+      if (!window.__devConfig || window.__devConfig.features?.ads !== false) {
+        var s = document.createElement("script");
+        s.src = "https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js";
+        s.async = true;
+        document.head.appendChild(s);
+
+        window.googletag = window.googletag || { cmd: [] };
+        googletag.cmd.push(function () {
+          googletag.pubads().set("page_url", "http://openfront.io ");
+        });
+      }
+    </script>
+
+    <!-- Analytics (conditionally loaded) -->
+    <script>
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.analytics !== false
+      ) {
+        // Google Ads
+        var s1 = document.createElement("script");
+        s1.src = "https://www.googletagmanager.com/gtag/js?id=AW-16702609763";
+        s1.async = true;
+        document.head.appendChild(s1);
+
+        // Google Analytics
+        var s2 = document.createElement("script");
+        s2.src = "https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4";
+        s2.async = true;
+        document.head.appendChild(s2);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+        gtag("config", "AW-16702609763");
+        gtag("config", "G-WQGQQ8RDN4");
+      }
+    </script>
   </head>
 
   <body
@@ -431,9 +505,7 @@
         ></div>
         <button
           class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-          onclick="
-            document.getElementById('language-modal').classList.add('hidden')
-          "
+          onclick="document.getElementById('language-modal').classList.add('hidden')"
         >
           Close
         </button>
@@ -447,6 +519,20 @@
           document.documentElement.classList.remove("preload");
         });
       });
+    </script>
+
+    <!-- Cloudflare Analytics (conditionally loaded) -->
+    <script>
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.analytics !== false
+      ) {
+        var s = document.createElement("script");
+        s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        s.defer = true;
+        s.dataset.cfBeacon = '{"token": "03d93e6fefb349c28ee69b408fa25a13"}';
+        document.body.appendChild(s);
+      }
     </script>
   </body>
 </html>
