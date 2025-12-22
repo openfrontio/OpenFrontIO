@@ -278,12 +278,19 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      expect(
+        (window as any).AudioContext.mock.calls.length,
+      ).toBeGreaterThanOrEqual(1);
+      const audioContextInstance = (window as any).AudioContext.mock.results[0]
+        .value;
+      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
     });
 
     test("should match Trios (3 players per team)", () => {
@@ -311,12 +318,19 @@ describe("LobbyNotificationManager", () => {
         numClients: 30,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      expect(
+        (window as any).AudioContext.mock.calls.length,
+      ).toBeGreaterThanOrEqual(1);
+      const audioContextInstance = (window as any).AudioContext.mock.results[0]
+        .value;
+      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
     });
 
     test("should match Quads (4 players per team)", () => {
@@ -344,12 +358,19 @@ describe("LobbyNotificationManager", () => {
         numClients: 25,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      expect(
+        (window as any).AudioContext.mock.calls.length,
+      ).toBeGreaterThanOrEqual(1);
+      const audioContextInstance = (window as any).AudioContext.mock.results[0]
+        .value;
+      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
     });
 
     test("should not match teams with players per team below min (50 players, 25 teams = 2 per team)", () => {
@@ -389,12 +410,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      // Should NOT have triggered notification
+      expect((window as any).AudioContext).not.toHaveBeenCalled();
     });
 
     test("should not match teams with players per team above max (50 players, 2 teams = 25 per team)", () => {
@@ -434,12 +458,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      // Should NOT have triggered notification
+      expect((window as any).AudioContext).not.toHaveBeenCalled();
     });
 
     test("should match teams with calculated players per team (100 players, 25 teams = 4 per team)", () => {
@@ -467,12 +494,19 @@ describe("LobbyNotificationManager", () => {
         numClients: 100,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      expect(
+        (window as any).AudioContext.mock.calls.length,
+      ).toBeGreaterThanOrEqual(1);
+      const audioContextInstance = (window as any).AudioContext.mock.results[0]
+        .value;
+      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
     });
 
     test("should not match when Team is disabled", () => {
@@ -513,12 +547,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 10,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
-      expect(manager).toBeDefined();
+
+      // Should NOT have triggered notification when Team mode is disabled
+      expect((window as any).AudioContext).not.toHaveBeenCalled();
     });
   });
 
@@ -904,13 +941,21 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
+      jest.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
       window.dispatchEvent(event);
 
+      // Verify notification was triggered and get AudioContext instance
+      expect((window as any).AudioContext.mock.calls.length).toBe(1);
+      const audioContextInstance = (window as any).AudioContext.mock.results[0]
+        .value;
+
       manager.destroy();
-      expect(manager).toBeDefined();
+
+      // Verify close() was called on the AudioContext
+      expect(audioContextInstance.close).toHaveBeenCalled();
     });
   });
 
