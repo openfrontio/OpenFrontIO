@@ -58,11 +58,6 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
   gameUpdate: GameUpdateViewData;
 }
 
-export interface PauseStateMessage extends BaseWorkerMessage {
-  type: "pause_state";
-  paused: boolean;
-}
-
 export interface PlayerActionsMessage extends BaseWorkerMessage {
   type: "player_actions";
   playerID: PlayerID;
@@ -133,7 +128,6 @@ export type MainThreadMessage =
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
-  | PauseStateMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage

@@ -391,6 +391,10 @@ export class PlayerView {
     return this.smallID() === this.game.myPlayer()?.smallID();
   }
 
+  isLobbyCreator(): boolean {
+    return this.data.isLobbyCreator;
+  }
+
   isAlliedWith(other: PlayerView): boolean {
     return this.data.allies.some((n) => other.smallID() === n);
   }

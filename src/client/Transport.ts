@@ -581,23 +581,11 @@ export class Transport {
   }
 
   private onPauseGameIntent(event: PauseGameIntentEvent) {
-    if (this.isLocal) {
-      // Local (singleplayer) game pause
-      if (event.paused) {
-        this.localServer.pause();
-      } else {
-        this.localServer.resume();
-      }
-      // Emit GamePausedEvent for UI to update
-      this.eventBus.emit(new GamePausedEvent(event.paused));
-    } else {
-      // Multiplayer game - send toggle_pause intent to server
-      this.sendIntent({
-        type: "toggle_pause",
-        clientID: this.lobbyConfig.clientID,
-        paused: event.paused,
-      });
-    }
+    this.sendIntent({
+      type: "toggle_pause",
+      clientID: this.lobbyConfig.clientID,
+      paused: event.paused,
+    });
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {

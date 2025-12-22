@@ -132,6 +132,10 @@ export class GameServer {
     }
   }
 
+  public isLobbyCreator(clientID: string): boolean {
+    return clientID === this.lobbyCreatorID;
+  }
+
   public joinClient(client: Client) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
@@ -494,6 +498,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
+        isLobbyCreator: c.isLobbyCreator,
       })),
     });
     if (!result.success) {
@@ -528,11 +533,10 @@ export class GameServer {
       return;
     }
 
-    const isLobbyCreator = client.clientID === this.lobbyCreatorID;
     this.log.info(`Sending start message to client`, {
       clientID: client.clientID,
       lobbyCreatorID: this.lobbyCreatorID,
-      isLobbyCreator,
+      isLobbyCreator: client.isLobbyCreator,
     });
 
     try {
@@ -540,10 +544,7 @@ export class GameServer {
         JSON.stringify({
           type: "start",
           turns: this.turns.slice(lastTurn),
-          gameStartInfo: {
-            ...this.gameStartInfo,
-            isLobbyCreator,
-          },
+          gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
         } satisfies ServerStartGameMessage),
       );

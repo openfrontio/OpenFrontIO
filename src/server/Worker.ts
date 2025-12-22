@@ -443,6 +443,11 @@ export async function startWorker() {
           }
         }
 
+        // Check if client is lobby creator
+        const game = gm.game(clientMsg.gameID);
+        const isLobbyCreator =
+          game?.isLobbyCreator(clientMsg.clientID) ?? false;
+
         // Create client and add to game
         const client = new Client(
           clientMsg.clientID,
@@ -454,6 +459,7 @@ export async function startWorker() {
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
+          isLobbyCreator,
         );
 
         const wasFound = gm.joinClient(client, clientMsg.gameID);

@@ -19,7 +19,6 @@ import { ShowSettingsModalEvent } from "./SettingsModal";
 export class GameRightSidebar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  public isLobbyCreator: boolean = false;
 
   @state()
   private _isSinglePlayer: boolean = false;
@@ -37,6 +36,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   private timer: number = 0;
 
   private hasWinner = false;
+  private isLobbyCreator = false;
 
   createRenderRoot() {
     return this;
@@ -57,6 +57,12 @@ export class GameRightSidebar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
+
+    if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
+      this.isLobbyCreator = true;
+      this.requestUpdate();
+    }
+
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {
       if (this.game.inSpawnPhase()) {

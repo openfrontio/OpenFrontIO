@@ -47,7 +47,6 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
-  isLobbyCreator: boolean = false,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -156,7 +155,6 @@ export function createRenderer(
   }
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
-  gameRightSidebar.isLobbyCreator = isLobbyCreator;
 
   const settingsModal = document.querySelector(
     "settings-modal",

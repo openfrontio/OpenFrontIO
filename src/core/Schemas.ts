@@ -439,6 +439,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
+  isLobbyCreator: z.boolean().optional(),
 });
 
 export const GameStartInfoSchema = z.object({
@@ -446,7 +447,6 @@ export const GameStartInfoSchema = z.object({
   lobbyCreatedAt: z.number(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
-  isLobbyCreator: z.boolean().optional(),
 });
 
 export const WinnerSchema = z

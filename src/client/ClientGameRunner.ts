@@ -195,12 +195,7 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(
-    canvas,
-    gameView,
-    eventBus,
-    lobbyConfig.gameStartInfo.isLobbyCreator ?? false,
-  );
+  const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -333,10 +328,12 @@ export class ClientGameRunner {
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
-    });
 
-    this.worker.onPauseStateChange((paused: boolean) => {
-      this.eventBus.emit(new GamePausedEvent(paused));
+      // Handle pause state changes
+      if (gu.updates[GameUpdateType.GamePaused].length > 0) {
+        const pauseUpdate = gu.updates[GameUpdateType.GamePaused][0];
+        this.eventBus.emit(new GamePausedEvent(pauseUpdate.paused));
+      }
     });
 
     const worker = this.worker;
