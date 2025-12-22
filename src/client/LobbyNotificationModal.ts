@@ -264,19 +264,17 @@ export class LobbyNotificationModal extends LitElement {
           </div>
 
           <!-- Status Info -->
-          <div
-            class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center"
-          >
-            ${this.isEnabled()
-              ? html`<span class="text-green-400"
-                  >${translateText("lobby_notification_modal.active")}</span
-                >`
-              : html`<span class="text-gray-400"
+          ${!this.isEnabled()
+            ? html`<div
+                class="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm text-center"
+              >
+                <span class="text-gray-400"
                   >${translateText(
                     "lobby_notification_modal.enable_hint",
                   )}</span
-                >`}
-          </div>
+                >
+              </div>`
+            : ""}
         </div>
       </o-modal>
     `;

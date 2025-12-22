@@ -850,7 +850,6 @@
     "min": "Min:",
     "max": "Max:",
     "sound_notifications": "Sound Notifications",
-    "active": "Notifications Active",
     "enable_hint": "Select a game mode to enable notifications",
     "team_count_range": "Players per Team"
   }
