@@ -78,8 +78,8 @@ export class SettingColorPalette extends LitElement {
     .color-palette {
       display: flex;
       gap: 12px;
-      background: #1e1e1e;
-      border: 1px solid #333;
+      background: var(--modal-card-bg, #1e1e1e);
+      border: 1px solid var(--modal-card-border, #333);
       border-radius: 10px;
       padding: 12px;
       box-sizing: border-box;
@@ -162,17 +162,17 @@ export class SettingColorPalette extends LitElement {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 2px solid #444;
+      border: 2px solid var(--modal-card-border, #444);
       flex-shrink: 0;
     }
 
     .color-input__text {
       flex: 1;
-      background: #2a2a2a;
-      border: 1px solid #444;
+      background: var(--modal-hover, #2a2a2a);
+      border: 1px solid var(--modal-card-border, #444);
       border-radius: 16px;
       padding: 6px 10px;
-      color: #fff;
+      color: var(--modal-text, #fff);
       font-family: monospace;
       font-size: 12px;
       text-align: center;
@@ -197,7 +197,7 @@ export class SettingColorPalette extends LitElement {
       align-items: center;
       gap: 8px;
       padding: 6px 8px;
-      background: #2a2a2a;
+      background: var(--modal-hover, #2a2a2a);
       border: 2px solid transparent;
       border-radius: 6px;
       cursor: pointer;
@@ -206,7 +206,7 @@ export class SettingColorPalette extends LitElement {
     }
 
     .swatch-item:hover {
-      background: #333;
+      background: var(--setting-item-hover, #333);
     }
 
     .swatch-item.selected {
@@ -219,7 +219,7 @@ export class SettingColorPalette extends LitElement {
       height: 24px;
       border-radius: 4px;
       flex-shrink: 0;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.2));
     }
 
     .swatch-item__info {
@@ -231,13 +231,13 @@ export class SettingColorPalette extends LitElement {
     .swatch-item__name {
       font-size: 11px;
       font-weight: 500;
-      color: #fff;
+      color: var(--modal-text, #fff);
       margin-bottom: 1px;
     }
 
     .swatch-item__desc {
       font-size: 9px;
-      color: #888;
+      color: var(--modal-text-muted, #888);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

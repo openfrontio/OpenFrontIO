@@ -18,8 +18,8 @@ export class SettingThemeMode extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      background: #1e1e1e;
-      border: 1px solid #333;
+      background: var(--modal-card-bg, #1e1e1e);
+      border: 1px solid var(--modal-card-border, #333);
       border-radius: 10px;
       padding: 12px 20px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -32,14 +32,14 @@ export class SettingThemeMode extends LitElement {
     }
 
     .setting-label {
-      color: #f0f0f0;
+      color: var(--modal-text, #f0f0f0);
       font-size: 15px;
       font-weight: 500;
     }
 
     .setting-description {
       font-size: 12px;
-      color: #888;
+      color: var(--modal-text-muted, #888);
     }
 
     .theme-options {
@@ -55,16 +55,16 @@ export class SettingThemeMode extends LitElement {
       align-items: center;
       gap: 4px;
       padding: 12px 8px;
-      border: 2px solid #333;
+      border: 2px solid var(--modal-card-border, #333);
       border-radius: 8px;
-      background: #2a2a2a;
+      background: var(--modal-hover, #2a2a2a);
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .theme-option:hover {
-      background: #3a3a3a;
-      border-color: #555;
+      background: var(--setting-item-hover, #3a3a3a);
+      border-color: var(--modal-border, #555);
     }
 
     .theme-option.selected {
@@ -78,7 +78,7 @@ export class SettingThemeMode extends LitElement {
 
     .theme-label {
       font-size: 12px;
-      color: #ccc;
+      color: var(--modal-text-muted, #ccc);
       text-transform: capitalize;
     }
 
@@ -90,6 +90,16 @@ export class SettingThemeMode extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.loadThemeMode();
+    window.addEventListener("dark-mode-changed", this.handleExternalChange);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("dark-mode-changed", this.handleExternalChange);
+  }
+
+  private loadThemeMode() {
     const stored = localStorage.getItem("settings.themeMode");
     if (stored === "light" || stored === "dark" || stored === "system") {
       this.selectedMode = stored;
@@ -99,6 +109,10 @@ export class SettingThemeMode extends LitElement {
       this.selectedMode = darkMode === "true" ? "dark" : "system";
     }
   }
+
+  private handleExternalChange = () => {
+    this.loadThemeMode();
+  };
 
   private selectMode(mode: ThemeMode) {
     this.selectedMode = mode;

@@ -246,28 +246,22 @@ export class UserSettingModal extends LitElement {
           >
             <div class="settings-tabs flex w-full justify-center">
               <button
-                class="flex-1 text-center px-3 py-1 rounded-l
-      ${this.settingsMode === "basic"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+                class="settings-tab flex-1 text-center px-3 py-1 rounded-l
+      ${this.settingsMode === "basic" ? "settings-tab--active" : ""}"
                 @click=${() => (this.settingsMode = "basic")}
               >
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="flex-1 text-center px-3 py-1
-      ${this.settingsMode === "keybinds"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+                class="settings-tab flex-1 text-center px-3 py-1
+      ${this.settingsMode === "keybinds" ? "settings-tab--active" : ""}"
                 @click=${() => (this.settingsMode = "keybinds")}
               >
                 ${translateText("user_setting.tab_keybinds")}
               </button>
               <button
-                class="flex-1 text-center px-3 py-1 rounded-r
-      ${this.settingsMode === "display"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+                class="settings-tab flex-1 text-center px-3 py-1 rounded-r
+      ${this.settingsMode === "display" ? "settings-tab--active" : ""}"
                 @click=${() => (this.settingsMode = "display")}
               >
                 ${translateText("user_setting.tab_display")}
@@ -296,6 +290,12 @@ export class UserSettingModal extends LitElement {
           detail: { mode },
           bubbles: true,
           composed: true,
+        }),
+      );
+      // Dispatch dark-mode-changed for DarkModeButton sync
+      window.dispatchEvent(
+        new CustomEvent("dark-mode-changed", {
+          detail: { darkMode: this.userSettings.isDarkModeActive() },
         }),
       );
     }
@@ -342,14 +342,6 @@ export class UserSettingModal extends LitElement {
         columns
       >
         <setting-toggle
-          label="${translateText("user_setting.emojis_label")}"
-          description="${translateText("user_setting.emojis_desc")}"
-          id="emoji-toggle"
-          .checked=${this.userSettings.emojis()}
-          @change=${this.toggleEmojis}
-        ></setting-toggle>
-
-        <setting-toggle
           label="${translateText("user_setting.alert_frame_label")}"
           description="${translateText("user_setting.alert_frame_desc")}"
           id="alert-frame-toggle"
@@ -364,6 +356,14 @@ export class UserSettingModal extends LitElement {
           .checked=${this.userSettings.territoryPatterns()}
           @change=${this.toggleTerritoryPatterns}
         ></setting-toggle>
+
+        <setting-toggle
+          label="${translateText("user_setting.emojis_label")}"
+          description="${translateText("user_setting.emojis_desc")}"
+          id="emoji-toggle"
+          .checked=${this.userSettings.emojis()}
+          @change=${this.toggleEmojis}
+        ></setting-toggle>
       </setting-group>
 
       <!-- Graphics Settings -->
@@ -372,6 +372,16 @@ export class UserSettingModal extends LitElement {
         groupId="graphics"
         columns
       >
+        <setting-toggle
+          label="${translateText("user_setting.performance_overlay_label")}"
+          description="${translateText(
+            "user_setting.performance_overlay_desc",
+          )}"
+          id="performance-overlay-toggle"
+          .checked=${this.userSettings.performanceOverlay()}
+          @change=${this.togglePerformanceOverlay}
+        ></setting-toggle>
+
         <setting-toggle
           label="${translateText("user_setting.special_effects_label")}"
           description="${translateText("user_setting.special_effects_desc")}"
@@ -394,16 +404,6 @@ export class UserSettingModal extends LitElement {
           id="cursor_cost_label-toggle"
           .checked=${this.userSettings.cursorCostLabel()}
           @change=${this.toggleCursorCostLabel}
-        ></setting-toggle>
-
-        <setting-toggle
-          label="${translateText("user_setting.performance_overlay_label")}"
-          description="${translateText(
-            "user_setting.performance_overlay_desc",
-          )}"
-          id="performance-overlay-toggle"
-          .checked=${this.userSettings.performanceOverlay()}
-          @change=${this.togglePerformanceOverlay}
         ></setting-toggle>
       </setting-group>
 
@@ -743,6 +743,10 @@ export class UserSettingModal extends LitElement {
   public open() {
     this.requestUpdate();
     this.modalEl?.open();
+    // Force reflow after modal opens to fix initial render issues with columns layout
+    requestAnimationFrame(() => {
+      this.requestUpdate();
+    });
   }
 
   public close() {

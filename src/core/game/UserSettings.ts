@@ -174,12 +174,17 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    this.set("settings.darkMode", !this.darkMode());
-    if (this.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Toggle between light and dark modes (skipping system for button toggle)
+    const currentlyDark = this.isDarkModeActive();
+    const newMode = currentlyDark ? "light" : "dark";
+    this.setThemeMode(newMode);
+
+    // Dispatch event for other components to sync
+    window.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: !currentlyDark },
+      }),
+    );
   }
 
   // For development only. Used for testing patterns, set in the console manually.

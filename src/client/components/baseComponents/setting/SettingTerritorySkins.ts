@@ -100,8 +100,8 @@ export class SettingTerritorySkins extends LitElement {
     .territory-skins {
       display: flex;
       gap: 16px;
-      background: #1e1e1e;
-      border: 1px solid #333;
+      background: var(--modal-card-bg, #1e1e1e);
+      border: 1px solid var(--modal-card-border, #333);
       border-radius: 10px;
       padding: 12px;
       box-sizing: border-box;
@@ -119,7 +119,7 @@ export class SettingTerritorySkins extends LitElement {
     .preview-label {
       font-size: 13px;
       font-weight: 500;
-      color: #fff;
+      color: var(--modal-text, #fff);
       margin-bottom: 4px;
     }
 
@@ -130,7 +130,7 @@ export class SettingTerritorySkins extends LitElement {
       background-size: cover;
       background-position: center;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border: 2px solid #444;
+      border: 2px solid var(--modal-card-border, #444);
     }
 
     .preview-actions {
@@ -186,7 +186,7 @@ export class SettingTerritorySkins extends LitElement {
     .skins-label {
       font-size: 13px;
       font-weight: 500;
-      color: #fff;
+      color: var(--modal-text, #fff);
       margin-bottom: 8px;
       flex-shrink: 0;
     }

@@ -18,7 +18,7 @@ export class SettingGroup extends LitElement {
     }
 
     .setting-group {
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--group-bg, rgba(0, 0, 0, 0.15));
       border-radius: 8px;
       overflow: hidden;
       margin-bottom: 8px;
@@ -29,27 +29,28 @@ export class SettingGroup extends LitElement {
       justify-content: space-between;
       align-items: center;
       padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--group-header-bg, rgba(0, 0, 0, 0.2));
       cursor: pointer;
       user-select: none;
       transition: background 0.2s ease;
     }
 
     .setting-group__header:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--group-header-bg, rgba(0, 0, 0, 0.25));
+      filter: brightness(1.1);
     }
 
     .setting-group__title {
       font-size: 14px;
       font-weight: 600;
-      color: #fff;
+      color: var(--modal-text, #fff);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .setting-group__toggle {
       font-size: 12px;
-      color: #888;
+      color: var(--modal-text-muted, #888);
       transition: transform 0.2s ease;
     }
 
@@ -65,32 +66,25 @@ export class SettingGroup extends LitElement {
     }
 
     .setting-group__content.collapsed {
-      display: none;
+      display: none !important;
     }
 
     .setting-group__content.columns {
-      display: block;
-      column-count: 2;
-      column-gap: 12px;
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 12px;
     }
 
     .setting-group__content.columns.collapsed {
-      display: none;
+      display: none !important;
     }
 
-    /* Ensure slotted items fill their column and don't break across columns */
+    /* Ensure slotted items fill their grid cell */
     ::slotted(*) {
       width: 100% !important;
       min-width: 0 !important;
       max-width: none !important;
-      break-inside: avoid;
-    }
-
-    /* Add vertical gap between items in columns mode */
-    .setting-group__content.columns ::slotted(*) {
-      margin-bottom: 12px;
-      display: inline-block;
-      width: 100% !important;
+      box-sizing: border-box;
     }
   `;
 
