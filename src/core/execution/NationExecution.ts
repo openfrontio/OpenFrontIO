@@ -9,6 +9,7 @@ import {
   PlayerID,
   PlayerType,
   Relation,
+  TerrainType,
   Tick,
   Unit,
   UnitType,
@@ -100,8 +101,16 @@ export class NationExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
+      // select a tile near the position defined in the map manifest for the current nation
+      const rl = this.randomSpawnLand();
+
+      if (rl === null) {
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        return;
+      }
+
       this.mg.addExecution(
-        new SpawnExecution(this.gameID, this.nation.playerInfo),
+        new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
       );
       return;
     }
@@ -220,6 +229,31 @@ export class NationExecution implements Execution {
         new ConstructionExecution(this.player, UnitType.Warship, tile),
       );
     }
+  }
+
+  randomSpawnLand(): TileRef | null {
+    const delta = 25;
+    let tries = 0;
+    while (tries < 50) {
+      tries++;
+      const cell = this.nation.spawnCell;
+      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
+      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
+      if (!this.mg.isValidCoord(x, y)) {
+        continue;
+      }
+      const tile = this.mg.ref(x, y);
+      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
+        if (
+          this.mg.terrainType(tile) === TerrainType.Mountain &&
+          this.random.chance(2)
+        ) {
+          continue;
+        }
+        return tile;
+      }
+    }
+    return null;
   }
 
   private updateRelationsFromEmbargos() {
