@@ -153,7 +153,7 @@ export class AiAttackBehavior {
       case Difficulty.Hard:
         return [bots, retaliate, betray, nuked, hated, weakest, island];
       case Difficulty.Impossible:
-        return [retaliate, bots, betray, hated, nuked, weakest, island];
+        return [retaliate, bots, betray, nuked, hated, weakest, island];
       default:
         assertNever(difficulty);
     }
