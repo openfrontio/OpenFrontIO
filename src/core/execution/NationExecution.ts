@@ -231,7 +231,7 @@ export class NationExecution implements Execution {
     }
   }
 
-  randomSpawnLand(): TileRef | null {
+  private randomSpawnLand(): TileRef | null {
     const delta = 25;
     let tries = 0;
     while (tries < 50) {
