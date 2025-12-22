@@ -66,8 +66,10 @@ export class HelpModal extends LitElement {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
+      resetGfx: "KeyR",
       ...saved,
     };
   }
@@ -132,7 +134,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    ${this.renderKey("ShiftLeft")}
+                    ${this.renderKey(keybinds.shiftKey)}
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -198,7 +200,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    ${this.renderKey("ShiftLeft")}
+                    ${this.renderKey(keybinds.shiftKey)}
                     <span class="plus">+</span>
                     <div class="mouse-with-arrows">
                       <div class="mouse-shell">
@@ -215,7 +217,8 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>
-                  ${this.renderKey(keybinds.altKey)} + ${this.renderKey("KeyR")}
+                  ${this.renderKey(keybinds.altKey)} +
+                  ${this.renderKey(keybinds.resetGfx)}
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
