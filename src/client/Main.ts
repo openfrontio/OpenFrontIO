@@ -508,6 +508,9 @@ class Client {
   }
 
   private cleanup(): void {
+    if (this.gameStop !== null) {
+      this.gameStop();
+    }
     // Remove event listeners
     window.removeEventListener(
       "open-notification-modal",
