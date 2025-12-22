@@ -55,19 +55,13 @@ export async function createGameRunner(
     );
   });
 
-  const nations = gameStart.config.disableNPCs
+  const nations = gameStart.config.disableNations
     ? []
     : gameMap.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            new PlayerInfo(
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-              n.strength,
-            ),
+            new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
           ),
       );
 
@@ -110,8 +104,8 @@ export class GameRunner {
         ...this.execManager.spawnBots(this.game.config().numBots()),
       );
     }
-    if (this.game.config().spawnNPCs()) {
-      this.game.addExecution(...this.execManager.fakeHumanExecutions());
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
   }
@@ -160,7 +154,7 @@ export class GameRunner {
         .players()
         .filter(
           (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
+            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
         )
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),

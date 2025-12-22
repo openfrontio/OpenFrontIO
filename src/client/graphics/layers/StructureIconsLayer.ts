@@ -25,6 +25,7 @@ import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
+import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -58,6 +59,10 @@ class StructureRenderInfo {
 export class StructureIconsLayer implements Layer {
   private ghostUnit: {
     container: PIXI.Container;
+    priceText: PIXI.BitmapText;
+    priceBg: PIXI.Graphics;
+    priceGroup: PIXI.Container;
+    priceBox: { height: number; y: number; paddingX: number; minWidth: number };
     range: PIXI.Container | null;
     rangeLevel?: number;
     buildableUnit: BuildableUnit;
@@ -266,11 +271,13 @@ export class StructureIconsLayer implements Layer {
         const unit = actions.buildableUnits.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
+        const showPrice = this.game.config().userSettings().cursorCostLabel();
         if (!unit) {
           Object.assign(this.ghostUnit.buildableUnit, {
             canBuild: false,
             canUpgrade: false,
           });
+          this.updateGhostPrice(0, showPrice);
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
@@ -278,6 +285,7 @@ export class StructureIconsLayer implements Layer {
         }
 
         this.ghostUnit.buildableUnit = unit;
+        this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
         const targetLevel = this.resolveGhostRangeLevel(unit);
         this.updateGhostRange(targetLevel);
@@ -310,6 +318,33 @@ export class StructureIconsLayer implements Layer {
         this.ghostUnit.container.scale.set(s);
         this.ghostUnit.range?.scale.set(this.transformHandler.scale);
       });
+  }
+
+  private updateGhostPrice(cost: bigint | number, showPrice: boolean) {
+    if (!this.ghostUnit) return;
+    const { priceText, priceBg, priceBox, priceGroup } = this.ghostUnit;
+    priceGroup.visible = showPrice;
+    if (!showPrice) return;
+
+    priceText.text = renderNumber(cost);
+    priceText.position.set(0, priceBox.y);
+
+    const textWidth = priceText.width;
+    const boxWidth = Math.max(
+      priceBox.minWidth,
+      textWidth + priceBox.paddingX * 2,
+    );
+
+    priceBg.clear();
+    priceBg
+      .roundRect(
+        -boxWidth / 2,
+        priceBox.y - priceBox.height / 2,
+        boxWidth,
+        priceBox.height,
+        4,
+      )
+      .fill({ color: 0x000000, alpha: 0.65 });
   }
 
   private createStructure(e: MouseUpEvent) {
@@ -373,16 +408,23 @@ export class StructureIconsLayer implements Layer {
     const rect = this.transformHandler.boundingRect();
     const localX = this.mousePos.x - rect.left;
     const localY = this.mousePos.y - rect.top;
+    const ghost = this.factory.createGhostContainer(
+      player,
+      this.ghostStage,
+      { x: localX, y: localY },
+      type,
+    );
     this.ghostUnit = {
-      container: this.factory.createGhostContainer(
-        player,
-        this.ghostStage,
-        { x: localX, y: localY },
-        type,
-      ),
+      container: ghost.container,
+      priceText: ghost.priceText,
+      priceBg: ghost.priceBg,
+      priceGroup: ghost.priceGroup,
+      priceBox: ghost.priceBox,
       range: null,
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
+    const showPrice = this.game.config().userSettings().cursorCostLabel();
+    this.updateGhostPrice(0, showPrice);
     const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
     this.updateGhostRange(baseLevel);
   }

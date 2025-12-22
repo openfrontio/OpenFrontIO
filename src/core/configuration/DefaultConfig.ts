@@ -251,14 +251,6 @@ export class DefaultConfig implements Config {
     return this._isReplay;
   }
 
-  samHittingChance(): number {
-    return 0.8;
-  }
-
-  samWarheadHittingChance(): number {
-    return 0.5;
-  }
-
   traitorDefenseDebuff(): number {
     return 0.5;
   }
@@ -285,19 +277,6 @@ export class DefaultConfig implements Config {
       throw new Error("userSettings is null");
     }
     return this._userSettings;
-  }
-
-  difficultyModifier(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1;
-      case Difficulty.Medium:
-        return 3;
-      case Difficulty.Hard:
-        return 9;
-      case Difficulty.Impossible:
-        return 18;
-    }
   }
 
   cityTroopIncrease(): number {
@@ -332,8 +311,8 @@ export class DefaultConfig implements Config {
     return this._gameConfig.playerTeams ?? 0;
   }
 
-  spawnNPCs(): boolean {
-    return !this._gameConfig.disableNPCs;
+  spawnNations(): boolean {
+    return !this._gameConfig.disableNations;
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
@@ -628,6 +607,9 @@ export class DefaultConfig implements Config {
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
   }
+  minDistanceBetweenPlayers(): number {
+    return 30;
+  }
 
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode === GameMode.Team) {
@@ -712,7 +694,7 @@ export class DefaultConfig implements Config {
         mag *= 0.8;
       }
       if (
-        attacker.type() === PlayerType.FakeHuman &&
+        attacker.type() === PlayerType.Nation &&
         defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
@@ -815,31 +797,22 @@ export class DefaultConfig implements Config {
     }
   }
 
-  useNationStrengthForStartManpower(): boolean {
-    // Currently disabled: FakeHumans became harder to play against due to AI improvements
-    // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
-    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
-    return false;
-  }
-
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
-    if (playerInfo.playerType === PlayerType.FakeHuman) {
-      const strength = this.useNationStrengthForStartManpower()
-        ? (playerInfo.nationStrength ?? 1)
-        : 1;
-
+    if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750 * strength;
+          return 18_750;
         case Difficulty.Medium:
-          return 25_000 * strength; // Like humans
+          return 25_000; // Like humans
         case Difficulty.Hard:
-          return 31_250 * strength;
+          return 31_250;
         case Difficulty.Impossible:
-          return 37_500 * strength;
+          return 37_500;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -873,6 +846,8 @@ export class DefaultConfig implements Config {
         return maxTroops * 1.25;
       case Difficulty.Impossible:
         return maxTroops * 1.5;
+      default:
+        assertNever(this._gameConfig.difficulty);
     }
   }
 
@@ -888,7 +863,7 @@ export class DefaultConfig implements Config {
       toAdd *= 0.6;
     }
 
-    if (player.type() === PlayerType.FakeHuman) {
+    if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
           toAdd *= 0.95;
@@ -902,6 +877,8 @@ export class DefaultConfig implements Config {
         case Difficulty.Impossible:
           toAdd *= 1.1;
           break;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
 

@@ -36,7 +36,7 @@ export class SinglePlayerModal extends LitElement {
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs: boolean = false;
+  @state() private disableNations: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -261,15 +261,17 @@ export class SinglePlayerModal extends LitElement {
               )
                 ? html`
                     <label
-                      for="singleplayer-modal-disable-npcs"
-                      class="option-card ${this.disableNPCs ? "selected" : ""}"
+                      for="singleplayer-modal-disable-nations"
+                      class="option-card ${this.disableNations
+                        ? "selected"
+                        : ""}"
                     >
                       <div class="checkbox-icon"></div>
                       <input
                         type="checkbox"
-                        id="singleplayer-modal-disable-npcs"
-                        @change=${this.handleDisableNPCsChange}
-                        .checked=${this.disableNPCs}
+                        id="singleplayer-modal-disable-nations"
+                        @change=${this.handleDisableNationsChange}
+                        .checked=${this.disableNations}
                       />
                       <div class="option-card-title">
                         ${translateText("single_modal.disable_nations")}
@@ -491,8 +493,8 @@ export class SinglePlayerModal extends LitElement {
     this.maxTimerValue = value;
   }
 
-  private handleDisableNPCsChange(e: Event) {
-    this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
+  private handleDisableNationsChange(e: Event) {
+    this.disableNations = Boolean((e.target as HTMLInputElement).checked);
   }
 
   private handleGameModeSelection(value: GameMode) {
@@ -591,10 +593,10 @@ export class SinglePlayerModal extends LitElement {
               ...(this.gameMode === GameMode.Team &&
               this.teamCount === HumansVsNations
                 ? {
-                    disableNPCs: false,
+                    disableNations: false,
                   }
                 : {
-                    disableNPCs: this.disableNPCs,
+                    disableNations: this.disableNations,
                   }),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP

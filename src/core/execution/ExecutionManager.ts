@@ -16,9 +16,9 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
+import { NationExecution } from "./NationExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
@@ -69,7 +69,7 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
-        return new SpawnExecution(player.info(), intent.tile);
+        return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(
           player,
@@ -133,18 +133,18 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): Execution[] {
+  spawnBots(numBots: number): SpawnExecution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
   }
 
-  spawnPlayers(): Execution[] {
+  spawnPlayers(): SpawnExecution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
-  fakeHumanExecutions(): Execution[] {
+  nationExecutions(): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(new FakeHumanExecution(this.gameID, nation));
+      execs.push(new NationExecution(this.gameID, nation));
     }
     return execs;
   }
