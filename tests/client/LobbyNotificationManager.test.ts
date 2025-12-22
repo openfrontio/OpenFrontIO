@@ -806,9 +806,9 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      // Send just the new lobby
+      // Send both lobbies (realistic behavior)
       const event2 = new CustomEvent("lobbies-updated", {
-        detail: [gameInfo2],
+        detail: [gameInfo1, gameInfo2],
       });
       window.dispatchEvent(event2);
 
