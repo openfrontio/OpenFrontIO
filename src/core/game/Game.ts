@@ -33,15 +33,10 @@ export interface MapPos {
   y: number;
 }
 
-export const DifficultySchema = z.enum([
-  "Easy",
-  "Medium",
-  "Hard",
-  "Impossible",
-]);
-export type Difficulty = z.infer<typeof DifficultySchema>;
+export const Difficulty = ["Easy", "Medium", "Hard", "Impossible"] as const;
+export type Difficulty = (typeof Difficulty)[number];
 export const isDifficulty = (value: unknown): value is Difficulty =>
-  DifficultySchema.safeParse(value).success;
+  typeof value === "string" && Difficulty.includes(value as Difficulty);
 
 export type Team = string;
 

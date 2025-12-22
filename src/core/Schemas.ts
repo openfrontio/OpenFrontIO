@@ -8,7 +8,6 @@ import {
 } from "./CosmeticSchemas";
 import {
   AllPlayers,
-  DifficultySchema,
   Duos,
   GameMapSizeSchema,
   GameMapTypeSchema,
@@ -19,6 +18,7 @@ import {
   Trios,
   UnitTypeSchema,
 } from "./game/Game";
+import { DifficultySchema } from "./GameSchemas";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 

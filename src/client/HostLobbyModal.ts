@@ -5,7 +5,6 @@ import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
-  DifficultySchema,
   Duos,
   GameMapType,
   GameMapTypeSchema,
@@ -234,7 +233,7 @@ export class HostLobbyModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("difficulty.difficulty")}</div>
             <div class="option-cards">
-              ${DifficultySchema.options.map(
+              ${Difficulty.map(
                 (value) => html`
                   <div
                     class="option-card ${this.selectedDifficulty === value
@@ -251,7 +250,6 @@ export class HostLobbyModal extends LitElement {
                   </div>
                 `,
               )}
-
             </div>
           </div>
 
