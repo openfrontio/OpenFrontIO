@@ -9,7 +9,7 @@ export interface LobbyNotificationCriteria {
   teamCounts?: Array<string | number>;
 }
 
-// Team configuration options - extracted to a constant to reduce duplication and maintenance risk
+// Team configuration options
 const FIXED_TEAM_MODES = ["Duos", "Trios", "Quads"] as const;
 const VARIABLE_TEAM_COUNTS = [2, 3, 4, 5, 6, 7] as const;
 const ALL_TEAM_OPTIONS = [...FIXED_TEAM_MODES, ...VARIABLE_TEAM_COUNTS];
