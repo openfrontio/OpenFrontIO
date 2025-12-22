@@ -178,8 +178,8 @@ export class PublicLobby extends LitElement {
             <div class="text-lg md:text-2xl font-semibold">
               ${this.currLobby
                 ? isStarting
-                  ? html`Starting game…`
-                  : html`Waiting for players
+                  ? html`${translateText("public_lobby.starting_game")}`
+                  : html`${translateText("public_lobby.waiting_for_players")}
                     ${[0, 1, 2]
                       .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
                       .join("")}`
