@@ -186,7 +186,7 @@ class Client {
     }
 
     this.lobbyNotificationManager = new LobbyNotificationManager();
-    
+
     window.addEventListener("beforeunload", () => {
       this.lobbyNotificationManager?.destroy();
     });
