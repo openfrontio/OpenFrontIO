@@ -107,7 +107,7 @@ export class HelpModal extends LitElement {
   }
 
   render() {
-    const keybinds = this.keybinds ?? this.getKeybinds();
+    const keybinds = this.keybinds;
 
     return html`
       <o-modal
