@@ -14,7 +14,6 @@ export type WorkerMessageType =
   | "initialized"
   | "turn"
   | "game_update"
-  | "pause_state"
   | "player_actions"
   | "player_actions_result"
   | "player_profile"

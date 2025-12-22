@@ -48,6 +48,12 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
+
+    // Try to get lobby creator status early but may not be available yet
+    if (this.game.myPlayer()?.isLobbyCreator()) {
+      this.isLobbyCreator = true;
+    }
+
     this.requestUpdate();
   }
 
