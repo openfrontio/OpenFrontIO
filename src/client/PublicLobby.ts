@@ -116,7 +116,7 @@ export class PublicLobby extends LitElement {
     if (this.lobbies.length === 0) return html``;
 
     const lobby = this.lobbies[0];
-    if (!lobby?.gameConfig) return;
+    if (!lobby?.gameConfig) return html``;
 
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
