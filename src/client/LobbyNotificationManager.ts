@@ -5,11 +5,8 @@ interface NotificationSettings {
   ffaEnabled: boolean;
   teamEnabled: boolean;
   soundEnabled: boolean;
-  ffaMinPlayers: number;
-  ffaMaxPlayers: number;
-  teamMinPlayers: number;
-  teamMaxPlayers: number;
-  selectedTeamCounts: Array<string | number>;
+  minTeamCount: number;
+  maxTeamCount: number;
 }
 
 export class LobbyNotificationManager {
@@ -74,31 +71,39 @@ export class LobbyNotificationManager {
   private matchesPreferences(config: GameConfig): boolean {
     if (!this.settings) return false;
 
-    const gameCapacity = config.maxPlayers ?? 0;
-
     // Check FFA
     if (this.settings.ffaEnabled && config.gameMode === GameMode.FFA) {
-      if (gameCapacity < this.settings.ffaMinPlayers) return false;
-      if (gameCapacity > this.settings.ffaMaxPlayers) return false;
       return true;
     }
 
     // Check Team
     if (this.settings.teamEnabled && config.gameMode === GameMode.Team) {
-      if (gameCapacity < this.settings.teamMinPlayers) return false;
-      if (gameCapacity > this.settings.teamMaxPlayers) return false;
+      const maxPlayers = config.maxPlayers ?? 0;
+      const playerTeams = config.playerTeams;
 
-      // Check team configuration
-      if (
-        this.settings.selectedTeamCounts &&
-        this.settings.selectedTeamCounts.length > 0
-      ) {
-        const playerTeams = config.playerTeams;
-        const matchesTeamCount = this.settings.selectedTeamCounts.some(
-          (selectedCount) => playerTeams === selectedCount,
-        );
-        if (!matchesTeamCount) return false;
-      }
+      if (maxPlayers === 0) return false;
+
+      // Map fixed modes to players per team
+      const playersPerTeamMap: Record<string, number> = {
+        Duos: 2,
+        Trios: 3,
+        Quads: 4,
+      };
+
+      // Calculate players per team
+      // If playerTeams is a string (Duos/Trios/Quads), use the map
+      // If it's a number, it's the number of teams, so calculate players per team
+      const playersPerTeam =
+        typeof playerTeams === "string"
+          ? (playersPerTeamMap[playerTeams] ?? 0)
+          : typeof playerTeams === "number"
+            ? Math.floor(maxPlayers / playerTeams)
+            : 0;
+
+      if (playersPerTeam === 0) return false;
+
+      if (playersPerTeam < this.settings.minTeamCount) return false;
+      if (playersPerTeam > this.settings.maxTeamCount) return false;
 
       return true;
     }

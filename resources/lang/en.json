@@ -847,16 +847,11 @@
   },
   "lobby_notification_modal": {
     "title": "Lobby Notifications",
-    "capacity_range": "Player capacity range:",
     "min": "Min:",
     "max": "Max:",
-    "team_configuration": "Team Configuration:",
-    "select_all": "Select All",
-    "deselect_all": "Deselect All",
-    "fixed_modes": "Fixed Modes:",
-    "variable_modes": "Variable Modes (Number of Teams):",
     "sound_notifications": "Sound Notifications",
     "active": "Notifications Active",
-    "enable_hint": "Select a game mode to enable notifications"
+    "enable_hint": "Select a game mode to enable notifications",
+    "team_count_range": "Players per Team"
   }
 }

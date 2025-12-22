@@ -9,11 +9,6 @@ export interface LobbyNotificationCriteria {
   teamCounts?: Array<string | number>;
 }
 
-// Team configuration options
-const FIXED_TEAM_MODES = ["Duos", "Trios", "Quads"] as const;
-const VARIABLE_TEAM_COUNTS = [2, 3, 4, 5, 6, 7] as const;
-const ALL_TEAM_OPTIONS = [...FIXED_TEAM_MODES, ...VARIABLE_TEAM_COUNTS];
-
 @customElement("lobby-notification-modal")
 export class LobbyNotificationModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -24,11 +19,8 @@ export class LobbyNotificationModal extends LitElement {
   @state() private ffaEnabled = false;
   @state() private teamEnabled = false;
   @state() private soundEnabled = true;
-  @state() private ffaMinPlayers = 2;
-  @state() private ffaMaxPlayers = 100;
-  @state() private teamMinPlayers = 2;
-  @state() private teamMaxPlayers = 100;
-  @state() private selectedTeamCounts: Set<string | number> = new Set();
+  @state() private minTeamCount = 2;
+  @state() private maxTeamCount = 50;
 
   createRenderRoot() {
     return this;
@@ -60,11 +52,8 @@ export class LobbyNotificationModal extends LitElement {
         this.ffaEnabled = settings.ffaEnabled ?? false;
         this.teamEnabled = settings.teamEnabled ?? false;
         this.soundEnabled = settings.soundEnabled ?? true;
-        this.ffaMinPlayers = settings.ffaMinPlayers ?? 2;
-        this.ffaMaxPlayers = settings.ffaMaxPlayers ?? 100;
-        this.teamMinPlayers = settings.teamMinPlayers ?? 2;
-        this.teamMaxPlayers = settings.teamMaxPlayers ?? 100;
-        this.selectedTeamCounts = new Set(settings.selectedTeamCounts ?? []);
+        this.minTeamCount = settings.minTeamCount ?? 2;
+        this.maxTeamCount = settings.maxTeamCount ?? 50;
       }
     } catch (error) {
       console.error("Failed to load notification settings:", error);
@@ -77,11 +66,8 @@ export class LobbyNotificationModal extends LitElement {
         ffaEnabled: this.ffaEnabled,
         teamEnabled: this.teamEnabled,
         soundEnabled: this.soundEnabled,
-        ffaMinPlayers: this.ffaMinPlayers,
-        ffaMaxPlayers: this.ffaMaxPlayers,
-        teamMinPlayers: this.teamMinPlayers,
-        teamMaxPlayers: this.teamMaxPlayers,
-        selectedTeamCounts: Array.from(this.selectedTeamCounts),
+        minTeamCount: this.minTeamCount,
+        maxTeamCount: this.maxTeamCount,
       };
       localStorage.setItem(
         "lobbyNotificationSettings",
@@ -103,18 +89,13 @@ export class LobbyNotificationModal extends LitElement {
     if (this.ffaEnabled) {
       criteria.push({
         gameMode: "FFA",
-        minPlayers: this.ffaMinPlayers,
-        maxPlayers: this.ffaMaxPlayers,
       });
     }
 
     if (this.teamEnabled) {
-      const teamCounts = Array.from(this.selectedTeamCounts);
       criteria.push({
         gameMode: "Team",
-        minPlayers: this.teamMinPlayers,
-        maxPlayers: this.teamMaxPlayers,
-        ...(teamCounts.length ? { teamCounts } : {}),
+        teamCounts: [this.minTeamCount, this.maxTeamCount],
       });
     }
 
@@ -152,29 +133,7 @@ export class LobbyNotificationModal extends LitElement {
     this.saveSettings();
   }
 
-  private handleTeamCountChange(value: string | number, e: Event) {
-    if ((e.target as HTMLInputElement).checked) {
-      this.selectedTeamCounts.add(value);
-    } else {
-      this.selectedTeamCounts.delete(value);
-    }
-    this.requestUpdate();
-    this.saveSettings();
-  }
-
   private handleSliderChange() {
-    this.saveSettings();
-  }
-
-  private selectAllTeams() {
-    this.selectedTeamCounts = new Set(ALL_TEAM_OPTIONS);
-    this.requestUpdate();
-    this.saveSettings();
-  }
-
-  private deselectAllTeams() {
-    this.selectedTeamCounts.clear();
-    this.requestUpdate();
     this.saveSettings();
   }
 
@@ -199,74 +158,6 @@ export class LobbyNotificationModal extends LitElement {
                 >${translateText("game_mode.ffa")}</span
               >
             </label>
-
-            ${this.ffaEnabled
-              ? html`
-                  <div class="ml-7 space-y-3">
-                    <div class="text-sm text-gray-300 mb-2">
-                      ${translateText(
-                        "lobby_notification_modal.capacity_range",
-                      )}
-                    </div>
-                    <div class="space-y-2">
-                      <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm"
-                          >${translateText(
-                            "lobby_notification_modal.min",
-                          )}</label
-                        >
-                        <input
-                          type="range"
-                          min="2"
-                          max="100"
-                          .value=${this.ffaMinPlayers.toString()}
-                          @input=${(e: Event) => {
-                            this.ffaMinPlayers = parseInt(
-                              (e.target as HTMLInputElement).value,
-                            );
-                            if (this.ffaMinPlayers > this.ffaMaxPlayers) {
-                              this.ffaMaxPlayers = this.ffaMinPlayers;
-                            }
-                            this.requestUpdate();
-                          }}
-                          @change=${this.handleSliderChange}
-                          class="flex-1"
-                        />
-                        <span class="w-12 text-right"
-                          >${this.ffaMinPlayers}</span
-                        >
-                      </div>
-                      <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm"
-                          >${translateText(
-                            "lobby_notification_modal.max",
-                          )}</label
-                        >
-                        <input
-                          type="range"
-                          min="2"
-                          max="100"
-                          .value=${this.ffaMaxPlayers.toString()}
-                          @input=${(e: Event) => {
-                            this.ffaMaxPlayers = parseInt(
-                              (e.target as HTMLInputElement).value,
-                            );
-                            if (this.ffaMaxPlayers < this.ffaMinPlayers) {
-                              this.ffaMinPlayers = this.ffaMaxPlayers;
-                            }
-                            this.requestUpdate();
-                          }}
-                          @change=${this.handleSliderChange}
-                          class="flex-1"
-                        />
-                        <span class="w-12 text-right"
-                          >${this.ffaMaxPlayers}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                `
-              : ""}
           </div>
 
           <!-- Team Section -->
@@ -286,157 +177,68 @@ export class LobbyNotificationModal extends LitElement {
             ${this.teamEnabled
               ? html`
                   <div class="ml-7 space-y-3">
-                    <div class="text-sm text-gray-300 mb-2">
-                      ${translateText(
-                        "lobby_notification_modal.capacity_range",
-                      )}
-                    </div>
-                    <div class="space-y-2">
-                      <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm"
-                          >${translateText(
-                            "lobby_notification_modal.min",
-                          )}</label
-                        >
-                        <input
-                          type="range"
-                          min="2"
-                          max="100"
-                          .value=${this.teamMinPlayers.toString()}
-                          @input=${(e: Event) => {
-                            this.teamMinPlayers = parseInt(
-                              (e.target as HTMLInputElement).value,
-                            );
-                            if (this.teamMinPlayers > this.teamMaxPlayers) {
-                              this.teamMaxPlayers = this.teamMinPlayers;
-                            }
-                            this.requestUpdate();
-                          }}
-                          @change=${this.handleSliderChange}
-                          class="flex-1"
-                        />
-                        <span class="w-12 text-right"
-                          >${this.teamMinPlayers}</span
-                        >
-                      </div>
-                      <div class="flex items-center gap-4">
-                        <label class="w-12 text-sm"
-                          >${translateText(
-                            "lobby_notification_modal.max",
-                          )}</label
-                        >
-                        <input
-                          type="range"
-                          min="2"
-                          max="100"
-                          .value=${this.teamMaxPlayers.toString()}
-                          @input=${(e: Event) => {
-                            this.teamMaxPlayers = parseInt(
-                              (e.target as HTMLInputElement).value,
-                            );
-                            if (this.teamMaxPlayers < this.teamMinPlayers) {
-                              this.teamMinPlayers = this.teamMaxPlayers;
-                            }
-                            this.requestUpdate();
-                          }}
-                          @change=${this.handleSliderChange}
-                          class="flex-1"
-                        />
-                        <span class="w-12 text-right"
-                          >${this.teamMaxPlayers}</span
-                        >
-                      </div>
-                    </div>
-
                     <div class="mt-4">
-                      <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm text-gray-300"
-                          >${translateText(
-                            "lobby_notification_modal.team_configuration",
-                          )}</span
-                        >
-                        <div class="flex gap-2">
-                          <button
-                            @click=${this.selectAllTeams}
-                            class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
-                          >
-                            ${translateText(
-                              "lobby_notification_modal.select_all",
-                            )}
-                          </button>
-                          <button
-                            @click=${this.deselectAllTeams}
-                            class="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 rounded"
-                          >
-                            ${translateText(
-                              "lobby_notification_modal.deselect_all",
-                            )}
-                          </button>
-                        </div>
+                      <div class="text-sm text-gray-300 mb-2 font-semibold">
+                        ${translateText(
+                          "lobby_notification_modal.team_count_range",
+                        )}
                       </div>
-
-                      <div class="space-y-1 text-sm">
-                        <div class="font-semibold text-blue-300 mb-1">
-                          ${translateText(
-                            "lobby_notification_modal.fixed_modes",
-                          )}
-                        </div>
-                        ${FIXED_TEAM_MODES.map(
-                          (mode) => html`
-                            <label
-                              class="flex items-center gap-2 cursor-pointer"
+                        <div class="space-y-2">
+                          <div class="flex items-center gap-4">
+                            <label class="w-12 text-sm"
+                              >${translateText(
+                                "lobby_notification_modal.min",
+                              )}</label
                             >
-                              <input
-                                type="checkbox"
-                                .checked=${this.selectedTeamCounts.has(mode)}
-                                @change=${(e: Event) =>
-                                  this.handleTeamCountChange(mode, e)}
-                                class="w-4 h-4"
-                              />
-                              <span>
-                                ${(
-                                  {
-                                    Duos: translateText(
-                                      "host_modal.teams_Duos",
-                                    ),
-                                    Trios: translateText(
-                                      "host_modal.teams_Trios",
-                                    ),
-                                    Quads: translateText(
-                                      "host_modal.teams_Quads",
-                                    ),
-                                  } as Record<string, string>
-                                )[mode]}
-                              </span>
-                            </label>
-                          `,
-                        )}
-
-                        <div class="font-semibold text-green-300 mt-2 mb-1">
-                          ${translateText(
-                            "lobby_notification_modal.variable_modes",
-                          )}
-                        </div>
-                        ${VARIABLE_TEAM_COUNTS.map(
-                          (count) => html`
-                            <label
-                              class="flex items-center gap-2 cursor-pointer"
+                            <input
+                              type="range"
+                              min="2"
+                              max="50"
+                              .value=${this.minTeamCount.toString()}
+                              @input=${(e: Event) => {
+                                this.minTeamCount = parseInt(
+                                  (e.target as HTMLInputElement).value,
+                                );
+                                if (this.minTeamCount > this.maxTeamCount) {
+                                  this.maxTeamCount = this.minTeamCount;
+                                }
+                                this.requestUpdate();
+                              }}
+                              @change=${this.handleSliderChange}
+                              class="flex-1"
+                            />
+                            <span class="w-12 text-right"
+                              >${this.minTeamCount}</span
                             >
-                              <input
-                                type="checkbox"
-                                .checked=${this.selectedTeamCounts.has(count)}
-                                @change=${(e: Event) =>
-                                  this.handleTeamCountChange(count, e)}
-                                class="w-4 h-4"
-                              />
-                              <span>
-                                ${translateText("public_lobby.teams", {
-                                  num: count,
-                                })}
-                              </span>
-                            </label>
-                          `,
-                        )}
+                          </div>
+                          <div class="flex items-center gap-4">
+                            <label class="w-12 text-sm"
+                              >${translateText(
+                                "lobby_notification_modal.max",
+                              )}</label
+                            >
+                            <input
+                              type="range"
+                              min="2"
+                              max="50"
+                              .value=${this.maxTeamCount.toString()}
+                              @input=${(e: Event) => {
+                                this.maxTeamCount = parseInt(
+                                  (e.target as HTMLInputElement).value,
+                                );
+                                if (this.maxTeamCount < this.minTeamCount) {
+                                  this.minTeamCount = this.maxTeamCount;
+                                }
+                                this.requestUpdate();
+                              }}
+                              @change=${this.handleSliderChange}
+                              class="flex-1"
+                            />
+                            <span class="w-12 text-right"
+                              >${this.maxTeamCount}</span
+                            >
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
