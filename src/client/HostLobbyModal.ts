@@ -27,6 +27,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/LobbyTeamView";
 import "./components/Maps";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -35,6 +36,7 @@ export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
@@ -607,7 +609,7 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
-        // join lobby
+        crazyGamesSDK.showInviteButton(this.lobbyId);
       })
       .then(() => {
         this.dispatchEvent(
@@ -622,11 +624,16 @@ export class HostLobbyModal extends LitElement {
         );
       });
     this.modalEl?.open();
+    this.modalEl.onClose = () => {
+      this.close();
+    };
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
   public close() {
+    console.log("Closing host lobby modal");
+    crazyGamesSDK.hideInviteButton();
     this.modalEl?.close();
     this.copySuccess = false;
     if (this.playersInterval) {
@@ -828,7 +835,6 @@ export class HostLobbyModal extends LitElement {
 
   private async copyToClipboard() {
     try {
-      //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
         `${location.origin}/#join=${this.lobbyId}`,
       );
@@ -851,8 +857,6 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
-
         this.clients = data.clients ?? [];
       });
   }
