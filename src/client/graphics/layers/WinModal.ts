@@ -16,6 +16,7 @@ import {
   handlePurchase,
   patternRelationship,
 } from "../../Cosmetics";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -293,6 +294,7 @@ export class WinModal extends LitElement implements Layer {
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
+          crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: wu.winner[1],
@@ -315,6 +317,7 @@ export class WinModal extends LitElement implements Layer {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
+          crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
