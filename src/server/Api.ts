@@ -1,4 +1,6 @@
-import z from "zod";
+import { z } from "zod/v4/classic/external.cjs";
+import { UserMeResponse, UserMeResponseSchema } from "../core/ApiSchemas";
+import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   GameID,
@@ -11,9 +13,45 @@ import { replacer } from "../core/Util";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
+const log = logger.child({ component: "Api" });
 
-const log = logger.child({ component: "Archive" });
-
+export async function getUserMe(
+  token: string,
+  config: ServerConfig,
+): Promise<
+  | { type: "success"; response: UserMeResponse }
+  | { type: "error"; message: string }
+> {
+  try {
+    // Get the user object
+    const response = await fetch(config.jwtIssuer() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${token}`,
+        "x-service-bypass": config.cloudflareRateLimitBypassToken(),
+      },
+    });
+    if (response.status !== 200) {
+      return {
+        type: "error",
+        message: `Failed to fetch user me: ${response.statusText}`,
+      };
+    }
+    const body = await response.json();
+    const result = UserMeResponseSchema.safeParse(body);
+    if (!result.success) {
+      return {
+        type: "error",
+        message: `Invalid response: ${z.prettifyError(result.error)}`,
+      };
+    }
+    return { type: "success", response: result.data };
+  } catch (e) {
+    return {
+      type: "error",
+      message: `Failed to fetch user me: ${e}`,
+    };
+  }
+}
 export async function archive(gameRecord: GameRecord) {
   try {
     const parsed = GameRecordSchema.safeParse(gameRecord);
@@ -30,6 +68,7 @@ export async function archive(gameRecord: GameRecord) {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": config.apiKey(),
+        "x-service-bypass": config.cloudflareRateLimitBypassToken(),
       },
     });
     if (!response.ok) {
@@ -45,7 +84,6 @@ export async function archive(gameRecord: GameRecord) {
     return;
   }
 }
-
 export async function readGameRecord(
   gameId: GameID,
 ): Promise<GameRecord | null> {
@@ -59,6 +97,7 @@ export async function readGameRecord(
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "x-service-bypass": config.cloudflareRateLimitBypassToken(),
       },
     });
     const record = await response.json();
@@ -76,7 +115,6 @@ export async function readGameRecord(
     return null;
   }
 }
-
 export function finalizeGameRecord(
   clientRecord: PartialGameRecord,
 ): GameRecord {

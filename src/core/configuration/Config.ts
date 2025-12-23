@@ -61,6 +61,7 @@ export interface ServerConfig {
   subdomain(): string;
   cloudflareAccountId(): string;
   cloudflareApiToken(): string;
+  cloudflareRateLimitBypassToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;

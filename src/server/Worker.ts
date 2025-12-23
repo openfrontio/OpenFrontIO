@@ -18,10 +18,10 @@ import {
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, finalizeGameRecord } from "./Archive";
+import { archive, finalizeGameRecord, getUserMe } from "./Api";
+import { verifyClientToken } from "./Auth";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
-import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";

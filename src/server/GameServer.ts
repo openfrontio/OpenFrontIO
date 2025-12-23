@@ -23,7 +23,7 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
-import { archive, finalizeGameRecord } from "./Archive";
+import { archive, finalizeGameRecord } from "./Api";
 import { Client } from "./Client";
 export enum GamePhase {
   Lobby = "LOBBY",

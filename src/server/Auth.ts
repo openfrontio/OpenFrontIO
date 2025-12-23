@@ -1,12 +1,8 @@
 import { jwtVerify } from "jose";
 import { z } from "zod";
-import {
-  TokenPayload,
-  TokenPayloadSchema,
-  UserMeResponse,
-  UserMeResponseSchema,
-} from "../core/ApiSchemas";
+import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
@@ -59,42 +55,5 @@ export async function verifyClientToken(
           : "An unknown error occurred";
 
     return { type: "error", message };
-  }
-}
-
-export async function getUserMe(
-  token: string,
-  config: ServerConfig,
-): Promise<
-  | { type: "success"; response: UserMeResponse }
-  | { type: "error"; message: string }
-> {
-  try {
-    // Get the user object
-    const response = await fetch(config.jwtIssuer() + "/users/@me", {
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-    });
-    if (response.status !== 200) {
-      return {
-        type: "error",
-        message: `Failed to fetch user me: ${response.statusText}`,
-      };
-    }
-    const body = await response.json();
-    const result = UserMeResponseSchema.safeParse(body);
-    if (!result.success) {
-      return {
-        type: "error",
-        message: `Invalid response: ${z.prettifyError(result.error)}`,
-      };
-    }
-    return { type: "success", response: result.data };
-  } catch (e) {
-    return {
-      type: "error",
-      message: `Failed to fetch user me: ${e}`,
-    };
   }
 }

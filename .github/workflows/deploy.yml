@@ -108,6 +108,7 @@ jobs:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_RATE_LIMIT_BYPASS_TOKEN: ${{ secrets.CF_RATE_LIMIT_BYPASS_TOKEN }}
           DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
           DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
