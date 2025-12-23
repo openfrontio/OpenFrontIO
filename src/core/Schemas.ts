@@ -130,6 +130,7 @@ export interface GameInfo {
   numClients?: number;
   msUntilStart?: number;
   gameConfig?: GameConfig;
+  nextGameConfig?: GameConfig;
 }
 export interface ClientInfo {
   clientID: ClientID;
@@ -174,10 +175,6 @@ export const GameConfigSchema = z.object({
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  nextMap: z.enum(GameMapType).optional(),
-  nextGameMode: z.enum(GameMode).optional(),
-  nextPlayerTeams: TeamCountConfigSchema.optional(),
-  nextMaxPlayers: z.number().optional(),
 });
 
 export const TeamSchema = z.string();

@@ -75,6 +75,7 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    public nextGameConfig?: GameConfig,
     private lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
@@ -651,6 +652,7 @@ export class GameServer {
         clientID: c.clientID,
       })),
       gameConfig: this.gameConfig,
+      nextGameConfig: this.nextGameConfig,
       msUntilStart: this.isPublic()
         ? this.createdAt + this.config.gameCreationRate()
         : undefined,

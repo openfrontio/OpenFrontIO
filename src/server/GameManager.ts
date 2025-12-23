@@ -51,6 +51,7 @@ export class GameManager {
   createGame(
     id: GameID,
     gameConfig: GameConfig | undefined,
+    nextGameConfig: GameConfig | undefined,
     creatorClientID?: string,
   ) {
     const game = new GameServer(
@@ -76,6 +77,7 @@ export class GameManager {
         disabledUnits: [],
         ...gameConfig,
       },
+      nextGameConfig,
       creatorClientID,
     );
     this.games.set(id, game);

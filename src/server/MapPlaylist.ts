@@ -80,7 +80,10 @@ export class MapPlaylist {
 
   constructor(private disableTeams: boolean = false) {}
 
-  public gameConfig(): GameConfig {
+  public gameConfig(): {
+    gameConfig: GameConfig;
+    nextGameConfig?: GameConfig;
+  } {
     const nextItem = this.getNextMap();
     const { map, mode } = nextItem;
 
@@ -100,7 +103,29 @@ export class MapPlaylist {
         ? (nextItem.playerTeams ?? this.getTeamCount())
         : undefined;
 
+    const gameConfig = this.createConfig(map, mode, playerTeams);
+
+    let nextGameConfig: GameConfig | undefined;
+    if (upNextItem) {
+      nextGameConfig = this.createConfig(
+        upNextItem.map,
+        upNextItem.mode,
+        nextPlayerTeams,
+      );
+    }
+
     // Create the default public game config (from your GameManager)
+    return {
+      gameConfig,
+      nextGameConfig,
+    };
+  }
+
+  private createConfig(
+    map: GameMapType,
+    mode: GameMode,
+    playerTeams?: TeamCountConfig,
+  ): GameConfig {
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -119,17 +144,7 @@ export class MapPlaylist {
       playerTeams,
       bots: 400,
       disabledUnits: [],
-      nextMap: upNextItem?.map,
-      nextGameMode: upNextItem?.mode,
-      nextPlayerTeams,
-      nextMaxPlayers: upNextItem
-        ? config.lobbyMaxPlayers(
-            upNextItem.map,
-            upNextItem.mode,
-            nextPlayerTeams,
-          )
-        : undefined,
-    } satisfies GameConfig;
+    };
   }
 
   private getTeamCount(): TeamCountConfig {

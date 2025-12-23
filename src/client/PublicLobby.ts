@@ -148,10 +148,10 @@ export class PublicLobby extends LitElement {
       teamDetailLabel: nextTeamDetailLabel,
       mapName: nextMapName,
     } = this.getGameDisplayDetails(
-      lobby.gameConfig.nextMap,
-      lobby.gameConfig.nextGameMode,
-      lobby.gameConfig.nextPlayerTeams,
-      lobby.gameConfig.nextMaxPlayers,
+      lobby.nextGameConfig?.gameMap,
+      lobby.nextGameConfig?.gameMode,
+      lobby.nextGameConfig?.playerTeams,
+      lobby.nextGameConfig?.maxPlayers,
     );
 
     const fullNextModeLabel = nextTeamDetailLabel
@@ -200,7 +200,7 @@ export class PublicLobby extends LitElement {
             </div>
             <div class="text-md font-medium text-white-400">${timeDisplay}</div>
           </div>
-          ${lobby.gameConfig.nextMap
+          ${lobby.nextGameConfig
             ? html` <div
                 class="col-span-full border-t border-white/20 pt-2 mt-2 flex flex-col items-end"
               >
