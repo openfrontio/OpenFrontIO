@@ -207,7 +207,7 @@ export class PublicLobby extends LitElement {
                 <div
                   class="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1"
                 >
-                  ${translateText("public_lobby.following_game")}
+                  ${translateText("public_lobby.up_next")}
                 </div>
                 <div
                   class="text-sm font-medium text-white-300 flex items-center justify-end gap-1"

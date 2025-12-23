@@ -266,7 +266,7 @@
     "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_lobby": {
-    "join": "Join next Game",
+    "join": "Join Game",
     "waiting": "players waiting",
     "teams_Duos": "of 2 (Duos)",
     "teams_Trios": "of 3 (Trios)",
@@ -274,7 +274,7 @@
     "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "following_game": "Following Game"
+    "up_next": "Up next"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
