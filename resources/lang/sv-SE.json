@@ -21,9 +21,7 @@
     "instructions": "Instruktioner",
     "how_to_play": "Hur man Spelar",
     "advertise": "Annonsera",
-    "wiki": "Wiki",
-    "privacy_policy": "Sekretesspolicy",
-    "terms_of_service": "Användarvillkor"
+    "wiki": "Wiki"
   },
   "news": {
     "full_changelog": "Se fullständig ändringslogg",
@@ -231,10 +229,10 @@
   },
   "difficulty": {
     "difficulty": "Svårighetsgrad",
-    "easy": "Avslappnat",
-    "medium": "Balanserat",
-    "hard": "Intensivt",
-    "impossible": "Omöjligt"
+    "Relaxed": "Avslappnat",
+    "Balanced": "Balanserat",
+    "Intense": "Intensivt",
+    "Impossible": "Omöjligt"
   },
   "game_mode": {
     "ffa": "Alla mot alla",
@@ -450,7 +448,6 @@
     "gold": "Guld",
     "ports": "Hamnar",
     "cities": "Städer",
-    "factories": "Fabriker",
     "missile_launchers": "Missilavfyringsramper",
     "sams": "Luftvärn",
     "warships": "Krigsskepp",
@@ -576,9 +573,6 @@
       "grogu_head": "Grogu Huvud",
       "grogu": "Grogu"
     }
-  },
-  "spawn_ad": {
-    "loading": "Laddar annons..."
   },
   "auth": {
     "login_required": "Inloggning krävs för att komma åt den här webbplatsen.",

@@ -21,12 +21,10 @@
     "instructions": "Instrucións",
     "how_to_play": "Como xogar",
     "advertise": "Promoción",
-    "wiki": "Wiki",
-    "privacy_policy": "Política de privacidade",
-    "terms_of_service": "Termos de servizo"
+    "wiki": "Wiki"
   },
   "news": {
-    "see_all_releases": "Ver todas as versións",
+    "full_changelog": "Ve o rexistro de actualizacións completo",
     "github_link": "en GitHub",
     "title": "Notas da versión"
   },
@@ -43,15 +41,15 @@
     "action_move_camera": "Mover cámara",
     "action_ratio_change": "Diminuír ou aumentar razón de ataque",
     "action_reset_gfx": "Reiniciar gráficos",
-    "action_auto_upgrade": "Subir de nivel o edificio máis próximo",
     "ui_section": "Interface do xogo",
     "ui_leaderboard": "Clasificación",
     "ui_your_team": "O teu equipo:",
-    "ui_leaderboard_desc": "Mostra os xogadores principais da partida e os seus nomes, porcentaxe da terra posuída, ouro e tropas. Ó premer en \"Mostrar todos\", móstranse todos os xogadores do xogo. Se non queres ver a clasificación, preme \"Agochar\".",
+    "ui_leaderboard_desc": "Mostra os xogadores principais da partida e os seus nomes, porcentaxe da terra posuída, ouro e tropas. Ó premer en \"Mostrar todos\", móstranse todos os xogadores do xogo. Se non queres ver a clasificación, preme \"Ocultar\".",
     "ui_control": "Panel de control",
     "ui_control_desc": "O panel de control contén os seguintes elementos:",
     "ui_pop": "Poboación — A cantidade que tes, a poboación máxima e a taxa á que medra.",
     "ui_gold": "Ouro — A cantidade que tes e a taxa á que o gañas.",
+    "ui_troops_workers": "Tropas e traballadores — A cantidade de tropas e traballadores asignados. As tropas empréganse para atacar ou defender ataques. Os traballadores serven para xerar ouro. Podes axustar o número de tropas e traballadores usando a barra.",
     "ui_attack_ratio": "Proporción de ataque - A cantidade de tropas que se usarán ao atacar. Podes axustar a proporción usando a barra. Ter máis tropas atacantes que tropas defensoras fará que perdas menos tropas no ataque, mentres que ter menos aumentará o dano inflixido ás túas tropas atacantes. O efecto non vai máis alá de proporcións de 2:1.",
     "ui_events": "Panel de eventos",
     "ui_events_desc": "O Panel de Eventos amosa os últimos eventos, solicitudes e mensaxes de chat rápido. Algúns exemplos son:",
@@ -70,7 +68,6 @@
     "radial_title": "Menú circular",
     "radial_desc": "O clic dereito (ou tocar no móbil) abre o menú circular. Para pechalo, fai clic fóra. Dende o menú podes:",
     "radial_build": "Abrir o menú de construción.",
-    "radial_attack": "Abrir menú de ataque.",
     "radial_info": "Abrir o menú de información.",
     "radial_boat": "Enviar un barco de transporte a atacar ó lugar escollido. Só dispoñible ó teres acceso ó mar.",
     "radial_close": "Pechar o menú.",
@@ -147,7 +144,6 @@
     "africa": "África",
     "asia": "Asia",
     "mars": "Marte",
-    "marsrevised": "Marte (revisado)",
     "southamerica": "América do Sur",
     "britannia": "Bretaña e Irlanda",
     "gatewaytotheatlantic": "Península Ibérica",
@@ -164,9 +160,7 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Estreito de Xibraltar",
-    "italia": "Italia",
-    "yenisei": "Ienisei",
-    "pluto": "Plutón"
+    "italia": "Italia"
   },
   "map_categories": {
     "continental": "Continentes",
@@ -217,8 +211,7 @@
     "player": "Xogador",
     "players": "Xogadores",
     "waiting": "Agardando polos xogadores...",
-    "start": "Comezar a partida",
-    "host_badge": "Anfitrión"
+    "start": "Comezar a partida"
   },
   "team_colors": {
     "red": "Vermello",
@@ -236,10 +229,10 @@
   },
   "difficulty": {
     "difficulty": "Dificultade",
-    "easy": "Relaxada",
-    "medium": "Equilibrada",
-    "hard": "Intensa",
-    "impossible": "Imposible"
+    "Relaxed": "Relaxada",
+    "Balanced": "Equilibrada",
+    "Intense": "Intensa",
+    "Impossible": "Imposible"
   },
   "game_mode": {
     "ffa": "Todos contra todos",
@@ -278,15 +271,9 @@
     "special_effects_desc": "Alternar efectos especiais. Desactívaos para mellorar o rendemento",
     "special_effects_enabled": "Efectos especiais activados",
     "special_effects_disabled": "Efectos especiais desactivados",
-    "structure_sprites_label": "Sprites de edificios",
-    "structure_sprites_desc": "Alternar sprites de edificios",
-    "structure_sprites_enabled": "Sprites de edificios activados",
-    "structure_sprites_disabled": "Sprites de edificios desactivados",
     "anonymous_names_label": "Nomes ocultos",
-    "anonymous_names_desc": "Oculta os verdadeiros nomes dos xogadores e mostra uns aleatorios.",
+    "anonymous_names_desc": "Oculta os nomes dos xogadores verdadeiros e mostra uns aleatorios.",
     "anonymous_names_enabled": "Nomes anónimos",
-    "lobby_id_visibility_label": "IDs de salas ocultas",
-    "lobby_id_visibility_desc": "Ocultar ID da sala ó crear unha sala privada",
     "real_names_shown": "Nomes reais",
     "left_click_label": "Clic esquerdo para abrir o menú",
     "left_click_desc": "Cando está ACTIVADO, o clic esquerdo abre o menú e o botón da espada ataca. Cando está DESACTIVADO, o clic esquerdo ataca directamente.",
@@ -295,11 +282,10 @@
     "right_click_opens_menu": "Clic dereito abre o menú",
     "attack_ratio_label": "⚔️ Proporción de atacantes",
     "attack_ratio_desc": "Porcentaxe das túas tropas para enviar nun ataque (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Proporción entre tropas e traballadores",
     "troop_ratio_desc": "Axustar o equilibrio entre tropas (para o combate) e traballadores (para a produción de ouro) (1–100%)",
     "territory_patterns_label": "🏳️ Deseños territoriais",
     "territory_patterns_desc": "Escoller se mostrar deseños territoriais no xogo",
-    "performance_overlay_label": "Superposición de rendemento",
-    "performance_overlay_desc": "Activar a superposición de rendemento. Activado, mostrarase a superposición de rendemento. Preme Shift+D durante o xogo para alternar.",
     "easter_writing_speed_label": "Multiplicador da velocidade de escritura",
     "easter_writing_speed_desc": "Axustar a velocidade coa que pretendes programar (x1–x100)",
     "easter_bug_count_label": "Contador de erros",
@@ -462,7 +448,6 @@
     "gold": "Ouro",
     "ports": "Portos",
     "cities": "Cidades",
-    "factories": "Fábricas",
     "missile_launchers": "Silos",
     "sams": "Lanzadores SAM",
     "warships": "Buques",
@@ -490,8 +475,7 @@
     "accept_alliance": "Aceptar",
     "reject_alliance": "Rexeitar",
     "alliance_renewed": "Renovouse a túa alianza con {name}",
-    "ignore": "Ignorar",
-    "unit_voluntarily_deleted": "Unidade eliminada voluntariamente"
+    "ignore": "Ignorar"
   },
   "unit_info_modal": {
     "structure_info": "Información do edificio",
@@ -499,7 +483,7 @@
     "close": "Pechar",
     "cooldown": "Tempo de recarga",
     "type": "Tipo",
-    "upgrade": "Subir de nivel",
+    "upgrade": "Mellorar",
     "level": "Nivel"
   },
   "relation": {
@@ -510,8 +494,10 @@
     "default": "Predeterminada"
   },
   "control_panel": {
+    "pop": "Poboación",
     "gold": "Ouro",
     "troops": "Tropas",
+    "workers": "Traballadores",
     "attack_ratio": "Proporción de ataque"
   },
   "player_panel": {
@@ -584,22 +570,14 @@
       "openfront": "OpenFront",
       "t_rex": "Tiranosauro",
       "embelem": "Emblema",
-      "contributor": "Contribuidor",
       "grogu_head": "Cabeza de Grogu",
       "grogu": "Grogu"
     }
-  },
-  "spawn_ad": {
-    "loading": "Cargando anuncio..."
   },
   "auth": {
     "login_required": "Debes iniciar sesión para acceder a este sitio.",
     "redirecting": "Estámosche a redirixir...",
     "not_authorized": "Non tes autorización para acceder a este sitio.",
     "contact_admin": "Se cres que esta mensaxe é un erro, por favor contacta co administrador do sitio."
-  },
-  "radial_menu": {
-    "delete_unit_title": "Eliminar unidade",
-    "delete_unit_description": "Preme para eliminar a unidade máis próxima"
   }
 }

@@ -181,10 +181,10 @@
   },
   "difficulty": {
     "difficulty": "الصعوبة",
-    "easy": "سهل",
-    "medium": "متوسط",
-    "hard": "صعب",
-    "impossible": "مستحيل"
+    "Relaxed": "سهل",
+    "Balanced": "متوسط",
+    "Intense": "صعب",
+    "Impossible": "مستحيل"
   },
   "game_mode": {
     "ffa": "الكل ضد الكل",

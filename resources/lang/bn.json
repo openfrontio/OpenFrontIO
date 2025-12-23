@@ -167,10 +167,10 @@
   },
   "difficulty": {
     "difficulty": "লেভেল",
-    "easy": "সহজ",
-    "medium": "মাঝারি",
-    "hard": "কঠিন",
-    "impossible": "অসম্ভব"
+    "Relaxed": "সহজ",
+    "Balanced": "মাঝারি",
+    "Intense": "কঠিন",
+    "Impossible": "অসম্ভব"
   },
   "game_mode": {
     "ffa": "সবাই বনাম সবাই",

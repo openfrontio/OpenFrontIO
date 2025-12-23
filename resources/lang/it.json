@@ -195,10 +195,10 @@
   },
   "difficulty": {
     "difficulty": "Difficoltà",
-    "easy": "Tranquillo",
-    "medium": "Bilanciato",
-    "hard": "Intenso",
-    "impossible": "Impossibile"
+    "Relaxed": "Tranquillo",
+    "Balanced": "Bilanciato",
+    "Intense": "Intenso",
+    "Impossible": "Impossibile"
   },
   "game_mode": {
     "ffa": "Tutti contro tutti",

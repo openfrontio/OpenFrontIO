@@ -256,7 +256,7 @@
     "Easy": "Könnyű",
     "Medium": "Közepes",
     "Hard": "Nehéz",
-    "impossible": "Lehetetlen"
+    "Impossible": "Lehetetlen"
   },
   "game_mode": {
     "ffa": "Mindenki mindenki ellen",

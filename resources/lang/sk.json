@@ -236,10 +236,10 @@
   },
   "difficulty": {
     "difficulty": "Náročnosť",
-    "easy": "Uvoľnená",
-    "medium": "Vyvážená",
-    "hard": "Búrlivá",
-    "impossible": "Nemožná"
+    "Relaxed": "Uvoľnená",
+    "Balanced": "Vyvážená",
+    "Intense": "Búrlivá",
+    "Impossible": "Nemožná"
   },
   "game_mode": {
     "ffa": "Každý za seba",

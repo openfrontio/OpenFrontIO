@@ -225,10 +225,10 @@
   },
   "difficulty": {
     "difficulty": "Schwierigkeitsgrad",
-    "easy": "Entspannt",
-    "medium": "Ausgeglichen",
-    "hard": "Anspruchsvoll",
-    "impossible": "Unmöglich"
+    "Relaxed": "Entspannt",
+    "Balanced": "Ausgeglichen",
+    "Intense": "Anspruchsvoll",
+    "Impossible": "Unmöglich"
   },
   "game_mode": {
     "ffa": "Free for All",

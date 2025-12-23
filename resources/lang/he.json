@@ -225,10 +225,10 @@
   },
   "difficulty": {
     "difficulty": "רמת קושי",
-    "easy": "רגוע",
-    "medium": "מאוזן",
-    "hard": "אינטנסיבי",
-    "impossible": "בלתי אפשרי"
+    "Relaxed": "רגוע",
+    "Balanced": "מאוזן",
+    "Intense": "אינטנסיבי",
+    "Impossible": "בלתי אפשרי"
   },
   "game_mode": {
     "ffa": "כולם נגד כולם",

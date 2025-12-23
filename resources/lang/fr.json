@@ -21,12 +21,10 @@
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
     "advertise": "Faire de la publicité",
-    "wiki": "Wiki",
-    "privacy_policy": "Politique de confidentialité",
-    "terms_of_service": "Conditions d'utilisation"
+    "wiki": "Wiki"
   },
   "news": {
-    "see_all_releases": "Voir toutes les versions",
+    "full_changelog": "Voir le journal des modifications complet",
     "github_link": "sur Github",
     "title": "Notes de version"
   },
@@ -43,7 +41,6 @@
     "action_move_camera": "Déplacer la caméra",
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
     "action_reset_gfx": "Réinitialiser les graphismes",
-    "action_auto_upgrade": "Améliorer automatiquement le bâtiment le plus proche",
     "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
     "ui_your_team": "Votre équipe :",
@@ -52,6 +49,7 @@
     "ui_control_desc": "Le panneau de contrôle contient les éléments suivants :",
     "ui_pop": "Pop - Le nombre d'unités que vous avez, votre population max et la vitesse à laquelle vous les gagnez.",
     "ui_gold": "Or - La quantité d'or que vous avez et la vitesse à laquelle vous en gagnez.",
+    "ui_troops_workers": "Troupes et Ouvriers - Le nombre de troupes et de travailleurs alloués. Les troupes sont utilisées pour attaquer ou défendre contre les attaques. Les travailleurs sont utilisés pour générer de l'or. Vous pouvez ajuster le nombre de troupes et de travailleurs en utilisant le curseur.",
     "ui_attack_ratio": "Ratio d'attaque - La quantité de troupes qui seront utilisées lors de votre attaque. Vous pouvez ajuster le ratio d'attaque en utilisant le curseur. Avoir plus de troupes attaquantes que défensives vous fera perdre moins de troupes dans l'attaque, quand en avoir moins va augmenter les dommages infligés à vos troupes attaquantes. L'effet ne dépasse pas le ratio de 2:1.",
     "ui_events": "Panneau des événements",
     "ui_events_desc": "Le panneau des événements affiche les derniers événements, demandes et messages de chat rapide. Quelques exemples sont :",
@@ -70,7 +68,6 @@
     "radial_title": "Menu radial",
     "radial_desc": "Un clic droit (ou un appui sur mobile) ouvre le menu Radial. Faites un clic droit à l'extérieur pour le fermer. À partir du menu, vous pouvez :",
     "radial_build": "Ouvrir le menu de construction.",
-    "radial_attack": "Ouvrez le menu d'attaque.",
     "radial_info": "Ouvrir le menu d'informations.",
     "radial_boat": "Envoyer un bateau (navire de transport) pour attaquer l'endroit sélectionné. Disponible uniquement si vous avez accès à l'eau.",
     "radial_close": "Fermer le menu.",
@@ -94,11 +91,11 @@
     "build_city": "Ville",
     "build_city_desc": "Utile quand vous ne pouvez agrandir votre territoire ou quand vous atteignez votre limite de population.",
     "build_factory": "Usine",
-    "build_factory_desc": "Construit automatiquement des chemins de fer vers les villes voisines, les ports et d'autres usines, et peut également se connecter avec des voisins amicaux. Des trains apparaissent régulièrement et vous donnent une quantité fixe d'or pour chaque bâtiment qu'ils visitent le long de la route, avec de l'or supplémentaire pour la visite des bâtiments de vos voisins.",
+    "build_factory_desc": "Crée automatiquement des chemins de fer avec les structures à proximité, et fait apparaître des trains sporadiquement.",
     "build_defense": "Poste de défense",
     "build_defense_desc": "Augmente les défenses autour des frontières voisines, qui montrent un motif en damier. Les attaques des ennemis sont plus lentes et font plus de blessés.",
     "build_port": "Port",
-    "build_port_desc": "Peut seulement être construit à proximité de l'eau. Permet de construire des navires de guerre. Envoie automatiquement des navires commerciaux entre les ports de votre pays et d'autres pays (sauf lorsque le commerce est arrêté), donnant de l'or aux deux parties. La transaction avec un joueur s'arrête automatiquement lorsque vous attaquez ou êtes attaqué par un joueur. Il reprend après 5 minutes ou si vous devenez alliés. Vous pouvez basculer manuellement le commerce avec \"Arrêter le commerce\" ou \"Commencer le commerce\".",
+    "build_port_desc": "Peut seulement être construit à proximité de l'eau. Permet de construire des navires de guerre. Envoie automatiquement des navires commerciaux entre les ports de votre pays et d'autres pays (sauf lorsque le commerce est arrêté), donnant de l'or aux deux parties. L'échange s'arrête automatiquement lorsque vous attaquez ou êtes attaqué par un joueur. Il reprend après 5 minutes ou si vous devenez allié. Vous pouvez controller manuellement le commerce avec \"Arrêter le commerce\" ou \"Commencer le commerce\".",
     "build_warship": "Navire de guerre",
     "build_warship_desc": "Patrouille dans une zone, capturant les navires commerciaux ennemis et détruisant leurs bateaux (navires de transport) et navires de guerre. Apparaît dans le Port le plus proche et patrouille la zone que vous avez cliquée pour le construire. Vous pouvez contrôler les vaisseaux de guerre en cliquant sur eux (voir Attaque sous Raccourcis) puis en cliquant sur la nouvelle zone dans laquelle vous voulez les déplacer.",
     "build_silo": "Silo à missiles",
@@ -131,21 +128,9 @@
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
     "infinite_troops": "Troupes infinies",
-    "compact_map": "Mini-carte",
     "disable_nukes": "Désactiver les armes nucléaires",
     "enables_title": "Activer les paramètres",
     "start": "Commencer la partie"
-  },
-  "token_login_modal": {
-    "title": "Connexion en cours...",
-    "logging_in": "Connexion en cours...",
-    "success": "Connexion réussie en tant que {email}!"
-  },
-  "account_modal": {
-    "title": "Compte",
-    "logged_in_as": "Connecté en tant que {email}",
-    "logged_in_with_discord": "Connecté avec Discord",
-    "recovery_email_sent": "Courriel de récupération envoyé à {email}"
   },
   "map": {
     "map": "Carte",
@@ -175,11 +160,7 @@
     "baikal": "Lac Baïkal",
     "halkidiki": "Chalcidique",
     "straitofgibraltar": "Détroit de Gibraltar",
-    "italia": "Italie",
-    "japan": "Japon",
-    "yenisei": "Ienisseï",
-    "pluto": "Pluton",
-    "montreal": "Montréal"
+    "italia": "Italie"
   },
   "map_categories": {
     "continental": "Continental",
@@ -197,9 +178,8 @@
     "join_lobby": "Rejoindre le salon",
     "checking": "Vérification du salon...",
     "not_found": "Salon introuvable. Veuillez vérifier l'ID et réessayer.",
-    "error": "Une erreur s'est produite. Veuillez réessayer ou contacter le support.",
-    "joined_waiting": "Rejoint avec succès ! En attente du début de la partie...",
-    "version_mismatch": "Cette partie a été créée avec une version différente. Impossible de rejoindre."
+    "error": "Une erreur est survenue. Veuillez réessayer.",
+    "joined_waiting": "Rejoint avec succès ! En attente du début de la partie..."
   },
   "public_lobby": {
     "join": "Rejoindre la prochaine partie",
@@ -226,16 +206,12 @@
     "disable_nations": "Désactiver les nations",
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
-    "donate_gold": "Donner de l'or",
     "infinite_troops": "Troupes infinies",
-    "donate_troops": "Donner des troupes",
-    "compact_map": "Mini-carte",
     "enables_title": "Activer les paramètres",
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
-    "start": "Commencer la partie",
-    "host_badge": "Hôte"
+    "start": "Commencer la partie"
   },
   "team_colors": {
     "red": "Rouge",
@@ -253,10 +229,10 @@
   },
   "difficulty": {
     "difficulty": "Difficulté",
-    "Easy": "Détendu",
-    "Medium": "Équilibré",
-    "Hard": "hard",
-    "impossible": "impossible"
+    "Relaxed": "Détendu",
+    "Balanced": "Équilibré",
+    "Intense": "Intense",
+    "Impossible": "Impossible"
   },
   "game_mode": {
     "ffa": "Chacun pour soi",
@@ -295,15 +271,9 @@
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "special_effects_enabled": "Effets spéciaux activés",
     "special_effects_disabled": "Effets spéciaux désactivés",
-    "structure_sprites_label": "Sprites de structure",
-    "structure_sprites_desc": "Activer/désactiver les sprites de structure",
-    "structure_sprites_enabled": "Sprites de structure activés",
-    "structure_sprites_disabled": "Sprites de structure désactivés",
     "anonymous_names_label": "Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
     "anonymous_names_enabled": "Noms anonymes activés",
-    "lobby_id_visibility_label": "ID du salon masqué",
-    "lobby_id_visibility_desc": "Cacher l'ID du salon lors de la création du salon privé",
     "real_names_shown": "Noms réels affichés",
     "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
@@ -312,13 +282,10 @@
     "right_click_opens_menu": "Un clic droit ouvre le menu",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
+    "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
     "territory_patterns_label": "🏳️ Modèles de territoire",
     "territory_patterns_desc": "Choisissez si vous voulez afficher les motifs de territoire en jeu",
-    "performance_overlay_label": "Surcouche de performances",
-    "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
-    "performance_overlay_enabled": "Affichage des performances activé",
-    "performance_overlay_disabled": "Affichage des performances désactivé",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -382,31 +349,26 @@
     },
     "help": {
       "troops": "S'il te plaît, donne-moi des troupes !",
-      "troops_frontlines": "Envoyez des troupes sur la ligne de front !",
       "gold": "S'il te plaît, donne-moi de l'or !",
       "no_attack": "S'il te plaît, ne m'attaque pas !",
       "sorry_attack": "Désolé, je ne voulais pas attaquer.",
       "alliance": "Alliance ?",
       "help_defend": "Aide-moi à me défendre contre [P1] !",
-      "trade_partners": "Soyons partenaires commerciaux !"
+      "team_up": "Faisons équipe contre [P1] !"
     },
     "attack": {
       "attack": "Attaque [P1] !",
       "mirv": "Lance un MIRV sur [P1] !",
       "focus": "Concentre l'attaque sur [P1] !",
-      "finish": "Finissons [P1] !",
-      "build_warships": "Construis des vaisseaux de guerre !"
+      "finish": "Finissons [P1] !"
     },
     "defend": {
       "defend": "Défend [P1] !",
-      "defend_from": "Défend contre [P1] !",
       "dont_attack": "N'attaque pas [P1] !",
-      "ally": "[P1] est mon allié !",
-      "build_posts": "Construis des Postes de Défense !"
+      "ally": "[P1] est mon allié !"
     },
     "greet": {
       "hello": "Bonjour !",
-      "good_job": "Beau travail !",
       "good_luck": "Bonne chance !",
       "have_fun": "Amuse-toi bien !",
       "gg": "GG !",
@@ -417,19 +379,13 @@
       "thanks": "Merci !",
       "oops": "Oups, mauvais bouton !",
       "trust_me": "Tu peux me faire confiance. Promis !",
-      "trust_broken": "Je t'ai fait confiance...",
-      "ruining_games": "Tu ruines nos deux parties.",
-      "dont_do_that": "Ne fais pas ça !",
-      "same_team": "Je suis de ton côté !"
+      "trust_broken": "Je t'ai fait confiance..."
     },
     "misc": {
       "go": "C'est parti !",
       "strategy": "Bonne stratégie !",
       "fun": "Cette partie est amusante !",
-      "team_up": "Faisons équipe contre [P1] !",
-      "pr": "Quand est-ce que mon PR sera intégré...?",
-      "build_closer": "Construis plus près pour avoir des trains !",
-      "coastline": "Laisse-moi avoir accès à un littoral."
+      "pr": "Quand est-ce que mon PR sera intégré...?"
     },
     "warnings": {
       "strong": "[P1] est fort·e.",
@@ -440,14 +396,10 @@
       "has_allies": "[P1] a beaucoup d'alliés.",
       "no_allies": "[P1] n'a pas d'alliés.",
       "betrayed": "[P1] a trahi son allié !",
-      "betrayed_me": "[P1] m'a trahi !",
       "getting_big": "[P1] croît trop vite !",
       "danger_base": "[P1] n'est pas protégé !",
       "saving_for_mirv": "[P1] économise pour lancer un MIRV.",
-      "mirv_ready": "[P1] a assez d'or pour lancer un MIRV !",
-      "snowballing": "[P1] grandit beaucoup trop vite !",
-      "cheating": "[P1] triche !",
-      "stop_trading": "Arrête le commerce avec [P1] !"
+      "mirv_ready": "[P1] a assez d'or pour lancer un MIRV !"
     }
   },
   "build_menu": {
@@ -466,8 +418,6 @@
     "not_enough_money": "Pas assez d'argent"
   },
   "win_modal": {
-    "support_openfront": "Soutenir OpenFront!",
-    "territory_pattern": "Achetez un modèle de territoire pour supporter OpenFront !",
     "died": "Vous êtes mort",
     "your_team": "Votre équipe a gagné !",
     "other_team": "L'équipe {team} a gagné !",
@@ -485,13 +435,7 @@
     "team": "Équipe",
     "owned": "Possédé",
     "gold": "Or",
-    "troops": "Troupes",
-    "launchers": "Lanceurs",
-    "sams": "SAMs",
-    "warships": "Vaisseaux de guerre",
-    "cities": "Villes",
-    "show_control": "Afficher les commandes",
-    "show_units": "Afficher les unités"
+    "troops": "Troupes"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -499,13 +443,11 @@
     "nation": "Nation",
     "player": "Joueur",
     "team": "Équipe",
-    "alliance_timeout": "L'alliance se termine dans",
-    "troops": "Troupes",
+    "d_troops": "Troupes en défense",
     "a_troops": "Troupes en attaque",
     "gold": "Or",
     "ports": "Ports",
     "cities": "Villes",
-    "factories": "Usines",
     "missile_launchers": "Lance-missiles",
     "sams": "SAMs",
     "warships": "Navires de guerre",
@@ -533,8 +475,7 @@
     "accept_alliance": "Accepter",
     "reject_alliance": "Refuser",
     "alliance_renewed": "Votre alliance avec {name} a été renouvelée",
-    "ignore": "Ignorer",
-    "unit_voluntarily_deleted": "Unité volontairement supprimée"
+    "ignore": "Ignorer"
   },
   "unit_info_modal": {
     "structure_info": "Infos sur la structure",
@@ -553,8 +494,10 @@
     "default": "Défaut"
   },
   "control_panel": {
+    "pop": "Pop",
     "gold": "Or",
     "troops": "Troupes",
+    "workers": "Ouvriers",
     "attack_ratio": "Ratio d'attaque"
   },
   "player_panel": {
@@ -570,8 +513,7 @@
     "yes": "Oui",
     "no": "Non",
     "none": "Aucun",
-    "alliances": "Alliances",
-    "flag": "Drapeau"
+    "alliances": "Alliances"
   },
   "replay_panel": {
     "replay_speed": "Vitesse de relecture",
@@ -591,7 +533,7 @@
     "choose_spawn": "Choisissez un emplacement de départ"
   },
   "territory_patterns": {
-    "title": "Sélectionner un motif de territoire",
+    "title": "Sélectionnez un motif de territoire",
     "purchase": "Acheter",
     "blocked": {
       "login": "Vous devez être connecté pour accéder à ce motif.",
@@ -628,85 +570,14 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Emblème",
-      "contributor": "Contributeur·ice",
       "grogu_head": "Tête de Grogu",
       "grogu": "Grogu"
     }
-  },
-  "flag_input": {
-    "title": "Sélectionner un drapeau",
-    "button_title": "Choisissez un drapeau !",
-    "search_flag": "Recherche..."
-  },
-  "spawn_ad": {
-    "loading": "Chargement de l'annonce..."
   },
   "auth": {
     "login_required": "La connexion est nécessaire pour accéder à ce site Web.",
     "redirecting": "Vous êtes en cours de redirection...",
     "not_authorized": "Vous n'êtes pas autorisé à accéder à ce site web.",
     "contact_admin": "Si vous pensez que vous voyez ce message par erreur, veuillez contacter l'administrateur du site."
-  },
-  "radial_menu": {
-    "delete_unit_title": "Supprimer une unité",
-    "delete_unit_description": "Cliquez pour supprimer l'unité la plus proche"
-  },
-  "discord_user_header": {
-    "avatar_alt": "Avatar"
-  },
-  "player_stats_table": {
-    "building_stats": "Statistiques de construction",
-    "ship_arrivals": "Arrivées de navire",
-    "nuke_stats": "Statistiques de bombes",
-    "player_metrics": "Statistiques du joueur",
-    "building": "Batîment",
-    "ship_type": "Type de navire",
-    "weapon": "Arme",
-    "built": "Construit",
-    "destroyed": "Détruit",
-    "captured": "Capturé",
-    "lost": "Perdu",
-    "hits": "Coups",
-    "launched": "Lancés",
-    "landed": "Atterris",
-    "sent": "Envoyés",
-    "arrived": "Arrivés",
-    "attack": "Attaque",
-    "received": "Reçu",
-    "cancelled": "Annulé",
-    "count": "Compte",
-    "gold": "Or",
-    "workers": "Ouvriers",
-    "war": "Guerre",
-    "trade": "Commercer",
-    "steal": "Voler",
-    "unit": {
-      "city": "Ville",
-      "port": "Port",
-      "defp": "Poste de défense",
-      "saml": "Lanceur de SAM",
-      "silo": "Silo à missiles",
-      "wshp": "Navire de guerre",
-      "fact": "Usine",
-      "trade": "Bateau de commerce",
-      "trans": "Bateau de transport",
-      "abomb": "Bombe atomique",
-      "hbomb": "Bombe à hydrogène",
-      "mirv": "MIRV",
-      "mirvw": "Ogive de MIRV"
-    }
-  },
-  "game_list": {
-    "recent_games": "Parties récentes",
-    "game_id": "ID de la partie",
-    "mode": "Mode",
-    "mode_ffa": "Chacun pour soi",
-    "mode_team": "Équipe",
-    "view": "Vue",
-    "details": "Détails",
-    "started": "Débuté",
-    "map": "Carte",
-    "difficulty": "Difficulté",
-    "type": "Type"
   }
 }

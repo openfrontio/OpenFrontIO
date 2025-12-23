@@ -167,10 +167,10 @@
   },
   "difficulty": {
     "difficulty": "लेवल",
-    "easy": "आसान",
-    "medium": "मध्यम",
-    "hard": "कठिन",
-    "impossible": "असंभव"
+    "Relaxed": "आसान",
+    "Balanced": "मध्यम",
+    "Intense": "कठिन",
+    "Impossible": "असंभव"
   },
   "game_mode": {
     "ffa": "हर कोई बनाम हर कोई",
