@@ -11,6 +11,7 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  GameConfig,
   GameID,
   ID,
   PartialGameRecordSchema,
@@ -128,9 +129,19 @@ export async function startWorker() {
       return res.status(400).json({ error });
     }
 
-    const gc = result.data;
+    const input = result.data;
+    let gameConfig: GameConfig | undefined;
+    let nextGameConfig: GameConfig | undefined;
+
+    if (input && "gameConfig" in input) {
+      gameConfig = input.gameConfig;
+      nextGameConfig = input.nextGameConfig;
+    } else {
+      gameConfig = input;
+    }
+
     if (
-      gc?.gameType === GameType.Public &&
+      gameConfig?.gameType === GameType.Public &&
       req.headers[config.adminHeader()] !== config.adminToken()
     ) {
       log.warn(
@@ -149,10 +160,10 @@ export async function startWorker() {
     }
 
     // Pass creatorClientID to createGame
-    const game = gm.createGame(id, gc, creatorClientID);
+    const game = gm.createGame(id, gameConfig, nextGameConfig, creatorClientID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gameConfig?.gameMode ? ` ${gameConfig.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -556,7 +567,8 @@ async function pollLobby(gm: GameManager) {
     if (data.assignment) {
       // TODO: Only allow specified players to join the game.
       console.log(`Creating game ${gameId}`);
-      const game = gm.createGame(gameId, playlist.gameConfig());
+      const { gameConfig, nextGameConfig } = playlist.gameConfig();
+      const game = gm.createGame(gameId, gameConfig, nextGameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.
         console.log(`Starting game ${gameId}`);

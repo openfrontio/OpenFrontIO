@@ -61,6 +61,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
 interface MapWithMode {
   map: GameMapType;
   mode: GameMode;
+  playerTeams?: TeamCountConfig;
 }
 
 const TEAM_COUNTS = [
@@ -80,13 +81,52 @@ export class MapPlaylist {
 
   constructor(private disableTeams: boolean = false) {}
 
-  public gameConfig(): GameConfig {
-    const { map, mode } = this.getNextMap();
+  public gameConfig(): {
+    gameConfig: GameConfig;
+    nextGameConfig?: GameConfig;
+  } {
+    const nextItem = this.getNextMap();
+    const { map, mode } = nextItem;
+
+    this.ensurePlaylistPopulated();
+    const upNextItem = this.mapsPlaylist[0];
+    let nextPlayerTeams: TeamCountConfig | undefined;
+
+    if (upNextItem) {
+      if (upNextItem.mode === GameMode.Team && !upNextItem.playerTeams) {
+        upNextItem.playerTeams = this.getTeamCount();
+      }
+      nextPlayerTeams = upNextItem.playerTeams;
+    }
 
     const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+      mode === GameMode.Team
+        ? (nextItem.playerTeams ?? this.getTeamCount())
+        : undefined;
+
+    const gameConfig = this.createConfig(map, mode, playerTeams);
+
+    let nextGameConfig: GameConfig | undefined;
+    if (upNextItem) {
+      nextGameConfig = this.createConfig(
+        upNextItem.map,
+        upNextItem.mode,
+        nextPlayerTeams,
+      );
+    }
 
     // Create the default public game config (from your GameManager)
+    return {
+      gameConfig,
+      nextGameConfig,
+    };
+  }
+
+  private createConfig(
+    map: GameMapType,
+    mode: GameMode,
+    playerTeams?: TeamCountConfig,
+  ): GameConfig {
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -105,24 +145,28 @@ export class MapPlaylist {
       playerTeams,
       bots: 400,
       disabledUnits: [],
-    } satisfies GameConfig;
+    };
   }
 
   private getTeamCount(): TeamCountConfig {
     return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
   }
 
-  private getNextMap(): MapWithMode {
+  private ensurePlaylistPopulated() {
     if (this.mapsPlaylist.length === 0) {
       const numAttempts = 10000;
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
           log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
+          return;
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
+  }
+
+  private getNextMap(): MapWithMode {
+    this.ensurePlaylistPopulated();
     // Even if it failed, playlist will be partially populated.
     return this.mapsPlaylist.shift()!;
   }

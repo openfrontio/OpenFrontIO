@@ -130,6 +130,7 @@ export interface GameInfo {
   numClients?: number;
   msUntilStart?: number;
   gameConfig?: GameConfig;
+  nextGameConfig?: GameConfig;
 }
 export interface ClientInfo {
   clientID: ClientID;
