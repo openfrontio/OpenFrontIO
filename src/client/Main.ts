@@ -111,7 +111,7 @@ class Client {
   private turnstileTokenPromise: Promise<{
     token: string;
     createdAt: number;
-  }> | null = null;
+  } | null> | null = null;
 
   constructor() {}
 
@@ -712,7 +712,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
-}> {
+} | null> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
   while (typeof window.turnstile === "undefined" && attempts < 100) {
@@ -721,7 +721,8 @@ async function getTurnstileToken(): Promise<{
   }
 
   if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
+    console.error("Failed to load Turnstile script");
+    return null;
   }
 
   const config = await getServerConfigFromClient();

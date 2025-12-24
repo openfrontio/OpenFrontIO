@@ -1,7 +1,12 @@
 import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
+import { replacer } from "../Util";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -22,10 +27,30 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   if (!("updates" in gu)) {
     return;
   }
+  const startPost = performance.now();
+
   sendMessage({
     type: "game_update",
     gameUpdate: gu,
   });
+  const durationPost = performance.now() - startPost;
+
+  if (gu.tick % 10 !== 0) {
+    return;
+  }
+  console.log(`post message duration: ${durationPost} ms`);
+
+  console.log(`tile size: ${gu.packedTileUpdates.length}`);
+  for (const u in gu.updates) {
+    const size = JSON.stringify(gu.updates[u], replacer).length / 1024;
+    if (size > 10) {
+      console.log(`type: ${GameUpdateType[u]}, size: ${size}`);
+    }
+  }
+  const start = performance.now();
+  console.log(`total size: ${JSON.stringify(gu, replacer).length / 1024}`);
+  const duration = performance.now() - start;
+  console.log(`serialization time: ${duration} ms`);
 }
 
 function sendMessage(message: WorkerMessage) {
