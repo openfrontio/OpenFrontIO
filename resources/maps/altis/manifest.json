@@ -1,0 +1,95 @@
+{
+  "map": {
+    "height": 1630,
+    "num_land_tiles": 1148596,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 407,
+    "num_land_tiles": 69952,
+    "width": 500
+  },
+  "map4x": {
+    "height": 815,
+    "num_land_tiles": 284600,
+    "width": 1000
+  },
+  "name": "altis",
+  "nations": [
+    {
+      "coordinates": [277, 1053],
+      "flag": "",
+      "name": "Kavala"
+    },
+    {
+      "coordinates": [475, 737],
+      "flag": "",
+      "name": "Kore"
+    },
+    {
+      "coordinates": [314, 411],
+      "flag": "",
+      "name": "Oreokastro"
+    },
+    {
+      "coordinates": [650, 628],
+      "flag": "",
+      "name": "Syrta"
+    },
+    {
+      "coordinates": [942, 573],
+      "flag": "",
+      "name": "Athira"
+    },
+    {
+      "coordinates": [1000, 430],
+      "flag": "",
+      "name": "Frini"
+    },
+    {
+      "coordinates": [1149, 940],
+      "flag": "",
+      "name": "Pyrgos"
+    },
+    {
+      "coordinates": [1422, 678],
+      "flag": "",
+      "name": "Paros"
+    },
+    {
+      "coordinates": [1113, 692],
+      "flag": "",
+      "name": "Telos"
+    },
+    {
+      "coordinates": [1461, 1308],
+      "flag": "",
+      "name": "Feres"
+    },
+    {
+      "coordinates": [1199, 1169],
+      "flag": "",
+      "name": "Ekali"
+    },
+    {
+      "coordinates": [1703, 414],
+      "flag": "",
+      "name": "Sofia"
+    },
+    {
+      "coordinates": [1750, 251],
+      "flag": "",
+      "name": "Molos"
+    },
+    {
+      "coordinates": [680, 1028],
+      "flag": "",
+      "name": "Zaros"
+    },
+    {
+      "coordinates": [887, 823],
+      "flag": "",
+      "name": "Neochori"
+    }
+  ]
+}
