@@ -462,6 +462,7 @@ export class GameServer {
         clientID: c.clientID,
         cosmetics: c.cosmetics,
       })),
+      lobbyCreatorID: this.lobbyCreatorID,
     });
     if (!result.success) {
       const error = z.prettifyError(result.error);

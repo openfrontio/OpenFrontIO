@@ -796,6 +796,7 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
+  canKick?: boolean;
   allianceExpiresAt?: Tick;
 }
 

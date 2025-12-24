@@ -191,6 +191,7 @@ async function createClientGame(
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    lobbyConfig.gameStartInfo.lobbyCreatorID,
   );
 
   const canvas = createCanvas();

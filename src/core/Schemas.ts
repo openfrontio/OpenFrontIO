@@ -437,6 +437,7 @@ export const GameStartInfoSchema = z.object({
   lobbyCreatedAt: z.number(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
+  lobbyCreatorID: ID.optional(),
 });
 
 export const WinnerSchema = z
