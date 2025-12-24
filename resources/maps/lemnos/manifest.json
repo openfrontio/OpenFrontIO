@@ -1,63 +1,63 @@
 {
   "map": {
-    "height": 1630,
-    "num_land_tiles": 1148596,
-    "width": 2000
+    "height": 1420,
+    "num_land_tiles": 874650,
+    "width": 1750
   },
   "map16x": {
-    "height": 407,
-    "num_land_tiles": 69952,
-    "width": 500
+    "height": 355,
+    "num_land_tiles": 53106,
+    "width": 437
   },
   "map4x": {
-    "height": 815,
-    "num_land_tiles": 284600,
-    "width": 1000
+    "height": 710,
+    "num_land_tiles": 216592,
+    "width": 875
   },
-  "name": "Lemnos",
+  "name": "lemnos",
   "nations": [
     {
-      "coordinates": [605, 373],
+      "coordinates": [550, 317],
       "flag": "",
       "name": "Gomati"
     },
     {
-      "coordinates": [1572, 317],
+      "coordinates": [1371, 254],
       "flag": "",
       "name": "Zematas"
     },
     {
-      "coordinates": [1147, 624],
+      "coordinates": [1096, 605],
       "flag": "",
       "name": "Kotsinas"
     },
     {
-      "coordinates": [1133, 1129],
+      "coordinates": [518, 894],
       "flag": "",
-      "name": "Paralia"
+      "name": "Evgatis"
     },
     {
-      "coordinates": [323, 1053],
+      "coordinates": [250, 879],
       "flag": "",
       "name": "Platy"
     },
     {
-      "coordinates": [869, 580],
+      "coordinates": [814, 460],
       "flag": "",
       "name": "Atsiki"
     },
     {
-      "coordinates": [505, 605],
+      "coordinates": [474, 542],
       "flag": "",
       "name": "Sardes"
     },
     {
-      "coordinates": [655, 902],
+      "coordinates": [691, 755],
       "flag": "",
-      "name": "Kontias"
+      "name": "Portianou"
     },
     {
-      "coordinates": [1336, 954],
+      "coordinates": [1177, 975],
       "flag": "",
       "name": "Kaminia"
     }
