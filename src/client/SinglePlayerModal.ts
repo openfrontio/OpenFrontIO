@@ -25,7 +25,11 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { LobbyPresetControls } from "./components/lobbyConfig/PresetControls";
+import {
+  LobbyPresetControls,
+  LobbyPresetKey,
+  lobbyPresetKeys,
+} from "./components/lobbyConfig/PresetControls";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
@@ -39,8 +43,8 @@ export class SinglePlayerModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private gameMap: GameMapType = GameMapType.World;
+  @state() private difficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -54,7 +58,9 @@ export class SinglePlayerModal extends LitElement {
   @state() private randomSpawn: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: TeamCountConfig = 2;
+  @state() private playerTeams: TeamCountConfig = 2;
+  @state() private gameType: GameType = GameType.Singleplayer;
+  @state() private gameMapSize: GameMapSize = GameMapSize.Normal;
 
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyPresets: LobbyPreset[] = [];
@@ -126,7 +132,7 @@ export class SinglePlayerModal extends LitElement {
                             <map-display
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
+                              this.gameMap === mapValue}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
@@ -169,7 +175,7 @@ export class SinglePlayerModal extends LitElement {
                 .map(
                   ([key, value]) => html`
                     <div
-                      class="option-card ${this.selectedDifficulty === value
+                      class="option-card ${this.difficulty === value
                         ? "selected"
                         : ""}"
                       @click=${() => this.handleDifficultySelection(value)}
@@ -236,7 +242,7 @@ export class SinglePlayerModal extends LitElement {
                     ].map(
                       (o) => html`
                         <div
-                          class="option-card ${this.teamCount === o
+                          class="option-card ${this.playerTeams === o
                             ? "selected"
                             : ""}"
                           @click=${() => this.handleTeamCountSelection(o)}
@@ -282,7 +288,7 @@ export class SinglePlayerModal extends LitElement {
 
               ${!(
                 this.gameMode === GameMode.Team &&
-                this.teamCount === HumansVsNations
+                this.playerTeams === HumansVsNations
               )
                 ? html`
                     <label
@@ -461,25 +467,20 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private buildPresetConfig(): LobbyPresetConfig {
-    return {
-      gameMap: this.selectedMap,
-      useRandomMap: this.useRandomMap,
-      difficulty: this.selectedDifficulty,
-      disableNPCs: this.disableNPCs,
-      bots: this.bots,
-      infiniteGold: this.infiniteGold,
-      donateGold: this.donateGold,
-      infiniteTroops: this.infiniteTroops,
-      donateTroops: this.donateTroops,
-      instantBuild: this.instantBuild,
-      randomSpawn: this.randomSpawn,
-      compactMap: this.compactMap,
-      maxTimer: this.maxTimer,
-      maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
-      gameMode: this.gameMode,
-      playerTeams: this.teamCount,
-      disabledUnits: this.disabledUnits,
-    };
+    this.gameType = GameType.Singleplayer;
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
+    const ret = {} as Record<LobbyPresetKey, LobbyPresetConfig[LobbyPresetKey]>;
+    const state = this as unknown as Record<
+      LobbyPresetKey,
+      LobbyPresetConfig[LobbyPresetKey]
+    >;
+    lobbyPresetKeys.forEach((key) => {
+      ret[key] = state[key];
+    });
+    ret.maxTimerValue = this.maxTimer ? this.maxTimerValue : undefined;
+    return ret as LobbyPresetConfig;
   }
 
   private savePreset(e: CustomEvent<string>) {
@@ -507,26 +508,23 @@ export class SinglePlayerModal extends LitElement {
       return;
     }
 
-    const config = preset.config;
+    const config = LobbyPresetControls.normalizePresetConfig(preset.config);
     this.useRandomMap = config.useRandomMap ?? false;
-    this.selectedMap = config.useRandomMap
-      ? this.getRandomMap()
-      : (config.gameMap ?? this.selectedMap);
-    this.selectedDifficulty = config.difficulty ?? this.selectedDifficulty;
-    this.disableNPCs = config.disableNPCs ?? this.disableNPCs;
-    this.bots = config.bots ?? this.bots;
-    this.infiniteGold = config.infiniteGold ?? this.infiniteGold;
-    this.donateGold = config.donateGold ?? this.donateGold;
-    this.infiniteTroops = config.infiniteTroops ?? this.infiniteTroops;
-    this.donateTroops = config.donateTroops ?? this.donateTroops;
-    this.instantBuild = config.instantBuild ?? this.instantBuild;
-    this.randomSpawn = config.randomSpawn ?? this.randomSpawn;
-    this.gameMode = config.gameMode ?? this.gameMode;
-    this.teamCount = config.playerTeams ?? this.teamCount;
-    this.disabledUnits = config.disabledUnits ?? [];
-    this.maxTimer = config.maxTimer ?? false;
-    this.maxTimerValue = config.maxTimerValue;
-    this.compactMap = config.compactMap ?? false;
+    this.gameMap = this.useRandomMap ? this.getRandomMap() : config.gameMap;
+    const state = this as unknown as Record<
+      LobbyPresetKey,
+      LobbyPresetConfig[LobbyPresetKey]
+    >;
+    lobbyPresetKeys
+      .filter((key) => key !== "gameMap" && key !== "useRandomMap")
+      .forEach((key) => {
+        state[key] = config[key];
+      });
+    this.maxTimerValue = this.maxTimer ? config.maxTimerValue : undefined;
+    this.gameType = GameType.Singleplayer;
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
   }
 
   private deletePreset(e?: CustomEvent<string>) {
@@ -558,12 +556,12 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleMapSelection(value: GameMapType) {
-    this.selectedMap = value;
+    this.gameMap = value;
     this.useRandomMap = false;
   }
 
   private handleDifficultySelection(value: Difficulty) {
-    this.selectedDifficulty = value;
+    this.difficulty = value;
   }
 
   private handleBotsChange(e: Event) {
@@ -592,6 +590,9 @@ export class SinglePlayerModal extends LitElement {
 
   private handleCompactMapChange(e: Event) {
     this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
   }
 
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
@@ -621,7 +622,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleTeamCountSelection(value: TeamCountConfig) {
-    this.teamCount = value;
+    this.playerTeams = value;
   }
 
   private getRandomMap(): GameMapType {
@@ -640,11 +641,11 @@ export class SinglePlayerModal extends LitElement {
   private async startGame() {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
+      this.gameMap = this.getRandomMap();
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${GameMapType[this.gameMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
     const gameID = generateID();
@@ -690,14 +691,14 @@ export class SinglePlayerModal extends LitElement {
               },
             ],
             config: {
-              gameMap: this.selectedMap,
+              gameMap: this.gameMap,
               gameMapSize: this.compactMap
                 ? GameMapSize.Compact
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
+              playerTeams: this.playerTeams,
+              difficulty: this.difficulty,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
@@ -710,7 +711,7 @@ export class SinglePlayerModal extends LitElement {
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
               ...(this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
+              this.playerTeams === HumansVsNations
                 ? {
                     disableNPCs: false,
                   }

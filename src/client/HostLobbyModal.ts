@@ -9,6 +9,7 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
+  GameType,
   HumansVsNations,
   Quads,
   Trios,
@@ -27,7 +28,11 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { LobbyPresetControls } from "./components/lobbyConfig/PresetControls";
+import {
+  LobbyPresetControls,
+  LobbyPresetKey,
+  lobbyPresetKeys,
+} from "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
@@ -39,12 +44,14 @@ export class HostLobbyModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private gameMap: GameMapType = GameMapType.World;
+  @state() private difficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: TeamCountConfig = 2;
+  @state() private playerTeams: TeamCountConfig = 2;
   @state() private bots: number = 400;
+  @state() private gameType: GameType = GameType.Private;
+  @state() private gameMapSize: GameMapSize = GameMapSize.Normal;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -219,7 +226,7 @@ export class HostLobbyModal extends LitElement {
                             <map-display
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
+                              this.gameMap === mapValue}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
@@ -260,7 +267,7 @@ export class HostLobbyModal extends LitElement {
                 .map(
                   ([key, value]) => html`
                     <div
-                      class="option-card ${this.selectedDifficulty === value
+                      class="option-card ${this.difficulty === value
                         ? "selected"
                         : ""}"
                       @click=${() => this.handleDifficultySelection(value)}
@@ -324,7 +331,7 @@ export class HostLobbyModal extends LitElement {
                       ].map(
                         (o) => html`
                           <div
-                            class="option-card ${this.teamCount === o
+                            class="option-card ${this.playerTeams === o
                               ? "selected"
                               : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
@@ -375,7 +382,7 @@ export class HostLobbyModal extends LitElement {
                 ${
                   !(
                     this.gameMode === GameMode.Team &&
-                    this.teamCount === HumansVsNations
+                    this.playerTeams === HumansVsNations
                   )
                     ? html`
                         <label
@@ -589,7 +596,7 @@ export class HostLobbyModal extends LitElement {
             .gameMode=${this.gameMode}
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-            .teamCount=${this.teamCount}
+            .teamCount=${this.playerTeams}
             .nationCount=${this.disableNPCs ? 0 : this.nationCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
@@ -675,25 +682,20 @@ export class HostLobbyModal extends LitElement {
   }
 
   private buildPresetConfig(): LobbyPresetConfig {
-    return {
-      gameMap: this.selectedMap,
-      useRandomMap: this.useRandomMap,
-      difficulty: this.selectedDifficulty,
-      disableNPCs: this.disableNPCs,
-      bots: this.bots,
-      infiniteGold: this.infiniteGold,
-      donateGold: this.donateGold,
-      infiniteTroops: this.infiniteTroops,
-      donateTroops: this.donateTroops,
-      instantBuild: this.instantBuild,
-      randomSpawn: this.randomSpawn,
-      compactMap: this.compactMap,
-      maxTimer: this.maxTimer,
-      maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
-      gameMode: this.gameMode,
-      playerTeams: this.teamCount,
-      disabledUnits: this.disabledUnits,
-    };
+    this.gameType = GameType.Private;
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
+    const ret = {} as Record<LobbyPresetKey, LobbyPresetConfig[LobbyPresetKey]>;
+    const state = this as unknown as Record<
+      LobbyPresetKey,
+      LobbyPresetConfig[LobbyPresetKey]
+    >;
+    lobbyPresetKeys.forEach((key) => {
+      ret[key] = state[key];
+    });
+    ret.maxTimerValue = this.maxTimer ? this.maxTimerValue : undefined;
+    return ret as LobbyPresetConfig;
   }
 
   private savePreset(e: CustomEvent<string>) {
@@ -721,26 +723,23 @@ export class HostLobbyModal extends LitElement {
       return;
     }
 
-    const config = preset.config;
+    const config = LobbyPresetControls.normalizePresetConfig(preset.config);
     this.useRandomMap = config.useRandomMap ?? false;
-    this.selectedMap = config.useRandomMap
-      ? this.getRandomMap()
-      : (config.gameMap ?? this.selectedMap);
-    this.selectedDifficulty = config.difficulty ?? this.selectedDifficulty;
-    this.disableNPCs = config.disableNPCs ?? this.disableNPCs;
-    this.bots = config.bots ?? this.bots;
-    this.infiniteGold = config.infiniteGold ?? this.infiniteGold;
-    this.donateGold = config.donateGold ?? this.donateGold;
-    this.infiniteTroops = config.infiniteTroops ?? this.infiniteTroops;
-    this.donateTroops = config.donateTroops ?? this.donateTroops;
-    this.instantBuild = config.instantBuild ?? this.instantBuild;
-    this.randomSpawn = config.randomSpawn ?? this.randomSpawn;
-    this.gameMode = config.gameMode ?? this.gameMode;
-    this.teamCount = config.playerTeams ?? this.teamCount;
-    this.disabledUnits = config.disabledUnits ?? [];
-    this.maxTimer = config.maxTimer ?? false;
-    this.maxTimerValue = config.maxTimerValue;
-    this.compactMap = config.compactMap ?? false;
+    this.gameMap = this.useRandomMap ? this.getRandomMap() : config.gameMap;
+    const state = this as unknown as Record<
+      LobbyPresetKey,
+      LobbyPresetConfig[LobbyPresetKey]
+    >;
+    lobbyPresetKeys
+      .filter((key) => key !== "gameMap" && key !== "useRandomMap")
+      .forEach((key) => {
+        state[key] = config[key];
+      });
+    this.maxTimerValue = this.maxTimer ? config.maxTimerValue : undefined;
+    this.gameType = GameType.Private;
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
 
     await this.loadNationCount();
     this.putGameConfig();
@@ -762,20 +761,20 @@ export class HostLobbyModal extends LitElement {
 
   private async handleRandomMapToggle() {
     this.useRandomMap = true;
-    this.selectedMap = this.getRandomMap();
+    this.gameMap = this.getRandomMap();
     await this.loadNationCount();
     this.putGameConfig();
   }
 
   private async handleMapSelection(value: GameMapType) {
-    this.selectedMap = value;
+    this.gameMap = value;
     this.useRandomMap = false;
     await this.loadNationCount();
     this.putGameConfig();
   }
 
   private async handleDifficultySelection(value: Difficulty) {
-    this.selectedDifficulty = value;
+    this.difficulty = value;
     this.putGameConfig();
   }
 
@@ -828,6 +827,9 @@ export class HostLobbyModal extends LitElement {
 
   private handleCompactMapChange(e: Event) {
     this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+    this.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
     this.putGameConfig();
   }
 
@@ -867,7 +869,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async handleTeamCountSelection(value: TeamCountConfig) {
-    this.teamCount = value;
+    this.playerTeams = value;
     this.putGameConfig();
   }
 
@@ -881,11 +883,11 @@ export class HostLobbyModal extends LitElement {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          gameMap: this.selectedMap,
+          gameMap: this.gameMap,
           gameMapSize: this.compactMap
             ? GameMapSize.Compact
             : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
+          difficulty: this.difficulty,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           donateGold: this.donateGold,
@@ -895,9 +897,9 @@ export class HostLobbyModal extends LitElement {
           randomSpawn: this.randomSpawn,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
+          playerTeams: this.playerTeams,
           ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
+          this.playerTeams === HumansVsNations
             ? {
                 disableNPCs: false,
               }
@@ -930,7 +932,7 @@ export class HostLobbyModal extends LitElement {
   private async startGame() {
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${GameMapType[this.gameMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();
@@ -990,7 +992,7 @@ export class HostLobbyModal extends LitElement {
 
   private async loadNationCount() {
     try {
-      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const mapData = this.mapLoader.getMapData(this.gameMap);
       const manifest = await mapData.manifest();
       this.nationCount = manifest.nations.length;
     } catch (error) {

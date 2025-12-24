@@ -177,12 +177,34 @@ export const LobbyPresetConfigSchema = GameConfigSchema.extend({
   useRandomMap: z.boolean().optional(),
   compactMap: z.boolean().optional(),
   maxTimer: z.boolean().optional(),
-}).partial();
+});
 export type LobbyPresetConfig = z.infer<typeof LobbyPresetConfigSchema>;
+
+const defaultLobbyPresetConfig: LobbyPresetConfig = {
+  gameMap: GameMapType.World,
+  difficulty: Difficulty.Medium,
+  donateGold: false,
+  donateTroops: false,
+  gameType: GameType.Private,
+  gameMode: GameMode.FFA,
+  gameMapSize: GameMapSize.Normal,
+  disableNPCs: false,
+  bots: 400,
+  infiniteGold: false,
+  infiniteTroops: false,
+  instantBuild: false,
+  randomSpawn: false,
+  useRandomMap: false,
+  compactMap: false,
+  maxTimer: false,
+  maxTimerValue: undefined,
+  playerTeams: 2,
+  disabledUnits: [],
+};
 
 export const LobbyPresetSchema = z.object({
   name: z.string().default("Preset"),
-  config: LobbyPresetConfigSchema.default({}),
+  config: LobbyPresetConfigSchema.default(defaultLobbyPresetConfig),
 });
 export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
 

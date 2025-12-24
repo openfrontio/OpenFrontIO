@@ -1,6 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Difficulty, GameMapType, GameMode } from "../../../core/game/Game";
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+} from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
   LobbyPreset,
@@ -10,6 +16,55 @@ import {
 } from "../../../core/Schemas";
 import { translateText } from "../../Utils";
 import "../baseComponents/Button";
+
+export const lobbyPresetKeys = [
+  "gameMap",
+  "useRandomMap",
+  "difficulty",
+  "disableNPCs",
+  "bots",
+  "infiniteGold",
+  "donateGold",
+  "infiniteTroops",
+  "donateTroops",
+  "gameType",
+  "gameMapSize",
+  "instantBuild",
+  "randomSpawn",
+  "compactMap",
+  "maxTimer",
+  "maxTimerValue",
+  "gameMode",
+  "playerTeams",
+  "disabledUnits",
+] as const;
+
+export type LobbyPresetKey = (typeof lobbyPresetKeys)[number];
+export type LobbyPresetDefaults = {
+  [K in LobbyPresetKey]-?: LobbyPresetConfig[K];
+};
+
+export const defaultLobbySettings: LobbyPresetDefaults = {
+  gameMap: GameMapType.World,
+  useRandomMap: false,
+  difficulty: Difficulty.Medium,
+  disableNPCs: false,
+  bots: 400,
+  infiniteGold: false,
+  donateGold: false,
+  infiniteTroops: false,
+  donateTroops: false,
+  gameType: GameType.Private,
+  gameMapSize: GameMapSize.Normal,
+  instantBuild: false,
+  randomSpawn: false,
+  compactMap: false,
+  maxTimer: false,
+  maxTimerValue: undefined,
+  gameMode: GameMode.FFA,
+  playerTeams: 2 as TeamCountConfig,
+  disabledUnits: [],
+};
 
 @customElement("lobby-preset-controls")
 export class LobbyPresetControls extends LitElement {
@@ -57,30 +112,18 @@ export class LobbyPresetControls extends LitElement {
     return { name: preset?.name ?? "Preset", config };
   }
 
-  private static normalizePresetConfig(
+  static normalizePresetConfig(
     config: Partial<LobbyPresetConfig>,
   ): LobbyPresetConfig {
-    const parsedResult = LobbyPresetConfigSchema.safeParse(config);
-    const parsed = parsedResult.success ? parsedResult.data : {};
-    return {
-      gameMap: parsed.gameMap ?? GameMapType.World,
-      useRandomMap: parsed.useRandomMap ?? false,
-      difficulty: parsed.difficulty ?? Difficulty.Medium,
-      disableNPCs: parsed.disableNPCs ?? false,
-      bots: parsed.bots ?? 400,
-      infiniteGold: parsed.infiniteGold ?? false,
-      donateGold: parsed.donateGold ?? false,
-      infiniteTroops: parsed.infiniteTroops ?? false,
-      donateTroops: parsed.donateTroops ?? false,
-      instantBuild: parsed.instantBuild ?? false,
-      randomSpawn: parsed.randomSpawn ?? false,
-      compactMap: parsed.compactMap ?? false,
-      maxTimer: parsed.maxTimer ?? false,
-      maxTimerValue: parsed.maxTimerValue,
-      gameMode: parsed.gameMode ?? GameMode.FFA,
-      playerTeams: parsed.playerTeams ?? (2 as TeamCountConfig),
-      disabledUnits: parsed.disabledUnits ?? [],
-    };
+    const merged = {
+      ...defaultLobbySettings,
+      ...config,
+    } as LobbyPresetConfig;
+    const parsedResult = LobbyPresetConfigSchema.safeParse(merged);
+    if (parsedResult.success) {
+      return parsedResult.data;
+    }
+    return defaultLobbySettings as LobbyPresetConfig;
   }
 
   createRenderRoot() {
