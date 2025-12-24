@@ -689,10 +689,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   private buildPresetConfig(): LobbyPresetConfig {
-    this.gameType = GameType.Private;
-    this.gameMapSize = this.compactMap
-      ? GameMapSize.Compact
-      : GameMapSize.Normal;
     const ret = {} as Record<LobbyPresetKey, LobbyPresetConfig[LobbyPresetKey]>;
     const state = this as unknown as Record<
       LobbyPresetKey,
@@ -701,6 +697,10 @@ export class HostLobbyModal extends LitElement {
     lobbyPresetKeys.forEach((key) => {
       ret[key] = state[key];
     });
+    ret.gameType = GameType.Private;
+    ret.gameMapSize = this.compactMap
+      ? GameMapSize.Compact
+      : GameMapSize.Normal;
     ret.maxTimerValue = this.maxTimer ? this.maxTimerValue : undefined;
     return ret as LobbyPresetConfig;
   }
