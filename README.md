@@ -181,7 +181,6 @@ Feel free to ask questions in the translation Discord server!
 To ensure code quality and project stability, we use a progressive contribution system:
 
 1. **New Contributors**: Limited to UI improvements and small bug fixes only
-
    - This helps you become familiar with the codebase
    - UI changes are easier to review and less likely to break core functionality
    - Small, focused PRs have a higher chance of being accepted
@@ -193,20 +192,17 @@ To ensure code quality and project stability, we use a progressive contribution 
 ### How to Contribute Successfully
 
 1. **Before Starting Work**:
-
    - Open an issue describing what you want to contribute
    - Wait for maintainer feedback before investing significant time
    - Small improvements can proceed directly to PR stage
 
 2. **Code Quality Requirements**:
-
    - All code must be well-commented and follow existing style patterns
    - New features should not break existing functionality
    - Code should be thoroughly tested before submission
    - All code changes in src/core _MUST_ be tested.
 
 3. **Pull Request Process**:
-
    - Keep PRs focused on a single feature or bug fix
    - Include screenshots for UI changes
    - Describe what testing you've performed
