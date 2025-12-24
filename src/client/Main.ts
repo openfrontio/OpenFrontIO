@@ -27,6 +27,11 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import "./LobbyNotificationButton";
+import { LobbyNotificationButton } from "./LobbyNotificationButton";
+import { LobbyNotificationManager } from "./LobbyNotificationManager";
+import "./LobbyNotificationModal";
+import { LobbyNotificationModal } from "./LobbyNotificationModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import "./NewsModal";
@@ -98,6 +103,19 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
+  private lobbyNotificationButton: LobbyNotificationButton | null = null;
+  private lobbyNotificationModal: LobbyNotificationModal | null = null;
+  private lobbyNotificationManager: LobbyNotificationManager | null = null;
+
+  // Event listener handlers (stored for cleanup)
+  private handleOpenNotificationModal = () => {
+    this.lobbyNotificationModal?.open();
+  };
+
+  private handleBeforeUnload = () => {
+    console.log("Browser is closing");
+    this.cleanup();
+  };
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -153,6 +171,27 @@ class Client {
       console.warn("Dark mode button element not found");
     }
 
+    this.lobbyNotificationButton = document.querySelector(
+      "lobby-notification-button",
+    ) as LobbyNotificationButton;
+    if (!this.lobbyNotificationButton) {
+      console.warn("Lobby notification button element not found");
+    }
+
+    this.lobbyNotificationModal = document.querySelector(
+      "lobby-notification-modal",
+    ) as LobbyNotificationModal;
+    if (!this.lobbyNotificationModal) {
+      console.warn("Lobby notification modal element not found");
+    }
+
+    this.lobbyNotificationManager = new LobbyNotificationManager();
+
+    window.addEventListener(
+      "open-notification-modal",
+      this.handleOpenNotificationModal,
+    );
+
     this.usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
@@ -162,12 +201,7 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
-      console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop();
-      }
-    });
+    window.addEventListener("beforeunload", this.handleBeforeUnload);
 
     const gutterAds = document.querySelector("gutter-ads");
     if (!(gutterAds instanceof GutterAds))
@@ -470,6 +504,27 @@ class Client {
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
+    }
+  }
+
+  private cleanup(): void {
+    // Remove event listeners
+    window.removeEventListener(
+      "open-notification-modal",
+      this.handleOpenNotificationModal,
+    );
+    window.removeEventListener("beforeunload", this.handleBeforeUnload);
+
+    // Destroy the LobbyNotificationManager
+    if (this.lobbyNotificationManager) {
+      this.lobbyNotificationManager.destroy();
+      this.lobbyNotificationManager = null;
+    }
+
+    // Stop any ongoing game
+    if (this.gameStop !== null) {
+      this.gameStop();
+      this.gameStop = null;
     }
   }
 
