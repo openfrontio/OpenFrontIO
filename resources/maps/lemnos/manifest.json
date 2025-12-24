@@ -17,79 +17,49 @@
   "name": "Lemnos",
   "nations": [
     {
-      "coordinates": [277, 1053],
+      "coordinates": [605, 373],
       "flag": "",
-      "name": "Kavala"
+      "name": "Gomati"
     },
     {
-      "coordinates": [475, 737],
+      "coordinates": [1572, 317],
       "flag": "",
-      "name": "Kore"
+      "name": "Zematas"
     },
     {
-      "coordinates": [314, 411],
+      "coordinates": [1147, 624],
       "flag": "",
-      "name": "Oreokastro"
+      "name": "Kotsinas"
     },
     {
-      "coordinates": [650, 628],
+      "coordinates": [1133, 1129],
       "flag": "",
-      "name": "Syrta"
+      "name": "Paralia"
     },
     {
-      "coordinates": [942, 573],
+      "coordinates": [323, 1053],
       "flag": "",
-      "name": "Athira"
+      "name": "Platy"
     },
     {
-      "coordinates": [1000, 430],
+      "coordinates": [869, 580],
       "flag": "",
-      "name": "Frini"
+      "name": "Atsiki"
     },
     {
-      "coordinates": [1149, 940],
+      "coordinates": [505, 605],
       "flag": "",
-      "name": "Pyrgos"
+      "name": "Sardes"
     },
     {
-      "coordinates": [1422, 678],
+      "coordinates": [655, 902],
       "flag": "",
-      "name": "Paros"
+      "name": "Kontias"
     },
     {
-      "coordinates": [1113, 692],
+      "coordinates": [1336, 954],
       "flag": "",
-      "name": "Telos"
-    },
-    {
-      "coordinates": [1461, 1308],
-      "flag": "",
-      "name": "Feres"
-    },
-    {
-      "coordinates": [1199, 1169],
-      "flag": "",
-      "name": "Ekali"
-    },
-    {
-      "coordinates": [1703, 414],
-      "flag": "",
-      "name": "Sofia"
-    },
-    {
-      "coordinates": [1750, 251],
-      "flag": "",
-      "name": "Molos"
-    },
-    {
-      "coordinates": [680, 1028],
-      "flag": "",
-      "name": "Zaros"
-    },
-    {
-      "coordinates": [887, 823],
-      "flag": "",
-      "name": "Neochori"
+      "name": "Kaminia"
     }
   ]
 }
