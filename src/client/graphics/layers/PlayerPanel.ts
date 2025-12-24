@@ -278,7 +278,12 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private handleKickClick(e: Event, other: PlayerView) {
     e.stopPropagation();
-    this.eventBus.emit(new SendKickPlayerIntentEvent(other.clientID()!));
+    const targetClientID = other.clientID();
+    if (!targetClientID) {
+      console.warn("Cannot kick player without clientID");
+      return;
+    }
+    this.eventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
     this.hide();
   }
 
