@@ -1,6 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-import { getAltKey, getModifierKey, translateText } from "../client/Utils";
+import {
+  getAltKey,
+  getModifierKey,
+  isRtlLanguage,
+  translateText,
+} from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -33,24 +38,33 @@ export class HelpModal extends LitElement {
   };
 
   render() {
+    const isRtl = isRtlLanguage();
+    const tableAlignClass = isRtl ? "text-right" : "text-left";
+
     return html`
+      <style>
+        .rtl-align {
+          text-align: right;
+        }
+      </style>
       <o-modal
         id="helpModal"
         title="Instructions"
         translationKey="main.instructions"
       >
-        <div class="flex flex-col items-center">
-          <div class="text-center text-2xl font-bold mb-4">
-            ${translateText("help_modal.hotkeys")}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>${translateText("help_modal.table_key")}</th>
-                <th>${translateText("help_modal.table_action")}</th>
-              </tr>
-            </thead>
-            <tbody class="text-left">
+        <div class="${isRtl ? "rtl-align" : ""}">
+          <div class="flex flex-col items-center">
+            <div class="text-center text-2xl font-bold mb-4">
+              ${translateText("help_modal.hotkeys")}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>${translateText("help_modal.table_key")}</th>
+                  <th>${translateText("help_modal.table_action")}</th>
+                </tr>
+              </thead>
+              <tbody class="${tableAlignClass}">
               <tr>
                 <td><span class="key">Space</span></td>
                 <td>${translateText("help_modal.action_alt_view")}</td>
@@ -443,7 +457,7 @@ export class HelpModal extends LitElement {
                 <th>${translateText("help_modal.build_desc")}</th>
               </tr>
             </thead>
-            <tbody class="text-left">
+            <tbody class="${tableAlignClass}">
               <tr>
                 <td>${translateText("help_modal.build_city")}</td>
                 <td><div class="icon city-icon"></div></td>
