@@ -24,6 +24,7 @@ import {
   LobbyPreset,
   LobbyPresetConfig,
   TeamCountConfig,
+  defaultLobbySettings,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -44,28 +45,34 @@ export class HostLobbyModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private gameMap: GameMapType = GameMapType.World;
-  @state() private difficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private playerTeams: TeamCountConfig = 2;
-  @state() private bots: number = 400;
-  @state() private gameType: GameType = GameType.Private;
-  @state() private gameMapSize: GameMapSize = GameMapSize.Normal;
-  @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
-  @state() private maxTimer: boolean = false;
-  @state() private maxTimerValue: number | undefined = undefined;
-  @state() private instantBuild: boolean = false;
-  @state() private randomSpawn: boolean = false;
-  @state() private compactMap: boolean = false;
+  @state() private gameMap: GameMapType = defaultLobbySettings.gameMap;
+  @state() private difficulty: Difficulty = defaultLobbySettings.difficulty;
+  @state() private disableNPCs = defaultLobbySettings.disableNPCs;
+  @state() private gameMode: GameMode = defaultLobbySettings.gameMode;
+  @state() private playerTeams: TeamCountConfig =
+    defaultLobbySettings.playerTeams ?? 2;
+  @state() private bots: number = defaultLobbySettings.bots;
+  @state() private gameType: GameType = defaultLobbySettings.gameType;
+  @state() private gameMapSize: GameMapSize = defaultLobbySettings.gameMapSize;
+  @state() private infiniteGold: boolean = defaultLobbySettings.infiniteGold;
+  @state() private donateGold: boolean = defaultLobbySettings.donateGold;
+  @state() private infiniteTroops: boolean =
+    defaultLobbySettings.infiniteTroops;
+  @state() private donateTroops: boolean = defaultLobbySettings.donateTroops;
+  @state() private maxTimer: boolean = defaultLobbySettings.maxTimer ?? false;
+  @state() private maxTimerValue: number | undefined =
+    defaultLobbySettings.maxTimerValue;
+  @state() private instantBuild: boolean = defaultLobbySettings.instantBuild;
+  @state() private randomSpawn: boolean = defaultLobbySettings.randomSpawn;
+  @state() private compactMap: boolean =
+    defaultLobbySettings.compactMap ?? false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
-  @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private useRandomMap: boolean =
+    defaultLobbySettings.useRandomMap ?? false;
+  @state() private disabledUnits: UnitType[] =
+    defaultLobbySettings.disabledUnits ?? [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
