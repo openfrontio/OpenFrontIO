@@ -58,8 +58,6 @@ export interface ServerConfig {
   jwkPublicKey(): Promise<JWK>;
   domain(): string;
   subdomain(): string;
-  cloudflareAccountId(): string;
-  cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
