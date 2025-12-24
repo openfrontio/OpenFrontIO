@@ -268,9 +268,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "of 2 (Duos)",
-    "teams_Trios": "of 3 (Trios)",
-    "teams_Quads": "of 4 (Quads)",
+    "teams_Duos": "{team_count} of 2 (Duos)",
+    "teams_Trios": "{team_count} of 3 (Trios)",
+    "teams_Quads": "{team_count} of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}"
