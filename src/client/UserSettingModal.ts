@@ -188,8 +188,6 @@ export class UserSettingModal extends LitElement {
     if (typeof value === "number") {
       const ratio = value / 100;
       localStorage.setItem("settings.attackRatio", ratio.toString());
-    } else {
-      console.warn("Slider event missing detail.value", e);
     }
   }
 
@@ -198,8 +196,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.territoryPatterns", enabled);
-
-    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
   }
 
   private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
@@ -476,14 +472,6 @@ export class UserSettingModal extends LitElement {
                 max="100"
                 value="40"
                 easter="true"
-                @change=${(e: CustomEvent) => {
-                  const value = e.detail?.value;
-                  if (value !== undefined) {
-                    console.log("Changed:", value);
-                  } else {
-                    console.warn("Slider event missing detail.value", e);
-                  }
-                }}
               ></setting-slider>
 
               <setting-number
@@ -495,14 +483,6 @@ export class UserSettingModal extends LitElement {
                 min="0"
                 max="1000"
                 easter="true"
-                @change=${(e: CustomEvent) => {
-                  const value = e.detail?.value;
-                  if (value !== undefined) {
-                    console.log("Changed:", value);
-                  } else {
-                    console.warn("Slider event missing detail.value", e);
-                  }
-                }}
               ></setting-number>
             </setting-group>
           `

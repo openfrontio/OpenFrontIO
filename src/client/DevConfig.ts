@@ -81,7 +81,6 @@ async function loadConfig(): Promise<DevFeatureConfig> {
         settings: config.settings,
       };
       cachedConfig = mergedConfig;
-      console.log("Loaded dev config from config.json:", mergedConfig);
 
       // Apply settings to localStorage if provided in config
       if (config.settings) {

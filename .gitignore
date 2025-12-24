@@ -8,13 +8,17 @@ resources/images/.DS_Store
 resources/.DS_Store
 .env*
 .DS_Store
-config.json
 .clinic/
-CLAUDE.md
-!.project/CLAUDE.md
 .idea/
 
 # Local configuration
 config.json
 resources/config.json
-.env
+
+# Claude Code internal files
+.claude/
+.project/
+CLAUDE.md
+
+# Use pnpm, not npm
+package-lock.json

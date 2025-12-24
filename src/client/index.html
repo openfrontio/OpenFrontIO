@@ -139,7 +139,6 @@
           xhr.send();
           if (xhr.status === 200) {
             window.__devConfig = JSON.parse(xhr.responseText);
-            console.log("Dev config loaded:", window.__devConfig);
           }
         } catch (e) {
           // No config.json, use production defaults

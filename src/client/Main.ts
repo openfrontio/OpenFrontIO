@@ -716,7 +716,6 @@ async function getTurnstileToken(): Promise<{
 } | null> {
   // Skip Turnstile if cloudflare feature is disabled
   if (!isDevFeatureEnabled("cloudflare")) {
-    console.log("Cloudflare/Turnstile disabled via config, skipping");
     return null;
   }
 
