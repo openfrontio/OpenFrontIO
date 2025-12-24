@@ -1,4 +1,4 @@
-import { LobbyPreset } from "../../core/Schemas";
+import { LobbyPreset, LobbyPresetSchema } from "../../core/Schemas";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -43,8 +43,13 @@ export class UserSettings {
     if (!value) return defaultValue;
 
     try {
-      const parsed = JSON.parse(value) as LobbyPreset[];
-      return Array.isArray(parsed) ? parsed : defaultValue;
+      const parsed = JSON.parse(value);
+      const result = LobbyPresetSchema.array().safeParse(parsed);
+      if (result.success) {
+        return result.data;
+      }
+      console.warn("Failed to parse lobby presets", result.error);
+      return defaultValue;
     } catch (error) {
       console.warn("Failed to parse lobby presets", error);
       return defaultValue;
