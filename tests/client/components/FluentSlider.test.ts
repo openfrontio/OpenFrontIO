@@ -253,7 +253,7 @@ describe("FluentSlider", () => {
 
   describe("Bot Count Scenario - Regression Test", () => {
     it("should correctly update bot count from 0 to 400 and dispatch proper events", async () => {
-      let capturedValues: number[] = [];
+      const capturedValues: number[] = [];
 
       slider.addEventListener("value-changed", (e) => {
         const customEvent = e as CustomEvent<{ value: number }>;
@@ -268,7 +268,7 @@ describe("FluentSlider", () => {
       ) as HTMLInputElement;
 
       // Simulate dragging the slider from 0 to 400
-      for (let val of [0, 100, 200, 300, 400]) {
+      for (const val of [0, 100, 200, 300, 400]) {
         rangeInput.valueAsNumber = val;
         rangeInput.dispatchEvent(new Event("input", { bubbles: true })); // Updates display
         rangeInput.dispatchEvent(new Event("change", { bubbles: true })); // Triggers event
