@@ -1,16 +1,154 @@
-import { PathFindResultType } from "../pathfinding/AStar";
-import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
+
+class MinHeap<T> {
+  private data: { key: number; value: T }[] = [];
+
+  get size(): number {
+    return this.data.length;
+  }
+
+  push(key: number, value: T): void {
+    const node = { key, value };
+    this.data.push(node);
+    this.bubbleUp(this.data.length - 1);
+  }
+
+  pop(): { key: number; value: T } | undefined {
+    if (this.data.length === 0) return undefined;
+    const top = this.data[0];
+    const last = this.data.pop()!;
+    if (this.data.length > 0) {
+      this.data[0] = last;
+      this.bubbleDown(0);
+    }
+    return top;
+  }
+
+  private bubbleUp(i: number): void {
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.data[p].key <= this.data[i].key) break;
+      [this.data[p], this.data[i]] = [this.data[i], this.data[p]];
+      i = p;
+    }
+  }
+
+  private bubbleDown(i: number): void {
+    const n = this.data.length;
+    while (true) {
+      const l = i * 2 + 1;
+      const r = l + 1;
+      let smallest = i;
+
+      if (l < n && this.data[l].key < this.data[smallest].key) smallest = l;
+      if (r < n && this.data[r].key < this.data[smallest].key) smallest = r;
+
+      if (smallest === i) break;
+      [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]];
+      i = smallest;
+    }
+  }
+}
+
+function isWaterTile(gm: GameMap, t: TileRef): boolean {
+  const anyGM = gm as any;
+  if (typeof anyGM.isWater === "function") return anyGM.isWater(t);
+  if (typeof anyGM.isOcean === "function") return anyGM.isOcean(t) || gm.isLake(t);
+  return gm.isLake(t);
+}
+
+function adjacentWaterTiles(gm: GameMap, shore: TileRef): TileRef[] {
+  return gm.neighbors(shore).filter((n) => isWaterTile(gm, n));
+}
+
+export function closestShoreFromPlayerByWater(
+  gm: GameMap,
+  player: Player,
+  targetShore: TileRef,
+  opts?: {
+    maxSteps?: number; // safety bound
+    waterFilter?: (t: TileRef) => boolean;
+  },
+): TileRef | null {
+  if (!gm.isShore(targetShore)) return null;
+
+  const maxSteps = opts?.maxSteps ?? 250_000;
+  const waterFilter = opts?.waterFilter ?? ((t: TileRef) => isWaterTile(gm, t));
+
+  const playerShoreTiles = Array.from(player.borderTiles()).filter((t) => gm.isShore(t));
+  if (playerShoreTiles.length === 0) return null;
+
+  const goalWaterToShore = new Map<TileRef, TileRef>();
+  for (const shore of playerShoreTiles) {
+    for (const w of gm.neighbors(shore)) {
+      if (!waterFilter(w)) 
+        continue;
+      if (!goalWaterToShore.has(w)) 
+        goalWaterToShore.set(w, shore);
+    }
+  }
+  if (goalWaterToShore.size === 0) return null;
+
+  // Start from water right next to the destination shore
+  const starts = adjacentWaterTiles(gm, targetShore).filter(waterFilter);
+  if (starts.length === 0) return null;
+
+  // If the like destination water is already next to the player's shore, return immediately
+  for (const s of starts) {
+    const hit = goalWaterToShore.get(s);
+    if (hit !== undefined) return hit;
+  }
+
+  const heap = new MinHeap<TileRef>();
+  const dist = new Map<TileRef, number>();
+
+  for (const s of starts) {
+    dist.set(s, 0);
+    heap.push(0, s);
+  }
+
+  let popped = 0;
+
+  while (heap.size > 0) {
+    const node = heap.pop()!;
+    const d = node.key;
+    const cur = node.value;
+
+    const best = dist.get(cur);
+    if (best === undefined || d !== best) continue;
+
+    popped++;
+    if (popped > maxSteps) {
+      return null;
+    }
+
+    const shoreHit = goalWaterToShore.get(cur);
+    if (shoreHit !== undefined) {
+      return shoreHit;
+    }
+
+    for (const nb of gm.neighbors(cur)) {
+      if (!waterFilter(nb)) continue;
+
+      const nd = d + 1;
+      const prev = dist.get(nb);
+      if (prev === undefined || nd < prev) {
+        dist.set(nb, nd);
+        heap.push(nd, nb);
+      }
+    }
+  }
+
+  return null;
+}
 
 export function canBuildTransportShip(
   game: Game,
   player: Player,
   tile: TileRef,
 ): TileRef | false {
-  if (
-    player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
-  ) {
+  if (player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()) {
     return false;
   }
 
@@ -55,27 +193,13 @@ export function canBuildTransportShip(
     }
   }
 
-  // Now we are boating in a lake, so do a bfs from target until we find
-  // a border tile owned by the player
+  const spawn = closestShoreFromPlayerByWater(game, player, dst, {
+    waterFilter: (t) => game.isLake(t),
+    maxSteps: 3_000_000,
+  });
 
-  const tiles = game.bfs(
-    dst,
-    andFN(
-      manhattanDistFN(dst, 300),
-      (_, t: TileRef) => game.isLake(t) || game.isShore(t),
-    ),
-  );
-
-  const sorted = Array.from(tiles).sort(
-    (a, b) => game.manhattanDist(dst, a) - game.manhattanDist(dst, b),
-  );
-
-  for (const t of sorted) {
-    if (game.owner(t) === player) {
-      return transportShipSpawn(game, player, t);
-    }
-  }
-  return false;
+  if (spawn === null) return false;
+  return transportShipSpawn(game, player, spawn);
 }
 
 function transportShipSpawn(
@@ -86,7 +210,11 @@ function transportShipSpawn(
   if (!game.isShore(targetTile)) {
     return false;
   }
-  const spawn = closestShoreFromPlayer(game, player, targetTile);
+
+  const spawn = closestShoreFromPlayerByWater(game, player, targetTile, {
+    maxSteps: 3_000_000,
+  });
+
   if (spawn === null) {
     return false;
   }
@@ -99,13 +227,19 @@ export function sourceDstOceanShore(
   tile: TileRef,
 ): [TileRef | null, TileRef | null] {
   const dst = gm.owner(tile);
-  const srcTile = closestShoreFromPlayer(gm, src, tile);
+
+  const srcTarget = targetTransportTile(gm, tile);
+  const srcTile = srcTarget ? closestShoreFromPlayerByWater(gm, src, srcTarget) : null;
+
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    // destination side is their closest reachable shore by water as well
+    const dt = targetTransportTile(gm, tile);
+    dstTile = dt ? closestShoreFromPlayerByWater(gm, dst as Player, dt) : null;
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
+
   return [srcTile, dstTile];
 }
 
@@ -120,14 +254,13 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   return dstTile;
 }
 
+
 export function closestShoreFromPlayer(
   gm: GameMap,
   player: Player,
   target: TileRef,
 ): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
+  const shoreTiles = Array.from(player.borderTiles()).filter((t) => gm.isShore(t));
   if (shoreTiles.length === 0) {
     return null;
   }
@@ -147,29 +280,12 @@ export function bestShoreDeploymentSource(
   const t = targetTransportTile(gm, target);
   if (t === null) return false;
 
-  const candidates = candidateShoreTiles(gm, player, t);
-  if (candidates.length === 0) return false;
+  // IMPORTANT CHANGE:One exact water search replaces MiniAStar + sampling.
+  const best = closestShoreFromPlayerByWater(gm, player, t, { maxSteps: 500_000 });
+  if (best === null) return false;
 
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
-  const result = aStar.compute();
-  if (result !== PathFindResultType.Completed) {
-    console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
-    return false;
-  }
-  const path = aStar.reconstructPath();
-  if (path.length === 0) {
-    return false;
-  }
-  const potential = path[0];
-  // Since mini a* downscales the map, we need to check the neighbors
-  // of the potential tile to find a valid deployment point
-  const neighbors = gm
-    .neighbors(potential)
-    .filter((n) => gm.isShore(n) && gm.owner(n) === player);
-  if (neighbors.length === 0) {
-    return false;
-  }
-  return neighbors[0];
+  if (!gm.isShore(best) || gm.owner(best) !== player) return false;
+  return best;
 }
 
 export function candidateShoreTiles(
@@ -191,21 +307,17 @@ export function candidateShoreTiles(
     maxY: null,
   };
 
-  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
+  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) => gm.isShore(t));
 
   for (const tile of borderShoreTiles) {
     const distance = gm.manhattanDist(tile, target);
     const cell = gm.cell(tile);
 
-    // Manhattan-closest tile
     if (distance < closestManhattanDistance) {
       closestManhattanDistance = distance;
       bestByManhattan = tile;
     }
 
-    // Extremum tiles
     if (cell.x < minX) {
       minX = cell.x;
       extremumTiles.minX = tile;
@@ -216,19 +328,12 @@ export function candidateShoreTiles(
       maxX = cell.x;
       extremumTiles.maxX = tile;
     } else if (cell.y > maxY) {
-      maxY = cell.y;
       extremumTiles.maxY = tile;
     }
   }
 
-  // Calculate sampling interval to ensure we get at most 50 tiles
-  const samplingInterval = Math.max(
-    10,
-    Math.ceil(borderShoreTiles.length / 50),
-  );
-  const sampledTiles = borderShoreTiles.filter(
-    (_, index) => index % samplingInterval === 0,
-  );
+  const samplingInterval = Math.max(10, Math.ceil(borderShoreTiles.length / 50));
+  const sampledTiles = borderShoreTiles.filter((_, index) => index % samplingInterval === 0);
 
   const candidates = [
     bestByManhattan,
@@ -255,6 +360,7 @@ function closestShoreTN(
   )
     .filter((t) => gm.isShore(t))
     .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
+
   if (tn.length === 0) {
     return null;
   }
