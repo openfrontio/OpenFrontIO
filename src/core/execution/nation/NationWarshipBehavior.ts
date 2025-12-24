@@ -141,7 +141,7 @@ export class NationWarshipBehavior {
   // Check if current player is one of the 3 richest (We don't want poor nations to use their precious gold on this)
   private isRichPlayer(isTeamGame: boolean): boolean {
     const players = this.game.players().filter((p) => {
-      if (!p.isAlive() || p.type() === PlayerType.Human) return false;
+      if (p.type() === PlayerType.Human) return false;
       return isTeamGame ? p.team() === this.player.team() : true;
     });
     const topThree = players
@@ -167,7 +167,7 @@ export class NationWarshipBehavior {
       { count: number; team: string; players: Player[] }
     >();
 
-    for (const p of this.game.players().filter((p) => p.isAlive())) {
+    for (const p of this.game.players()) {
       // Skip friendly players (our team and allies)
       if (this.player.isFriendly(p) || p.id() === this.player.id()) {
         continue;
@@ -225,12 +225,7 @@ export class NationWarshipBehavior {
   } | null {
     const enemies = this.game
       .players()
-      .filter(
-        (p) =>
-          p.isAlive() &&
-          !this.player.isFriendly(p) &&
-          p.id() !== this.player.id(),
-      );
+      .filter((p) => !this.player.isFriendly(p) && p.id() !== this.player.id());
 
     for (const enemy of enemies) {
       const enemyWarships = enemy.units(UnitType.Warship);
