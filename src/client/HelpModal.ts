@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
-import { customElement, query } from "lit/decorators.js";
-import { getAltKey, getModifierKey, translateText } from "../client/Utils";
+import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -10,6 +10,7 @@ export class HelpModal extends LitElement {
     open: () => void;
     close: () => void;
   };
+  @state() private keybinds: Record<string, string> = this.getKeybinds();
 
   createRenderRoot() {
     return this;
@@ -25,6 +26,15 @@ export class HelpModal extends LitElement {
     super.disconnectedCallback();
   }
 
+  private isKeybindObject(v: unknown): v is { value: string } {
+    return (
+      typeof v === "object" &&
+      v !== null &&
+      "value" in v &&
+      typeof (v as any).value === "string"
+    );
+  }
+
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
@@ -32,7 +42,80 @@ export class HelpModal extends LitElement {
     }
   };
 
+  private getKeybinds(): Record<string, string> {
+    let saved: Record<string, string> = {};
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem("settings.keybinds") ?? "{}",
+      );
+      saved = Object.fromEntries(
+        Object.entries(parsed)
+          .map(([k, v]) => {
+            if (this.isKeybindObject(v)) return [k, v.value];
+            if (typeof v === "string") return [k, v];
+            return [k, undefined];
+          })
+          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+      ) as Record<string, string>;
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
+    }
+
+    const isMac = /Mac/.test(navigator.userAgent);
+    return {
+      toggleView: "Space",
+      centerCamera: "KeyC",
+      moveUp: "KeyW",
+      moveDown: "KeyS",
+      moveLeft: "KeyA",
+      moveRight: "KeyD",
+      zoomOut: "KeyQ",
+      zoomIn: "KeyE",
+      attackRatioDown: "KeyT",
+      attackRatioUp: "KeyY",
+      shiftKey: "ShiftLeft",
+      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
+      altKey: "AltLeft",
+      resetGfx: "KeyR",
+      ...saved,
+    };
+  }
+
+  private getKeyLabel(code: string): string {
+    if (!code) return "";
+
+    const specialLabels: Record<string, string> = {
+      ShiftLeft: "⇧ Shift",
+      ShiftRight: "⇧ Shift",
+      ControlLeft: "Ctrl",
+      ControlRight: "Ctrl",
+      AltLeft: "Alt",
+      AltRight: "Alt",
+      MetaLeft: "⌘",
+      MetaRight: "⌘",
+      Space: "Space",
+      ArrowUp: "↑",
+      ArrowDown: "↓",
+      ArrowLeft: "←",
+      ArrowRight: "→",
+    };
+
+    if (specialLabels[code]) return specialLabels[code];
+    if (code.startsWith("Key") && code.length === 4) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
+
+    return code;
+  }
+
+  private renderKey(code: string) {
+    const label = this.getKeyLabel(code);
+    return html`<span class="key">${label}</span>`;
+  }
+
   render() {
+    const keybinds = this.keybinds;
+
     return html`
       <o-modal
         id="helpModal"
@@ -52,13 +135,13 @@ export class HelpModal extends LitElement {
             </thead>
             <tbody class="text-left">
               <tr>
-                <td><span class="key">Space</span></td>
+                <td>${this.renderKey(keybinds.toggleView)}</td>
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">⇧ Shift</span>
+                    ${this.renderKey(keybinds.shiftKey)}
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -71,7 +154,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">${getModifierKey()}</span>
+                    ${this.renderKey(keybinds.modifierKey)}
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -84,7 +167,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">${getAltKey()}</span>
+                    ${this.renderKey(keybinds.altKey)}
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -95,28 +178,36 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_emote")}</td>
               </tr>
               <tr>
-                <td><span class="key">C</span></td>
+                <td>${this.renderKey(keybinds.centerCamera)}</td>
                 <td>${translateText("help_modal.action_center")}</td>
               </tr>
               <tr>
-                <td><span class="key">Q</span> / <span class="key">E</span></td>
+                <td>
+                  ${this.renderKey(keybinds.zoomOut)} /
+                  ${this.renderKey(keybinds.zoomIn)}
+                </td>
                 <td>${translateText("help_modal.action_zoom")}</td>
               </tr>
               <tr>
                 <td>
-                  <span class="key">W</span> <span class="key">A</span>
-                  <span class="key">S</span> <span class="key">D</span>
+                  ${this.renderKey(keybinds.moveUp)}
+                  ${this.renderKey(keybinds.moveLeft)}
+                  ${this.renderKey(keybinds.moveDown)}
+                  ${this.renderKey(keybinds.moveRight)}
                 </td>
                 <td>${translateText("help_modal.action_move_camera")}</td>
               </tr>
               <tr>
-                <td><span class="key">1</span> / <span class="key">2</span></td>
+                <td>
+                  ${this.renderKey(keybinds.attackRatioDown)} /
+                  ${this.renderKey(keybinds.attackRatioUp)}
+                </td>
                 <td>${translateText("help_modal.action_ratio_change")}</td>
               </tr>
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">⇧ Shift</span>
+                    ${this.renderKey(keybinds.shiftKey)}
                     <span class="plus">+</span>
                     <div class="mouse-with-arrows">
                       <div class="mouse-shell">
@@ -133,8 +224,8 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>
-                  <span class="key">${getAltKey()}</span> +
-                  <span class="key">R</span>
+                  ${this.renderKey(keybinds.altKey)} +
+                  ${this.renderKey(keybinds.resetGfx)}
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
@@ -600,6 +691,7 @@ export class HelpModal extends LitElement {
   }
 
   public open() {
+    this.keybinds = this.getKeybinds();
     this.modalEl?.open();
   }
 
