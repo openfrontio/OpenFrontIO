@@ -1,7 +1,8 @@
 import { LitElement, css, html } from "lit";
-import { property, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 
+@customElement("fluent-slider")
 export class FluentSlider extends LitElement {
   static styles = css`
     :host {
@@ -149,5 +150,3 @@ export class FluentSlider extends LitElement {
     `;
   }
 }
-
-customElements.define("fluent-slider", FluentSlider);

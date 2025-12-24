@@ -224,7 +224,9 @@ describe("FluentSlider", () => {
 
   describe("Component Structure", () => {
     it("should render a range input", () => {
-      const rangeInput = slider.shadowRoot?.querySelector('input[type="range"]');
+      const rangeInput = slider.shadowRoot?.querySelector(
+        'input[type="range"]',
+      );
       expect(rangeInput).toBeTruthy();
     });
 

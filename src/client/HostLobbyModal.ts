@@ -24,8 +24,8 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
-import "./components/FluentSlider";
 import "./components/Difficulties";
+import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
