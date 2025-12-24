@@ -1,18 +1,11 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
-} from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
+  defaultLobbySettings,
   LobbyPreset,
   LobbyPresetConfig,
   LobbyPresetConfigSchema,
-  TeamCountConfig,
 } from "../../../core/Schemas";
 import { translateText } from "../../Utils";
 import "../baseComponents/Button";
@@ -42,28 +35,6 @@ export const lobbyPresetKeys = [
 export type LobbyPresetKey = (typeof lobbyPresetKeys)[number];
 export type LobbyPresetDefaults = {
   [K in LobbyPresetKey]-?: LobbyPresetConfig[K];
-};
-
-export const defaultLobbySettings: LobbyPresetDefaults = {
-  gameMap: GameMapType.World,
-  useRandomMap: false,
-  difficulty: Difficulty.Medium,
-  disableNPCs: false,
-  bots: 400,
-  infiniteGold: false,
-  donateGold: false,
-  infiniteTroops: false,
-  donateTroops: false,
-  gameType: GameType.Private,
-  gameMapSize: GameMapSize.Normal,
-  instantBuild: false,
-  randomSpawn: false,
-  compactMap: false,
-  maxTimer: false,
-  maxTimerValue: undefined,
-  gameMode: GameMode.FFA,
-  playerTeams: 2 as TeamCountConfig,
-  disabledUnits: [],
 };
 
 @customElement("lobby-preset-controls")
@@ -116,7 +87,7 @@ export class LobbyPresetControls extends LitElement {
     config: Partial<LobbyPresetConfig>,
   ): LobbyPresetConfig {
     const merged = {
-      ...defaultLobbySettings,
+      ...(defaultLobbySettings as LobbyPresetDefaults),
       ...config,
     } as LobbyPresetConfig;
     const parsedResult = LobbyPresetConfigSchema.safeParse(merged);

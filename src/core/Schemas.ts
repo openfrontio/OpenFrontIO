@@ -180,7 +180,7 @@ export const LobbyPresetConfigSchema = GameConfigSchema.extend({
 });
 export type LobbyPresetConfig = z.infer<typeof LobbyPresetConfigSchema>;
 
-const defaultLobbyPresetConfig: LobbyPresetConfig = {
+export const defaultLobbySettings: LobbyPresetConfig = {
   gameMap: GameMapType.World,
   difficulty: Difficulty.Medium,
   donateGold: false,
@@ -204,7 +204,7 @@ const defaultLobbyPresetConfig: LobbyPresetConfig = {
 
 export const LobbyPresetSchema = z.object({
   name: z.string().default("Preset"),
-  config: LobbyPresetConfigSchema.default(defaultLobbyPresetConfig),
+  config: LobbyPresetConfigSchema.default(defaultLobbySettings),
 });
 export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
 
