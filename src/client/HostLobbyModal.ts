@@ -20,11 +20,14 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyPreset,
+  LobbyPresetConfig,
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import { LobbyPresetControls } from "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
@@ -59,6 +62,9 @@ export class HostLobbyModal extends LitElement {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
+  @state() private lobbyPresets: LobbyPreset[] = [];
+  @state() private selectedPresetName = "";
+  @state() private presetNameInput = "";
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -74,6 +80,10 @@ export class HostLobbyModal extends LitElement {
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
+  }
+
+  firstUpdated() {
+    this.loadPresets();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -171,6 +181,17 @@ export class HostLobbyModal extends LitElement {
           </button>
         </div>
         <div class="options-layout">
+          <lobby-preset-controls
+            .presets=${this.lobbyPresets}
+            .selectedName=${this.selectedPresetName}
+            .nameInput=${this.presetNameInput}
+            @preset-select=${this.handlePresetSelect}
+            @preset-load=${(e: CustomEvent<string>) =>
+              this.applyPreset(e.detail)}
+            @preset-delete=${this.deletePreset}
+            @preset-name-input=${this.handlePresetNameInput}
+            @preset-save=${this.savePreset}
+          ></lobby-preset-controls>
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
@@ -598,6 +619,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
+    this.loadPresets();
     this.lobbyCreatorClientID = generateID();
     this.lobbyIdVisible = this.userSettings.get(
       "settings.lobbyIdVisibility",
@@ -637,6 +659,104 @@ export class HostLobbyModal extends LitElement {
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
+    }
+  }
+
+  private loadPresets() {
+    this.lobbyPresets = LobbyPresetControls.listPresets(this.userSettings);
+  }
+
+  private handlePresetSelect(e: CustomEvent<string>) {
+    this.selectedPresetName = e.detail;
+  }
+
+  private handlePresetNameInput(e: CustomEvent<string>) {
+    this.presetNameInput = e.detail;
+  }
+
+  private buildPresetConfig(): LobbyPresetConfig {
+    return {
+      gameMap: this.selectedMap,
+      useRandomMap: this.useRandomMap,
+      difficulty: this.selectedDifficulty,
+      disableNPCs: this.disableNPCs,
+      bots: this.bots,
+      infiniteGold: this.infiniteGold,
+      donateGold: this.donateGold,
+      infiniteTroops: this.infiniteTroops,
+      donateTroops: this.donateTroops,
+      instantBuild: this.instantBuild,
+      randomSpawn: this.randomSpawn,
+      compactMap: this.compactMap,
+      maxTimer: this.maxTimer,
+      maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
+      gameMode: this.gameMode,
+      playerTeams: this.teamCount,
+      disabledUnits: this.disabledUnits,
+    };
+  }
+
+  private savePreset(e: CustomEvent<string>) {
+    const name = (
+      e.detail ??
+      this.presetNameInput ??
+      this.selectedPresetName
+    ).trim();
+    if (!name) {
+      return;
+    }
+    this.lobbyPresets = LobbyPresetControls.savePreset(
+      this.userSettings,
+      name,
+      this.buildPresetConfig(),
+    );
+    this.selectedPresetName = name;
+    this.presetNameInput = "";
+  }
+
+  private async applyPreset(name?: string) {
+    const presetName = name ?? this.selectedPresetName;
+    const preset = this.lobbyPresets.find((p) => p.name === presetName);
+    if (!preset) {
+      return;
+    }
+
+    const config = preset.config;
+    this.useRandomMap = config.useRandomMap ?? false;
+    this.selectedMap = config.useRandomMap
+      ? this.getRandomMap()
+      : (config.gameMap ?? this.selectedMap);
+    this.selectedDifficulty = config.difficulty ?? this.selectedDifficulty;
+    this.disableNPCs = config.disableNPCs ?? this.disableNPCs;
+    this.bots = config.bots ?? this.bots;
+    this.infiniteGold = config.infiniteGold ?? this.infiniteGold;
+    this.donateGold = config.donateGold ?? this.donateGold;
+    this.infiniteTroops = config.infiniteTroops ?? this.infiniteTroops;
+    this.donateTroops = config.donateTroops ?? this.donateTroops;
+    this.instantBuild = config.instantBuild ?? this.instantBuild;
+    this.randomSpawn = config.randomSpawn ?? this.randomSpawn;
+    this.gameMode = config.gameMode ?? this.gameMode;
+    this.teamCount = config.playerTeams ?? this.teamCount;
+    this.disabledUnits = config.disabledUnits ?? [];
+    this.maxTimer = config.maxTimer ?? false;
+    this.maxTimerValue = config.maxTimerValue;
+    this.compactMap = config.compactMap ?? false;
+
+    await this.loadNationCount();
+    this.putGameConfig();
+  }
+
+  private deletePreset(e?: CustomEvent<string>) {
+    const presetName = (e?.detail ?? this.selectedPresetName).trim();
+    if (!presetName) {
+      return;
+    }
+    this.lobbyPresets = LobbyPresetControls.deletePreset(
+      this.userSettings,
+      presetName,
+    );
+    if (this.selectedPresetName === presetName) {
+      this.selectedPresetName = "";
     }
   }
 

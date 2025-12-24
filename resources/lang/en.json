@@ -844,5 +844,15 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "lobby_config": {
+    "preset": {
+      "title": "Presets",
+      "select": "Select preset",
+      "load": "Load",
+      "delete": "Delete",
+      "placeholder": "Preset name",
+      "save": "Save current"
+    }
   }
 }
