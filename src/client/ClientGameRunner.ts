@@ -39,7 +39,6 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
-  GamePausedEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -327,12 +326,6 @@ export class ClientGameRunner {
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
-
-      // Handle pause state changes
-      if (gu.updates[GameUpdateType.GamePaused].length > 0) {
-        const pauseUpdate = gu.updates[GameUpdateType.GamePaused][0];
-        this.eventBus.emit(new GamePausedEvent(pauseUpdate.paused));
       }
     });
 

@@ -107,14 +107,8 @@ export class LocalServer {
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {
-      if (this.lobbyConfig.gameRecord) {
-        // If we are replaying a game, we don't want to process intents
-        return;
-      }
-
-      // Handle pause/unpause intents specially (like server-side logic)
       if (clientMsg.intent.type === "toggle_pause") {
-        const paused = !!clientMsg.intent.paused;
+        const paused = clientMsg.intent.paused;
 
         if (paused) {
           // Pausing: add intent and end turn before pause takes effect
@@ -127,6 +121,11 @@ export class LocalServer {
           this.intents.push(clientMsg.intent);
           this.endTurn();
         }
+        return;
+      }
+
+      // Don't process non-pause intents during replays
+      if (this.lobbyConfig.gameRecord) {
         return;
       }
 

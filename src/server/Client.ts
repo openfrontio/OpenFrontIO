@@ -20,7 +20,6 @@ export class Client {
     public readonly username: string,
     public ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
-    public readonly isLobbyCreator: boolean = false,
     public readonly isRejoin: boolean = false,
   ) {}
 }

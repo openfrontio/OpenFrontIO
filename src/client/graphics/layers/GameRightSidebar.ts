@@ -49,11 +49,6 @@ export class GameRightSidebar extends LitElement implements Layer {
     this._isVisible = true;
     this.game.inSpawnPhase();
 
-    // Try to get lobby creator status early but may not be available yet
-    if (this.game.myPlayer()?.isLobbyCreator()) {
-      this.isLobbyCreator = true;
-    }
-
     this.requestUpdate();
   }
 
@@ -64,6 +59,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
 
+    // Check if the player is the lobby creator
     if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
       this.isLobbyCreator = true;
       this.requestUpdate();

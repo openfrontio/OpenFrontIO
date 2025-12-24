@@ -498,7 +498,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
-        isLobbyCreator: c.isLobbyCreator,
+        isLobbyCreator: this.isLobbyCreator(c.clientID),
       })),
     });
     if (!result.success) {
@@ -536,7 +536,7 @@ export class GameServer {
     this.log.info(`Sending start message to client`, {
       clientID: client.clientID,
       lobbyCreatorID: this.lobbyCreatorID,
-      isLobbyCreator: client.isLobbyCreator,
+      isLobbyCreator: this.isLobbyCreator(client.clientID),
     });
 
     try {

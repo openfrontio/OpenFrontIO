@@ -33,10 +33,6 @@ export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
 }
 
-export class GamePausedEvent implements GameEvent {
-  constructor(public readonly paused: boolean) {}
-}
-
 export class SendAllianceRequestIntentEvent implements GameEvent {
   constructor(
     public readonly requestor: PlayerView,

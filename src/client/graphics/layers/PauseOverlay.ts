@@ -2,8 +2,8 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { GamePausedEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -13,22 +13,17 @@ export class PauseOverlay extends LitElement implements Layer {
   public eventBus: EventBus;
   private isPaused = false;
 
-  private gamePausedHandler = (e: GamePausedEvent) => {
-    this.isPaused = e.paused;
-    this.requestUpdate();
-  };
-
   createRenderRoot() {
     return this;
   }
 
-  init() {
-    this.eventBus.on(GamePausedEvent, this.gamePausedHandler);
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.eventBus.off(GamePausedEvent, this.gamePausedHandler);
+  tick() {
+    const updates = this.game.updatesSinceLastTick();
+    if (updates && updates[GameUpdateType.GamePaused].length > 0) {
+      const pauseUpdate = updates[GameUpdateType.GamePaused][0];
+      this.isPaused = pauseUpdate.paused;
+      this.requestUpdate();
+    }
   }
 
   render() {
