@@ -67,6 +67,8 @@ export class NationEmojiBehavior {
   }
 
   private checkOverwhelmedByAttacks(): void {
+    if (!this.random.chance(4)) return;
+
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length === 0) return;
 
@@ -83,6 +85,8 @@ export class NationEmojiBehavior {
   }
 
   private checkVerySmallAttack(): void {
+    if (!this.random.chance(4)) return;
+
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length === 0) return;
 
@@ -171,7 +175,7 @@ export class NationEmojiBehavior {
 
   // Brag with our crown
   private brag(): void {
-    if (!this.random.chance(80)) return;
+    if (!this.random.chance(100)) return;
 
     const sorted = this.game
       .players()
@@ -183,7 +187,7 @@ export class NationEmojiBehavior {
   }
 
   private charmAllies(): void {
-    if (!this.random.chance(80)) return;
+    if (!this.random.chance(250)) return;
 
     const humanAllies = this.player
       .allies()
@@ -209,7 +213,7 @@ export class NationEmojiBehavior {
   }
 
   private findRat(): void {
-    if (!this.random.chance(80)) return;
+    if (!this.random.chance(10000)) return;
 
     const totalLand = this.game.numLandTiles();
     const threshold = totalLand * 0.01; // 1% of land
@@ -243,11 +247,13 @@ export class NationEmojiBehavior {
 
     // If we have a good relation to the other player, we are probably attacking first (aggressive)
     if (this.player.relation(otherPlayer) >= Relation.Neutral) {
+      if (!this.random.chance(2)) return;
       this.sendEmoji(otherPlayer, EMOJI_AGGRESSIVE_ATTACK);
       return;
     }
 
     // We are probably retaliating
+    if (!this.random.chance(4)) return;
     this.sendEmoji(otherPlayer, EMOJI_ATTACK);
   }
 

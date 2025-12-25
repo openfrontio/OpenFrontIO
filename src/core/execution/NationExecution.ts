@@ -182,6 +182,7 @@ export class NationExecution implements Execution {
       return;
     }
 
+    this.emojiBehavior.maybeSendCasualEmoji();
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
@@ -190,7 +191,6 @@ export class NationExecution implements Execution {
     this.mirvBehavior.considerMIRV();
     this.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
-    this.emojiBehavior.maybeSendCasualEmoji();
   }
 
   private randomSpawnLand(): TileRef | null {
