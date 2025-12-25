@@ -194,7 +194,19 @@ const NOUNS = [
 ];
 
 function pluralize(noun: string): string {
-  if (noun.endsWith("s")) {
+  if (
+    noun.endsWith("s") ||
+    noun.endsWith("ch") ||
+    noun.endsWith("sh") ||
+    noun.endsWith("x") ||
+    noun.endsWith("z")
+  ) {
+    return `${noun}es`;
+  }
+  if (noun.endsWith("y") && !"aeiou".includes(noun[noun.length - 2])) {
+    return `${noun.slice(0, -1)}ies`;
+  }
+  if (noun.endsWith("o")) {
     return `${noun}es`;
   }
   return `${noun}s`;
