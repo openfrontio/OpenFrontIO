@@ -278,6 +278,13 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private handleKickClick(e: Event, other: PlayerView) {
     e.stopPropagation();
+    if (
+      !window.confirm(
+        translateText("player_panel.kick_confirm", { name: other.name() }),
+      )
+    ) {
+      return;
+    }
     const targetClientID = other.clientID();
     if (!targetClientID) {
       console.warn("Cannot kick player without clientID");

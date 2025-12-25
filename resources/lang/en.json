@@ -694,7 +694,8 @@
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis",
-    "kick": "Kick Player"
+    "kick": "Kick Player",
+    "kick_confirm": "Are you sure you want to kick {name}?"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
