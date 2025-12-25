@@ -25,8 +25,10 @@ import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
-import { MapPlaylist } from "./MapPlaylist";
+import { selectMapForRanked } from "./MapSelection";
+import { MatchmakingPoller } from "./MatchmakingPoller";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { buildRankedGameConfig } from "./RankedGameConfig";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -34,7 +36,6 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
-const playlist = new MapPlaylist(true);
 
 // Worker setup
 export async function startWorker() {
@@ -70,6 +71,50 @@ export async function startWorker() {
     log,
   );
   privilegeRefresher.start();
+
+  // Matchmaking poller for ranked games
+  const matchmakingEnabled = process.env.MATCHMAKING_ENABLED === "true";
+
+  if (matchmakingEnabled) {
+    const matchmakingPoller = new MatchmakingPoller(
+      config,
+      log,
+      async (gameId, assignment) => {
+        const selectedMap = selectMapForRanked({
+          playerCount: assignment.config.playerCount,
+          matchMode: assignment.config.gameMode,
+          queueType: assignment.config.queueType,
+        });
+
+        // Build full game config
+        const gameConfig = buildRankedGameConfig(
+          selectedMap,
+          assignment.config,
+        );
+
+        gm.createGame(gameId, gameConfig);
+
+        log.info("Created ranked match", {
+          gameId,
+          map: selectedMap,
+          mode: assignment.config.gameMode,
+          players: assignment.config.playerCount,
+        });
+
+        setTimeout(() => {
+          const game = gm.game(gameId);
+          if (game && !game.hasStarted()) {
+            log.info(`Starting ranked match ${gameId}`);
+            game.start();
+          }
+        }, 5000);
+      },
+      () => gm.activeClients(), // Get CCU from GameManager
+    );
+
+    matchmakingPoller.start();
+    log.info("Matchmaking poller started");
+  }
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -554,12 +599,22 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      // TODO: Only allow specified players to join the game.
-      console.log(`Creating game ${gameId}`);
-      const game = gm.createGame(gameId, playlist.gameConfig());
+      const assignment = data.assignment;
+      log.info(`Creating game ${gameId} with assignment`, assignment.config);
+
+      const selectedMap = selectMapForRanked({
+        playerCount: assignment.config.playerCount,
+        matchMode: assignment.config.gameMode,
+        queueType: assignment.config.queueType,
+      });
+
+      // Build full game config using assignment config
+      const gameConfig = buildRankedGameConfig(selectedMap, assignment.config);
+
+      const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.
-        console.log(`Starting game ${gameId}`);
+        log.info(`Starting game ${gameId}`);
         game.start();
       }, 5000);
     }
