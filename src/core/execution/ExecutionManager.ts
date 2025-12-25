@@ -125,7 +125,7 @@ export class Executor {
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
-        return new PauseExecution(intent.paused);
+        return new PauseExecution(player, intent.paused);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

@@ -132,10 +132,6 @@ export class GameServer {
     }
   }
 
-  public isLobbyCreator(clientID: string): boolean {
-    return clientID === this.lobbyCreatorID;
-  }
-
   public joinClient(client: Client) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
@@ -363,9 +359,7 @@ export class GameServer {
                   return;
                 }
 
-                const paused = !!clientMsg.intent.paused;
-
-                if (paused) {
+                if (clientMsg.intent.paused) {
                   // Pausing: send intent and complete current turn before pause takes effect
                   this.addIntent(clientMsg.intent);
                   this.endTurn();
@@ -498,7 +492,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
-        isLobbyCreator: this.isLobbyCreator(c.clientID),
+        isLobbyCreator: this.lobbyCreatorID === c.clientID,
       })),
     });
     if (!result.success) {
@@ -536,7 +530,7 @@ export class GameServer {
     this.log.info(`Sending start message to client`, {
       clientID: client.clientID,
       lobbyCreatorID: this.lobbyCreatorID,
-      isLobbyCreator: this.isLobbyCreator(client.clientID),
+      isLobbyCreator: this.lobbyCreatorID === client.clientID,
     });
 
     try {

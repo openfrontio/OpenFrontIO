@@ -24,7 +24,6 @@ import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
-import { PauseOverlay } from "./layers/PauseOverlay";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -230,13 +229,6 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
-  const pauseOverlay = document.querySelector("pause-overlay") as PauseOverlay;
-  if (!(pauseOverlay instanceof PauseOverlay)) {
-    console.error("pause overlay not found");
-  }
-  pauseOverlay.game = game;
-  pauseOverlay.eventBus = eventBus;
-
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -278,7 +270,6 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    pauseOverlay,
     new AdTimer(game),
     alertFrame,
     performanceOverlay,

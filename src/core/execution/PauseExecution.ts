@@ -1,7 +1,10 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, GameType, Player } from "../game/Game";
 
 export class PauseExecution implements Execution {
-  constructor(private paused: boolean) {}
+  constructor(
+    private player: Player,
+    private paused: boolean,
+  ) {}
 
   isActive(): boolean {
     return false;
@@ -12,7 +15,12 @@ export class PauseExecution implements Execution {
   }
 
   init(game: Game, ticks: number): void {
-    game.setPaused(this.paused);
+    if (
+      this.player.isLobbyCreator() ||
+      game.config().gameConfig().gameType === GameType.Singleplayer
+    ) {
+      game.setPaused(this.paused);
+    }
   }
 
   tick(ticks: number): void {}

@@ -108,9 +108,7 @@ export class LocalServer {
     }
     if (clientMsg.type === "intent") {
       if (clientMsg.intent.type === "toggle_pause") {
-        const paused = clientMsg.intent.paused;
-
-        if (paused) {
+        if (clientMsg.intent.paused) {
           // Pausing: add intent and end turn before pause takes effect
           this.intents.push(clientMsg.intent);
           this.endTurn();
@@ -123,7 +121,6 @@ export class LocalServer {
         }
         return;
       }
-
       // Don't process non-pause intents during replays
       if (this.lobbyConfig.gameRecord) {
         return;
