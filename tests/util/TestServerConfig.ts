@@ -22,22 +22,10 @@ export class TestServerConfig implements ServerConfig {
   stripePublishableKey(): string {
     throw new Error("Method not implemented.");
   }
-  cloudflareConfigPath(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareCredsPath(): string {
-    throw new Error("Method not implemented.");
-  }
   domain(): string {
     throw new Error("Method not implemented.");
   }
   subdomain(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareAccountId(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareApiToken(): string {
     throw new Error("Method not implemented.");
   }
   jwtAudience(): string {
