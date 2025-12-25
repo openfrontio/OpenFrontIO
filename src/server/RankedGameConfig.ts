@@ -59,7 +59,7 @@ export function buildRankedGameConfig(
 
     bots: 400,
     difficulty: Difficulty.Medium,
-    disableNPCs: true,
+    disableNations: true,
 
     // Donation rules
     donateGold: isTeamMode,
