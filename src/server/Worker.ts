@@ -84,7 +84,10 @@ export async function startWorker() {
         const selectedMap = selectMapForRanked({
           playerCount: assignment.config.playerCount,
           gameMode:
-            assignment.config.gameMode === "ffa" ? GameMode.FFA : GameMode.Team,
+            assignment.config.gameMode === "ffa" ||
+            assignment.config.gameMode === "duel"
+              ? GameMode.FFA
+              : GameMode.Team,
           queueType: assignment.config.queueType,
           matchMode: assignment.config.gameMode,
         });
@@ -587,7 +590,10 @@ async function pollLobby(gm: GameManager) {
       const selectedMap = selectMapForRanked({
         playerCount: assignment.config.playerCount,
         gameMode:
-          assignment.config.gameMode === "ffa" ? GameMode.FFA : GameMode.Team,
+          assignment.config.gameMode === "ffa" ||
+          assignment.config.gameMode === "duel"
+            ? GameMode.FFA
+            : GameMode.Team,
         queueType: assignment.config.queueType,
         matchMode: assignment.config.gameMode,
       });
