@@ -43,31 +43,15 @@ export class NationAllianceBehavior {
   }
 
   maybeSendAllianceRequests(borderingEnemies: Player[]) {
-    // Impossible / smart nations know the strategic value of alliances and thus send more requests
-    const { difficulty } = this.game.config().gameConfig();
-    const shouldSendAllianceRequest = () => {
-      switch (difficulty) {
-        case Difficulty.Easy:
-          return this.random.chance(35);
-        case Difficulty.Medium:
-          return this.random.chance(30);
-        case Difficulty.Hard:
-          return this.random.chance(25);
-        case Difficulty.Impossible:
-          return this.random.chance(20);
-        default:
-          assertNever(difficulty);
-      }
-    };
-
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>
-      (p.type() === PlayerType.Bot && difficulty === Difficulty.Easy) ||
+      (p.type() === PlayerType.Bot &&
+        this.game.config().gameConfig().difficulty === Difficulty.Easy) ||
       p.type() !== PlayerType.Bot;
 
     for (const enemy of borderingEnemies) {
       if (
-        shouldSendAllianceRequest() &&
+        this.random.chance(20) &&
         isAcceptablePlayerType(enemy) &&
         this.player.canSendAllianceRequest(enemy) &&
         this.getAllianceRequestDecision(enemy)
@@ -106,6 +90,10 @@ export class NationAllianceBehavior {
     if (this.checkAlreadyEnoughAlliances(otherPlayer)) {
       return false;
     }
+    // Maybe accept if we are in the earlygame
+    if (this.isEarlygame()) {
+      return true;
+    }
     // Accept if we are similarly strong
     return this.isAlliancePartnerSimilarlyStrong(otherPlayer);
   }
@@ -121,6 +109,39 @@ export class NationAllianceBehavior {
         return this.random.chance(40); // 2.5% chance to be confused on hard
       case Difficulty.Impossible:
         return false; // No confusion on impossible
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  private isEarlygame(): boolean {
+    const spawnTicks = this.game.config().numSpawnPhaseTurns();
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        // On easy, accept 90% in the first 5 minutes
+        return (
+          this.game.ticks() < 3000 + spawnTicks &&
+          this.random.nextInt(0, 100) >= 10
+        );
+      case Difficulty.Medium:
+        // On medium, accept 70% in the first 3 minutes
+        return (
+          this.game.ticks() < 1800 + spawnTicks &&
+          this.random.nextInt(0, 100) >= 30
+        );
+      case Difficulty.Hard:
+        // On hard, accept 50% in the first 3 minutes
+        return (
+          this.game.ticks() < 1800 + spawnTicks &&
+          this.random.nextInt(0, 100) >= 50
+        );
+      case Difficulty.Impossible:
+        // On impossible, accept 30% in the first minute
+        return (
+          this.game.ticks() < 600 + spawnTicks &&
+          this.random.nextInt(0, 100) >= 70
+        );
       default:
         assertNever(difficulty);
     }

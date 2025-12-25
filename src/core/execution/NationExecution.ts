@@ -9,6 +9,7 @@ import {
   PlayerID,
   PlayerType,
   Relation,
+  TerrainType,
   Tick,
   Unit,
   UnitType,
@@ -17,11 +18,17 @@ import { TileRef, euclDistFN } from "../game/GameMap";
 import { canBuildTransportShip } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
+import {
+  assertNever,
+  boundingBoxTiles,
+  calculateBoundingBox,
+  simpleHash,
+} from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
+import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -36,6 +43,7 @@ export class NationExecution implements Execution {
   private mirvBehavior: NationMIRVBehavior | null = null;
   private attackBehavior: AiAttackBehavior | null = null;
   private allianceBehavior: NationAllianceBehavior | null = null;
+  private warshipBehavior: NationWarshipBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -48,11 +56,6 @@ export class NationExecution implements Execution {
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
-  // Track our transport ships we currently own
-  private trackedTransportShips: Set<Unit> = new Set();
-  // Track our trade ships we currently own
-  private trackedTradeShips: Set<Unit> = new Set();
-
   constructor(
     private gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
@@ -60,8 +63,6 @@ export class NationExecution implements Execution {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
     );
-    this.attackRate = this.random.nextInt(40, 80);
-    this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
@@ -69,9 +70,8 @@ export class NationExecution implements Execution {
 
   init(mg: Game) {
     this.mg = mg;
-    if (this.random.chance(10)) {
-      // this.isTraitor = true
-    }
+    this.attackRate = this.getAttackRate();
+    this.attackTick = this.random.nextInt(0, this.attackRate);
 
     if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
       this.player = this.mg.addPlayer(this.nation.playerInfo);
@@ -80,15 +80,31 @@ export class NationExecution implements Execution {
     }
   }
 
+  private getAttackRate(): number {
+    const { difficulty } = this.mg.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return this.random.nextInt(65, 80); // Slower reactions
+      case Difficulty.Medium:
+        return this.random.nextInt(55, 70);
+      case Difficulty.Hard:
+        return this.random.nextInt(45, 60);
+      case Difficulty.Impossible:
+        return this.random.nextInt(30, 50); // Faster reactions
+      default:
+        assertNever(difficulty);
+    }
+  }
+
   tick(ticks: number) {
     // Ship tracking
     if (
+      this.warshipBehavior !== null &&
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy
     ) {
-      this.trackTransportShipsAndRetaliate();
-      this.trackTradeShipsAndRetaliate();
+      this.warshipBehavior.trackShipsAndRetaliate();
     }
 
     if (ticks % this.attackRate !== this.attackTick) {
@@ -100,8 +116,16 @@ export class NationExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
+      // select a tile near the position defined in the map manifest for the current nation
+      const rl = this.randomSpawnLand();
+
+      if (rl === null) {
+        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+        return;
+      }
+
       this.mg.addExecution(
-        new SpawnExecution(this.gameID, this.nation.playerInfo),
+        new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
       );
       return;
     }
@@ -114,7 +138,8 @@ export class NationExecution implements Execution {
     if (
       this.mirvBehavior === null ||
       this.attackBehavior === null ||
-      this.allianceBehavior === null
+      this.allianceBehavior === null ||
+      this.warshipBehavior === null
     ) {
       // Player is unavailable during init()
       this.emojiBehavior = new NationEmojiBehavior(
@@ -129,6 +154,11 @@ export class NationExecution implements Execution {
         this.emojiBehavior,
       );
       this.allianceBehavior = new NationAllianceBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
+      this.warshipBehavior = new NationWarshipBehavior(
         this.random,
         this.mg,
         this.player,
@@ -156,70 +186,32 @@ export class NationExecution implements Execution {
     this.handleEmbargoesToHostileNations();
     this.mirvBehavior.considerMIRV();
     this.maybeAttack();
+    this.warshipBehavior.counterWarshipInfestation();
   }
 
-  // Send out a warship if our transport ship got captured
-  private trackTransportShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned transport ships to our tracking set
-    this.player
-      .units(UnitType.TransportShip)
-      .forEach((u) => this.trackedTransportShips.add(u));
-
-    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
-    for (const ship of Array.from(this.trackedTransportShips)) {
-      if (!ship.isActive()) {
-        // Distinguish between arrival/retreat and enemy destruction
-        if (ship.wasDestroyedByEnemy()) {
-          this.maybeRetaliateWithWarship(ship.tile());
-        }
-        this.trackedTransportShips.delete(ship);
-      }
-    }
-  }
-
-  // Send out a warship if our trade ship got captured
-  private trackTradeShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned trade ships to our tracking map
-    this.player
-      .units(UnitType.TradeShip)
-      .forEach((u) => this.trackedTradeShips.add(u));
-
-    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
-    for (const ship of Array.from(this.trackedTradeShips)) {
-      if (!ship.isActive()) {
-        this.trackedTradeShips.delete(ship);
+  private randomSpawnLand(): TileRef | null {
+    const delta = 25;
+    let tries = 0;
+    while (tries < 50) {
+      tries++;
+      const cell = this.nation.spawnCell;
+      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
+      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
+      if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
-      if (ship.owner().id() !== this.player.id()) {
-        // Ship was ours and is now owned by someone else -> captured
-        this.maybeRetaliateWithWarship(ship.tile());
-        this.trackedTradeShips.delete(ship);
+      const tile = this.mg.ref(x, y);
+      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
+        if (
+          this.mg.terrainType(tile) === TerrainType.Mountain &&
+          this.random.chance(2)
+        ) {
+          continue;
+        }
+        return tile;
       }
     }
-  }
-
-  private maybeRetaliateWithWarship(tile: TileRef): void {
-    if (this.player === null) return;
-
-    const { difficulty } = this.mg.config().gameConfig();
-    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
-    if (
-      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
-      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
-      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
-    ) {
-      const canBuild = this.player.canBuild(UnitType.Warship, tile);
-      if (canBuild === false) {
-        return;
-      }
-      this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, tile),
-      );
-    }
+    return null;
   }
 
   private updateRelationsFromEmbargos() {
@@ -453,15 +445,13 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.assistAllies();
-
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-
     this.maybeSendNuke(
       this.attackBehavior.findBestNukeTarget(borderingEnemies),
     );
   }
 
-  sendBoatRandomly(borderingEnemies: Player[] = []) {
+  private sendBoatRandomly(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),
@@ -556,14 +546,16 @@ export class NationExecution implements Execution {
   }
 
   private maybeSendNuke(other: Player | null) {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.player === null || this.attackBehavior === null)
+      throw new Error("not initialized");
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
       other === null ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
-      this.player.isOnSameTeam(other)
+      this.player.isOnSameTeam(other) ||
+      this.attackBehavior.shouldAttack(other) === false
     ) {
       return;
     }
