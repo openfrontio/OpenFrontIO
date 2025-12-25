@@ -121,7 +121,9 @@ export class NationExecution implements Execution {
     if (this.mg.inSpawnPhase()) {
       // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
       if (this.nation.spawnCell === undefined) {
-        new SpawnExecution(this.gameID, this.nation.playerInfo);
+        this.mg.addExecution(
+          new SpawnExecution(this.gameID, this.nation.playerInfo),
+        );
         return;
       }
 
