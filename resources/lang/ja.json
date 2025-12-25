@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Discordサーバーに参加!",
+    "join_discord": "Discord",
     "login_discord": "Discordでログイン",
     "checking_login": "ログイン中...",
     "logged_in": "ログイン中！",
@@ -30,8 +30,6 @@
     "join_lobby": "ロビーに参加",
     "single_player": "シングルプレイヤー",
     "instructions": "説明書",
-    "how_to_play": "遊び方",
-    "advertise": "広告",
     "wiki": "ウィキ",
     "privacy_policy": "プライバシーポリシー",
     "terms_of_service": "利用規約",
@@ -135,6 +133,7 @@
   },
   "single_modal": {
     "title": "シングルプレイヤー",
+    "random_spawn": "ランダムスポーン",
     "allow_alliances": "同盟を許可",
     "options_title": "オプション",
     "bots": "ボット数: ",
@@ -144,10 +143,9 @@
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
     "infinite_troops": "兵士無限",
-    "compact_map": "ミニマップ",
+    "compact_map": "小型マップ",
     "max_timer": "ゲーム時間 (分)",
     "disable_nukes": "核兵器使用禁止",
-    "automatic_difficulty": "自動難易度",
     "enables_title": "機能の有効化",
     "start": "ゲーム開始"
   },
@@ -162,6 +160,18 @@
     "fetching_account": "アカウント情報を取得中...",
     "logged_in_with_discord": "Discordでログインしました",
     "recovery_email_sent": "{email} に回復用のメールを送信しました"
+  },
+  "stats_modal": {
+    "title": "ステータス",
+    "clan_stats": "クランステータス",
+    "loading": "ロード中…",
+    "error": "クランステータスの読み込みに失敗しました",
+    "no_stats": "クランステータスがありません",
+    "clan": "クラン",
+    "games": "ゲーム",
+    "win_score": "勝利スコア",
+    "loss_score": "敗北スコア",
+    "win_loss_ratio": "勝利/敗北"
   },
   "map": {
     "map": "地図",
@@ -197,7 +207,10 @@
     "pluto": "冥王星",
     "montreal": "モントリオール",
     "achiran": "アチラン",
-    "baikalnukewars": "バイカル（核戦争）"
+    "baikalnukewars": "バイカル（核戦争）",
+    "fourislands": "4つの島",
+    "gulfofstlawrence": "セントローレンス湾",
+    "lisbon": "リスボンの都市圏"
   },
   "map_categories": {
     "continental": "大陸",
@@ -222,11 +235,12 @@
   "public_lobby": {
     "join": "次のゲームに参加",
     "waiting": "人が参加しています...",
-    "teams_Duos": "デュオ（2人のチーム）",
-    "teams_Trios": "トリオ（3人のチーム）",
-    "teams_Quads": "クワッド（4人のチーム）",
+    "teams_Duos": "2 人プレイヤー(ドゥオ)",
+    "teams_Trios": "3 人プレイヤー(トリオ)",
+    "teams_Quads": "4 人プレイヤー(クワッド)",
     "teams_hvn": "プレイヤー対国家",
-    "teams": "{num}チーム"
+    "teams": "{num}チーム",
+    "players_per_team": "{num}人プレイヤー"
   },
   "matchmaking_modal": {
     "title": "マッチングする",
@@ -256,14 +270,20 @@
     "donate_gold": "資金援助",
     "infinite_troops": "兵士無限",
     "donate_troops": "軍事支援",
-    "compact_map": "ミニマップ",
-    "automatic_difficulty": "難易度を自動調整",
+    "compact_map": "小型マップ",
     "enables_title": "機能設定",
     "player": "プレイヤー",
     "players": "プレイヤー",
+    "nation_players": "国家",
+    "nation_player": "国家",
     "waiting": "他のプレイヤーの参加を待っています...",
+    "random_spawn": "ランダムスポーン",
     "start": "ゲーム開始",
-    "host_badge": "ホスト"
+    "host_badge": "ホスト",
+    "assigned_teams": "チーム編成",
+    "empty_teams": "空きのチーム",
+    "empty_team": "空き",
+    "remove_player": "{username}を削除"
   },
   "team_colors": {
     "red": "赤",
@@ -315,7 +335,7 @@
     "emojis_label": "絵文字を表示",
     "emojis_desc": "ゲーム中で絵文字を表示します",
     "alert_frame_label": "アラートフレーム",
-    "alert_frame_desc": "アラートフレームを切り替えます。有効にすると、裏切られたときにフレームが表示されます。",
+    "alert_frame_desc": "警告フレームの表示をを切り替えます。有効時、裏切られたときや陸上から攻撃を受けたときにフレームが表示されます。",
     "special_effects_label": "特殊効果",
     "special_effects_desc": "特殊効果を切り替えます。無効にするとパフォーマンスが向上します。",
     "structure_sprites_label": "建物アイコン",
@@ -512,7 +532,14 @@
     "exit": "ゲームから退出",
     "keep": "観戦する",
     "spectate": "観戦する",
-    "wishlist": "Steamでウィッシュリストに追加して下さい！"
+    "wishlist": "Steamでウィッシュリストに追加して下さい！",
+    "ofm_winter": "OpenFront 冬季マスターズトーナメント！",
+    "ofm_winter_description": "競技トーナメントにして、最強のプレイヤーたちに挑もう",
+    "join_tournament": "トーナメントに参加",
+    "join_discord": "Discordコミュニティに参加しよう！",
+    "discord_description": "他のプレイヤーと交流して、アップデート情報や戦略を共有しよう",
+    "join_server": "サーバに入る",
+    "youtube_tutorial": "ヘルプが必要ですか？"
   },
   "leaderboard": {
     "title": "ランキング",
@@ -552,6 +579,7 @@
   },
   "events_display": {
     "retreating": "撤退中",
+    "retaliate": "反撃する",
     "boat": "ボート",
     "alliance_request_status": "{name}が同盟のリクエストを{status}しました",
     "alliance_accepted": "承認",
@@ -570,8 +598,10 @@
     "accept_alliance": "承諾",
     "reject_alliance": "却下",
     "alliance_renewed": "{name} との同盟が更新されました",
+    "wants_to_renew_alliance": "{name} が同盟の更新を提案しています",
     "ignore": "無視",
-    "unit_voluntarily_deleted": "ユニットは自己破壊しました"
+    "unit_voluntarily_deleted": "ユニットは自己破壊しました",
+    "betrayal_debuff_ends": "裏切りのデバフ終了まであと {time} 秒"
   },
   "unit_info_modal": {
     "structure_info": "建造物情報",
@@ -618,7 +648,6 @@
     "flag": "旗",
     "chat": "チャット",
     "target": "ターゲット",
-    "break": "破棄",
     "break_alliance": "同盟を破棄",
     "alliance": "同盟",
     "send_alliance": "同盟を要請",
@@ -630,10 +659,7 @@
     "title_with_name": "{name}へ軍隊を送信",
     "available_tooltip": "あなたの兵士数",
     "min_keep": "最小値を保つ",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "軍を送る",
-    "warning_attackbar": "一度有効にすると、モーダルから直接開くことはできません。攻撃バーからのみ軍を送ることができます。",
     "aria_slider": "軍隊スライダー",
     "capacity_note": "現在、受取主は {{amount}} のみ受け取ることができます。"
   },
@@ -655,15 +681,34 @@
     "copy_clipboard": "クリップボードにコピーする",
     "copied": "コピーしました！",
     "failed_copy": "コピーに失敗しました",
+    "spawn_failed": {
+      "title": "スポーンに失敗しました",
+      "description": "自動スポーンの選択に失敗しました。このゲームにプレイできません。"
+    },
     "desync_notice": "他のプレイヤと同期ズレが発生しています。他のプレイヤーとは違う画面になっている可能性があります。"
   },
+  "performance_overlay": {
+    "reset": "リセット",
+    "copy_json_title": "現在のパフォーマンス指標をJSONでコピー",
+    "copy_clipboard": "JSONでコピー",
+    "copied": "コピーに成功しました！",
+    "failed_copy": "コピーに失敗しました",
+    "fps": "FPS：",
+    "avg_60s": "平均(60秒)：",
+    "frame": "フレーム：",
+    "tick_exec": "Tick 実行：",
+    "tick_delay": "Tick 遅延：",
+    "layers_header": "レイヤー(平均 / 最大、処理合計時間順)："
+  },
   "heads_up_message": {
-    "choose_spawn": "スタート地点を選んで下さい"
+    "choose_spawn": "スタート地点を選んで下さい",
+    "random_spawn": "ランダムスポーンが有効です。開始地点を設定しています…"
   },
   "territory_patterns": {
     "title": "領土スキン",
     "colors": "色",
     "purchase": "購入",
+    "show_only_owned": "自分の領地",
     "blocked": {
       "login": "スキンを解放するにはログインしてください",
       "purchase": "スキンを解放するには購入してください"
