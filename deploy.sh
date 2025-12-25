@@ -76,15 +76,15 @@ if [ -f .env.$ENV ]; then
 fi
 
 # Check required environment variables for deployment
-if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_REPO" ]; then
-    echo "Error: DOCKER_USERNAME or DOCKER_REPO not defined in .env file or environment"
+if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_REPO" ]; then
+    echo "Error: GHCR_USERNAME or GHCR_REPO not defined in .env file or environment"
     exit 1
 fi
 
 if [[ "$VERSION_TAG" == sha256:* ]]; then
-    DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}@${VERSION_TAG}"
+    GHCR_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}@${VERSION_TAG}"
 else
-    DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
+    GHCR_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:${VERSION_TAG}"
 fi
 
 if [ "$HOST" == "staging" ]; then
@@ -139,7 +139,7 @@ print_header "DEPLOYMENT INFORMATION"
 echo "Environment: ${ENV}"
 echo "Host: ${HOST}"
 echo "Subdomain: ${SUBDOMAIN}"
-echo "Docker Image: $DOCKER_IMAGE"
+echo "Image: $GHCR_IMAGE"
 echo "Target Server: $SERVER_HOST"
 
 # Copy update script to Hetzner server
@@ -168,8 +168,8 @@ cat > $ENV_FILE << 'EOL'
 GAME_ENV=$ENV
 ENV=$ENV
 HOST=$HOST
-DOCKER_IMAGE=$DOCKER_IMAGE
-DOCKER_TOKEN=$DOCKER_TOKEN
+GHCR_IMAGE=$GHCR_IMAGE
+GHCR_TOKEN=$GHCR_TOKEN
 ADMIN_TOKEN=$ADMIN_TOKEN
 CF_ACCOUNT_ID=$CF_ACCOUNT_ID
 R2_ACCESS_KEY=$R2_ACCESS_KEY
