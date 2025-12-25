@@ -6,7 +6,11 @@ import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, GameType } from "../../../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  MIN_GAME_TICKS_FOR_SURRENDER,
+} from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent, SendSurrenderIntentEvent } from "../../Transport";
@@ -14,8 +18,6 @@ import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
-
-const MIN_GAME_TICKS_FOR_SURRENDER = 3000;
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {

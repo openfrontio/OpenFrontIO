@@ -1,8 +1,11 @@
-import { Execution, Game, GameMode, Player, PlayerType } from "../game/Game";
-
-// Minimum game time (after spawn phase) before surrender is allowed: 5 minutes
-// Game runs at 10 ticks/second, so 5 minutes = 5 * 60 * 10 = 3000 ticks
-const MIN_GAME_TICKS_FOR_SURRENDER = 3000;
+import {
+  Execution,
+  Game,
+  GameMode,
+  MIN_GAME_TICKS_FOR_SURRENDER,
+  Player,
+  PlayerType,
+} from "../game/Game";
 
 export class SurrenderExecution implements Execution {
   private mg: Game | null = null;
