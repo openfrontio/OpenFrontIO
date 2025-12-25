@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
@@ -80,16 +80,10 @@ export async function startWorker() {
       config,
       log,
       async (gameId, assignment) => {
-        // Select map based on player count and mode
         const selectedMap = selectMapForRanked({
           playerCount: assignment.config.playerCount,
-          gameMode:
-            assignment.config.gameMode === "ffa" ||
-            assignment.config.gameMode === "duel"
-              ? GameMode.FFA
-              : GameMode.Team,
-          queueType: assignment.config.queueType,
           matchMode: assignment.config.gameMode,
+          queueType: assignment.config.queueType,
         });
 
         // Build full game config
@@ -98,7 +92,6 @@ export async function startWorker() {
           assignment.config,
         );
 
-        // Create game
         gm.createGame(gameId, gameConfig);
 
         log.info("Created ranked match", {
@@ -108,8 +101,13 @@ export async function startWorker() {
           players: assignment.config.playerCount,
         });
 
-        // TODO: Notify players to connect to this game
-        // Players already have gameId from Lobby websocket
+        setTimeout(() => {
+          const game = gm.game(gameId);
+          if (game && !game.hasStarted()) {
+            log.info(`Starting ranked match ${gameId}`);
+            game.start();
+          }
+        }, 5000);
       },
       () => gm.activeClients(), // Get CCU from GameManager
     );
@@ -586,16 +584,10 @@ async function pollLobby(gm: GameManager) {
       const assignment = data.assignment;
       log.info(`Creating game ${gameId} with assignment`, assignment.config);
 
-      // Select map based on player count and mode
       const selectedMap = selectMapForRanked({
         playerCount: assignment.config.playerCount,
-        gameMode:
-          assignment.config.gameMode === "ffa" ||
-          assignment.config.gameMode === "duel"
-            ? GameMode.FFA
-            : GameMode.Team,
-        queueType: assignment.config.queueType,
         matchMode: assignment.config.gameMode,
+        queueType: assignment.config.queueType,
       });
 
       // Build full game config using assignment config

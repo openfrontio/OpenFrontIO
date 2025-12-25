@@ -10,11 +10,19 @@ import {
 } from "../core/game/Game";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 
+export type MatchMode = "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
+
 export interface RankedMatchConfig {
   queueType: "ranked" | "unranked";
-  gameMode: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
+  gameMode: MatchMode;
   playerCount: number;
   teamConfig?: TeamCountConfig;
+}
+
+export function matchModeToGameMode(matchMode: MatchMode): GameMode {
+  if (matchMode === "duel") return GameMode.Duel;
+  if (matchMode === "ffa") return GameMode.FFA;
+  return GameMode.Team;
 }
 
 /**
@@ -29,16 +37,8 @@ export function buildRankedGameConfig(
   const { gameMode, playerCount } = matchConfig;
   const isDuel = gameMode === "duel";
   const isFFA = gameMode === "ffa";
-  const isTeamMode =
-    gameMode === "team" ||
-    gameMode === "duos" ||
-    gameMode === "trios" ||
-    gameMode === "quads";
-  const mode = isDuel
-    ? GameMode.Duel
-    : isTeamMode
-      ? GameMode.Team
-      : GameMode.FFA;
+  const isTeamMode = !isDuel && !isFFA;
+  const mode = matchModeToGameMode(gameMode);
 
   // Determine team configuration based on game mode
   let teamConfig: TeamCountConfig | undefined = matchConfig.teamConfig;
