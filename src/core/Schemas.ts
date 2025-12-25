@@ -152,7 +152,7 @@ export enum LogSeverity {
 // Utility types
 //
 
-const TeamCountConfigSchema = z.union([
+export const TeamCountConfigSchema = z.union([
   z.number(),
   z.literal(Duos),
   z.literal(Trios),
