@@ -1,17 +1,24 @@
 import { Logger } from "winston";
+import { z } from "zod";
 import { ServerConfig } from "../core/configuration/Config";
-import { TeamCountConfig } from "../core/Schemas";
+import { TeamCountConfigSchema } from "../core/Schemas";
 import { generateID, simpleHash } from "../core/Util";
 
-export interface MatchAssignment {
-  players: string[]; // Player tokens
-  config: {
-    queueType: "ranked" | "unranked";
-    gameMode: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
-    playerCount: number;
-    teamConfig?: TeamCountConfig;
-  };
-}
+const MatchAssignmentSchema = z.object({
+  players: z.array(z.string()),
+  config: z.object({
+    queueType: z.enum(["ranked", "unranked"]),
+    gameMode: z.enum(["ffa", "team", "duel", "duos", "trios", "quads"]),
+    playerCount: z.number().int().positive(),
+    teamConfig: TeamCountConfigSchema.optional(),
+  }),
+});
+
+const MatchmakingResponseSchema = z.object({
+  assignment: MatchAssignmentSchema.optional(),
+});
+
+export type MatchAssignment = z.infer<typeof MatchAssignmentSchema>;
 
 export class MatchmakingPoller {
   private serverId: string;
@@ -74,6 +81,9 @@ export class MatchmakingPoller {
           ccu: ccu,
         });
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
         const response = await fetch(
           `${this.config.jwtIssuer()}/matchmaking/checkin`,
           {
@@ -87,12 +97,25 @@ export class MatchmakingPoller {
               ccu: ccu,
               gameId: gameId,
             }),
+            signal: controller.signal,
           },
         );
 
-        if (response.ok) {
-          const data = await response.json();
+        clearTimeout(timeoutId);
 
+        if (response.ok) {
+          const rawData = await response.json();
+          const result = MatchmakingResponseSchema.safeParse(rawData);
+
+          if (!result.success) {
+            this.log.error("Invalid matchmaking response", {
+              error: result.error.message,
+            });
+            await this.sleep(10000);
+            continue;
+          }
+
+          const data = result.data;
           if (data.assignment) {
             this.log.info("Received match assignment", {
               gameId,

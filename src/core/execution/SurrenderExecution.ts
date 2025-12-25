@@ -31,7 +31,10 @@ export class SurrenderExecution implements Execution {
     // Find the opponent (the other human player in duel)
     const players = mg
       .players()
-      .filter((p) => p.type() === PlayerType.Human && p !== this.player);
+      .filter(
+        (p) =>
+          p.type() === PlayerType.Human && p !== this.player && p.isAlive(),
+      );
     if (players.length !== 1) {
       console.warn("Cannot surrender: expected exactly one opponent");
       return;

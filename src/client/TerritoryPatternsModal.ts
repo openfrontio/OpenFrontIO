@@ -292,14 +292,4 @@ export class TerritoryPatternsModal extends LitElement {
     render(preview, this.previewButton);
     this.requestUpdate();
   }
-
-  private isLoggedIn(): boolean {
-    if (this.userMeResponse === false) {
-      return false;
-    }
-    return (
-      this.userMeResponse.user.discord !== undefined ||
-      this.userMeResponse.user.email !== undefined
-    );
-  }
 }

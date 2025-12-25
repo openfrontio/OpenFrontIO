@@ -115,6 +115,8 @@ export class PlayerExecution implements Execution {
         }
       }
     }
+
+    this.mg.stats().updateMaxTiles(this.player);
   }
 
   private removeClusters() {
