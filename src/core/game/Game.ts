@@ -25,6 +25,8 @@ export type Gold = bigint;
 
 export const AllPlayers = "AllPlayers" as const;
 
+export const MIN_GAME_TICKS_FOR_SURRENDER = 3000;
+
 // export type GameUpdates = Record<GameUpdateType, GameUpdate[]>;
 // Create a type that maps GameUpdateType to its corresponding update type
 type UpdateTypeMap<T extends GameUpdateType> = Extract<GameUpdate, { type: T }>;

@@ -1,7 +1,11 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, GameType } from "../../../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  MIN_GAME_TICKS_FOR_SURRENDER,
+} from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
@@ -15,8 +19,6 @@ import FastForwardIconSolid from "/images/FastForwardIconSolidWhite.svg?url";
 import pauseIcon from "/images/PauseIconWhite.svg?url";
 import playIcon from "/images/PlayIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
-
-const MIN_GAME_TICKS_FOR_SURRENDER = 3000;
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
