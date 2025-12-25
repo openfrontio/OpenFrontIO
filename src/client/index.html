@@ -130,6 +130,12 @@
       document.documentElement.className = "preload";
     </script>
 
+    <!-- CrazyGames SDK -->
+    <script
+      src="https://sdk.crazygames.com/crazygames-sdk-v3.js"
+      async
+    ></script>
+
     <!-- Cloudflare Turnstile -->
     <script
       src="https://challenges.cloudflare.com/turnstile/v0/api.js"
@@ -481,7 +487,9 @@
         ></div>
         <button
           class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-          onclick="document.getElementById('language-modal').classList.add('hidden')"
+          onclick="
+            document.getElementById('language-modal').classList.add('hidden')
+          "
         >
           Close
         </button>
