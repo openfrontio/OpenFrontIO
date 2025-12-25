@@ -9,17 +9,25 @@ import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";
+import {
+  EMOJI_CONFUSED,
+  EMOJI_HANDSHAKE,
+  EMOJI_LOVE,
+  EMOJI_SCARED_OF_THREAT,
+  NationEmojiBehavior,
+} from "./NationEmojiBehavior";
 
 export class NationAllianceBehavior {
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
+    private emojiBehavior: NationEmojiBehavior,
   ) {}
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
-      if (this.getAllianceRequestDecision(req.requestor())) {
+      if (this.getAllianceDecision(req.requestor(), true)) {
         req.accept();
       } else {
         req.reject();
@@ -34,7 +42,7 @@ export class NationAllianceBehavior {
       if (!alliance.onlyOneAgreedToExtend()) continue;
 
       const human = alliance.other(this.player);
-      if (!this.getAllianceRequestDecision(human)) continue;
+      if (!this.getAllianceDecision(human, true)) continue;
 
       this.game.addExecution(
         new AllianceExtensionExecution(this.player, human.id()),
@@ -54,7 +62,7 @@ export class NationAllianceBehavior {
         this.random.chance(20) &&
         isAcceptablePlayerType(enemy) &&
         this.player.canSendAllianceRequest(enemy) &&
-        this.getAllianceRequestDecision(enemy)
+        this.getAllianceDecision(enemy, false)
       ) {
         this.game.addExecution(
           new AllianceRequestExecution(this.player, enemy.id()),
@@ -63,27 +71,45 @@ export class NationAllianceBehavior {
     }
   }
 
-  private getAllianceRequestDecision(otherPlayer: Player): boolean {
+  private getAllianceDecision(
+    otherPlayer: Player,
+    isResponse: boolean,
+  ): boolean {
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
     }
     // Nearly always reject traitors
     if (otherPlayer.isTraitor() && this.random.nextInt(0, 100) >= 10) {
+      if (isResponse && this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_CONFUSED);
+      }
       return false;
     }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
     // Impossible (smart) nations on the other hand are analyzing the facts
     if (this.isAlliancePartnerThreat(otherPlayer)) {
+      if (!isResponse && this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_SCARED_OF_THREAT);
+      }
+      if (isResponse && this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_LOVE);
+      }
       return true;
     }
     // Reject if relation is bad
     if (this.player.relation(otherPlayer) < Relation.Neutral) {
+      if (isResponse && this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_CONFUSED);
+      }
       return false;
     }
     // Maybe accept if relation is friendly
     if (this.isAlliancePartnerFriendly(otherPlayer)) {
+      if (this.random.chance(3)) {
+        this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_HANDSHAKE);
+      }
       return true;
     }
     // Reject if we already have some alliances, we don't want to ally with the entire map

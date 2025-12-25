@@ -478,6 +478,11 @@ export class AiAttackBehavior {
       return;
     }
 
+    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+      if (this.emojiBehavior === undefined) throw new Error("not initialized");
+      this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
     this.game.addExecution(
       new AttackExecution(
         troops,
@@ -485,11 +490,6 @@ export class AiAttackBehavior {
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
     );
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendHeckleEmoji(target);
-    }
   }
 
   private sendBoatAttack(target: Player) {
@@ -515,6 +515,11 @@ export class AiAttackBehavior {
       return;
     }
 
+    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+      if (this.emojiBehavior === undefined) throw new Error("not initialized");
+      this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
     this.game.addExecution(
       new TransportShipExecution(
         this.player,
@@ -524,11 +529,6 @@ export class AiAttackBehavior {
         null,
       ),
     );
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendHeckleEmoji(target);
-    }
   }
 
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
