@@ -310,7 +310,7 @@ export enum Relation {
 
 export class Nation {
   constructor(
-    public readonly spawnCell: Cell,
+    public readonly spawnCell: Cell | undefined,
     public readonly playerInfo: PlayerInfo,
   ) {}
 }

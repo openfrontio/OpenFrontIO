@@ -119,7 +119,13 @@ export class NationExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
-      // select a tile near the position defined in the map manifest for the current nation
+      // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
+      if (this.nation.spawnCell === undefined) {
+        new SpawnExecution(this.gameID, this.nation.playerInfo);
+        return;
+      }
+
+      // Select a tile near the position defined in the map manifest
       const rl = this.randomSpawnLand();
 
       if (rl === null) {
@@ -250,6 +256,8 @@ export class NationExecution implements Execution {
   }
 
   private randomSpawnLand(): TileRef | null {
+    if (this.nation.spawnCell === undefined) throw new Error("not initialized");
+
     const delta = 25;
     let tries = 0;
     while (tries < 50) {

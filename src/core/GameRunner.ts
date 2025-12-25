@@ -1,13 +1,20 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "./execution/utils/BotNames";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
   Cell,
   Game,
+  GameMode,
+  GameType,
   GameUpdates,
+  HumansVsNations,
   NameViewData,
   Nation,
   Player,
@@ -26,7 +33,10 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
-import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import {
+  loadTerrainMap as loadGameMap,
+  Nation as ManifestNation,
+} from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { simpleHash } from "./Util";
@@ -55,15 +65,12 @@ export async function createGameRunner(
     );
   });
 
-  const nations = gameStart.config.disableNations
-    ? []
-    : gameMap.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
-          ),
-      );
+  const nations = createNationsForGame(
+    gameStart,
+    gameMap.nations,
+    humans.length,
+    random,
+  );
 
   const game: Game = createGame(
     humans,
@@ -80,6 +87,82 @@ export async function createGameRunner(
   );
   gr.init();
   return gr;
+}
+
+/**
+ * Creates the nations array for a game, handling HumansVsNations mode specially.
+ * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
+ */
+function createNationsForGame(
+  gameStart: GameStartInfo,
+  manifestNations: ManifestNation[],
+  numHumans: number,
+  random: PseudoRandom,
+): Nation[] {
+  // If nations are disabled, return empty array
+  if (gameStart.config.disableNations) {
+    return [];
+  }
+
+  const toNation = (n: ManifestNation): Nation =>
+    new Nation(
+      new Cell(n.coordinates[0], n.coordinates[1]),
+      new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
+    );
+
+  const isHumansVsNations =
+    gameStart.config.gameMode === GameMode.Team &&
+    gameStart.config.playerTeams === HumansVsNations;
+
+  // For non-HumansVsNations modes, use all manifest nations as before
+  if (!isHumansVsNations) {
+    return manifestNations.map(toNation);
+  }
+
+  // HumansVsNations mode: balance nation count to match human count
+  const isSingleplayer = gameStart.config.gameType === GameType.Singleplayer;
+  const targetNationCount = isSingleplayer ? 1 : numHumans;
+
+  if (targetNationCount === 0) {
+    return [];
+  }
+
+  // If we have enough manifest nations, use a subset
+  if (manifestNations.length >= targetNationCount) {
+    // Shuffle manifest nations to add variety
+    const shuffled = [...manifestNations];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = random.nextInt(0, i + 1);
+      const temp = shuffled[i];
+      shuffled[i] = shuffled[j];
+      shuffled[j] = temp;
+    }
+    return shuffled.slice(0, targetNationCount).map(toNation);
+  }
+
+  // If we need more nations than defined in manifest, create additional ones
+  const nations: Nation[] = manifestNations.map(toNation);
+  const additionalCount = targetNationCount - manifestNations.length;
+  for (let i = 0; i < additionalCount; i++) {
+    const name = generateNationName(random);
+    nations.push(
+      new Nation(
+        undefined,
+        new PlayerInfo(name, PlayerType.Nation, null, random.nextID()),
+      ),
+    );
+  }
+
+  return nations;
+}
+
+/**
+ * Generates a nation name using the bot name prefixes and suffixes.
+ */
+function generateNationName(random: PseudoRandom): string {
+  const prefixIndex = random.nextInt(0, BOT_NAME_PREFIXES.length);
+  const suffixIndex = random.nextInt(0, BOT_NAME_SUFFIXES.length);
+  return `${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
 }
 
 export class GameRunner {

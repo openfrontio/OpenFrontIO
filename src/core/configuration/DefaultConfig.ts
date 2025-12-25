@@ -207,7 +207,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
         p -= p % 4;
         break;
       case HumansVsNations:
-        // For HumansVsNations, return the base team player count
+        // Half the slots are for humans, the other half will get filled with nations
+        p = Math.floor(p / 2);
         break;
       default:
         p -= p % numPlayerTeams;
