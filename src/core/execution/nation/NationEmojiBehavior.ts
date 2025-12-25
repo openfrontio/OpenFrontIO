@@ -204,7 +204,12 @@ export class NationEmojiBehavior {
 
     const traitors = this.game
       .players()
-      .filter((p) => p.type() === PlayerType.Human && p.isTraitor());
+      .filter(
+        (p) =>
+          p.type() === PlayerType.Human &&
+          !p.isFriendly(this.player) &&
+          p.isTraitor(),
+      );
 
     if (traitors.length === 0) return;
 
