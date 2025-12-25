@@ -193,6 +193,9 @@ const NOUNS = [
   "Penguin",
 ];
 
+// Words from NOUNS that need irregular "-oes" plural
+const O_TO_OES = new Set(["Potato", "Tomato"]);
+
 function pluralize(noun: string): string {
   if (
     noun.endsWith("s") ||
@@ -206,7 +209,7 @@ function pluralize(noun: string): string {
   if (noun.endsWith("y") && !"aeiou".includes(noun[noun.length - 2])) {
     return `${noun.slice(0, -1)}ies`;
   }
-  if (noun.endsWith("o")) {
+  if (O_TO_OES.has(noun)) {
     return `${noun}es`;
   }
   return `${noun}s`;
