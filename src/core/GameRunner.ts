@@ -114,7 +114,7 @@ function createNationsForGame(
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // For non-HumansVsNations modes, use all manifest nations as before
+  // For non-HumansVsNations modes, simply use the manifest nations
   if (!isHumansVsNations) {
     return manifestNations.map(toNation);
   }
