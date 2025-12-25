@@ -1,13 +1,13 @@
 import { numPlayersConfig } from "../core/configuration/DefaultConfig";
 import { GameMapType, GameMode } from "../core/game/Game";
+import { MatchMode, matchModeToGameMode } from "./RankedGameConfig";
 
 const MAP_CAPACITIES = numPlayersConfig;
 
 export interface MapSelectionCriteria {
   playerCount: number;
-  gameMode: GameMode;
+  matchMode: MatchMode;
   queueType: "ranked" | "unranked";
-  matchMode?: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
 }
 
 /**
@@ -17,11 +17,13 @@ export interface MapSelectionCriteria {
 export function selectMapForRanked(
   criteria: MapSelectionCriteria,
 ): GameMapType {
-  const { playerCount, gameMode, matchMode } = criteria;
+  const { playerCount, matchMode } = criteria;
 
   if (matchMode === "duel") {
     return GameMapType.Australia;
   }
+
+  const gameMode = matchModeToGameMode(matchMode);
 
   // Get maps that can handle this player count
   const suitableMaps = getSuitableMaps(playerCount);
