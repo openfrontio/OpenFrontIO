@@ -432,11 +432,12 @@ export class AiAttackBehavior {
   }
 
   shouldAttack(other: Player | TerraNullius): boolean {
-    // Always attack Terra Nullius, non-humans and traitors
+    // Always attack Terra Nullius, non-humans and traitors (or if we are a bot)
     if (
       other.isPlayer() === false ||
       other.type() !== PlayerType.Human ||
-      other.isTraitor()
+      other.isTraitor() ||
+      this.player.type() === PlayerType.Bot
     ) {
       return true;
     }
