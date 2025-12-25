@@ -732,7 +732,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "indigo",
               })
             : ""}
-          ${canKick
+          ${canKick && !this.g.isLobbyCreator(other)
             ? actionButton({
                 onClick: (e: MouseEvent) => this.handleKickClick(e, other),
                 icon: disabledIcon,
