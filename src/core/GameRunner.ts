@@ -1,10 +1,7 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
-import {
-  BOT_NAME_PREFIXES,
-  BOT_NAME_SUFFIXES,
-} from "./execution/utils/BotNames";
+import { generateNationName } from "./execution/utils/NationNames";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -154,15 +151,6 @@ function createNationsForGame(
   }
 
   return nations;
-}
-
-/**
- * Generates a nation name using the bot name prefixes and suffixes.
- */
-function generateNationName(random: PseudoRandom): string {
-  const prefixIndex = random.nextInt(0, BOT_NAME_PREFIXES.length);
-  const suffixIndex = random.nextInt(0, BOT_NAME_SUFFIXES.length);
-  return `${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
 }
 
 export class GameRunner {
