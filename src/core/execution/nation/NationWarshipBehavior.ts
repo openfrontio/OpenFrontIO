@@ -1,4 +1,5 @@
 import {
+  AllPlayers,
   Difficulty,
   Game,
   Gold,
@@ -10,6 +11,10 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { ConstructionExecution } from "../ConstructionExecution";
+import {
+  EMOJI_WARSHIP_RETALIATION,
+  NationEmojiBehavior,
+} from "./NationEmojiBehavior";
 
 export class NationWarshipBehavior {
   // Track our transport ships we currently own
@@ -21,6 +26,7 @@ export class NationWarshipBehavior {
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
+    private emojiBehavior: NationEmojiBehavior,
   ) {}
 
   trackShipsAndRetaliate(): void {
@@ -39,8 +45,8 @@ export class NationWarshipBehavior {
     for (const ship of Array.from(this.trackedTransportShips)) {
       if (!ship.isActive()) {
         // Distinguish between arrival/retreat and enemy destruction
-        if (ship.wasDestroyedByEnemy()) {
-          this.maybeRetaliateWithWarship(ship.tile());
+        if (ship.wasDestroyedByEnemy() && ship.destroyer() !== undefined) {
+          this.maybeRetaliateWithWarship(ship.tile(), ship.destroyer()!);
         }
         this.trackedTransportShips.delete(ship);
       }
@@ -62,13 +68,13 @@ export class NationWarshipBehavior {
       }
       if (ship.owner().id() !== this.player.id()) {
         // Ship was ours and is now owned by someone else -> captured
-        this.maybeRetaliateWithWarship(ship.tile());
+        this.maybeRetaliateWithWarship(ship.tile(), ship.owner());
         this.trackedTradeShips.delete(ship);
       }
     }
   }
 
-  private maybeRetaliateWithWarship(tile: TileRef): void {
+  private maybeRetaliateWithWarship(tile: TileRef, enemy: Player): void {
     const { difficulty } = this.game.config().gameConfig();
     // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
     if (
@@ -83,6 +89,7 @@ export class NationWarshipBehavior {
       this.game.addExecution(
         new ConstructionExecution(this.player, UnitType.Warship, tile),
       );
+      this.emojiBehavior.maybeSendEmoji(enemy, EMOJI_WARSHIP_RETALIATION);
     }
   }
 
@@ -256,6 +263,7 @@ export class NationWarshipBehavior {
         target.warship.tile(),
       ),
     );
+    this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_WARSHIP_RETALIATION);
   }
 
   private cost(type: UnitType): Gold {

@@ -459,6 +459,7 @@ export interface Unit {
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
   wasDestroyedByEnemy(): boolean;
+  destroyer(): Player | undefined;
 
   // Train
   trainType(): TrainType | undefined;
