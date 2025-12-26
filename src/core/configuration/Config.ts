@@ -45,10 +45,6 @@ export interface ServerConfig {
   adminHeader(): string;
   // Only available on the server
   gitCommit(): string;
-  r2Bucket(): string;
-  r2Endpoint(): string;
-  r2AccessKey(): string;
-  r2SecretKey(): string;
   apiKey(): string;
   otelEndpoint(): string;
   otelAuthHeader(): string;
