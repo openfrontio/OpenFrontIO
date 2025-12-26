@@ -28,8 +28,8 @@ echo "======================================================"
 # Container and image configuration
 CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
 
-echo "Pulling ${DOCKER_IMAGE} from Docker Hub..."
-docker pull "${DOCKER_IMAGE}"
+echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
+docker pull "${GHCR_IMAGE}"
 
 echo "Checking for existing container..."
 # Check for running container
@@ -67,7 +67,7 @@ docker run -d \
     --env-file "$ENV_FILE" \
     --name "${CONTAINER_NAME}" \
     -v "cloudflared-${CONTAINER_NAME}:/etc/cloudflared" \
-    "${DOCKER_IMAGE}"
+    "${GHCR_IMAGE}"
 
 if [ $? -eq 0 ]; then
     echo "Update complete! New ${CONTAINER_NAME} container is running."
