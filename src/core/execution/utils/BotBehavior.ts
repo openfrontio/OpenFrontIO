@@ -44,13 +44,14 @@ export class BotBehavior {
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
-  // Prevent attacking of humans on lower difficulties
+  // Prevent attacking of humans on lower difficulties (or if we are a bot)
   private shouldAttack(other: Player | TerraNullius): boolean {
     // Always attack Terra Nullius, non-humans and traitors
     if (
       other.isPlayer() === false ||
       other.type() !== PlayerType.Human ||
-      other.isTraitor()
+      other.isTraitor() ||
+      this.player.type() === PlayerType.Bot
     ) {
       return true;
     }
@@ -374,7 +375,6 @@ export class BotBehavior {
     }
 
     // Choose a new enemy randomly
-    const { difficulty } = this.game.config().gameConfig();
     const neighbors = this.player.neighbors();
     for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (!neighbor.isPlayer()) continue;
@@ -383,7 +383,7 @@ export class BotBehavior {
         neighbor.type() === PlayerType.FakeHuman ||
         neighbor.type() === PlayerType.Human
       ) {
-        if (this.random.chance(2) || difficulty === Difficulty.Easy) {
+        if (this.random.chance(2)) {
           continue;
         }
       }

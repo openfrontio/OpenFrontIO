@@ -46,10 +46,6 @@ export interface ServerConfig {
   adminHeader(): string;
   // Only available on the server
   gitCommit(): string;
-  r2Bucket(): string;
-  r2Endpoint(): string;
-  r2AccessKey(): string;
-  r2SecretKey(): string;
   apiKey(): string;
   otelEndpoint(): string;
   otelAuthHeader(): string;
@@ -59,10 +55,6 @@ export interface ServerConfig {
   jwkPublicKey(): Promise<JWK>;
   domain(): string;
   subdomain(): string;
-  cloudflareAccountId(): string;
-  cloudflareApiToken(): string;
-  cloudflareConfigPath(): string;
-  cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
