@@ -384,7 +384,6 @@ export class AiAttackBehavior {
     }
 
     // Choose a new enemy randomly
-    const { difficulty } = this.game.config().gameConfig();
     const neighbors = this.player.neighbors();
     for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (!neighbor.isPlayer()) continue;
@@ -393,7 +392,7 @@ export class AiAttackBehavior {
         neighbor.type() === PlayerType.Nation ||
         neighbor.type() === PlayerType.Human
       ) {
-        if (this.random.chance(2) || difficulty === Difficulty.Easy) {
+        if (this.random.chance(2)) {
           continue;
         }
       }
@@ -433,11 +432,12 @@ export class AiAttackBehavior {
   }
 
   shouldAttack(other: Player | TerraNullius): boolean {
-    // Always attack Terra Nullius, non-humans and traitors
+    // Always attack Terra Nullius, non-humans and traitors (or if we are a bot)
     if (
       other.isPlayer() === false ||
       other.type() !== PlayerType.Human ||
-      other.isTraitor()
+      other.isTraitor() ||
+      this.player.type() === PlayerType.Bot
     ) {
       return true;
     }
@@ -478,6 +478,11 @@ export class AiAttackBehavior {
       return;
     }
 
+    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+      if (this.emojiBehavior === undefined) throw new Error("not initialized");
+      this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
     this.game.addExecution(
       new AttackExecution(
         troops,
@@ -485,11 +490,6 @@ export class AiAttackBehavior {
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
     );
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendHeckleEmoji(target);
-    }
   }
 
   private sendBoatAttack(target: Player) {
@@ -515,6 +515,11 @@ export class AiAttackBehavior {
       return;
     }
 
+    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+      if (this.emojiBehavior === undefined) throw new Error("not initialized");
+      this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
     this.game.addExecution(
       new TransportShipExecution(
         this.player,
@@ -524,11 +529,6 @@ export class AiAttackBehavior {
         null,
       ),
     );
-
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
-      if (this.emojiBehavior === undefined) throw new Error("not initialized");
-      this.emojiBehavior.maybeSendHeckleEmoji(target);
-    }
   }
 
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {

@@ -243,7 +243,8 @@
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
     "svalmel": "Svalmel",
-    "manicouagan": "Manicouagan"
+    "manicouagan": "Manicouagan",
+    "lemnos": "Lemnos"
   },
   "map_categories": {
     "continental": "Continental",
@@ -268,6 +269,8 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "waiting_for_players": "Waiting for players",
+    "starting_game": "Starting game…",
     "teams_Duos": "of 2 (Duos)",
     "teams_Trios": "of 3 (Trios)",
     "teams_Quads": "of 4 (Quads)",
@@ -575,7 +578,7 @@
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
-    "discord_description": "Connect with other players, get updates, and share strategies",
+    "discord_description": "Connect with players, discover new features, and win prizes!",
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
@@ -742,6 +745,10 @@
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
+  },
+  "pause": {
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",
