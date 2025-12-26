@@ -5,7 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "experimentalDecorators": true,
-    "types": ["jest", "node"]
+    "types": ["vitest", "node"]
   },
   "include": ["tests/**/*", "src/**/*"]
 }

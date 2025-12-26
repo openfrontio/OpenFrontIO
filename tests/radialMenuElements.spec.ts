@@ -1,15 +1,13 @@
+import { vi } from "vitest";
+
 // Mock BuildMenu to avoid importing lit and other ESM-heavy deps in this unit test
-jest.mock(
-  "../src/client/graphics/layers/BuildMenu",
-  () => ({
-    BuildMenu: class {},
-    flattenedBuildTable: [],
-  }),
-  { virtual: true },
-);
+vi.mock("../src/client/graphics/layers/BuildMenu", () => ({
+  BuildMenu: class {},
+  flattenedBuildTable: [],
+}));
 
 // Mock Utils to avoid touching DOM (document) during tests
-jest.mock("../src/client/Utils", () => ({
+vi.mock("../src/client/Utils", () => ({
   translateText: (k: string) => k,
   getSvgAspectRatio: async () => 1,
 }));
@@ -57,20 +55,20 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
     } as any,
     emojiTable: {} as any,
     playerActionHandler: {
-      handleBreakAlliance: jest.fn(),
-      handleEmbargo: jest.fn(),
-      handleDonateGold: jest.fn(),
-      handleDonateTroops: jest.fn(),
-      handleTargetPlayer: jest.fn(),
+      handleBreakAlliance: vi.fn(),
+      handleEmbargo: vi.fn(),
+      handleDonateGold: vi.fn(),
+      handleDonateTroops: vi.fn(),
+      handleTargetPlayer: vi.fn(),
     } as any,
     playerPanel: {
-      show: jest.fn(),
+      show: vi.fn(),
     } as any,
     chatIntegration: {
-      createQuickChatMenu: jest.fn(() => []),
+      createQuickChatMenu: vi.fn(() => []),
     } as any,
     eventBus: {} as any,
-    closeMenu: jest.fn(),
+    closeMenu: vi.fn(),
   };
 };
 

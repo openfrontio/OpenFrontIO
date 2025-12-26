@@ -1,4 +1,4 @@
-import version from "../../../resources/version.txt";
+import version from "../../../resources/version.txt?raw";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";

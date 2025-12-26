@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import Countries from "../../../../resources/countries.json" with { type: "json" };
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
@@ -23,7 +24,6 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import Countries from "../../data/countries.json";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,

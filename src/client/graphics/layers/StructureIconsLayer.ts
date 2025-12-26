@@ -2,7 +2,7 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
+import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml?raw";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {

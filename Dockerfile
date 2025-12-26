@@ -12,7 +12,6 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy only what's needed for build
 COPY tsconfig.json ./
-COPY tsconfig.jest.json ./
 COPY webpack.config.js ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./

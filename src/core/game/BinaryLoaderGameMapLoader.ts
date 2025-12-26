@@ -2,10 +2,6 @@ import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
 
-export interface BinModule {
-  default: string;
-}
-
 interface NationMapModule {
   default: MapManifest;
 }
@@ -36,27 +32,29 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
     );
     const fileName = key?.toLowerCase();
 
+    const loadBinary = (url: string) =>
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error(`Failed to load ${url}`);
+          return res.arrayBuffer();
+        })
+        .then((buf) => new Uint8Array(buf));
+
     const mapData = {
       mapBin: this.createLazyLoader(() =>
-        (
-          import(
-            `!!binary-loader!../../../resources/maps/${fileName}/map.bin`
-          ) as Promise<BinModule>
-        ).then((m) => this.toUInt8Array(m.default)),
+        import(`../../../resources/maps/${fileName}/map.bin?url`).then((m) =>
+          loadBinary(m.default),
+        ),
       ),
       map4xBin: this.createLazyLoader(() =>
-        (
-          import(
-            `!!binary-loader!../../../resources/maps/${fileName}/map4x.bin`
-          ) as Promise<BinModule>
-        ).then((m) => this.toUInt8Array(m.default)),
+        import(`../../../resources/maps/${fileName}/map4x.bin?url`).then((m) =>
+          loadBinary(m.default),
+        ),
       ),
       map16xBin: this.createLazyLoader(() =>
-        (
-          import(
-            `!!binary-loader!../../../resources/maps/${fileName}/map16x.bin`
-          ) as Promise<BinModule>
-        ).then((m) => this.toUInt8Array(m.default)),
+        import(`../../../resources/maps/${fileName}/map16x.bin?url`).then((m) =>
+          loadBinary(m.default),
+        ),
       ),
       manifest: this.createLazyLoader(() =>
         (
@@ -76,19 +74,5 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
 
     this.maps.set(map, mapData);
     return mapData;
-  }
-
-  /**
-   * Converts a given string into a UInt8Array where each character in the string
-   * is represented as an 8-bit unsigned integer.
-   */
-  private toUInt8Array(data: string) {
-    const rawData = new Uint8Array(data.length);
-
-    for (let i = 0; i < data.length; i++) {
-      rawData[i] = data.charCodeAt(i);
-    }
-
-    return rawData;
   }
 }
