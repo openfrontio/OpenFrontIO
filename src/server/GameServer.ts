@@ -62,6 +62,8 @@ export class GameServer {
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
+  private isPaused = false;
+
   private websockets: Set<WebSocket> = new Set();
 
   private winnerVotes: Map<
@@ -346,8 +348,40 @@ export class GameServer {
                 this.kickClient(clientMsg.intent.target);
                 return;
               }
+              case "toggle_pause": {
+                // Only lobby creator can pause/resume
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can toggle pause`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                if (clientMsg.intent.paused) {
+                  // Pausing: send intent and complete current turn before pause takes effect
+                  this.addIntent(clientMsg.intent);
+                  this.endTurn();
+                  this.isPaused = true;
+                } else {
+                  // Unpausing: clear pause flag before sending intent so next turn can execute
+                  this.isPaused = false;
+                  this.addIntent(clientMsg.intent);
+                  this.endTurn();
+                }
+
+                this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
+                  clientID: client.clientID,
+                  gameID: this.id,
+                });
+                break;
+              }
               default: {
-                this.addIntent(clientMsg.intent);
+                // Don't process intents while game is paused
+                if (!this.isPaused) {
+                  this.addIntent(clientMsg.intent);
+                }
                 break;
               }
             }
@@ -461,6 +495,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
+        isLobbyCreator: this.lobbyCreatorID === c.clientID,
       })),
     });
     if (!result.success) {
@@ -488,6 +523,19 @@ export class GameServer {
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
+    // Find which client this websocket belongs to
+    const client = this.activeClients.find((c) => c.ws === ws);
+    if (!client) {
+      this.log.warn("Could not find client for websocket in sendStartGameMsg");
+      return;
+    }
+
+    this.log.info(`Sending start message to client`, {
+      clientID: client.clientID,
+      lobbyCreatorID: this.lobbyCreatorID,
+      isLobbyCreator: this.lobbyCreatorID === client.clientID,
+    });
+
     try {
       ws.send(
         JSON.stringify({
@@ -508,6 +556,11 @@ export class GameServer {
   }
 
   private endTurn() {
+    // Skip turn execution if game is paused
+    if (this.isPaused) {
+      return;
+    }
+
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
       intents: this.intents,

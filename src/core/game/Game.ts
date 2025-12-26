@@ -418,6 +418,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
+    public readonly isLobbyCreator: boolean = false,
   ) {
     this.clan = getClanTag(name);
   }
@@ -538,6 +539,7 @@ export interface Player {
   type(): PlayerType;
   isPlayer(): this is Player;
   toString(): string;
+  isLobbyCreator(): boolean;
 
   // State & Properties
   isAlive(): boolean;
@@ -707,6 +709,8 @@ export interface Game extends GameMap {
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
+  isPaused(): boolean;
+  setPaused(paused: boolean): void;
 
   // Units
   units(...types: UnitType[]): Unit[];

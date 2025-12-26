@@ -15,7 +15,7 @@ import musicIcon from "../../../../resources/images/music.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
@@ -108,7 +108,7 @@ export class SettingsModal extends LitElement implements Layer {
 
   private pauseGame(pause: boolean) {
     if (this.shouldPause && !this.wasPausedWhenOpened)
-      this.eventBus.emit(new PauseGameEvent(pause));
+      this.eventBus.emit(new PauseGameIntentEvent(pause));
   }
 
   private onTerrainButtonClick() {
