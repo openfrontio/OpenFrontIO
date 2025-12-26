@@ -179,6 +179,7 @@ export class PlayerImpl implements Player {
       hasSpawned: this.hasSpawned(),
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
+      isLobbyCreator: this.isLobbyCreator(),
     };
   }
 
@@ -338,6 +339,11 @@ export class PlayerImpl implements Player {
   info(): PlayerInfo {
     return this.playerInfo;
   }
+
+  isLobbyCreator(): boolean {
+    return this.playerInfo.isLobbyCreator;
+  }
+
   isAlive(): boolean {
     return this._tiles.size > 0;
   }

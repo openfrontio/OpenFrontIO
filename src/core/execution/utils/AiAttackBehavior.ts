@@ -384,7 +384,6 @@ export class AiAttackBehavior {
     }
 
     // Choose a new enemy randomly
-    const { difficulty } = this.game.config().gameConfig();
     const neighbors = this.player.neighbors();
     for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (!neighbor.isPlayer()) continue;
@@ -393,7 +392,7 @@ export class AiAttackBehavior {
         neighbor.type() === PlayerType.Nation ||
         neighbor.type() === PlayerType.Human
       ) {
-        if (this.random.chance(2) || difficulty === Difficulty.Easy) {
+        if (this.random.chance(2)) {
           continue;
         }
       }
@@ -433,11 +432,12 @@ export class AiAttackBehavior {
   }
 
   shouldAttack(other: Player | TerraNullius): boolean {
-    // Always attack Terra Nullius, non-humans and traitors
+    // Always attack Terra Nullius, non-humans and traitors (or if we are a bot)
     if (
       other.isPlayer() === false ||
       other.type() !== PlayerType.Human ||
-      other.isTraitor()
+      other.isTraitor() ||
+      this.player.type() === PlayerType.Bot
     ) {
       return true;
     }
