@@ -47,7 +47,8 @@ export type Intent =
   | EmbargoAllIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
-  | KickPlayerIntent;
+  | KickPlayerIntent
+  | TogglePauseIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -79,6 +80,7 @@ export type AllianceExtensionIntent = z.infer<
 >;
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
+export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -91,6 +93,7 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage;
+
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
@@ -354,6 +357,11 @@ export const KickPlayerIntentSchema = BaseIntentSchema.extend({
   target: ID,
 });
 
+export const TogglePauseIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("toggle_pause"),
+  paused: z.boolean().default(false),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -377,6 +385,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   AllianceExtensionIntentSchema,
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
+  TogglePauseIntentSchema,
 ]);
 
 //
@@ -430,6 +439,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
+  isLobbyCreator: z.boolean().optional(),
 });
 
 export const GameStartInfoSchema = z.object({

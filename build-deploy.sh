@@ -15,34 +15,34 @@ print_header "BUILD AND DEPLOY WRAPPER"
 echo "This script will run build.sh and deploy.sh in sequence."
 echo "You can also run them separately:"
 echo "  ./build.sh [prod|staging] [version_tag]"
-echo "  ./deploy.sh [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+echo "  ./deploy.sh [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain]"
 echo ""
 
 # Check command line arguments
 if [ $# -lt 3 ] || [ $# -gt 5 ]; then
     echo "Error: Please specify environment, host, and subdomain"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain]"
     exit 1
 fi
 
 # Validate second argument (host)
 if [ "$2" != "falk1" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
     echo "Error: Second argument must be either 'falk1', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain]"
     exit 1
 fi
 
 # Validate third argument (subdomain)
 if [ -z "$3" ]; then
     echo "Error: Subdomain is required"
-    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain]"
     exit 1
 fi
 
@@ -54,23 +54,6 @@ echo "Generated version tag: $VERSION_TAG"
 ENV="$1"
 HOST="$2"
 SUBDOMAIN="$3"
-ENABLE_BASIC_AUTH=""
-
-# Parse remaining arguments
-shift 3
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --enable_basic_auth)
-            ENABLE_BASIC_AUTH="--enable_basic_auth"
-            shift
-            ;;
-        *)
-            echo "Error: Unknown argument: $1"
-            echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [subdomain] [--enable_basic_auth]"
-            exit 1
-            ;;
-    esac
-done
 
 # Step 1: Run build.sh
 echo "Step 1: Running build.sh..."
