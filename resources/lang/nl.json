@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (ALFA)",
-    "join_discord": "Word lid van de Discord!",
+    "join_discord": "Discord",
     "login_discord": "Login met Discord",
     "checking_login": "Inlog controleren...",
     "logged_in": "Ingelogd!",
@@ -30,8 +30,6 @@
     "join_lobby": "Lobby toetreden",
     "single_player": "Eén Speler",
     "instructions": "Instructies",
-    "how_to_play": "Hoe spelen?",
-    "advertise": "Adverteren",
     "wiki": "Wiki",
     "privacy_policy": "Privacybeleid",
     "terms_of_service": "Servicevoorwaarden",
@@ -135,6 +133,7 @@
   },
   "single_modal": {
     "title": "Eén speler",
+    "random_spawn": "Willekeurige startpositie",
     "allow_alliances": "Bondgenootschappen toestaan",
     "options_title": "Opties",
     "bots": "Bots:",
@@ -144,10 +143,9 @@
     "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",
     "infinite_troops": "Oneindige troepen",
-    "compact_map": "Compacte Kaart",
+    "compact_map": "Compacte kaart",
     "max_timer": "Spellengte (minuten)",
     "disable_nukes": "Kernwapens uitschakelen",
-    "automatic_difficulty": "Automatische Moeilijkheidsgraad",
     "enables_title": "Onderdelen inschakelen",
     "start": "Start Spel"
   },
@@ -162,6 +160,18 @@
     "fetching_account": "Accountgegevens ophalen...",
     "logged_in_with_discord": "Ingelogd met Discord",
     "recovery_email_sent": "Herstelmail verzonden naar {email}"
+  },
+  "stats_modal": {
+    "title": "Statistieken",
+    "clan_stats": "Clan statistieken",
+    "loading": "Laden...",
+    "error": "Fout bij het laden van clan statistieken",
+    "no_stats": "Er zijn geen clan statistieken beschikbaar",
+    "clan": "Clan",
+    "games": "Spellen",
+    "win_score": "Win Score",
+    "loss_score": "Verlies Score",
+    "win_loss_ratio": "Gewonnen/Verloren"
   },
   "map": {
     "map": "Kaart",
@@ -197,7 +207,10 @@
     "pluto": "Pluto",
     "montreal": "Montreal",
     "achiran": "Achiran",
-    "baikalnukewars": "Baikal (Kernoorlog)"
+    "baikalnukewars": "Baikal (Kernoorlog)",
+    "fourislands": "Vier Eilanden",
+    "gulfofstlawrence": "Saint Lawrencebaai",
+    "lisbon": "Lissabon"
   },
   "map_categories": {
     "continental": "Continent",
@@ -222,11 +235,12 @@
   "public_lobby": {
     "join": "Deelnemen aan volgende Spel",
     "waiting": "spelers wachten",
-    "teams_Duos": "Duo's (teams van 2)",
-    "teams_Trios": "Trio's (teams van 3)",
-    "teams_Quads": "Viertallen (teams van 4)",
+    "teams_Duos": "van 2 (Duo's)",
+    "teams_Trios": "van 3 (Trio's)",
+    "teams_Quads": "van 4 (Viertallen)",
     "teams_hvn": "Mensen vs Naties",
-    "teams": "{num} Teams"
+    "teams": "{num} Teams",
+    "players_per_team": "van {num}"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
@@ -256,14 +270,20 @@
     "donate_gold": "Goud geven",
     "infinite_troops": "Oneindige troepen",
     "donate_troops": "Troepen geven",
-    "compact_map": "Compacte Kaart",
-    "automatic_difficulty": "Automatische Moeilijkheidsgraad",
+    "compact_map": "Compacte kaart",
     "enables_title": "Onderdelen inschakelen",
     "player": "Speler",
     "players": "Spelers",
+    "nation_players": "Naties",
+    "nation_player": "Natie",
     "waiting": "Wachten op spelers...",
+    "random_spawn": "Willekeurige startpositie",
     "start": "Start Spel",
-    "host_badge": "Host"
+    "host_badge": "Host",
+    "assigned_teams": "Toegewezen Teams",
+    "empty_teams": "Lege Teams",
+    "empty_team": "Leeg",
+    "remove_player": "Verwijder {username}"
   },
   "team_colors": {
     "red": "Rood",
@@ -315,7 +335,7 @@
     "emojis_label": "Emoji's",
     "emojis_desc": "Schakel het tonen van emoji's in de game uit/aan",
     "alert_frame_label": "Waarshuwingskader",
-    "alert_frame_desc": "Schakel het waarschuwingskader aan/uit. Als het is ingeschakeld, wordt het kader getoond wanneer je wordt verraden.",
+    "alert_frame_desc": "Schakel het waarschuwingskader aan/uit. Als ingeschakeld, wordt het kader getoond wanneer je wordt verraden of over land wordt aangevallen.",
     "special_effects_label": "Visuele effecten",
     "special_effects_desc": "Visuele effecten aanzetten. Zet uit om de prestaties van het spel te verbeteren",
     "structure_sprites_label": "Gebouw afbeeldingen",
@@ -512,7 +532,14 @@
     "exit": "Verlaat spel",
     "keep": "Blijf spelen",
     "spectate": "Toekijken",
-    "wishlist": "Op je Verlanglijst op Steam!"
+    "wishlist": "Op je Verlanglijst op Steam!",
+    "ofm_winter": "OpenFront Masters Wintertoernooi!",
+    "ofm_winter_description": "Doe mee met het competitieve toernooi en concurreer met de beste spelers",
+    "join_tournament": "Toernooi toetreden",
+    "join_discord": "Word lid van onze Discord-gemeenschap!",
+    "discord_description": "Leg contact met andere spelers, krijg updates en deel strategieën",
+    "join_server": "Word lid van server",
+    "youtube_tutorial": "Wat hulp nodig?"
   },
   "leaderboard": {
     "title": "Leidersbord",
@@ -552,6 +579,7 @@
   },
   "events_display": {
     "retreating": "trekken zich terug",
+    "retaliate": "Terugvechten",
     "boat": "Boot",
     "alliance_request_status": "{name} heeft je alliantieverzoek {status}",
     "alliance_accepted": "geaccepteerd",
@@ -570,8 +598,10 @@
     "accept_alliance": "Aanvaarden",
     "reject_alliance": "Afwijzen",
     "alliance_renewed": "Je alliantie met {name} is hernieuwd",
+    "wants_to_renew_alliance": "{name} wil jullie alliantie vernieuwen",
     "ignore": "Negeren",
-    "unit_voluntarily_deleted": "Eenheid vrijwillig verwijderd"
+    "unit_voluntarily_deleted": "Eenheid vrijwillig verwijderd",
+    "betrayal_debuff_ends": "Nog {time} seconden tot de verraad-verzwakking afloopt"
   },
   "unit_info_modal": {
     "structure_info": "Gebouw Info",
@@ -618,7 +648,6 @@
     "flag": "Vlag",
     "chat": "Chat",
     "target": "Doelmarkering",
-    "break": "Verbreek",
     "break_alliance": "Verbreek Alliantie",
     "alliance": "Alliantie",
     "send_alliance": "Stuur Alliantieverzoek",
@@ -630,10 +659,7 @@
     "title_with_name": "Stuur Troepen naar {name}",
     "available_tooltip": "Jouw nu beschikbare troepen",
     "min_keep": "Min. houden",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "Gebruik aanvalsverhouding-balk voor het aantal te versturen troepen",
-    "warning_attackbar": "Eenmaal ingeschakeld kan je deze modus niet rechtstreeks open. Je zult alleen via de aanvalsbalk troepen kunnen sturen.",
     "aria_slider": "Troepen schuifbalk",
     "capacity_note": "Ontvanger kan slechts {{amount}} accepteren momenteel."
   },
@@ -655,15 +681,34 @@
     "copy_clipboard": "Naar klembord kopiëren",
     "copied": "Gekopiëerd!",
     "failed_copy": "Kopiëren mislukt",
+    "spawn_failed": {
+      "title": "Startpositie plaatsen mislukt",
+      "description": "Automatische plaatsing startpositie is mislukt. Je kunt dit spel niet meespelen."
+    },
     "desync_notice": "Je bent niet meer gesynchroniseerd met andere spelers. Wat je ziet kan verschillen van andere spelers."
   },
+  "performance_overlay": {
+    "reset": "Reset",
+    "copy_json_title": "Kopieer huidige prestatiestatistieken als JSON",
+    "copy_clipboard": "JSON kopiëren",
+    "copied": "Gekopieerd!",
+    "failed_copy": "Kopiëren mislukt",
+    "fps": "FPS:",
+    "avg_60s": "Gem. (60s):",
+    "frame": "Frame:",
+    "tick_exec": "Tick uitvoering:",
+    "tick_delay": "Tick Vertraging:",
+    "layers_header": "Lagen (gem / max, gesorteerd op totale tijd):"
+  },
   "heads_up_message": {
-    "choose_spawn": "Kies een startlocatie"
+    "choose_spawn": "Kies een startlocatie",
+    "random_spawn": "Willekeurige startpositie is ingeschakeld. Positie wordt voor je gekozen..."
   },
   "territory_patterns": {
     "title": "Skins ",
     "colors": "Kleuren",
     "purchase": "Kopen",
+    "show_only_owned": "Mijn Skins",
     "blocked": {
       "login": "Je moet ingelogd zijn voor toegang tot deze skin.",
       "purchase": "Koop deze skin om te ontgrendelen."
