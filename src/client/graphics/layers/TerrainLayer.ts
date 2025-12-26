@@ -32,7 +32,7 @@ export class TerrainLayer implements Layer {
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
 
-    const context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
@@ -55,7 +55,7 @@ export class TerrainLayer implements Layer {
       this.imageData.data[offset] = terrainColor.rgba.r;
       this.imageData.data[offset + 1] = terrainColor.rgba.g;
       this.imageData.data[offset + 2] = terrainColor.rgba.b;
-      this.imageData.data[offset + 3] = (terrainColor.rgba.a * 255) | 0;
+      this.imageData.data[offset + 3] = 255;
     });
   }
 
