@@ -175,7 +175,7 @@ export function boatPathFromTileToShore(
   const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, targetWater, {
     kingMoves: true,
     noCornerCutting: true,
-    maxVisited: 300_000,
+    maxVisited: 300_000, //todo: replace with a proper limit based on the map size
   });
   if (result === null) return null;
 
@@ -183,6 +183,41 @@ export function boatPathFromTileToShore(
     return [...result.path, dstShore];
   }
   return [startTile, ...result.path, dstShore];
+}
+
+export function boatPathFromTileToWater(
+  gm: GameMap,
+  startTile: TileRef,
+  dstWater: TileRef,
+): TileRef[] | null {
+  if (!gm.isValidRef(startTile) || !gm.isValidRef(dstWater)) return null;
+  if (!gm.isWater(dstWater)) return null;
+
+  const bfs = getBoatBfs(gm);
+
+  let seedNodes: TileRef[] = [];
+  let seedOrigins: TileRef[] = [];
+  if (gm.isWater(startTile)) {
+    seedNodes = [startTile];
+    seedOrigins = [startTile];
+  } else if (gm.isShore(startTile)) {
+    const adj = adjacentWaterTiles(gm, startTile);
+    if (adj.length === 0) return null;
+    seedNodes = adj;
+    seedOrigins = adj.map(() => startTile);
+  } else {
+    return null;
+  }
+
+  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, [dstWater], {
+    kingMoves: true,
+    noCornerCutting: true,
+    maxVisited: 300_000,
+  });
+  if (result === null) return null;
+
+  if (gm.isWater(startTile)) return result.path;
+  return [startTile, ...result.path];
 }
 
 export function bestTransportShipRoute(

@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { boatPathFromTileToWater } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -17,9 +16,12 @@ export class WarshipExecution implements Execution {
   private random: PseudoRandom;
   private warship: Unit;
   private mg: Game;
-  private pathfinder: PathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
+
+  private path: TileRef[] = [];
+  private pathIndex = 0;
+  private pathDst: TileRef | null = null;
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
@@ -27,7 +29,6 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -48,6 +49,9 @@ export class WarshipExecution implements Execution {
         this.input,
       );
     }
+    this.path = [];
+    this.pathIndex = 0;
+    this.pathDst = null;
   }
 
   tick(ticks: number): void {
@@ -177,27 +181,43 @@ export class WarshipExecution implements Execution {
   private huntDownTradeShip() {
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
-      const result = this.pathfinder.nextTile(
-        this.warship.tile(),
-        this.warship.targetUnit()!.tile(),
-        5,
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          this.warship.owner().captureUnit(this.warship.targetUnit()!);
-          this.warship.setTargetUnit(undefined);
-          this.warship.move(this.warship.tile());
-          return;
-        case PathFindResultType.NextTile:
-          this.warship.move(result.node);
-          break;
-        case PathFindResultType.Pending:
-          this.warship.touch();
-          break;
-        case PathFindResultType.PathNotFound:
-          console.log(`path not found to target`);
-          break;
+      const curr = this.warship.tile();
+      const dst = this.warship.targetUnit()!.tile();
+
+      if (curr === null) {
+        return;
       }
+
+      if (curr !== null && this.mg.manhattanDist(curr, dst) < 5) {
+        this.warship.owner().captureUnit(this.warship.targetUnit()!);
+        this.warship.setTargetUnit(undefined);
+        this.warship.move(this.warship.tile());
+        return;
+      }
+
+      if (this.pathDst !== dst || this.path.length === 0) {
+        const newPath = boatPathFromTileToWater(this.mg, curr, dst);
+        if (newPath === null || newPath.length < 2) {
+          console.log(`path not found to target`);
+          this.path = [];
+          this.pathIndex = 0;
+          this.pathDst = null;
+          break;
+        }
+        this.path = newPath;
+        this.pathIndex = 0;
+        this.pathDst = dst;
+      }
+
+      const next = this.path[this.pathIndex + 1];
+      if (next === undefined) {
+        this.path = [];
+        this.pathIndex = 0;
+        this.pathDst = null;
+        break;
+      }
+      this.warship.move(next);
+      this.pathIndex++;
     }
   }
 
@@ -209,25 +229,46 @@ export class WarshipExecution implements Execution {
       }
     }
 
-    const result = this.pathfinder.nextTile(
-      this.warship.tile(),
-      this.warship.targetTile()!,
-    );
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        this.warship.setTargetTile(undefined);
-        this.warship.move(result.node);
-        break;
-      case PathFindResultType.NextTile:
-        this.warship.move(result.node);
-        break;
-      case PathFindResultType.Pending:
-        this.warship.touch();
-        return;
-      case PathFindResultType.PathNotFound:
+    const curr = this.warship.tile();
+    const dst = this.warship.targetTile()!;
+
+    if (curr === null) return;
+    if (curr === dst) {
+      this.warship.setTargetTile(undefined);
+      return;
+    }
+
+    if (this.pathDst !== dst || this.path.length === 0) {
+      const newPath = boatPathFromTileToWater(this.mg, curr, dst);
+      if (newPath === null || newPath.length < 2) {
         console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
-        break;
+        this.path = [];
+        this.pathIndex = 0;
+        this.pathDst = null;
+        return;
+      }
+      this.path = newPath;
+      this.pathIndex = 0;
+      this.pathDst = dst;
+    }
+
+    const next = this.path[this.pathIndex + 1];
+    if (next === undefined) {
+      this.warship.setTargetTile(undefined);
+      this.path = [];
+      this.pathIndex = 0;
+      this.pathDst = null;
+      return;
+    }
+    this.warship.move(next);
+    this.pathIndex++;
+
+    if (next === dst) {
+      this.warship.setTargetTile(undefined);
+      this.path = [];
+      this.pathIndex = 0;
+      this.pathDst = null;
     }
   }
 

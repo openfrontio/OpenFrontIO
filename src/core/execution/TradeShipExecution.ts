@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { boatPathFromTileToShore } from "../game/TransportShipUtils";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -17,8 +16,10 @@ export class TradeShipExecution implements Execution {
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: PathFinder;
   private tilesTraveled = 0;
+  private path: TileRef[] = [];
+  private pathIndex = 0;
+  private pathDst: TileRef | null = null;
 
   constructor(
     private origOwner: Player,
@@ -28,7 +29,6 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 2500);
   }
 
   tick(ticks: number): void {
@@ -102,31 +102,39 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
-
-    switch (result.type) {
-      case PathFindResultType.Pending:
-        // Fire unit event to rerender.
-        this.tradeShip.move(curTile);
-        break;
-      case PathFindResultType.NextTile:
-        // Update safeFromPirates status
-        if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
-          this.tradeShip.setSafeFromPirates();
-        }
-        this.tradeShip.move(result.node);
-        this.tilesTraveled++;
-        break;
-      case PathFindResultType.Completed:
-        this.complete();
-        break;
-      case PathFindResultType.PathNotFound:
+    const dst = this._dstPort.tile();
+    if (this.pathDst !== dst || this.path.length === 0) {
+      const newPath = boatPathFromTileToShore(this.mg, curTile, dst);
+      if (newPath === null || newPath.length < 2) {
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
         }
         this.active = false;
-        break;
+        return;
+      }
+      this.path = newPath;
+      this.pathIndex = 0;
+      this.pathDst = dst;
+    }
+
+    const next = this.path[this.pathIndex + 1];
+    if (next === undefined) {
+      this.complete();
+      return;
+    }
+
+    if (this.mg.isWater(next) && this.mg.isShoreline(next)) {
+      this.tradeShip.setSafeFromPirates();
+    }
+
+    this.tradeShip.move(next);
+    this.tilesTraveled++;
+    this.pathIndex++;
+
+    if (next === dst) {
+      this.complete();
+      return;
     }
   }
 
