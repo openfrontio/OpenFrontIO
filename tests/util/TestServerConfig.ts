@@ -82,16 +82,4 @@ export class TestServerConfig implements ServerConfig {
   gitCommit(): string {
     throw new Error("Method not implemented.");
   }
-  r2Bucket(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2Endpoint(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2AccessKey(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2SecretKey(): string {
-    throw new Error("Method not implemented.");
-  }
 }

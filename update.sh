@@ -32,8 +32,8 @@ echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
 docker pull "${GHCR_IMAGE}"
 
 echo "Checking for existing container..."
-# Check for running container
-RUNNING_CONTAINER="$(docker ps | grep ${CONTAINER_NAME} | awk '{print $1}')"
+# Use docker ps with filter for exact name match
+RUNNING_CONTAINER="$(docker ps --filter "name=^${CONTAINER_NAME}$" -q)"
 if [ -n "$RUNNING_CONTAINER" ]; then
     echo "Stopping running container $RUNNING_CONTAINER..."
     docker stop "$RUNNING_CONTAINER"
@@ -44,7 +44,7 @@ if [ -n "$RUNNING_CONTAINER" ]; then
 fi
 
 # Also check for stopped containers with the same name
-STOPPED_CONTAINER="$(docker ps -a | grep ${CONTAINER_NAME} | awk '{print $1}')"
+STOPPED_CONTAINER="$(docker ps -a --filter "name=^${CONTAINER_NAME}$" -q)"
 if [ -n "$STOPPED_CONTAINER" ]; then
     echo "Removing stopped container $STOPPED_CONTAINER..."
     docker rm "$STOPPED_CONTAINER"
