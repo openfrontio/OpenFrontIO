@@ -12,6 +12,7 @@ import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -116,6 +117,7 @@ class Client {
   constructor() {}
 
   async initialize(): Promise<void> {
+    crazyGamesSDK.maybeInit();
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -162,10 +164,11 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
+        await crazyGamesSDK.gameplayStop();
       }
     });
 
@@ -348,7 +351,7 @@ class Client {
     }
 
     // Attempt to join lobby
-    this.handleHash();
+    this.handleUrl();
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
@@ -358,7 +361,7 @@ class Client {
       }
 
       // Attempt to join lobby
-      this.handleHash();
+      this.handleUrl();
     };
 
     // Handle browser navigation & manual hash edits
@@ -385,7 +388,17 @@ class Client {
     this.initializeFuseTag();
   }
 
-  private handleHash() {
+  private handleUrl() {
+    // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      const lobbyId = crazyGamesSDK.getInviteGameId();
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
+        return;
+      }
+    }
+
     const strip = () =>
       history.replaceState(
         null,
@@ -454,6 +467,7 @@ class Client {
       return;
     }
 
+    // Fallback to hash-based join for non-CrazyGames environments
     if (decodedHash.startsWith("#join=")) {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
@@ -551,6 +565,8 @@ class Client {
         document.documentElement.classList.add("in-game");
         removeSnowflakes(); // Stop snowflakes when joining a game
 
+        crazyGamesSDK.loadingStart();
+
         // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
@@ -569,6 +585,9 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        crazyGamesSDK.loadingStop();
+        crazyGamesSDK.gameplayStart();
+
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
@@ -585,6 +604,9 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+
+    crazyGamesSDK.gameplayStop();
+
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
     // Show snowflakes when leaving lobby (back to homepage)
