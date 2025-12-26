@@ -1,7 +1,259 @@
-import { PathFindResultType } from "../pathfinding/AStar";
-import { MiniAStar } from "../pathfinding/MiniAStar";
+import { MultiSourceAnyTargetBFS } from "../pathfinding/MultiSourceAnyTargetBFS";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
+
+type BoatRoute = {
+  src: TileRef;
+  dst: TileRef;
+  path: TileRef[];
+};
+
+let boatBfs: MultiSourceAnyTargetBFS | null = null;
+let boatBfsNumTiles = 0;
+function getBoatBfs(gm: GameMap): MultiSourceAnyTargetBFS {
+  const numTiles = gm.width() * gm.height();
+  if (boatBfs === null || boatBfsNumTiles !== numTiles) {
+    boatBfs = new MultiSourceAnyTargetBFS(numTiles);
+    boatBfsNumTiles = numTiles;
+  }
+  return boatBfs;
+}
+
+function insertTopK(
+  items: { tile: TileRef; dist: number }[],
+  tile: TileRef,
+  dist: number,
+  k: number,
+) {
+  if (items.length === 0) {
+    items.push({ tile, dist });
+    return;
+  }
+  if (items.length === k && dist >= items[items.length - 1]!.dist) {
+    return;
+  }
+  let i = items.length;
+  items.push({ tile, dist });
+  while (i > 0 && items[i - 1]!.dist > dist) {
+    items[i] = items[i - 1]!;
+    i--;
+  }
+  items[i] = { tile, dist };
+  if (items.length > k) items.pop();
+}
+
+function shoreTargetsNearClick(
+  gm: Game,
+  attacker: Player,
+  click: TileRef,
+  targetOwner: Player | ReturnType<Game["terraNullius"]>,
+  maxTargets: number,
+  scanRadiusTN: number,
+): TileRef[] {
+  // Explicit target: if user clicks a shore tile, use that exact shore.
+  if (gm.isShore(click) && gm.owner(click) !== attacker) {
+    const owner = gm.owner(click);
+    if (!owner.isPlayer() || !attacker.isFriendly(owner)) {
+      return [click];
+    }
+    return [];
+  }
+
+  // Water click: search a larger area but return only the closest shore tile.
+  // This prevents "snapping" to far-away shores while still being usable on open water.
+  if (gm.isWater(click)) {
+    const cx = gm.x(click);
+    const cy = gm.y(click);
+    const r = 50;
+    let best: TileRef | null = null;
+    let bestDist = Infinity;
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (!gm.isValidCoord(x, y)) continue;
+        const tile = gm.ref(x, y);
+        if (!gm.isShore(tile)) continue;
+        const owner = gm.owner(tile);
+        if (owner === attacker) continue;
+        if (owner.isPlayer() && attacker.isFriendly(owner)) continue;
+        const dist = Math.abs(x - cx) + Math.abs(y - cy);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = tile;
+        }
+      }
+    }
+    return best === null ? [] : [best];
+  }
+
+  // Default behavior: scan a bounding box near the click for candidate shore tiles.
+  // (Previously, player targets used all border tiles, which could pick very distant shores.)
+  const top: { tile: TileRef; dist: number }[] = [];
+  const cx = gm.x(click);
+  const cy = gm.y(click);
+  const r = scanRadiusTN;
+  for (let y = cy - r; y <= cy + r; y++) {
+    for (let x = cx - r; x <= cx + r; x++) {
+      if (!gm.isValidCoord(x, y)) continue;
+      const tile = gm.ref(x, y);
+      if (!gm.isShore(tile)) continue;
+
+      if (targetOwner.isPlayer()) {
+        if (gm.owner(tile) !== targetOwner) continue;
+      } else {
+        if (gm.hasOwner(tile)) continue;
+      }
+
+      if (gm.owner(tile) === attacker) continue;
+      const dist = Math.abs(x - cx) + Math.abs(y - cy);
+      insertTopK(top, tile, dist, maxTargets);
+    }
+  }
+  return top.map((x) => x.tile);
+}
+
+function adjacentWaterTiles(gm: GameMap, shore: TileRef): TileRef[] {
+  const out: TileRef[] = [];
+  for (const n of gm.neighbors(shore)) {
+    if (gm.isWater(n)) out.push(n);
+  }
+  return out;
+}
+
+function pickLandingForTargetWater(
+  gm: GameMap,
+  click: TileRef,
+  targetWater: TileRef,
+  targetShores: readonly TileRef[],
+): TileRef | null {
+  // targetShores are already sorted by closeness to click; first adjacency wins.
+  for (const shore of targetShores) {
+    for (const n of gm.neighbors(shore)) {
+      if (n === targetWater) return shore;
+    }
+  }
+  // Fallback: should not happen if targetWater was built from these shores.
+  let best: TileRef | null = null;
+  let bestDist = Infinity;
+  for (const shore of targetShores) {
+    if (!gm.neighbors(shore).some((n) => gm.isWater(n))) continue;
+    const d = gm.manhattanDist(click, shore);
+    if (d < bestDist) {
+      bestDist = d;
+      best = shore;
+    }
+  }
+  return best;
+}
+
+export function boatPathFromTileToShore(
+  gm: GameMap,
+  startTile: TileRef,
+  dstShore: TileRef,
+): TileRef[] | null {
+  if (!gm.isValidRef(startTile) || !gm.isValidRef(dstShore)) return null;
+  if (!gm.isShore(dstShore)) return null;
+
+  const targetWater = adjacentWaterTiles(gm, dstShore);
+  if (targetWater.length === 0) return null;
+
+  const bfs = getBoatBfs(gm);
+
+  let seedNodes: TileRef[] = [];
+  let seedOrigins: TileRef[] = [];
+  if (gm.isWater(startTile)) {
+    seedNodes = [startTile];
+    seedOrigins = [startTile];
+  } else if (gm.isShore(startTile)) {
+    const adj = adjacentWaterTiles(gm, startTile);
+    if (adj.length === 0) return null;
+    seedNodes = adj;
+    seedOrigins = adj.map(() => startTile);
+  } else {
+    return null;
+  }
+
+  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, targetWater, {
+    kingMoves: true,
+    noCornerCutting: true,
+    maxVisited: 300_000,
+  });
+  if (result === null) return null;
+
+  if (gm.isWater(startTile)) {
+    return [...result.path, dstShore];
+  }
+  return [startTile, ...result.path, dstShore];
+}
+
+export function bestTransportShipRoute(
+  gm: Game,
+  attacker: Player,
+  clickTile: TileRef,
+  preferredSrc: TileRef | null = null,
+  maxTargetShores = 96,
+): BoatRoute | false {
+  const other = gm.owner(clickTile);
+  if (other === attacker) return false;
+  if (other.isPlayer() && attacker.isFriendly(other)) return false;
+
+  const targetShores = shoreTargetsNearClick(
+    gm,
+    attacker,
+    clickTile,
+    other,
+    maxTargetShores,
+    10,
+  );
+  if (targetShores.length === 0) return false;
+
+  const targetWater: TileRef[] = [];
+  for (const shore of targetShores) {
+    targetWater.push(...adjacentWaterTiles(gm, shore));
+  }
+  if (targetWater.length === 0) return false;
+
+  const sourceShores: TileRef[] =
+    preferredSrc !== null && gm.isValidRef(preferredSrc)
+      ? [preferredSrc]
+      : candidateShoreTiles(gm, attacker, clickTile);
+
+  const seedNodeToOrigin = new Map<TileRef, TileRef>();
+  for (const shore of sourceShores) {
+    if (!gm.isValidRef(shore)) continue;
+    if (gm.owner(shore) !== attacker) continue;
+    if (!gm.isShore(shore)) continue;
+    for (const w of adjacentWaterTiles(gm, shore)) {
+      if (!seedNodeToOrigin.has(w)) {
+        seedNodeToOrigin.set(w, shore);
+      }
+    }
+  }
+  if (seedNodeToOrigin.size === 0) return false;
+
+  const seedNodes: TileRef[] = [];
+  const seedOrigins: TileRef[] = [];
+  for (const [node, origin] of seedNodeToOrigin.entries()) {
+    seedNodes.push(node);
+    seedOrigins.push(origin);
+  }
+
+  const bfs = getBoatBfs(gm);
+  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, targetWater, {
+    kingMoves: true,
+    noCornerCutting: true,
+    // Hard budget to avoid pathological cases; tweak as needed.
+    maxVisited: 300_000,
+  });
+  if (result === null) return false;
+
+  const dst = pickLandingForTargetWater(gm, clickTile, result.target, targetShores);
+  if (dst === null) return false;
+
+  const src = result.source;
+  // Full route includes the shore endpoints to drive unit movement.
+  const path = [src, ...result.path, dst];
+  return { src, dst, path };
+}
 
 export function canBuildTransportShip(
   game: Game,
@@ -144,32 +396,9 @@ export function bestShoreDeploymentSource(
   player: Player,
   target: TileRef,
 ): TileRef | false {
-  const t = targetTransportTile(gm, target);
-  if (t === null) return false;
-
-  const candidates = candidateShoreTiles(gm, player, t);
-  if (candidates.length === 0) return false;
-
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
-  const result = aStar.compute();
-  if (result !== PathFindResultType.Completed) {
-    console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
-    return false;
-  }
-  const path = aStar.reconstructPath();
-  if (path.length === 0) {
-    return false;
-  }
-  const potential = path[0];
-  // Since mini a* downscales the map, we need to check the neighbors
-  // of the potential tile to find a valid deployment point
-  const neighbors = gm
-    .neighbors(potential)
-    .filter((n) => gm.isShore(n) && gm.owner(n) === player);
-  if (neighbors.length === 0) {
-    return false;
-  }
-  return neighbors[0];
+  const route = bestTransportShipRoute(gm, player, target, null);
+  if (route === false) return false;
+  return route.src;
 }
 
 export function candidateShoreTiles(

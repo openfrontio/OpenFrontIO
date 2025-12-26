@@ -10,9 +10,10 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import {
+  bestTransportShipRoute,
+  boatPathFromTileToShore,
+} from "../game/TransportShipUtils";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -28,12 +29,13 @@ export class TransportShipExecution implements Execution {
   private target: Player | TerraNullius;
 
   // TODO make private
-  public path: TileRef[];
+  public path: TileRef[] = [];
   private dst: TileRef | null;
 
   private boat: Unit;
-
-  private pathFinder: PathFinder;
+  private forwardPath: TileRef[] = [];
+  private pathIndex = 0;
+  private usingReverseRetreatPath = false;
 
   private originalOwner: Player;
 
@@ -70,7 +72,6 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -100,40 +101,33 @@ export class TransportShipExecution implements Execution {
 
     this.startTroops = Math.min(this.startTroops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
-    if (this.dst === null) {
+    const route = bestTransportShipRoute(
+      this.mg,
+      this.attacker,
+      this.ref,
+      this.src,
+    );
+    if (route === false) {
       console.warn(
-        `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
+        `${this.attacker} cannot send ship to ${this.target}, no route found`,
       );
       this.active = false;
       return;
     }
 
-    const closestTileSrc = this.attacker.canBuild(
-      UnitType.TransportShip,
-      this.dst,
-    );
-    if (closestTileSrc === false) {
-      console.warn(`can't build transport ship`);
+    // Basic affordability/availability checks (avoid relying on transport-ship spawn heuristics).
+    const boatCost = this.mg.unitInfo(UnitType.TransportShip).cost(this.mg, this.attacker);
+    if (!this.attacker.isAlive() || this.attacker.gold() < boatCost) {
       this.active = false;
       return;
     }
 
-    if (this.src === null) {
-      // Only update the src if it's not already set
-      // because we assume that the src is set to the best spawn tile
-      this.src = closestTileSrc;
-    } else {
-      if (
-        this.mg.owner(this.src) !== this.attacker ||
-        !this.mg.isShore(this.src)
-      ) {
-        console.warn(
-          `src is not a shore tile or not owned by: ${this.attacker.name()}`,
-        );
-        this.src = closestTileSrc;
-      }
-    }
+    this.src = route.src;
+    this.dst = route.dst;
+    this.forwardPath = route.path;
+    this.path = route.path;
+    this.pathIndex = 0;
+    this.usingReverseRetreatPath = false;
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
@@ -217,67 +211,96 @@ export class TransportShipExecution implements Execution {
         if (this.boat.targetTile() !== this.dst) {
           this.boat.setTargetTile(this.dst);
         }
-      }
-    }
 
-    const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        if (this.mg.owner(this.dst) === this.attacker) {
-          const deaths = this.boat.troops() * (malusForRetreat / 100);
-          const survivors = this.boat.troops() - deaths;
-          this.attacker.addTroops(survivors);
-          this.boat.delete(false);
-          this.active = false;
-
-          // Record stats
-          this.mg
-            .stats()
-            .boatArriveTroops(this.attacker, this.target, survivors);
-          if (deaths) {
-            this.mg.displayMessage(
-              `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
-              MessageType.ATTACK_CANCELLED,
-              this.attacker.id(),
-            );
-          }
-          return;
-        }
-        this.attacker.conquer(this.dst);
-        if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.attacker.addTroops(this.boat.troops());
-        } else {
-          this.mg.addExecution(
-            new AttackExecution(
-              this.boat.troops(),
-              this.attacker,
-              this.targetID,
+        // Retreat is just the existing forward path in reverse (hot-path friendly).
+        // Fallback to a recompute only if we can't safely reverse (e.g. path invalidated).
+        if (!this.usingReverseRetreatPath) {
+          const curr = this.boat.tile();
+          const idx = curr === null ? -1 : this.forwardPath.indexOf(curr);
+          if (idx >= 0) {
+            this.path = this.forwardPath.slice(0, idx + 1).reverse();
+            this.pathIndex = 0;
+            this.usingReverseRetreatPath = true;
+          } else {
+            const retreatPath = boatPathFromTileToShore(
+              this.mg,
+              curr!,
               this.dst,
-              false,
-            ),
-          );
+            );
+            if (retreatPath !== null) {
+              this.path = retreatPath;
+              this.pathIndex = 0;
+              this.usingReverseRetreatPath = true;
+            }
+          }
         }
-        this.boat.delete(false);
-        this.active = false;
-
-        // Record stats
-        this.mg
-          .stats()
-          .boatArriveTroops(this.attacker, this.target, this.boat.troops());
-        return;
-      case PathFindResultType.NextTile:
-        this.boat.move(result.node);
-        break;
-      case PathFindResultType.Pending:
-        break;
-      case PathFindResultType.PathNotFound:
-        // TODO: add to poisoned port list
-        console.warn(`path not found to dst`);
-        this.attacker.addTroops(this.boat.troops());
-        this.boat.delete(false);
-        this.active = false;
-        return;
+      }
+    } else {
+      this.usingReverseRetreatPath = false;
     }
+
+    if (this.path.length === 0 || this.pathIndex >= this.path.length - 1) {
+      // Treat as arrived; should be rare (e.g. src==dst edge).
+      this.finish();
+      return;
+    }
+
+    const next = this.path[this.pathIndex + 1];
+    if (next === undefined) {
+      this.finish();
+      return;
+    }
+    this.boat.move(next);
+    this.pathIndex++;
+
+    if (this.dst !== null && next === this.dst) {
+      this.finish();
+      return;
+    }
+  }
+
+  private finish() {
+    if (this.dst === null) {
+      this.active = false;
+      return;
+    }
+
+    if (this.mg.owner(this.dst) === this.attacker) {
+      const deaths = this.boat.troops() * (malusForRetreat / 100);
+      const survivors = this.boat.troops() - deaths;
+      this.attacker.addTroops(survivors);
+      this.boat.delete(false);
+      this.active = false;
+
+      this.mg.stats().boatArriveTroops(this.attacker, this.target, survivors);
+      if (deaths) {
+        this.mg.displayMessage(
+          `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+          MessageType.ATTACK_CANCELLED,
+          this.attacker.id(),
+        );
+      }
+      return;
+    }
+
+    this.attacker.conquer(this.dst);
+    if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
+      this.attacker.addTroops(this.boat.troops());
+    } else {
+      this.mg.addExecution(
+        new AttackExecution(
+          this.boat.troops(),
+          this.attacker,
+          this.targetID,
+          this.dst,
+          false,
+        ),
+      );
+    }
+    this.boat.delete(false);
+    this.active = false;
+
+    this.mg.stats().boatArriveTroops(this.attacker, this.target, this.boat.troops());
   }
 
   owner(): Player {
