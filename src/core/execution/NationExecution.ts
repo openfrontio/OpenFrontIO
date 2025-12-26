@@ -26,7 +26,7 @@ import {
 } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
+import { EMOJI_NUKE, NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
@@ -136,6 +136,7 @@ export class NationExecution implements Execution {
     }
 
     if (
+      this.emojiBehavior === null ||
       this.mirvBehavior === null ||
       this.attackBehavior === null ||
       this.allianceBehavior === null ||
@@ -157,11 +158,13 @@ export class NationExecution implements Execution {
         this.random,
         this.mg,
         this.player,
+        this.emojiBehavior,
       );
       this.warshipBehavior = new NationWarshipBehavior(
         this.random,
         this.mg,
         this.player,
+        this.emojiBehavior,
       );
       this.attackBehavior = new AiAttackBehavior(
         this.random,
@@ -179,6 +182,7 @@ export class NationExecution implements Execution {
       return;
     }
 
+    this.emojiBehavior.maybeSendCasualEmoji();
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
@@ -676,7 +680,7 @@ export class NationExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
-    this.emojiBehavior.maybeSendHeckleEmoji(targetPlayer);
+    this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
   }
 
   private randTerritoryTileArray(numTiles: number): TileRef[] {

@@ -47,6 +47,7 @@ export enum GameUpdateType {
   RailroadEvent,
   ConquestEvent,
   EmbargoEvent,
+  GamePaused,
 }
 
 export type GameUpdate =
@@ -68,7 +69,8 @@ export type GameUpdate =
   | BonusEventUpdate
   | RailroadUpdate
   | ConquestUpdate
-  | EmbargoUpdate;
+  | EmbargoUpdate
+  | GamePausedUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -172,6 +174,7 @@ export interface PlayerUpdate {
   hasSpawned: boolean;
   betrayals: number;
   lastDeleteUnitTick: Tick;
+  isLobbyCreator: boolean;
 }
 
 export interface AllianceView {
@@ -268,4 +271,9 @@ export interface EmbargoUpdate {
   event: "start" | "stop";
   playerID: number;
   embargoedID: number;
+}
+
+export interface GamePausedUpdate {
+  type: GameUpdateType.GamePaused;
+  paused: boolean;
 }

@@ -106,6 +106,7 @@ export enum GameMapType {
   GulfOfStLawrence = "Gulf of St. Lawrence",
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
+  Lemnos = "Lemnos",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -143,6 +144,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Lisbon,
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
+    GameMapType.Lemnos,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -418,6 +420,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
+    public readonly isLobbyCreator: boolean = false,
   ) {
     this.clan = getClanTag(name);
   }
@@ -456,6 +459,7 @@ export interface Unit {
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
   wasDestroyedByEnemy(): boolean;
+  destroyer(): Player | undefined;
 
   // Train
   trainType(): TrainType | undefined;
@@ -538,6 +542,7 @@ export interface Player {
   type(): PlayerType;
   isPlayer(): this is Player;
   toString(): string;
+  isLobbyCreator(): boolean;
 
   // State & Properties
   isAlive(): boolean;
@@ -707,6 +712,8 @@ export interface Game extends GameMap {
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
+  isPaused(): boolean;
+  setPaused(paused: boolean): void;
 
   // Units
   units(...types: UnitType[]): Unit[];
