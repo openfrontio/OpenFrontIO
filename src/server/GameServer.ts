@@ -378,7 +378,10 @@ export class GameServer {
                 break;
               }
               default: {
-                this.addIntent(clientMsg.intent);
+                // Don't process intents while game is paused
+                if (!this.isPaused) {
+                  this.addIntent(clientMsg.intent);
+                }
                 break;
               }
             }

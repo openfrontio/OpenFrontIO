@@ -121,8 +121,8 @@ export class LocalServer {
         }
         return;
       }
-      // Don't process non-pause intents during replays
-      if (this.lobbyConfig.gameRecord) {
+      // Don't process non-pause intents during replays or while paused
+      if (this.lobbyConfig.gameRecord || this.paused) {
         return;
       }
 
