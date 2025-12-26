@@ -1,6 +1,5 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import ofmWintersLogo from "../../../../resources/images/OfmWintersLogo.png";
 import {
   getGamesPlayed,
   isInIframe,
@@ -17,6 +16,7 @@ import {
   handlePurchase,
   patternRelationship,
 } from "../../Cosmetics";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -115,8 +115,6 @@ export class WinModal extends LitElement implements Layer {
     if (this.rand < 0.25) {
       return this.steamWishlist();
     } else if (this.rand < 0.5) {
-      return this.ofmDisplay();
-    } else if (this.rand < 0.75) {
       return this.discordDisplay();
     } else {
       return this.renderPatternButton();
@@ -229,34 +227,6 @@ export class WinModal extends LitElement implements Layer {
     </p>`;
   }
 
-  ofmDisplay(): TemplateResult {
-    return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
-        <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("win_modal.ofm_winter")}
-        </h3>
-        <div class="mb-3">
-          <img
-            src=${ofmWintersLogo}
-            alt="OpenFront Masters Winter"
-            class="mx-auto max-w-full h-auto max-h-[200px] rounded"
-          />
-        </div>
-        <p class="text-white mb-3">
-          ${translateText("win_modal.ofm_winter_description")}
-        </p>
-        <a
-          href="https://discord.gg/wXXJshB8Jt"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-block px-6 py-3 bg-green-600 text-white rounded font-semibold transition-all duration-200 hover:bg-green-700 hover:-translate-y-px no-underline"
-        >
-          ${translateText("win_modal.join_tournament")}
-        </a>
-      </div>
-    `;
-  }
-
   discordDisplay(): TemplateResult {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
@@ -324,6 +294,7 @@ export class WinModal extends LitElement implements Layer {
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
+          crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: wu.winner[1],
@@ -346,6 +317,7 @@ export class WinModal extends LitElement implements Layer {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
+          crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),

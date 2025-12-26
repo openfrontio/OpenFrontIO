@@ -9,6 +9,7 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -115,8 +116,10 @@ export class GameRightSidebar extends LitElement implements Layer {
       );
       if (!isConfirmed) return;
     }
-    // redirect to the home page
-    window.location.href = "/";
+    crazyGamesSDK.gameplayStop().then(() => {
+      // redirect to the home page
+      window.location.href = "/";
+    });
   }
 
   private onSettingsButtonClick() {
