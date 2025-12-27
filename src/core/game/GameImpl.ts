@@ -10,6 +10,7 @@ import {
   AllianceRequest,
   Cell,
   ColoredTeams,
+  DestroyNukesResult,
   Duos,
   EmojiMessage,
   Execution,
@@ -56,13 +57,6 @@ export function createGame(
 }
 
 export type CellString = string;
-
-export type DestroyNukesResult = {
-  inFlight: number;
-  queued: number;
-  fromRequestorToRecipient: number;
-  fromRecipientToRequestor: number;
-};
 
 export class GameImpl implements Game {
   private _ticks = 0;
