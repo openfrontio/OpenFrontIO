@@ -18,6 +18,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message: string = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private maxPlayers: number | null = null;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -75,7 +76,9 @@ export class JoinPrivateLobbyModal extends LitElement {
           ${this.hasJoined && this.players.length > 0
             ? html` <div class="options-section">
                 <div class="option-title">
-                  ${this.players.length}
+                  ${this.players.length}${this.maxPlayers !== null
+                    ? `/${this.maxPlayers}`
+                    : ""}
                   ${this.players.length === 1
                     ? translateText("private_lobby.player")
                     : translateText("private_lobby.players")}
@@ -127,6 +130,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.close();
     this.hasJoined = false;
     this.message = "";
+    this.maxPlayers = null;
+    this.players = [];
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
         detail: { lobby: this.lobbyIdInput.value },
@@ -315,6 +320,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        this.maxPlayers = data.gameConfig?.maxPlayers ?? null;
       })
       .catch((error) => {
         console.error("Error polling players:", error);
