@@ -1,17 +1,17 @@
 {
   "map": {
     "height": 1600,
-    "num_land_tiles": 1495986,
+    "num_land_tiles": 1495857,
     "width": 1600
   },
   "map16x": {
     "height": 400,
-    "num_land_tiles": 90227,
+    "num_land_tiles": 90194,
     "width": 400
   },
   "map4x": {
     "height": 800,
-    "num_land_tiles": 369447,
+    "num_land_tiles": 369383,
     "width": 800
   },
   "name": "Lisbon",
