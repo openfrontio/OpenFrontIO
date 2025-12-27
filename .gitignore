@@ -19,6 +19,3 @@ resources/config.json
 .claude/
 .project/
 CLAUDE.md
-
-# Use pnpm, not npm
-package-lock.json
