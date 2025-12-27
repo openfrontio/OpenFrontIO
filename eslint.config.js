@@ -28,7 +28,7 @@ export default [
             "eslint.config.js",
             "postcss.config.js",
             "tailwind.config.js",
-            "webpack.config.js",
+            "vite.config.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,
