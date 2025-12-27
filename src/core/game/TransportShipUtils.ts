@@ -1,4 +1,4 @@
-import { MultiSourceAnyTargetBFS } from "../pathfinding/MultiSourceAnyTargetBFS";
+import { findWaterPathFromSeedsCoarseToFine } from "../pathfinding/CoarseToFineWaterPath";
 import { getWaterComponentIds } from "../pathfinding/WaterComponents";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
@@ -9,15 +9,10 @@ type BoatRoute = {
   path: TileRef[];
 };
 
-let boatBfs: MultiSourceAnyTargetBFS | null = null;
-let boatBfsNumTiles = 0;
-function getBoatBfs(gm: GameMap): MultiSourceAnyTargetBFS {
-  const numTiles = gm.width() * gm.height();
-  if (boatBfs === null || boatBfsNumTiles !== numTiles) {
-    boatBfs = new MultiSourceAnyTargetBFS(numTiles);
-    boatBfsNumTiles = numTiles;
-  }
-  return boatBfs;
+function miniMapOrNull(gm: GameMap): GameMap | null {
+  const mm = (gm as any).miniMap;
+  if (typeof mm === "function") return mm.call(gm) as GameMap;
+  return null;
 }
 
 function insertTopK(
@@ -88,6 +83,13 @@ function shoreTargetsNearClick(
 
   // Default behavior: scan a bounding box near the click for candidate shore tiles.
   // (Previously, player targets used all border tiles, which could pick very distant shores.)
+  // TerraNullius targets keep the classic "find closest unowned shore within a radius" behavior
+  // so inland clicks still resolve to a nearby shoreline.
+  if (!targetOwner.isPlayer()) {
+    const tn = closestShoreTN(gm, click, 50);
+    return tn === null ? [] : [tn];
+  }
+
   const top: { tile: TileRef; dist: number }[] = [];
   const cx = gm.x(click);
   const cy = gm.y(click);
@@ -197,9 +199,8 @@ export function boatPathFromTileToShore(
   const targetWater = targetWaterAll.filter((t) => seedComps.has(ids[t] ?? 0));
   if (targetWater.length === 0) return null;
 
-  const bfs = getBoatBfs(gm);
   const startTime = performance.now();
-  const result = bfs.findWaterPathFromSeeds(
+  const result = findWaterPathFromSeedsCoarseToFine(
     gm,
     seedNodesFiltered,
     seedOriginsFiltered,
@@ -208,6 +209,7 @@ export function boatPathFromTileToShore(
       kingMoves: true,
       noCornerCutting: true,
     },
+    miniMapOrNull(gm),
   );
   const duration = performance.now() - startTime;
   if (result === null) return null;
@@ -269,12 +271,18 @@ export function boatPathFromTileToWater(
   }
   if (seedNodesFiltered.length === 0) return null;
 
-  const bfs = getBoatBfs(gm);
   const startTime = performance.now();
-  const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, [dstWater], {
-    kingMoves: true,
-    noCornerCutting: true,
-  });
+  const result = findWaterPathFromSeedsCoarseToFine(
+    gm,
+    seedNodesFiltered,
+    seedOriginsFiltered,
+    [dstWater],
+    {
+      kingMoves: true,
+      noCornerCutting: true,
+    },
+    miniMapOrNull(gm),
+  );
   const duration = performance.now() - startTime;
   if (result === null) return null;
 
@@ -324,21 +332,32 @@ export function bestTransportShipRoute(
   }
   if (targetWater.length === 0) return false;
 
-  const sourceShores: TileRef[] =
-    preferredSrc !== null && gm.isValidRef(preferredSrc)
-      ? [preferredSrc]
-      : candidateShoreTiles(gm, attacker, clickTile);
+  const preferredRequested =
+    preferredSrc !== null && gm.isValidRef(preferredSrc);
 
-  const seedNodeToOrigin = new Map<TileRef, TileRef>();
-  for (const shore of sourceShores) {
-    if (!gm.isValidRef(shore)) continue;
-    if (gm.owner(shore) !== attacker) continue;
-    if (!gm.isShore(shore)) continue;
-    for (const w of adjacentWaterTiles(gm, shore)) {
-      if (!seedNodeToOrigin.has(w)) {
-        seedNodeToOrigin.set(w, shore);
+  const buildSeedNodeToOrigin = (sourceShores: readonly TileRef[]) => {
+    const out = new Map<TileRef, TileRef>();
+    for (const shore of sourceShores) {
+      if (!gm.isValidRef(shore)) continue;
+      if (gm.owner(shore) !== attacker) continue;
+      if (!gm.isShore(shore)) continue;
+      for (const w of adjacentWaterTiles(gm, shore)) {
+        if (!out.has(w)) {
+          out.set(w, shore);
+        }
       }
     }
+    return out;
+  };
+
+  let seedNodeToOrigin = buildSeedNodeToOrigin(
+    preferredRequested ? [preferredSrc!] : candidateShoreTiles(gm, attacker, clickTile),
+  );
+  // Preferred src is a hint; if it doesn't yield a valid spawn shore, fall back to normal candidates.
+  if (seedNodeToOrigin.size === 0 && preferredRequested) {
+    seedNodeToOrigin = buildSeedNodeToOrigin(
+      candidateShoreTiles(gm, attacker, clickTile),
+    );
   }
   if (seedNodeToOrigin.size === 0) return false;
 
@@ -375,12 +394,18 @@ export function bestTransportShipRoute(
   const targetWaterFiltered = targetWater.filter((t) => seedComps.has(ids[t] ?? 0));
   if (targetWaterFiltered.length === 0) return false;
 
-  const bfs = getBoatBfs(gm);
   const startTime = performance.now();
-  const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, targetWaterFiltered, {
-    kingMoves: true,
-    noCornerCutting: true,
-  });
+  const result = findWaterPathFromSeedsCoarseToFine(
+    gm,
+    seedNodesFiltered,
+    seedOriginsFiltered,
+    targetWaterFiltered,
+    {
+      kingMoves: true,
+      noCornerCutting: true,
+    },
+    gm.miniMap(),
+  );
   const duration = performance.now() - startTime;
   if (result === null) return false;
 

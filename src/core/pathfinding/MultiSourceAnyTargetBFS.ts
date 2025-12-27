@@ -9,6 +9,17 @@ export type MultiSourceAnyTargetBFSResult = {
 export type MultiSourceAnyTargetBFSOptions = {
   kingMoves?: boolean;
   noCornerCutting?: boolean;
+  /**
+   * Optional region mask to restrict traversal.
+   *
+   * Intended for coarse-to-fine corridors: map each fine tile to a coarse region and
+   * allow only regions whose stamp matches.
+   */
+  allowedMask?: {
+    tileToRegion: Uint32Array;
+    regionStamp: Uint32Array;
+    stamp: number;
+  };
 };
 
 /**
@@ -67,11 +78,19 @@ export class MultiSourceAnyTargetBFS {
     let head = 0;
     let tail = 0;
 
+    const allowed = opts.allowedMask;
+
     const count = Math.min(seedNodes.length, seedOrigins.length);
     for (let i = 0; i < count; i++) {
       const node = seedNodes[i]!;
       const origin = seedOrigins[i]!;
       if (node < 0 || node >= this.visitedStamp.length) continue;
+      if (
+        allowed &&
+        allowed.regionStamp[allowed.tileToRegion[node]!] !== allowed.stamp
+      ) {
+        continue;
+      }
       if (!gm.isWater(node)) continue;
       if (this.visitedStamp[node] === stamp) continue;
       this.visitedStamp[node] = stamp;
@@ -102,29 +121,57 @@ export class MultiSourceAnyTargetBFS {
       if (node >= w) {
         const n = node - w;
         if (gm.isWater(n) && this.visitedStamp[n] !== stamp) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[n]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(n, node, stamp);
           this.queue[tail++] = n;
+          }
         }
       }
       if (node < lastRowStart) {
         const s = node + w;
         if (gm.isWater(s) && this.visitedStamp[s] !== stamp) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[s]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(s, node, stamp);
           this.queue[tail++] = s;
+          }
         }
       }
       if (x !== 0) {
         const wv = node - 1;
         if (gm.isWater(wv) && this.visitedStamp[wv] !== stamp) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[wv]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(wv, node, stamp);
           this.queue[tail++] = wv;
+          }
         }
       }
       if (x !== w - 1) {
         const ev = node + 1;
         if (gm.isWater(ev) && this.visitedStamp[ev] !== stamp) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[ev]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(ev, node, stamp);
           this.queue[tail++] = ev;
+          }
         }
       }
 
@@ -138,8 +185,15 @@ export class MultiSourceAnyTargetBFS {
           (!noCornerCutting || (gm.isWater(node - w) && gm.isWater(node - 1))) &&
           this.visitedStamp[nw] !== stamp
         ) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[nw]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(nw, node, stamp);
           this.queue[tail++] = nw;
+          }
         }
       }
       if (node >= w && x !== w - 1) {
@@ -149,8 +203,15 @@ export class MultiSourceAnyTargetBFS {
           (!noCornerCutting || (gm.isWater(node - w) && gm.isWater(node + 1))) &&
           this.visitedStamp[ne] !== stamp
         ) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[ne]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(ne, node, stamp);
           this.queue[tail++] = ne;
+          }
         }
       }
       if (node < lastRowStart && x !== 0) {
@@ -160,8 +221,15 @@ export class MultiSourceAnyTargetBFS {
           (!noCornerCutting || (gm.isWater(node + w) && gm.isWater(node - 1))) &&
           this.visitedStamp[sw] !== stamp
         ) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[sw]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(sw, node, stamp);
           this.queue[tail++] = sw;
+          }
         }
       }
       if (node < lastRowStart && x !== w - 1) {
@@ -171,8 +239,15 @@ export class MultiSourceAnyTargetBFS {
           (!noCornerCutting || (gm.isWater(node + w) && gm.isWater(node + 1))) &&
           this.visitedStamp[se] !== stamp
         ) {
+          if (
+            allowed &&
+            allowed.regionStamp[allowed.tileToRegion[se]!] !== allowed.stamp
+          ) {
+            // skip
+          } else {
           this.visit(se, node, stamp);
           this.queue[tail++] = se;
+          }
         }
       }
     }

@@ -13,7 +13,9 @@ import { TileRef } from "../game/GameMap";
 import {
   bestTransportShipRoute,
   boatPathFromTileToShore,
+  candidateShoreTiles,
 } from "../game/TransportShipUtils";
+import { getWaterComponentIds } from "../pathfinding/WaterComponents";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -168,6 +170,14 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
+
+    // In team games, disconnected players can have their ships captured by teammates on conquest.
+    // Until ownership transfers, avoid progressing the ship (prevents it from completing an attack
+    // while the original owner is already disconnected).
+    if (this.originalOwner.isDisconnected() && this.boat.owner() === this.originalOwner) {
+      return;
+    }
+
     if (ticks - this.lastMove < this.ticksPerMove) {
       return;
     }
@@ -186,15 +196,67 @@ export class TransportShipExecution implements Execution {
     }
 
     if (this.boat.retreating()) {
+      const curr = this.boat.tile();
+      if (curr === null) {
+        this.active = false;
+        return;
+      }
+
       // Ensure retreat source is still valid for (new) owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
+      if (
+        this.src === null ||
+        !this.mg.isValidRef(this.src) ||
+        this.mg.owner(this.src) !== this.attacker ||
+        !this.mg.isShore(this.src)
+      ) {
+        // Pick a reachable shore tile owned by the new owner.
+        const ids = getWaterComponentIds(this.mg);
+        const currComps = new Set<number>();
+        if (this.mg.isWater(curr)) {
+          const id = ids[curr] ?? 0;
+          if (id !== 0) currComps.add(id);
+        } else if (this.mg.isShore(curr)) {
+          for (const n of this.mg.neighbors(curr)) {
+            if (!this.mg.isWater(n)) continue;
+            const id = ids[n] ?? 0;
+            if (id !== 0) currComps.add(id);
+          }
         }
+
+        let newSrc: TileRef | null = null;
+        if (currComps.size !== 0) {
+          const candidates = candidateShoreTiles(this.mg, this.attacker, curr);
+          for (const shore of candidates) {
+            if (shore === curr || shore === this.ref) continue;
+            for (const n of this.mg.neighbors(shore)) {
+              if (!this.mg.isWater(n)) continue;
+              const id = ids[n] ?? 0;
+              if (id !== 0 && currComps.has(id)) {
+                newSrc = shore;
+                break;
+              }
+            }
+            if (newSrc !== null) break;
+          }
+
+          if (newSrc === null) {
+            for (const t of this.attacker.borderTiles()) {
+              if (!this.mg.isShore(t)) continue;
+              if (t === curr || t === this.ref) continue;
+              for (const n of this.mg.neighbors(t)) {
+                if (!this.mg.isWater(n)) continue;
+                const id = ids[n] ?? 0;
+                if (id !== 0 && currComps.has(id)) {
+                  newSrc = t;
+                  break;
+                }
+              }
+              if (newSrc !== null) break;
+            }
+          }
+        }
+
+        this.src = newSrc;
       }
 
       if (this.src === null) {
@@ -215,18 +277,14 @@ export class TransportShipExecution implements Execution {
         // Retreat is just the existing forward path in reverse (hot-path friendly).
         // Fallback to a recompute only if we can't safely reverse (e.g. path invalidated).
         if (!this.usingReverseRetreatPath) {
-          const curr = this.boat.tile();
-          const idx = curr === null ? -1 : this.forwardPath.indexOf(curr);
-          if (idx >= 0) {
+          const originalSrc = this.forwardPath[0] ?? null;
+          const idx = this.forwardPath.indexOf(curr);
+          if (originalSrc !== null && this.dst === originalSrc && idx >= 0) {
             this.path = this.forwardPath.slice(0, idx + 1).reverse();
             this.pathIndex = 0;
             this.usingReverseRetreatPath = true;
           } else {
-            const retreatPath = boatPathFromTileToShore(
-              this.mg,
-              curr!,
-              this.dst,
-            );
+            const retreatPath = boatPathFromTileToShore(this.mg, curr, this.dst);
             if (retreatPath !== null) {
               this.path = retreatPath;
               this.pathIndex = 0;
