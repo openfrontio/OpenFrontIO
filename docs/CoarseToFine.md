@@ -5,9 +5,9 @@
 Full-res water BFS is optimal and simple, but the “ocean case” can still expand a lot of tiles.
 Coarse-to-fine is the next lever: do a cheap solve on a low-res map to guide / bound the expensive solve.
 
-## Do we already have low-res maps?
+## We already have low-res maps
 
-Yes. The terrain loader already ships multiple resolutions per map:
+The terrain loader already ships multiple resolutions per map:
 
 - `manifest.map` + `map.bin` (full res)
 - `manifest.map4x` + `map4x.bin` (coarser)
@@ -21,7 +21,7 @@ At runtime we load:
 
 So we can prototype coarse-to-fine without extending mapgen first.
 
-## Core idea (don’t overthink it)
+## Core idea
 
 Stage 1 (coarse):
 - Run the same multi-source/any-target search on `miniGameMap` (BFS, water-only, king-moves if desired).
@@ -33,7 +33,7 @@ Stage 2 (refine):
 Important: the coarse map is an approximation. It must never be allowed to make the final path invalid.
 If the refine stage fails inside the corridor, fall back to full-res BFS.
 
-## Option A: Coarse corridor (usually the biggest win)
+## Option A: Coarse corridor (this)
 
 1) Map fine tiles → coarse cells by integer scaling:
    - `scaleX = gameMap.width / miniGameMap.width`
@@ -49,7 +49,7 @@ Notes:
 - If the low-res generation is “optimistic” (water if any child tile is water), the coarse path can cut across land.
   Inflation + fallback is what keeps this safe.
 
-## Option B: Coarse heuristic for A*
+## Option B: Coarse heuristic for A* (future?)
 
 If we ever move from BFS → A* on full-res, a cheap heuristic is:
 
@@ -66,9 +66,6 @@ Water-component IDs are still a free early reject:
 - `WaterComponents.ts` already precomputes IDs per `GameMap` instance.
 - Do the same check on `miniGameMap` if useful, but full-res component filtering already prevents the worst “wrong ocean” searches.
 
-## Practical next steps (incremental)
-
-1) Add a coarse route helper that mirrors the existing API but runs on `miniGameMap`.
-2) Implement corridor masking + refine fallback as a generic helper (so transport/trade/warship can all share it).
-3) Measure: expansions + ms, before/after, on worst-case oceans.
-4) Only then decide if mapgen needs a better “navmap” (e.g. conservative water, coastline preservation, etc.).
+## Practical next steps 
+ Measure: expansions + ms, before/after, on worst-case oceans.
+ decide if mapgen needs a better “navmap” (e.g. conservative water, coastline preservation, etc.).
