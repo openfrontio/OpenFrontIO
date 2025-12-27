@@ -430,6 +430,24 @@ export const attackMenuElement: MenuElement = {
   },
 };
 
+const donateGoldRadialElement: MenuElement = {
+  id: Slot.Attack,
+  name: "radial_donate_gold",
+  disabled: (params: MenuElementParams) =>
+    params.game.inSpawnPhase() ||
+    !params.playerActions?.interaction?.canDonateGold,
+  icon: donateGoldIcon,
+  color: "#EAB308",
+  action: (params: MenuElementParams) => {
+    if (!params.selected) return;
+    params.playerPanel.openSendGoldModal(
+      params.playerActions,
+      params.tile,
+      params.selected,
+    );
+  },
+};
+
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
@@ -609,7 +627,11 @@ export const rootMenuElement: MenuElement = {
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
-        : [boatMenuElement, ally, attackMenuElement]),
+        : [
+            boatMenuElement,
+            ally,
+            isFriendlyTarget(params) ? donateGoldRadialElement : attackMenuElement,
+          ]),
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);
