@@ -139,6 +139,9 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.radialMenu.setCenterButtonAppearance(
       isFriendlyTarget ? donateTroopIcon : swordIcon,
       isFriendlyTarget ? "#34D399" : "#2c3e50",
+      isFriendlyTarget
+        ? this.radialMenu.getDefaultCenterIconSize() * 0.75
+        : this.radialMenu.getDefaultCenterIconSize(),
     );
 
     this.radialMenu.setParams(params);
