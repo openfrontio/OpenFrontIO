@@ -78,6 +78,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    gameStart.lobbyCreatorID,
   );
   gr.init();
   return gr;
@@ -94,6 +95,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private lobbyCreatorID: ClientID | undefined,
   ) {}
 
   init() {
@@ -208,6 +210,9 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        canKick:
+          this.lobbyCreatorID === player.clientID() &&
+          player.clientID() !== other.clientID(),
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {
