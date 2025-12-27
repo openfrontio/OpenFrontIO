@@ -6,14 +6,23 @@ import {
   Player,
   PlayerID,
 } from "../game/Game";
+import { PseudoRandom } from "../PseudoRandom";
 import { assertNever, toInt } from "../Util";
+import { EmojiExecution } from "./EmojiExecution";
+import {
+  EMOJI_DONATION_OK,
+  EMOJI_DONATION_TOO_SMALL,
+  EMOJI_LOVE,
+} from "./nation/NationEmojiBehavior";
 
 export class DonateGoldExecution implements Execution {
   private recipient: Player;
+  private gold: Gold;
+
   private mg: Game;
+  private random: PseudoRandom;
 
   private active = true;
-  private gold: Gold;
 
   constructor(
     private sender: Player,
@@ -25,6 +34,7 @@ export class DonateGoldExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    this.random = new PseudoRandom(mg.ticks());
 
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
@@ -49,6 +59,22 @@ export class DonateGoldExecution implements Execution {
       if (relationUpdate > 0) {
         this.recipient.updateRelation(this.sender, relationUpdate);
       }
+
+      // Select emoji based on donation value
+      const emoji =
+        relationUpdate >= 50
+          ? EMOJI_LOVE
+          : relationUpdate > 0
+            ? EMOJI_DONATION_OK
+            : EMOJI_DONATION_TOO_SMALL;
+
+      this.mg.addExecution(
+        new EmojiExecution(
+          this.recipient,
+          this.sender.id(),
+          this.random.randElement(emoji),
+        ),
+      );
     } else {
       console.warn(
         `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,

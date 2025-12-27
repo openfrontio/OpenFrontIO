@@ -115,7 +115,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. The SAM has a 7.5 second cooldown.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
@@ -243,7 +243,8 @@
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
     "svalmel": "Svalmel",
-    "manicouagan": "Manicouagan"
+    "manicouagan": "Manicouagan",
+    "lemnos": "Lemnos"
   },
   "map_categories": {
     "continental": "Continental",
@@ -268,6 +269,8 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "waiting_for_players": "Waiting for players",
+    "starting_game": "Starting game…",
     "teams_Duos": "of 2 (Duos)",
     "teams_Trios": "of 3 (Trios)",
     "teams_Quads": "of 4 (Quads)",
@@ -574,7 +577,7 @@
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
-    "discord_description": "Connect with other players, get updates, and share strategies",
+    "discord_description": "Connect with players, discover new features, and win prizes!",
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
@@ -741,6 +744,10 @@
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
+  },
+  "pause": {
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",

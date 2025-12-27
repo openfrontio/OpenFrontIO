@@ -26,8 +26,9 @@ import {
 } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
+import { EMOJI_NUKE, NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
+import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -42,6 +43,7 @@ export class NationExecution implements Execution {
   private mirvBehavior: NationMIRVBehavior | null = null;
   private attackBehavior: AiAttackBehavior | null = null;
   private allianceBehavior: NationAllianceBehavior | null = null;
+  private warshipBehavior: NationWarshipBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -53,11 +55,6 @@ export class NationExecution implements Execution {
 
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
-
-  // Track our transport ships we currently own
-  private trackedTransportShips: Set<Unit> = new Set();
-  // Track our trade ships we currently own
-  private trackedTradeShips: Set<Unit> = new Set();
 
   constructor(
     private gameID: GameID,
@@ -102,12 +99,12 @@ export class NationExecution implements Execution {
   tick(ticks: number) {
     // Ship tracking
     if (
+      this.warshipBehavior !== null &&
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy
     ) {
-      this.trackTransportShipsAndRetaliate();
-      this.trackTradeShipsAndRetaliate();
+      this.warshipBehavior.trackShipsAndRetaliate();
     }
 
     if (ticks % this.attackRate !== this.attackTick) {
@@ -139,9 +136,11 @@ export class NationExecution implements Execution {
     }
 
     if (
+      this.emojiBehavior === null ||
       this.mirvBehavior === null ||
       this.attackBehavior === null ||
-      this.allianceBehavior === null
+      this.allianceBehavior === null ||
+      this.warshipBehavior === null
     ) {
       // Player is unavailable during init()
       this.emojiBehavior = new NationEmojiBehavior(
@@ -159,6 +158,13 @@ export class NationExecution implements Execution {
         this.random,
         this.mg,
         this.player,
+        this.emojiBehavior,
+      );
+      this.warshipBehavior = new NationWarshipBehavior(
+        this.random,
+        this.mg,
+        this.player,
+        this.emojiBehavior,
       );
       this.attackBehavior = new AiAttackBehavior(
         this.random,
@@ -176,6 +182,7 @@ export class NationExecution implements Execution {
       return;
     }
 
+    this.emojiBehavior.maybeSendCasualEmoji();
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
@@ -183,70 +190,7 @@ export class NationExecution implements Execution {
     this.handleEmbargoesToHostileNations();
     this.mirvBehavior.considerMIRV();
     this.maybeAttack();
-  }
-
-  // Send out a warship if our transport ship got captured
-  private trackTransportShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned transport ships to our tracking set
-    this.player
-      .units(UnitType.TransportShip)
-      .forEach((u) => this.trackedTransportShips.add(u));
-
-    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
-    for (const ship of Array.from(this.trackedTransportShips)) {
-      if (!ship.isActive()) {
-        // Distinguish between arrival/retreat and enemy destruction
-        if (ship.wasDestroyedByEnemy()) {
-          this.maybeRetaliateWithWarship(ship.tile());
-        }
-        this.trackedTransportShips.delete(ship);
-      }
-    }
-  }
-
-  // Send out a warship if our trade ship got captured
-  private trackTradeShipsAndRetaliate(): void {
-    if (this.player === null) return;
-
-    // Add any currently owned trade ships to our tracking map
-    this.player
-      .units(UnitType.TradeShip)
-      .forEach((u) => this.trackedTradeShips.add(u));
-
-    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
-    for (const ship of Array.from(this.trackedTradeShips)) {
-      if (!ship.isActive()) {
-        this.trackedTradeShips.delete(ship);
-        continue;
-      }
-      if (ship.owner().id() !== this.player.id()) {
-        // Ship was ours and is now owned by someone else -> captured
-        this.maybeRetaliateWithWarship(ship.tile());
-        this.trackedTradeShips.delete(ship);
-      }
-    }
-  }
-
-  private maybeRetaliateWithWarship(tile: TileRef): void {
-    if (this.player === null) return;
-
-    const { difficulty } = this.mg.config().gameConfig();
-    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
-    if (
-      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
-      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
-      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
-    ) {
-      const canBuild = this.player.canBuild(UnitType.Warship, tile);
-      if (canBuild === false) {
-        return;
-      }
-      this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, tile),
-      );
-    }
+    this.warshipBehavior.counterWarshipInfestation();
   }
 
   private randomSpawnLand(): TileRef | null {
@@ -505,9 +449,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.assistAllies();
-
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-
     this.maybeSendNuke(
       this.attackBehavior.findBestNukeTarget(borderingEnemies),
     );
@@ -738,7 +680,7 @@ export class NationExecution implements Execution {
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
-    this.emojiBehavior.maybeSendHeckleEmoji(targetPlayer);
+    this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
   }
 
   private randTerritoryTileArray(numTiles: number): TileRef[] {
