@@ -1,0 +1,8 @@
+{
+  "features": {
+    "analytics": false,
+    "publicLobbies": false,
+    "cloudflare": false,
+    "ads": false
+  }
+}

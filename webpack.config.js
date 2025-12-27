@@ -9,6 +9,15 @@ import webpack from "webpack";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Client dev server port (default: 9000)
+const clientPortEnv = process.env.OPENFRONT_CLIENT_PORT ?? "9000";
+const clientPort = parseInt(clientPortEnv, 10);
+if (isNaN(clientPort) || clientPort < 1 || clientPort > 65535) {
+  throw new Error(
+    `Invalid OPENFRONT_CLIENT_PORT: "${clientPortEnv}". Must be a number between 1 and 65535.`,
+  );
+}
+
 const gitCommit =
   process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
 
@@ -150,6 +159,11 @@ export default async (env, argv) => {
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },
+          {
+            from: path.resolve(__dirname, "config.json"),
+            to: path.resolve(__dirname, "static/config.json"),
+            noErrorOnMissing: true,
+          },
         ],
         options: { concurrency: 100 },
       }),
@@ -179,7 +193,7 @@ export default async (env, argv) => {
           },
           historyApiFallback: true,
           compress: true,
-          port: 9000,
+          port: clientPort,
           proxy: [
             // WebSocket proxies
             {

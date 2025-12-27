@@ -11,3 +11,7 @@ resources/.DS_Store
 .clinic/
 CLAUDE.md
 .idea/
+.claude/
+
+# Local configuration
+config.json

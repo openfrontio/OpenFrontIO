@@ -15,6 +15,7 @@ import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import { isDevFeatureEnabled, waitForDevConfig } from "./DevConfig";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
@@ -118,9 +119,13 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+    // Load dev config to set up feature flags
+    await waitForDevConfig();
     // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // the user joins a lobby (skip if cloudflare is disabled).
+    if (isDevFeatureEnabled("cloudflare")) {
+      this.turnstileTokenPromise = getTurnstileToken();
+    }
 
     const gameVersion = document.getElementById(
       "game-version",

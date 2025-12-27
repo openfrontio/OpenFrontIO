@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { isDevFeatureEnabled } from "./DevConfig";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -35,6 +36,16 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // Skip fetching public lobbies if disabled in dev config
+    // Check window.__devConfig first (set synchronously in index.html),
+    // then fall back to async-loaded config
+    const devConfig = (window as any).__devConfig;
+    if (devConfig?.features?.publicLobbies === false) {
+      return;
+    }
+    if (!isDevFeatureEnabled("publicLobbies")) {
+      return;
+    }
     this.fetchAndUpdateLobbies();
     this.lobbiesInterval = window.setInterval(
       () => this.fetchAndUpdateLobbies(),

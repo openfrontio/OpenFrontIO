@@ -142,7 +142,13 @@ export async function startMaster() {
     );
   });
 
-  const PORT = 3000;
+  const portEnv = process.env.OPENFRONT_SERVER_PORT ?? "3000";
+  const PORT = parseInt(portEnv, 10);
+  if (isNaN(PORT) || PORT < 1 || PORT > 65535) {
+    throw new Error(
+      `Invalid OPENFRONT_SERVER_PORT: "${portEnv}". Must be a number between 1 and 65535.`,
+    );
+  }
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
