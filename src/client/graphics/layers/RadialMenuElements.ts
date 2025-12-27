@@ -630,7 +630,9 @@ export const rootMenuElement: MenuElement = {
         : [
             boatMenuElement,
             ally,
-            isFriendlyTarget(params) ? donateGoldRadialElement : attackMenuElement,
+            isFriendlyTarget(params)
+              ? donateGoldRadialElement
+              : attackMenuElement,
           ]),
     ];
 
