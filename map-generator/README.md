@@ -33,6 +33,14 @@ To process a subset of maps, pass a comma-separated list:
 
 `go run . --maps=northamerica,world`
 
+## Output Files
+
+- `resources/maps/<map_name>/manifest.json` - JSON metadata containing map dimensions and land tile counts for all scales.
+- `resources/maps/<map_name>/map.bin` - Full scale binary map data packed with terrain type and magnitude.
+- `resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
+- `resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
+- `resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
+
 ## Create image.png
 
 The map-generator will process your input file at `assets/maps/<map_name>/image.png` to generate the map
