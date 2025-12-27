@@ -198,22 +198,38 @@ export function boatPathFromTileToShore(
   if (targetWater.length === 0) return null;
 
   const bfs = getBoatBfs(gm);
+  const startTime = performance.now();
   const result = bfs.findWaterPathFromSeeds(
     gm,
     seedNodesFiltered,
     seedOriginsFiltered,
     targetWater,
     {
-    kingMoves: true,
-    noCornerCutting: true,
+      kingMoves: true,
+      noCornerCutting: true,
     },
   );
+  const duration = performance.now() - startTime;
   if (result === null) return null;
 
   if (gm.isWater(startTile)) {
-    return [...result.path, dstShore];
+    const path = [...result.path, dstShore];
+    console.log(
+      `boatPathFromTileToShore: ${duration.toFixed(2)}ms, steps=${Math.max(
+        0,
+        path.length - 1,
+      )}`,
+    );
+    return path;
   }
-  return [startTile, ...result.path, dstShore];
+  const path = [startTile, ...result.path, dstShore];
+  console.log(
+    `boatPathFromTileToShore: ${duration.toFixed(2)}ms, steps=${Math.max(
+      0,
+      path.length - 1,
+    )}`,
+  );
+  return path;
 }
 
 export function boatPathFromTileToWater(
@@ -254,14 +270,31 @@ export function boatPathFromTileToWater(
   if (seedNodesFiltered.length === 0) return null;
 
   const bfs = getBoatBfs(gm);
+  const startTime = performance.now();
   const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, [dstWater], {
     kingMoves: true,
     noCornerCutting: true,
   });
+  const duration = performance.now() - startTime;
   if (result === null) return null;
 
-  if (gm.isWater(startTile)) return result.path;
-  return [startTile, ...result.path];
+  if (gm.isWater(startTile)) {
+    console.log(
+      `boatPathFromTileToWater: ${duration.toFixed(2)}ms, steps=${Math.max(
+        0,
+        result.path.length - 1,
+      )}`,
+    );
+    return result.path;
+  }
+  const path = [startTile, ...result.path];
+  console.log(
+    `boatPathFromTileToWater: ${duration.toFixed(2)}ms, steps=${Math.max(
+      0,
+      path.length - 1,
+    )}`,
+  );
+  return path;
 }
 
 export function bestTransportShipRoute(
@@ -343,10 +376,12 @@ export function bestTransportShipRoute(
   if (targetWaterFiltered.length === 0) return false;
 
   const bfs = getBoatBfs(gm);
+  const startTime = performance.now();
   const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, targetWaterFiltered, {
     kingMoves: true,
     noCornerCutting: true,
   });
+  const duration = performance.now() - startTime;
   if (result === null) return false;
 
   const dst = pickLandingForTargetWater(gm, clickTile, result.target, targetShores);
@@ -355,6 +390,12 @@ export function bestTransportShipRoute(
   const src = result.source;
   // Full route includes the shore endpoints to drive unit movement.
   const path = [src, ...result.path, dst];
+  console.log(
+    `bestTransportShipRoute: ${duration.toFixed(2)}ms, steps=${Math.max(
+      0,
+      path.length - 1,
+    )}`,
+  );
   return { src, dst, path };
 }
 
