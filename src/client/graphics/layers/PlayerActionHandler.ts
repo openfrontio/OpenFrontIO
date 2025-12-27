@@ -84,8 +84,12 @@ export class PlayerActionHandler {
     this.eventBus.emit(new SendDonateGoldIntentEvent(recipient, null));
   }
 
-  handleDonateTroops(recipient: PlayerView) {
-    this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, null));
+  handleDonateTroops(recipient: PlayerView, troops?: number) {
+    const amount = troops ?? null;
+    if (amount !== null && amount <= 0) {
+      return;
+    }
+    this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, amount));
   }
 
   handleEmbargo(recipient: PlayerView, action: "start" | "stop") {
