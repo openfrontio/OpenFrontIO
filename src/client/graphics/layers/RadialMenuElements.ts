@@ -10,6 +10,7 @@ import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
+import { UIState } from "../UIState";
 
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
@@ -37,6 +38,7 @@ export interface MenuElementParams {
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
+  uiState?: UIState;
   closeMenu: () => void;
 }
 
@@ -549,16 +551,44 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
+
+    const selectedPlayer = params.selected;
+    const isFriendlyTarget =
+      selectedPlayer !== null &&
+      selectedPlayer.id() !== params.myPlayer.id() &&
+      selectedPlayer.isFriendly(params.myPlayer);
+
+    if (isFriendlyTarget) {
+      return !params.playerActions.interaction?.canDonateTroops;
+    }
+
     return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      params.playerActionHandler.handleAttack(
-        params.myPlayer,
-        params.selected?.id() ?? null,
-      );
+      const selectedPlayer = params.selected;
+      const isFriendlyTarget =
+        selectedPlayer !== null &&
+        selectedPlayer.id() !== params.myPlayer.id() &&
+        selectedPlayer.isFriendly(params.myPlayer);
+
+      if (isFriendlyTarget) {
+        const ratio = params.uiState?.attackRatio ?? 1;
+        const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
+        if (troopsToDonate > 0) {
+          params.playerActionHandler.handleDonateTroops(
+            selectedPlayer,
+            troopsToDonate,
+          );
+        }
+      } else {
+        params.playerActionHandler.handleAttack(
+          params.myPlayer,
+          params.selected?.id() ?? null,
+        );
+      }
     }
     params.closeMenu();
   },
