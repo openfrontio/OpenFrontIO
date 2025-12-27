@@ -42,6 +42,7 @@ import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { getWaterComponentIds } from "../pathfinding/WaterComponents";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -50,6 +51,10 @@ export function createGame(
   miniGameMap: GameMap,
   config: Config,
 ): Game {
+  // Precompute and cache water-component IDs once per map instance.
+  getWaterComponentIds(gameMap);
+  getWaterComponentIds(miniGameMap);
+
   const stats = new StatsImpl();
   return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
 }

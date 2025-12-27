@@ -9,7 +9,6 @@ export type MultiSourceAnyTargetBFSResult = {
 export type MultiSourceAnyTargetBFSOptions = {
   kingMoves?: boolean;
   noCornerCutting?: boolean;
-  maxVisited?: number;
 };
 
 /**
@@ -85,8 +84,6 @@ export class MultiSourceAnyTargetBFS {
 
     const kingMoves = opts.kingMoves ?? true;
     const noCornerCutting = opts.noCornerCutting ?? true;
-    const maxVisited = opts.maxVisited ?? this.visitedStamp.length;
-    let visitedCount = tail;
 
     while (head < tail) {
       const node = this.queue[head++] as TileRef;
@@ -107,7 +104,6 @@ export class MultiSourceAnyTargetBFS {
         if (gm.isWater(n) && this.visitedStamp[n] !== stamp) {
           this.visit(n, node, stamp);
           this.queue[tail++] = n;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (node < lastRowStart) {
@@ -115,7 +111,6 @@ export class MultiSourceAnyTargetBFS {
         if (gm.isWater(s) && this.visitedStamp[s] !== stamp) {
           this.visit(s, node, stamp);
           this.queue[tail++] = s;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (x !== 0) {
@@ -123,7 +118,6 @@ export class MultiSourceAnyTargetBFS {
         if (gm.isWater(wv) && this.visitedStamp[wv] !== stamp) {
           this.visit(wv, node, stamp);
           this.queue[tail++] = wv;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (x !== w - 1) {
@@ -131,7 +125,6 @@ export class MultiSourceAnyTargetBFS {
         if (gm.isWater(ev) && this.visitedStamp[ev] !== stamp) {
           this.visit(ev, node, stamp);
           this.queue[tail++] = ev;
-          if (++visitedCount > maxVisited) return null;
         }
       }
 
@@ -147,7 +140,6 @@ export class MultiSourceAnyTargetBFS {
         ) {
           this.visit(nw, node, stamp);
           this.queue[tail++] = nw;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (node >= w && x !== w - 1) {
@@ -159,7 +151,6 @@ export class MultiSourceAnyTargetBFS {
         ) {
           this.visit(ne, node, stamp);
           this.queue[tail++] = ne;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (node < lastRowStart && x !== 0) {
@@ -171,7 +162,6 @@ export class MultiSourceAnyTargetBFS {
         ) {
           this.visit(sw, node, stamp);
           this.queue[tail++] = sw;
-          if (++visitedCount > maxVisited) return null;
         }
       }
       if (node < lastRowStart && x !== w - 1) {
@@ -183,7 +173,6 @@ export class MultiSourceAnyTargetBFS {
         ) {
           this.visit(se, node, stamp);
           this.queue[tail++] = se;
-          if (++visitedCount > maxVisited) return null;
         }
       }
     }

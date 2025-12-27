@@ -1,4 +1,5 @@
 import { MultiSourceAnyTargetBFS } from "../pathfinding/MultiSourceAnyTargetBFS";
+import { getWaterComponentIds } from "../pathfinding/WaterComponents";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
@@ -153,11 +154,6 @@ export function boatPathFromTileToShore(
   if (!gm.isValidRef(startTile) || !gm.isValidRef(dstShore)) return null;
   if (!gm.isShore(dstShore)) return null;
 
-  const targetWater = adjacentWaterTiles(gm, dstShore);
-  if (targetWater.length === 0) return null;
-
-  const bfs = getBoatBfs(gm);
-
   let seedNodes: TileRef[] = [];
   let seedOrigins: TileRef[] = [];
   if (gm.isWater(startTile)) {
@@ -172,11 +168,46 @@ export function boatPathFromTileToShore(
     return null;
   }
 
-  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, targetWater, {
+  const targetWaterAll = adjacentWaterTiles(gm, dstShore);
+  if (targetWaterAll.length === 0) return null;
+
+  // Avoid impossible searches: restrict to the same connected water component.
+  const ids = getWaterComponentIds(gm);
+  const targetComps = new Set<number>();
+  for (const t of targetWaterAll) {
+    const id = ids[t] ?? 0;
+    if (id !== 0) targetComps.add(id);
+  }
+  if (targetComps.size === 0) return null;
+
+  const seedNodesFiltered: TileRef[] = [];
+  const seedOriginsFiltered: TileRef[] = [];
+  const seedComps = new Set<number>();
+  for (let i = 0; i < seedNodes.length; i++) {
+    const n = seedNodes[i]!;
+    const id = ids[n] ?? 0;
+    if (id === 0) continue;
+    if (!targetComps.has(id)) continue;
+    seedNodesFiltered.push(n);
+    seedOriginsFiltered.push(seedOrigins[i]!);
+    seedComps.add(id);
+  }
+  if (seedNodesFiltered.length === 0) return null;
+
+  const targetWater = targetWaterAll.filter((t) => seedComps.has(ids[t] ?? 0));
+  if (targetWater.length === 0) return null;
+
+  const bfs = getBoatBfs(gm);
+  const result = bfs.findWaterPathFromSeeds(
+    gm,
+    seedNodesFiltered,
+    seedOriginsFiltered,
+    targetWater,
+    {
     kingMoves: true,
     noCornerCutting: true,
-    maxVisited: 300_000, //todo: replace with a proper limit based on the map size
-  });
+    },
+  );
   if (result === null) return null;
 
   if (gm.isWater(startTile)) {
@@ -193,8 +224,6 @@ export function boatPathFromTileToWater(
   if (!gm.isValidRef(startTile) || !gm.isValidRef(dstWater)) return null;
   if (!gm.isWater(dstWater)) return null;
 
-  const bfs = getBoatBfs(gm);
-
   let seedNodes: TileRef[] = [];
   let seedOrigins: TileRef[] = [];
   if (gm.isWater(startTile)) {
@@ -209,10 +238,25 @@ export function boatPathFromTileToWater(
     return null;
   }
 
-  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, [dstWater], {
+  // Avoid impossible searches: restrict seeds to the same connected water component.
+  const ids = getWaterComponentIds(gm);
+  const dstComp = ids[dstWater] ?? 0;
+  if (dstComp === 0) return null;
+
+  const seedNodesFiltered: TileRef[] = [];
+  const seedOriginsFiltered: TileRef[] = [];
+  for (let i = 0; i < seedNodes.length; i++) {
+    const n = seedNodes[i]!;
+    if ((ids[n] ?? 0) !== dstComp) continue;
+    seedNodesFiltered.push(n);
+    seedOriginsFiltered.push(seedOrigins[i]!);
+  }
+  if (seedNodesFiltered.length === 0) return null;
+
+  const bfs = getBoatBfs(gm);
+  const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, [dstWater], {
     kingMoves: true,
     noCornerCutting: true,
-    maxVisited: 300_000,
   });
   if (result === null) return null;
 
@@ -272,12 +316,36 @@ export function bestTransportShipRoute(
     seedOrigins.push(origin);
   }
 
+  // Avoid impossible searches: restrict seeds/targets to overlapping water components.
+  const ids = getWaterComponentIds(gm);
+  const targetComps = new Set<number>();
+  for (const tw of targetWater) {
+    const id = ids[tw] ?? 0;
+    if (id !== 0) targetComps.add(id);
+  }
+  if (targetComps.size === 0) return false;
+
+  const seedNodesFiltered: TileRef[] = [];
+  const seedOriginsFiltered: TileRef[] = [];
+  const seedComps = new Set<number>();
+  for (let i = 0; i < seedNodes.length; i++) {
+    const n = seedNodes[i]!;
+    const id = ids[n] ?? 0;
+    if (id === 0) continue;
+    if (!targetComps.has(id)) continue;
+    seedNodesFiltered.push(n);
+    seedOriginsFiltered.push(seedOrigins[i]!);
+    seedComps.add(id);
+  }
+  if (seedNodesFiltered.length === 0) return false;
+
+  const targetWaterFiltered = targetWater.filter((t) => seedComps.has(ids[t] ?? 0));
+  if (targetWaterFiltered.length === 0) return false;
+
   const bfs = getBoatBfs(gm);
-  const result = bfs.findWaterPathFromSeeds(gm, seedNodes, seedOrigins, targetWater, {
+  const result = bfs.findWaterPathFromSeeds(gm, seedNodesFiltered, seedOriginsFiltered, targetWaterFiltered, {
     kingMoves: true,
     noCornerCutting: true,
-    // Hard budget to avoid pathological cases; tweak as needed.
-    maxVisited: 300_000,
   });
   if (result === null) return false;
 
