@@ -30,6 +30,7 @@ export class NukeExecution implements Execution {
     private src?: TileRef | null,
     private speed: number = -1,
     private waitTicks = 0,
+    private rocketDirectionUp: boolean = true,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -137,6 +138,7 @@ export class NukeExecution implements Execution {
         this.dst,
         this.speed,
         this.nukeType !== UnitType.MIRVWarhead,
+        this.rocketDirectionUp,
       );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,

@@ -106,7 +106,12 @@ export class Executor {
       case "embargo_all":
         return new EmbargoAllExecution(player, intent.action);
       case "build_unit":
-        return new ConstructionExecution(player, intent.unit, intent.tile);
+        return new ConstructionExecution(
+          player,
+          intent.unit,
+          intent.tile,
+          intent.rocketDirectionUp,
+        );
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
       }

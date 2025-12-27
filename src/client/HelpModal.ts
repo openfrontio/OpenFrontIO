@@ -139,6 +139,10 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
+                <td><span class="key">U</span></td>
+                <td>${translateText("help_modal.bomb_direction")}</td>
+              </tr>
+              <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
                     ${this.renderKey(keybinds.shiftKey)}
