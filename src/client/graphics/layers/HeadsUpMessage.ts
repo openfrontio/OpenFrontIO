@@ -39,9 +39,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
   private getMessage(): string {
     if (this.isPaused) {
       if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
-        return translateText("pause.singleplayer_game_paused");
+        return translateText("heads_up_message.singleplayer_game_paused");
       } else {
-        return translateText("pause.multiplayer_game_paused");
+        return translateText("heads_up_message.multiplayer_game_paused");
       }
     }
     return this.game.config().isRandomSpawn()
