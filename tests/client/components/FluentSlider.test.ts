@@ -1,11 +1,8 @@
-/**
- * @jest-environment jsdom
- */
 import { FluentSlider } from "../../../src/client/components/FluentSlider";
 
 // Mock the translateText function
-jest.mock("../../../src/client/Utils", () => ({
-  translateText: jest.fn((key: string) => key),
+vi.mock("../../../src/client/Utils", () => ({
+  translateText: vi.fn((key: string) => key),
 }));
 
 describe("FluentSlider", () => {
@@ -84,7 +81,7 @@ describe("FluentSlider", () => {
 
   describe("Value-Changed Event - CRITICAL FOR BUG FIX", () => {
     it("should dispatch CustomEvent with detail.value (not event.target.value)", async () => {
-      const eventSpy = jest.fn();
+      const eventSpy = vi.fn();
       slider.addEventListener("value-changed", eventSpy);
 
       const rangeInput = slider.shadowRoot?.querySelector(
@@ -107,7 +104,7 @@ describe("FluentSlider", () => {
     });
 
     it("should not dispatch event on input, only on change", async () => {
-      const eventSpy = jest.fn();
+      const eventSpy = vi.fn();
       slider.addEventListener("value-changed", eventSpy);
 
       const rangeInput = slider.shadowRoot?.querySelector(
@@ -128,7 +125,7 @@ describe("FluentSlider", () => {
 
     it("should work with the handler pattern used in HostLobbyModal", async () => {
       // This simulates the actual handler code in HostLobbyModal.ts:656-660
-      const mockHandler = jest.fn((e: Event) => {
+      const mockHandler = vi.fn((e: Event) => {
         const customEvent = e as CustomEvent<{ value: number }>;
         const value = customEvent.detail.value;
         if (isNaN(value) || value < 0 || value > 400) {
@@ -154,7 +151,7 @@ describe("FluentSlider", () => {
 
     it("should work with the handler pattern used in SinglePlayerModal", async () => {
       // This simulates the actual handler code in SinglePlayerModal.ts:444-451
-      const mockHandler = jest.fn((e: Event) => {
+      const mockHandler = vi.fn((e: Event) => {
         const customEvent = e as CustomEvent<{ value: number }>;
         const value = customEvent.detail.value;
         if (isNaN(value) || value < 0 || value > 400) {

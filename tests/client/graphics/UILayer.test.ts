@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import { UILayer } from "../../../src/client/graphics/layers/UILayer";
 import { UnitSelectionEvent } from "../../../src/client/InputHandler";
 import { UnitView } from "../../../src/core/game/GameView";
@@ -28,7 +25,7 @@ describe("UILayer", () => {
       ticks: () => 1,
       updatesSinceLastTick: () => undefined,
     };
-    eventBus = { on: jest.fn() };
+    eventBus = { on: vi.fn() };
     transformHandler = {};
   });
 
@@ -50,7 +47,7 @@ describe("UILayer", () => {
       owner: () => ({}),
     };
     const event = { isSelected: true, unit };
-    ui.drawSelectionBox = jest.fn();
+    ui.drawSelectionBox = vi.fn();
     ui["onUnitSelection"](event as UnitSelectionEvent);
     expect(ui.drawSelectionBox).toHaveBeenCalledWith(unit);
   });

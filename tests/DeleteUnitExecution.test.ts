@@ -112,7 +112,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     });
 
     it("should prevent deleting units during spawn phase", () => {
-      jest.spyOn(game, "inSpawnPhase").mockReturnValue(true);
+      vi.spyOn(game, "inSpawnPhase").mockReturnValue(true);
 
       const execution = new DeleteUnitExecution(player, unit.id());
       execution.init(game, 0);
@@ -122,7 +122,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     });
 
     it("should allow deleting units when all conditions are met", () => {
-      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
+      vi.spyOn(game, "inSpawnPhase").mockReturnValue(false);
 
       const execution = new DeleteUnitExecution(player, unit.id());
       execution.init(game, 0);
@@ -131,7 +131,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     });
 
     it("should delete after deletion delay", () => {
-      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
+      vi.spyOn(game, "inSpawnPhase").mockReturnValue(false);
 
       const execution = new DeleteUnitExecution(player, unit.id());
       game.addExecution(execution);
@@ -144,7 +144,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     });
 
     it("should reset deletion if captured", () => {
-      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
+      vi.spyOn(game, "inSpawnPhase").mockReturnValue(false);
 
       const execution = new DeleteUnitExecution(player, unit.id());
       game.addExecution(execution);

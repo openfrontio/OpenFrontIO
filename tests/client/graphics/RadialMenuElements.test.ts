@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+import { vi, type Mock } from "vitest";
 import {
   attackMenuElement,
   buildMenuElement,
@@ -13,13 +11,15 @@ import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
-jest.mock("../../../src/client/Utils", () => ({
-  translateText: jest.fn((key: string) => key),
-  renderNumber: jest.fn((num: number) => num.toString()),
+vi.mock("../../../src/client/Utils", () => ({
+  translateText: vi.fn((key: string) => key),
+  renderNumber: vi.fn((num: number) => num.toString()),
 }));
 
-jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
-  const { UnitType } = jest.requireActual("../../../src/core/game/Game");
+vi.mock("../../../src/client/graphics/layers/BuildMenu", async () => {
+  const { UnitType } = await vi.importActual<
+    typeof import("../../../src/core/game/Game")
+  >("../../../src/core/game/Game");
   return {
     flattenedBuildTable: [
       {
@@ -68,14 +68,14 @@ jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
   };
 });
 
-jest.mock("nanoid", () => ({
-  customAlphabet: jest.fn(() => jest.fn(() => "mock-id")),
+vi.mock("nanoid", () => ({
+  customAlphabet: vi.fn(() => vi.fn(() => "mock-id")),
 }));
 
-jest.mock("dompurify", () => ({
+vi.mock("dompurify", () => ({
   __esModule: true,
   default: {
-    sanitize: jest.fn((str: string) => str),
+    sanitize: vi.fn((str: string) => str),
   },
 }));
 
@@ -90,29 +90,29 @@ describe("RadialMenuElements", () => {
   beforeEach(() => {
     mockPlayer = {
       id: () => 1,
-      isAlliedWith: jest.fn(() => false),
-      isPlayer: jest.fn(() => true),
+      isAlliedWith: vi.fn(() => false),
+      isPlayer: vi.fn(() => true),
     } as unknown as PlayerView;
 
     mockGame = {
-      inSpawnPhase: jest.fn(() => false),
-      owner: jest.fn(() => mockPlayer),
-      isLand: jest.fn(() => true),
-      config: jest.fn(() => ({
+      inSpawnPhase: vi.fn(() => false),
+      owner: vi.fn(() => mockPlayer),
+      isLand: vi.fn(() => true),
+      config: vi.fn(() => ({
         theme: () => ({
           territoryColor: () => ({
             lighten: () => ({ alpha: () => ({ toRgbString: () => "#fff" }) }),
           }),
         }),
-        isUnitDisabled: jest.fn(() => false),
+        isUnitDisabled: vi.fn(() => false),
       })),
     } as unknown as GameView;
 
     mockBuildMenu = {
-      canBuildOrUpgrade: jest.fn(() => true),
-      cost: jest.fn(() => 100),
-      count: jest.fn(() => 5),
-      sendBuildOrUpgrade: jest.fn(),
+      canBuildOrUpgrade: vi.fn(() => true),
+      cost: vi.fn(() => 100),
+      count: vi.fn(() => 5),
+      sendBuildOrUpgrade: vi.fn(),
     };
 
     mockPlayerActions = {
@@ -148,7 +148,7 @@ describe("RadialMenuElements", () => {
       playerPanel: {} as any,
       chatIntegration: {} as any,
       eventBus: {} as any,
-      closeMenu: jest.fn(),
+      closeMenu: vi.fn(),
     };
   });
 
@@ -161,19 +161,19 @@ describe("RadialMenuElements", () => {
     });
 
     it("should be disabled during spawn phase", () => {
-      mockGame.inSpawnPhase = jest.fn(() => true);
+      mockGame.inSpawnPhase = vi.fn(() => true);
       expect(attackMenuElement.disabled(mockParams)).toBe(true);
     });
 
     it("should be enabled when not in spawn phase", () => {
-      mockGame.inSpawnPhase = jest.fn(() => false);
+      mockGame.inSpawnPhase = vi.fn(() => false);
       expect(attackMenuElement.disabled(mockParams)).toBe(false);
     });
 
     it("should return attack submenu with attack units only", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
@@ -203,7 +203,7 @@ describe("RadialMenuElements", () => {
     it("should not include construction units in attack menu", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
@@ -237,12 +237,12 @@ describe("RadialMenuElements", () => {
     });
 
     it("should be disabled during spawn phase", () => {
-      mockGame.inSpawnPhase = jest.fn(() => true);
+      mockGame.inSpawnPhase = vi.fn(() => true);
       expect(buildMenuElement.disabled(mockParams)).toBe(true);
     });
 
     it("should be enabled when not in spawn phase", () => {
-      mockGame.inSpawnPhase = jest.fn(() => false);
+      mockGame.inSpawnPhase = vi.fn(() => false);
       expect(buildMenuElement.disabled(mockParams)).toBe(false);
     });
 
@@ -313,9 +313,9 @@ describe("RadialMenuElements", () => {
     it("should show attack and boat menu on enemy territory", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
-      mockGame.owner = jest.fn(() => enemyPlayer);
+      mockGame.owner = vi.fn(() => enemyPlayer);
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
       const buildMenu = subMenu.find((item) => item.id === Slot.Build);
@@ -337,8 +337,8 @@ describe("RadialMenuElements", () => {
     it("should handle ally menu correctly", () => {
       const allyPlayer = {
         id: () => 2,
-        isAlliedWith: jest.fn(() => true),
-        isPlayer: jest.fn(() => true),
+        isAlliedWith: vi.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = allyPlayer;
 
@@ -367,7 +367,7 @@ describe("RadialMenuElements", () => {
     it("should execute attack action correctly", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
@@ -389,7 +389,7 @@ describe("RadialMenuElements", () => {
 
     it("should not execute action when buildable unit is not found", () => {
       mockPlayerActions.buildableUnits = [];
-      mockBuildMenu.canBuildOrUpgrade = jest.fn(() => false);
+      mockBuildMenu.canBuildOrUpgrade = vi.fn(() => false);
 
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");
@@ -420,7 +420,7 @@ describe("RadialMenuElements", () => {
     it("should generate correct tooltip items for attack elements", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
@@ -452,7 +452,7 @@ describe("RadialMenuElements", () => {
     it("should use correct colors for attack elements", () => {
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
@@ -465,7 +465,7 @@ describe("RadialMenuElements", () => {
     });
 
     it("should not set color when element is disabled", () => {
-      mockBuildMenu.canBuildOrUpgrade = jest.fn(() => false);
+      mockBuildMenu.canBuildOrUpgrade = vi.fn(() => false);
 
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");
@@ -475,10 +475,12 @@ describe("RadialMenuElements", () => {
   });
 
   describe("Translation integration", () => {
-    it("should use translateText for tooltip items in build menu", () => {
-      const { translateText } = jest.requireMock("../../../src/client/Utils");
+    it("should use translateText for tooltip items in build menu", async () => {
+      const { translateText } = await vi.importMock<
+        typeof import("../../../src/client/Utils")
+      >("../../../src/client/Utils");
 
-      (translateText as jest.Mock).mockClear();
+      (translateText as Mock).mockClear();
 
       buildMenuElement.subMenu!(mockParams);
 
@@ -488,14 +490,16 @@ describe("RadialMenuElements", () => {
       expect(translateText).toHaveBeenCalledWith("unit_type.factory_desc");
     });
 
-    it("should use translateText for tooltip items in attack menu", () => {
-      const { translateText } = jest.requireMock("../../../src/client/Utils");
+    it("should use translateText for tooltip items in attack menu", async () => {
+      const { translateText } = await vi.importMock<
+        typeof import("../../../src/client/Utils")
+      >("../../../src/client/Utils");
 
-      (translateText as jest.Mock).mockClear();
+      (translateText as Mock).mockClear();
 
       const enemyPlayer = {
         id: () => 2,
-        isPlayer: jest.fn(() => true),
+        isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 

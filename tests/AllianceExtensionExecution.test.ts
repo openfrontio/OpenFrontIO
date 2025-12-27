@@ -35,9 +35,9 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance between Humans", () => {
-    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
-    jest.spyOn(player2, "isAlive").mockReturnValue(true);
-    jest.spyOn(player1, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
@@ -53,7 +53,7 @@ describe("AllianceExtensionExecution", () => {
     expect(player2.allianceWith(player1)).toBeTruthy();
 
     const allianceBefore = player1.allianceWith(player2)!;
-    const allianceSpy = jest.spyOn(allianceBefore, "extend");
+    const allianceSpy = vi.spyOn(allianceBefore, "extend");
 
     const expirationBefore = allianceBefore.expiresAt();
 
@@ -82,9 +82,9 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance between Human and non-Human", () => {
-    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
-    jest.spyOn(player3, "isAlive").mockReturnValue(true);
-    jest.spyOn(player1, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player3, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     game.addExecution(new AllianceRequestExecution(player1, player3.id()));
     game.executeNextTick();
@@ -100,7 +100,7 @@ describe("AllianceExtensionExecution", () => {
     expect(player3.allianceWith(player1)).toBeTruthy();
 
     const allianceBefore = player1.allianceWith(player3)!;
-    const allianceSpy = jest.spyOn(allianceBefore, "extend");
+    const allianceSpy = vi.spyOn(allianceBefore, "extend");
     const expirationBefore = allianceBefore.expiresAt();
 
     game.addExecution(new AllianceExtensionExecution(player1, player3.id()));
@@ -120,9 +120,9 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Sends message to other player when one player requests renewal", () => {
-    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
-    jest.spyOn(player2, "isAlive").mockReturnValue(true);
-    jest.spyOn(player1, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     // Create alliance between player1 and player2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
@@ -139,7 +139,7 @@ describe("AllianceExtensionExecution", () => {
     expect(player2.allianceWith(player1)).toBeTruthy();
 
     // Spy on displayMessage to verify it's called
-    const displayMessageSpy = jest.spyOn(game, "displayMessage");
+    const displayMessageSpy = vi.spyOn(game, "displayMessage");
 
     // Player1 requests renewal
     game.addExecution(new AllianceExtensionExecution(player1, player2.id()));

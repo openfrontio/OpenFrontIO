@@ -23,7 +23,9 @@ export class WorkerClient {
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID,
   ) {
-    this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
+    this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
+      type: "module",
+    });
     this.messageHandlers = new Map();
 
     // Set up global message handler

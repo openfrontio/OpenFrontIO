@@ -26,7 +26,6 @@ export default [
           allowDefaultProject: [
             "__mocks__/fileMock.js",
             "eslint.config.js",
-            "jest.config.ts",
             "postcss.config.js",
             "tailwind.config.js",
             "webpack.config.js",

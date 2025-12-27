@@ -13,15 +13,15 @@ const createMockStation = (unitId: number): any => {
   return {
     unit: {
       id: unitId,
-      setTrainStation: jest.fn(),
+      setTrainStation: vi.fn(),
     },
-    tile: jest.fn(),
-    neighbors: jest.fn(() => []),
-    getCluster: jest.fn(() => cluster),
-    setCluster: jest.fn(),
-    addRailroad: jest.fn(),
-    getRailroads: jest.fn(() => railroads),
-    clearRailroads: jest.fn(),
+    tile: vi.fn(),
+    neighbors: vi.fn(() => []),
+    getCluster: vi.fn(() => cluster),
+    setCluster: vi.fn(),
+    addRailroad: vi.fn(),
+    getRailroads: vi.fn(() => railroads),
+    clearRailroads: vi.fn(),
   };
 };
 
@@ -54,18 +54,18 @@ describe("RailNetworkImpl", () => {
 
   beforeEach(() => {
     stationManager = {
-      addStation: jest.fn(),
-      removeStation: jest.fn(),
-      findStation: jest.fn(),
-      getAll: jest.fn(() => new Set()),
+      addStation: vi.fn(),
+      removeStation: vi.fn(),
+      findStation: vi.fn(),
+      getAll: vi.fn(() => new Set()),
     };
     pathService = {
-      findTilePath: jest.fn(() => [0]),
-      findStationsPath: jest.fn(() => [0]),
+      findTilePath: vi.fn(() => [0]),
+      findStationsPath: vi.fn(() => [0]),
     };
     game = {
-      nearbyUnits: jest.fn(() => []),
-      addExecution: jest.fn(),
+      nearbyUnits: vi.fn(() => []),
+      addExecution: vi.fn(),
       config: () => ({
         trainStationMaxRange: () => 80,
         trainStationMinRange: () => 10,
@@ -86,7 +86,7 @@ describe("RailNetworkImpl", () => {
     network.connectStation(stationA);
 
     const cluster = stationB.getCluster();
-    cluster.addStation = jest.fn();
+    cluster.addStation = vi.fn();
     expect(cluster.addStation).not.toHaveBeenCalled();
 
     pathService.findTilePath.mockReturnValue(new Array(200));
@@ -95,9 +95,9 @@ describe("RailNetworkImpl", () => {
   });
 
   test("removeStation removes all neighbor links", () => {
-    const neighbor = { removeNeighboringRails: jest.fn() };
+    const neighbor = { removeNeighboringRails: vi.fn() };
     const station = createMockStation(1);
-    station.neighbors = jest.fn(() => [neighbor]);
+    station.neighbors = vi.fn(() => [neighbor]);
     stationManager.findStation.mockReturnValue(station);
     network.removeStation(station);
     expect(station.clearRailroads).toHaveBeenCalled();
@@ -119,9 +119,9 @@ describe("RailNetworkImpl", () => {
     const cluster = new Cluster();
     const neighbor = createMockStation(1);
     const station = createMockStation(2);
-    station.getCluster = jest.fn(() => cluster);
-    station.neighbors = jest.fn(() => [neighbor]);
-    cluster.removeStation = jest.fn();
+    station.getCluster = vi.fn(() => cluster);
+    station.neighbors = vi.fn(() => [neighbor]);
+    cluster.removeStation = vi.fn();
 
     stationManager.findStation.mockReturnValue(station);
 
@@ -150,8 +150,8 @@ describe("RailNetworkImpl", () => {
     const neighborStation = createMockStation(2);
     const cluster = new Cluster();
     cluster.addStation(neighborStation);
-    neighborStation.getCluster = jest.fn(() => cluster);
-    cluster.has = jest.fn(() => false);
+    neighborStation.getCluster = vi.fn(() => cluster);
+    cluster.has = vi.fn(() => false);
 
     const neighborUnit = { unit: neighborStation.unit, distSquared: 20 };
 

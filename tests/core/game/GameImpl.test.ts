@@ -67,7 +67,7 @@ describe("GameImpl", () => {
   });
 
   test("Don't become traitor when betraying inactive player", async () => {
-    jest.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
     game.addExecution(new AllianceRequestExecution(attacker, defender.id()));
 
     game.executeNextTick();
@@ -106,7 +106,7 @@ describe("GameImpl", () => {
   });
 
   test("Do become traitor when betraying active player", async () => {
-    jest.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
     game.addExecution(new AllianceRequestExecution(attacker, defender.id()));
 
     game.executeNextTick();
