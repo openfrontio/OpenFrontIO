@@ -72,7 +72,6 @@ export class UserSettingModal extends LitElement {
   };
 
   private triggerEasterEgg() {
-    console.log("🪺 Setting~ unlocked by EVAN combo!");
     this.showEasterEggSettings = true;
     const popup = document.createElement("div");
     popup.className = "easter-egg-popup";
@@ -107,8 +106,6 @@ export class UserSettingModal extends LitElement {
         composed: true,
       }),
     );
-
-    console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
@@ -116,8 +113,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.emojis", enabled);
-
-    console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
   private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
@@ -125,8 +120,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.alertFrame", enabled);
-
-    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
   }
 
   private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
@@ -134,8 +127,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.specialEffects", enabled);
-
-    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
   }
 
   private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
@@ -143,8 +134,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.structureSprites", enabled);
-
-    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
   }
 
   private toggleCursorCostLabel(e: CustomEvent<{ checked: boolean }>) {
@@ -152,8 +141,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.cursorCostLabel", enabled);
-
-    console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
   }
 
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
@@ -161,8 +148,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.anonymousNames", enabled);
-
-    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
   }
 
   private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
@@ -170,7 +155,6 @@ export class UserSettingModal extends LitElement {
     if (typeof hideIds !== "boolean") return;
 
     this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
-    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
   }
 
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
@@ -178,8 +162,6 @@ export class UserSettingModal extends LitElement {
     if (typeof enabled !== "boolean") return;
 
     this.userSettings.set("settings.leftClickOpensMenu", enabled);
-    console.log("🖱️ Left Click Opens Menu:", enabled ? "ON" : "OFF");
-
     this.requestUpdate();
   }
 
@@ -208,7 +190,6 @@ export class UserSettingModal extends LitElement {
   private handleKeybindChange(
     e: CustomEvent<{ action: string; value: string; key: string }>,
   ) {
-    console.log("Keybind change event:", e);
     const { action, value, key } = e.detail;
     const prevValue = this.keybinds[action]?.value ?? "";
 

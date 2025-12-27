@@ -76,6 +76,18 @@ async function loadConfig(): Promise<DevFeatureConfig> {
     const response = await fetch("/config.json");
     if (response.ok) {
       const config = await response.json();
+
+      // Validate basic structure
+      if (
+        !config ||
+        typeof config !== "object" ||
+        (config.features && typeof config.features !== "object")
+      ) {
+        console.warn("Invalid config.json structure, using defaults");
+        cachedConfig = defaultConfig;
+        return defaultConfig;
+      }
+
       const mergedConfig: DevFeatureConfig = {
         features: { ...defaultConfig.features, ...config.features },
         settings: config.settings,
@@ -207,8 +219,3 @@ export function isDevFeatureEnabled(
 ): boolean {
   return getDevConfig().features[feature];
 }
-
-/**
- * @deprecated Use waitForDevConfig() instead
- */
-export const loadDevConfig = waitForDevConfig;

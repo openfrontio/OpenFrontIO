@@ -15,7 +15,7 @@ import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
-import { isDevFeatureEnabled, loadDevConfig } from "./DevConfig";
+import { isDevFeatureEnabled, waitForDevConfig } from "./DevConfig";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
@@ -121,7 +121,7 @@ class Client {
     crazyGamesSDK.maybeInit();
 
     // Load dev config first to set up feature flags
-    await loadDevConfig();
+    await waitForDevConfig();
 
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.

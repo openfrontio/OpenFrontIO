@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const clientPort = process.env.OPENFRONT_CLIENT_PORT ?? "9000";
+const clientPort = parseInt(process.env.OPENFRONT_CLIENT_PORT ?? "9000", 10);
 const serverPort = parseInt(process.env.OPENFRONT_SERVER_PORT ?? "3000", 10);
 
 const ports = [
@@ -39,24 +39,35 @@ function stopProcessesOnPorts(portList) {
           }
         }
 
+        let killedAny = false;
         for (const pid of pids) {
           try {
             execSync(`taskkill /PID ${pid} /F`, {
               stdio: "ignore",
               shell: true,
             });
-            stoppedPorts.push(portNum);
+            killedAny = true;
           } catch {
             // Process may have already exited
           }
         }
+        if (killedAny) {
+          stoppedPorts.push(portNum);
+        }
       } else {
-        // Unix: Use lsof to find and kill processes
-        execSync(`lsof -ti :${portNum} | xargs kill -9 2>/dev/null || true`, {
-          stdio: "ignore",
+        // Unix: Use lsof to find PIDs, then kill if any found
+        const pids = execSync(`lsof -ti :${portNum} 2>/dev/null || true`, {
+          encoding: "utf8",
           shell: true,
-        });
-        stoppedPorts.push(portNum);
+        }).trim();
+
+        if (pids) {
+          execSync(`echo "${pids}" | xargs kill -9 2>/dev/null || true`, {
+            stdio: "ignore",
+            shell: true,
+          });
+          stoppedPorts.push(portNum);
+        }
       }
     } catch {
       // No process on this port or command failed - ignore
@@ -69,7 +80,7 @@ function stopProcessesOnPorts(portList) {
 try {
   const stopped = stopProcessesOnPorts(ports);
   if (stopped.length > 0) {
-    console.log(`Stopped processes on ports: ${ports.join(", ")}`);
+    console.log(`Stopped processes on ports: ${stopped.join(", ")}`);
   } else {
     console.log(`No processes found on ports: ${ports.join(", ")}`);
   }
