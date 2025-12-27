@@ -188,7 +188,7 @@ export class InputHandler {
     const isMac = /Mac/.test(navigator.userAgent);
 
     this.keybinds = {
-      toggleView: "Space",
+      toggleView: "Backslash",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -552,7 +552,12 @@ export class InputHandler {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
 
-      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      // Shift+drag is reserved for bounding box selection (don't pan)
+      const isShiftHeld =
+        this.activeKeys.has("ShiftLeft") || this.activeKeys.has("ShiftRight");
+      if (!isShiftHeld) {
+        this.eventBus.emit(new DragEvent(deltaX, deltaY));
+      }
 
       this.lastPointerX = event.clientX;
       this.lastPointerY = event.clientY;

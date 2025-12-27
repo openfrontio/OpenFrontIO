@@ -25,7 +25,6 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -251,7 +250,7 @@ export class HostLobbyModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(`difficulty.${key.toLowerCase()}`)}
+                        ${translateText(`difficulty.${key}`)}
                       </p>
                     </div>
                   `,
@@ -334,17 +333,25 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-                <div class="option-card">
-                <fluent-slider
+                <label for="bots-count" class="option-card">
+                  <input
+                    type="range"
+                    id="bots-count"
                     min="0"
                     max="400"
                     step="1"
-                    .value=${this.bots}
-                  labelKey="host_modal.bots"
-                  disabledKey="host_modal.bots_disabled"
-                  @value-changed=${this.handleBotsChange}
-                ></fluent-slider>
-              </div>
+                    @input=${this.handleBotsChange}
+                    @change=${this.handleBotsChange}
+                    .value="${String(this.bots)}"
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.bots")}</span>${
+                      this.bots === 0
+                        ? translateText("host_modal.bots_disabled")
+                        : this.bots
+                    }
+                  </div>
+                </label>
 
                 ${
                   !(
@@ -661,8 +668,7 @@ export class HostLobbyModal extends LitElement {
 
   // Modified to include debouncing
   private handleBotsChange(e: Event) {
-    const customEvent = e as CustomEvent<{ value: number }>;
-    const value = customEvent.detail.value;
+    const value = parseInt((e.target as HTMLInputElement).value);
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }

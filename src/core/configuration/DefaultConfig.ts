@@ -211,6 +211,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   enableMatchmaking(): boolean {
     return false;
   }
+  enablePublicGames(): boolean {
+    return process.env.ENABLE_PUBLIC_GAMES !== "false";
+  }
 }
 
 export class DefaultConfig implements Config {
@@ -229,6 +232,14 @@ export class DefaultConfig implements Config {
 
   isReplay(): boolean {
     return this._isReplay;
+  }
+
+  samHittingChance(): number {
+    return 0.8;
+  }
+
+  samWarheadHittingChance(): number {
+    return 0.5;
   }
 
   traitorDefenseDebuff(): number {

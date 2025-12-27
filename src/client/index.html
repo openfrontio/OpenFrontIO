@@ -136,54 +136,77 @@
       async
     ></script>
 
-    <!-- Cloudflare Turnstile -->
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
-
-    <!-- Publift/Fuse ads -->
-    <script
-      async
-      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
-    ></script>
-
+    <!-- Dev config check - blocks external scripts in dev mode -->
     <script>
-      window.googletag = window.googletag || { cmd: [] };
-      googletag.cmd.push(function () {
-        googletag.pubads().set("page_url", "http://openfront.io ");
-      });
+      (function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/config.json", false); // Synchronous request
+        try {
+          xhr.send();
+          if (xhr.status === 200) {
+            window.__devConfig = JSON.parse(xhr.responseText);
+          }
+        } catch (e) {
+          // No config.json, use production defaults
+        }
+      })();
     </script>
 
-    <!-- Analytics -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=AW-16702609763"
-    ></script>
+    <!-- Cloudflare Turnstile (conditionally loaded) -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.cloudflare !== false
+      ) {
+        var s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
       }
-
-      gtag("js", new Date());
-      gtag("config", "AW-16702609763");
     </script>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
 
-      gtag("config", "G-WQGQQ8RDN4");
+    <!-- Publift/Fuse ads (conditionally loaded) -->
+    <script>
+      if (!window.__devConfig || window.__devConfig.features?.ads !== false) {
+        var s = document.createElement("script");
+        s.src = "https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js";
+        s.async = true;
+        document.head.appendChild(s);
+
+        window.googletag = window.googletag || { cmd: [] };
+        googletag.cmd.push(function () {
+          googletag.pubads().set("page_url", "http://openfront.io ");
+        });
+      }
+    </script>
+
+    <!-- Analytics (conditionally loaded) -->
+    <script>
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.analytics !== false
+      ) {
+        // Google Ads
+        var s1 = document.createElement("script");
+        s1.src = "https://www.googletagmanager.com/gtag/js?id=AW-16702609763";
+        s1.async = true;
+        document.head.appendChild(s1);
+
+        // Google Analytics
+        var s2 = document.createElement("script");
+        s2.src = "https://www.googletagmanager.com/gtag/js?id=G-WQGQQ8RDN4";
+        s2.async = true;
+        document.head.appendChild(s2);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+        gtag("config", "AW-16702609763");
+        gtag("config", "G-WQGQQ8RDN4");
+      }
     </script>
   </head>
 
@@ -505,11 +528,18 @@
       });
     </script>
 
-    <!-- Analytics -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
-    ></script>
+    <!-- Cloudflare Analytics (conditionally loaded) -->
+    <script>
+      if (
+        !window.__devConfig ||
+        window.__devConfig.features?.analytics !== false
+      ) {
+        var s = document.createElement("script");
+        s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        s.defer = true;
+        s.dataset.cfBeacon = '{"token": "03d93e6fefb349c28ee69b408fa25a13"}';
+        document.body.appendChild(s);
+      }
+    </script>
   </body>
 </html>

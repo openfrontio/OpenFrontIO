@@ -11,13 +11,8 @@ import (
 	"sync"
 )
 
-// mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
 
-// maps defines the registry of available maps to be processed.
-// Each entry contains the folder name and a flag indicating if it's a test map.
-//
-// New maps need to be added here in order to allow the map-generator to process them.
 var maps = []struct {
 	Name   string
 	IsTest bool
@@ -67,8 +62,6 @@ var maps = []struct {
 	{Name: "giantworldmap", IsTest: true},
 }
 
-// outputMapDir returns the absolute path to the directory where generated map files should be written.
-// It distinguishes between test and production output locations.
 func outputMapDir(isTest bool) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -80,8 +73,6 @@ func outputMapDir(isTest bool) (string, error) {
 	return filepath.Join(cwd, "..", "resources", "maps"), nil
 }
 
-// inputMapDir returns the absolute path to the directory containing source map assets.
-// It distinguishes between test and production asset locations.
 func inputMapDir(isTest bool) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -94,8 +85,6 @@ func inputMapDir(isTest bool) (string, error) {
 	}
 }
 
-// processMap handles the end-to-end generation for a single map.
-// It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
 func processMap(name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
@@ -181,8 +170,6 @@ func processMap(name string, isTest bool) error {
 	return nil
 }
 
-// parseMapsFlag validates and parses the --maps command-line argument.
-// It returns a set of selected map names or nil if no flag was provided (implying all maps).
 func parseMapsFlag() (map[string]bool, error) {
 	if mapsFlag == "" {
 		return nil, nil
@@ -203,8 +190,6 @@ func parseMapsFlag() (map[string]bool, error) {
 	return selected, nil
 }
 
-// loadTerrainMaps manages the concurrent generation of all selected maps.
-// It spins up goroutines for each map and aggregates any errors.
 func loadTerrainMaps() error {
 	selectedMaps, err := parseMapsFlag()
 	if err != nil {
@@ -242,8 +227,6 @@ func loadTerrainMaps() error {
 	return nil
 }
 
-// main is the entry point for the map generator tool.
-// It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
 	flag.Parse()

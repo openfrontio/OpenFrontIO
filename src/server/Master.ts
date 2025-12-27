@@ -99,21 +99,25 @@ export async function startMaster() {
       if (readyWorkers.size === config.numWorkers()) {
         log.info("All workers ready, starting game scheduling");
 
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
+        if (config.enablePublicGames()) {
+          const scheduleLobbies = () => {
+            schedulePublicGame(playlist).catch((error) => {
+              log.error("Error scheduling public game:", error);
+            });
+          };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+          setInterval(
+            () =>
+              fetchLobbies().then((lobbies) => {
+                if (lobbies === 0) {
+                  scheduleLobbies();
+                }
+              }),
+            100,
+          );
+        } else {
+          log.info("Public games disabled (ENABLE_PUBLIC_GAMES=false)");
+        }
       }
     }
   });
@@ -142,7 +146,14 @@ export async function startMaster() {
     );
   });
 
-  const PORT = 3000;
+  const portEnv = process.env.OPENFRONT_SERVER_PORT ?? "3000";
+  const PORT = parseInt(portEnv, 10);
+  if (isNaN(PORT) || PORT < 0 || PORT > 65535) {
+    log.error(
+      `Invalid OPENFRONT_SERVER_PORT: "${portEnv}". Must be a number between 0 and 65535.`,
+    );
+    process.exit(1);
+  }
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });

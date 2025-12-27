@@ -28,6 +28,7 @@ export default [
             "eslint.config.js",
             "jest.config.ts",
             "postcss.config.js",
+            "scripts/dev-stop.js",
             "tailwind.config.js",
             "webpack.config.js",
           ],

@@ -3,6 +3,8 @@ import { PlayerPattern } from "../Schemas";
 
 const PATTERN_KEY = "territoryPattern";
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export class UserSettings {
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
@@ -63,6 +65,49 @@ export class UserSettings {
 
   darkMode() {
     return this.get("settings.darkMode", false);
+  }
+
+  themeMode(): ThemeMode {
+    const value = localStorage.getItem("settings.themeMode");
+    if (value === "light" || value === "dark" || value === "system") {
+      return value;
+    }
+    // Migrate from legacy darkMode setting
+    if (this.darkMode()) {
+      return "dark";
+    }
+    return "system";
+  }
+
+  setThemeMode(mode: ThemeMode): void {
+    localStorage.setItem("settings.themeMode", mode);
+    this.applyTheme();
+  }
+
+  applyTheme(): void {
+    const mode = this.themeMode();
+    if (mode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (mode === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      // System mode - check prefers-color-scheme
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }
+
+  isDarkModeActive(): boolean {
+    const mode = this.themeMode();
+    if (mode === "dark") return true;
+    if (mode === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
   leftClickOpensMenu() {
@@ -129,12 +174,17 @@ export class UserSettings {
   }
 
   toggleDarkMode() {
-    this.set("settings.darkMode", !this.darkMode());
-    if (this.darkMode()) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Toggle between light and dark modes (skipping system for button toggle)
+    const currentlyDark = this.isDarkModeActive();
+    const newMode = currentlyDark ? "light" : "dark";
+    this.setThemeMode(newMode);
+
+    // Dispatch event for other components to sync
+    window.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: !currentlyDark },
+      }),
+    );
   }
 
   // For development only. Used for testing patterns, set in the console manually.

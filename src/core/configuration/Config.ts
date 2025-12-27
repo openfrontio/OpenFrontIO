@@ -57,6 +57,7 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
+  enablePublicGames(): boolean;
 }
 
 export interface NukeMagnitude {
@@ -65,6 +66,8 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
+  samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;

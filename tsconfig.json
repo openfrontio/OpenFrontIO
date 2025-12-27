@@ -21,7 +21,9 @@
     "resolveJsonModule": true,
     "strictNullChecks": true,
     "useDefineForClassFields": false,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "types": ["jest"]
   },
   "include": [
     "src/**/*",
@@ -29,7 +31,7 @@
     "proprietary/**/*",
     "generated/**/*",
     "tests/**/*",
-    "src/scripts"
+    "scripts/**/*"
   ],
   "exclude": ["node_modules"]
 }

@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
+import { ref } from "lit/directives/ref.js";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";

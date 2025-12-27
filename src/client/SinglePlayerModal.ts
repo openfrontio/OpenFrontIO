@@ -21,7 +21,6 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import "./components/FluentSlider";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
@@ -154,7 +153,7 @@ export class SinglePlayerModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(`difficulty.${key.toLowerCase()}`)}
+                        ${translateText(`difficulty.${key}`)}
                       </p>
                     </div>
                   `,
@@ -237,17 +236,24 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              <div class="option-card">
-                <fluent-slider
+              <label for="bots-count" class="option-card">
+                <input
+                  type="range"
+                  id="bots-count"
                   min="0"
                   max="400"
                   step="1"
-                  .value=${this.bots}
-                  labelKey="single_modal.bots"
-                  disabledKey="single_modal.bots_disabled"
-                  @value-changed=${this.handleBotsChange}
-                ></fluent-slider>
-              </div>
+                  @input=${this.handleBotsChange}
+                  @change=${this.handleBotsChange}
+                  .value="${String(this.bots)}"
+                />
+                <div class="option-card-title">
+                  <span>${translateText("single_modal.bots")}</span>${this
+                    .bots === 0
+                    ? translateText("single_modal.bots_disabled")
+                    : this.bots}
+                </div>
+              </label>
 
               ${!(
                 this.gameMode === GameMode.Team &&
@@ -442,8 +448,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleBotsChange(e: Event) {
-    const customEvent = e as CustomEvent<{ value: number }>;
-    const value = customEvent.detail.value;
+    const value = parseInt((e.target as HTMLInputElement).value);
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }

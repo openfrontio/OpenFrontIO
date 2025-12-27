@@ -1,16 +1,22 @@
 import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
+import dotenv from "dotenv";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
 import webpack from "webpack";
 
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const gitCommit =
   process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
+
+const clientPort = parseInt(process.env.OPENFRONT_CLIENT_PORT ?? "9000", 10);
+const serverPort = parseInt(process.env.OPENFRONT_SERVER_PORT ?? "3000", 10);
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
@@ -179,12 +185,12 @@ export default async (env, argv) => {
           },
           historyApiFallback: true,
           compress: true,
-          port: 9000,
+          port: clientPort,
           proxy: [
             // WebSocket proxies
             {
               context: ["/socket"],
-              target: "ws://localhost:3000",
+              target: `ws://localhost:${serverPort}`,
               ws: true,
               changeOrigin: true,
               logLevel: "debug",
@@ -192,7 +198,7 @@ export default async (env, argv) => {
             // Worker WebSocket proxies - using direct paths without /socket suffix
             {
               context: ["/w0"],
-              target: "ws://localhost:3001",
+              target: `ws://localhost:${serverPort + 1}`,
               ws: true,
               secure: false,
               changeOrigin: true,
@@ -200,7 +206,7 @@ export default async (env, argv) => {
             },
             {
               context: ["/w1"],
-              target: "ws://localhost:3002",
+              target: `ws://localhost:${serverPort + 2}`,
               ws: true,
               secure: false,
               changeOrigin: true,
@@ -208,7 +214,7 @@ export default async (env, argv) => {
             },
             {
               context: ["/w2"],
-              target: "ws://localhost:3003",
+              target: `ws://localhost:${serverPort + 3}`,
               ws: true,
               secure: false,
               changeOrigin: true,
@@ -217,7 +223,7 @@ export default async (env, argv) => {
             // Worker proxies for HTTP requests
             {
               context: ["/w0"],
-              target: "http://localhost:3001",
+              target: `http://localhost:${serverPort + 1}`,
               pathRewrite: { "^/w0": "" },
               secure: false,
               changeOrigin: true,
@@ -225,7 +231,7 @@ export default async (env, argv) => {
             },
             {
               context: ["/w1"],
-              target: "http://localhost:3002",
+              target: `http://localhost:${serverPort + 2}`,
               pathRewrite: { "^/w1": "" },
               secure: false,
               changeOrigin: true,
@@ -233,7 +239,7 @@ export default async (env, argv) => {
             },
             {
               context: ["/w2"],
-              target: "http://localhost:3003",
+              target: `http://localhost:${serverPort + 3}`,
               pathRewrite: { "^/w2": "" },
               secure: false,
               changeOrigin: true,
@@ -253,7 +259,7 @@ export default async (env, argv) => {
                 "/api/auth/discord",
                 "/api/kick_player",
               ],
-              target: "http://localhost:3000",
+              target: `http://localhost:${serverPort}`,
               secure: false,
               changeOrigin: true,
             },

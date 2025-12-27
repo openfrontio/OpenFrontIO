@@ -1,105 +1,45 @@
 import {
   AllPlayers,
-  Difficulty,
   Game,
   Gold,
   Player,
   PlayerType,
+  Tick,
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
-import { assertNever } from "../../Util";
 import { MirvExecution } from "../MIRVExecution";
 import { calculateTerritoryCenter } from "../Util";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 
 export class NationMIRVBehavior {
+  private readonly lastMIRVSent: [Tick, TileRef][] = [];
+
+  /** Ticks until MIRV can be attempted again */
+  private static readonly MIRV_COOLDOWN_TICKS = 20;
+
+  /** Odds of aborting a MIRV attempt */
+  private static readonly MIRV_HESITATION_ODDS = 7;
+
+  /** Threshold for team victory denial */
+  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8;
+
+  /** Threshold for individual victory denial */
+  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.65;
+
+  /** Multiplier for steamroll city gap threshold */
+  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.3;
+
+  /** Minimum city count for leader to trigger steam roll detection */
+  private static readonly STEAMROLL_MIN_LEADER_CITIES = 10;
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
-
-  private get hesitationOdds(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 2; // More likely to hesitate
-      case Difficulty.Medium:
-        return 4;
-      case Difficulty.Hard:
-        return 8;
-      case Difficulty.Impossible:
-        return 16; // Rarely hesitates
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get victoryDenialTeamThreshold(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 0.9; // Only react right before the game ends (95%)
-      case Difficulty.Medium:
-        return 0.8;
-      case Difficulty.Hard:
-        return 0.7;
-      case Difficulty.Impossible:
-        return 0.6; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get victoryDenialIndividualThreshold(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 0.75; // Only react right before the game ends (80%)
-      case Difficulty.Medium:
-        return 0.65;
-      case Difficulty.Hard:
-        return 0.55;
-      case Difficulty.Impossible:
-        return 0.4; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get steamrollCityGapMultiplier(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1.5; // Needs larger gap to trigger
-      case Difficulty.Medium:
-        return 1.3;
-      case Difficulty.Hard:
-        return 1.2;
-      case Difficulty.Impossible:
-        return 1.15; // Reacts to smaller gaps
-      default:
-        assertNever(difficulty);
-    }
-  }
-
-  private get steamrollMinLeaderCities(): number {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 15; // Needs more cities to trigger
-      case Difficulty.Medium:
-      case Difficulty.Hard:
-        return 10;
-      case Difficulty.Impossible:
-        return 8; // Reacts early
-      default:
-        assertNever(difficulty);
-    }
-  }
 
   considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
@@ -110,7 +50,13 @@ export class NationMIRVBehavior {
       return false;
     }
 
-    if (this.random.chance(this.hesitationOdds)) {
+    this.removeOldMIRVEvents();
+    if (this.lastMIRVSent.length > 0) {
+      return false;
+    }
+
+    if (this.random.chance(NationMIRVBehavior.MIRV_HESITATION_ODDS)) {
+      this.triggerMIRVCooldown();
       return false;
     }
 
@@ -162,7 +108,7 @@ export class NationMIRVBehavior {
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
         const teamShare = teamTerritory / totalLand;
-        if (teamShare >= this.victoryDenialTeamThreshold) {
+        if (teamShare >= NationMIRVBehavior.VICTORY_DENIAL_TEAM_THRESHOLD) {
           // Only consider the largest team member as the target when team exceeds threshold
           let largestMember: Player | null = null;
           let largestTiles = -1;
@@ -181,7 +127,8 @@ export class NationMIRVBehavior {
         }
       } else {
         const share = p.numTilesOwned() / totalLand;
-        if (share >= this.victoryDenialIndividualThreshold) severity = share;
+        if (share >= NationMIRVBehavior.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+          severity = share;
       }
       if (severity > 0) {
         if (best === null || severity > best.severity) best = { p, severity };
@@ -206,11 +153,13 @@ export class NationMIRVBehavior {
 
     const topPlayer = allPlayers[0];
 
-    if (topPlayer.cityCount <= this.steamrollMinLeaderCities) return null;
+    if (topPlayer.cityCount <= NationMIRVBehavior.STEAMROLL_MIN_LEADER_CITIES)
+      return null;
 
     const secondHighest = allPlayers[1].cityCount;
 
-    const threshold = secondHighest * this.steamrollCityGapMultiplier;
+    const threshold =
+      secondHighest * NationMIRVBehavior.STEAMROLL_CITY_GAP_MULTIPLIER;
 
     if (topPlayer.cityCount >= threshold) {
       return validTargets.some((p) => p === topPlayer.p) ? topPlayer.p : null;
@@ -220,10 +169,23 @@ export class NationMIRVBehavior {
   }
 
   // MIRV Helper Methods
+  private mirvTargetsCache: {
+    tick: number;
+    players: Player[];
+  } | null = null;
+
   private getValidMirvTargetPlayers(): Player[] {
+    const MIRV_TARGETS_CACHE_TICKS = 2 * 10; // 2 seconds
     if (this.player === null) throw new Error("not initialized");
 
-    return this.game.players().filter((p) => {
+    if (
+      this.mirvTargetsCache &&
+      this.game.ticks() - this.mirvTargetsCache.tick < MIRV_TARGETS_CACHE_TICKS
+    ) {
+      return this.mirvTargetsCache.players;
+    }
+
+    const players = this.game.players().filter((p) => {
       return (
         p !== this.player &&
         p.isPlayer() &&
@@ -231,6 +193,9 @@ export class NationMIRVBehavior {
         !this.player!.isOnSameTeam(p)
       );
     });
+
+    this.mirvTargetsCache = { tick: this.game.ticks(), players };
+    return players;
   }
 
   private isInboundMIRVFrom(attacker: Player): boolean {
@@ -256,8 +221,36 @@ export class NationMIRVBehavior {
 
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
-      this.game.addExecution(new MirvExecution(this.player, centerTile));
+      this.sendMIRV(centerTile);
       this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
+      return;
+    }
+  }
+
+  private sendMIRV(tile: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    this.triggerMIRVCooldown(tile);
+    this.game.addExecution(new MirvExecution(this.player, tile));
+  }
+
+  private triggerMIRVCooldown(tile?: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    this.removeOldMIRVEvents();
+    const tick = this.game.ticks();
+    // Use provided tile or any tile from player's territory for cooldown tracking
+    const cooldownTile =
+      tile ?? Array.from(this.player.tiles())[0] ?? this.game.ref(0, 0);
+    this.lastMIRVSent.push([tick, cooldownTile]);
+  }
+
+  private removeOldMIRVEvents() {
+    const maxAge = NationMIRVBehavior.MIRV_COOLDOWN_TICKS;
+    const tick = this.game.ticks();
+    while (
+      this.lastMIRVSent.length > 0 &&
+      this.lastMIRVSent[0][0] + maxAge <= tick
+    ) {
+      this.lastMIRVSent.shift();
     }
   }
 

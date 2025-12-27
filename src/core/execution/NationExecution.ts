@@ -9,21 +9,14 @@ import {
   PlayerID,
   PlayerType,
   Relation,
-  TerrainType,
   Tick,
   Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef, euclDistFN } from "../game/GameMap";
-import { canBuildTransportShip } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import {
-  assertNever,
-  boundingBoxTiles,
-  calculateBoundingBox,
-  simpleHash,
-} from "../Util";
+import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./nation/NationEmojiBehavior";
@@ -63,6 +56,8 @@ export class NationExecution implements Execution {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
     );
+    this.attackRate = this.random.nextInt(40, 80);
+    this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
@@ -70,29 +65,14 @@ export class NationExecution implements Execution {
 
   init(mg: Game) {
     this.mg = mg;
-    this.attackRate = this.getAttackRate();
-    this.attackTick = this.random.nextInt(0, this.attackRate);
+    if (this.random.chance(10)) {
+      // this.isTraitor = true
+    }
 
     if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
       this.player = this.mg.addPlayer(this.nation.playerInfo);
     } else {
       this.player = this.mg.player(this.nation.playerInfo.id);
-    }
-  }
-
-  private getAttackRate(): number {
-    const { difficulty } = this.mg.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return this.random.nextInt(65, 80); // Slower reactions
-      case Difficulty.Medium:
-        return this.random.nextInt(55, 70);
-      case Difficulty.Hard:
-        return this.random.nextInt(45, 60);
-      case Difficulty.Impossible:
-        return this.random.nextInt(30, 50); // Faster reactions
-      default:
-        assertNever(difficulty);
     }
   }
 
@@ -116,16 +96,8 @@ export class NationExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
-      // select a tile near the position defined in the map manifest for the current nation
-      const rl = this.randomSpawnLand();
-
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-        return;
-      }
-
       this.mg.addExecution(
-        new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
       );
       return;
     }
@@ -191,31 +163,6 @@ export class NationExecution implements Execution {
     this.mirvBehavior.considerMIRV();
     this.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
-  }
-
-  private randomSpawnLand(): TileRef | null {
-    const delta = 25;
-    let tries = 0;
-    while (tries < 50) {
-      tries++;
-      const cell = this.nation.spawnCell;
-      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
-      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
-      if (!this.mg.isValidCoord(x, y)) {
-        continue;
-      }
-      const tile = this.mg.ref(x, y);
-      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
-        if (
-          this.mg.terrainType(tile) === TerrainType.Mountain &&
-          this.random.chance(2)
-        ) {
-          continue;
-        }
-        return tile;
-      }
-    }
-    return null;
   }
 
   private updateRelationsFromEmbargos() {
@@ -455,7 +402,7 @@ export class NationExecution implements Execution {
     );
   }
 
-  private sendBoatRandomly(borderingEnemies: Player[] = []) {
+  sendBoatRandomly(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),
@@ -496,7 +443,6 @@ export class NationExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
-    const unreachablePlayers = new Set<PlayerID>();
     for (let i = 0; i < 500; i++) {
       const randX = this.random.nextInt(x - 150, x + 150);
       const randY = this.random.nextInt(y - 150, y + 150);
@@ -511,10 +457,6 @@ export class NationExecution implements Execution {
       if (owner === this.player) {
         continue;
       }
-      // Skip players we already know are unreachable (Performance optimization)
-      if (owner.isPlayer() && unreachablePlayers.has(owner.id())) {
-        continue;
-      }
       // Don't send boats to players with which we share a border, that usually looks stupid
       if (owner.isPlayer() && borderingEnemies.includes(owner)) {
         continue;
@@ -523,43 +465,30 @@ export class NationExecution implements Execution {
       if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
         continue;
       }
-
-      let matchesCriteria = false;
+      // High-interest targeting: prioritize unowned tiles or tiles owned by bots
       if (highInterestOnly) {
-        // High-interest targeting: prioritize unowned tiles or tiles owned by bots
-        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
+        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
+          return randTile;
+        }
       } else {
         // Normal targeting: return unowned tiles or tiles owned by non-friendly players
-        matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
-      }
-      if (!matchesCriteria) {
-        continue;
-      }
-
-      // Validate that we can actually build a transport ship to this target
-      if (canBuildTransportShip(this.mg, this.player, randTile) === false) {
-        if (owner.isPlayer()) {
-          unreachablePlayers.add(owner.id());
+        if (!owner.isPlayer() || !owner.isFriendly(this.player)) {
+          return randTile;
         }
-        continue;
       }
-
-      return randTile;
     }
     return null;
   }
 
   private maybeSendNuke(other: Player | null) {
-    if (this.player === null || this.attackBehavior === null)
-      throw new Error("not initialized");
+    if (this.player === null) throw new Error("not initialized");
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
       other === null ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
-      this.player.isOnSameTeam(other) ||
-      this.attackBehavior.shouldAttack(other) === false
+      this.player.isOnSameTeam(other)
     ) {
       return;
     }

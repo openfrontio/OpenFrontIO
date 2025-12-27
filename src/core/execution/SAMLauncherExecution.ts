@@ -186,6 +186,18 @@ export class SAMLauncherExecution implements Execution {
     this.mg = mg;
   }
 
+  private isHit(type: UnitType, random: number): boolean {
+    if (type === UnitType.AtomBomb) {
+      return true;
+    }
+
+    if (type === UnitType.MIRVWarhead) {
+      return random < this.mg.config().samWarheadHittingChance();
+    }
+
+    return random < this.mg.config().samHittingChance();
+  }
+
   tick(ticks: number): void {
     if (this.mg === null || this.player === null) {
       throw new Error("Not initialized");
@@ -267,7 +279,15 @@ export class SAMLauncherExecution implements Execution {
           ? UnitType.MIRVWarhead
           : target?.unit.type();
       if (type === undefined) throw new Error("Unknown unit type");
-      if (mirvWarheadTargets.length > 0) {
+      const random = this.pseudoRandom.next();
+      const hit = this.isHit(type, random);
+      if (!hit) {
+        this.mg.displayMessage(
+          `Missile failed to intercept ${type}`,
+          MessageType.SAM_MISS,
+          this.sam.owner().id(),
+        );
+      } else if (mirvWarheadTargets.length > 0) {
         const samOwner = this.sam.owner();
 
         // Message
