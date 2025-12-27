@@ -113,11 +113,15 @@ Using the `name` from your json:
 
 ## Notes
 
-- Maps with over 3 million land tiles are not recommended for performance reasons.
-- Average land tile count is around 1 - 2 million.
 - Islands smaller than 30 tiles (pixels) are automatically removed by the script.
 - Bodies of water smaller than 200 tiles (pixels) are also removed.
 - The map generator normalizes dimensions to multiples of 4. Any pixels beyond `Width - (Width % 4)` or `Height - (Height % 4)` are cropped.
+
+For Performance Reasons:
+
+- Maps should be between 2 - 3 million pixels square (area).
+- Maps with over 3 million land tiles are not recommended.
+- Average land tile count is around 1 - 2 million.
 
 ## 🛠️ Development Tools
 
