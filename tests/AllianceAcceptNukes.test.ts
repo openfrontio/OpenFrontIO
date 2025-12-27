@@ -136,6 +136,9 @@ describe("Alliance acceptance destroys nukes", () => {
   });
 
   test("queued nukes never spawn after alliance acceptance (race condition)", () => {
+    // Ensure the target tile is owned by player2
+    player2.conquer(game.ref(20, 20));
+
     const exec = new NukeExecution(
       UnitType.AtomBomb,
       player1,
