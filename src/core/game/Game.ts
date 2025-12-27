@@ -673,6 +673,7 @@ export interface Game extends GameMap {
   height(): number;
   map(): GameMap;
   miniMap(): GameMap;
+  microMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only) to avoid creating arrays
   forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void;

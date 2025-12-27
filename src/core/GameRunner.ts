@@ -70,6 +70,7 @@ export async function createGameRunner(
     nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
+    gameMap.microGameMap,
     config,
   );
 

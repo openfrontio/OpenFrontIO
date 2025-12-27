@@ -49,14 +49,24 @@ export function createGame(
   nations: Nation[],
   gameMap: GameMap,
   miniGameMap: GameMap,
+  microGameMap: GameMap,
   config: Config,
 ): Game {
   // Precompute and cache water-component IDs once per map instance.
   getWaterComponentIds(gameMap);
   getWaterComponentIds(miniGameMap);
+  getWaterComponentIds(microGameMap);
 
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    microGameMap,
+    config,
+    stats,
+  );
 }
 
 export type CellString = string;
@@ -95,6 +105,7 @@ export class GameImpl implements Game {
     private _nations: Nation[],
     private _map: GameMap,
     private miniGameMap: GameMap,
+    private microGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
   ) {
@@ -204,6 +215,9 @@ export class GameImpl implements Game {
   }
   miniMap(): GameMap {
     return this.miniGameMap;
+  }
+  microMap(): GameMap {
+    return this.microGameMap;
   }
 
   addUpdate(update: GameUpdate) {

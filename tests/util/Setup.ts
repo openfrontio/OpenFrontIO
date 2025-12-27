@@ -39,6 +39,10 @@ export async function setup(
     currentDir,
     `../testdata/maps/${mapName}/map4x.bin`,
   );
+  const microMapBinPath = path.join(
+    currentDir,
+    `../testdata/maps/${mapName}/map16x.bin`,
+  );
   const manifestPath = path.join(
     currentDir,
     `../testdata/maps/${mapName}/manifest.json`,
@@ -46,12 +50,17 @@ export async function setup(
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
+  const microMapBinBuffer = fs.readFileSync(microMapBinPath);
   const manifest = JSON.parse(
     fs.readFileSync(manifestPath, "utf8"),
   ) satisfies MapManifest;
 
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
+  const microGameMap = await genTerrainFromBin(
+    manifest.map16x,
+    microMapBinBuffer,
+  );
 
   // Configure the game
   const serverConfig = new TestServerConfig();
@@ -78,7 +87,7 @@ export async function setup(
     false,
   );
 
-  return createGame(humans, [], gameMap, miniGameMap, config);
+  return createGame(humans, [], gameMap, miniGameMap, microGameMap, config);
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {

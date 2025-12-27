@@ -6,6 +6,7 @@ export type TerrainMapData = {
   nations: Nation[];
   gameMap: GameMap;
   miniGameMap: GameMap;
+  microGameMap: GameMap;
 };
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
@@ -53,6 +54,13 @@ export async function loadTerrainMap(
         )
       : await genTerrainFromBin(manifest.map16x, await mapFiles.map16xBin());
 
+  // Always expose the 16x map (micro map) for coarse heuristics/corridors.
+  // In compact games, miniMap already is 16x, so we can reuse it.
+  const microMap =
+    mapSize === GameMapSize.Normal
+      ? await genTerrainFromBin(manifest.map16x, await mapFiles.map16xBin())
+      : miniMap;
+
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
       nation.coordinates = [
@@ -66,6 +74,7 @@ export async function loadTerrainMap(
     nations: manifest.nations,
     gameMap: gameMap,
     miniGameMap: miniMap,
+    microGameMap: microMap,
   };
   loadedMaps.set(map, result);
   return result;

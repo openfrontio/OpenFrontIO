@@ -13,10 +13,11 @@ Yes. The terrain loader already ships multiple resolutions per map:
 - `manifest.map4x` + `map4x.bin` (coarser)
 - `manifest.map16x` + `map16x.bin` (even coarser)
 
-At runtime we already load both:
+At runtime we load:
 
 - `gameMap`: full res for normal games (or `map4x` for compact games)
 - `miniGameMap`: lower res (`map4x` for normal games, or `map16x` for compact games)
+- `microGameMap`: always `map16x` (in compact games this is the same instance as `miniGameMap`)
 
 So we can prototype coarse-to-fine without extending mapgen first.
 
