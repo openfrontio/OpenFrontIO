@@ -113,7 +113,6 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   const selectedPlayer = params.selected;
   return (
     selectedPlayer !== null &&
-    selectedPlayer.id() !== params.myPlayer.id() &&
     selectedPlayer.isFriendly(params.myPlayer)
   );
 }
