@@ -91,6 +91,16 @@ function getStampSet(gm: GameMap): StampSet {
   stampSetCache.set(gm, set);
   return set;
 }
+
+// Separate stamp array for "visited coarse regions" marking to avoid clobbering the allowed corridor stamp.
+const visitedStampSetCache = new WeakMap<GameMap, StampSet>();
+function getVisitedStampSet(gm: GameMap): StampSet {
+  const cached = visitedStampSetCache.get(gm);
+  if (cached) return cached;
+  const set: StampSet = { stamp: 1, data: new Uint32Array(gm.width() * gm.height()) };
+  visitedStampSetCache.set(gm, set);
+  return set;
+}
 function nextStamp(set: StampSet): number {
   const next = (set.stamp + 1) >>> 0;
   set.stamp = next === 0 ? 1 : next;
@@ -135,6 +145,38 @@ function markCoarseCorridor(
       }
     }
   }
+}
+
+function widenAllowedByVisitedRing(
+  coarseWidth: number,
+  coarseHeight: number,
+  allowedStamp: Uint32Array,
+  allowed: number,
+  visitedStamp: Uint32Array,
+  visited: number,
+): boolean {
+  let widened = false;
+  for (let y = 0; y < coarseHeight; y++) {
+    const row = y * coarseWidth;
+    for (let x = 0; x < coarseWidth; x++) {
+      const idx = row + x;
+      if (visitedStamp[idx] !== visited) continue;
+      const y0 = Math.max(0, y - 1);
+      const y1 = Math.min(coarseHeight - 1, y + 1);
+      const x0 = Math.max(0, x - 1);
+      const x1 = Math.min(coarseWidth - 1, x + 1);
+      for (let yy = y0; yy <= y1; yy++) {
+        const nRow = yy * coarseWidth;
+        for (let xx = x0; xx <= x1; xx++) {
+          const n = nRow + xx;
+          if (allowedStamp[n] === allowed) continue;
+          allowedStamp[n] = allowed;
+          widened = true;
+        }
+      }
+    }
+  }
+  return widened;
 }
 
 export function findWaterPathFromSeedsCoarseToFine(
@@ -228,20 +270,23 @@ export function findWaterPathFromSeedsCoarseToFine(
   }
 
   const corridorRadius0 = Math.max(0, coarseToFine.corridorRadius ?? 2);
-  const maxAttempts = Math.max(1, coarseToFine.maxAttempts ?? 2);
-  const radiusMultiplier = Math.max(1, coarseToFine.radiusMultiplier ?? 2);
+  const maxAttempts = Math.max(1, coarseToFine.maxAttempts ?? 3);
 
-  const corridorSet = getStampSet(coarseMap);
-  for (let attempt = 0, radius = corridorRadius0; attempt < maxAttempts; attempt++) {
-    const corridorStamp = nextStamp(corridorSet);
-    markCoarseCorridor(
-      coarseWidth,
-      coarseHeight,
-      corridorSet.data,
-      corridorStamp,
-      coarseResult.path,
-      radius,
-    );
+  // Allowed corridor stamp is stable across attempts (widening is cumulative).
+  const allowedSet = getStampSet(coarseMap);
+  const allowed = nextStamp(allowedSet);
+  markCoarseCorridor(
+    coarseWidth,
+    coarseHeight,
+    allowedSet.data,
+    allowed,
+    coarseResult.path,
+    corridorRadius0,
+  );
+
+  const visitedSet = getVisitedStampSet(coarseMap);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const visited = nextStamp(visitedSet);
 
     const refined = fineBfs.findWaterPathFromSeeds(
       fineMap,
@@ -252,14 +297,31 @@ export function findWaterPathFromSeedsCoarseToFine(
         ...bfsOpts,
         allowedMask: {
           tileToRegion: mapping.fineToCoarse,
-          regionStamp: corridorSet.data,
-          stamp: corridorStamp,
+          regionStamp: allowedSet.data,
+          stamp: allowed,
+        },
+        visitedMaskOut: {
+          tileToRegion: mapping.fineToCoarse,
+          regionStamp: visitedSet.data,
+          stamp: visited,
         },
       },
     );
     if (refined !== null) return refined;
 
-    radius *= radiusMultiplier;
+    if (attempt === maxAttempts - 1) break;
+
+    // Local corridor widening: expand by 1 ring around the coarse regions actually visited
+    // in this failed attempt. Widening is cumulative (newly allowed regions stay allowed).
+    const widened = widenAllowedByVisitedRing(
+      coarseWidth,
+      coarseHeight,
+      allowedSet.data,
+      allowed,
+      visitedSet.data,
+      visited,
+    );
+    if (!widened) break;
   }
 
   // Final fallback: unrestricted fine BFS.

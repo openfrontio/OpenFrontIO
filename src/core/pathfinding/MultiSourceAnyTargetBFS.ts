@@ -20,6 +20,17 @@ export type MultiSourceAnyTargetBFSOptions = {
     regionStamp: Uint32Array;
     stamp: number;
   };
+  /**
+   * Optional region marking output.
+   *
+   * Intended for local corridor widening: during BFS, mark which coarse regions were
+   * actually visited (cheap stamp write, allocation-free).
+   */
+  visitedMaskOut?: {
+    tileToRegion: Uint32Array;
+    regionStamp: Uint32Array;
+    stamp: number;
+  };
 };
 
 /**
@@ -79,6 +90,7 @@ export class MultiSourceAnyTargetBFS {
     let tail = 0;
 
     const allowed = opts.allowedMask;
+    const visitedOut = opts.visitedMaskOut;
 
     const count = Math.min(seedNodes.length, seedOrigins.length);
     for (let i = 0; i < count; i++) {
@@ -96,6 +108,9 @@ export class MultiSourceAnyTargetBFS {
       this.visitedStamp[node] = stamp;
       this.prev[node] = -1;
       this.startOf[node] = origin;
+      if (visitedOut) {
+        visitedOut.regionStamp[visitedOut.tileToRegion[node]!] = visitedOut.stamp;
+      }
       this.queue[tail++] = node;
     }
 
@@ -127,8 +142,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(n, node, stamp);
-          this.queue[tail++] = n;
+            this.visit(n, node, stamp, visitedOut);
+            this.queue[tail++] = n;
           }
         }
       }
@@ -141,8 +156,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(s, node, stamp);
-          this.queue[tail++] = s;
+            this.visit(s, node, stamp, visitedOut);
+            this.queue[tail++] = s;
           }
         }
       }
@@ -155,8 +170,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(wv, node, stamp);
-          this.queue[tail++] = wv;
+            this.visit(wv, node, stamp, visitedOut);
+            this.queue[tail++] = wv;
           }
         }
       }
@@ -169,8 +184,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(ev, node, stamp);
-          this.queue[tail++] = ev;
+            this.visit(ev, node, stamp, visitedOut);
+            this.queue[tail++] = ev;
           }
         }
       }
@@ -191,8 +206,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(nw, node, stamp);
-          this.queue[tail++] = nw;
+            this.visit(nw, node, stamp, visitedOut);
+            this.queue[tail++] = nw;
           }
         }
       }
@@ -209,8 +224,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(ne, node, stamp);
-          this.queue[tail++] = ne;
+            this.visit(ne, node, stamp, visitedOut);
+            this.queue[tail++] = ne;
           }
         }
       }
@@ -227,8 +242,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(sw, node, stamp);
-          this.queue[tail++] = sw;
+            this.visit(sw, node, stamp, visitedOut);
+            this.queue[tail++] = sw;
           }
         }
       }
@@ -245,8 +260,8 @@ export class MultiSourceAnyTargetBFS {
           ) {
             // skip
           } else {
-          this.visit(se, node, stamp);
-          this.queue[tail++] = se;
+            this.visit(se, node, stamp, visitedOut);
+            this.queue[tail++] = se;
           }
         }
       }
@@ -255,10 +270,18 @@ export class MultiSourceAnyTargetBFS {
     return null;
   }
 
-  private visit(node: TileRef, from: TileRef, stamp: number) {
+  private visit(
+    node: TileRef,
+    from: TileRef,
+    stamp: number,
+    visitedOut: MultiSourceAnyTargetBFSOptions["visitedMaskOut"],
+  ) {
     this.visitedStamp[node] = stamp;
     this.prev[node] = from;
     this.startOf[node] = this.startOf[from];
+    if (visitedOut) {
+      visitedOut.regionStamp[visitedOut.tileToRegion[node]!] = visitedOut.stamp;
+    }
   }
 
   private reconstructPath(target: TileRef): TileRef[] {
