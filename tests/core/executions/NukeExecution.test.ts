@@ -125,4 +125,26 @@ describe("NukeExecution", () => {
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
   });
+
+  test("destroyInFlight deactivates execution and removes nuke unit", async () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    const exec = new NukeExecution(
+      UnitType.AtomBomb,
+      player,
+      game.ref(10, 10),
+      game.ref(1, 1),
+    );
+
+    game.addExecution(exec);
+    game.executeNextTick(); // init
+    game.executeNextTick(); // spawn nuke
+
+    expect(exec.isInFlight()).toBe(true);
+    expect(exec.isActive()).toBe(true);
+
+    exec.destroyInFlight();
+
+    expect(exec.isActive()).toBe(false);
+  });
 });

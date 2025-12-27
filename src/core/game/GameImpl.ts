@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { NukeExecution } from "../execution/NukeExecution";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -55,6 +56,13 @@ export function createGame(
 }
 
 export type CellString = string;
+
+export type DestroyNukesResult = {
+  inFlight: number;
+  queued: number;
+  fromRequestorToRecipient: number;
+  fromRecipientToRequestor: number;
+};
 
 export class GameImpl implements Game {
   private _ticks = 0;
@@ -277,6 +285,75 @@ export class GameImpl implements Game {
     return ar;
   }
 
+  public destroyNukesBetween(p1: Player, p2: Player): DestroyNukesResult {
+    let inFlight = 0;
+    let queued = 0;
+    let fromRequestorToRecipient = 0;
+    let fromRecipientToRequestor = 0;
+
+    const destroy = (exec: Execution, isQueued: boolean) => {
+      if (!(exec instanceof NukeExecution)) return;
+
+      const launcher = exec.owner();
+
+      // queued execution -> target not resolvable yet
+      const target =
+        exec.isInFlight() && exec.target()
+          ? exec.target()
+          : exec instanceof NukeExecution
+            ? exec.targetTile()
+            : null;
+
+      if (!target) return;
+
+      let targetOwner: Player | TerraNullius;
+      if (typeof target === "object" && "isPlayer" in target) {
+        // target is already a Player or TerraNullius (in-flight nuke)
+        targetOwner = target as Player | TerraNullius;
+      } else {
+        // target is a TileRef (queued nuke)
+        targetOwner = this.owner(target as TileRef);
+      }
+
+      const isRequestorToRecipient = launcher === p1 && targetOwner === p2;
+      const isRecipientToRequestor = launcher === p2 && targetOwner === p1;
+
+      const isBetween = isRequestorToRecipient || isRecipientToRequestor;
+
+      if (!isBetween) {
+        return;
+      }
+
+      if (isQueued) queued++;
+      else inFlight++;
+
+      if (isRequestorToRecipient) fromRequestorToRecipient++;
+      else fromRecipientToRequestor++;
+
+      exec.destroyInFlight();
+    };
+
+    for (const exec of this.execs) {
+      if (exec instanceof NukeExecution && !exec.isInFlight()) {
+        // initialized but not launched yet -> queued
+        destroy(exec, true);
+      } else {
+        destroy(exec, false);
+      }
+    }
+
+    for (const exec of this.unInitExecs) {
+      destroy(exec, true);
+    }
+
+    return {
+      inFlight,
+      queued,
+      fromRequestorToRecipient,
+      fromRecipientToRequestor,
+    };
+  }
+
   acceptAllianceRequest(request: AllianceRequestImpl) {
     this.allianceRequests = this.allianceRequests.filter(
       (ar) => ar !== request,
@@ -310,6 +387,110 @@ export class GameImpl implements Game {
       requestor.endTemporaryEmbargo(recipient);
     if (recipient.hasEmbargoAgainst(requestor))
       recipient.endTemporaryEmbargo(requestor);
+
+    const {
+      inFlight,
+      queued,
+      fromRequestorToRecipient,
+      fromRecipientToRequestor,
+    } = this.destroyNukesBetween(requestor, recipient);
+
+    // Destroy counts available for display messages
+    this.unInitExecs = this.unInitExecs.filter((e) => e.isActive());
+
+    if (fromRequestorToRecipient > 0) {
+      const requestorMsg = `${fromRequestorToRecipient} nuke${
+        fromRequestorToRecipient > 1 ? "s" : ""
+      } launched towards ${recipient.displayName()} ${
+        fromRequestorToRecipient > 1 ? "were" : "was"
+      } destroyed due to the alliance`;
+
+      const recipientMsg = `${fromRequestorToRecipient} nuke${
+        fromRequestorToRecipient > 1 ? "s" : ""
+      } launched by ${requestor.displayName()} towards you ${
+        fromRequestorToRecipient > 1 ? "were" : "was"
+      } destroyed due to the alliance`;
+
+      this.displayMessage(
+        requestorMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        requestor.id(),
+      );
+      this.displayMessage(
+        recipientMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        recipient.id(),
+      );
+    }
+
+    if (fromRecipientToRequestor > 0) {
+      const requestorMsg = `${fromRecipientToRequestor} nuke${
+        fromRecipientToRequestor > 1 ? "s" : ""
+      } launched by ${recipient.displayName()} towards you ${
+        fromRecipientToRequestor > 1 ? "were" : "was"
+      } destroyed due to the alliance`;
+
+      const recipientMsg = `${fromRecipientToRequestor} nuke${
+        fromRecipientToRequestor > 1 ? "s" : ""
+      } launched towards ${requestor.displayName()} ${
+        fromRecipientToRequestor > 1 ? "were" : "was"
+      } destroyed due to the alliance`;
+
+      this.displayMessage(
+        requestorMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        requestor.id(),
+      );
+      this.displayMessage(
+        recipientMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        recipient.id(),
+      );
+    }
+
+    if (inFlight > 0) {
+      const baseMsg = `${inFlight} nuke${inFlight > 1 ? "s" : ""} in flight ${
+        inFlight > 1 ? "were" : "was"
+      } neutralized due to alliance formation with`;
+
+      const requestorMsg = `${inFlight} nuke${
+        inFlight > 1 ? "s" : ""
+      } in flight ${
+        inFlight > 1 ? "were" : "was"
+      } neutralized due to alliance formation with ${recipient.displayName()}`;
+      const recipientMsg = baseMsg + ` ${requestor.displayName()}`;
+
+      this.displayMessage(
+        requestorMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        requestor.id(),
+      );
+      this.displayMessage(
+        recipientMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        recipient.id(),
+      );
+    }
+
+    if (queued > 0) {
+      const baseMsg = `${queued} planned nuke${queued > 1 ? "s" : ""} ${
+        queued > 1 ? "were" : "was"
+      } canceled due to alliance formation with`;
+
+      const requestorMsg = baseMsg + ` ${recipient.displayName()}`;
+      const recipientMsg = baseMsg + ` ${requestor.displayName()}`;
+
+      this.displayMessage(
+        requestorMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        requestor.id(),
+      );
+      this.displayMessage(
+        recipientMsg,
+        MessageType.ALLIANCE_ACCEPTED,
+        recipient.id(),
+      );
+    }
 
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
@@ -357,6 +538,7 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
+    const pending = this.updates;
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
@@ -393,7 +575,15 @@ export class GameImpl implements Game {
       });
     }
     this._ticks++;
-    return this.updates;
+
+    const merged = createGameUpdatesMap();
+
+    for (const k in merged) {
+      merged[k] = [...pending[k], ...this.updates[k]];
+    }
+
+    this.updates = createGameUpdatesMap();
+    return merged;
   }
 
   private hash(): number {
