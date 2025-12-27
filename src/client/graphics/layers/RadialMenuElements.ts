@@ -111,10 +111,7 @@ export enum Slot {
 
 function isFriendlyTarget(params: MenuElementParams): boolean {
   const selectedPlayer = params.selected;
-  return (
-    selectedPlayer !== null &&
-    selectedPlayer.isFriendly(params.myPlayer)
-  );
+  return selectedPlayer !== null && selectedPlayer.isFriendly(params.myPlayer);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
