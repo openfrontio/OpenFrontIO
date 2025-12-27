@@ -20,8 +20,8 @@ import {
   rootMenuElement,
 } from "./RadialMenuElements";
 
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { ContextMenuEvent } from "../../InputHandler";
 
 @customElement("main-radial-menu")
