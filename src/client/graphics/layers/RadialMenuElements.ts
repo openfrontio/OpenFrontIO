@@ -109,6 +109,15 @@ export enum Slot {
   Delete = "delete",
 }
 
+function isFriendlyTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  return (
+    selectedPlayer !== null &&
+    selectedPlayer.id() !== params.myPlayer.id() &&
+    selectedPlayer.isFriendly(params.myPlayer)
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
@@ -552,13 +561,7 @@ export const centerButtonElement: CenterButtonElement = {
       return false;
     }
 
-    const selectedPlayer = params.selected;
-    const isFriendlyTarget =
-      selectedPlayer !== null &&
-      selectedPlayer.id() !== params.myPlayer.id() &&
-      selectedPlayer.isFriendly(params.myPlayer);
-
-    if (isFriendlyTarget) {
+    if (isFriendlyTarget(params)) {
       return !params.playerActions.interaction?.canDonateTroops;
     }
 
@@ -568,13 +571,8 @@ export const centerButtonElement: CenterButtonElement = {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      const selectedPlayer = params.selected;
-      const isFriendlyTarget =
-        selectedPlayer !== null &&
-        selectedPlayer.id() !== params.myPlayer.id() &&
-        selectedPlayer.isFriendly(params.myPlayer);
-
-      if (isFriendlyTarget) {
+      if (isFriendlyTarget(params)) {
+        const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
         const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
         if (troopsToDonate > 0) {
