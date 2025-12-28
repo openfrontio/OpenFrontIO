@@ -15,6 +15,16 @@ function miniMapOrNull(gm: GameMap): GameMap | null {
   return null;
 }
 
+function microMapOrNull(gm: GameMap): GameMap | null {
+  const mm = (gm as any).microMap;
+  if (typeof mm === "function") return mm.call(gm) as GameMap;
+  return null;
+}
+
+function coarseBoatMapOrNull(gm: GameMap | Game): GameMap | null {
+  return microMapOrNull(gm) ?? miniMapOrNull(gm);
+}
+
 function insertTopK(
   items: { tile: TileRef; dist: number }[],
   tile: TileRef,
@@ -209,7 +219,7 @@ export function boatPathFromTileToShore(
       kingMoves: true,
       noCornerCutting: true,
     },
-    miniMapOrNull(gm),
+    coarseBoatMapOrNull(gm),
   );
   const duration = performance.now() - startTime;
   if (result === null) return null;
@@ -281,7 +291,7 @@ export function boatPathFromTileToWater(
       kingMoves: true,
       noCornerCutting: true,
     },
-    miniMapOrNull(gm),
+    coarseBoatMapOrNull(gm),
   );
   const duration = performance.now() - startTime;
   if (result === null) return null;
@@ -395,6 +405,7 @@ export function bestTransportShipRoute(
   if (targetWaterFiltered.length === 0) return false;
 
   const startTime = performance.now();
+  const coarse = coarseBoatMapOrNull(gm);
   const result = findWaterPathFromSeedsCoarseToFine(
     gm,
     seedNodesFiltered,
@@ -404,7 +415,7 @@ export function bestTransportShipRoute(
       kingMoves: true,
       noCornerCutting: true,
     },
-    gm.miniMap(),
+    coarse,
   );
   const duration = performance.now() - startTime;
   if (result === null) return false;
