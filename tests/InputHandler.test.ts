@@ -1,7 +1,12 @@
 /**
  * @jest-environment jsdom
  */
-import { AutoUpgradeEvent, InputHandler } from "../src/client/InputHandler";
+import {
+  AutoUpgradeEvent,
+  ContextMenuEvent,
+  InputHandler,
+  MouseUpEvent,
+} from "../src/client/InputHandler";
 import { EventBus } from "../src/core/EventBus";
 
 class MockPointerEvent {
@@ -453,6 +458,48 @@ describe("InputHandler AutoUpgrade", () => {
       // default remains when parsing fails
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
+    });
+  });
+
+  describe("Mac Ctrl+Click Context Menu", () => {
+    test("should create context menu with Ctrl+Click on Mac, but not attack", () => {
+      // Mock isMac() to return true
+      jest.spyOn(inputHandler as any, "isMac").mockReturnValue(true);
+      const mockEmit = jest.spyOn(eventBus, "emit");
+
+      // Simulate ControlLeft being held
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      // Simulate a pointer down first (to set pointerDown state)
+      const pointerDownEvent = new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 200,
+        pointerId: 1,
+      });
+      inputHandler["onPointerDown"](pointerDownEvent);
+      mockEmit.mockClear();
+
+      // Now trigger pointer up
+      const pointerUpEvent = new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 100,
+        clientY: 200,
+        pointerId: 1,
+      });
+      inputHandler["onPointerUp"](pointerUpEvent);
+
+      // Verify ContextMenuEvent was emitted with correct coordinates
+      expect(mockEmit).toHaveBeenCalledTimes(1);
+      // If MouseUp is fired, that would cause an attack - which we do not want.
+      expect(mockEmit).not.toHaveBeenCalledWith(expect.any(MouseUpEvent));
+      expect(mockEmit).toHaveBeenCalledWith(expect.any(ContextMenuEvent));
+      expect(mockEmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          x: 100,
+          y: 200,
+        }),
+      );
     });
   });
 });
