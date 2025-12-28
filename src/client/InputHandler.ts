@@ -293,11 +293,7 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+      const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && e.code !== "Escape") {
         return;
       }
@@ -343,11 +339,7 @@ export class InputHandler {
       }
     });
     window.addEventListener("keyup", (e) => {
-      const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+      const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
       }
@@ -605,6 +597,22 @@ export class InputHandler {
       x: (pointerEvents[0].clientX + pointerEvents[1].clientX) / 2,
       y: (pointerEvents[0].clientY + pointerEvents[1].clientY) / 2,
     };
+  }
+
+  private isTextInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    if (!element) return false;
+    if (element.tagName === "TEXTAREA" || element.isContentEditable) {
+      return true;
+    }
+    if (element.tagName === "INPUT") {
+      const input = element as HTMLInputElement;
+      if (input.id === "attack-ratio" && input.type === "range") {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   destroy() {
