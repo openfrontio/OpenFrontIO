@@ -280,6 +280,8 @@
     "tab_keybinds": "Näppäinasetukset",
     "dark_mode_label": "Tumma tila",
     "dark_mode_desc": "Vaihda sivuston ulkonäköä vaaleiden ja tummien teemojen välillä",
+    "color_blind_label": "Värisokeusapu",
+    "color_blind_desc": "Lisää visuaalisen avun joukkuetovereiden löytämiseen spawn-vaiheen aikana",
     "dark_mode_enabled": "Tumma tila käytössä",
     "light_mode_enabled": "Vaalea tila käytössä",
     "emojis_label": "Hymiöt",

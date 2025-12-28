@@ -224,6 +224,8 @@
     "tab_keybinds": "Tasti",
     "dark_mode_label": "🌙 Modalità Scura",
     "dark_mode_desc": "Attiva/disattiva l'aspetto del sito tra il tema chiaro e scuro",
+    "color_blind_label": "Assistenza daltonismo",
+    "color_blind_desc": "Aggiunge un aiuto visivo per individuare più facilmente i compagni di squadra durante la fase di spawn",
     "emojis_label": "😊 Emoji",
     "emojis_desc": "Attiva o disattiva la visualizzazione delle emoji nel gioco",
     "special_effects_label": "💥 Effetti speciali",

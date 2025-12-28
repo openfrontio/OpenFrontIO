@@ -266,6 +266,8 @@
     "tab_keybinds": "Genvejstaster",
     "dark_mode_label": "Mørk Tilstand",
     "dark_mode_desc": "Skift webstedets udseende mellem lyst og mørkt tema",
+    "color_blind_label": "Farveblindhjælp",
+    "color_blind_desc": "Tilføjer visuel hjælp til lettere at finde holdkammerater under spawn-fasen",
     "dark_mode_enabled": "Mørk tilstand aktiveret",
     "light_mode_enabled": "Lys tilstand aktiveret",
     "emojis_label": "Emojis",

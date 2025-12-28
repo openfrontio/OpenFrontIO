@@ -332,6 +332,8 @@
     "tab_keybinds": "キーの割り当て",
     "dark_mode_label": "ダークモード",
     "dark_mode_desc": "画面を黒基調に切り替えます",
+    "color_blind_label": "色覚サポート",
+    "color_blind_desc": "スポーン時にチームメイトを見つけやすくする視覚的な補助を追加します",
     "emojis_label": "絵文字を表示",
     "emojis_desc": "ゲーム中で絵文字を表示します",
     "alert_frame_label": "アラートフレーム",

@@ -332,6 +332,8 @@
     "tab_keybinds": "热键绑定",
     "dark_mode_label": "深色模式",
     "dark_mode_desc": "在浅色和深色主题之间切换网站外观",
+    "color_blind_label": "色盲辅助",
+    "color_blind_desc": "添加视觉辅助，使在出生阶段更容易发现队友",
     "emojis_label": "表情符号",
     "emojis_desc": "切换是否在游戏中显示表情符号",
     "alert_frame_label": "警告框",

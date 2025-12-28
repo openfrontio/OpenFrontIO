@@ -259,6 +259,8 @@
     "tab_keybinds": "키 설정",
     "dark_mode_label": "다크 모드",
     "dark_mode_desc": "밝은 테마/어두운 테마로 전환합니다.",
+    "color_blind_label": "색맹 지원",
+    "color_blind_desc": "스폰 단계에서 팀원을 더 쉽게 찾을 수 있도록 시각적 도움을 추가합니다",
     "dark_mode_enabled": "다크 모드 적용됨",
     "light_mode_enabled": "라이트 모드 적용됨",
     "emojis_label": "이모지",

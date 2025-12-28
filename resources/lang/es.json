@@ -224,6 +224,8 @@
     "tab_keybinds": "Combinaciones de teclas",
     "dark_mode_label": "🌙 Modo oscuro",
     "dark_mode_desc": "Cambiar la apariencia del sitio entre el tema claro y oscuro",
+    "color_blind_label": "Asistencia para daltonismo",
+    "color_blind_desc": "Añade ayuda visual para identificar compañeros de equipo durante la fase de aparición",
     "emojis_label": "😊 Emojis",
     "emojis_desc": "Cambiar si se muestran los emojis en el juego",
     "special_effects_label": "💥 Efectos especiales",

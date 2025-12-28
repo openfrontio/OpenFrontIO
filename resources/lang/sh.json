@@ -186,6 +186,8 @@
     "tab_keybinds": "Prečice",
     "dark_mode_label": "Tamni mod",
     "dark_mode_desc": "Promeni izgled stranice sa svetlog na tamni mod",
+    "color_blind_label": "Pomoć za daltonizam",
+    "color_blind_desc": "Dodaje vizuelnu pomoć za lakše prepoznavanje saigrača tokom faze spawn-a",
     "emojis_label": "Emotikoni",
     "emojis_desc": "Uključi ili isključi prikazivanje emotikona",
     "left_click_label": "Otvori meni na lijevi klik",

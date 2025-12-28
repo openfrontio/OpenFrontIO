@@ -261,6 +261,8 @@
     "tab_keybinds": "Tangentbindningar",
     "dark_mode_label": "Mörkt Tema",
     "dark_mode_desc": "Ändrar hemsidans utseende mellan mörkt och ljust tema.",
+    "color_blind_label": "Färgblindshjälp",
+    "color_blind_desc": "Lägger till visuellt stöd för att lättare hitta lagkamrater under spawn-fasen",
     "dark_mode_enabled": "Mörkt tema aktiverad",
     "light_mode_enabled": "Ljust tema aktiverad",
     "emojis_label": "Emojis",

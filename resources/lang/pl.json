@@ -312,6 +312,8 @@
     "tab_keybinds": "Skróty klawiszowe",
     "dark_mode_label": "Tryb ciemny",
     "dark_mode_desc": "Przełącz wygląd strony pomiędzy jasnym a ciemnym trybem",
+    "color_blind_label": "Pomoc dla daltonistów",
+    "color_blind_desc": "Dodaje wizualną pomoc, aby łatwiej dostrzec członków drużyny podczas fazy odradzania",
     "emojis_label": "Emotikony",
     "emojis_desc": "Przełącz, czy emotki mają być wyświetlane w grze",
     "alert_frame_label": "Ramka ostrzeżenia",

@@ -266,6 +266,8 @@
     "tab_keybinds": "Atallos de tecla",
     "dark_mode_label": "Modo escuro",
     "dark_mode_desc": "Alternar a aparencia do xogo entre modo claro e escuro",
+    "color_blind_label": "Asistencia para daltonismo",
+    "color_blind_desc": "Engade axuda visual para identificar compañeiros de equipo durante a fase de aparición",
     "dark_mode_enabled": "Modo escuro activado",
     "light_mode_enabled": "Modo claro activado",
     "emojis_label": "Emojis",
