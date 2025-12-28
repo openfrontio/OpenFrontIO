@@ -20,7 +20,12 @@
     "lint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
-    "inst": "npm ci --ignore-scripts"
+    "inst": "npm ci --ignore-scripts",
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "predev": "npm run sync-assets",
+    "prebuild-dev": "npm run sync-assets",
+    "prebuild-prod": "npm run sync-assets",
+    "prestart:client": "npm run sync-assets"
   },
   "lint-staged": {
     "**/*": [

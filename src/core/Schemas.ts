@@ -1,6 +1,6 @@
 import { z } from "zod";
-import countries from "../../resources/countries.json" with { type: "json" };
-import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
+import countries from "../assets/data/countries.json" with { type: "json" };
+import quickChatData from "../assets/data/QuickChat.json" with { type: "json" };
 import {
   ColorPaletteSchema,
   PatternDataSchema,

@@ -1,5 +1,4 @@
-import Snowflake3Png from "../../resources/images/Snowflake.webp";
-import version from "../../resources/version.txt?raw";
+import version from "../assets/data/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -56,7 +55,7 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
-
+import Snowflake3Png from "/images/Snowflake.webp?url";
 declare global {
   interface Window {
     turnstile: any;

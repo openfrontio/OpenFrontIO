@@ -29,6 +29,7 @@ export default [
             "postcss.config.js",
             "tailwind.config.js",
             "vite.config.ts",
+            "scripts/sync-assets.mjs",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

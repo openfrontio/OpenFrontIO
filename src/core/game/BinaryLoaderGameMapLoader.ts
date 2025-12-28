@@ -2,10 +2,6 @@ import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
 
-interface NationMapModule {
-  default: MapManifest;
-}
-
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
 
@@ -40,35 +36,26 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
         })
         .then((buf) => new Uint8Array(buf));
 
+    const mapBasePath = `/maps/${fileName}`;
+
     const mapData = {
-      mapBin: this.createLazyLoader(() =>
-        import(`../../../resources/maps/${fileName}/map.bin?url`).then((m) =>
-          loadBinary(m.default),
-        ),
-      ),
+      mapBin: this.createLazyLoader(() => loadBinary(`${mapBasePath}/map.bin`)),
       map4xBin: this.createLazyLoader(() =>
-        import(`../../../resources/maps/${fileName}/map4x.bin?url`).then((m) =>
-          loadBinary(m.default),
-        ),
+        loadBinary(`${mapBasePath}/map4x.bin`),
       ),
       map16xBin: this.createLazyLoader(() =>
-        import(`../../../resources/maps/${fileName}/map16x.bin?url`).then((m) =>
-          loadBinary(m.default),
-        ),
+        loadBinary(`${mapBasePath}/map16x.bin`),
       ),
       manifest: this.createLazyLoader(() =>
-        (
-          import(
-            `../../../resources/maps/${fileName}/manifest.json`
-          ) as Promise<NationMapModule>
-        ).then((m) => m.default),
+        fetch(`${mapBasePath}/manifest.json`).then((res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to load ${mapBasePath}/manifest.json`);
+          }
+          return res.json() as Promise<MapManifest>;
+        }),
       ),
       webpPath: this.createLazyLoader(() =>
-        (
-          import(
-            `../../../resources/maps/${fileName}/thumbnail.webp`
-          ) as Promise<{ default: string }>
-        ).then((m) => m.default),
+        Promise.resolve(`${mapBasePath}/thumbnail.webp`),
       ),
     } satisfies MapData;
 

@@ -2,7 +2,6 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml?url";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -40,6 +39,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
+import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
 extend([a11yPlugin]);
 
