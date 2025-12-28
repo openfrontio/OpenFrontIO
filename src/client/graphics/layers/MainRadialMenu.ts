@@ -20,6 +20,7 @@ import {
   rootMenuElement,
 } from "./RadialMenuElements";
 import swordIcon from "/images/SwordIconWhite.svg?url";
+import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 
 import { ContextMenuEvent } from "../../InputHandler";
 
@@ -127,9 +128,21 @@ export class MainRadialMenu extends LitElement implements Layer {
       playerActionHandler: this.playerActionHandler,
       playerPanel: this.playerPanel,
       chatIntegration: this.chatIntegration,
+      uiState: this.uiState,
       closeMenu: () => this.closeMenu(),
       eventBus: this.eventBus,
     };
+
+    const isFriendlyTarget =
+      recipient !== null && recipient.isFriendly(myPlayer);
+
+    this.radialMenu.setCenterButtonAppearance(
+      isFriendlyTarget ? donateTroopIcon : swordIcon,
+      isFriendlyTarget ? "#34D399" : "#2c3e50",
+      isFriendlyTarget
+        ? this.radialMenu.getDefaultCenterIconSize() * 0.75
+        : this.radialMenu.getDefaultCenterIconSize(),
+    );
 
     this.radialMenu.setParams(params);
     if (screenX !== null && screenY !== null) {

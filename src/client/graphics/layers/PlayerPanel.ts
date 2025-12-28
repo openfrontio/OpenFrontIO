@@ -62,6 +62,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
+  @state() private suppressNextHide: boolean = false;
 
   private ctModal: ChatModal;
 
@@ -78,7 +79,13 @@ export class PlayerPanel extends LitElement implements Layer {
     });
   }
   init() {
-    this.eventBus.on(MouseUpEvent, () => this.hide());
+    this.eventBus.on(MouseUpEvent, () => {
+      if (this.suppressNextHide) {
+        this.suppressNextHide = false;
+        return;
+      }
+      this.hide();
+    });
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
     if (!this.ctModal) {
@@ -131,6 +138,20 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  public openSendGoldModal(
+    actions: PlayerActions,
+    tile: TileRef,
+    target: PlayerView,
+  ) {
+    this.suppressNextHide = true;
+    this.actions = actions;
+    this.tile = tile;
+    this.sendTarget = target;
+    this.sendMode = "gold";
+    this.isVisible = true;
+    this.requestUpdate();
+  }
+
   public hide() {
     this.isVisible = false;
     this.sendMode = "none";
@@ -164,11 +185,13 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private openSendTroops(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "troops";
   }
 
   private openSendGold(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "gold";
   }
