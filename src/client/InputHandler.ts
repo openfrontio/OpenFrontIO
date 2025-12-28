@@ -290,6 +290,11 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
+      const isTextInput = this.isTextInputTarget(e.target);
+      if (isTextInput && e.code !== "Escape") {
+        return;
+      }
+
       if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
@@ -331,6 +336,11 @@ export class InputHandler {
       }
     });
     window.addEventListener("keyup", (e) => {
+      const isTextInput = this.isTextInputTarget(e.target);
+      if (isTextInput && !this.activeKeys.has(e.code)) {
+        return;
+      }
+
       if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
@@ -579,6 +589,22 @@ export class InputHandler {
       x: (pointerEvents[0].clientX + pointerEvents[1].clientX) / 2,
       y: (pointerEvents[0].clientY + pointerEvents[1].clientY) / 2,
     };
+  }
+
+  private isTextInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    if (!element) return false;
+    if (element.tagName === "TEXTAREA" || element.isContentEditable) {
+      return true;
+    }
+    if (element.tagName === "INPUT") {
+      const input = element as HTMLInputElement;
+      if (input.id === "attack-ratio" && input.type === "range") {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   destroy() {

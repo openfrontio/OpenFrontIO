@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import structureIcon from "../../../../resources/images/CityIconWhite.svg";
+import cursorPriceIcon from "../../../../resources/images/CursorPriceIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -8,12 +9,13 @@ import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
+import sirenIcon from "../../../../resources/images/SirenIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import musicIcon from "../../../../resources/images/music.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
@@ -106,7 +108,7 @@ export class SettingsModal extends LitElement implements Layer {
 
   private pauseGame(pause: boolean) {
     if (this.shouldPause && !this.wasPausedWhenOpened)
-      this.eventBus.emit(new PauseGameEvent(pause));
+      this.eventBus.emit(new PauseGameIntentEvent(pause));
   }
 
   private onTerrainButtonClick() {
@@ -130,6 +132,11 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleAlertFrameButtonClick() {
+    this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.eventBus.emit(new RefreshGraphicsEvent());
@@ -143,6 +150,11 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+    this.requestUpdate();
+  }
+
+  private onToggleCursorCostLabelButtonClick() {
+    this.userSettings.toggleCursorCostLabel();
     this.requestUpdate();
   }
 
@@ -348,6 +360,26 @@ export class SettingsModal extends LitElement implements Layer {
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleAlertFrameButtonClick}"
+            >
+              <img src=${sirenIcon} alt="alertFrame" width="20" height="20" />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.alert_frame_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.alert_frame_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.alertFrame()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleStructureSpritesButtonClick}"
             >
               <img
@@ -366,6 +398,31 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.structureSprites()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleCursorCostLabelButtonClick}"
+            >
+              <img
+                src=${cursorPriceIcon}
+                alt="cursorCostLabel"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.cursor_cost_label_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.cursor_cost_label_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.cursorCostLabel()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

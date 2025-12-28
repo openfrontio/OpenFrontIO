@@ -1,16 +1,16 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
+import FastForwardIconSolid from "../../../../resources/images/FastForwardIconSolidWhite.svg";
 import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
-import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhite.svg";
-import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { PauseGameEvent } from "../../Transport";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -37,6 +37,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   private timer: number = 0;
 
   private hasWinner = false;
+  private isLobbyCreator = false;
 
   createRenderRoot() {
     return this;
@@ -48,6 +49,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
+
     this.requestUpdate();
   }
 
@@ -57,6 +59,13 @@ export class GameRightSidebar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
+
+    // Check if the player is the lobby creator
+    if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
+      this.isLobbyCreator = true;
+      this.requestUpdate();
+    }
+
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {
       if (this.game.inSpawnPhase()) {
@@ -74,13 +83,17 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   private secondsToHms = (d: number): string => {
+    const pad = (n: number) => (n < 10 ? `0${n}` : n);
+
     const h = Math.floor(d / 3600);
     const m = Math.floor((d % 3600) / 60);
     const s = Math.floor((d % 3600) % 60);
-    let time = d === 0 ? "-" : `${s}s`;
-    if (m > 0) time = `${m}m` + time;
-    if (h > 0) time = `${h}h` + time;
-    return time;
+
+    if (h !== 0) {
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    } else {
+      return `${pad(m)}:${pad(s)}`;
+    }
   };
 
   private toggleReplayPanel(): void {
@@ -92,7 +105,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
   private onExitButtonClick() {
@@ -103,8 +116,10 @@ export class GameRightSidebar extends LitElement implements Layer {
       );
       if (!isConfirmed) return;
     }
-    // redirect to the home page
-    window.location.href = "/";
+    crazyGamesSDK.gameplayStop().then(() => {
+      // redirect to the home page
+      window.location.href = "/";
+    });
   }
 
   private onSettingsButtonClick() {
@@ -116,76 +131,66 @@ export class GameRightSidebar extends LitElement implements Layer {
   render() {
     if (this.game === undefined) return html``;
 
+    const timerColor =
+      this.game.config().gameConfig().maxTimerValue !== undefined &&
+      this.timer < 60
+        ? "text-red-400"
+        : "";
+
     return html`
       <aside
-        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg transition-transform duration-300 ease-out transform ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg transition-transform duration-300 ease-out transform text-white ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <div
-          class=${`flex justify-end items-center gap-2 text-white ${
-            this._isReplayVisible ? "mb-2" : ""
-          }`}
-        >
-          ${this.maybeRenderReplayButtons()}
-          <div
-            class="w-6 h-6 cursor-pointer"
-            @click=${this.onSettingsButtonClick}
-          >
-            <img
-              src=${settingsIcon}
-              alt="settings"
-              width="20"
-              height="20"
-              style="vertical-align: middle;"
-            />
-          </div>
-          <div class="w-6 h-6 cursor-pointer" @click=${this.onExitButtonClick}>
-            <img src=${exitIcon} alt="exit" width="20" height="20" />
-          </div>
+        <!-- In-game time -->
+        <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
+
+        <!-- Buttons -->
+        ${this.maybeRenderReplayButtons()}
+
+        <div class="cursor-pointer" @click=${this.onSettingsButtonClick}>
+          <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
-        <!-- Timer display below buttons -->
-        <div class="flex justify-center items-center mt-2">
-          <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
-            style="${this.game.config().gameConfig().maxTimerValue !==
-              undefined && this.timer < 60
-              ? "color: #ff8080;"
-              : ""}"
-          >
-            ${this.secondsToHms(this.timer)}
-          </div>
+
+        <div class="cursor-pointer" @click=${this.onExitButtonClick}>
+          <img src=${exitIcon} alt="exit" width="20" height="20" />
         </div>
       </aside>
     `;
   }
 
   maybeRenderReplayButtons() {
-    if (this._isSinglePlayer || this.game?.config()?.isReplay()) {
-      return html` <div
-          class="w-6 h-6 cursor-pointer"
-          @click=${this.toggleReplayPanel}
-        >
-          <img
-            src=${this._isReplayVisible ? replaySolidIcon : replayRegularIcon}
-            alt="replay"
-            width="20"
-            height="20"
-            style="vertical-align: middle;"
-          />
-        </div>
-        <div class="w-6 h-6 cursor-pointer" @click=${this.onPauseButtonClick}>
-          <img
-            src=${this.isPaused ? playIcon : pauseIcon}
-            alt="play/pause"
-            width="20"
-            height="20"
-            style="vertical-align: middle;"
-          />
-        </div>`;
-    } else {
-      return html``;
-    }
+    const isReplayOrSingleplayer =
+      this._isSinglePlayer || this.game?.config()?.isReplay();
+    const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+
+    return html`
+      ${isReplayOrSingleplayer
+        ? html`
+            <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
+              <img
+                src=${FastForwardIconSolid}
+                alt="replay"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+      ${showPauseButton
+        ? html`
+            <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
+              <img
+                src=${this.isPaused ? playIcon : pauseIcon}
+                alt="play/pause"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+    `;
   }
 }

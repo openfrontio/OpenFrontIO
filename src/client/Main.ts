@@ -1,17 +1,24 @@
+import Snowflake3Png from "../../resources/images/Snowflake.webp";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
+import { GameInfoModal } from "./GameInfoModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
@@ -34,18 +41,15 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  isInIframe,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { getUserMe, isLoggedIn } from "./jwt";
+import "./snow.css";
 import "./styles.css";
 
 declare global {
   interface Window {
+    turnstile: any;
     enableAds: boolean;
     PageOS: {
       session: {
@@ -105,9 +109,19 @@ class Client {
 
   private gutterAds: GutterAds;
 
+  private turnstileTokenPromise: Promise<{
+    token: string;
+    createdAt: number;
+  }> | null = null;
+
   constructor() {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    crazyGamesSDK.maybeInit();
+    // Prefetch turnstile token so it is available when
+    // the user joins a lobby.
+    this.turnstileTokenPromise = getTurnstileToken();
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -150,10 +164,11 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
+        await crazyGamesSDK.gameplayStop();
       }
     });
 
@@ -184,6 +199,10 @@ class Client {
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
       console.warn("Help modal element not found");
+    }
+    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
+    if (!giModal || !(giModal instanceof GameInfoModal)) {
+      console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
@@ -272,7 +291,7 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
+    if ((await userAuth()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
@@ -332,7 +351,7 @@ class Client {
     }
 
     // Attempt to join lobby
-    this.handleHash();
+    this.handleUrl();
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
@@ -342,7 +361,7 @@ class Client {
       }
 
       // Attempt to join lobby
-      this.handleHash();
+      this.handleUrl();
     };
 
     // Handle browser navigation & manual hash edits
@@ -369,7 +388,17 @@ class Client {
     this.initializeFuseTag();
   }
 
-  private handleHash() {
+  private handleUrl() {
+    // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      const lobbyId = crazyGamesSDK.getInviteGameId();
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
+        return;
+      }
+    }
+
     const strip = () =>
       history.replaceState(
         null,
@@ -438,6 +467,7 @@ class Client {
       return;
     }
 
+    // Fallback to hash-based join for non-CrazyGames environments
     if (decodedHash.startsWith("#join=")) {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
@@ -484,8 +514,8 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
+        turnstileToken: await this.getTurnstileToken(lobby),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -493,6 +523,10 @@ class Client {
       () => {
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
+        if (this.usernameInput) {
+          // fix edge case where username-validation-error is re-rendered and hidden tag removed
+          this.usernameInput.validationError = "";
+        }
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
@@ -527,6 +561,11 @@ class Client {
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
+        // Hide snowflakes when joining lobby
+        document.documentElement.classList.add("in-game");
+        removeSnowflakes(); // Stop snowflakes when joining a game
+
+        crazyGamesSDK.loadingStart();
 
         // show when the game loads
         const startingModal = document.querySelector(
@@ -546,6 +585,9 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        crazyGamesSDK.loadingStop();
+        crazyGamesSDK.gameplayStart();
+
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
@@ -562,8 +604,14 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+
+    crazyGamesSDK.gameplayStop();
+
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
+    // Show snowflakes when leaving lobby (back to homepage)
+    document.documentElement.classList.remove("in-game");
+    enableSnowflakes(); // Restart snowflakes when leaving a game
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -596,49 +644,129 @@ class Client {
       }
     }, 100);
   }
+
+  private async getTurnstileToken(
+    lobby: JoinLobbyEvent,
+  ): Promise<string | null> {
+    const config = await getServerConfigFromClient();
+    if (
+      config.env() === GameEnv.Dev ||
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+    ) {
+      return null;
+    }
+
+    if (this.turnstileTokenPromise === null) {
+      console.log("No prefetched turnstile token, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
+    }
+
+    const token = await this.turnstileTokenPromise;
+    // Clear promise so a new token is fetched next time
+    this.turnstileTokenPromise = null;
+    if (!token) {
+      console.log("No turnstile token");
+      return null;
+    }
+
+    const tokenTTL = 3 * 60 * 1000;
+    if (Date.now() < token.createdAt + tokenTTL) {
+      console.log("Prefetched turnstile token is valid");
+      return token.token;
+    } else {
+      console.log("Turnstile token expired, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
+    }
+  }
+}
+function enableSnowflakes() {
+  // Respect user's motion preferences
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  if (prefersReducedMotion) {
+    return;
+  }
+
+  const snowContainer = document.querySelector(".snow") as HTMLElement;
+  if (!snowContainer) {
+    console.warn("Snow container element not found");
+    return;
+  }
+
+  // Clear existing snowflakes if any
+  removeSnowflakes();
+
+  const isMobile = window.innerWidth <= 768;
+  const numberOfSnowflakes = isMobile ? 30 : 75; // Increased count
+
+  for (let i = 0; i < numberOfSnowflakes; i++) {
+    const snowflake = document.createElement("div");
+    snowflake.classList.add("snowflake");
+    snowflake.style.left = `${Math.random() * 100}vw`; // Random horizontal position
+    snowflake.style.animationDuration = `${Math.random() * 10 + 5}s`; // Random duration between 5-15s
+    snowflake.style.animationDelay = `${Math.random() * -10}s`; // Random delay
+    snowflake.style.opacity = `${Math.random() * 0.5 + 0.5}`; // Random opacity between 0.5-1
+    const size = Math.random() * 20 + 10; // Random size between 10-30px
+    snowflake.style.width = `${size}px`;
+    snowflake.style.height = `${size}px`;
+    snowflake.style.backgroundImage = `url(${Snowflake3Png})`;
+
+    snowContainer.appendChild(snowflake);
+  }
 }
 
+function removeSnowflakes() {
+  const snowContainer = document.querySelector(".snow") as HTMLElement;
+  if (snowContainer) {
+    snowContainer.replaceChildren();
+  }
+}
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
+
+  // Initially enable snowflakes if not in-game
+  if (!document.documentElement.classList.contains("in-game")) {
+    enableSnowflakes();
+  }
 });
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromCookie(): string {
-  const COOKIE_NAME = "player_persistent_id";
-
-  // Try to get existing cookie
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
-    if (cookieName === COOKIE_NAME) {
-      return cookieValue;
-    }
+async function getTurnstileToken(): Promise<{
+  token: string;
+  createdAt: number;
+}> {
+  // Wait for Turnstile script to load (handles slow connections)
+  let attempts = 0;
+  while (typeof window.turnstile === "undefined" && attempts < 100) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    attempts++;
   }
 
-  // If no cookie exists, create new ID and set cookie
-  const newID = generateCryptoRandomUUID();
-  document.cookie = [
-    `${COOKIE_NAME}=${newID}`,
-    `max-age=${5 * 365 * 24 * 60 * 60}`, // 5 years
-    "path=/",
-    "SameSite=Strict",
-    "Secure",
-  ].join(";");
+  if (typeof window.turnstile === "undefined") {
+    throw new Error("Failed to load Turnstile script");
+  }
 
-  return newID;
+  const config = await getServerConfigFromClient();
+  const widgetId = window.turnstile.render("#turnstile-container", {
+    sitekey: config.turnstileSiteKey(),
+    size: "normal",
+    appearance: "interaction-only",
+    theme: "light",
+  });
+
+  return new Promise((resolve, reject) => {
+    window.turnstile.execute(widgetId, {
+      callback: (token: string) => {
+        window.turnstile.remove(widgetId);
+        console.log(`Turnstile token received: ${token}`);
+        resolve({ token, createdAt: Date.now() });
+      },
+      "error-callback": (errorCode: string) => {
+        window.turnstile.remove(widgetId);
+        console.error(`Turnstile error: ${errorCode}`);
+        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        reject(new Error(`Turnstile failed: ${errorCode}`));
+      },
+    });
+  });
 }

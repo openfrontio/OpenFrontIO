@@ -1,0 +1,45 @@
+{
+  "map": {
+    "height": 1580,
+    "num_land_tiles": 1011623,
+    "width": 1700
+  },
+  "map16x": {
+    "height": 395,
+    "num_land_tiles": 59685,
+    "width": 425
+  },
+  "map4x": {
+    "height": 790,
+    "num_land_tiles": 248068,
+    "width": 850
+  },
+  "name": "Svalmel",
+  "nations": [
+    {
+      "coordinates": [900, 850],
+      "flag": "santa_claus",
+      "name": "Santa Claus"
+    },
+    {
+      "coordinates": [275, 525],
+      "flag": "no",
+      "name": "Svalbard"
+    },
+    {
+      "coordinates": [860, 1360],
+      "flag": "ca",
+      "name": "Melville"
+    },
+    {
+      "coordinates": [1370, 465],
+      "flag": "ca",
+      "name": "Bathurst"
+    },
+    {
+      "coordinates": [910, 250],
+      "flag": "no",
+      "name": "Nordaustlandet"
+    }
+  ]
+}

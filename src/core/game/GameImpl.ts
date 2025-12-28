@@ -85,6 +85,8 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private _isPaused: boolean = false;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -337,6 +339,15 @@ export class GameImpl implements Game {
     return this._config;
   }
 
+  isPaused(): boolean {
+    return this._isPaused;
+  }
+
+  setPaused(paused: boolean): void {
+    this._isPaused = paused;
+    this.addUpdate({ type: GameUpdateType.GamePaused, paused });
+  }
+
   inSpawnPhase(): boolean {
     return this._ticks <= this.config().numSpawnPhaseTurns();
   }
@@ -517,6 +528,30 @@ export class GameImpl implements Game {
     return ns;
   }
 
+  // Zero-allocation neighbor iteration for performance-critical code
+  forEachNeighborWithDiag(
+    tile: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue; // Skip the center tile
+        const newX = x + dx;
+        const newY = y + dy;
+        if (
+          newX >= 0 &&
+          newX < this._width &&
+          newY >= 0 &&
+          newY < this._height
+        ) {
+          callback(this._map.ref(newX, newY));
+        }
+      }
+    }
+  }
+
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
@@ -597,7 +632,7 @@ export class GameImpl implements Game {
     });
   }
 
-  public breakAlliance(breaker: Player, alliance: Alliance) {
+  public breakAlliance(breaker: Player, alliance: MutableAlliance) {
     let other: Player;
     if (alliance.requestor() === breaker) {
       other = alliance.recipient();
@@ -613,18 +648,13 @@ export class GameImpl implements Game {
       breaker.markTraitor();
     }
 
-    const breakerSet = new Set(breaker.alliances());
-    const alliances = other.alliances().filter((a) => breakerSet.has(a));
-    if (alliances.length !== 1) {
-      throw new Error(
-        `must have exactly one alliance, have ${alliances.length}`,
-      );
-    }
-    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliance);
+
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
       traitorID: breaker.smallID(),
       betrayedID: other.smallID(),
+      allianceID: alliance.id(),
     });
   }
 
@@ -858,6 +888,15 @@ export class GameImpl implements Game {
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
   }
+  // Zero-allocation neighbor iteration (cardinal only)
+  forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    if (x > 0) callback(this._map.ref(x - 1, y));
+    if (x + 1 < this._width) callback(this._map.ref(x + 1, y));
+    if (y > 0) callback(this._map.ref(x, y - 1));
+    if (y + 1 < this._height) callback(this._map.ref(x, y + 1));
+  }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
@@ -881,6 +920,13 @@ export class GameImpl implements Game {
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
     return this._map.euclideanDistSquared(c1, c2);
+  }
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef> {
+    return this._map.circleSearch(tile, radius, filter);
   }
   bfs(
     tile: TileRef,

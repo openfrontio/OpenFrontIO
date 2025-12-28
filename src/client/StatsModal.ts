@@ -4,7 +4,7 @@ import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
-import { getApiBase } from "./jwt";
+import { getApiBase } from "./Api";
 import { translateText } from "./Utils";
 
 @customElement("stats-modal")
@@ -80,7 +80,7 @@ export class StatsModal extends LitElement {
             ${translateText("stats_modal.loading")}
           </p>
           <div
-            class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
+            class="w-6 h-6 border-4 border-red-500 border-t-transparent rounded-full animate-spin"
           ></div>
         </div>
       `;
@@ -91,7 +91,7 @@ export class StatsModal extends LitElement {
         <div class="flex flex-col items-center justify-center p-6 text-white">
           <p class="mb-4 text-center">${this.error}</p>
           <button
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
             @click=${() => this.loadLeaderboard()}
           >
             Retry
@@ -135,6 +135,9 @@ export class StatsModal extends LitElement {
             <thead>
               <tr class="border-b border-gray-700 text-gray-300">
                 <th class="py-2 pr-3 text-left">
+                  ${translateText("stats_modal.rank")}
+                </th>
+                <th class="py-2 pr-3 text-left">
                   ${translateText("stats_modal.clan")}
                 </th>
                 <th class="py-2 px-2 text-right">
@@ -153,8 +156,11 @@ export class StatsModal extends LitElement {
             </thead>
             <tbody>
               ${clans.map(
-                (clan) => html`
+                (clan, index) => html`
                   <tr class="border-b border-gray-800 last:border-b-0">
+                    <td class="py-2 pr-3 text-center">
+                      ${(index + 1).toLocaleString()}
+                    </td>
                     <td class="py-2 pr-3 font-semibold text-left">
                       ${clan.clanTag}
                     </td>
@@ -213,7 +219,7 @@ export class StatsButton extends LitElement {
       <div class="fixed top-20 right-4 z-[9998]">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
+          class="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-offset-4"
           title="${translateText("stats_modal.title")}"
         >
           <img src="/icons/stats.svg" alt="Stats" class="w-6 h-6" />

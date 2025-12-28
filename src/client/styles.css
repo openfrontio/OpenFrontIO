@@ -50,7 +50,7 @@
   padding: 15px 20px;
   font-size: 16px;
   cursor: pointer;
-  background-color: #007bff;
+  background-color: var(--primaryColor);
   color: white;
   border: none;
   border-radius: 8px;
@@ -60,7 +60,7 @@
 }
 
 .start-game-button:not(:disabled):hover {
-  background-color: #0056b3;
+  background-color: var(--primaryColorHover);
 }
 
 .start-game-button:disabled {
@@ -107,8 +107,8 @@
 }
 
 .option-card.selected {
-  border-color: #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border-color: var(--primaryColor);
+  background: rgba(229, 57, 53, 0.1);
 }
 
 .option-card-title {
@@ -152,8 +152,8 @@ label.option-card:hover {
 }
 
 .option-card.selected .checkbox-icon {
-  border-color: #4a9eff;
-  background: #4a9eff;
+  border-color: var(--primaryColor);
+  background: var(--primaryColor);
 }
 
 .option-card.selected .checkbox-icon::after {
@@ -251,14 +251,14 @@ label.option-card:hover {
 #bots-count::-moz-range-progress,
 #private-lobby-bots-count::-moz-range-progress {
   height: 8px;
-  background-color: #0075ff;
+  background-color: var(--primaryColor);
 }
 
 #bots-count::-moz-range-thumb,
 #private-lobby-bots-count::-moz-range-thumb {
   height: 16px;
   width: 16px;
-  background: #0075ff;
+  background: var(--primaryColor);
   border: none;
   border-radius: 50%;
 }
@@ -269,7 +269,7 @@ label.option-card:hover {
   height: 8px;
   background: linear-gradient(
     to right,
-    #0075ff var(--progress, 0%),
+    var(--primaryColor) var(--progress, 0%),
     white var(--progress, 0%)
   );
 }
@@ -279,7 +279,7 @@ label.option-card:hover {
   -webkit-appearance: none;
   height: 16px;
   width: 16px;
-  background: #0075ff;
+  background: var(--primaryColor);
   border: none;
   border-radius: 50%;
   margin-top: -4px;
@@ -291,8 +291,8 @@ label.option-card:hover {
 }
 
 .random-map.selected {
-  border: 2px solid #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border: 2px solid var(--primaryColor);
+  background: rgba(229, 57, 53, 0.1);
 }
 
 #helpModal table {
@@ -601,11 +601,11 @@ label.option-card:hover {
 /* News Button Notification */
 news-button .active button {
   position: relative;
-  border-color: #2563eb !important;
+  border-color: var(--primaryColor) !important;
   border-width: 2px !important;
   box-shadow:
-    0 0 0 1px rgba(37, 99, 235, 0.5),
-    0 0 8px rgba(37, 99, 235, 0.4);
+    0 0 0 1px rgba(139, 26, 26, 0.5),
+    0 0 8px rgba(139, 26, 26, 0.4);
 }
 
 news-button .active button::after {

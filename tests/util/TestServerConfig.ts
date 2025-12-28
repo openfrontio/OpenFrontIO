@@ -4,6 +4,12 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  turnstileSiteKey(): string {
+    throw new Error("Method not implemented.");
+  }
+  turnstileSecretKey(): string {
+    throw new Error("Method not implemented.");
+  }
   enableMatchmaking(): boolean {
     throw new Error("Method not implemented.");
   }
@@ -16,22 +22,10 @@ export class TestServerConfig implements ServerConfig {
   stripePublishableKey(): string {
     throw new Error("Method not implemented.");
   }
-  cloudflareConfigPath(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareCredsPath(): string {
-    throw new Error("Method not implemented.");
-  }
   domain(): string {
     throw new Error("Method not implemented.");
   }
   subdomain(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareAccountId(): string {
-    throw new Error("Method not implemented.");
-  }
-  cloudflareApiToken(): string {
     throw new Error("Method not implemented.");
   }
   jwtAudience(): string {
@@ -86,18 +80,6 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   gitCommit(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2Bucket(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2Endpoint(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2AccessKey(): string {
-    throw new Error("Method not implemented.");
-  }
-  r2SecretKey(): string {
     throw new Error("Method not implemented.");
   }
 }

@@ -1,0 +1,94 @@
+{
+  "name": "New York City",
+  "nations": [
+    {
+      "coordinates": [127, 1323],
+      "name": "Unami Tribe"
+    },
+    {
+      "coordinates": [116, 765],
+      "name": "Unalachtigo"
+    },
+    {
+      "coordinates": [163, 135],
+      "name": "Munsee Tribe"
+    },
+    {
+      "coordinates": [661, 531],
+      "name": "Mannahatta Village"
+    },
+    {
+      "coordinates": [558, 760],
+      "name": "New Netherland Colony",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [756, 833],
+      "name": "New York Colony",
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [240, 1818],
+      "name": "New Jersey Colony",
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [1065, 1085],
+      "name": "Long Island Territory",
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [1454, 989],
+      "name": "Montaukett Nation"
+    },
+    {
+      "coordinates": [1367, 762],
+      "name": "Unkechaug Nation"
+    },
+    {
+      "coordinates": [1109, 824],
+      "name": "Shinnecock Nation"
+    },
+    {
+      "coordinates": [969, 269],
+      "name": "Weckquaesgeek"
+    },
+    {
+      "coordinates": [746, 1172],
+      "name": "Siwanoy"
+    },
+    {
+      "coordinates": [927, 86],
+      "name": "Colen Donck",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [849, 1043],
+      "name": "Canarsie"
+    },
+    {
+      "coordinates": [991, 1247],
+      "name": "Rockaway"
+    },
+    {
+      "coordinates": [929, 642],
+      "name": "Maspeth",
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [647, 1018],
+      "name": "Breukelen",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [1150, 532],
+      "name": "Vlissingen",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [629, 690],
+      "name": "Gravesend",
+      "flag": "gb-eng"
+    }
+  ]
+}

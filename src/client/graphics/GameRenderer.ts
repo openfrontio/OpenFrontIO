@@ -114,6 +114,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
+  eventsDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -205,12 +206,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -248,7 +244,7 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
@@ -312,7 +308,7 @@ export class GameRenderer {
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
   ) {
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }

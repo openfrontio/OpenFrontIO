@@ -26,6 +26,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
+import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -36,7 +37,6 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentID } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
@@ -57,7 +57,7 @@ export interface LobbyConfig {
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
-  token: string;
+  turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -79,9 +79,17 @@ export function joinLobby(
 
   const transport = new Transport(lobbyConfig, eventBus);
 
+  let hasJoined = false;
+
   const onconnect = () => {
-    console.log(`Joined game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame(0);
+    if (hasJoined) {
+      console.log("rejoining game");
+      transport.rejoinGame(0);
+    } else {
+      hasJoined = true;
+      console.log(`Joining game lobby ${lobbyConfig.gameID}`);
+      transport.joinGame();
+    }
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
@@ -208,7 +216,6 @@ export class ClientGameRunner {
   private isActive = false;
 
   private turnsSeen = 0;
-  private hasJoined = false;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -230,7 +237,7 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private saveGame(update: WinUpdate) {
+  private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
     }
@@ -321,6 +328,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
+
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
@@ -332,13 +340,12 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
-      this.transport.joinGame(this.turnsSeen);
+      this.transport.rejoinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
-        this.hasJoined = true;
-        console.log("starting game!");
+        console.log("starting game! in client game runner");
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -413,10 +420,6 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
-        if (!this.hasJoined) {
-          this.transport.joinGame(0);
-          return;
-        }
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
@@ -430,12 +433,25 @@ export class ClientGameRunner {
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
-          this.worker.sendTurn(message.turn);
+          this.worker.sendTurn(
+            // Filter out pause intents in replays
+            this.gameView.config().isReplay()
+              ? {
+                  ...message.turn,
+                  intents: message.turn.intents.filter(
+                    (i) => i.type !== "toggle_pause",
+                  ),
+                }
+              : message.turn,
+          );
           this.turnsSeen++;
         }
       }
     };
-    this.transport.connect(onconnect, onmessage);
+    this.transport.updateCallback(onconnect, onmessage);
+    console.log("sending join game");
+    // Rejoin game from the start so we don't miss any turns.
+    this.transport.rejoinGame(0);
   }
 
   public stop() {

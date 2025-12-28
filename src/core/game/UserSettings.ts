@@ -73,9 +73,14 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  cursorCostLabel() {
+    const legacy = this.get("settings.ghostPricePill", true);
+    return this.get("settings.cursorCostLabel", legacy);
+  }
+
   focusLocked() {
     return false;
-    // TODO: renable when performance issues are fixed.
+    // TODO: re-enable when performance issues are fixed.
     this.get("settings.focusLocked", true);
   }
 
@@ -113,6 +118,10 @@ export class UserSettings {
 
   toggleStructureSprites() {
     this.set("settings.structureSprites", !this.structureSprites());
+  }
+
+  toggleCursorCostLabel() {
+    this.set("settings.cursorCostLabel", !this.cursorCostLabel());
   }
 
   toggleTerritoryPatterns() {

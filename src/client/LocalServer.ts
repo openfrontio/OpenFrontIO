@@ -17,9 +17,9 @@ import {
   getClanTag,
   replacer,
 } from "../core/Util";
+import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { getPersistentID } from "./Main";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
@@ -41,16 +41,25 @@ export class LocalServer {
   private turnStartTime = 0;
 
   private turnCheckInterval: NodeJS.Timeout;
+  private clientConnect: () => void;
+  private clientMessage: (message: ServerMessage) => void;
 
   constructor(
     private lobbyConfig: LobbyConfig,
-    private clientConnect: () => void,
-    private clientMessage: (message: ServerMessage) => void,
     private isReplay: boolean,
     private eventBus: EventBus,
   ) {}
 
+  public updateCallback(
+    clientConnect: () => void,
+    clientMessage: (message: ServerMessage) => void,
+  ) {
+    this.clientConnect = clientConnect;
+    this.clientMessage = clientMessage;
+  }
+
   start() {
+    console.log("local server starting");
     this.turnCheckInterval = setInterval(() => {
       const turnIntervalMs =
         this.lobbyConfig.serverConfig.turnIntervalMs() *
@@ -88,23 +97,35 @@ export class LocalServer {
     } satisfies ServerStartGameMessage);
   }
 
-  pause() {
-    this.paused = true;
-  }
-
-  resume() {
-    this.paused = false;
-  }
-
   onMessage(clientMsg: ClientMessage) {
+    if (clientMsg.type === "rejoin") {
+      this.clientMessage({
+        type: "start",
+        gameStartInfo: this.lobbyConfig.gameStartInfo!,
+        turns: this.turns,
+        lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
+      } satisfies ServerStartGameMessage);
+    }
     if (clientMsg.type === "intent") {
-      if (this.lobbyConfig.gameRecord) {
-        // If we are replaying a game, we don't want to process intents
+      if (clientMsg.intent.type === "toggle_pause") {
+        if (clientMsg.intent.paused) {
+          // Pausing: add intent and end turn before pause takes effect
+          this.intents.push(clientMsg.intent);
+          this.endTurn();
+          this.paused = true;
+        } else {
+          // Unpausing: clear pause flag before adding intent so next turn can execute
+          this.paused = false;
+          this.intents.push(clientMsg.intent);
+          this.endTurn();
+        }
         return;
       }
-      if (this.paused) {
+      // Don't process non-pause intents during replays or while paused
+      if (this.lobbyConfig.gameRecord || this.paused) {
         return;
       }
+
       this.intents.push(clientMsg.intent);
     }
     if (clientMsg.type === "hash") {

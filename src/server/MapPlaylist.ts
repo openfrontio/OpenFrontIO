@@ -36,6 +36,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   EuropeClassic: 3,
   FalklandIslands: 4,
   FaroeIslands: 4,
+  FourIslands: 4,
   GatewayToTheAtlantic: 5,
   GulfOfStLawrence: 4,
   Halkidiki: 4,
@@ -43,15 +44,19 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Italia: 6,
   Japan: 6,
   Lisbon: 4,
+  Manicouagan: 4,
   Mars: 3,
   Mena: 6,
   Montreal: 6,
+  NewYorkCity: 3,
   NorthAmerica: 5,
   Pangaea: 5,
   Pluto: 6,
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
+  Svalmel: 8,
   World: 8,
+  Lemnos: 3,
 };
 
 interface MapWithMode {
@@ -69,7 +74,6 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
-  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
@@ -91,13 +95,13 @@ export class MapPlaylist {
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Normal,
-      difficulty: Difficulty.Medium,
+      difficulty: Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: false,
-      disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
       bots: 400,
@@ -138,8 +142,6 @@ export class MapPlaylist {
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
     const team1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const team2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
@@ -152,14 +154,6 @@ export class MapPlaylist {
         }
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
-          return false;
-        }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;
       }
     }

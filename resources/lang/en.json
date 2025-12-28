@@ -30,6 +30,7 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
+    "game_info": "Game info",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -67,7 +68,7 @@
     "ui_events_desc": "The Event panel displays the latest events, requests and Quick Chat messages. Some examples are:",
     "ui_events_alliance": "Alliance - Alliance requests can be accepted or rejected. Allies can share resources and troops, but can't attack each other. Clicking Focus moves the view to the player who sent the request.",
     "ui_events_attack": "Attacks - Incoming attacks and your outgoing attacks are shown. Click the message to center the view on the attack, nuke or Boat (transport ship). You can retreat troops by clicking the red X button. This will cost the lives of 25% of your attacking troops. If you retrieve a Boat attack, the boat returns to its starting point and will attack there if the land has been captured since. Nukes can't be retreated once launched.",
-    "ui_events_quickchat": "Quick Chat - You can see sent and recieved chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
+    "ui_events_quickchat": "Quick Chat - You can see sent and received chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
@@ -114,7 +115,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. The SAM has a 7.5 second cooldown.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
@@ -146,7 +147,6 @@
     "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -157,10 +157,15 @@
   },
   "account_modal": {
     "title": "Account",
-    "logged_in_as": "Logged in as {email}",
+    "linked_account": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
-    "recovery_email_sent": "Recovery email sent to {email}"
+    "recovery_email_sent": "Recovery email sent to {email}",
+    "player_id": "Player ID: {id}",
+    "not_found": "Not Found",
+    "clear_session": "Clear Session",
+    "failed_to_send_recovery_email": "Failed to send recovery email",
+    "enter_email_address": "Please enter an email address"
   },
   "stats_modal": {
     "title": "Stats",
@@ -172,7 +177,31 @@
     "games": "Games",
     "win_score": "Win Score",
     "loss_score": "Loss Score",
-    "win_loss_ratio": "Win/Loss"
+    "win_loss_ratio": "Win/Loss",
+    "rank": "Rank"
+  },
+  "game_info_modal": {
+    "title": "Game info",
+    "players": "Players",
+    "atoms": "Atoms",
+    "hydros": "Hydros",
+    "mirv": "MIRV",
+    "bombs": "Bombs",
+    "total_gold": "Total",
+    "all_gold": "All gold",
+    "trade": "Trade",
+    "conquest_gold": "Conquered player gold",
+    "stolen_gold": "Stolen with warships",
+    "num_of_conquests": "Number of conquered players",
+    "duration": "Duration",
+    "survival_time": "Survival time",
+    "war": "War",
+    "economy": "Economy",
+    "conquests": "Conquests",
+    "pirate": "Pirate",
+    "conquered": "Conquered",
+    "loading_game_info": "Loading game stats",
+    "no_winner": "This game ended with no winner"
   },
   "map": {
     "map": "Map",
@@ -207,11 +236,15 @@
     "yenisei": "Yenisei",
     "pluto": "Pluto",
     "montreal": "Montreal",
+    "newyorkcity": "New York City",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
     "fourislands": "Four Islands",
     "gulfofstlawrence": "Gulf of St. Lawrence",
-    "lisbon": "Lisbon"
+    "lisbon": "Lisbon",
+    "svalmel": "Svalmel",
+    "manicouagan": "Manicouagan",
+    "lemnos": "Lemnos"
   },
   "map_categories": {
     "continental": "Continental",
@@ -236,11 +269,14 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "waiting_for_players": "Waiting for players",
+    "starting_game": "Starting game…",
+    "teams_Duos": "of 2 (Duos)",
+    "teams_Trios": "of 3 (Trios)",
+    "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
-    "teams": "{num} teams"
+    "teams": "{num} teams",
+    "players_per_team": "of {num}"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
@@ -272,7 +308,6 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -285,7 +320,10 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {username}"
+    "remove_player": "Remove {username}",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)"
   },
   "team_colors": {
     "red": "Red",
@@ -304,10 +342,10 @@
   },
   "difficulty": {
     "difficulty": "Difficulty",
-    "Easy": "Relaxed",
-    "Medium": "Balanced",
-    "Hard": "Intense",
-    "Impossible": "Impossible"
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "impossible": "Impossible"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -337,11 +375,13 @@
     "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
-    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
+    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",
     "structure_sprites_desc": "Toggle structure sprites",
+    "cursor_cost_label_label": "Cursor Build Cost",
+    "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "lobby_id_visibility_label": "Hidden Lobby IDs",
@@ -351,7 +391,6 @@
     "left_click_menu": "Left Click Menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "performance_overlay_label": "Performance Overlay",
@@ -539,8 +578,9 @@
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
-    "discord_description": "Connect with other players, get updates, and share strategies",
-    "join_server": "Join Server"
+    "discord_description": "Connect with players, discover new features, and win prizes!",
+    "join_server": "Join Server",
+    "youtube_tutorial": "Need some help?"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -550,7 +590,7 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops",
+    "maxtroops": "Max troops",
     "launchers": "Launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -566,6 +606,7 @@
     "team": "Team",
     "alliance_timeout": "Alliance ends in",
     "troops": "Troops",
+    "maxtroops": "Max troops",
     "a_troops": "Attacking troops",
     "gold": "Gold",
     "ports": "Ports",
@@ -649,7 +690,6 @@
     "flag": "Flag",
     "chat": "Chat",
     "target": "Target",
-    "break": "Break",
     "break_alliance": "Break Alliance",
     "alliance": "Alliance",
     "send_alliance": "Send Alliance",
@@ -661,10 +701,7 @@
     "title_with_name": "Send Troops to {name}",
     "available_tooltip": "Your current available troops",
     "min_keep": "Min keep",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "Use attack bar to send troops",
-    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
     "aria_slider": "Troops slider",
     "capacity_note": "Receiver can accept only {{amount}} right now."
   },
@@ -707,13 +744,16 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
-    "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
+    "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",
     "colors": "Colors",
     "purchase": "Purchase",
     "show_only_owned": "My Skins",
+    "not_logged_in": "Not logged in",
     "blocked": {
       "login": "You must be logged in to access this skin.",
       "purchase": "Purchase this skin to unlock it."
@@ -793,6 +833,7 @@
     "mode_team": "Team",
     "view": "View",
     "details": "Details",
+    "ranking": "Ranking",
     "started": "Started",
     "map": "Map",
     "difficulty": "Difficulty",
