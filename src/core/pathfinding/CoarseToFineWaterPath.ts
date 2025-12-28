@@ -4,6 +4,7 @@ import {
   MultiSourceAnyTargetBFSOptions,
   MultiSourceAnyTargetBFSResult,
 } from "./MultiSourceAnyTargetBFS";
+import { rubberBandCoarsePath } from "./PathRubberBand";
 
 export type CoarseToFineWaterPathOptions = {
   /**
@@ -277,12 +278,17 @@ export function findWaterPathFromSeedsCoarseToFine(
   // Allowed corridor stamp is stable across attempts (widening is cumulative).
   const allowedSet = getStampSet(coarseMap);
   const allowed = nextStamp(allowedSet);
+  const corridorSpine = rubberBandCoarsePath(
+    coarseMap,
+    coarseResult.path,
+    bfsOpts,
+  );
   markCoarseCorridor(
     coarseWidth,
     coarseHeight,
     allowedSet.data,
     allowed,
-    coarseResult.path,
+    corridorSpine,
     corridorRadius0,
   );
 
