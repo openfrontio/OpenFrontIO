@@ -65,7 +65,7 @@ export class NationEmojiBehavior {
   }
 
   private checkOverwhelmedByAttacks(): void {
-    if (!this.random.chance(8)) return;
+    if (!this.random.chance(16)) return;
 
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length === 0) return;
