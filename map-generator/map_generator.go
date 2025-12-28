@@ -89,16 +89,16 @@ type LogArgs struct {
 }
 
 // Logger defines a function signature for logging with formatting and conditional output.
-type Logger func(LogArgs LogArgs, format string, v ...interface{})
+type Logger func(logArgs LogArgs, format string, v ...interface{})
 
 // createLogger creates a logger instance that handles formatting and conditional output
 func createLogger(args GeneratorArgs) Logger {
 	// and handle checking against the performance and verbose flags
-	return func(LogArgs LogArgs, format string, v ...interface{}) {
-		if LogArgs.isVerbose && !args.Verbose {
+	return func(logArgs LogArgs, format string, v ...interface{}) {
+		if logArgs.isVerbose && !args.Verbose {
 			return
 		}
-		if LogArgs.isPerformance && !args.Performance {
+		if logArgs.isPerformance && !args.Performance {
 			return
 		}
 		if args.Verbose {
