@@ -65,6 +65,7 @@ export class StructureIconsLayer implements Layer {
     priceBox: { height: number; y: number; paddingX: number; minWidth: number };
     range: PIXI.Container | null;
     rangeLevel?: number;
+    targetingAlly?: boolean;
     buildableUnit: BuildableUnit;
   } | null = null;
   private pixicanvas: HTMLCanvasElement;
@@ -254,6 +255,49 @@ export class StructureIconsLayer implements Layer {
       tileRef = this.game.ref(tile.x, tile.y);
     }
 
+    // Check if targeting an ally (for nuke warning visual)
+    // Uses same logic as NukeExecution.maybeBreakAlliances()
+    let targetingAlly = false;
+    const myPlayer = this.game.myPlayer();
+    const nukeType = this.ghostUnit.buildableUnit.type;
+    if (
+      tileRef &&
+      myPlayer &&
+      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
+    ) {
+      // Only check if player has allies
+      const allies = myPlayer.allies();
+      if (allies.length > 0) {
+        const allySmallIds = new Set(allies.map((a) => a.smallID()));
+        const magnitude = this.game.config().nukeMagnitudes(nukeType);
+        const outerSquared = magnitude.outer * magnitude.outer;
+        const threshold = this.game.config().nukeAllianceBreakThreshold();
+
+        // Count tiles per ally within blast radius (same as NukeExecution.tilesToDestroy logic)
+        // For preview, we check the full outer radius since any tile there could be destroyed
+        // The warning might show even if the alliance won't definitely break
+        // But it will always show when there's a possibility of breaking
+        const allyTileCounts = new Map<number, number>();
+        const tilesInBlast = this.game.bfs(tileRef, (gm, t) => {
+          const d2 = gm.euclideanDistSquared(tileRef!, t);
+          return d2 <= outerSquared;
+        });
+
+        for (const nearbyTile of tilesInBlast) {
+          const ownerSmallId = this.game.ownerID(nearbyTile);
+          if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
+            const count = (allyTileCounts.get(ownerSmallId) ?? 0) + 1;
+            allyTileCounts.set(ownerSmallId, count);
+            // Check if any ally exceeds threshold
+            if (count > threshold) {
+              targetingAlly = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     this.game
       ?.myPlayer()
       ?.actions(tileRef)
@@ -288,7 +332,7 @@ export class StructureIconsLayer implements Layer {
         this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
         const targetLevel = this.resolveGhostRangeLevel(unit);
-        this.updateGhostRange(targetLevel);
+        this.updateGhostRange(targetLevel, targetingAlly);
 
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
@@ -460,18 +504,23 @@ export class StructureIconsLayer implements Layer {
     return 1;
   }
 
-  private updateGhostRange(level?: number) {
+  private updateGhostRange(level?: number, targetingAlly: boolean = false) {
     if (!this.ghostUnit) {
       return;
     }
 
-    if (this.ghostUnit.range && this.ghostUnit.rangeLevel === level) {
+    if (
+      this.ghostUnit.range &&
+      this.ghostUnit.rangeLevel === level &&
+      this.ghostUnit.targetingAlly === targetingAlly
+    ) {
       return;
     }
 
     this.ghostUnit.range?.destroy();
     this.ghostUnit.range = null;
     this.ghostUnit.rangeLevel = level;
+    this.ghostUnit.targetingAlly = targetingAlly;
 
     const position = this.ghostUnit.container.position;
     const range = this.factory.createRange(
@@ -479,6 +528,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostStage,
       { x: position.x, y: position.y },
       level,
+      targetingAlly,
     );
     if (range) {
       this.ghostUnit.range = range;
