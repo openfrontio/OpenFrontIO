@@ -221,6 +221,9 @@ export function boatPathFromTileToShore(
       noCornerCutting: true,
     },
     coarseBoatMapOrNull(gm),
+    {
+      offshoreCleanup: { windowSize: 16 },
+    },
   );
   const duration = performance.now() - startTime;
   if (result === null) return null;
@@ -293,6 +296,9 @@ export function boatPathFromTileToWater(
       noCornerCutting: true,
     },
     coarseBoatMapOrNull(gm),
+    {
+      offshoreCleanup: { windowSize: 16 },
+    },
   );
   const duration = performance.now() - startTime;
   if (result === null) return null;
@@ -417,6 +423,9 @@ export function bestTransportShipRoute(
       noCornerCutting: true,
     },
     coarse,
+    {
+      offshoreCleanup: { windowSize: 16 },
+    },
   );
   const duration = performance.now() - startTime;
   if (result === null) return false;

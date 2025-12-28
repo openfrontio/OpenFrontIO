@@ -4,7 +4,11 @@ import {
   MultiSourceAnyTargetBFSOptions,
   MultiSourceAnyTargetBFSResult,
 } from "./MultiSourceAnyTargetBFS";
-import { rubberBandCoarsePath, rubberBandWaterPath } from "./PathRubberBand";
+import {
+  OffshoreCleanupOptions,
+  rubberBandCoarsePath,
+  rubberBandWaterPath,
+} from "./PathRubberBand";
 
 export type CoarseToFineWaterPathOptions = {
   /**
@@ -20,6 +24,10 @@ export type CoarseToFineWaterPathOptions = {
    * Multiply radius each attempt (e.g. 2 turns 2 -> 4 -> 8 ...).
    */
   radiusMultiplier?: number;
+  /**
+   * Optional post-processing on the refined fine path.
+   */
+  offshoreCleanup?: OffshoreCleanupOptions;
 };
 
 const bfsCache = new WeakMap<GameMap, MultiSourceAnyTargetBFS>();
@@ -196,7 +204,12 @@ export function findWaterPathFromSeedsCoarseToFine(
     result: MultiSourceAnyTargetBFSResult | null,
   ): MultiSourceAnyTargetBFSResult | null => {
     if (result === null) return null;
-    const rb = rubberBandWaterPath(fineMap, result.path, bfsOpts);
+    const rb = rubberBandWaterPath(
+      fineMap,
+      result.path,
+      bfsOpts,
+      coarseToFine.offshoreCleanup,
+    );
     return { ...result, path: rb.path, waypoints: rb.waypoints };
   };
 
