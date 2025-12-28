@@ -154,8 +154,9 @@ function widenAllowedByVisitedRing(
   allowed: number,
   visitedStamp: Uint32Array,
   visited: number,
-): boolean {
-  let widened = false;
+  outNewlyAllowed: Int32Array,
+): number {
+  let count = 0;
   for (let y = 0; y < coarseHeight; y++) {
     const row = y * coarseWidth;
     for (let x = 0; x < coarseWidth; x++) {
@@ -171,12 +172,12 @@ function widenAllowedByVisitedRing(
           const n = nRow + xx;
           if (allowedStamp[n] === allowed) continue;
           allowedStamp[n] = allowed;
-          widened = true;
+          outNewlyAllowed[count++] = n;
         }
       }
     }
   }
-  return widened;
+  return count;
 }
 
 export function findWaterPathFromSeedsCoarseToFine(
@@ -269,7 +270,8 @@ export function findWaterPathFromSeedsCoarseToFine(
     );
   }
 
-  const corridorRadius0 = Math.max(0, coarseToFine.corridorRadius ?? 2);
+  // Start tight (radius 0) and rely on local widening + final fallback for robustness.
+  const corridorRadius0 = Math.max(0, coarseToFine.corridorRadius ?? 0);
   const maxAttempts = Math.max(1, coarseToFine.maxAttempts ?? 3);
 
   // Allowed corridor stamp is stable across attempts (widening is cumulative).
@@ -285,44 +287,50 @@ export function findWaterPathFromSeedsCoarseToFine(
   );
 
   const visitedSet = getVisitedStampSet(coarseMap);
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const visited = nextStamp(visitedSet);
+  let expansionsLeft = maxAttempts - 1;
+  const visitedMask = {
+    tileToRegion: mapping.fineToCoarse,
+    regionStamp: visitedSet.data,
+    stamp: nextStamp(visitedSet),
+  };
 
-    const refined = fineBfs.findWaterPathFromSeeds(
-      fineMap,
-      seedNodes,
-      seedOrigins,
-      targets,
-      {
-        ...bfsOpts,
-        allowedMask: {
-          tileToRegion: mapping.fineToCoarse,
-          regionStamp: allowedSet.data,
-          stamp: allowed,
-        },
-        visitedMaskOut: {
-          tileToRegion: mapping.fineToCoarse,
-          regionStamp: visitedSet.data,
-          stamp: visited,
-        },
+  const refined = fineBfs.findWaterPathFromSeedsMaskExpanding(
+    fineMap,
+    seedNodes,
+    seedOrigins,
+    targets,
+    {
+      ...bfsOpts,
+      allowedMask: {
+        tileToRegion: mapping.fineToCoarse,
+        regionStamp: allowedSet.data,
+        stamp: allowed,
       },
-    );
-    if (refined !== null) return refined;
+      visitedMaskOut: visitedMask,
+    },
+    (outNewlyAllowed) => {
+      if (expansionsLeft <= 0) return 0;
 
-    if (attempt === maxAttempts - 1) break;
+      // Expand by 1 ring around the coarse regions actually visited in the most recent phase.
+      // Widening is cumulative (newly allowed regions stay allowed).
+      const newCount = widenAllowedByVisitedRing(
+        coarseWidth,
+        coarseHeight,
+        allowedSet.data,
+        allowed,
+        visitedSet.data,
+        visitedMask.stamp,
+        outNewlyAllowed,
+      );
+      expansionsLeft--;
+      if (newCount <= 0) return 0;
 
-    // Local corridor widening: expand by 1 ring around the coarse regions actually visited
-    // in this failed attempt. Widening is cumulative (newly allowed regions stay allowed).
-    const widened = widenAllowedByVisitedRing(
-      coarseWidth,
-      coarseHeight,
-      allowedSet.data,
-      allowed,
-      visitedSet.data,
-      visited,
-    );
-    if (!widened) break;
-  }
+      // Reset visited coarse tracking for the next phase.
+      visitedMask.stamp = nextStamp(visitedSet);
+      return newCount;
+    },
+  );
+  if (refined !== null) return refined;
 
   // Final fallback: unrestricted fine BFS.
   return fineBfs.findWaterPathFromSeeds(
