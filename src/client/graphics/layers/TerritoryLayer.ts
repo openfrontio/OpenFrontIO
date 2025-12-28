@@ -21,8 +21,8 @@ import {
   MouseOverEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
-import { TransformHandler } from "../TransformHandler";
 import { drawTeammateGlow } from "../TeammateGlow";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -334,10 +334,7 @@ export class TerritoryLayer implements Layer {
 
     const innerRadius = Math.max(
       2,
-      Math.min(
-        TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1,
-        Math.sqrt(maxDistSq),
-      ),
+      Math.min(TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1, Math.sqrt(maxDistSq)),
     );
 
     return {
