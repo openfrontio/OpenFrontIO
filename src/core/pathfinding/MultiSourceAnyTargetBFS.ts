@@ -4,6 +4,11 @@ export type MultiSourceAnyTargetBFSResult = {
   source: TileRef;
   target: TileRef;
   path: TileRef[];
+  /**
+   * Optional sparse polyline representation of `path` (e.g. for rendering/splines).
+   * When present, `path` should still be treated as the authoritative tile-valid route.
+   */
+  waypoints?: TileRef[];
 };
 
 export type MultiSourceAnyTargetBFSOptions = {

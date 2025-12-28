@@ -7,6 +7,7 @@ type BoatRoute = {
   src: TileRef;
   dst: TileRef;
   path: TileRef[];
+  waypoints?: TileRef[];
 };
 
 function miniMapOrNull(gm: GameMap): GameMap | null {
@@ -426,13 +427,15 @@ export function bestTransportShipRoute(
   const src = result.source;
   // Full route includes the shore endpoints to drive unit movement.
   const path = [src, ...result.path, dst];
+  const waterWaypoints = result.waypoints ?? result.path;
+  const waypoints = [src, ...waterWaypoints, dst];
   console.log(
     `bestTransportShipRoute: ${duration.toFixed(2)}ms, steps=${Math.max(
       0,
       path.length - 1,
     )}`,
   );
-  return { src, dst, path };
+  return { src, dst, path, waypoints };
 }
 
 export function canBuildTransportShip(

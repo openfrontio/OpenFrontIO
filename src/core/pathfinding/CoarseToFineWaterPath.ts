@@ -4,7 +4,7 @@ import {
   MultiSourceAnyTargetBFSOptions,
   MultiSourceAnyTargetBFSResult,
 } from "./MultiSourceAnyTargetBFS";
-import { rubberBandCoarsePath } from "./PathRubberBand";
+import { rubberBandCoarsePath, rubberBandWaterPath } from "./PathRubberBand";
 
 export type CoarseToFineWaterPathOptions = {
   /**
@@ -192,24 +192,36 @@ export function findWaterPathFromSeedsCoarseToFine(
 ): MultiSourceAnyTargetBFSResult | null {
   const fineBfs = getBfs(fineMap);
 
+  const postprocessFine = (
+    result: MultiSourceAnyTargetBFSResult | null,
+  ): MultiSourceAnyTargetBFSResult | null => {
+    if (result === null) return null;
+    const rb = rubberBandWaterPath(fineMap, result.path, bfsOpts);
+    return { ...result, path: rb.path, waypoints: rb.waypoints };
+  };
+
   if (!coarseMap) {
-    return fineBfs.findWaterPathFromSeeds(
-      fineMap,
-      seedNodes,
-      seedOrigins,
-      targets,
-      bfsOpts,
+    return postprocessFine(
+      fineBfs.findWaterPathFromSeeds(
+        fineMap,
+        seedNodes,
+        seedOrigins,
+        targets,
+        bfsOpts,
+      ),
     );
   }
 
   const mapping = getFineToCoarseMapping(fineMap, coarseMap);
   if (mapping === null) {
-    return fineBfs.findWaterPathFromSeeds(
-      fineMap,
-      seedNodes,
-      seedOrigins,
-      targets,
-      bfsOpts,
+    return postprocessFine(
+      fineBfs.findWaterPathFromSeeds(
+        fineMap,
+        seedNodes,
+        seedOrigins,
+        targets,
+        bfsOpts,
+      ),
     );
   }
 
@@ -242,12 +254,14 @@ export function findWaterPathFromSeedsCoarseToFine(
   );
 
   if (coarseSeeds.length === 0 || coarseTargets.length === 0) {
-    return fineBfs.findWaterPathFromSeeds(
-      fineMap,
-      seedNodes,
-      seedOrigins,
-      targets,
-      bfsOpts,
+    return postprocessFine(
+      fineBfs.findWaterPathFromSeeds(
+        fineMap,
+        seedNodes,
+        seedOrigins,
+        targets,
+        bfsOpts,
+      ),
     );
   }
 
@@ -262,12 +276,14 @@ export function findWaterPathFromSeedsCoarseToFine(
 
   if (coarseResult === null) {
     // Safe fallback: if the coarse map is conservative, we might still have a fine path.
-    return fineBfs.findWaterPathFromSeeds(
-      fineMap,
-      seedNodes,
-      seedOrigins,
-      targets,
-      bfsOpts,
+    return postprocessFine(
+      fineBfs.findWaterPathFromSeeds(
+        fineMap,
+        seedNodes,
+        seedOrigins,
+        targets,
+        bfsOpts,
+      ),
     );
   }
 
@@ -336,14 +352,16 @@ export function findWaterPathFromSeedsCoarseToFine(
       return newCount;
     },
   );
-  if (refined !== null) return refined;
+  if (refined !== null) return postprocessFine(refined);
 
   // Final fallback: unrestricted fine BFS.
-  return fineBfs.findWaterPathFromSeeds(
-    fineMap,
-    seedNodes,
-    seedOrigins,
-    targets,
-    bfsOpts,
+  return postprocessFine(
+    fineBfs.findWaterPathFromSeeds(
+      fineMap,
+      seedNodes,
+      seedOrigins,
+      targets,
+      bfsOpts,
+    ),
   );
 }
