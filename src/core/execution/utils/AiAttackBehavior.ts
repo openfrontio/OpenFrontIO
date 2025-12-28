@@ -384,7 +384,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  // Find someone who is weaker than us and is under attack from others (20%+ of their troops incoming)
+  // Find someone who is weaker than us and is under big attack from others (50%+ of their troops incoming)
   private findWeakestVictim(borderingEnemies: Player[]): Player | null {
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest
     return (
@@ -395,7 +395,7 @@ export class AiAttackBehavior {
           .incomingAttacks()
           .reduce((sum, attack) => sum + attack.troops(), 0);
 
-        return totalIncomingTroops > enemy.troops() * 0.2;
+        return totalIncomingTroops > enemy.troops() * 0.5;
       }) ?? null
     );
   }
