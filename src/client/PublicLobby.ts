@@ -22,12 +22,16 @@ export class PublicLobby extends LitElement {
   @state() private mapImages: Map<GameID, string> = new Map();
   @state() private joiningDotIndex: number = 0;
 
-  private lobbiesInterval: number | null = null;
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
-  private lobbiesFetchInFlight: Promise<GameInfo[]> | null = null;
+  private ws: WebSocket | null = null;
+  private wsReconnectTimeout: number | null = null;
+  private wsReconnectDelay: number = 3000;
+  private fallbackPollInterval: number | null = null;
+  private wsConnectionAttempts: number = 0;
+  private maxWsAttempts: number = 3;
 
   createRenderRoot() {
     return this;
@@ -35,38 +39,129 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.fetchAndUpdateLobbies();
-    this.lobbiesInterval = window.setInterval(
-      () => this.fetchAndUpdateLobbies(),
-      1000,
-    );
+    this.connectWebSocket();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.lobbiesInterval !== null) {
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
-    }
+    this.disconnectWebSocket();
     this.stopJoiningAnimation();
   }
 
-  private async fetchAndUpdateLobbies(): Promise<void> {
+  private connectWebSocket() {
     try {
-      this.lobbies = await this.fetchLobbies();
-      this.lobbies.forEach((l) => {
-        if (!this.lobbyIDToStart.has(l.gameID)) {
-          const msUntilStart = l.msUntilStart ?? 0;
-          this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
-        }
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/socket`;
+      
+      this.ws = new WebSocket(wsUrl);
 
-        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+      this.ws.addEventListener("open", () => {
+        console.log("WebSocket connected to lobby updates");
+        this.wsConnectionAttempts = 0;
+        // Clear any pending reconnect attempts
+        if (this.wsReconnectTimeout !== null) {
+          clearTimeout(this.wsReconnectTimeout);
+          this.wsReconnectTimeout = null;
+        }
+        // Stop fallback polling if it's running
+        this.stopFallbackPolling();
+      });
+
+      this.ws.addEventListener("message", (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "lobbies_update") {
+            this.handleLobbiesUpdate(message.data?.lobbies ?? []);
+          }
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
         }
       });
+
+      this.ws.addEventListener("close", () => {
+        console.log("WebSocket disconnected, attempting to reconnect...");
+        this.wsConnectionAttempts++;
+        if (this.wsConnectionAttempts >= this.maxWsAttempts) {
+          console.log("Max WebSocket attempts reached, falling back to HTTP polling");
+          this.startFallbackPolling();
+        } else {
+          this.scheduleReconnect();
+        }
+      });
+
+      this.ws.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+        this.wsConnectionAttempts++;
+      });
     } catch (error) {
-      console.error("Error fetching lobbies:", error);
+      console.error("Error connecting WebSocket:", error);
+      this.wsConnectionAttempts++;
+      if (this.wsConnectionAttempts >= this.maxWsAttempts) {
+        this.startFallbackPolling();
+      } else {
+        this.scheduleReconnect();
+      }
     }
+  }
+
+  private disconnectWebSocket() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    if (this.wsReconnectTimeout !== null) {
+      clearTimeout(this.wsReconnectTimeout);
+      this.wsReconnectTimeout = null;
+    }
+  }
+
+  private scheduleReconnect() {
+    if (this.wsReconnectTimeout !== null) return;
+    this.wsReconnectTimeout = window.setTimeout(() => {
+      this.wsReconnectTimeout = null;
+      this.connectWebSocket();
+    }, this.wsReconnectDelay);
+  }
+
+  private startFallbackPolling() {
+    if (this.fallbackPollInterval !== null) return;
+    console.log("Starting HTTP fallback polling");
+    this.fallbackPollInterval = window.setInterval(() => {
+      this.fetchLobbiesHTTP();
+    }, 1000);
+  }
+
+  private stopFallbackPolling() {
+    if (this.fallbackPollInterval !== null) {
+      clearInterval(this.fallbackPollInterval);
+      this.fallbackPollInterval = null;
+    }
+  }
+
+  private async fetchLobbiesHTTP() {
+    try {
+      const response = await fetch(`/api/public_lobbies`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      this.handleLobbiesUpdate(data.lobbies as GameInfo[]);
+    } catch (error) {
+      console.error("Error fetching lobbies via HTTP:", error);
+    }
+  }
+
+  private handleLobbiesUpdate(lobbies: GameInfo[]) {
+    this.lobbies = lobbies;
+    this.lobbies.forEach((l) => {
+      if (!this.lobbyIDToStart.has(l.gameID)) {
+        const msUntilStart = l.msUntilStart ?? 0;
+        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
+      }
+
+      if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+        this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+      }
+    });
+    this.requestUpdate();
   }
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
@@ -77,38 +172,6 @@ export class PublicLobby extends LitElement {
       this.requestUpdate();
     } catch (error) {
       console.error("Failed to load map image:", error);
-    }
-  }
-
-  async fetchLobbies(): Promise<GameInfo[]> {
-    if (this.lobbiesFetchInFlight) {
-      return this.lobbiesFetchInFlight;
-    }
-
-    this.lobbiesFetchInFlight = (async () => {
-      try {
-        const response = await fetch(`/api/public_lobbies`);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        return data.lobbies as GameInfo[];
-      } catch (error) {
-        console.error("Error fetching lobbies:", error);
-        throw error;
-      } finally {
-        this.lobbiesFetchInFlight = null;
-      }
-    })();
-
-    return this.lobbiesFetchInFlight;
-  }
-
-  public stop() {
-    if (this.lobbiesInterval !== null) {
-      this.isLobbyHighlighted = false;
-      this.stopJoiningAnimation();
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
     }
   }
 
@@ -211,6 +274,14 @@ export class PublicLobby extends LitElement {
   }
 
   leaveLobby() {
+    this.isLobbyHighlighted = false;
+    this.currLobby = null;
+    this.stopJoiningAnimation();
+  }
+
+  public stop() {
+    this.disconnectWebSocket();
+    this.stopFallbackPolling();
     this.isLobbyHighlighted = false;
     this.currLobby = null;
     this.stopJoiningAnimation();

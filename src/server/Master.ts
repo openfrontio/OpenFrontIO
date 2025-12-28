@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { WebSocket, WebSocketServer } from "ws";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -62,6 +63,23 @@ app.use(
 let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
+const connectedClients: Set<WebSocket> = new Set();
+
+// Broadcast lobbies to all connected clients
+function broadcastLobbies() {
+  const message = JSON.stringify({
+    type: "lobbies_update",
+    data: JSON.parse(publicLobbiesJsonStr || '{"lobbies":[]}'),
+  });
+
+  connectedClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    } else {
+      connectedClients.delete(client);
+    }
+  });
+}
 
 // Start the master process
 export async function startMaster() {
@@ -73,6 +91,32 @@ export async function startMaster() {
 
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${config.numWorkers()} workers...`);
+
+  // Setup WebSocket server for clients
+  const wss = new WebSocketServer({ server, path: "/socket" });
+
+  wss.on("connection", (ws: WebSocket) => {
+    log.info(`Client connected. Total clients: ${connectedClients.size + 1}`);
+    connectedClients.add(ws);
+
+    // Send current lobbies immediately (always send, even if empty)
+    ws.send(
+      JSON.stringify({
+        type: "lobbies_update",
+        data: JSON.parse(publicLobbiesJsonStr || '{"lobbies":[]}'),
+      }),
+    );
+
+    ws.on("close", () => {
+      connectedClients.delete(ws);
+      log.info(`Client disconnected. Total clients: ${connectedClients.size}`);
+    });
+
+    ws.on("error", (error) => {
+      log.error(`WebSocket error:`, error);
+      connectedClients.delete(ws);
+    });
+  });
 
   // Generate admin token for worker authentication
   const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
@@ -226,9 +270,15 @@ async function fetchLobbies(): Promise<number> {
   });
 
   // Update the JSON string
-  publicLobbiesJsonStr = JSON.stringify({
+  const newLobbiesJson = JSON.stringify({
     lobbies: lobbyInfos,
   });
+
+  // Only broadcast if lobbies changed
+  if (publicLobbiesJsonStr !== newLobbiesJson) {
+    publicLobbiesJsonStr = newLobbiesJson;
+    broadcastLobbies();
+  }
 
   return publicLobbyIDs.size;
 }
