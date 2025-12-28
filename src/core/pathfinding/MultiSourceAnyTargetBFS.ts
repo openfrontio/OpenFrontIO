@@ -9,6 +9,10 @@ export type MultiSourceAnyTargetBFSResult = {
    * When present, `path` should still be treated as the authoritative tile-valid route.
    */
   waypoints?: TileRef[];
+  /**
+   * Optional sampled spline in tile coordinates (x,y pairs), intended for rendering.
+   */
+  spline?: number[];
 };
 
 export type MultiSourceAnyTargetBFSOptions = {

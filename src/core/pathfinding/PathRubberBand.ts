@@ -5,14 +5,34 @@ import { MultiSourceAnyTargetBFSOptions } from "./MultiSourceAnyTargetBFS";
 export type RubberBandPathResult = {
   waypoints: TileRef[];
   path: TileRef[];
+  /**
+   * Optional sampled spline in tile coordinates (x,y pairs), intended for rendering.
+   * This does not affect the tile-valid `path`.
+   */
+  spline?: number[];
 };
 
 export type OffshoreCleanupOptions = {
   /**
    * Square window size (in tiles) used to find the local maximum "depth" (distance-to-land).
-   * Typical: 16.
+   *
+   * Must be odd so the window is symmetric around the waypoint (even sizes bias by 1 tile).
+   * Typical: 33.
    */
   windowSize?: number;
+};
+
+export type WaypointSplineOptions = {
+  enabled?: boolean;
+  /**
+   * Number of samples per waypoint segment (higher = smoother).
+   * Typical: 4..8.
+   */
+  samplesPerSegment?: number;
+  /**
+   * Catmull-Rom tension (0..1). Typical: 0.5.
+   */
+  tension?: number;
 };
 
 const depthDirs8 = [
@@ -34,6 +54,114 @@ let waypointScratchOut = new Int32Array(0);
 
 function sign(n: number): -1 | 0 | 1 {
   return n === 0 ? 0 : n > 0 ? 1 : -1;
+}
+
+function catmullRom1D(
+  p0: number,
+  p1: number,
+  p2: number,
+  p3: number,
+  t: number,
+  tension: number,
+): number {
+  // Standard Catmull-Rom (cubic Hermite form).
+  const t2 = t * t;
+  const t3 = t2 * t;
+  const m1 = (p2 - p0) * tension;
+  const m2 = (p3 - p1) * tension;
+  return (
+    (2 * t3 - 3 * t2 + 1) * p1 +
+    (t3 - 2 * t2 + t) * m1 +
+    (-2 * t3 + 3 * t2) * p2 +
+    (t3 - t2) * m2
+  );
+}
+
+function buildWaypointSplineSamples(
+  gm: GameMap,
+  waypoints: readonly TileRef[],
+  noCornerCutting: boolean,
+  opts: WaypointSplineOptions,
+): number[] | undefined {
+  const enabled = opts.enabled ?? true;
+  if (!enabled) return undefined;
+  if (waypoints.length < 2) return undefined;
+
+  const samplesPerSegment = Math.max(1, Math.min(16, opts.samplesPerSegment ?? 4));
+  const tension = Math.max(0, Math.min(1, opts.tension ?? 0.5));
+
+  // Clamp for safety on pathological inputs.
+  const maxSegments = 1024;
+  const segCount = Math.min(maxSegments, waypoints.length - 1);
+
+  const out: number[] = [];
+  out.length = 0;
+
+  const pushPoint = (x: number, y: number) => {
+    out.push(x, y);
+  };
+
+  // Convert to tile-center coordinates to avoid bias.
+  const cx = (t: TileRef) => gm.x(t) + 0.5;
+  const cy = (t: TileRef) => gm.y(t) + 0.5;
+
+  // Validate samples stay on water (coarse check) to avoid obvious curve-cutting over land.
+  const w = gm.width();
+  const h = gm.height();
+  const isSampleWater = (x: number, y: number) => {
+    const tx = Math.max(0, Math.min(w - 1, Math.floor(x)));
+    const ty = Math.max(0, Math.min(h - 1, Math.floor(y)));
+    const ref = ty * w + tx;
+    if (!gm.isWater(ref)) return false;
+    if (noCornerCutting) {
+      // If we're close to a corner, be conservative: require the orthogonals to be water as well.
+      // This is a heuristic validation; the authoritative path remains tile-valid.
+      const fx = x - tx;
+      const fy = y - ty;
+      const dx = fx < 0.25 ? -1 : fx > 0.75 ? 1 : 0;
+      const dy = fy < 0.25 ? -1 : fy > 0.75 ? 1 : 0;
+      if (dx !== 0 && dy !== 0) {
+        const ox = tx + dx;
+        const oy = ty + dy;
+        if (ox >= 0 && ox < w && oy >= 0 && oy < h) {
+          const orthoA = ty * w + ox;
+          const orthoB = oy * w + tx;
+          if (!gm.isWater(orthoA) || !gm.isWater(orthoB)) return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // Start point.
+  pushPoint(cx(waypoints[0]!), cy(waypoints[0]!));
+
+  for (let i = 0; i < segCount; i++) {
+    const p0 = waypoints[Math.max(0, i - 1)]!;
+    const p1 = waypoints[i]!;
+    const p2 = waypoints[i + 1]!;
+    const p3 = waypoints[Math.min(waypoints.length - 1, i + 2)]!;
+
+    const x0 = cx(p0);
+    const y0 = cy(p0);
+    const x1 = cx(p1);
+    const y1 = cy(p1);
+    const x2 = cx(p2);
+    const y2 = cy(p2);
+    const x3 = cx(p3);
+    const y3 = cy(p3);
+
+    // Skip t=0 (already pushed p1). Include samples up to t<1 and then rely on next segment / final point.
+    for (let s = 1; s <= samplesPerSegment; s++) {
+      const t = s / samplesPerSegment;
+      const x = catmullRom1D(x0, x1, x2, x3, t, tension);
+      const y = catmullRom1D(y0, y1, y2, y3, t, tension);
+      if (!isSampleWater(x, y)) return undefined;
+      pushPoint(x, y);
+    }
+  }
+
+  return out;
 }
 
 function lineOfSightWater(
@@ -168,8 +296,10 @@ function snapWaypointsToLocalDepthMaxInPlace(
 ) {
   if (waypoints.length <= 2) return;
 
-  const windowSize = Math.max(4, opts.windowSize ?? 16);
-  const half = Math.max(1, Math.floor(windowSize / 2));
+  let windowSize = Math.max(5, opts.windowSize ?? 33);
+  // Keep it odd so the "depth field" doesn't get a directional bias from [-k, +k-1] windows.
+  if ((windowSize & 1) === 0) windowSize += 1;
+  const half = windowSize >> 1;
 
   const w = gm.width();
   const h = gm.height();
@@ -204,8 +334,8 @@ function snapWaypointsToLocalDepthMaxInPlace(
 
     const x0 = Math.max(0, cx - half);
     const y0 = Math.max(0, cy - half);
-    const x1 = Math.min(w - 1, cx + (windowSize - half - 1));
-    const y1 = Math.min(h - 1, cy + (windowSize - half - 1));
+    const x1 = Math.min(w - 1, cx + half);
+    const y1 = Math.min(h - 1, cy + half);
     const ww = x1 - x0 + 1;
     const wh = y1 - y0 + 1;
     const n = ww * wh;
@@ -265,7 +395,6 @@ function snapWaypointsToLocalDepthMaxInPlace(
         const t = row + (x0 + lx);
         if (!gm.isWater(t)) continue;
         const depth = depthScratchDist[base + lx]!;
-        // Must preserve the sparse-path invariant: segments remain LOS-water.
         if (
           !lineOfSightWater(gm, prev, t, noCornerCutting) ||
           !lineOfSightWater(gm, t, next, noCornerCutting)
@@ -276,10 +405,7 @@ function snapWaypointsToLocalDepthMaxInPlace(
         const dy = (y0 + ly) - cy;
         const d2 = dx * dx + dy * dy;
 
-        if (
-          depth > bestDepth ||
-          (depth === bestDepth && d2 < bestDist2)
-        ) {
+        if (depth > bestDepth || (depth === bestDepth && d2 < bestDist2)) {
           bestDepth = depth;
           bestDist2 = d2;
           bestTile = t;
@@ -363,6 +489,7 @@ export function rubberBandWaterPath(
   waterPath: readonly TileRef[],
   bfsOpts: MultiSourceAnyTargetBFSOptions,
   offshore?: OffshoreCleanupOptions,
+  spline?: WaypointSplineOptions,
 ): RubberBandPathResult {
   if (waterPath.length <= 2) {
     return { waypoints: [...waterPath], path: [...waterPath] };
@@ -381,6 +508,12 @@ export function rubberBandWaterPath(
     snapWaypointsToLocalDepthMaxInPlace(gm, waypoints, noCornerCutting, offshore);
   }
 
+  const splineOpts: WaypointSplineOptions = spline ?? {};
+  const splineSamples =
+    splineOpts.enabled === false
+      ? undefined
+      : buildWaypointSplineSamples(gm, waypoints, noCornerCutting, splineOpts);
+
   // Final: expand the waypoint polyline once into a tile-valid path.
   const out: TileRef[] = [];
   for (let k = 0; k < waypoints.length - 1; k++) {
@@ -388,6 +521,6 @@ export function rubberBandWaterPath(
   }
 
   return out.length > 0
-    ? { waypoints, path: out }
+    ? { waypoints, path: out, spline: splineSamples }
     : { waypoints: [...waterPath], path: [...waterPath] };
 }

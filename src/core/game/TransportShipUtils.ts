@@ -8,6 +8,7 @@ type BoatRoute = {
   dst: TileRef;
   path: TileRef[];
   waypoints?: TileRef[];
+  spline?: number[];
 };
 
 function miniMapOrNull(gm: GameMap): GameMap | null {
@@ -222,7 +223,7 @@ export function boatPathFromTileToShore(
     },
     coarseBoatMapOrNull(gm),
     {
-      offshoreCleanup: { windowSize: 16 },
+      offshoreCleanup: { windowSize: 17 },
     },
   );
   const duration = performance.now() - startTime;
@@ -297,7 +298,7 @@ export function boatPathFromTileToWater(
     },
     coarseBoatMapOrNull(gm),
     {
-      offshoreCleanup: { windowSize: 16 },
+      offshoreCleanup: { windowSize: 17 },
     },
   );
   const duration = performance.now() - startTime;
@@ -424,7 +425,7 @@ export function bestTransportShipRoute(
     },
     coarse,
     {
-      offshoreCleanup: { windowSize: 16 },
+      offshoreCleanup: { windowSize: 17 },
     },
   );
   const duration = performance.now() - startTime;
@@ -444,7 +445,7 @@ export function bestTransportShipRoute(
       path.length - 1,
     )}`,
   );
-  return { src, dst, path, waypoints };
+  return { src, dst, path, waypoints, spline: result.spline };
 }
 
 export function canBuildTransportShip(

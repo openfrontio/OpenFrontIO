@@ -6,6 +6,7 @@ import {
 } from "./MultiSourceAnyTargetBFS";
 import {
   OffshoreCleanupOptions,
+  WaypointSplineOptions,
   rubberBandCoarsePath,
   rubberBandWaterPath,
 } from "./PathRubberBand";
@@ -28,6 +29,10 @@ export type CoarseToFineWaterPathOptions = {
    * Optional post-processing on the refined fine path.
    */
   offshoreCleanup?: OffshoreCleanupOptions;
+  /**
+   * Optional spline sampling (rendering-only) built from the final waypoints.
+   */
+  waypointSpline?: WaypointSplineOptions;
 };
 
 const bfsCache = new WeakMap<GameMap, MultiSourceAnyTargetBFS>();
@@ -209,8 +214,14 @@ export function findWaterPathFromSeedsCoarseToFine(
       result.path,
       bfsOpts,
       coarseToFine.offshoreCleanup,
+      coarseToFine.waypointSpline,
     );
-    return { ...result, path: rb.path, waypoints: rb.waypoints };
+    return {
+      ...result,
+      path: rb.path,
+      waypoints: rb.waypoints,
+      spline: rb.spline,
+    };
   };
 
   if (!coarseMap) {
