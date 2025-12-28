@@ -89,21 +89,25 @@ type LogArgs struct {
 }
 
 // Logger defines a function signature for logging with formatting and conditional output.
+// Other than logArgs providing additional context, it is a proxy to log.Printf
 type Logger func(logArgs LogArgs, format string, v ...interface{})
 
 // createLogger creates a logger instance that handles formatting and conditional output
 func createLogger(args GeneratorArgs) Logger {
-	// and handle checking against the performance and verbose flags
 	return func(logArgs LogArgs, format string, v ...interface{}) {
+		// dont log verbose messages when not in verbose mode
 		if logArgs.isVerbose && !args.Verbose {
 			return
 		}
+		// dont log performance messages when not in performance mode
 		if logArgs.isPerformance && !args.Performance {
 			return
 		}
+		// log the name of the map first in verbose mode: [world] Log Message Here
 		if args.Verbose {
 			log.Printf("[%s] %s", args.Name, fmt.Sprintf(format, v...))
 		} else {
+			// by default, we proxy to log.Printf
 			log.Printf(format, v...)
 		}
 	}
@@ -146,12 +150,9 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	width = width - (width % 4)
 	height = height - (height % 4)
 
-	// only perform this check if the performance flag is enabled
-	if args.Performance {
-		area := width * height
-		if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
-			logger(LogArgs{isPerformance: true}, "⚠️ Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize)
-		}
+	area := width * height
+	if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
+		logger(LogArgs{isPerformance: true}, "⚠️ Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize)
 	}
 
 	logger(LogArgs{}, "Processing Map: %s, dimensions: %dx%d", args.Name, width, height)
