@@ -70,6 +70,7 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  allianceID?: number;
 }
 
 @customElement("events-display")
@@ -336,6 +337,7 @@ export class EventsDisplay extends LitElement implements Layer {
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: other.smallID(),
+        allianceID: alliance.id,
       });
     }
   }
@@ -360,6 +362,16 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   renderLayer(): void {}
+
+  private removeAllianceRenewalEvents(allianceID: number) {
+    this.events = this.events.filter(
+      (event) =>
+        !(
+          event.type === MessageType.RENEW_ALLIANCE &&
+          event.allianceID === allianceID
+        ),
+    );
+  }
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.myPlayer();
@@ -551,6 +563,9 @@ export class EventsDisplay extends LitElement implements Layer {
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
+
+    this.removeAllianceRenewalEvents(update.allianceID);
+    this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
