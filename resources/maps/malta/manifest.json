@@ -1,0 +1,524 @@
+{
+  "map": {
+    "height": 1600,
+    "num_land_tiles": 1045815,
+    "width": 2400
+  },
+  "map16x": {
+    "height": 400,
+    "num_land_tiles": 63973,
+    "width": 600
+  },
+  "map4x": {
+    "height": 800,
+    "num_land_tiles": 259519,
+    "width": 1200
+  },
+  "name": "Malta",
+  "nations": [
+    {
+      "coordinates": [
+        1825,
+        910
+      ],
+      "flag": "mt",
+      "name": "Valletta"
+    },
+    {
+      "coordinates": [
+        1809,
+        910
+      ],
+      "flag": "it",
+      "name": "Floriana"
+    },
+    {
+      "coordinates": [
+        1769,
+        888
+      ],
+      "flag": "gb",
+      "name": "Sliema"
+    },
+    {
+      "coordinates": [
+        1766,
+        884
+      ],
+      "flag": "fr",
+      "name": "Gzira"
+    },
+    {
+      "coordinates": [
+        1754,
+        886
+      ],
+      "flag": "de",
+      "name": "Msida"
+    },
+    {
+      "coordinates": [
+        1752,
+        896
+      ],
+      "flag": "es",
+      "name": "Pieta"
+    },
+    {
+      "coordinates": [
+        1708,
+        902
+      ],
+      "flag": "pt",
+      "name": "Hamrun"
+    },
+    {
+      "coordinates": [
+        1676,
+        907
+      ],
+      "flag": "nl",
+      "name": "Santa Venera"
+    },
+    {
+      "coordinates": [
+        1658,
+        896
+      ],
+      "flag": "ie",
+      "name": "Birkirkara"
+    },
+    {
+      "coordinates": [
+        1620,
+        938
+      ],
+      "flag": "be",
+      "name": "Qormi"
+    },
+    {
+      "coordinates": [
+        1562,
+        905
+      ],
+      "flag": "se",
+      "name": "Attard"
+    },
+    {
+      "coordinates": [
+        1575,
+        895
+      ],
+      "flag": "no",
+      "name": "Balzan"
+    },
+    {
+      "coordinates": [
+        1602,
+        865
+      ],
+      "flag": "fi",
+      "name": "Lija"
+    },
+    {
+      "coordinates": [
+        1728,
+        842
+      ],
+      "flag": "dk",
+      "name": "San Gwann"
+    },
+    {
+      "coordinates": [
+        1736,
+        836
+      ],
+      "flag": "pl",
+      "name": "Swieqi"
+    },
+    {
+      "coordinates": [
+        1762,
+        809
+      ],
+      "flag": "ro",
+      "name": "Pembroke"
+    },
+    {
+      "coordinates": [
+        1679,
+        806
+      ],
+      "flag": "gr",
+      "name": "Naxxar"
+    },
+    {
+      "coordinates": [
+        1709,
+        769
+      ],
+      "flag": "cy",
+      "name": "Gharghur"
+    },
+    {
+      "coordinates": [
+        1658,
+        780
+      ],
+      "flag": "hr",
+      "name": "Iklin"
+    },
+    {
+      "coordinates": [
+        1627,
+        768
+      ],
+      "flag": "si",
+      "name": "Mosta"
+    },
+    {
+      "coordinates": [
+        1521,
+        599
+      ],
+      "flag": "tr",
+      "name": "Mellieha"
+    },
+    {
+      "coordinates": [
+        1642,
+        687
+      ],
+      "flag": "tn",
+      "name": "St Paul's Bay"
+    },
+    {
+      "coordinates": [
+        1484,
+        868
+      ],
+      "flag": "ch",
+      "name": "Mdina"
+    },
+    {
+      "coordinates": [
+        1460,
+        903
+      ],
+      "flag": "at",
+      "name": "Rabat"
+    },
+    {
+      "coordinates": [
+        1503,
+        836
+      ],
+      "flag": "cz",
+      "name": "Mtarfa"
+    },
+    {
+      "coordinates": [
+        1332,
+        923
+      ],
+      "flag": "sk",
+      "name": "Dingli"
+    },
+    {
+      "coordinates": [
+        1505,
+        999
+      ],
+      "flag": "hu",
+      "name": "Siggiewi"
+    },
+    {
+      "coordinates": [
+        1463,
+        1106
+      ],
+      "flag": "dz",
+      "name": "Zurrieq"
+    },
+    {
+      "coordinates": [
+        1434,
+        1130
+      ],
+      "flag": "so",
+      "name": "Qrendi"
+    },
+    {
+      "coordinates": [
+        1679,
+        975
+      ],
+      "flag": "eg",
+      "name": "Luqa"
+    },
+    {
+      "coordinates": [
+        1728,
+        1028
+      ],
+      "flag": "il",
+      "name": "Gudja"
+    },
+    {
+      "coordinates": [
+        1778,
+        1025
+      ],
+      "flag": "jo",
+      "name": "Ghaxaq"
+    },
+    {
+      "coordinates": [
+        1730,
+        926
+      ],
+      "flag": "sa",
+      "name": "Marsa"
+    },
+    {
+      "coordinates": [
+        1747,
+        955
+      ],
+      "flag": "ae",
+      "name": "Paola"
+    },
+    {
+      "coordinates": [
+        1736,
+        972
+      ],
+      "flag": "qa",
+      "name": "Tarxien"
+    },
+    {
+      "coordinates": [
+        1798,
+        985
+      ],
+      "flag": "kw",
+      "name": "Fgura"
+    },
+    {
+      "coordinates": [
+        1827,
+        975
+      ],
+      "flag": "bh",
+      "name": "Zabbar"
+    },
+    {
+      "coordinates": [
+        1832,
+        939
+      ],
+      "flag": "om",
+      "name": "Kalkara"
+    },
+    {
+      "coordinates": [
+        1844,
+        947
+      ],
+      "flag": "jo",
+      "name": "Birgu"
+    },
+    {
+      "coordinates": [
+        1827,
+        943
+      ],
+      "flag": "lb",
+      "name": "Bormla"
+    },
+    {
+      "coordinates": [
+        1837,
+        952
+      ],
+      "flag": "sy",
+      "name": "Isla (Senglea)"
+    },
+    {
+      "coordinates": [
+        1803,
+        1009
+      ],
+      "flag": "iq",
+      "name": "Zejtun"
+    },
+    {
+      "coordinates": [
+        1868,
+        1032
+      ],
+      "flag": "ps",
+      "name": "Marsaxlokk"
+    },
+    {
+      "coordinates": [
+        1808,
+        1172
+      ],
+      "flag": "sd",
+      "name": "Birzebbuga"
+    },
+    {
+      "coordinates": [
+        1582,
+        1110
+      ],
+      "flag": "et",
+      "name": "Mqabba"
+    },
+    {
+      "coordinates": [
+        1635,
+        1110
+      ],
+      "flag": "ke",
+      "name": "Kirkop"
+    },
+    {
+      "coordinates": [
+        435,
+        203
+      ],
+      "flag": "mt",
+      "name": "Victoria"
+    },
+    {
+      "coordinates": [
+        419,
+        248
+      ],
+      "flag": "it",
+      "name": "Fontana"
+    },
+    {
+      "coordinates": [
+        359,
+        227
+      ],
+      "flag": "gb",
+      "name": "Kercem"
+    },
+    {
+      "coordinates": [
+        487,
+        254
+      ],
+      "flag": "fr",
+      "name": "Xewkija"
+    },
+    {
+      "coordinates": [
+        537,
+        216
+      ],
+      "flag": "de",
+      "name": "Nadur"
+    },
+    {
+      "coordinates": [
+        494,
+        169
+      ],
+      "flag": "es",
+      "name": "Xaghra"
+    },
+    {
+      "coordinates": [
+        471,
+        101
+      ],
+      "flag": "pt",
+      "name": "Marsalforn"
+    },
+    {
+      "coordinates": [
+        236,
+        101
+      ],
+      "flag": "nl",
+      "name": "Ghasri"
+    },
+    {
+      "coordinates": [
+        236,
+        202
+      ],
+      "flag": "ie",
+      "name": "Gharb"
+    },
+    {
+      "coordinates": [
+        212,
+        226
+      ],
+      "flag": "be",
+      "name": "San Lawrenz"
+    },
+    {
+      "coordinates": [
+        335,
+        313
+      ],
+      "flag": "se",
+      "name": "Xlendi"
+    },
+    {
+      "coordinates": [
+        451,
+        281
+      ],
+      "flag": "no",
+      "name": "Munxar"
+    },
+    {
+      "coordinates": [
+        470,
+        304
+      ],
+      "flag": "fi",
+      "name": "Sannat"
+    },
+    {
+      "coordinates": [
+        604,
+        300
+      ],
+      "flag": "cy",
+      "name": "Mgarr"
+    },
+    {
+      "coordinates": [
+        610,
+        278
+      ],
+      "flag": "hr",
+      "name": "Ghajnsielem"
+    },
+    {
+      "coordinates": [
+        674,
+        159
+      ],
+      "flag": "si",
+      "name": "Qala"
+    },
+    {
+      "coordinates": [
+        814,
+        354
+      ],
+      "flag": "sm",
+      "name": "Comino"
+    }
+  ]
+}

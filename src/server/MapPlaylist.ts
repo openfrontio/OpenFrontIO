@@ -57,6 +57,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Svalmel: 8,
   World: 8,
   Lemnos: 3,
+  Malta: 4,
 };
 
 interface MapWithMode {

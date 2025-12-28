@@ -84,6 +84,7 @@ const numPlayersConfig = {
   [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
   [GameMapType.Lemnos]: [20, 15, 10],
+  [GameMapType.Malta]: [36, 28, 20],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {

@@ -107,6 +107,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Malta = "Malta",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -145,6 +146,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
     GameMapType.Lemnos,
+    GameMapType.Malta,
   ],
   fantasy: [
     GameMapType.Pangaea,
