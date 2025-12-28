@@ -32,6 +32,7 @@ export class PublicLobby extends LitElement {
   private fallbackPollInterval: number | null = null;
   private wsConnectionAttempts: number = 0;
   private maxWsAttempts: number = 3;
+  private wsAttemptCounted: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -54,6 +55,7 @@ export class PublicLobby extends LitElement {
       const wsUrl = `${protocol}//${window.location.host}/socket`;
 
       this.ws = new WebSocket(wsUrl);
+      this.wsAttemptCounted = false;
 
       this.ws.addEventListener("open", () => {
         console.log("WebSocket connected to lobby updates");
@@ -80,7 +82,10 @@ export class PublicLobby extends LitElement {
 
       this.ws.addEventListener("close", () => {
         console.log("WebSocket disconnected, attempting to reconnect...");
-        this.wsConnectionAttempts++;
+        if (!this.wsAttemptCounted) {
+          this.wsAttemptCounted = true;
+          this.wsConnectionAttempts++;
+        }
         if (this.wsConnectionAttempts >= this.maxWsAttempts) {
           console.log(
             "Max WebSocket attempts reached, falling back to HTTP polling",
@@ -93,7 +98,7 @@ export class PublicLobby extends LitElement {
 
       this.ws.addEventListener("error", (error) => {
         console.error("WebSocket error:", error);
-        this.wsConnectionAttempts++;
+        // Do not increment here; close will handle counting.
       });
     } catch (error) {
       console.error("Error connecting WebSocket:", error);
