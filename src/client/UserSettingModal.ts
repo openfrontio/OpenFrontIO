@@ -298,7 +298,7 @@ export class UserSettingModal extends LitElement {
       >
         <setting-placeholder
           image="/images/placeholders/placeholder-display-theme-manager.jpg"
-          alt="Territory Skins Preview"
+          alt="${translateText("user_setting.skins_preview_alt")}"
         ></setting-placeholder>
       </setting-group>
 
@@ -309,7 +309,7 @@ export class UserSettingModal extends LitElement {
       >
         <setting-placeholder
           image="/images/placeholders/placeholder-display-color-manager.jpg"
-          alt="Color Palette Preview"
+          alt="${translateText("user_setting.colors_preview_alt")}"
         ></setting-placeholder>
       </setting-group>
     `;
@@ -408,9 +408,11 @@ export class UserSettingModal extends LitElement {
           description="${translateText("user_setting.attack_ratio_desc")}"
           min="1"
           max="100"
-          .value=${Number(
-            localStorage.getItem("settings.attackRatio") ?? "0.2",
-          ) * 100}
+          .value=${(() => {
+            const stored = localStorage.getItem("settings.attackRatio");
+            const parsed = stored !== null ? Number(stored) : 0.2;
+            return (Number.isNaN(parsed) ? 0.2 : parsed) * 100;
+          })()}
           @change=${this.sliderAttackRatio}
         ></setting-slider>
       </setting-group>
