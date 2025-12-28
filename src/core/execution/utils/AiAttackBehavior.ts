@@ -38,33 +38,7 @@ export class AiAttackBehavior {
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
 
-  assistAllies() {
-    if (this.emojiBehavior === undefined) throw new Error("not initialized");
-
-    for (const ally of this.player.allies()) {
-      if (ally.targets().length === 0) continue;
-      if (this.player.relation(ally) < Relation.Friendly) {
-        this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_RELATION_TOO_LOW);
-        continue;
-      }
-      for (const target of ally.targets()) {
-        if (target === this.player) {
-          this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_TARGET_ME);
-          continue;
-        }
-        if (this.player.isFriendly(target)) {
-          this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_TARGET_ALLY);
-          continue;
-        }
-        // All checks passed, assist them
-        this.player.updateRelation(ally, -20);
-        this.sendAttack(target);
-        this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_ACCEPT);
-        return;
-      }
-    }
-  }
-
+  // attackBestTarget is called with borderingFriends and borderingEnemies sorted by troops (ascending)
   attackBestTarget(borderingFriends: Player[], borderingEnemies: Player[]) {
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
@@ -101,11 +75,43 @@ export class AiAttackBehavior {
 
     const bots = (): boolean => this.attackBots();
 
+    const assist = (): boolean => this.assistAllies();
+
+    const traitor = (): boolean => {
+      const weakestTraitor = this.findWeakestTraitor(borderingEnemies);
+      if (weakestTraitor) {
+        this.sendAttack(weakestTraitor);
+        return true;
+      }
+      return false;
+    };
+
+    const afk = (): boolean => {
+      // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+      const weakestAfk = borderingEnemies.find((enemy) =>
+        enemy.isDisconnected(),
+      );
+      if (weakestAfk) {
+        this.sendAttack(weakestAfk);
+        return true;
+      }
+      return false;
+    };
+
     const betray = (): boolean => this.maybeBetrayAndAttack(borderingFriends);
 
     const nuked = (): boolean => {
       if (this.isBorderingNukedTerritory()) {
         this.sendAttack(this.game.terraNullius());
+        return true;
+      }
+      return false;
+    };
+
+    const victim = (): boolean => {
+      const weakestVictim = this.findWeakestVictim(borderingEnemies);
+      if (weakestVictim) {
+        this.sendAttack(weakestVictim);
         return true;
       }
       return false;
@@ -126,6 +132,7 @@ export class AiAttackBehavior {
 
     const weakest = (): boolean => {
       if (borderingEnemies.length > 0) {
+        // borderingEnemies is already sorted by troops (ascending), so first match is weakest
         this.sendAttack(borderingEnemies[0]);
         return true;
       }
@@ -147,24 +154,71 @@ export class AiAttackBehavior {
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
       case Difficulty.Easy:
-        return [nuked, bots, retaliate, betray, hated, weakest];
+        return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
-        return [bots, nuked, retaliate, betray, hated, weakest, island];
+        return [
+          bots,
+          nuked,
+          retaliate,
+          assist,
+          betray,
+          hated,
+          afk,
+          traitor,
+          weakest,
+          island,
+        ];
       case Difficulty.Hard:
-        return [bots, retaliate, betray, nuked, hated, weakest, island];
+        return [
+          bots,
+          retaliate,
+          assist,
+          betray,
+          nuked,
+          traitor,
+          afk,
+          hated,
+          victim,
+          weakest,
+          island,
+        ];
       case Difficulty.Impossible:
-        return [retaliate, bots, betray, nuked, hated, weakest, island];
+        return [
+          retaliate,
+          bots,
+          assist,
+          traitor,
+          afk,
+          betray,
+          nuked,
+          victim,
+          hated,
+          weakest,
+          island,
+        ];
       default:
         assertNever(difficulty);
     }
   }
 
-  // TODO: Nuke the crown if it's far enough ahead of everybody else (based on difficulty)
   findBestNukeTarget(borderingEnemies: Player[]): Player | null {
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
       return incomingAttackPlayer;
+    }
+
+    // Assist allies, check their targets (this is basically the same as in assistAllies, but without sending emojis)
+    for (const ally of this.player.allies()) {
+      if (ally.targets().length === 0) continue;
+      if (this.player.relation(ally) < Relation.Friendly) continue;
+
+      for (const target of ally.targets()) {
+        if (target === this.player) continue;
+        if (this.player.isFriendly(target)) continue;
+        // Found a valid ally target to nuke
+        return target;
+      }
     }
 
     // Find the most hated player with hostile relation
@@ -175,19 +229,6 @@ export class AiAttackBehavior {
       this.player.isFriendly(mostHated.player) === false
     ) {
       return mostHated.player;
-    }
-
-    // Find the weakest player
-    if (borderingEnemies.length > 0) {
-      return borderingEnemies[0];
-    }
-
-    // If we don't have bordering enemies, find someone on an island next to us
-    if (borderingEnemies.length === 0) {
-      const nearestIslandEnemy = this.findNearestIslandEnemy();
-      if (nearestIslandEnemy) {
-        return nearestIslandEnemy;
-      }
     }
 
     return null;
@@ -275,6 +316,45 @@ export class AiAttackBehavior {
     }
   }
 
+  private assistAllies(): boolean {
+    if (this.emojiBehavior === undefined) throw new Error("not initialized");
+
+    for (const ally of this.player.allies()) {
+      if (ally.targets().length === 0) continue;
+      if (this.player.relation(ally) < Relation.Friendly) {
+        this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_RELATION_TOO_LOW);
+        continue;
+      }
+      for (const target of ally.targets()) {
+        if (target === this.player) {
+          this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_TARGET_ME);
+          continue;
+        }
+        if (this.player.isFriendly(target)) {
+          this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_TARGET_ALLY);
+          continue;
+        }
+        // All checks passed, assist them
+        this.player.updateRelation(ally, -20);
+        this.sendAttack(target);
+        this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_ACCEPT);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Find a traitor who isn't much stronger than us (max 20% more troops)
+  private findWeakestTraitor(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+    return (
+      borderingEnemies.find(
+        (enemy) =>
+          enemy.isTraitor() && enemy.troops() * 1.2 < this.player.troops(),
+      ) ?? null
+    );
+  }
+
   private maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
 
@@ -302,6 +382,22 @@ export class AiAttackBehavior {
       }
     }
     return false;
+  }
+
+  // Find someone who is weaker than us and is under attack from others (20%+ of their troops incoming)
+  private findWeakestVictim(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+    return (
+      borderingEnemies.find((enemy) => {
+        if (enemy.troops() >= this.player.troops()) return false;
+
+        const totalIncomingTroops = enemy
+          .incomingAttacks()
+          .reduce((sum, attack) => sum + attack.troops(), 0);
+
+        return totalIncomingTroops > enemy.troops() * 0.2;
+      }) ?? null
+    );
   }
 
   private findNearestIslandEnemy(): Player | null {

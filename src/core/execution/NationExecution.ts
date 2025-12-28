@@ -448,7 +448,6 @@ export class NationExecution implements Execution {
       this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
     }
 
-    this.attackBehavior.assistAllies();
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
     this.maybeSendNuke(
       this.attackBehavior.findBestNukeTarget(borderingEnemies),

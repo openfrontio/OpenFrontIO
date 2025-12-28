@@ -1,6 +1,7 @@
 import { renderTroops } from "../../client/Utils";
 import {
   Attack,
+  Difficulty,
   Execution,
   Game,
   MessageType,
@@ -152,7 +153,23 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
-      this.target.updateRelation(this._owner, -80);
+      const difficulty = this.mg.config().gameConfig().difficulty;
+      let relationChange: number;
+      switch (difficulty) {
+        case Difficulty.Easy:
+          relationChange = -60;
+          break;
+        case Difficulty.Medium:
+          relationChange = -70;
+          break;
+        case Difficulty.Hard:
+          relationChange = -80;
+          break;
+        case Difficulty.Impossible:
+          relationChange = -100;
+          break;
+      }
+      this.target.updateRelation(this._owner, relationChange);
     }
   }
 
