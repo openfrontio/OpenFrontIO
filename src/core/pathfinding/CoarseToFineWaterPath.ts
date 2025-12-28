@@ -270,9 +270,9 @@ export function findWaterPathFromSeedsCoarseToFine(
     );
   }
 
-  // Start tight (radius 0) and rely on local widening + final fallback for robustness.
-  const corridorRadius0 = Math.max(0, coarseToFine.corridorRadius ?? 0);
-  const maxAttempts = Math.max(1, coarseToFine.maxAttempts ?? 3);
+  // Default to a slightly inflated corridor to avoid "optimistic coarse water" cliffs.
+  const corridorRadius0 = Math.max(0, coarseToFine.corridorRadius ?? 2);
+  const maxAttempts = Math.max(1, coarseToFine.maxAttempts ?? 6);
 
   // Allowed corridor stamp is stable across attempts (widening is cumulative).
   const allowedSet = getStampSet(coarseMap);
