@@ -52,7 +52,7 @@ export class PublicLobby extends LitElement {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/socket`;
-      
+
       this.ws = new WebSocket(wsUrl);
 
       this.ws.addEventListener("open", () => {
@@ -82,7 +82,9 @@ export class PublicLobby extends LitElement {
         console.log("WebSocket disconnected, attempting to reconnect...");
         this.wsConnectionAttempts++;
         if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-          console.log("Max WebSocket attempts reached, falling back to HTTP polling");
+          console.log(
+            "Max WebSocket attempts reached, falling back to HTTP polling",
+          );
           this.startFallbackPolling();
         } else {
           this.scheduleReconnect();
@@ -141,7 +143,8 @@ export class PublicLobby extends LitElement {
   private async fetchLobbiesHTTP() {
     try {
       const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       this.handleLobbiesUpdate(data.lobbies as GameInfo[]);
     } catch (error) {
