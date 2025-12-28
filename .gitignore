@@ -9,5 +9,6 @@ resources/.DS_Store
 .env*
 .DS_Store
 .clinic/
+.claude/
 CLAUDE.md
 .idea/
