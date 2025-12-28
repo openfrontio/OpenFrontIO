@@ -505,6 +505,10 @@ export class PlayerView {
     return this.smallID() === this.game.myPlayer()?.smallID();
   }
 
+  isLobbyCreator(): boolean {
+    return this.data.isLobbyCreator;
+  }
+
   isAlliedWith(other: PlayerView): boolean {
     return this.data.allies.some((n) => other.smallID() === n);
   }
@@ -880,6 +884,13 @@ export class GameView implements GameMap {
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
     return this._map.euclideanDistSquared(c1, c2);
+  }
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef> {
+    return this._map.circleSearch(tile, radius, filter);
   }
   bfs(
     tile: TileRef,

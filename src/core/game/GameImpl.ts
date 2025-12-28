@@ -85,6 +85,8 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private _isPaused: boolean = false;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -335,6 +337,15 @@ export class GameImpl implements Game {
   }
   config(): Config {
     return this._config;
+  }
+
+  isPaused(): boolean {
+    return this._isPaused;
+  }
+
+  setPaused(paused: boolean): void {
+    this._isPaused = paused;
+    this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
   inSpawnPhase(): boolean {
@@ -914,6 +925,13 @@ export class GameImpl implements Game {
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
     return this._map.euclideanDistSquared(c1, c2);
+  }
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef> {
+    return this._map.circleSearch(tile, radius, filter);
   }
   bfs(
     tile: TileRef,

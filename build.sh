@@ -105,6 +105,7 @@ fi
 # --push will push all tags automatically
 docker buildx build \
     --platform linux/amd64 \
+    --metadata-file $METADATA_FILE \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --cache-from type=registry,ref=$BUILDCACHE_IMAGE \
     --cache-to type=registry,ref=$BUILDCACHE_IMAGE,mode=max \
