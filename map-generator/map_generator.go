@@ -88,6 +88,27 @@ type LogArgs struct {
 	isPerformance bool
 }
 
+// Logger defines a function signature for logging with formatting and conditional output.
+type Logger func(LogArgs LogArgs, format string, v ...interface{})
+
+// createLogger creates a logger instance that handles formatting and conditional output
+func createLogger(args GeneratorArgs) Logger {
+	// and handle checking against the performance and verbose flags
+	return func(LogArgs LogArgs, format string, v ...interface{}) {
+		if LogArgs.isVerbose && !args.Verbose {
+			return
+		}
+		if LogArgs.isPerformance && !args.Performance {
+			return
+		}
+		if args.Verbose {
+			log.Printf("[%s] %s", args.Name, fmt.Sprintf(format, v...))
+		} else {
+			log.Printf(format, v...)
+		}
+	}
+}
+
 // GenerateMap is the main map-generator workflow.
 //   - Maps each pixel to a Terrain type based on its blue value
 //   - Removes small islands and lakes
@@ -112,21 +133,7 @@ type LogArgs struct {
 // Misc Notes
 //   - It normalizes map width/height to multiples of 4 for the mini map downscaling.
 func GenerateMap(args GeneratorArgs) (MapResult, error) {
-	// create a logger that will prepend the mapname in -verbose mode
-	// and handle checking against the performance and verbose flags
-	logger := func(LogArgs LogArgs, format string, v ...interface{}) {
-		if LogArgs.isVerbose && !args.Verbose {
-			return
-		}
-		if LogArgs.isPerformance && !args.Performance {
-			return
-		}
-		if args.Verbose {
-			log.Printf("[%s] %s", args.Name, fmt.Sprintf(format, v...))
-		} else {
-			log.Printf(format, v...)
-		}
-	}
+	logger := createLogger(args)
 	img, err := png.Decode(bytes.NewReader(args.ImageBuffer))
 	if err != nil {
 		return MapResult{}, fmt.Errorf("failed to decode PNG: %w", err)
@@ -838,6 +845,3 @@ type CombinedBinaryHeader struct {
 	MiniMapOffset uint32
 	MiniMapSize   uint32
 }
-
-// Logger defines a function signature for logging with formatting.
-type Logger func(LogArgs LogArgs, format string, v ...interface{})
