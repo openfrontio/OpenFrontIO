@@ -83,6 +83,7 @@ const numPlayersConfig = {
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
   [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
+  [GameMapType.Lemnos]: [20, 15, 10],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -101,18 +102,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
-  }
-  cloudflareAccountId(): string {
-    return process.env.CF_ACCOUNT_ID ?? "";
-  }
-  cloudflareApiToken(): string {
-    return process.env.CF_API_TOKEN ?? "";
-  }
-  cloudflareConfigPath(): string {
-    return process.env.CF_CONFIG_PATH ?? "";
-  }
-  cloudflareCredsPath(): string {
-    return process.env.CF_CREDS_PATH ?? "";
   }
 
   private publicKey: JWK;
@@ -153,19 +142,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   gitCommit(): string {
     return process.env.GIT_COMMIT ?? "";
   }
-  r2Endpoint(): string {
-    return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  }
-  r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY ?? "";
-  }
-  r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY ?? "";
-  }
-
-  r2Bucket(): string {
-    return process.env.R2_BUCKET ?? "";
-  }
 
   apiKey(): string {
     return process.env.API_KEY ?? "";
@@ -175,7 +151,11 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN ?? "dummy-admin-token";
+    const token = process.env.ADMIN_TOKEN;
+    if (!token) {
+      throw new Error("ADMIN_TOKEN not set");
+    }
+    return token;
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;

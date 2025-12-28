@@ -1,4 +1,5 @@
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import {
   AllianceRequest,
   Game,
@@ -44,7 +45,12 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     // Use a fixed random seed for deterministic behavior
     const random = new PseudoRandom(46);
 
-    allianceBehavior = new NationAllianceBehavior(random, game, player);
+    allianceBehavior = new NationAllianceBehavior(
+      random,
+      game,
+      player,
+      new NationEmojiBehavior(random, game, player),
+    );
   });
 
   function setupAllianceRequest({
@@ -164,6 +170,7 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
       mockRandom,
       mockGame,
       mockPlayer,
+      new NationEmojiBehavior(mockRandom, mockGame, mockPlayer),
     );
   });
 
