@@ -605,6 +605,7 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
     private humans: Player[],
+    private _lobbyCreatorID: ClientID | undefined,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
@@ -618,6 +619,10 @@ export class GameView implements GameMap {
         flag: nation.flag,
       } satisfies PlayerCosmetics);
     }
+  }
+
+  isLobbyCreator(player: PlayerView): boolean {
+    return player.clientID() === this._lobbyCreatorID;
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {

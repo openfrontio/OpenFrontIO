@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import disabledIcon from "../../../../resources/images/DisabledIcon.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
@@ -31,6 +32,7 @@ import {
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendKickPlayerIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import {
@@ -294,6 +296,24 @@ export class PlayerPanel extends LitElement implements Layer {
   private handleTargetClick(e: Event, other: PlayerView) {
     e.stopPropagation();
     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
+    this.hide();
+  }
+
+  private handleKickClick(e: Event, other: PlayerView) {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        translateText("player_panel.kick_confirm", { name: other.name() }),
+      )
+    ) {
+      return;
+    }
+    const targetClientID = other.clientID();
+    if (!targetClientID) {
+      console.warn("Cannot kick player without clientID");
+      return;
+    }
+    this.eventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
     this.hide();
   }
 
@@ -641,6 +661,7 @@ export class PlayerPanel extends LitElement implements Layer {
     const canBreakAlliance = this.actions?.interaction?.canBreakAlliance;
     const canTarget = this.actions?.interaction?.canTarget;
     const canEmbargo = this.actions?.interaction?.canEmbargo;
+    const canKick = this.actions?.interaction?.canKick;
 
     return html`
       <div class="flex flex-col gap-2.5">
@@ -739,6 +760,16 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.send_alliance"),
                 label: translateText("player_panel.send_alliance"),
                 type: "indigo",
+              })
+            : ""}
+          ${canKick && !this.g.isLobbyCreator(other)
+            ? actionButton({
+                onClick: (e: MouseEvent) => this.handleKickClick(e, other),
+                icon: disabledIcon,
+                iconAlt: "Kick",
+                title: translateText("player_panel.kick"),
+                label: translateText("player_panel.kick"),
+                type: "red",
               })
             : ""}
         </div>
