@@ -205,12 +205,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -303,7 +298,7 @@ export class GameRenderer {
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
   ) {
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }

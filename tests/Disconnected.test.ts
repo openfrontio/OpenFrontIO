@@ -11,12 +11,14 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
+import { GameID } from "../src/core/Schemas";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 let game: Game;
+const gameID: GameID = "game_id";
 let player1: Player;
 let player2: Player;
 let enemy: Player;
@@ -46,8 +48,8 @@ describe("Disconnected", () => {
     player2 = game.addPlayer(player2Info);
 
     game.addExecution(
-      new SpawnExecution(player1Info, game.ref(1, 1)),
-      new SpawnExecution(player2Info, game.ref(7, 7)),
+      new SpawnExecution(gameID, player1Info, game.ref(1, 1)),
+      new SpawnExecution(gameID, player2Info, game.ref(7, 7)),
     );
 
     while (game.inSpawnPhase()) {
@@ -203,8 +205,8 @@ describe("Disconnected", () => {
       );
 
       game.addExecution(
-        new SpawnExecution(player1Info, game.map().ref(coastX - 2, 1)),
-        new SpawnExecution(player2Info, game.map().ref(coastX - 2, 4)),
+        new SpawnExecution(gameID, player1Info, game.map().ref(coastX - 2, 1)),
+        new SpawnExecution(gameID, player2Info, game.map().ref(coastX - 2, 4)),
       );
 
       while (game.inSpawnPhase()) {

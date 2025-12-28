@@ -2,10 +2,12 @@ import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
 import { DonateTroopsExecution } from "../src/core/execution/DonateTroopExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 
 describe("Donate troops to an ally", () => {
   it("Troops should be successfully donated", async () => {
+    const gameID: GameID = "game_id";
     const game = await setup("ocean_and_land", {
       infiniteTroops: false,
       donateTroops: true,
@@ -35,8 +37,8 @@ describe("Donate troops to an ally", () => {
     const spawnB = game.ref(0, 15);
 
     game.addExecution(
-      new SpawnExecution(donorInfo, spawnA),
-      new SpawnExecution(recipientInfo, spawnB),
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
     );
 
     while (game.inSpawnPhase()) {
@@ -73,6 +75,7 @@ describe("Donate gold to an ally", () => {
       infiniteGold: false,
       donateGold: true,
     });
+    const gameID: GameID = "game_id";
 
     const donorInfo = new PlayerInfo(
       "donor",
@@ -98,8 +101,8 @@ describe("Donate gold to an ally", () => {
     const spawnB = game.ref(0, 15);
 
     game.addExecution(
-      new SpawnExecution(donorInfo, spawnA),
-      new SpawnExecution(recipientInfo, spawnB),
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
     );
 
     while (game.inSpawnPhase()) {
@@ -137,6 +140,7 @@ describe("Donate troops to a non ally", () => {
       infiniteTroops: false,
       donateTroops: true,
     });
+    const gameID: GameID = "game_id";
 
     const donorInfo = new PlayerInfo(
       "donor",
@@ -162,8 +166,8 @@ describe("Donate troops to a non ally", () => {
     const spawnB = game.ref(0, 15);
 
     game.addExecution(
-      new SpawnExecution(donorInfo, spawnA),
-      new SpawnExecution(recipientInfo, spawnB),
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
     );
 
     while (game.inSpawnPhase()) {
@@ -197,6 +201,7 @@ describe("Donate Gold to a non ally", () => {
       infiniteGold: false,
       donateGold: true,
     });
+    const gameID: GameID = "game_id";
 
     const donorInfo = new PlayerInfo(
       "donor",
@@ -222,8 +227,8 @@ describe("Donate Gold to a non ally", () => {
     const spawnB = game.ref(0, 15);
 
     game.addExecution(
-      new SpawnExecution(donorInfo, spawnA),
-      new SpawnExecution(recipientInfo, spawnB),
+      new SpawnExecution(gameID, donorInfo, spawnA),
+      new SpawnExecution(gameID, recipientInfo, spawnB),
     );
 
     while (game.inSpawnPhase()) {

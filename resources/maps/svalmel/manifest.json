@@ -19,32 +19,27 @@
     {
       "coordinates": [900, 850],
       "flag": "santa_claus",
-      "name": "Santa Claus",
-      "strength": 2
+      "name": "Santa Claus"
     },
     {
       "coordinates": [275, 525],
       "flag": "no",
-      "name": "Svalbard",
-      "strength": 2
+      "name": "Svalbard"
     },
     {
       "coordinates": [860, 1360],
       "flag": "ca",
-      "name": "Melville",
-      "strength": 2
+      "name": "Melville"
     },
     {
       "coordinates": [1370, 465],
       "flag": "ca",
-      "name": "Bathurst",
-      "strength": 1
+      "name": "Bathurst"
     },
     {
       "coordinates": [910, 250],
       "flag": "no",
-      "name": "Nordaustlandet",
-      "strength": 1
+      "name": "Nordaustlandet"
     }
   ]
 }

@@ -45,10 +45,6 @@ export interface ServerConfig {
   adminHeader(): string;
   // Only available on the server
   gitCommit(): string;
-  r2Bucket(): string;
-  r2Endpoint(): string;
-  r2AccessKey(): string;
-  r2SecretKey(): string;
   apiKey(): string;
   otelEndpoint(): string;
   otelAuthHeader(): string;
@@ -58,10 +54,6 @@ export interface ServerConfig {
   jwkPublicKey(): Promise<JWK>;
   domain(): string;
   subdomain(): string;
-  cloudflareAccountId(): string;
-  cloudflareApiToken(): string;
-  cloudflareConfigPath(): string;
-  cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
@@ -73,8 +65,6 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
-  samHittingChance(): number;
-  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -94,7 +84,6 @@ export interface Config {
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
-  useNationStrengthForStartManpower(): boolean;
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
@@ -155,6 +144,7 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
+  minDistanceBetweenPlayers(): number;
   defensePostDefenseBonus(): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;

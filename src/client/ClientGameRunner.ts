@@ -328,6 +328,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
+
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
@@ -432,7 +433,17 @@ export class ClientGameRunner {
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
-          this.worker.sendTurn(message.turn);
+          this.worker.sendTurn(
+            // Filter out pause intents in replays
+            this.gameView.config().isReplay()
+              ? {
+                  ...message.turn,
+                  intents: message.turn.intents.filter(
+                    (i) => i.type !== "toggle_pause",
+                  ),
+                }
+              : message.turn,
+          );
           this.turnsSeen++;
         }
       }
