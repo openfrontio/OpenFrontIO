@@ -13,6 +13,8 @@ import (
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
+var verboseFlag bool
+var performanceFlag bool
 
 // maps defines the registry of available maps to be processed.
 // Each entry contains the folder name and a flag indicating if it's a test map.
@@ -131,6 +133,8 @@ func processMap(name string, isTest bool) error {
 		ImageBuffer: imageBuffer,
 		RemoveSmall: !isTest, // Don't remove small islands for test maps
 		Name:        name,
+		Verbose:     verboseFlag,
+		Performance: performanceFlag && !isTest,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to generate map for %s: %w", name, err)
@@ -246,6 +250,9 @@ func loadTerrainMaps() error {
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
+	flag.BoolVar(&verboseFlag, "verbose", false, "Turns on additional logging during the map generation process")
+	flag.BoolVar(&verboseFlag, "v", false, "Turns on additional logging (shorthand)")
+	flag.BoolVar(&performanceFlag, "performance", false, "Adds additional logging checks for performance-based recommendations")
 	flag.Parse()
 
 	if err := loadTerrainMaps(); err != nil {
