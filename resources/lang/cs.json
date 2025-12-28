@@ -224,8 +224,6 @@
     "tab_keybinds": "Klávesové zkratky",
     "dark_mode_label": "🌙 Tmavý režim",
     "dark_mode_desc": "Přepnout vzhled stránky mezi světlým a tmavým motivem",
-    "color_blind_label": "Pomoc pro barvoslepé",
-    "color_blind_desc": "Přidává vizuální pomoc pro snazší rozpoznání spoluhráčů během fáze spawnu",
     "emojis_label": "😊 Emoji",
     "emojis_desc": "Určuje, zda jsou emoji zobrazeny ve hře",
     "special_effects_label": "💥 Speciální efekty",

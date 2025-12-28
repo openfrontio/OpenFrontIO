@@ -283,8 +283,6 @@
     "tab_keybinds": "Billentyűkiosztások",
     "dark_mode_label": "Sötét mód",
     "dark_mode_desc": "Váltás a weboldal világos és sötét megjelenése között",
-    "color_blind_label": "Színvakság segítség",
-    "color_blind_desc": "Vizuális segítséget ad a csapattársak könnyebb megtalálásához a spawn fázis alatt",
     "dark_mode_enabled": "Sötét mód engedélyezve",
     "light_mode_enabled": "Világos mód engedélyezve",
     "emojis_label": "Emojik",

@@ -332,8 +332,6 @@
     "tab_keybinds": "Sneltoetsen",
     "dark_mode_label": "Donkere Modus",
     "dark_mode_desc": "Schakel tussen lichte en donkere thema's voor de site",
-    "color_blind_label": "Kleurenblind hulp",
-    "color_blind_desc": "Voegt visuele hulp toe om teamgenoten makkelijker te herkennen tijdens de spawn-fase",
     "emojis_label": "Emoji's",
     "emojis_desc": "Schakel het tonen van emoji's in de game uit/aan",
     "alert_frame_label": "Waarshuwingskader",

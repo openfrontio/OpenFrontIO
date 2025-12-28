@@ -332,8 +332,6 @@
     "tab_keybinds": "Raccourcis clavier",
     "dark_mode_label": "Mode sombre",
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
-    "color_blind_label": "Assistance daltonisme",
-    "color_blind_desc": "Ajoute une aide visuelle pour repérer plus facilement les coéquipiers pendant la phase d'apparition",
     "emojis_label": "Émojis",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
     "alert_frame_label": "Fenêtre d'alertes",

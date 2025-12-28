@@ -255,8 +255,6 @@
     "tab_keybinds": "Tastenbelegung",
     "dark_mode_label": "Dunkler Modus",
     "dark_mode_desc": "Wechseln zwischen dem dunklen und hellen Design der Website",
-    "color_blind_label": "Farbenblind-Hilfe",
-    "color_blind_desc": "Fügt visuelle Hilfen hinzu, um Teamkameraden während der Spawn-Phase leichter zu erkennen",
     "emojis_label": "Emojis",
     "emojis_desc": "Emojis im Spiel ein-/ausblenden",
     "alert_frame_label": "Warnrahmen",

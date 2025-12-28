@@ -266,8 +266,6 @@
     "tab_keybinds": "Atalhos",
     "dark_mode_label": "Modo Escuro",
     "dark_mode_desc": "Alternar a aparência do site entre temas claro e escuro",
-    "color_blind_label": "Assistência para daltonismo",
-    "color_blind_desc": "Adiciona ajuda visual para identificar companheiros de equipa durante a fase de aparecimento",
     "dark_mode_enabled": "Modo Escuro ativado",
     "light_mode_enabled": "Modo Claro ativado",
     "emojis_label": "Emojis",

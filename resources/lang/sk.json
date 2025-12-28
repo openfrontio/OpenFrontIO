@@ -266,8 +266,6 @@
     "tab_keybinds": "Skratky",
     "dark_mode_label": "Tmavý režim",
     "dark_mode_desc": "Prepne vzhľad stránky medzi svetlou a tmavou témou",
-    "color_blind_label": "Pomoc pre farboslepých",
-    "color_blind_desc": "Pridáva vizuálnu pomoc na ľahšie rozpoznanie spoluhráčov počas fázy spawnu",
     "dark_mode_enabled": "Tmavý režim spustený",
     "light_mode_enabled": "Svetlý režim spustený",
     "emojis_label": "Emoji",

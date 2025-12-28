@@ -283,8 +283,6 @@
     "tab_keybinds": "Bližnjice",
     "dark_mode_label": "Temni način",
     "dark_mode_desc": "Preklopi med temnim in svetlim načinom",
-    "color_blind_label": "Pomoč za barvno slepoto",
-    "color_blind_desc": "Dodaja vizualno pomoč za lažje prepoznavanje soigralcev med fazo pojavljanja",
     "dark_mode_enabled": "Temni način aktiviran",
     "light_mode_enabled": "Svetli način aktiviran",
     "emojis_label": "Emojiji",

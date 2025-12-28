@@ -255,8 +255,6 @@
     "tab_keybinds": "קיצורי מקלדת",
     "dark_mode_label": "מצב כהה",
     "dark_mode_desc": "החלף את הנראות של האתר בין מצב כהה לבהיר.",
-    "color_blind_label": "עזרה לעיוורי צבעים",
-    "color_blind_desc": "מוסיף עזרה חזותית לזיהוי קל יותר של חברי צוות בשלב ההופעה",
     "emojis_label": "אימוג'ים",
     "emojis_desc": "מאפשר הצגה של אימוג'ים במשחק",
     "alert_frame_label": "מסגרת אזהרה",

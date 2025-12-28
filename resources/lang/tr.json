@@ -280,8 +280,6 @@
     "tab_keybinds": "Kısayollar",
     "dark_mode_label": "Karanlık Tema",
     "dark_mode_desc": "Sitenin görünümünü açık ve koyu tema arasında değiştir",
-    "color_blind_label": "Renk körlüğü yardımı",
-    "color_blind_desc": "Doğma aşamasında takım arkadaşlarını daha kolay görmenizi sağlayan görsel yardım ekler",
     "dark_mode_enabled": "Karanlık tema etkinleştirildi",
     "light_mode_enabled": "Açık tema etkinleştirildi",
     "emojis_label": "Emojiler",
