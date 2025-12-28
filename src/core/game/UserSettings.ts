@@ -73,6 +73,10 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  colorBlind() {
+    return this.get("settings.colorBlind", false);
+  }
+
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);
@@ -126,6 +130,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleColorBlind() {
+    this.set("settings.colorBlind", !this.colorBlind());
   }
 
   toggleDarkMode() {

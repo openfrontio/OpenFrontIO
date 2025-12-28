@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
   ColoredTeams,
+  GameMode,
   PlayerType,
   Team,
   UnitType,
@@ -21,9 +22,12 @@ import {
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
+import { drawTeammateGlow } from "../TeammateGlow";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
+  private static readonly SPAWN_HIGHLIGHT_RADIUS = 9;
+  private static readonly PULSE_SPEED = 0.2;
   private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -183,6 +187,10 @@ export class TerritoryLayer implements Layer {
 
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);
+    const myPlayer = this.game.myPlayer();
+    const colorBlindEnabled =
+      this.userSettings.colorBlind() &&
+      this.game.config().gameConfig().gameMode === GameMode.Team;
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -196,7 +204,6 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
       if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
         // In FFA games (when team === null), use default yellow spawn highlight color
         color = this.theme.spawnHighlightColor();
@@ -217,11 +224,20 @@ export class TerritoryLayer implements Layer {
 
       for (const tile of this.game.bfs(
         centerTile,
-        euclDistFN(centerTile, 9, true),
+        euclDistFN(centerTile, TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS, true),
       )) {
-        if (!this.game.hasOwner(tile)) {
+        if (this.game.ownerID(tile) === 0) {
           this.paintHighlightTile(tile, color, 255);
         }
+      }
+
+      if (
+        colorBlindEnabled &&
+        myPlayer !== null &&
+        human.smallID() !== myPlayer.smallID() &&
+        myPlayer.isOnSameTeam(human)
+      ) {
+        this.drawTeammateGlowForPlayer(human, centerTile);
       }
     }
   }
@@ -263,6 +279,104 @@ export class TerritoryLayer implements Layer {
       baseColor, // Always draw white static semi-transparent ring
       teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
     );
+
+    const myPlayer = this.game.myPlayer();
+    if (
+      this.userSettings.colorBlind() &&
+      this.game.config().gameConfig().gameMode === GameMode.Team &&
+      myPlayer !== null &&
+      focusedPlayer.smallID() !== myPlayer.smallID() &&
+      myPlayer.isOnSameTeam(focusedPlayer)
+    ) {
+      const centerTile = this.game.ref(center.x, center.y);
+      if (centerTile) {
+        this.drawTeammateGlowForPlayer(focusedPlayer, centerTile);
+      }
+    }
+  }
+
+  private spawnCenterFromOwnedTiles(
+    ownedTiles: TileRef[],
+    ownedSumX: number,
+    ownedSumY: number,
+  ): { x: number; y: number; innerRadius: number } | null {
+    if (ownedTiles.length === 0) {
+      return null;
+    }
+
+    const avgX = ownedSumX / ownedTiles.length;
+    const avgY = ownedSumY / ownedTiles.length;
+    let centerTile = ownedTiles[0];
+    let minDistSq = Infinity;
+
+    for (const tile of ownedTiles) {
+      const dx = this.game.x(tile) - avgX;
+      const dy = this.game.y(tile) - avgY;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        centerTile = tile;
+      }
+    }
+
+    const centerX = this.game.x(centerTile);
+    const centerY = this.game.y(centerTile);
+    let maxDistSq = 0;
+
+    for (const tile of ownedTiles) {
+      const dx = this.game.x(tile) - centerX;
+      const dy = this.game.y(tile) - centerY;
+      const distSq = dx * dx + dy * dy;
+      if (distSq > maxDistSq) {
+        maxDistSq = distSq;
+      }
+    }
+
+    const innerRadius = Math.max(
+      2,
+      Math.min(
+        TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1,
+        Math.sqrt(maxDistSq),
+      ),
+    );
+
+    return {
+      x: centerX,
+      y: centerY,
+      innerRadius,
+    };
+  }
+
+  private drawTeammateGlowForPlayer(
+    player: PlayerView,
+    centerTile: TileRef,
+  ): void {
+    const ownedTiles: TileRef[] = [];
+    let ownedSumX = 0;
+    let ownedSumY = 0;
+
+    for (const tile of this.game.bfs(
+      centerTile,
+      euclDistFN(centerTile, TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS, true),
+    )) {
+      if (this.game.ownerID(tile) === player.smallID()) {
+        ownedTiles.push(tile);
+        ownedSumX += this.game.x(tile);
+        ownedSumY += this.game.y(tile);
+      }
+    }
+
+    const spawnCenter = this.spawnCenterFromOwnedTiles(
+      ownedTiles,
+      ownedSumX,
+      ownedSumY,
+    );
+    if (spawnCenter) {
+      drawTeammateGlow(this.highlightContext, spawnCenter.x, spawnCenter.y, {
+        outerRadius: Math.max(3, spawnCenter.innerRadius),
+        pulsePhase: this.game.ticks() * TerritoryLayer.PULSE_SPEED,
+      });
+    }
   }
 
   init() {

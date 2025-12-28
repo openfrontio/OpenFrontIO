@@ -107,6 +107,14 @@ export class UserSettingModal extends LitElement {
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
+  private toggleColorBlind(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.colorBlind", enabled);
+    this.requestUpdate();
+  }
+
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -280,6 +288,15 @@ export class UserSettingModal extends LitElement {
         .checked=${this.userSettings.darkMode()}
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 🌈 Color-blind assist -->
+      <setting-toggle
+        label="${translateText("user_setting.color_blind_label")}"
+        description="${translateText("user_setting.color_blind_desc")}"
+        id="color-blind-toggle"
+        .checked=${this.userSettings.colorBlind()}
+        @change=${this.toggleColorBlind}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
