@@ -19,8 +19,8 @@ import {
   MenuElementParams,
   rootMenuElement,
 } from "./RadialMenuElements";
-import swordIcon from "/images/SwordIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
 
 import { ContextMenuEvent } from "../../InputHandler";
 

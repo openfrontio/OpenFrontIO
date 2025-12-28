@@ -445,7 +445,7 @@ export class PlayerPanel extends LitElement implements Layer {
         ${country && typeof flagCode === "string"
           ? html`<img
               src="/flags/${encodeURIComponent(flagCode)}.svg"
-              alt=${country?.name || "Flag"}
+              alt=${country?.name ?? "Flag"}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";

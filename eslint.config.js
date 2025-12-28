@@ -28,7 +28,6 @@ export default [
             "eslint.config.js",
             "postcss.config.js",
             "tailwind.config.js",
-            "vite.config.ts",
             "scripts/sync-assets.mjs",
           ],
         },

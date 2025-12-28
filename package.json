@@ -25,7 +25,9 @@
     "predev": "npm run sync-assets",
     "prebuild-dev": "npm run sync-assets",
     "prebuild-prod": "npm run sync-assets",
-    "prestart:client": "npm run sync-assets"
+    "prestart:client": "npm run sync-assets",
+    "pretest": "npm run sync-assets",
+    "pretest:coverage": "npm run sync-assets"
   },
   "lint-staged": {
     "**/*": [
