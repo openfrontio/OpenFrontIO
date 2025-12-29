@@ -6,10 +6,11 @@
     // Modules
     "module": "ESNext",
     "rootDir": ".",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "resources/*": ["resources/*"]
+      "resources/*": ["resources/*"],
+      "lit/decorators": ["node_modules/lit/decorators.js"]
     },
     // Emit
     "sourceMap": true,

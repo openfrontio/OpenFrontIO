@@ -1,5 +1,4 @@
-import fs from "fs";
-import { globSync } from "glob";
+import fs, { globSync } from "fs";
 
 type Nation = {
   name?: string;
