@@ -84,13 +84,15 @@ export class SinglePlayerModal extends LitElement {
           <div class="options-section">
             <div
               class="option-title"
-              style="display:flex; align-items:center; justify-content:center; gap:10px;"
+              style="position:relative; display:flex; align-items:center; justify-content:center; width:100%;"
             >
-              <span>${translateText("map.map")}</span>
+              <span style="text-align:center; width:100%;">
+                ${translateText("map.map")}
+              </span>
               <button
                 @click=${this.toggleAchievements}
                 title=${translateText("single_modal.toggle_achievements")}
-                style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.06); cursor:pointer; padding:4px;"
+                style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.06); cursor:pointer; padding:4px; position:absolute; right:0; top:50%; transform:translateY(-50%);"
               >
                 <img
                   src="/images/MedalIconWhite.svg"
