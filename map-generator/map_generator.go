@@ -117,7 +117,7 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 
 	area := width * height
 	if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
-		logger.Info(fmt.Sprintf("Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
+		logger.Debug(fmt.Sprintf("Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
 	}
 
 	// Initialize terrain grid
@@ -179,7 +179,7 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 		return MapResult{}, fmt.Errorf("Map has 0 land tiles")
 	}
 	if mapNumLandTiles > maxRecommendedLandTileCount {
-		logger.Info(fmt.Sprintf("Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
+		logger.Debug(fmt.Sprintf("Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
 	}
 
 	return MapResult{
