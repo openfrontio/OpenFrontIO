@@ -258,6 +258,22 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
+    const overlord = player.overlord();
+    const supportTroops =
+      overlord !== null && this.game.config().vassalsEnabled()
+        ? Math.floor(
+            overlord.troops() * overlord.vassalSupportRatio(),
+          )
+        : 0;
+    const effectiveTroops =
+      player.effectiveTroops?.() ?? supportTroops + player.troops();
+    const showVassal = this.game.config().vassalsEnabled();
+    const vassalOf =
+      showVassal && player.overlord && player.overlord()
+        ? (player.overlord() as PlayerView)
+        : null;
+    const vassals =
+      showVassal && player.vassals ? (player.vassals() as PlayerView[]) : [];
 
     if (
       player.type() === PlayerType.FakeHuman &&
@@ -274,11 +290,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       `;
     }
 
+    let currentAlliance: AllianceView | undefined;
     if (isAllied) {
-      const alliance = myPlayer
+      currentAlliance = myPlayer
         ?.alliances()
         .find((alliance) => alliance.other === player.id());
-      if (alliance !== undefined) {
+      if (currentAlliance !== undefined) {
         relationHtml = html` <span
           class="flex gap-2 ml-auto mr-0 text-sm font-bold"
         >
@@ -289,7 +306,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             height="20"
             style="vertical-align: middle;"
           />
-          ${this.allianceExpirationText(alliance)}
+          ${currentAlliance.expiresAt === Number.MAX_SAFE_INTEGER
+            ? "Permanent (vassal hierarchy)"
+            : this.allianceExpirationText(currentAlliance)}
         </span>`;
       }
     }
@@ -337,6 +356,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           <span>${player.name()}</span>
           ${this.renderPlayerNameIcons(player)}
         </button>
+        ${vassalOf
+          ? html`<div class="text-xs text-blue-300 mb-1">
+              Vassal of: ${vassalOf.name()}
+            </div>`
+          : ""}
+        ${vassals.length > 0
+          ? html`<div class="text-xs text-green-300 mb-1">
+              Overlord of:
+              ${vassals.map((v) => v.name()).join(", ")}
+            </div>`
+          : ""}
 
         <!-- Collapsible section -->
         ${this.showDetails
@@ -358,6 +388,28 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                       ${renderTroops(player.troops())}
                     </span>
                   </div>`
+                : ""}
+              ${overlord !== null && this.game.config().vassalsEnabled()
+                ? html`<div
+                      class="flex gap-2 text-sm opacity-80"
+                      translate="no"
+                    >
+                      Support from overlord
+                      <span class="ml-auto mr-0 font-bold text-yellow-300">
+                        ${supportTroops > 0 ? "+" : ""}${renderTroops(
+                          supportTroops,
+                        )}
+                      </span>
+                    </div>
+                    <div
+                      class="flex gap-2 text-sm opacity-80"
+                      translate="no"
+                    >
+                      Attack capacity
+                      <span class="ml-auto mr-0 font-bold text-green-300">
+                        ${renderTroops(effectiveTroops)}
+                      </span>
+                    </div>`
                 : ""}
               ${attackingTroops >= 1
                 ? html`<div

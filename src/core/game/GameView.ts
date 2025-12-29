@@ -380,6 +380,29 @@ export class PlayerView {
     return this.data.troops;
   }
 
+  vassalSupportRatio(): number {
+    return this.data.vassalSupportRatio ?? 0;
+  }
+
+  /**
+   * Troops available for an outgoing attack, including any potential support
+   * the overlord can provide via the vassal support pool.
+   */
+  effectiveTroops(): number {
+    const base = this.troops();
+    const overlord = this.overlord();
+    if (!overlord) return base;
+    const lastUse = overlord.data.lastVassalSupportUseTick ?? -Infinity;
+    const cooldown = this.game.config().donateCooldown();
+    const supportReady = this.game.ticks() - lastUse >= cooldown;
+    if (!supportReady) return base;
+
+    const supportPool = Math.floor(
+      overlord.troops() * overlord.vassalSupportRatio(),
+    );
+    return base + supportPool;
+  }
+
   totalUnitLevels(type: UnitType): number {
     return this.units(type)
       .filter((unit) => !unit.isUnderConstruction())
@@ -395,12 +418,38 @@ export class PlayerView {
     return this.data.allies.some((n) => other.smallID() === n);
   }
 
+  overlord(): PlayerView | null {
+    if (this.data.overlordID === undefined) return null;
+    const p = this.game.playerBySmallID(this.data.overlordID);
+    return p.isPlayer() ? (p as PlayerView) : null;
+  }
+
+  vassals(): PlayerView[] {
+    return (this.data.vassalIDs ?? []).map(
+      (id) => this.game.playerBySmallID(id) as PlayerView,
+    );
+  }
+  sharesHierarchy(other: PlayerView): boolean {
+    const rootOf = (p: PlayerView): PlayerView => {
+      let curr: PlayerView | null = p;
+      while (curr!.overlord()) {
+        curr = curr!.overlord();
+      }
+      return curr!;
+    };
+    return rootOf(this) === rootOf(other);
+  }
+
   isOnSameTeam(other: PlayerView): boolean {
     return this.data.team !== undefined && this.data.team === other.data.team;
   }
 
   isFriendly(other: PlayerView): boolean {
-    return this.isAlliedWith(other) || this.isOnSameTeam(other);
+    return (
+      this.isAlliedWith(other) ||
+      this.isOnSameTeam(other) ||
+      this.sharesHierarchy(other)
+    );
   }
 
   isRequestingAllianceWith(other: PlayerView) {
@@ -460,6 +509,11 @@ export class PlayerView {
           (this.game.ticks() + 1 - this.lastDeleteUnitTick()),
       ) / 10
     );
+  }
+
+  // Convenience for UI code to avoid threading the game separately.
+  config(): Config {
+    return this.game.config();
   }
 }
 

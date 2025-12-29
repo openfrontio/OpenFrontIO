@@ -17,6 +17,7 @@ export default {
   transformIgnorePatterns: [
     "node_modules/(?!(nanoid|@jsep|fastpriorityqueue|@datastructures-js)/)",
   ],
+  setupFilesAfterEnv: ["<rootDir>/tests/setupCanvas.ts"],
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {

@@ -55,6 +55,7 @@ export async function setup(
 
   // Configure the game
   const serverConfig = new TestServerConfig();
+  const { enableVassals = true, ...restConfig } = _gameConfig;
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
@@ -69,7 +70,8 @@ export async function setup(
     infiniteTroops: false,
     instantBuild: false,
     randomSpawn: false,
-    ..._gameConfig,
+    enableVassals,
+    ...restConfig,
   };
   const config = new ConfigClass(
     serverConfig,

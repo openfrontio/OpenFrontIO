@@ -389,8 +389,12 @@ export class RadialMenu implements Layer {
   ) {
     const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       const disabled = this.params === null || d.data.disabled(this.params);
-      if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
-        this.showTooltip(d.data.tooltipItems);
+      const tooltipItems =
+        d.data.tooltipItemsFn && this.params
+          ? d.data.tooltipItemsFn(this.params)
+          : d.data.tooltipItems;
+      if (tooltipItems && tooltipItems.length > 0) {
+        this.showTooltip(tooltipItems);
       } else if (d.data.tooltipKeys && d.data.tooltipKeys.length > 0) {
         this.showTooltip(d.data.tooltipKeys);
       }

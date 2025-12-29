@@ -23,6 +23,34 @@ export class WinCheckExecution implements Execution {
     this.mg = mg;
   }
 
+  private getOverlord(player: Player): Player | null {
+    return typeof (player as any).overlord === "function"
+      ? (player as any).overlord()
+      : null;
+  }
+
+  private getVassals(player: Player): Player[] {
+    return typeof (player as any).vassals === "function"
+      ? ((player as any).vassals() as Player[])
+      : [];
+  }
+
+  // Count a player's owned tiles plus all of their vassals recursively.
+  // Vassal tiles always count toward the overlord, regardless of team.
+  private hierarchyTiles(player: Player): number {
+    let total = player.numTilesOwned();
+    for (const vassal of this.getVassals(player)) {
+      total += this.hierarchyTiles(vassal);
+    }
+    return total;
+  }
+
+  // Only consider root players (no overlord) when attributing vassal territory.
+  private rootPlayers(): Player[] {
+    if (this.mg === null) return [];
+    return this.mg.players().filter((p) => this.getOverlord(p) === null);
+  }
+
   tick(ticks: number) {
     if (ticks % 10 !== 0) {
       return;
@@ -38,9 +66,9 @@ export class WinCheckExecution implements Execution {
 
   checkWinnerFFA(): void {
     if (this.mg === null) throw new Error("Not initialized");
-    const sorted = this.mg
-      .players()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    const sorted = this.rootPlayers().sort(
+      (a, b) => this.hierarchyTiles(b) - this.hierarchyTiles(a),
+    );
     if (sorted.length === 0) {
       return;
     }
@@ -50,7 +78,7 @@ export class WinCheckExecution implements Execution {
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
-      (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
+      (this.hierarchyTiles(max) / numTilesWithoutFallout) * 100 >
         this.mg.config().percentageTilesOwnedToWin() ||
       (this.mg.config().gameConfig().maxTimerValue !== undefined &&
         timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
@@ -64,14 +92,12 @@ export class WinCheckExecution implements Execution {
   checkWinnerTeam(): void {
     if (this.mg === null) throw new Error("Not initialized");
     const teamToTiles = new Map<Team, number>();
-    for (const player of this.mg.players()) {
-      const team = player.team();
-      // Sanity check, team should not be null here
+    // Attribute vassal land to the root overlord's team to avoid double counting.
+    for (const root of this.rootPlayers()) {
+      const team = root.team();
       if (team === null) continue;
-      teamToTiles.set(
-        team,
-        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-      );
+      const tiles = this.hierarchyTiles(root);
+      teamToTiles.set(team, (teamToTiles.get(team) ?? 0) + tiles);
     }
     const sorted = Array.from(teamToTiles.entries()).sort(
       (a, b) => b[1] - a[1],

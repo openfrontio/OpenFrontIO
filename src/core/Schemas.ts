@@ -35,6 +35,9 @@ export type Intent =
   | AllianceRequestReplyIntent
   | AllianceExtensionIntent
   | BreakAllianceIntent
+  | SurrenderIntent
+  | VassalOfferIntent
+  | VassalOfferReplyIntent
   | TargetPlayerIntent
   | EmojiIntent
   | DonateGoldIntent
@@ -47,7 +50,8 @@ export type Intent =
   | EmbargoAllIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
-  | KickPlayerIntent;
+  | KickPlayerIntent
+  | VassalSupportIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -60,6 +64,11 @@ export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
 >;
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
+export type SurrenderIntent = z.infer<typeof SurrenderIntentSchema>;
+export type VassalOfferIntent = z.infer<typeof VassalOfferIntentSchema>;
+export type VassalOfferReplyIntent = z.infer<
+  typeof VassalOfferReplyIntentSchema
+>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
@@ -79,6 +88,7 @@ export type AllianceExtensionIntent = z.infer<
 >;
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
+export type VassalSupportIntent = z.infer<typeof VassalSupportIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -170,6 +180,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   randomSpawn: z.boolean(),
+  enableVassals: z.boolean().optional().default(true),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
@@ -266,6 +277,24 @@ export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
   recipient: ID,
 });
 
+export const SurrenderIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("surrender"),
+  target: ID,
+  goldRatio: z.number().min(0).max(1).optional(),
+  troopRatio: z.number().min(0).max(1).optional(),
+});
+
+export const VassalOfferIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("offerVassal"),
+  target: ID,
+});
+
+export const VassalOfferReplyIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("vassalOfferReply"),
+  requestor: ID, // original offer sender
+  accept: z.boolean(),
+});
+
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("targetPlayer"),
   target: ID,
@@ -350,6 +379,11 @@ export const KickPlayerIntentSchema = BaseIntentSchema.extend({
   target: ID,
 });
 
+export const VassalSupportIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("vassalSupport"),
+  ratio: z.number().min(0).max(1),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -360,6 +394,9 @@ const IntentSchema = z.discriminatedUnion("type", [
   AllianceRequestIntentSchema,
   AllianceRequestReplyIntentSchema,
   BreakAllianceIntentSchema,
+  SurrenderIntentSchema,
+  VassalOfferIntentSchema,
+  VassalOfferReplyIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
   DonateGoldIntentSchema,
@@ -373,6 +410,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   AllianceExtensionIntentSchema,
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
+  VassalSupportIntentSchema,
 ]);
 
 //

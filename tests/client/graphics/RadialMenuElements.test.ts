@@ -9,9 +9,10 @@ import {
   rootMenuElement,
   Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
-import { UnitType } from "../../../src/core/game/Game";
+import { UnitType, PlayerType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
+import { vassalMenuVisibility } from "../../../src/client/graphics/vassalHelpers";
 
 jest.mock("../../../src/client/Utils", () => ({
   translateText: jest.fn((key: string) => key),
@@ -131,6 +132,8 @@ describe("RadialMenuElements", () => {
         canBreakAlliance: false,
         canDonateTroops: true,
         canDonateGold: true,
+        canSurrender: true,
+        canOfferVassal: true,
       },
     };
 
@@ -346,6 +349,91 @@ describe("RadialMenuElements", () => {
       const allyMenu = subMenu.find((item) => item.id === "ally_break");
 
       expect(allyMenu).toBeDefined();
+    });
+
+    it("shows vassal actions only when vassals are enabled", () => {
+      const enemyPlayer = {
+        id: () => 99,
+        isPlayer: jest.fn(() => true),
+        type: jest.fn(() => PlayerType.Human),
+        overlord: jest.fn(() => null),
+        isAlliedWith: jest.fn(() => false),
+        isOnSameTeam: jest.fn(() => false),
+        sharesHierarchy: jest.fn(() => false),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+      mockGame.owner = jest.fn(() => enemyPlayer);
+      (mockGame.config as jest.Mock).mockReturnValue({
+        vassalsEnabled: () => true,
+      });
+      let subMenu = rootMenuElement.subMenu!(mockParams);
+      expect(subMenu.some((m) => m.id === "surrender")).toBe(true);
+      expect(subMenu.some((m) => m.id === "force_vassal")).toBe(true);
+
+      (mockGame.config as jest.Mock).mockReturnValue({
+        vassalsEnabled: () => false,
+      });
+      subMenu = rootMenuElement.subMenu!(mockParams);
+      expect(subMenu.some((m) => m.id === "surrender")).toBe(false);
+      expect(subMenu.some((m) => m.id === "force_vassal")).toBe(false);
+
+      const vis = vassalMenuVisibility(mockParams);
+      expect(vis.showSurrender).toBe(false);
+      expect(vis.showOffer).toBe(false);
+    });
+  });
+
+  describe("vassal menu visibility (UI)", () => {
+    beforeEach(() => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: jest.fn(() => true),
+        isAlliedWith: jest.fn(() => false),
+        overlord: jest.fn(() => null),
+        type: jest.fn(() => PlayerType.Human),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+      mockGame.owner = jest.fn(() => enemyPlayer); // not own territory
+    });
+
+    it("shows surrender and offer when vassals enabled", () => {
+    mockGame.config = jest.fn(
+      () =>
+        ({
+          vassalsEnabled: () => true,
+          theme: () => ({
+            territoryColor: () => ({
+              lighten: () => ({ alpha: () => ({ toRgbString: () => "#fff" }) }),
+            }),
+          }),
+          isUnitDisabled: jest.fn(() => false),
+        }) as unknown as any,
+    );
+
+      const menuItems = rootMenuElement.subMenu!(mockParams);
+      const ids = menuItems.map((m) => m.id);
+      expect(ids).toContain("surrender");
+      expect(ids).toContain("force_vassal");
+    });
+
+    it("hides surrender and offer when vassals disabled", () => {
+    mockGame.config = jest.fn(
+      () =>
+        ({
+          vassalsEnabled: () => false,
+          theme: () => ({
+            territoryColor: () => ({
+              lighten: () => ({ alpha: () => ({ toRgbString: () => "#fff" }) }),
+            }),
+          }),
+          isUnitDisabled: jest.fn(() => false),
+        }) as unknown as any,
+    );
+
+      const menuItems = rootMenuElement.subMenu!(mockParams);
+      const ids = menuItems.map((m) => m.id);
+      expect(ids).not.toContain("surrender");
+      expect(ids).not.toContain("force_vassal");
     });
   });
 

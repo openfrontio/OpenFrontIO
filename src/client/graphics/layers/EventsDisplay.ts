@@ -27,6 +27,8 @@ import {
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
+  VassalOfferReplyUpdate,
+  VassalOfferUpdate,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
@@ -35,6 +37,7 @@ import {
   CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendVassalOfferReplyIntentEvent,
   SendAttackIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -170,6 +173,8 @@ export class EventsDisplay extends LitElement implements Layer {
       GameUpdateType.AllianceRequestReply,
       this.onAllianceRequestReplyEvent.bind(this),
     ],
+    [GameUpdateType.VassalOfferRequest, this.onVassalOfferRequest.bind(this)],
+    [GameUpdateType.VassalOfferReply, this.onVassalOfferReplyEvent.bind(this)],
     [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
     [GameUpdateType.TargetPlayer, this.onTargetPlayerEvent.bind(this)],
     [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
@@ -524,6 +529,70 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: update.request.recipientID,
+    });
+  }
+
+  onVassalOfferRequest(update: VassalOfferUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || update.recipientID !== myPlayer.smallID()) return;
+
+    const requestor = this.game.playerBySmallID(
+      update.requestorID,
+    ) as PlayerView;
+    const recipient = this.game.playerBySmallID(
+      update.recipientID,
+    ) as PlayerView;
+
+    this.addEvent({
+      description: `${requestor.displayName()} offered you vassalage`,
+      buttons: [
+        {
+          text: translateText("events_display.focus"),
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
+          preventClose: true,
+        },
+        {
+          text: "Accept vassalage",
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendVassalOfferReplyIntentEvent(requestor, true),
+            ),
+        },
+        {
+          text: "Reject",
+          className: "btn-info",
+          action: () =>
+            this.eventBus.emit(
+              new SendVassalOfferReplyIntentEvent(requestor, false),
+            ),
+        },
+      ],
+      highlight: true,
+      type: MessageType.VASSAL_REQUEST,
+      createdAt: this.game.ticks(),
+      priority: 0,
+      duration: this.game.config().allianceRequestDuration() - 20,
+      shouldDelete: () => false,
+      focusID: update.requestorID,
+    });
+  }
+
+  onVassalOfferReplyEvent(update: VassalOfferReplyUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+    if (update.requestorID !== myPlayer.smallID()) return;
+    const recipient = this.game.playerBySmallID(
+      update.recipientID,
+    ) as PlayerView;
+    this.addEvent({
+      description: `${recipient.displayName()} ${
+        update.accept ? "accepted" : "rejected"
+      } your vassalage offer`,
+      createdAt: this.game.ticks(),
+      highlight: true,
+      type: update.accept ? MessageType.VASSAL_ACCEPTED : MessageType.VASSAL_REJECTED,
     });
   }
 

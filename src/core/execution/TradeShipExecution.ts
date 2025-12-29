@@ -140,8 +140,26 @@ export class TradeShipExecution implements Execution {
         this.tradeShip!.owner().unitCount(UnitType.Port),
       );
 
+    const effectiveOwner = (unitOwner: Player, portTile: TileRef): Player => {
+      const tileOwner = this.mg.owner(portTile);
+      if (
+        tileOwner &&
+        tileOwner.isPlayer &&
+        tileOwner.isPlayer() &&
+        tileOwner !== unitOwner &&
+        unitOwner.isFriendly(tileOwner as Player)
+      ) {
+        return tileOwner as Player;
+      }
+      return unitOwner;
+    };
+
     if (this.wasCaptured) {
+      const dstOwner = effectiveOwner(this._dstPort.owner(), this._dstPort.tile());
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
+      if (dstOwner !== this.tradeShip!.owner()) {
+        dstOwner.addGold(gold, this._dstPort.tile());
+      }
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.CAPTURED_ENEMY_UNIT,
@@ -153,8 +171,10 @@ export class TradeShipExecution implements Execution {
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
-      this.srcPort.owner().addGold(gold);
-      this._dstPort.owner().addGold(gold, this._dstPort.tile());
+      const srcOwner = effectiveOwner(this.srcPort.owner(), this.srcPort.tile());
+      const dstOwner = effectiveOwner(this._dstPort.owner(), this._dstPort.tile());
+      srcOwner.addGold(gold);
+      dstOwner.addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
         MessageType.RECEIVED_GOLD_FROM_TRADE,

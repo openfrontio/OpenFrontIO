@@ -46,6 +46,26 @@ export class SendBreakAllianceIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendSurrenderIntentEvent implements GameEvent {
+  constructor(
+    public readonly requestor: PlayerView,
+    public readonly recipient: PlayerView,
+    public readonly goldRatio?: number,
+    public readonly troopRatio?: number,
+  ) {}
+}
+
+export class SendForceVassalIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
+export class SendVassalOfferReplyIntentEvent implements GameEvent {
+  constructor(
+    public readonly requestor: PlayerView,
+    public readonly accepted: boolean,
+  ) {}
+}
+
 export class SendUpgradeStructureIntentEvent implements GameEvent {
   constructor(
     public readonly unitId: number,
@@ -64,6 +84,10 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
   constructor(public readonly recipient: PlayerView) {}
+}
+
+export class SendVassalSupportIntentEvent implements GameEvent {
+  constructor(public readonly ratio: number) {}
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
@@ -198,6 +222,9 @@ export class Transport {
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
     );
+    this.eventBus.on(SendVassalSupportIntentEvent, (e) =>
+      this.onSendVassalSupportIntent(e),
+    );
     this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
       this.onAllianceRequestReplyUIEvent(e),
     );
@@ -206,6 +233,15 @@ export class Transport {
     );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
+    );
+    this.eventBus.on(SendSurrenderIntentEvent, (e) =>
+      this.onSendSurrenderIntent(e),
+    );
+    this.eventBus.on(SendForceVassalIntentEvent, (e) =>
+      this.onSendForceVassalIntent(e),
+    );
+    this.eventBus.on(SendVassalOfferReplyIntentEvent, (e) =>
+      this.onSendVassalOfferReplyIntent(e),
     );
     this.eventBus.on(SendSpawnIntentEvent, (e) =>
       this.onSendSpawnIntentEvent(e),
@@ -455,6 +491,35 @@ export class Transport {
     });
   }
 
+  private onSendSurrenderIntent(event: SendSurrenderIntentEvent) {
+    this.sendIntent({
+      type: "surrender",
+      clientID: this.lobbyConfig.clientID,
+      target: event.recipient.id(),
+      goldRatio: event.goldRatio,
+      troopRatio: event.troopRatio,
+    });
+  }
+
+  private onSendForceVassalIntent(event: SendForceVassalIntentEvent) {
+    this.sendIntent({
+      type: "offerVassal",
+      clientID: this.lobbyConfig.clientID,
+      target: event.recipient.id(),
+    });
+  }
+
+  private onSendVassalOfferReplyIntent(
+    event: SendVassalOfferReplyIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "vassalOfferReply",
+      clientID: this.lobbyConfig.clientID,
+      requestor: event.requestor.id(),
+      accept: event.accepted,
+    });
+  }
+
   private onSendAllianceExtensionIntent(
     event: SendAllianceExtensionIntentEvent,
   ) {
@@ -462,6 +527,14 @@ export class Transport {
       type: "allianceExtension",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
+    });
+  }
+
+  private onSendVassalSupportIntent(event: SendVassalSupportIntentEvent) {
+    this.sendIntent({
+      type: "vassalSupport",
+      clientID: this.lobbyConfig.clientID,
+      ratio: event.ratio,
     });
   }
 

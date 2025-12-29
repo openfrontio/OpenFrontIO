@@ -100,6 +100,7 @@ export class ConstructionExecution implements Execution {
       this.structure.setUnderConstruction(false);
     }
     const player = this.player;
+
     switch (this.constructionType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:

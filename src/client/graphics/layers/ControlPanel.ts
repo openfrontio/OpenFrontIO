@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
@@ -9,16 +9,23 @@ import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import { SendVassalSupportIntentEvent } from "../../Transport";
+import { vassalsEnabledFrom } from "../vassalHelpers";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
-  public game: GameView;
+  @property({ attribute: false })
+  public game: GameView | null = null;
   public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
 
   @state()
   private attackRatio: number = 0.2;
+  @state()
+  private vassalSupportRatio: number = 0;
+
+  private sentSupportInit = false;
 
   @state()
   private _maxTroops: number;
@@ -44,6 +51,14 @@ export class ControlPanel extends LitElement implements Layer {
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
     this.uiState.attackRatio = this.attackRatio;
+    this.vassalSupportRatio = Number(
+      localStorage.getItem("settings.vassalSupportRatio") ?? "0",
+    );
+    // Push the saved value to both UI state and server so vassals know it
+    // even if the player doesn't move the slider this session.
+    if (vassalsEnabledFrom(this.game)) {
+      this.onVassalSupportChange(this.vassalSupportRatio);
+    }
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio =
         (parseInt(
@@ -71,31 +86,41 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
-    if (!this._isVisible && !this.game.inSpawnPhase()) {
+    const game = this.game;
+    if (game === null) return;
+
+    if (!this._isVisible && !game.inSpawnPhase()) {
       this.setVisibile(true);
     }
 
-    const player = this.game.myPlayer();
+    const player = game.myPlayer();
     if (player === null || !player.isAlive()) {
       this.setVisibile(false);
       return;
     }
 
-    if (this.game.ticks() % 5 === 0) {
+    // Ensure initial vassal support setting is sent once a player exists.
+    if (!this.sentSupportInit && vassalsEnabledFrom(game)) {
+      this.onVassalSupportChange(this.vassalSupportRatio);
+    }
+
+    if (game.ticks() % 5 === 0) {
       this.updateTroopIncrease();
     }
 
-    this._maxTroops = this.game.config().maxTroops(player);
+    this._maxTroops = game.config().maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
-    this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+    this.troopRate = game.config().troopIncreaseRate(player) * 10;
     this.requestUpdate();
   }
 
   private updateTroopIncrease() {
-    const player = this.game?.myPlayer();
+    const game = this.game;
+    if (game === null) return;
+    const player = game.myPlayer();
     if (player === null) return;
-    const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
+    const troopIncreaseRate = game.config().troopIncreaseRate(player);
     this._troopRateIsIncreasing =
       troopIncreaseRate >= this._lastTroopIncreaseRate;
     this._lastTroopIncreaseRate = troopIncreaseRate;
@@ -103,6 +128,20 @@ export class ControlPanel extends LitElement implements Layer {
 
   onAttackRatioChange(newRatio: number) {
     this.uiState.attackRatio = newRatio;
+  }
+
+  onVassalSupportChange(newRatio: number) {
+    const game = this.game;
+    if (!vassalsEnabledFrom(game) || game === null) {
+      return;
+    }
+    const player = game.myPlayer();
+    if (!player) return;
+    this.vassalSupportRatio = newRatio;
+    this.uiState.vassalSupportRatio = newRatio;
+    localStorage.setItem("settings.vassalSupportRatio", newRatio.toString());
+    this.eventBus.emit(new SendVassalSupportIntentEvent(newRatio));
+    this.sentSupportInit = true;
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -201,7 +240,9 @@ export class ControlPanel extends LitElement implements Layer {
               <span>${(this.attackRatio * 100).toFixed(0)}%</span>
               <span>
                 (${renderTroops(
-                  (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                  (this.game?.myPlayer()?.effectiveTroops?.() ??
+                    this.game?.myPlayer()?.troops() ??
+                    0) * this.attackRatio,
                 )})
               </span>
             </span>
@@ -232,11 +273,68 @@ export class ControlPanel extends LitElement implements Layer {
             />
           </div>
         </div>
+
+        ${this.game?.config().vassalsEnabled()
+          ? html`
+              <div class="relative mb-0 sm:mb-4 mt-4">
+                <label class="block text-white mb-1">
+                  Vassal support pool:
+                  <span
+                    class="inline-flex items-center gap-1"
+                    dir="ltr"
+                    style="unicode-bidi: isolate;"
+                    translate="no"
+                  >
+                    <span>${(this.vassalSupportRatio * 100).toFixed(0)}%</span>
+                    <span>
+                      (${renderTroops(
+                        (this.game?.myPlayer()?.troops() ?? 0) *
+                          this.vassalSupportRatio,
+                      )})
+                    </span>
+                  </span>
+                </label>
+                <div class="relative h-8">
+                  <div
+                    class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
+                  ></div>
+                  <div
+                    class="absolute left-0 top-3 h-2 bg-yellow-400/70 rounded transition-all duration-300"
+                    style="width: ${this.vassalSupportRatio * 100}%"
+                  ></div>
+                  <input
+                    id="vassal-support-ratio"
+                    type="range"
+                    min="0"
+                    max="100"
+                    .value=${(this.vassalSupportRatio * 100).toString()}
+                    @input=${(e: Event) => {
+                      const newRatio =
+                        Number((e.target as HTMLInputElement).value) / 100;
+                      this.onVassalSupportChange(newRatio);
+                    }}
+                    class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer attackRatio"
+                  />
+                </div>
+              </div>
+            `
+          : null}
       </div>
     `;
   }
 
   createRenderRoot() {
     return this; // Disable shadow DOM to allow Tailwind styles
+  }
+
+  updated(changed: Map<string, unknown>) {
+    if (
+      changed.has("game") &&
+      this.game &&
+      vassalsEnabledFrom(this.game) &&
+      !this.sentSupportInit
+    ) {
+      this.onVassalSupportChange(this.vassalSupportRatio);
+    }
   }
 }

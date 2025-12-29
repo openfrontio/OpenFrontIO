@@ -1,6 +1,8 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
+  static readonly PERMANENT: Tick = Number.MAX_SAFE_INTEGER;
+
   private extensionRequestedRequestor_: boolean = false;
   private extensionRequestedRecipient_: boolean = false;
 
@@ -12,8 +14,12 @@ export class AllianceImpl implements MutableAlliance {
     readonly recipient_: Player,
     private readonly createdAt_: Tick,
     private readonly id_: number,
+    expiresAt?: Tick,
   ) {
-    this.expiresAt_ = createdAt_ + mg.config().allianceDuration();
+    this.expiresAt_ =
+      expiresAt !== undefined
+        ? expiresAt
+        : createdAt_ + mg.config().allianceDuration();
   }
 
   other(player: Player): Player {
@@ -33,6 +39,11 @@ export class AllianceImpl implements MutableAlliance {
 
   createdAt(): Tick {
     return this.createdAt_;
+  }
+
+  // vassalage (but maybe expanded to other longer-unbreakable alliances later?)
+  isEnforced(): boolean {
+    return this.expiresAt_ === AllianceImpl.PERMANENT;
   }
 
   expire(): void {

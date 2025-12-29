@@ -17,8 +17,12 @@ import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { VassalOfferExecution } from "./VassalOfferExecution";
+import { VassalOfferReplyExecution } from "./VassalOfferReplyExecution";
+import { VassalSupportExecution } from "./VassalSupportExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
+import { SurrenderExecution } from "./SurrenderExecution";
 import { NoOpExecution } from "./NoOpExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
@@ -88,6 +92,23 @@ export class Executor {
         );
       case "breakAlliance":
         return new BreakAllianceExecution(player, intent.recipient);
+      case "surrender":
+        return new SurrenderExecution(
+          player,
+          intent.target,
+          intent.goldRatio ?? undefined,
+          intent.troopRatio ?? undefined,
+        );
+      case "offerVassal":
+        return new VassalOfferExecution(player, intent.target);
+      case "vassalOfferReply":
+        return new VassalOfferReplyExecution(
+          intent.requestor,
+          player.id(),
+          intent.accept,
+        );
+      case "vassalSupport":
+        return new VassalSupportExecution(player, intent.ratio);
       case "targetPlayer":
         return new TargetPlayerExecution(player, intent.target);
       case "emoji":

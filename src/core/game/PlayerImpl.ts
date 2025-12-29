@@ -38,6 +38,10 @@ import {
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
+import {
+  hierarchyRelation,
+  sharesHierarchy as sharesHierarchyUtil,
+} from "./HierarchyUtils";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
@@ -69,6 +73,7 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
+  private _vassalSupportRatio = 0;
 
   markedTraitorTick = -1;
   private _betrayalCount: number = 0;
@@ -100,6 +105,7 @@ export class PlayerImpl implements Player {
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
+  public lastVassalSupportUseTick: number = -1;
 
   private _hasSpawned = false;
   private _isDisconnected = false;
@@ -121,9 +127,24 @@ export class PlayerImpl implements Player {
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
 
   toUpdate(): PlayerUpdate {
+    const isOppositeTeamVassal = (() => {
+      const o = this.overlord();
+      if (!o) return false;
+      const myTeam = this.team();
+      const oTeam = o.team();
+      if (myTeam === null || oTeam === null) return false;
+      return myTeam !== oTeam;
+    })();
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
+
+    const allianceAllies = this.alliances().map((a) => a.other(this).smallID());
+    const hierarchyAllies: number[] = [];
+    const overlord = this.overlord();
+    if (overlord) hierarchyAllies.push(overlord.smallID());
+    hierarchyAllies.push(...this.vassals().map((v) => v.smallID()));
+    const allies = Array.from(new Set([...allianceAllies, ...hierarchyAllies]));
 
     return {
       type: GameUpdateType.Player,
@@ -136,10 +157,15 @@ export class PlayerImpl implements Player {
       playerType: this.type(),
       isAlive: this.isAlive(),
       isDisconnected: this.isDisconnected(),
-      tilesOwned: this.numTilesOwned(),
+      tilesOwned: isOppositeTeamVassal ? 0 : this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
+      allies,
+      overlordID: overlord?.smallID(),
+      vassalIDs: this.vassals().map((v) => v.smallID()),
+      vassalTribute: this.vassalTribute() ?? undefined,
+      vassalSupportRatio: this._vassalSupportRatio,
+      lastVassalSupportUseTick: this.lastVassalSupportUseTick,
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
@@ -267,11 +293,44 @@ export class PlayerImpl implements Player {
   }
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
-    for (const border of this._borderTiles) {
+    return this.sharesOperationalBorderWith(other, true);
+  }
+
+  private sharesBorderAcrossTiles(
+    tiles: ReadonlySet<TileRef>,
+    other: Player | TerraNullius,
+  ): boolean {
+    for (const border of tiles) {
       for (const neighbor of this.mg.map().neighbors(border)) {
         if (this.mg.map().ownerID(neighbor) === other.smallID()) {
           return true;
         }
+      }
+    }
+    return false;
+  }
+
+  sharesOperationalBorderWith(
+    other: Player | TerraNullius,
+    includeOwn: boolean = true,
+  ): boolean {
+    if (includeOwn && this.sharesBorderAcrossTiles(this._borderTiles, other)) {
+      return true;
+    }
+    const partners: Player[] = [];
+    const overlord = this.overlord();
+    if (overlord && this.canUseTerritoryOf(overlord)) {
+      partners.push(overlord);
+    }
+    partners.push(...this.vassals());
+    for (const p of partners) {
+      if (
+        this.sharesBorderAcrossTiles(
+          (p as PlayerImpl)._borderTiles,
+          other,
+        )
+      ) {
+        return true;
       }
     }
     return false;
@@ -286,6 +345,15 @@ export class PlayerImpl implements Player {
 
   borderTiles(): ReadonlySet<TileRef> {
     return this._borderTiles;
+  }
+
+  private canUseTerritoryOf(owner: Player | TerraNullius): boolean {
+    if (!owner.isPlayer()) return false;
+    const p = owner as Player;
+    return (
+      p === this ||
+      this.isOverlordOf(p) // my vassal
+    );
   }
 
   neighbors(): (Player | TerraNullius)[] {
@@ -370,14 +438,24 @@ export class PlayerImpl implements Player {
   }
 
   allies(): Player[] {
-    return this.alliances().map((a) => a.other(this));
+    const allies = new Set<Player>();
+    this.alliances().forEach((a) => allies.add(a.other(this)));
+    const overlord = this.overlord();
+    if (overlord) allies.add(overlord);
+    this.vassals().forEach((v) => allies.add(v));
+    return Array.from(allies);
   }
 
   isAlliedWith(other: Player): boolean {
     if (other === this) {
       return false;
     }
-    return this.allianceWith(other) !== null;
+    return (
+      this.allianceWith(other) !== null ||
+      this.isVassalOf(other) ||
+      this.isOverlordOf(other) ||
+      this.sharesOverlord(other)
+    );
   }
 
   allianceWith(other: Player): MutableAlliance | null {
@@ -395,7 +473,12 @@ export class PlayerImpl implements Player {
     if (other === this) {
       return false;
     }
-    if (this.isDisconnected() || other.isDisconnected()) {
+    if (
+      this.isDisconnected() ||
+      other.isDisconnected() ||
+      this.isVassalOf(other) ||
+      this.isOverlordOf(other)
+    ) {
       // Disconnected players are marked as not-friendly even if they are allies,
       // so we need to return early if either player is disconnected.
       // Otherwise we could end up sending an alliance request to someone
@@ -429,6 +512,89 @@ export class PlayerImpl implements Player {
 
   breakAlliance(alliance: Alliance): void {
     this.mg.breakAlliance(this, alliance);
+  }
+
+  overlord(): Player | null {
+    const rel = this.mg.vassalages_.find((v) => v.vassal() === this);
+    return rel?.overlord() ?? null;
+  }
+
+  vassals(): Player[] {
+    return this.mg.vassalages_
+      .filter((v) => v.overlord() === this)
+      .map((v) => v.vassal());
+  }
+
+  vassalSupportRatio(): number {
+    return this._vassalSupportRatio;
+  }
+
+  setVassalSupportRatio(ratio: number): void {
+    const clamped = Math.max(0, Math.min(1, ratio));
+    if (clamped === this._vassalSupportRatio) return;
+    this._vassalSupportRatio = clamped;
+    // Ensure clients (including vassals) receive the updated pool size.
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  vassalTribute():
+    | {
+        goldRatio: number;
+        troopRatio: number;
+      }
+    | null {
+    const rel = this.mg.vassalages_.find((v) => v.vassal() === this);
+    if (!rel) return null;
+    return {
+      goldRatio: rel.goldTributeRatio(),
+      troopRatio: rel.troopTributeRatio(),
+    };
+  }
+
+  isVassalOf(other: Player): boolean {
+    const overlord = this.overlord();
+    return overlord !== null && overlord === other;
+  }
+
+  isOverlordOf(other: Player): boolean {
+    return this.vassals().includes(other);
+  }
+
+  sharesOverlord(other: Player): boolean {
+    const myOverlord = this.overlord();
+    const otherOverlord = other.overlord();
+    return !!myOverlord && !!otherOverlord && myOverlord === otherOverlord;
+  }
+
+  sharesHierarchy(other: Player): boolean {
+    return sharesHierarchyUtil(this, other);
+  }
+
+  hasTerritorialAccess(owner: Player): boolean {
+    if (owner === this) return true;
+    if (!owner.isPlayer()) return false;
+    return this.isOverlordOf(owner) || this.isVassalOf(owner);
+  }
+
+  surrenderTo(
+    overlord: Player,
+    goldRatio?: number,
+    troopRatio?: number,
+  ): void {
+    const v = this.mg.vassalize(
+      this,
+      overlord,
+      goldRatio ?? this.mg.config().vassalGoldTributeRatio(),
+      troopRatio ?? this.mg.config().vassalTroopTributeRatio(),
+    );
+    if (v === null) {
+      return;
+    }
+  }
+
+  releaseVassal(vassal: Player): void {
+    if (!this.isOverlordOf(vassal)) return;
+    this.mg.removeVassalage(vassal);
   }
 
   isTraitor(): boolean {
@@ -736,6 +902,9 @@ export class PlayerImpl implements Player {
   }
 
   addEmbargo(other: Player, isTemporary: boolean): void {
+    if (this.sharesHierarchy(other)) {
+      return;
+    }
     const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
@@ -797,7 +966,11 @@ export class PlayerImpl implements Player {
     if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
-    return this.isOnSameTeam(other) || this.isAlliedWith(other);
+    return (
+      this.isOnSameTeam(other) ||
+      this.isAlliedWith(other) ||
+      this.sharesHierarchy(other)
+    );
   }
 
   gold(): Gold {
@@ -1000,10 +1173,18 @@ export class PlayerImpl implements Player {
   nukeSpawn(tile: TileRef): TileRef | false {
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
-      if (this.isOnSameTeam(owner)) {
-        return false;
-      }
+      const other = owner as Player;
+      if (this.isOnSameTeam(other)) return false; // just no
+
+      // Allow nuking down the hierarchy (any depth), but not up or sideways.
+      const relation = hierarchyRelation(this, other);
+      if (relation === "Descendant") return false; // vassal cannot nuke overlord chain
+      if (relation === "Sibling") return false; // siblings under same overlord
+
+      // otherwise, nuking self, temp ally, vassal, or hostile/neutral, all ok
+      // or non-owned tile in the implicit else
     }
+
     // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
@@ -1023,7 +1204,11 @@ export class PlayerImpl implements Player {
         manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
       ),
     )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isOceanShore(t))
+      .filter(
+        (t) =>
+          this.canUseTerritoryOf(this.mg.owner(t)) &&
+          this.mg.isOceanShore(t),
+      )
       .sort(
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
@@ -1070,7 +1255,8 @@ export class PlayerImpl implements Player {
   }
 
   private validStructureSpawnTiles(tile: TileRef): TileRef[] {
-    if (this.mg.owner(tile) !== this) {
+    const tileOwner = this.mg.owner(tile);
+    if (!this.canUseTerritoryOf(tileOwner)) {
       return [];
     }
     const searchRadius = 15;
@@ -1078,6 +1264,16 @@ export class PlayerImpl implements Player {
     const types = Object.values(UnitType).filter((unitTypeValue) => {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
+
+    const allowedOwners = new Set<number>();
+    const collectHierarchy = (p: Player) => {
+      allowedOwners.add(p.smallID());
+      p.vassals().forEach((v) => collectHierarchy(v));
+    };
+    collectHierarchy(this);
+    if (this.overlord()) {
+      collectHierarchy(this.overlord() as Player);
+    }
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
@@ -1089,7 +1285,7 @@ export class PlayerImpl implements Player {
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
-        gm.ownerID(t) === this.smallID()
+        allowedOwners.has(gm.ownerID(t))
       );
     });
     const validSet: Set<TileRef> = new Set(nearbyTiles);
@@ -1193,15 +1389,19 @@ export class PlayerImpl implements Player {
       this.mg.hasOwner(tile) &&
       this.mg.config().numSpawnPhaseTurns() +
         this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
+      this.mg.ticks()
     ) {
       return false;
     }
 
-    if (this.mg.owner(tile) === this) {
+    const tileOwner = this.mg.owner(tile);
+    if (
+      tileOwner === this ||
+      (tileOwner.isPlayer() && this.sharesHierarchy(tileOwner as Player))
+    ) {
       return false;
     }
-    const other = this.mg.owner(tile);
+    const other = tileOwner;
     if (other.isPlayer()) {
       if (this.isFriendly(other)) {
         return false;
@@ -1212,7 +1412,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(other);
+      return this.sharesOperationalBorderWith(other);
     } else {
       for (const t of this.mg.bfs(
         tile,
@@ -1222,7 +1422,11 @@ export class PlayerImpl implements Player {
         ),
       )) {
         for (const n of this.mg.neighbors(t)) {
-          if (this.mg.owner(n) === this) {
+          const owner = this.mg.owner(n);
+          if (
+            owner === this ||
+            (owner.isPlayer() && this.sharesHierarchy(owner as Player))
+          ) {
             return true;
           }
         }

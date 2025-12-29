@@ -206,15 +206,31 @@ export class GameRunner {
 
     if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
+      const enforcedAlliance = player.sharesHierarchy(other);
       actions.interaction = {
-        sharedBorder: player.sharesBorderWith(other),
+        sharedBorder: player.sharesOperationalBorderWith(other),
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
-        canSendAllianceRequest: player.canSendAllianceRequest(other),
-        canBreakAlliance: player.isAlliedWith(other),
+        canSendAllianceRequest:
+          !enforcedAlliance && player.canSendAllianceRequest(other),
+        canBreakAlliance: player.isAlliedWith(other) && !enforcedAlliance,
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
-        canEmbargo: !player.hasEmbargoAgainst(other),
+        canEmbargo: !player.hasEmbargoAgainst(other) && !enforcedAlliance,
+        canSurrender:
+          other.isPlayer() &&
+          player.overlord() === null &&
+          !player.isVassalOf(other as Player) &&
+          !player.isOverlordOf(other as Player) &&
+          player !== (other as Player) &&
+          (other as Player).type() !== PlayerType.Bot,
+        canOfferVassal:
+          other.isPlayer() &&
+          other.overlord() === null &&
+          (other as Player).type() !== PlayerType.Bot &&
+          !player.isOnSameTeam(other as Player) &&
+          !player.sharesHierarchy(other as Player) &&
+          player !== (other as Player),
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {

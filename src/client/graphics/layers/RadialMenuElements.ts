@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  PlayerActions,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -22,8 +27,10 @@ import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import surrenderIcon from "../../../../resources/images/AllianceIconFaded.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+import { vassalsEnabledFrom, vassalMenuVisibility } from "../vassalHelpers";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -49,6 +56,7 @@ export interface MenuElement {
   text?: string;
   fontSize?: string;
   tooltipItems?: TooltipItem[];
+  tooltipItemsFn?: (params: MenuElementParams) => TooltipItem[] | undefined;
   tooltipKeys?: TooltipKey[];
 
   cooldown?: (params: MenuElementParams) => number;
@@ -82,6 +90,7 @@ export const COLORS = {
   infoEmoji: "#f1c40f",
   trade: "#008080",
   embargo: "#6600cc",
+  surrender: "#d0a84f",
   tooltip: {
     cost: "#ffd700",
     count: "#aaa",
@@ -205,6 +214,168 @@ const allyBreakElement: MenuElement = {
       params.myPlayer,
       params.selected!,
     );
+    params.closeMenu();
+  },
+};
+
+const surrenderElement: MenuElement = {
+  id: "surrender",
+  name: "surrender",
+  displayed: (params: MenuElementParams) => {
+    if (!vassalsEnabledFrom(params.game)) return false;
+    const target = params.selected;
+    const isPlayer =
+      !!target && typeof (target as PlayerView).isPlayer === "function"
+        ? (target as PlayerView).isPlayer()
+        : false;
+    // Show for any player target (even if self/ally), rely on disabled+tooltip to explain.
+    return !!target && isPlayer;
+  },
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canSurrender,
+  color: COLORS.surrender,
+  icon: surrenderIcon,
+  text: "Surrender (vassalize)",
+  tooltipItemsFn: (params: MenuElementParams) => {
+    const disabled = !params.playerActions?.interaction?.canSurrender;
+    if (!disabled) return undefined;
+    const target = params.selected;
+    if (!target) {
+      return [{ text: "No target selected", className: "description" }];
+    }
+    if (target.id() === params.myPlayer.id()) {
+      return [
+        { text: "You cannot surrender to yourself", className: "description" },
+      ];
+    }
+    if (params.myPlayer.overlord()) {
+      return [
+        {
+          text: "You already serve an overlord",
+          className: "description",
+        },
+      ];
+    }
+    if (params.myPlayer.overlord() === target) {
+      return [
+        {
+          text: "Already a vassal of this nation",
+          className: "description",
+        },
+      ];
+    }
+    if (target.overlord && target.overlord() === params.myPlayer) {
+      return [
+        {
+          text: "You are their overlord",
+          className: "description",
+        },
+      ];
+    }
+    if (target.type && target.type() === PlayerType.Bot) {
+      return [
+        { text: "Cannot surrender to bots", className: "description" },
+      ];
+    }
+    return [
+      {
+        text: "Surrender unavailable right now",
+        className: "description",
+      },
+    ];
+  },
+  action: (params: MenuElementParams) => {
+    params.playerActionHandler.handleSurrender(
+      params.myPlayer,
+      params.selected!,
+    );
+    params.closeMenu();
+  },
+};
+
+const forceVassalElement: MenuElement = {
+  id: "force_vassal",
+  name: "offer_vassal",
+  disabled: (params: MenuElementParams) => {
+    const target = params.selected;
+    if (!vassalsEnabledFrom(params.game)) return true;
+    if (!target) return true;
+    if (target.overlord && target.overlord()) return true;
+    // fallback to server-provided flag if present
+    if (params.playerActions?.interaction?.canOfferVassal === false) return true;
+    return false; // allow for allies; server will still validate
+  },
+  displayed: (params: MenuElementParams) => {
+    if (!vassalsEnabledFrom(params.game)) return false;
+    const target = params.selected;
+    const isPlayer =
+      !!target && typeof (target as PlayerView).isPlayer === "function"
+        ? (target as PlayerView).isPlayer()
+        : false;
+    return !!target && isPlayer && target.id() !== params.myPlayer.id();
+  },
+  color: COLORS.surrender,
+  icon: surrenderIcon,
+  text: "Offer Vassalage",
+  tooltipItemsFn: (params: MenuElementParams) => {
+    const disabled = forceVassalElement.disabled!(params);
+    if (!disabled) return undefined;
+    const target = params.selected;
+    if (!target) {
+      return [{ text: "No target selected", className: "description" }];
+    }
+    if (target.id() === params.myPlayer.id()) {
+      return [
+        { text: "You cannot vassalize yourself", className: "description" },
+      ];
+    }
+    if (target.overlord && target.overlord()) {
+      return [
+        {
+          text: "Target already serves an overlord",
+          className: "description",
+        },
+      ];
+    }
+    if (target.type && target.type() === PlayerType.Bot) {
+      return [
+        { text: "Bots do not accept vassalage", className: "description" },
+      ];
+    }
+    if (!params.playerActions?.interaction?.canOfferVassal) {
+      // Mirror server-side checks for clarity
+      const reasons: string[] = [];
+      if (params.myPlayer.isOnSameTeam(target)) {
+        reasons.push("Same team");
+      }
+      if (params.myPlayer.sharesHierarchy(target)) {
+        reasons.push("Already in your hierarchy");
+      }
+      if (target.overlord && target.overlord()) {
+        reasons.push("Target already has an overlord");
+      }
+      if (target === params.myPlayer) {
+        reasons.push("You cannot target yourself");
+      }
+      return [
+        {
+          text:
+            reasons.length > 0
+              ? `Cannot offer vassalage: ${reasons.join(", ")}`
+              : "Offer unavailable (server rules)",
+          className: "description",
+        },
+      ];
+    }
+    return [
+      {
+        text: "Offer unavailable right now",
+        className: "description",
+      },
+    ];
+  },
+  action: (params: MenuElementParams) => {
+    params.playerActionHandler.handleForceVassal(params.selected!);
     params.closeMenu();
   },
 };
@@ -581,11 +752,19 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const { showSurrender } = vassalMenuVisibility(params);
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
-        : [boatMenuElement, ally, attackMenuElement]),
+        : [
+            boatMenuElement,
+            ally,
+            showSurrender ? surrenderElement : null,
+            vassalsEnabledFrom(params.game) ? forceVassalElement : null,
+            attackMenuElement,
+          ]),
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);

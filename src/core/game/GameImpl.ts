@@ -4,6 +4,8 @@ import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { VassalageImpl } from "./VassalageImpl";
+import { rootOf, sharesHierarchy } from "./HierarchyUtils";
 import {
   Alliance,
   AllianceRequest,
@@ -28,6 +30,7 @@ import {
   TerrainType,
   TerraNullius,
   Trios,
+  MutableVassalage,
   Unit,
   UnitInfo,
   UnitType,
@@ -71,6 +74,7 @@ export class GameImpl implements Game {
 
   allianceRequests: AllianceRequestImpl[] = [];
   alliances_: AllianceImpl[] = [];
+  vassalages_: VassalageImpl[] = [];
 
   private nextPlayerID = 1;
   private _nextUnitID = 1;
@@ -188,6 +192,118 @@ export class GameImpl implements Game {
     return this.alliances_;
   }
 
+  private refreshHierarchyAlliances(): void {
+    // Group players by root
+    const groups = new Map<Player, Player[]>();
+    for (const p of this.players()) {
+      const root = rootOf(p);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root)!.push(p);
+    }
+
+    // Ensure alliances inside each hierarchy
+    for (const players of groups.values()) {
+      for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+          const a = players[i];
+          const b = players[j];
+          if (a.allianceWith(b) !== null) {
+            // Quietly remove the temporary alliance so we can rebuild a permanent one
+            // without spamming an "alliance expired" event to clients.
+            this.removeAlliance(a.allianceWith(b)!, false);
+          }
+          const alliance = new AllianceImpl(
+            this,
+            a,
+            b,
+            this._ticks,
+            this.nextAllianceID++,
+            AllianceImpl.PERMANENT, // enforced hierarchy alliance
+          );
+          this.alliances_.push(alliance);
+        }
+      }
+    }
+
+    // Remove enforced (permanent) alliances between differing hierarchies (announce to players)
+    for (const alliance of [...this.alliances_]) {
+      if (alliance.isEnforced() && !sharesHierarchy(alliance.requestor(), alliance.recipient())) {
+        alliance.expire(); // emits AllianceExpired update
+      }
+    }
+
+    // Clear embargoes inside the same hierarchy
+    for (const players of groups.values()) {
+      for (const p of players) {
+        for (const q of players) {
+          if (p === q || !p.isPlayer() || !q.isPlayer()) continue;
+          if (p.hasEmbargoAgainst(q as Player)) p.stopEmbargo(q as Player);
+        }
+      }
+    }
+  }
+
+  vassalages(): MutableVassalage[] {
+    return this.vassalages_;
+  }
+
+  vassalize(
+    vassal: Player,
+    overlord: Player,
+    goldRatio: number = this._config.vassalGoldTributeRatio(),
+    troopRatio: number = this._config.vassalTroopTributeRatio(),
+  ): MutableVassalage | null {
+    if (!this._config.vassalsEnabled()) {
+      return null;
+    }
+
+    const existing = this.vassalages_.find((v) => v.vassal() === vassal);
+    if (existing) {
+      if (existing.overlord() === overlord) {
+        existing.setGoldTributeRatio(goldRatio);
+        existing.setTroopTributeRatio(troopRatio);
+        return existing;
+      }
+      // Already has a different overlord; do not allow multiple.
+      return existing;
+    }
+    const vassalage = new VassalageImpl(
+      this,
+      overlord,
+      vassal,
+      this._ticks,
+      goldRatio,
+      troopRatio,
+    );
+    this.vassalages_.push(vassalage);
+    if (vassal.hasEmbargoAgainst(overlord)) {
+      vassal.stopEmbargo(overlord);
+    }
+    if (overlord.hasEmbargoAgainst(vassal)) {
+      overlord.stopEmbargo(vassal);
+    }
+    // Create a permanent alliance for visibility and client updates.
+    if (overlord.allianceWith(vassal) === null) {
+      const alliance = new AllianceImpl(
+        this,
+        overlord,
+        vassal,
+        this._ticks,
+        this.nextAllianceID++,
+        AllianceImpl.PERMANENT, // enforced hierarchy alliance
+      );
+      this.alliances_.push(alliance);
+    }
+    // Ensure alliances across the hierarchy
+    this.refreshHierarchyAlliances();
+
+    return vassalage;
+  }
+
+  removeVassalage(vassal: Player): void {
+    this.vassalages_ = this.vassalages_.filter((v) => v.vassal() !== vassal);
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
     if (id === 0) {
       return this.terraNullius();
@@ -201,7 +317,11 @@ export class GameImpl implements Game {
     return this.miniGameMap;
   }
 
-  addUpdate(update: GameUpdate) {
+  addUpdate(update: GameUpdate | GameUpdate[]) {
+    if (Array.isArray(update)) {
+      update.forEach((u) => this.addUpdate(u));
+      return;
+    }
     (this.updates[update.type] as GameUpdate[]).push(update);
   }
 
@@ -314,6 +434,7 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: true,
     });
+
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
@@ -604,6 +725,10 @@ export class GameImpl implements Game {
     } else {
       other = alliance.requestor();
     }
+    if (breaker.isVassalOf(other) || breaker.isOverlordOf(other)) {
+      console.warn("Cannot break enforced vassal alliance");
+      return;
+    }
     if (!breaker.isAlliedWith(other)) {
       throw new Error(
         `${breaker} not allied with ${other}, cannot break alliance`,
@@ -628,7 +753,7 @@ export class GameImpl implements Game {
     });
   }
 
-  public expireAlliance(alliance: Alliance) {
+  private removeAlliance(alliance: Alliance, announce: boolean) {
     const p1Set = new Set(alliance.recipient().alliances());
     const alliances = alliance
       .requestor()
@@ -640,11 +765,18 @@ export class GameImpl implements Game {
       );
     }
     this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
-    this.addUpdate({
-      type: GameUpdateType.AllianceExpired,
-      player1ID: alliance.requestor().smallID(),
-      player2ID: alliance.recipient().smallID(),
-    });
+    if (announce) {
+      this.addUpdate({
+        type: GameUpdateType.AllianceExpired,
+        player1ID: alliance.requestor().smallID(),
+        player2ID: alliance.recipient().smallID(),
+      });
+    }
+  }
+
+  public expireAlliance(alliance: Alliance) {
+    // Public-facing expiry that still notifies clients
+    this.removeAlliance(alliance, true);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
@@ -935,6 +1067,13 @@ export class GameImpl implements Game {
       conqueredId: conquered.id(),
       gold,
     });
+
+    // Remove any vassalage relationships involving the conquered player
+    this.vassalages_ = this.vassalages_.filter(
+      (v) => v.vassal() !== conquered && v.overlord() !== conquered,
+    );
+    // Rebuild hierarchy alliances/embargoes for remaining players
+    this.refreshHierarchyAlliances();
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);

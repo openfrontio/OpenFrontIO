@@ -2,6 +2,7 @@ import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
+import { sharesHierarchy } from "./HierarchyUtils";
 
 export function canBuildTransportShip(
   game: Game,
@@ -28,22 +29,29 @@ export function canBuildTransportShip(
   }
 
   if (game.isOceanShore(dst)) {
+    const myCoasts = hierarchyShoreTiles(game, player);
     let myPlayerBordersOcean = false;
-    for (const bt of player.borderTiles()) {
+    for (const bt of myCoasts) {
       if (game.isOceanShore(bt)) {
         myPlayerBordersOcean = true;
         break;
       }
+    }
+    if (!myPlayerBordersOcean) {
+      return false;
     }
 
     let otherPlayerBordersOcean = false;
     if (!game.hasOwner(tile)) {
       otherPlayerBordersOcean = true;
     } else {
-      for (const bt of (other as Player).borderTiles()) {
-        if (game.isOceanShore(bt)) {
-          otherPlayerBordersOcean = true;
-          break;
+      const owner = game.owner(tile);
+      if (owner.isPlayer()) {
+        for (const bt of Array.from((owner as Player).borderTiles())) {
+          if (game.isOceanShore(bt)) {
+            otherPlayerBordersOcean = true;
+            break;
+          }
         }
       }
     }
@@ -121,11 +129,11 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
 }
 
 export function closestShoreFromPlayer(
-  gm: GameMap,
+  gm: Game,
   player: Player,
   target: TileRef,
 ): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
+  const shoreTiles = hierarchyShoreTiles(gm, player).filter((t) =>
     gm.isShore(t),
   );
   if (shoreTiles.length === 0) {
@@ -191,7 +199,7 @@ export function candidateShoreTiles(
     maxY: null,
   };
 
-  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
+  const borderShoreTiles = hierarchyShoreTiles(gm, player).filter((t) =>
     gm.isShore(t),
   );
 
@@ -259,4 +267,19 @@ function closestShoreTN(
     return null;
   }
   return tn[0];
+}
+
+function hierarchyPlayers(game: Game, player: Player): Player[] {
+  return game.players().filter((p) => sharesHierarchy(player, p));
+}
+
+function hierarchyShoreTiles(gm: Game, player: Player): TileRef[] {
+  const players = hierarchyPlayers(gm, player);
+  const tiles: TileRef[] = [];
+  for (const p of players) {
+    Array.from(p.borderTiles())
+      .filter((t) => gm.isShore(t))
+      .forEach((t) => tiles.push(t));
+  }
+  return tiles;
 }

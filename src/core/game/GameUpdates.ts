@@ -35,6 +35,8 @@ export enum GameUpdateType {
   DisplayChatEvent,
   AllianceRequest,
   AllianceRequestReply,
+  VassalOfferRequest,
+  VassalOfferReply,
   BrokeAlliance,
   AllianceExpired,
   AllianceExtension,
@@ -55,6 +57,8 @@ export type GameUpdate =
   | PlayerUpdate
   | AllianceRequestUpdate
   | AllianceRequestReplyUpdate
+  | VassalOfferUpdate
+  | VassalOfferReplyUpdate
   | BrokeAllianceUpdate
   | AllianceExpiredUpdate
   | DisplayMessageUpdate
@@ -159,6 +163,11 @@ export interface PlayerUpdate {
   tilesOwned: number;
   gold: Gold;
   troops: number;
+  overlordID?: number;
+  vassalIDs: number[];
+  vassalTribute?: { goldRatio: number; troopRatio: number };
+  vassalSupportRatio?: number;
+  lastVassalSupportUseTick?: number;
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
@@ -193,6 +202,19 @@ export interface AllianceRequestReplyUpdate {
   type: GameUpdateType.AllianceRequestReply;
   request: AllianceRequestUpdate;
   accepted: boolean;
+}
+
+export interface VassalOfferUpdate {
+  type: GameUpdateType.VassalOfferRequest;
+  requestorID: number;
+  recipientID: number;
+}
+
+export interface VassalOfferReplyUpdate {
+  type: GameUpdateType.VassalOfferReply;
+  requestorID: number;
+  recipientID: number;
+  accept: boolean;
 }
 
 export interface BrokeAllianceUpdate {

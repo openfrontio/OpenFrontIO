@@ -88,11 +88,22 @@ class SAMTargetingSystem {
       detectionRange,
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) => {
-        return (
-          isUnit(unit) &&
-          unit.owner() !== this.sam.owner() &&
-          !this.sam.owner().isFriendly(unit.owner())
-        );
+        if (!isUnit(unit)) return false;
+        const samOwner = this.sam.owner();
+        if (unit.owner() === samOwner) return false;
+
+        const targetTile = unit.targetTile?.();
+        const targetOwner =
+          targetTile !== undefined ? this.mg.owner(targetTile) : null;
+
+        // Shoot down nukes from friendlies if the target is friendly to the SAM owner
+        // (e.g., a newly formed vassal hierarchy). Ensure the predicate is always boolean.
+        const targetFriendly =
+          targetOwner !== null &&
+          targetOwner.isPlayer &&
+          targetOwner.isPlayer() &&
+          samOwner.isFriendly(targetOwner as Player);
+        return !samOwner.isFriendly(unit.owner()) || targetFriendly;
       },
     );
 

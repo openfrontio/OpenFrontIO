@@ -102,13 +102,65 @@ export class AttackExecution implements Execution {
       }
     }
 
-    this.startTroops ??= this.mg
-      .config()
-      .attackAmount(this._owner, this.target);
-    if (this.removeTroops) {
-      this.startTroops = Math.min(this._owner.troops(), this.startTroops);
-      this._owner.removeTroops(this.startTroops);
+    // Pre-compute possible support (respecting cooldown) for sourcing troops.
+    const overlord = this._owner.overlord();
+    const cooldown = this.mg.config().donateCooldown();
+    const lastUse =
+      overlord && (overlord as any).lastVassalSupportUseTick !== undefined
+        ? (overlord as any).lastVassalSupportUseTick
+        : -Infinity;
+    const canUseSupport =
+      overlord !== null && this.mg.ticks() - lastUse >= cooldown;
+
+    // How much support *could* exist (ignores cooldown) – used to infer the
+    // player's intended ratio when they clicked/ordered the attack.
+    const potentialSupport =
+      overlord !== null
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+        : 0;
+
+    // How much support is actually available this tick (respects cooldown).
+    const supportLoanable =
+      overlord && canUseSupport
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+        : 0;
+
+    const availableNow = this._owner.troops() + supportLoanable;
+    const intendedCapacity = this._owner.troops() + potentialSupport;
+
+    let desiredTroops: number;
+    if (this.startTroops !== null && this.startTroops !== undefined) {
+      // Derive the intended attack ratio from the player's request, then
+      // re-apply it to the *currently* available pool so we don't overdraw
+      // the vassal's own troops when support is on cooldown.
+      const ratioWanted =
+        intendedCapacity > 0
+          ? Math.min(1, this.startTroops / intendedCapacity)
+          : 0;
+      desiredTroops = Math.floor(availableNow * ratioWanted);
+    } else {
+      desiredTroops = this.mg.config().attackAmount(this._owner, this.target);
     }
+
+    // Never attempt to send more than we truly have available right now.
+    desiredTroops = Math.max(0, Math.min(desiredTroops, availableNow));
+    let actualTroops = desiredTroops;
+    if (this.removeTroops) {
+      let sendFromSupport = 0;
+      if (overlord && canUseSupport && supportLoanable > 0) {
+        sendFromSupport = Math.min(supportLoanable, desiredTroops);
+        overlord.removeTroops(sendFromSupport);
+        (overlord as any).lastVassalSupportUseTick = this.mg.ticks();
+      }
+
+      const remaining = desiredTroops - sendFromSupport;
+      const sendFromSelf = Math.min(this._owner.troops(), remaining);
+      this._owner.removeTroops(sendFromSelf);
+
+      actualTroops = sendFromSelf + sendFromSupport;
+      this.startTroops = actualTroops;
+    }
+    this.startTroops = actualTroops;
     this.attack = this._owner.createAttack(
       this.target,
       this.startTroops,

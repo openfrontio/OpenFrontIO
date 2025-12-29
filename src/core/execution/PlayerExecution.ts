@@ -3,6 +3,7 @@ import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
+import { isClusterSurroundedBy } from "./utils/surround";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -37,7 +38,10 @@ export class PlayerExecution implements Execution {
         u.delete();
         continue;
       }
-      if (owner === this.player) {
+      if (
+        owner === this.player ||
+        this.player.hasTerritorialAccess(owner as Player)
+      ) {
         continue;
       }
 
@@ -72,12 +76,35 @@ export class PlayerExecution implements Execution {
     }
 
     const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
-    this.player.addGold(goldFromWorkers);
+    const vassalTribute = this.player.vassalTribute();
+    let troopGain = troopInc;
+    let goldGain = goldFromWorkers;
+
+    if (vassalTribute) {
+      const overlord = this.player.overlord();
+      if (overlord && overlord.isAlive()) {
+        const troopTribute = Math.floor(troopInc * vassalTribute.troopRatio);
+        const goldTribute = BigInt(
+          Math.floor(Number(goldFromWorkers) * vassalTribute.goldRatio),
+        );
+
+        troopGain = Math.max(0, troopInc - troopTribute);
+        goldGain = goldFromWorkers - goldTribute;
+
+        if (troopTribute > 0) overlord.addTroops(troopTribute);
+        if (goldTribute > 0) {
+          overlord.addGold(goldTribute);
+          this.mg.stats().goldWork(overlord, goldTribute);
+        }
+      }
+    }
+
+    this.player.addTroops(troopGain);
+    this.player.addGold(goldGain);
 
     // Record stats
-    this.mg.stats().goldWork(this.player, goldFromWorkers);
+    this.mg.stats().goldWork(this.player, goldGain);
 
     const alliances = Array.from(this.player.alliances());
     for (const alliance of alliances) {
@@ -236,7 +263,39 @@ export class PlayerExecution implements Execution {
       return null;
     }
 
-    // Get the largest attack from the neighbors
+    // Group hostile neighbors by their hierarchy root (overlord or self)
+    const rootToPlayers = new Map<Player, Set<Player>>();
+    const rootToCount = new Map<Player, number>();
+    const rootOf = (p: Player): Player => {
+      let r: Player = p;
+      while (r.overlord && r.overlord()) {
+        const o = r.overlord();
+        if (!o) break;
+        r = o;
+      }
+      return r;
+    };
+    for (const [neighbor, count] of neighbors) {
+      const root = rootOf(neighbor);
+      if (!rootToPlayers.has(root)) {
+        rootToPlayers.set(root, new Set<Player>());
+      }
+      rootToPlayers.get(root)!.add(neighbor);
+      rootToCount.set(root, (rootToCount.get(root) ?? 0) + count);
+    }
+
+    if (rootToPlayers.size === 1) {
+      const [root, players] = Array.from(rootToPlayers.entries())[0];
+      // Single owner in the enclosing ring → that owner
+      if (players.size === 1) {
+        return Array.from(players)[0];
+      }
+      // Multiple vassals of same hierarchy → overlord/root
+      return root;
+    }
+
+    // Mixed hierarchies: fall back to original behavior
+    // Largest ongoing attack against this player
     let largestNeighborAttack: Player | null = null;
     let largestTroopCount = 0;
     for (const [neighbor] of neighbors) {
@@ -249,12 +308,11 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-
     if (largestNeighborAttack !== null) {
       return largestNeighborAttack;
     }
 
-    // There are no ongoing attacks, so find the enemy with the largest border.
+    // Otherwise, enemy with largest border count
     return getMode(neighbors);
   }
 

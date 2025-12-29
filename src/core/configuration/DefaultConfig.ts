@@ -347,6 +347,10 @@ export class DefaultConfig implements Config {
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
+  vassalsEnabled(): boolean {
+    // default to true for legacy configs
+    return this._gameConfig.enableVassals !== false;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
@@ -583,6 +587,12 @@ export class DefaultConfig implements Config {
   defaultDonationAmount(sender: Player): number {
     return Math.floor(sender.troops() / 3);
   }
+  vassalGoldTributeRatio(): number {
+    return 0.25;
+  }
+  vassalTroopTributeRatio(): number {
+    return 0.25;
+  }
   donateCooldown(): Tick {
     return 10 * 10;
   }
@@ -612,6 +622,9 @@ export class DefaultConfig implements Config {
     return 20 * 10;
   }
   allianceRequestCooldown(): Tick {
+    return 30 * 10;
+  }
+  vassalOfferDuration(): Tick {
     return 30 * 10;
   }
   allianceDuration(): Tick {

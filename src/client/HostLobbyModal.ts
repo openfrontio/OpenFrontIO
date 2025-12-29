@@ -50,6 +50,7 @@ export class HostLobbyModal extends LitElement {
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
+  @state() private enableVassals: boolean = true;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -473,6 +474,25 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.infinite_troops")}
                   </div>
                 </label>
+
+                <label
+                  for="enable-vassals"
+                  class="option-card ${this.enableVassals ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="enable-vassals"
+                    @change=${(e: Event) => {
+                      this.enableVassals = (e.target as HTMLInputElement).checked;
+                      this.putGameConfig();
+                    }}
+                    .checked=${this.enableVassals}
+                  />
+                  <div class="option-card-title">
+                    Enable vassals
+                  </div>
+                </label>
                 <label
                 for="host-modal-compact-map"
                 class="option-card ${this.compactMap ? "selected" : ""}"
@@ -773,6 +793,7 @@ export class HostLobbyModal extends LitElement {
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           randomSpawn: this.randomSpawn,
+          enableVassals: this.enableVassals,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,

@@ -143,15 +143,24 @@ export class BotBehavior {
     }
   }
 
+  private availableTroops(player: Player): number {
+    const overlord = player.overlord?.() ?? null;
+    const support =
+      overlord !== null
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+        : 0;
+    return player.troops() + support;
+  }
+
   private hasReserveRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+    const ratio = this.availableTroops(this.player) / maxTroops;
     return ratio >= this.reserveRatio;
   }
 
   private hasTriggerRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+    const ratio = this.availableTroops(this.player) / maxTroops;
     return ratio >= this.triggerRatio;
   }
 
@@ -376,9 +385,10 @@ export class BotBehavior {
   }
 
   forceSendAttack(target: Player | TerraNullius) {
+    const available = this.availableTroops(this.player);
     this.game.addExecution(
       new AttackExecution(
-        this.player.troops() / 2,
+        available / 2,
         this.player,
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
@@ -394,7 +404,8 @@ export class BotBehavior {
       ? this.reserveRatio
       : this.expandRatio;
     const targetTroops = maxTroops * reserveRatio;
-    const troops = this.player.troops() - targetTroops;
+    const available = this.availableTroops(this.player);
+    const troops = available - targetTroops;
     if (troops < 1) return;
     this.game.addExecution(
       new AttackExecution(

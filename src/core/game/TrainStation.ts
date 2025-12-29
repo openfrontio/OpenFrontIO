@@ -25,11 +25,26 @@ class CityStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
-    // Share revenue with the station owner if it's not the current player
-    if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
+    const tileOwner = mg.owner(station.tile()) as Player | null;
+
+    // If city is built by a friendly on someone else's land, treat the land owner
+    // as the effective station owner for revenue purposes so both sides get full share.
+    const effectiveOwner =
+      tileOwner &&
+      tileOwner.isPlayer &&
+      tileOwner.isPlayer() &&
+      tileOwner !== stationOwner &&
+      stationOwner.isFriendly(tileOwner as Player)
+        ? (tileOwner as Player)
+        : stationOwner;
+
+    const goldBonus = mg.config().trainGold(rel(trainOwner, effectiveOwner));
+
+    // Pay effective owner if different from train owner
+    if (trainOwner !== effectiveOwner) {
+      effectiveOwner.addGold(goldBonus, station.tile());
     }
+    // Pay train owner
     trainOwner.addGold(goldBonus, station.tile());
   }
 }
@@ -43,13 +58,23 @@ class PortStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const tileOwner = mg.owner(station.tile()) as Player | null;
 
-    trainOwner.addGold(goldBonus, station.tile());
-    // Share revenue with the station owner if it's not the current player
-    if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
+    const effectiveOwner =
+      tileOwner &&
+      tileOwner.isPlayer &&
+      tileOwner.isPlayer() &&
+      tileOwner !== stationOwner &&
+      stationOwner.isFriendly(tileOwner as Player)
+        ? (tileOwner as Player)
+        : stationOwner;
+
+    const goldBonus = mg.config().trainGold(rel(trainOwner, effectiveOwner));
+
+    if (trainOwner !== effectiveOwner) {
+      effectiveOwner.addGold(goldBonus, station.tile());
     }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 

@@ -391,6 +391,7 @@ export interface Alliance {
   recipient(): Player;
   createdAt(): Tick;
   expiresAt(): Tick;
+  isEnforced(): boolean;
   other(player: Player): Player;
 }
 
@@ -402,6 +403,19 @@ export interface MutableAlliance extends Alliance {
   id(): number;
   extend(): void;
   onlyOneAgreedToExtend(): boolean;
+}
+
+export interface Vassalage {
+  overlord(): Player;
+  vassal(): Player;
+  createdAt(): Tick;
+  goldTributeRatio(): number;
+  troopTributeRatio(): number;
+}
+
+export interface MutableVassalage extends Vassalage {
+  setGoldTributeRatio(ratio: number): void;
+  setTroopTributeRatio(ratio: number): void;
 }
 
 export class PlayerInfo {
@@ -590,6 +604,7 @@ export interface Player {
   // Relations & Diplomacy
   neighbors(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
+  sharesOperationalBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
   allRelationsSorted(): { player: Player; relation: Relation }[];
   updateRelation(other: Player, delta: number): void;
@@ -606,6 +621,17 @@ export interface Player {
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
+  overlord(): Player | null;
+  vassals(): Player[];
+  vassalSupportRatio(): number;
+  setVassalSupportRatio(ratio: number): void;
+  isVassalOf(other: Player): boolean;
+  isOverlordOf(other: Player): boolean;
+  sharesHierarchy(other: Player): boolean;
+  hasTerritorialAccess(owner: Player): boolean;
+  vassalTribute(): { goldRatio: number; troopRatio: number } | null;
+  surrenderTo(overlord: Player, goldRatio?: number, troopRatio?: number): void;
+  releaseVassal(vassal: Player): void;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
@@ -687,6 +713,14 @@ export interface Game extends GameMap {
   // Alliances
   alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
+  vassalages(): MutableVassalage[];
+  vassalize(
+    vassal: Player,
+    overlord: Player,
+    goldRatio?: number,
+    troopRatio?: number,
+  ): MutableVassalage | null;
+  removeVassalage(vassal: Player): void;
 
   // Game State
   ticks(): Tick;
@@ -784,6 +818,8 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
+  canSurrender: boolean;
+  canOfferVassal: boolean;
   allianceExpiresAt?: Tick;
 }
 
@@ -820,6 +856,10 @@ export enum MessageType {
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
   RENEW_ALLIANCE,
+  VASSALAGE_FORMED,
+  VASSAL_REQUEST,
+  VASSAL_ACCEPTED,
+  VASSAL_REJECTED,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -852,6 +892,10 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
   [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
+  [MessageType.VASSALAGE_FORMED]: MessageCategory.ALLIANCE,
+  [MessageType.VASSAL_REQUEST]: MessageCategory.ALLIANCE,
+  [MessageType.VASSAL_ACCEPTED]: MessageCategory.ALLIANCE,
+  [MessageType.VASSAL_REJECTED]: MessageCategory.ALLIANCE,
   [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,

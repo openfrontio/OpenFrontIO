@@ -90,11 +90,20 @@ export class NukeExecution implements Execution {
           allianceRequest?.reject();
         }
         // Mirv warheads shouldn't break alliances
+        // Do not break permanent overlord/vassal alliances
         const alliance = this.player.allianceWith(attackedPlayer);
         if (alliance !== null) {
-          this.player.breakAlliance(alliance);
+          if (
+            !this.player.isVassalOf(attackedPlayer) &&
+            !this.player.isOverlordOf(attackedPlayer)
+          ) {
+            this.player.breakAlliance(alliance);
+          }
         }
-        if (attackedPlayer !== this.player) {
+        if (
+          attackedPlayer !== this.player &&
+          !this.player.sharesHierarchy(attackedPlayer)
+        ) {
           attackedPlayer.updateRelation(this.player, -100);
         }
       }
@@ -234,6 +243,9 @@ export class NukeExecution implements Execution {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
     this.maybeBreakAlliances(toDestroy);
+    // If target is inside my hierarchy, let SAMs still attempt interception
+    // (handled before detonation via targetable flag); ensure targetable was up-to-date
+    this.updateNukeTargetable();
 
     const maxTroops = this.target().isPlayer()
       ? this.mg.config().maxTroops(this.target() as Player)

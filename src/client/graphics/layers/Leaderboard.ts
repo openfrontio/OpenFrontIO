@@ -6,6 +6,7 @@ import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
+import { effectiveTilesFromVassals } from "../vassalHelpers";
 
 interface Entry {
   name: string;
@@ -48,6 +49,11 @@ export class Leaderboard extends LitElement implements Layer {
 
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
+
+  // Exposed for lightweight testing without importing lit DOM.
+  static effectiveTilesFor(player: PlayerView): number {
+    return effectiveTilesFromVassals(player);
+  }
 
   createRenderRoot() {
     return this; // use light DOM for Tailwind support
@@ -93,7 +99,10 @@ export class Leaderboard extends LitElement implements Layer {
         break;
       default:
         sorted = sorted.sort((a, b) =>
-          compare(a.numTilesOwned(), b.numTilesOwned()),
+          compare(
+            effectiveTilesFromVassals(a),
+            effectiveTilesFromVassals(b),
+          ),
         );
     }
 
@@ -111,7 +120,7 @@ export class Leaderboard extends LitElement implements Layer {
         name: player.displayName(),
         position: index + 1,
         score: formatPercentage(
-          player.numTilesOwned() / numTilesWithoutFallout,
+          effectiveTilesFromVassals(player) / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
@@ -142,7 +151,7 @@ export class Leaderboard extends LitElement implements Layer {
           name: myPlayer.displayName(),
           position: place,
           score: formatPercentage(
-            myPlayer.numTilesOwned() / this.game.numLandTiles(),
+            effectiveTilesFromVassals(myPlayer) / numTilesWithoutFallout,
           ),
           gold: renderNumber(myPlayer.gold()),
           troops: renderNumber(myPlayerTroops),

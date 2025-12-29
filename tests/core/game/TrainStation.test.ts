@@ -16,11 +16,22 @@ describe("TrainStation", () => {
     game = {
       ticks: jest.fn().mockReturnValue(123),
       config: jest.fn().mockReturnValue({
-        trainGold: (isFriendly: boolean) =>
-          isFriendly ? BigInt(1000) : BigInt(500),
+        trainGold: (rel: string) => {
+          switch (rel) {
+            case "self":
+              return 1000n;
+            case "ally":
+              return 800n;
+            case "team":
+              return 700n;
+            default:
+              return 500n;
+          }
+        },
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
+      owner: jest.fn(),
     } as any;
 
     player = {
@@ -28,6 +39,8 @@ describe("TrainStation", () => {
       id: 1,
       canTrade: jest.fn().mockReturnValue(true),
       isFriendly: jest.fn().mockReturnValue(false),
+      isAlliedWith: jest.fn().mockReturnValue(false),
+      isOnSameTeam: jest.fn().mockReturnValue(false),
     } as any;
 
     unit = {
@@ -43,6 +56,8 @@ describe("TrainStation", () => {
       owner: jest.fn().mockReturnValue(player),
       level: jest.fn(),
     } as any;
+
+    game.owner.mockReturnValue(player);
   });
 
   it("handles City stop", () => {
@@ -56,14 +71,20 @@ describe("TrainStation", () => {
 
   it("handles allied trade", () => {
     unit.type.mockReturnValue(UnitType.City);
-    player.isFriendly.mockReturnValue(true);
+    const ally: any = {
+      addGold: jest.fn(),
+      isAlliedWith: jest.fn().mockReturnValue(true),
+      isOnSameTeam: jest.fn().mockReturnValue(false),
+      isFriendly: jest.fn().mockReturnValue(true),
+    };
+    trainExecution.owner.mockReturnValue(ally);
     const station = new TrainStation(game, unit);
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
+    expect(unit.owner().addGold).toHaveBeenCalledWith(800n, unit.tile());
     expect(trainExecution.owner().addGold).toHaveBeenCalledWith(
-      1000n,
+      800n,
       unit.tile(),
     );
   });
@@ -125,5 +146,56 @@ describe("TrainStation", () => {
     const station = new TrainStation(game, unit);
     expect(station.tile()).toEqual({ x: 0, y: 0 });
     expect(station.isActive()).toBe(true);
+  });
+
+  it("pays tile owner when city built by another friendly on their land", () => {
+    unit.type.mockReturnValue(UnitType.City);
+    const stationOwner = player; // builder (overlord)
+    const tileOwner: any = {
+      addGold: jest.fn(),
+      isPlayer: jest.fn().mockReturnValue(true),
+      isFriendly: jest.fn().mockReturnValue(true),
+      isAlliedWith: jest.fn().mockReturnValue(false),
+      isOnSameTeam: jest.fn().mockReturnValue(false),
+    };
+    const trainOwner = stationOwner; // overlord runs the train
+    trainExecution.owner.mockReturnValue(trainOwner as any);
+    game.owner.mockReturnValue(tileOwner);
+    stationOwner.isFriendly.mockReturnValue(true);
+    stationOwner.isAlliedWith.mockReturnValue(true);
+
+    const station = new TrainStation(game, unit);
+    station.onTrainStop(trainExecution);
+
+    // Effective owner is tileOwner (friendly land), so trainOwner gets ally rate
+    expect(trainOwner.addGold).toHaveBeenCalledWith(800n, unit.tile());
+    // tile owner also gets ally rate
+    expect(tileOwner.addGold).toHaveBeenCalledWith(800n, unit.tile());
+    // station owner is same as train owner; no extra payout
+    expect(stationOwner.addGold).toHaveBeenCalledTimes(1);
+  });
+
+  it("pays tile owner for port on friendly land", () => {
+    unit.type.mockReturnValue(UnitType.Port);
+    const stationOwner = player; // builder
+    const tileOwner: any = {
+      addGold: jest.fn(),
+      isPlayer: jest.fn().mockReturnValue(true),
+      isFriendly: jest.fn().mockReturnValue(true),
+      isAlliedWith: jest.fn().mockReturnValue(true),
+      isOnSameTeam: jest.fn().mockReturnValue(false),
+    };
+    const trainOwner = stationOwner;
+    trainExecution.owner.mockReturnValue(trainOwner as any);
+    game.owner.mockReturnValue(tileOwner);
+    stationOwner.isFriendly.mockReturnValue(true);
+    stationOwner.isAlliedWith.mockReturnValue(true);
+
+    const station = new TrainStation(game, unit);
+    station.onTrainStop(trainExecution);
+
+    // Effective owner is tile owner (friendly land), ally rate
+    expect(trainOwner.addGold).toHaveBeenCalledWith(800n, unit.tile());
+    expect(tileOwner.addGold).toHaveBeenCalledWith(800n, unit.tile());
   });
 });

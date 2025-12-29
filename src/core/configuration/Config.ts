@@ -91,6 +91,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   isRandomSpawn(): boolean;
+  vassalsEnabled(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
@@ -139,6 +140,9 @@ export interface Config {
   deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
+  vassalGoldTributeRatio(): number;
+  vassalTroopTributeRatio(): number;
+  vassalOfferDuration(): Tick;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipShortRangeDebuff(): number;
   tradeShipGold(dist: number, numPorts: number): Gold;

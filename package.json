@@ -112,6 +112,7 @@
     "@opentelemetry/sdk-metrics": "^2.0.0",
     "@opentelemetry/semantic-conventions": "^1.32.0",
     "@opentelemetry/winston-transport": "^0.11.0",
+    "@swc/core-linux-x64-gnu": "^1.13.3",
     "@types/compression": "^1.8.1",
     "colord": "^2.9.3",
     "colorjs.io": "^0.5.2",
