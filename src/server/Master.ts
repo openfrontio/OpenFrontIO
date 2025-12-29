@@ -115,6 +115,16 @@ export async function startMaster() {
     ws.on("error", (error) => {
       log.error(`WebSocket error:`, error);
       connectedClients.delete(ws);
+      try {
+        if (
+          ws.readyState === WebSocket.OPEN ||
+          ws.readyState === WebSocket.CONNECTING
+        ) {
+          ws.close(1011, "WebSocket internal error");
+        }
+      } catch (closeError) {
+        log.error("Error while closing WebSocket after error:", closeError);
+      }
     });
   });
 
