@@ -77,6 +77,15 @@ export class PublicLobby extends LitElement {
           }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
+          // Close the WebSocket so that the 'close' handler can perform
+          // reconnect attempts or fall back to HTTP polling.
+          if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try {
+              this.ws.close();
+            } catch (closeError) {
+              console.error("Error closing WebSocket after parse failure:", closeError);
+            }
+          }
         }
       });
 
