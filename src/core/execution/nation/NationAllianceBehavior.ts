@@ -5,10 +5,16 @@ import {
   PlayerType,
   Relation,
 } from "../../game/Game";
+import {
+  effectiveTroops,
+  rootOf,
+  sharesHierarchy,
+} from "../../game/HierarchyUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";
+import { VassalOfferExecution } from "../VassalOfferExecution";
 import {
   EMOJI_CONFUSED,
   EMOJI_HANDSHAKE,
@@ -16,8 +22,6 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { rootOf, sharesHierarchy } from "../../game/HierarchyUtils";
-import { VassalOfferExecution } from "../VassalOfferExecution";
 
 export class NationAllianceBehavior {
   constructor(
@@ -61,7 +65,9 @@ export class NationAllianceBehavior {
 
     for (const enemy of borderingEnemies) {
       if (this.shouldOfferVassal(enemy)) {
-        this.game.addExecution(new VassalOfferExecution(this.player, enemy.id()));
+        this.game.addExecution(
+          new VassalOfferExecution(this.player, enemy.id()),
+        );
         continue;
       }
       if (
@@ -195,8 +201,8 @@ export class NationAllianceBehavior {
 
   private isAlliancePartnerThreat(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
-    const myTroops = this.effectiveTroops(this.player);
-    const otherTroops = this.effectiveTroops(otherPlayer);
+    const myTroops = effectiveTroops(this.player);
+    const otherTroops = effectiveTroops(otherPlayer);
     const myTiles = this.weightedHierarchyTiles(this.player);
     const otherTiles = this.weightedHierarchyTiles(otherPlayer);
     switch (difficulty) {
@@ -290,29 +296,17 @@ export class NationAllianceBehavior {
   // It would make a lot of sense to use nextFloat here, but "there's a chance floats can cause desyncs"
   private isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
-    const myTroops = this.effectiveTroops(this.player);
-    const otherTroops = this.effectiveTroops(otherPlayer);
+    const myTroops = effectiveTroops(this.player);
+    const otherTroops = effectiveTroops(otherPlayer);
     switch (difficulty) {
       case Difficulty.Easy:
-        return (
-          otherTroops >
-          myTroops * (this.random.nextInt(60, 70) / 100)
-        );
+        return otherTroops > myTroops * (this.random.nextInt(60, 70) / 100);
       case Difficulty.Medium:
-        return (
-          otherTroops >
-          myTroops * (this.random.nextInt(70, 80) / 100)
-        );
+        return otherTroops > myTroops * (this.random.nextInt(70, 80) / 100);
       case Difficulty.Hard:
-        return (
-          otherTroops >
-          myTroops * (this.random.nextInt(75, 85) / 100)
-        );
+        return otherTroops > myTroops * (this.random.nextInt(75, 85) / 100);
       case Difficulty.Impossible:
-        return (
-          otherTroops >
-          myTroops * (this.random.nextInt(80, 90) / 100)
-        );
+        return otherTroops > myTroops * (this.random.nextInt(80, 90) / 100);
       default:
         assertNever(difficulty);
     }
@@ -327,10 +321,7 @@ export class NationAllianceBehavior {
   maybeBetray(otherPlayer: Player): boolean {
     const alliance = this.player.allianceWith(otherPlayer);
     if (alliance?.isEnforced()) return false;
-    if (
-      alliance &&
-      this.player.troops() >= otherPlayer.troops() * 10
-    ) {
+    if (alliance && this.player.troops() >= otherPlayer.troops() * 10) {
       this.betray(otherPlayer);
       return true;
     }
@@ -341,15 +332,6 @@ export class NationAllianceBehavior {
     const alliance = this.player.allianceWith(target);
     if (!alliance) return;
     this.player.breakAlliance(alliance);
-  }
-
-  private effectiveTroops(player: Player): number {
-    const overlord = player.overlord?.() ?? null;
-    const support =
-      overlord !== null
-        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
-        : 0;
-    return player.troops() + support;
   }
 
   private weightedHierarchyTiles(player: Player, vassalWeight = 0.3): number {
@@ -373,8 +355,8 @@ export class NationAllianceBehavior {
       this.game.ticks() - alliance.createdAt() >
         4 * this.game.config().allianceDuration();
 
-    const myTroops = this.effectiveTroops(this.player);
-    const otherTroops = this.effectiveTroops(other);
+    const myTroops = effectiveTroops(this.player);
+    const otherTroops = effectiveTroops(other);
     const myTiles = this.weightedHierarchyTiles(this.player);
     const otherTiles = this.weightedHierarchyTiles(other);
 

@@ -7,14 +7,15 @@ import {
   PlayerType,
   UnitType,
 } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
 import {
-  hierarchyTiles,
+  effectiveTroops,
   hierarchyPlayers,
   hierarchyShoreTiles,
+  hierarchyTiles,
   sharesHierarchy,
   teamHierarchyTiles,
 } from "../../game/HierarchyUtils";
-import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { MirvExecution } from "../MIRVExecution";
@@ -281,25 +282,14 @@ export class NationMIRVBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 
-  private effectiveTroops(player: Player): number {
-    const overlord = player.overlord?.() ?? null;
-    const support =
-      overlord !== null
-        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
-        : 0;
-    return player.troops() + support;
-  }
-
   private threatScore(
     enemy: Player,
     myHierarchyPlayers: Player[],
     myShoreTiles: TileRef[],
   ): number {
-    const effective = this.effectiveTroops(enemy);
+    const effective = effectiveTroops(enemy);
     const troopScore =
-      effective <= 500_000
-        ? effective
-        : 500_000 + (effective - 500_000) * 0.2;
+      effective <= 500_000 ? effective : 500_000 + (effective - 500_000) * 0.2;
 
     const distance = this.hierarchyDistanceToEnemy(
       enemy,

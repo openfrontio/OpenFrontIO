@@ -62,6 +62,16 @@ export function hierarchyTiles(player: Player): number {
   return total;
 }
 
+// Troops available for AI decisions, including potential overlord support.
+export function effectiveTroops(player: Player): number {
+  const overlord = player.overlord?.() ?? null;
+  const support =
+    overlord !== null
+      ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+      : 0;
+  return player.troops() + support;
+}
+
 // Only consider root players (no overlord) when attributing vassal territory.
 export function rootPlayers(game: Game): Player[] {
   return game

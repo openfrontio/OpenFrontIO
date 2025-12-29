@@ -1,4 +1,11 @@
-import { Execution, Game, MessageType, Player, PlayerID, PlayerType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  MessageType,
+  Player,
+  PlayerID,
+  PlayerType,
+} from "../game/Game";
 import { GameUpdateType } from "../game/GameUpdates";
 
 export class SurrenderExecution implements Execution {
@@ -39,18 +46,6 @@ export class SurrenderExecution implements Execution {
       throw new Error("SurrenderExecution not initialized");
     }
 
-    // Await recipient confirmation for humans: send request once then stop
-    if (this.recipient.type() === PlayerType.Human && !this.requestSent) {
-      this.mg.addUpdate({
-        type: GameUpdateType.VassalOfferRequest,
-        requestorID: this.requestor.smallID(),
-        recipientID: this.recipient.smallID(),
-      });
-      this.requestSent = true;
-      this.active = false;
-      return;
-    }
-
     if (this.requestor === this.recipient) {
       this.active = false;
       return;
@@ -69,11 +64,19 @@ export class SurrenderExecution implements Execution {
       return;
     }
 
-    this.requestor.surrenderTo(
-      this.recipient,
-      this.goldRatio,
-      this.troopRatio,
-    );
+    // Await recipient confirmation for humans: send request once then stop
+    if (this.recipient.type() === PlayerType.Human && !this.requestSent) {
+      this.mg.addUpdate({
+        type: GameUpdateType.VassalOfferRequest,
+        requestorID: this.requestor.smallID(),
+        recipientID: this.recipient.smallID(),
+      });
+      this.requestSent = true;
+      this.active = false;
+      return;
+    }
+
+    this.requestor.surrenderTo(this.recipient, this.goldRatio, this.troopRatio);
 
     this.requestor.updateRelation(this.recipient, 100);
     this.recipient.updateRelation(this.requestor, 60);
