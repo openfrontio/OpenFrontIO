@@ -15,6 +15,7 @@ import { getConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   GameMapType,
+  GameType,
   PlayerActions,
   UnitType,
 } from "../core/game/Game";
@@ -292,7 +293,8 @@ export class ClientGameRunner {
     if (!this.lobby.gameStartInfo) return;
     if (!this.didPlayerWin(update)) return;
 
-    const { gameMap, difficulty } = this.lobby.gameStartInfo.config;
+    const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
+    if (gameType !== GameType.Singleplayer) return;
     if (difficulty !== Difficulty.Easy) return;
 
     type WinRecord = Partial<Record<GameMapType, Difficulty[]>>;
