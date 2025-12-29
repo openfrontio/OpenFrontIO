@@ -49,6 +49,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
+  @state() private showAchievements: boolean = false;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -71,13 +72,33 @@ export class SinglePlayerModal extends LitElement {
     }
   };
 
+  private toggleAchievements = () => {
+    this.showAchievements = !this.showAchievements;
+  };
+
   render() {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("map.map")}</div>
+            <div
+              class="option-title"
+              style="display:flex; align-items:center; justify-content:center; gap:10px;"
+            >
+              <span>${translateText("map.map")}</span>
+              <button
+                @click=${this.toggleAchievements}
+                title=${translateText("single_modal.toggle_achievements")}
+                style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.06); cursor:pointer; padding:4px;"
+              >
+                <img
+                  src="/images/MedalIconWhite.svg"
+                  alt="Toggle achievements"
+                  style=${`width:18px; height:18px; opacity:${this.showAchievements ? "1" : "0.5"};`}
+                />
+              </button>
+            </div>
             <div class="option-cards flex-col">
               <!-- Use the imported mapCategories -->
               ${Object.entries(mapCategories).map(
@@ -103,7 +124,7 @@ export class SinglePlayerModal extends LitElement {
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
-                              .showMedals=${true}
+                              .showMedals=${this.showAchievements}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
