@@ -145,6 +145,8 @@ export class PublicLobby extends LitElement {
   private startFallbackPolling() {
     if (this.fallbackPollInterval !== null) return;
     console.log("Starting HTTP fallback polling");
+    // Fetch immediately to avoid initial delay before first update
+    this.fetchLobbiesHTTP();
     this.fallbackPollInterval = window.setInterval(() => {
       this.fetchLobbiesHTTP();
     }, 1000);
