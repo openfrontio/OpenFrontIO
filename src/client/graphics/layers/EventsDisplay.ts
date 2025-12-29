@@ -2,11 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -50,6 +45,11 @@ import {
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import nukeIcon from "/images/NukeIconWhite.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
 
 interface GameEvent {
   description: string;
