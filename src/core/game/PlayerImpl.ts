@@ -436,7 +436,7 @@ export class PlayerImpl implements Player {
     return delta >= this.mg.config().allianceRequestCooldown();
   }
 
-  breakAlliance(alliance: Alliance): void {
+  breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
   }
 
