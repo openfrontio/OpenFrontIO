@@ -14,6 +14,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
+  GameMapSize,
   GameMapType,
   GameType,
   PlayerActions,
@@ -296,19 +297,43 @@ export class ClientGameRunner {
     const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
     if (gameType !== GameType.Singleplayer) return;
 
-    type WinRecord = Partial<Record<GameMapType, Difficulty[]>>;
+    type Medal = Difficulty | "Custom";
+    type WinRecord = Partial<Record<GameMapType, Medal[]>>;
     const storageKey = "achievements.singleplayerWins";
+
+    const medal: Medal = this.isDefaultSingleplayerSettings(
+      this.lobby.gameStartInfo.config,
+    )
+      ? difficulty
+      : "Custom";
 
     try {
       const raw = localStorage.getItem(storageKey);
       const parsed: WinRecord = raw ? JSON.parse(raw) : {};
       const existing = new Set(parsed[gameMap] ?? []);
-      existing.add(difficulty);
+      existing.add(medal);
       parsed[gameMap] = Array.from(existing);
       localStorage.setItem(storageKey, JSON.stringify(parsed));
     } catch (error) {
       console.warn("Failed to record singleplayer win", error);
     }
+  }
+
+  private isDefaultSingleplayerSettings(
+    config: GameStartInfo["config"],
+  ): boolean {
+    if (config.gameMapSize !== GameMapSize.Normal) return false;
+    if (config.donateGold !== true) return false;
+    if (config.donateTroops !== true) return false;
+    if (config.disableNations !== false) return false;
+    if (config.bots !== 400) return false;
+    if (config.infiniteGold !== false) return false;
+    if (config.infiniteTroops !== false) return false;
+    if (config.instantBuild !== false) return false;
+    if (config.randomSpawn !== false) return false;
+    if (config.maxTimerValue !== undefined) return false;
+    if ((config.disabledUnits?.length ?? 0) !== 0) return false;
+    return true;
   }
 
   public start() {
