@@ -1,4 +1,75 @@
-import { PseudoRandom } from "../../PseudoRandom";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameStartInfo } from "../Schemas";
+import {
+  Cell,
+  GameMode,
+  GameType,
+  HumansVsNations,
+  Nation,
+  PlayerInfo,
+  PlayerType,
+} from "./Game";
+import { Nation as ManifestNation } from "./TerrainMapLoader";
+
+/**
+ * Creates the nations array for a game, handling HumansVsNations mode specially.
+ * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
+ */
+export function createNationsForGame(
+  gameStart: GameStartInfo,
+  manifestNations: ManifestNation[],
+  numHumans: number,
+  random: PseudoRandom,
+): Nation[] {
+  if (gameStart.config.disableNations) {
+    return [];
+  }
+
+  const toNation = (n: ManifestNation): Nation =>
+    new Nation(
+      new Cell(n.coordinates[0], n.coordinates[1]),
+      new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
+    );
+
+  const isHumansVsNations =
+    gameStart.config.gameMode === GameMode.Team &&
+    gameStart.config.playerTeams === HumansVsNations;
+
+  // For non-HumansVsNations modes, simply use the manifest nations
+  if (!isHumansVsNations) {
+    return manifestNations.map(toNation);
+  }
+
+  // HumansVsNations mode: balance nation count to match human count
+  const isSingleplayer = gameStart.config.gameType === GameType.Singleplayer;
+  const targetNationCount = isSingleplayer ? 1 : numHumans;
+
+  if (targetNationCount === 0) {
+    return [];
+  }
+
+  // If we have enough manifest nations, use a subset
+  if (manifestNations.length >= targetNationCount) {
+    // Shuffle manifest nations to add variety
+    const shuffled = random.shuffleArray(manifestNations);
+    return shuffled.slice(0, targetNationCount).map(toNation);
+  }
+
+  // If we need more nations than defined in manifest, create additional ones
+  const nations: Nation[] = manifestNations.map(toNation);
+  const additionalCount = targetNationCount - manifestNations.length;
+  for (let i = 0; i < additionalCount; i++) {
+    const name = generateNationName(random);
+    nations.push(
+      new Nation(
+        undefined,
+        new PlayerInfo(name, PlayerType.Nation, null, random.nextID()),
+      ),
+    );
+  }
+
+  return nations;
+}
 
 const PLURAL_NOUN = Symbol("plural!");
 const NOUN = Symbol("noun!");
@@ -215,7 +286,7 @@ function pluralize(noun: string): string {
   return `${noun}s`;
 }
 
-export function generateNationName(random: PseudoRandom): string {
+function generateNationName(random: PseudoRandom): string {
   const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
   const noun = NOUNS[random.nextInt(0, NOUNS.length)];
 
