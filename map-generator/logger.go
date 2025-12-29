@@ -12,13 +12,14 @@ import (
 	"sync"
 )
 
-// Flags supported for conditional logging
 type LogFlags struct {
-	performance bool
-	removal     bool
+	logLevel    string // The log-level (most -> least wordy): ALL, DEBUG, INFO (default), WARN, ERROR
+	verbose     bool   // sets log-level=DEBUG
+	performance bool   // opts-in to performance checks and sets log-level=DEBUG
+	removal     bool   // opts-in to island/lake removal logging and sets log-level=DEBUG
 }
 
-// LevelAll allows for manually setting a log level that outputs all messages, regardless of other passed flags
+// LevelAll is a custom log Level that outputs all messages, regardless of other passed flags
 const LevelAll = slog.Level(-8)
 
 // PerformanceLogTag is a slog attribute used to tag performance-related log messages.
@@ -26,6 +27,42 @@ var PerformanceLogTag = slog.String("tag", "performance")
 
 // RemovalLogTag is a slog attribute used to tag land/water removal-related log messages.
 var RemovalLogTag = slog.String("tag", "removal")
+
+// DetermineLogLevel determines the log level based on the LogFlags
+// It prioritizes the log level flag over the default, and switches to debug if performance or removal flags are set.
+func DetermineLogLevel(
+	logFlags LogFlags) slog.Level {
+
+	var level = slog.LevelInfo
+	if logFlags.verbose {
+		level = slog.LevelDebug
+	}
+
+	// switch to debug if any of the optional flags is enabled
+	if logFlags.performance || logFlags.removal {
+		level = slog.LevelDebug
+	}
+
+	// parse the log-level input string to the slog.Level type
+	if logFlags.logLevel != "" {
+		switch strings.ToLower(logFlags.logLevel) {
+		case "all":
+			level = LevelAll
+		case "debug":
+			level = slog.LevelDebug
+		case "info":
+			level = slog.LevelInfo
+		case "warn":
+			level = slog.LevelWarn
+		case "error":
+			level = slog.LevelError
+		default:
+			fmt.Printf("invalid log level: %s, defaulting to info\n", logFlags.logLevel)
+			level = slog.LevelInfo
+		}
+	}
+	return level
+}
 
 // GeneratorLogger is a custom slog.Handler that outputs logs based on log level and performance flags.
 type GeneratorLogger struct {
@@ -64,7 +101,8 @@ func (h *GeneratorLogger) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 // Handle processes a log record.
-// It formats the log message and decides whether to output it based on log level and flags
+// It decides whether to output each record based on log level and flags
+// On output, it formats the log message with any extra formatting
 func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
 	isPerformanceLog := false
 	isRemovalLog := false
