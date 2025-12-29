@@ -14,7 +14,11 @@ class MockWebSocket extends EventTarget {
     MockWebSocket.instances.push(this);
   }
 
-  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
     super.addEventListener(type, listener, options);
   }
 
