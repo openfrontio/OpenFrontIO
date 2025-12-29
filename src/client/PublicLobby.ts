@@ -135,6 +135,7 @@ export class PublicLobby extends LitElement {
       lobby.gameConfig.gameMode,
       teamCount,
       teamTotal,
+      teamSize,
     );
     // True when the detail label already includes the full mode text.
     const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
@@ -246,7 +247,7 @@ export class PublicLobby extends LitElement {
       if (teamCount === Duos) return 2;
       if (teamCount === Trios) return 3;
       if (teamCount === Quads) return 4;
-      if (teamCount === HumansVsNations) return Math.floor(maxPlayers / 2);
+      if (teamCount === HumansVsNations) return maxPlayers;
       return undefined;
     }
     if (typeof teamCount === "number" && teamCount > 0) {
@@ -270,10 +271,13 @@ export class PublicLobby extends LitElement {
     gameMode: GameMode,
     teamCount: number | string | null,
     teamTotal: number | undefined,
+    teamSize: number | undefined,
   ): string {
     if (gameMode !== GameMode.Team) return translateText("game_mode.ffa");
-    if (teamCount === HumansVsNations)
-      return translateText("public_lobby.teams_hvn");
+    if (teamCount === HumansVsNations && teamSize !== undefined)
+      return translateText("public_lobby.teams_hvn_detailed", {
+        num: teamSize,
+      });
     const totalTeams =
       teamTotal ?? (typeof teamCount === "number" ? teamCount : 0);
     return translateText("public_lobby.teams", { num: totalTeams });
@@ -289,7 +293,11 @@ export class PublicLobby extends LitElement {
       return { label: null, isFullLabel: false };
     }
 
-    if (typeof teamCount === "string" && teamCount !== HumansVsNations) {
+    if (typeof teamCount === "string" && teamCount === HumansVsNations) {
+      return null;
+    }
+
+    if (typeof teamCount === "string") {
       const teamKey = `public_lobby.teams_${teamCount}`;
       // translateText returns the key when a translation is missing.
       const maybeTranslated = translateText(teamKey, {

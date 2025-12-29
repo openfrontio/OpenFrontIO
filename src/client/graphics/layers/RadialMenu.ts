@@ -1,5 +1,4 @@
 import * as d3 from "d3";
-import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
 import { getSvgAspectRatio, translateText } from "../../Utils";
@@ -10,6 +9,7 @@ import {
   MenuElementParams,
   TooltipKey,
 } from "./RadialMenuElements";
+import backIcon from "/images/BackIconWhite.svg?url";
 
 export class CloseRadialMenuEvent implements GameEvent {
   constructor() {}

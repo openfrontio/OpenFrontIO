@@ -1,4 +1,3 @@
-import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -17,6 +16,7 @@ import {
 } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import shieldIcon from "/images/ShieldIconBlack.svg?url";
 
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
