@@ -67,10 +67,8 @@ const connectedClients: Set<WebSocket> = new Set();
 
 // Broadcast lobbies to all connected clients
 function broadcastLobbies() {
-  const message = JSON.stringify({
-    type: "lobbies_update",
-    data: JSON.parse(publicLobbiesJsonStr || '{"lobbies":[]}'),
-  });
+  const dataStr = publicLobbiesJsonStr || '{"lobbies":[]}';
+  const message = `{"type":"lobbies_update","data":${dataStr}}`;
 
   connectedClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
