@@ -27,18 +27,18 @@ import {
   DisplayMessageUpdate,
   EmojiUpdate,
   GameUpdateType,
-  VassalOfferReplyUpdate,
-  VassalOfferUpdate,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
+  VassalOfferReplyUpdate,
+  VassalOfferUpdate,
 } from "../../../core/game/GameUpdates";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
-  SendVassalOfferReplyIntentEvent,
   SendAttackIntentEvent,
+  SendVassalOfferReplyIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -609,7 +609,10 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20,
-      shouldDelete: () => false,
+      shouldDelete: () => {
+        const current = recipient.overlord();
+        return current?.smallID() === requestor.smallID();
+      },
       focusID: update.requestorID,
     });
   }
@@ -632,7 +635,9 @@ export class EventsDisplay extends LitElement implements Layer {
       }),
       createdAt: this.game.ticks(),
       highlight: true,
-      type: update.accept ? MessageType.VASSAL_ACCEPTED : MessageType.VASSAL_REJECTED,
+      type: update.accept
+        ? MessageType.VASSAL_ACCEPTED
+        : MessageType.VASSAL_REJECTED,
     });
   }
 

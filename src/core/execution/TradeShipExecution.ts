@@ -143,19 +143,20 @@ export class TradeShipExecution implements Execution {
     const effectiveOwner = (unitOwner: Player, portTile: TileRef): Player => {
       const tileOwner = this.mg.owner(portTile);
       if (
-        tileOwner &&
-        tileOwner.isPlayer &&
-        tileOwner.isPlayer() &&
+        tileOwner?.isPlayer?.() &&
         tileOwner !== unitOwner &&
-        unitOwner.isFriendly(tileOwner as Player)
+        unitOwner.isFriendly(tileOwner)
       ) {
-        return tileOwner as Player;
+        return tileOwner;
       }
       return unitOwner;
     };
 
     if (this.wasCaptured) {
-      const dstOwner = effectiveOwner(this._dstPort.owner(), this._dstPort.tile());
+      const dstOwner = effectiveOwner(
+        this._dstPort.owner(),
+        this._dstPort.tile(),
+      );
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       if (dstOwner !== this.tradeShip!.owner()) {
         dstOwner.addGold(gold, this._dstPort.tile());
@@ -171,8 +172,14 @@ export class TradeShipExecution implements Execution {
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
-      const srcOwner = effectiveOwner(this.srcPort.owner(), this.srcPort.tile());
-      const dstOwner = effectiveOwner(this._dstPort.owner(), this._dstPort.tile());
+      const srcOwner = effectiveOwner(
+        this.srcPort.owner(),
+        this.srcPort.tile(),
+      );
+      const dstOwner = effectiveOwner(
+        this._dstPort.owner(),
+        this._dstPort.tile(),
+      );
       srcOwner.addGold(gold);
       dstOwner.addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(

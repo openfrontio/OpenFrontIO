@@ -1,9 +1,11 @@
-import { Execution } from "../game/Game";
-import { Player } from "../game/Game";
+import { Execution, Player } from "../game/Game";
 
 export class VassalSupportExecution implements Execution {
   private active = true;
-  constructor(private readonly player: Player, private readonly ratio: number) {}
+  constructor(
+    private readonly player: Player,
+    private readonly ratio: number,
+  ) {}
 
   activeDuringSpawnPhase(): boolean {
     return true;
@@ -13,9 +15,7 @@ export class VassalSupportExecution implements Execution {
 
   tick(): void {
     const clamped = Math.max(0, Math.min(1, this.ratio));
-    if (typeof (this.player as any).setVassalSupportRatio === "function") {
-      (this.player as any).setVassalSupportRatio(clamped);
-    }
+    this.player.setVassalSupportRatio(clamped);
     this.active = false;
   }
 

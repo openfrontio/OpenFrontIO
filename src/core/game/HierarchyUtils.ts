@@ -11,7 +11,13 @@ export type HierarchyPosition =
 // Returns the highest ancestor (root) in the vassal tree for a player.
 export function rootOf(player: Player): Player {
   let curr: Player = player;
+  const visited = new Set<Player>();
   while (curr.overlord && curr.overlord()) {
+    if (visited.has(curr)) {
+      console.error("Cycle detected in overlord chain");
+      return curr;
+    }
+    visited.add(curr);
     curr = curr.overlord() as Player;
   }
   return curr;
@@ -28,14 +34,12 @@ export function isAncestorOf(maybeAncestor: Player, target: Player): boolean {
 }
 
 // True if `maybeDescendant` is a vassal (direct or indirect) of `root`.
-export function isDescendantOf(
-  maybeDescendant: Player,
-  root: Player,
-): boolean {
+export function isDescendantOf(maybeDescendant: Player, root: Player): boolean {
   return isAncestorOf(root, maybeDescendant);
 }
 
 export function hierarchyPosition(a: Player, b: Player): HierarchyPosition {
+  if (a === b) return "Sibling";
   if (isAncestorOf(a, b)) return "Ancestor";
   if (isAncestorOf(b, a)) return "Descendant";
   if (rootOf(a) === rootOf(b)) return "Sibling";

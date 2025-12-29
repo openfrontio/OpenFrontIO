@@ -262,19 +262,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const overlord = player.overlord();
     const supportTroops =
       overlord !== null && this.game.config().vassalsEnabled()
-        ? Math.floor(
-            overlord.troops() * overlord.vassalSupportRatio(),
-          )
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
         : 0;
     const effectiveTroops =
       player.effectiveTroops?.() ?? supportTroops + player.troops();
     const showVassal = this.game.config().vassalsEnabled();
-    const vassalOf =
-      showVassal && player.overlord && player.overlord()
-        ? (player.overlord() as PlayerView)
-        : null;
-    const vassals =
-      showVassal && player.vassals ? (player.vassals() as PlayerView[]) : [];
+    const vassalOf = showVassal
+      ? (player.overlord() as PlayerView | null)
+      : null;
+    const vassals = showVassal ? (player.vassals() as PlayerView[]) : [];
 
     if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
@@ -394,17 +390,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                       class="flex gap-2 text-sm opacity-80"
                       translate="no"
                     >
-                      ${translateText("player_info_overlay.support_from_overlord")}
+                      ${translateText(
+                        "player_info_overlay.support_from_overlord",
+                      )}
                       <span class="ml-auto mr-0 font-bold text-yellow-300">
                         ${supportTroops > 0 ? "+" : ""}${renderTroops(
                           supportTroops,
                         )}
                       </span>
                     </div>
-                    <div
-                      class="flex gap-2 text-sm opacity-80"
-                      translate="no"
-                    >
+                    <div class="flex gap-2 text-sm opacity-80" translate="no">
                       ${translateText("player_info_overlay.attack_capacity")}
                       <span class="ml-auto mr-0 font-bold text-green-300">
                         ${renderTroops(effectiveTroops)}

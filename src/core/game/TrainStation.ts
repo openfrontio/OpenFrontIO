@@ -13,6 +13,38 @@ interface TrainStopHandler {
   onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution): void;
 }
 
+function effectiveStationOwner(
+  mg: Game,
+  stationOwner: Player,
+  stationTile: TileRef,
+): Player {
+  const tileOwner = mg.owner(stationTile);
+  // If city is built by a friendly on someone else's land, treat the land owner
+  // as the effective station owner for revenue purposes so both sides get full share.
+  if (
+    tileOwner?.isPlayer?.() &&
+    tileOwner !== stationOwner &&
+    stationOwner.isFriendly(tileOwner)
+  ) {
+    return tileOwner;
+  }
+  return stationOwner;
+}
+
+function payoutTrainStop(
+  mg: Game,
+  stationOwner: Player,
+  trainOwner: Player,
+  stationTile: TileRef,
+): void {
+  const effectiveOwner = effectiveStationOwner(mg, stationOwner, stationTile);
+  const goldBonus = mg.config().trainGold(rel(trainOwner, effectiveOwner));
+  if (trainOwner !== effectiveOwner) {
+    effectiveOwner.addGold(goldBonus, stationTile);
+  }
+  trainOwner.addGold(goldBonus, stationTile);
+}
+
 /**
  * All stop handlers share the same logic for the time being
  * Behavior to be defined
@@ -23,29 +55,12 @@ class CityStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const stationOwner = station.unit.owner();
-    const trainOwner = trainExecution.owner();
-    const tileOwner = mg.owner(station.tile()) as Player | null;
-
-    // If city is built by a friendly on someone else's land, treat the land owner
-    // as the effective station owner for revenue purposes so both sides get full share.
-    const effectiveOwner =
-      tileOwner &&
-      tileOwner.isPlayer &&
-      tileOwner.isPlayer() &&
-      tileOwner !== stationOwner &&
-      stationOwner.isFriendly(tileOwner as Player)
-        ? (tileOwner as Player)
-        : stationOwner;
-
-    const goldBonus = mg.config().trainGold(rel(trainOwner, effectiveOwner));
-
-    // Pay effective owner if different from train owner
-    if (trainOwner !== effectiveOwner) {
-      effectiveOwner.addGold(goldBonus, station.tile());
-    }
-    // Pay train owner
-    trainOwner.addGold(goldBonus, station.tile());
+    payoutTrainStop(
+      mg,
+      station.unit.owner(),
+      trainExecution.owner(),
+      station.tile(),
+    );
   }
 }
 
@@ -56,25 +71,12 @@ class PortStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const stationOwner = station.unit.owner();
-    const trainOwner = trainExecution.owner();
-    const tileOwner = mg.owner(station.tile()) as Player | null;
-
-    const effectiveOwner =
-      tileOwner &&
-      tileOwner.isPlayer &&
-      tileOwner.isPlayer() &&
-      tileOwner !== stationOwner &&
-      stationOwner.isFriendly(tileOwner as Player)
-        ? (tileOwner as Player)
-        : stationOwner;
-
-    const goldBonus = mg.config().trainGold(rel(trainOwner, effectiveOwner));
-
-    if (trainOwner !== effectiveOwner) {
-      effectiveOwner.addGold(goldBonus, station.tile());
-    }
-    trainOwner.addGold(goldBonus, station.tile());
+    payoutTrainStop(
+      mg,
+      station.unit.owner(),
+      trainExecution.owner(),
+      station.tile(),
+    );
   }
 }
 

@@ -101,7 +101,10 @@ export class PlayerActionHandler {
     panel.appendChild(actions);
     overlay.appendChild(panel);
 
-    const cleanup = () => overlay.remove();
+    const cleanup = () => {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+    };
     panel
       .querySelector('[data-role="cancel"]')
       ?.addEventListener("click", cleanup);
@@ -120,7 +123,7 @@ export class PlayerActionHandler {
         opts.onConfirm();
       }
     };
-    document.addEventListener("keydown", onKey, { once: true });
+    document.addEventListener("keydown", onKey);
 
     document.body.appendChild(overlay);
   }

@@ -158,7 +158,6 @@ export class AttackExecution implements Execution {
       this._owner.removeTroops(sendFromSelf);
 
       actualTroops = sendFromSelf + sendFromSupport;
-      this.startTroops = actualTroops;
     }
     this.startTroops = actualTroops;
     this.attack = this._owner.createAttack(

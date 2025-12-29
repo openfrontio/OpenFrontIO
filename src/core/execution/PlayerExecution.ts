@@ -1,8 +1,8 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { rootOf } from "../game/HierarchyUtils";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
-import { isClusterSurroundedBy } from "./utils/surround";
 
 interface ClusterTraversalState {
   visited: Uint32Array;
@@ -303,15 +303,6 @@ export class PlayerExecution implements Execution {
     // Group hostile neighbors by their hierarchy root (overlord or self)
     const rootToPlayers = new Map<Player, Set<Player>>();
     const rootToCount = new Map<Player, number>();
-    const rootOf = (p: Player): Player => {
-      let r: Player = p;
-      while (r.overlord && r.overlord()) {
-        const o = r.overlord();
-        if (!o) break;
-        r = o;
-      }
-      return r;
-    };
     for (const [neighbor, count] of neighbors) {
       const root = rootOf(neighbor);
       if (!rootToPlayers.has(root)) {

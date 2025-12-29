@@ -4,8 +4,6 @@ import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
-import { VassalageImpl } from "./VassalageImpl";
-import { rootOf, sharesHierarchy } from "./HierarchyUtils";
 import {
   Alliance,
   AllianceRequest,
@@ -20,6 +18,7 @@ import {
   HumansVsNations,
   MessageType,
   MutableAlliance,
+  MutableVassalage,
   Nation,
   Player,
   PlayerID,
@@ -30,13 +29,13 @@ import {
   TerrainType,
   TerraNullius,
   Trios,
-  MutableVassalage,
   Unit,
   UnitInfo,
   UnitType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { rootOf, sharesHierarchy } from "./HierarchyUtils";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
 import { createRailNetwork } from "./RailNetworkImpl";
@@ -45,6 +44,7 @@ import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { VassalageImpl } from "./VassalageImpl";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -229,7 +229,10 @@ export class GameImpl implements Game {
 
     // Remove enforced (permanent) alliances between differing hierarchies (announce to players)
     for (const alliance of [...this.alliances_]) {
-      if (alliance.isEnforced() && !sharesHierarchy(alliance.requestor(), alliance.recipient())) {
+      if (
+        alliance.isEnforced() &&
+        !sharesHierarchy(alliance.requestor(), alliance.recipient())
+      ) {
         alliance.expire(); // emits AllianceExpired update
       }
     }
@@ -238,8 +241,8 @@ export class GameImpl implements Game {
     for (const players of groups.values()) {
       for (const p of players) {
         for (const q of players) {
-          if (p === q || !p.isPlayer() || !q.isPlayer()) continue;
-          if (p.hasEmbargoAgainst(q as Player)) p.stopEmbargo(q as Player);
+          if (p === q) continue;
+          if (p.hasEmbargoAgainst(q)) p.stopEmbargo(q);
         }
       }
     }
@@ -436,7 +439,6 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: true,
     });
-
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
