@@ -179,7 +179,7 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 	logger.Debug(fmt.Sprintf("Land Tile Count (16x): %d", numLandTiles16x))
 
 	if mapNumLandTiles == 0 {
-		logger.Error("Map has 0 land tiles")
+		return MapResult{}, fmt.Errorf("Map has 0 land tiles")
 	}
 	if mapNumLandTiles > maxRecommendedLandTileCount {
 		logger.Info(fmt.Sprintf("Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)

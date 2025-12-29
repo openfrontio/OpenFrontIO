@@ -101,11 +101,13 @@ func (h *GeneratorLogger) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 // Handle processes a log record.
-// It decides whether to output each record based on log level and flags
+// It decides whether to output each record based on log level, flags, and if the map is a test map
 // On output, it formats the log message with any extra formatting
 func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
 	isPerformanceLog := false
 	isRemovalLog := false
+	isTestMap := false
+
 	var mapName string
 
 	findAttrs := func(a slog.Attr) {
@@ -117,6 +119,9 @@ func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
 		}
 		if a.Key == "map" {
 			mapName = a.Value.String()
+		}
+		if a.Key == "isTest" {
+			isTestMap = a.Value.Bool()
 		}
 	}
 
@@ -140,10 +145,15 @@ func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
 		return nil
 	}
 
+	// dont log performance messages for test maps
+	if isPerformanceLog && isTestMap {
+		return nil
+	}
+
 	buf := &bytes.Buffer{}
 
 	// Add map name as a prefix in log Level DEBUG and ALL
-	if h.opts.Level == slog.LevelDebug || h.opts.Level == LevelAll && mapName != "" {
+	if (h.opts.Level == slog.LevelDebug || h.opts.Level == LevelAll) && mapName != "" {
 		mapName = strings.Trim(mapName, `"`)
 		fmt.Fprintf(buf, "[%s] ", mapName)
 	}
@@ -151,6 +161,10 @@ func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
 	// Add prefix for performance messages
 	if isPerformanceLog {
 		fmt.Fprintf(buf, "[PERF] ")
+	}
+
+	if h.prefix != "" {
+		fmt.Fprintf(buf, "%s ", h.prefix)
 	}
 
 	fmt.Fprintln(buf, r.Message)
