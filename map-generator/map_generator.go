@@ -12,13 +12,10 @@ import (
 	"github.com/chai2010/webp"
 )
 
-// The smallest a body of land or lake can be, all smaller are removed
 const (
+	// The smallest a body of land or lake can be, all smaller are removed
 	minIslandSize = 30
 	minLakeSize   = 200
-)
-
-const (
 	// the recommended max area pixel size for input images
 	minRecommendedPixelSize = 2000000
 	maxRecommendedPixelSize = 3000000
