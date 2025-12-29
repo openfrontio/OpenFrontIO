@@ -1,15 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import stopTradingIcon from "../../../../resources/images/StopIconWhite.png";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import startTradingIcon from "../../../../resources/images/TradingIconWhite.png";
-import traitorIcon from "../../../../resources/images/TraitorIconLightRed.svg";
-import breakAllianceIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import Countries from "../../../assets/data/countries.json" with { type: "json" };
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -23,7 +14,6 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import Countries from "../../data/countries.json";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -44,6 +34,16 @@ import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import "./SendResourceModal";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
+import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import stopTradingIcon from "/images/StopIconWhite.png?url";
+import targetIcon from "/images/TargetIconWhite.svg?url";
+import startTradingIcon from "/images/TradingIconWhite.png?url";
+import traitorIcon from "/images/TraitorIconLightRed.svg?url";
+import breakAllianceIcon from "/images/TraitorIconWhite.svg?url";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -62,6 +62,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
+  @state() private suppressNextHide: boolean = false;
 
   private ctModal: ChatModal;
 
@@ -78,7 +79,13 @@ export class PlayerPanel extends LitElement implements Layer {
     });
   }
   init() {
-    this.eventBus.on(MouseUpEvent, () => this.hide());
+    this.eventBus.on(MouseUpEvent, () => {
+      if (this.suppressNextHide) {
+        this.suppressNextHide = false;
+        return;
+      }
+      this.hide();
+    });
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
     if (!this.ctModal) {
@@ -131,6 +138,20 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  public openSendGoldModal(
+    actions: PlayerActions,
+    tile: TileRef,
+    target: PlayerView,
+  ) {
+    this.suppressNextHide = true;
+    this.actions = actions;
+    this.tile = tile;
+    this.sendTarget = target;
+    this.sendMode = "gold";
+    this.isVisible = true;
+    this.requestUpdate();
+  }
+
   public hide() {
     this.isVisible = false;
     this.sendMode = "none";
@@ -164,11 +185,13 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private openSendTroops(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "troops";
   }
 
   private openSendGold(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "gold";
   }
@@ -422,7 +445,7 @@ export class PlayerPanel extends LitElement implements Layer {
         ${country && typeof flagCode === "string"
           ? html`<img
               src="/flags/${encodeURIComponent(flagCode)}.svg"
-              alt=${country?.name || "Flag"}
+              alt=${country?.name ?? "Flag"}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
