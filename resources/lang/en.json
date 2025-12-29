@@ -274,7 +274,8 @@
     "teams_Quads": "{team_count} of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
     "starting_game": "Starting game…",
-    "teams_hvn": "Humans Vs Nations",
+    "teams_hvn": "Humans vs Nations",
+    "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}"
   },

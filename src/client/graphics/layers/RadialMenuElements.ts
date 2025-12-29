@@ -12,19 +12,19 @@ import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
-import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import infoIcon from "../../../../resources/images/InfoIcon.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import boatIcon from "/images/BoatIconWhite.svg?url";
+import buildIcon from "/images/BuildIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
+import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import infoIcon from "/images/InfoIcon.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
+import targetIcon from "/images/TargetIconWhite.svg?url";
+import traitorIcon from "/images/TraitorIconWhite.svg?url";
+import xIcon from "/images/XIcon.svg?url";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
