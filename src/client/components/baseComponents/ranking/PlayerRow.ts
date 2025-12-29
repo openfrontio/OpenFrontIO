@@ -86,7 +86,7 @@ export class PlayerRow extends LitElement {
       </div>
       <div>
         <div
-          class="font-bold rounded-[50%] w-[30px] h-[30px] leading-[1.6rem] border text-center bg-white text-black"
+          class="font-bold rounded-[50%] w-[30px] h-[30px] leading-[1.6rem] border border-gray-200 text-center bg-white text-black"
         >
           ${Number(this.score).toFixed(0)}
         </div>
@@ -190,7 +190,7 @@ export class PlayerRow extends LitElement {
   private renderTag(tag: string) {
     return html`
       <div
-        class="bg-white text-black rounded-lg sm:rounded-xl border text-xs leading-[12px] sm:leading-[18px] text-blue-900 h-[15px] pr-[4px] pl-[4px] sm:h-[20px] sm:pr-[8px] sm:pl-[8px] font-bold"
+        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-[12px] sm:leading-[18px] text-blue-900 h-[15px] pr-[4px] pl-[4px] sm:h-[20px] sm:pr-[8px] sm:pl-[8px] font-bold"
       >
         ${tag}
       </div>
@@ -200,7 +200,7 @@ export class PlayerRow extends LitElement {
   private renderIcon() {
     if (this.player.killedAt) {
       return html` <div
-        class="w-[30px] h-[30px] leading-[5px] text-lg sm:min-w-[40px] sm:w-[40px] sm:h-[40px] pt-[12px] sm:leading-[15px] sm:rounded-[50%] sm:border text-center sm:bg-slate-500 sm:text-2xl"
+        class="w-[30px] h-[30px] leading-[5px] text-lg sm:min-w-[40px] sm:w-[40px] sm:h-[40px] pt-[12px] sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
       >
         💀
       </div>`;
@@ -213,7 +213,7 @@ export class PlayerRow extends LitElement {
 
     return html`
       <div
-        class="w-[30px] h-[30px] min-w-[30px] leading-[5px] rounded-[50%] sm:min-w-[40px] sm:w-[40px] sm:h-[40px] sm:pt-[10px] sm:leading-[14px] border text-center bg-slate-500"
+        class="w-[30px] h-[30px] min-w-[30px] leading-[5px] rounded-[50%] sm:min-w-[40px] sm:w-[40px] sm:h-[40px] sm:pt-[10px] sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
       >
         <img
           src="/images/ProfileIcon.svg"

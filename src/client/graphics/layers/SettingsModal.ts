@@ -218,7 +218,7 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
           </div>
 
-          <div class="p-4 space-y-3">
+          <div class="p-4 flex flex-col gap-3">
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
             >

@@ -515,7 +515,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderStats(other: PlayerView, my: PlayerView) {
     return html`
       <!-- Betrayals -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
@@ -528,7 +528,7 @@ export class PlayerPanel extends LitElement implements Layer {
       </div>
 
       <!-- Trading / Embargo -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
@@ -612,7 +612,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderAllianceExpiry() {
     if (this.allianceExpiryText === null) return html``;
     return html`
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-base">
         <div class="font-semibold text-zinc-300">
           ${translateText("player_panel.alliance_time_remaining")}
         </div>

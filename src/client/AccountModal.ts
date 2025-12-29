@@ -172,7 +172,7 @@ export class AccountModal extends LitElement {
           <div class="mb-6">
             <button
               @click="${this.handleDiscordLogin}"
-              class="w-full px-6 py-3 text-sm font-medium text-white bg-[#5865F2] border border-transparent rounded-md hover:bg-[#4752C4] focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center space-x-2"
+              class="w-full px-6 py-3 text-sm font-medium text-white bg-[#5865F2] border border-transparent rounded-md hover:bg-[#4752C4] focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <img
                 src="/images/DiscordLogo.svg"
@@ -216,7 +216,7 @@ export class AccountModal extends LitElement {
           </div>
         </div>
 
-        <div class="flex justify-end space-x-3">
+        <div class="flex justify-end gap-3">
           <button
             @click="${this.close}"
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
