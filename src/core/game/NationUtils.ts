@@ -264,6 +264,25 @@ const NOUNS = [
   "Penguin",
 ];
 
+function generateNationName(random: PseudoRandom): string {
+  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
+  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
+
+  const result: string[] = [];
+
+  for (const part of template) {
+    if (part === PLURAL_NOUN) {
+      result.push(pluralize(noun));
+    } else if (part === NOUN) {
+      result.push(noun);
+    } else {
+      result.push(part);
+    }
+  }
+
+  return result.join(" ");
+}
+
 // Words from NOUNS that need irregular "-oes" plural
 const O_TO_OES = new Set(["Potato", "Tomato"]);
 
@@ -284,23 +303,4 @@ function pluralize(noun: string): string {
     return `${noun}es`;
   }
   return `${noun}s`;
-}
-
-function generateNationName(random: PseudoRandom): string {
-  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
-  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
-
-  const result: string[] = [];
-
-  for (const part of template) {
-    if (part === PLURAL_NOUN) {
-      result.push(pluralize(noun));
-    } else if (part === NOUN) {
-      result.push(noun);
-    } else {
-      result.push(part);
-    }
-  }
-
-  return result.join(" ");
 }
