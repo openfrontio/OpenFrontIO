@@ -161,7 +161,9 @@ export class MapDisplay extends LitElement {
                 class="option-image"
               />`
             : html`<div class="option-image">Error</div>`}
-        ${this.showMedals ? html`<div class="medal-row">${this.renderMedals()}</div>` : null}
+        ${this.showMedals
+          ? html`<div class="medal-row">${this.renderMedals()}</div>`
+          : null}
         <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;
