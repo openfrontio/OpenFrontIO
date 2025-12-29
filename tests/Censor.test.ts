@@ -1,5 +1,5 @@
 // Mocking the obscenity library to control its behavior in tests.
-jest.mock("obscenity", () => {
+vi.mock("obscenity", () => {
   return {
     RegExpMatcher: class {
       private dummy: string[] = ["foo", "bar", "leet", "code"];
@@ -26,7 +26,7 @@ jest.mock("obscenity", () => {
 });
 
 // Mocks the output of translation functions to return predictable values.
-jest.mock("../src/client/Utils", () => ({
+vi.mock("../src/client/Utils", () => ({
   translateText: (key: string, vars?: any) =>
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));

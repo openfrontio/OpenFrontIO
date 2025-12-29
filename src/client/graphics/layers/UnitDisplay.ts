@@ -1,15 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
-import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
@@ -20,6 +10,16 @@ import {
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import warshipIcon from "/images/BattleshipIconWhite.svg?url";
+import cityIcon from "/images/CityIconWhite.svg?url";
+import factoryIcon from "/images/FactoryIconWhite.svg?url";
+import mirvIcon from "/images/MIRVIcon.svg?url";
+import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
+import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
+import atomBombIcon from "/images/NukeIconWhite.svg?url";
+import portIcon from "/images/PortIcon.svg?url";
+import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
+import defensePostIcon from "/images/ShieldIconWhite.svg?url";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {

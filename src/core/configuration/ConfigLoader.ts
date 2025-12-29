@@ -3,6 +3,7 @@ import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig } from "./DefaultConfig";
 import { DevConfig, DevServerConfig } from "./DevConfig";
+import { Env } from "./Env";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
 
@@ -22,7 +23,7 @@ export async function getConfig(
       console.log("using prod config");
       return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:
-      throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
+      throw Error(`unsupported server configuration: ${Env.GAME_ENV}`);
   }
 }
 export async function getServerConfigFromClient(): Promise<ServerConfig> {
@@ -44,7 +45,7 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
-  const gameEnv = process.env.GAME_ENV ?? "dev";
+  const gameEnv = Env.GAME_ENV;
   return getServerConfig(gameEnv);
 }
 export function getServerConfig(gameEnv: string) {
