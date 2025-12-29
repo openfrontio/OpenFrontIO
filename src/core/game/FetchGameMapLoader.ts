@@ -42,7 +42,9 @@ export class FetchGameMapLoader implements GameMapLoader {
     let url = `${this.prefix}/${map}/${path}`;
 
     if (this.cacheBuster) {
-      url += `${url.includes("?") ? "&" : "?"}v=${this.cacheBuster}`;
+      url += `${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(
+        this.cacheBuster.trim(),
+      )}`;
     }
 
     return url;

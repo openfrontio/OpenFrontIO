@@ -2,7 +2,6 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -40,6 +39,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
+import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
 extend([a11yPlugin]);
 
@@ -75,7 +75,8 @@ export class StructureIconsLayer implements Layer {
   public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
-  private renderer: PIXI.Renderer;
+  private renderer: PIXI.Renderer | null = null;
+  private rendererInitialized: boolean = false;
   private renders: StructureRenderInfo[] = [];
   private readonly seenUnits: Set<UnitView> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
@@ -113,7 +114,7 @@ export class StructureIconsLayer implements Layer {
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    this.renderer = new PIXI.WebGLRenderer();
+    const renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
@@ -143,7 +144,7 @@ export class StructureIconsLayer implements Layer {
     this.rootStage.position.set(0, 0);
     this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await this.renderer.init({
+    await renderer.init({
       canvas: this.pixicanvas,
       resolution: 1,
       width: this.pixicanvas.width,
@@ -153,6 +154,9 @@ export class StructureIconsLayer implements Layer {
       backgroundAlpha: 0,
       backgroundColor: 0x00000000,
     });
+
+    this.renderer = renderer;
+    this.rendererInitialized = true;
   }
 
   shouldTransform(): boolean {
@@ -202,7 +206,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
+    if (!this.renderer || !this.rendererInitialized) {
       return;
     }
 

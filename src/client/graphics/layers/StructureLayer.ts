@@ -4,16 +4,16 @@ import { EventBus } from "../../../core/EventBus";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
-import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
-import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
-import anchorIcon from "../../../../resources/images/buildings/port1.png";
-import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
-import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import cityIcon from "/images/buildings/cityAlt1.png?url";
+import factoryIcon from "/images/buildings/factoryAlt1.png?url";
+import shieldIcon from "/images/buildings/fortAlt3.png?url";
+import anchorIcon from "/images/buildings/port1.png?url";
+import missileSiloIcon from "/images/buildings/silo1.png?url";
+import SAMMissileIcon from "/images/buildings/silo4.png?url";
 
 const underConstructionColor = colord("rgb(150,150,150)");
 

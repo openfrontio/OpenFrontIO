@@ -1,16 +1,5 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -35,6 +24,17 @@ import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import warshipIcon from "/images/BattleshipIconWhite.svg?url";
+import cityIcon from "/images/CityIconWhite.svg?url";
+import factoryIcon from "/images/FactoryIconWhite.svg?url";
+import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
+import mirvIcon from "/images/MIRVIcon.svg?url";
+import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
+import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
+import atomBombIcon from "/images/NukeIconWhite.svg?url";
+import portIcon from "/images/PortIcon.svg?url";
+import samlauncherIcon from "/images/SamLauncherIconWhite.svg?url";
+import shieldIcon from "/images/ShieldIconWhite.svg?url";
 
 export interface BuildItemDisplay {
   unitType: UnitType;
