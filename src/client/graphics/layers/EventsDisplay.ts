@@ -188,10 +188,12 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private togglePinAllianceEvents() {
-    this.pinAllianceEvents = !this.pinAllianceEvents;
     const settings = this.game?.config().userSettings();
-    if (settings?.set) {
-      settings.set("settings.pinAllianceRequests", this.pinAllianceEvents);
+    if (settings?.togglePinAllianceRequests) {
+      settings.togglePinAllianceRequests();
+      this.pinAllianceEvents = settings.pinAllianceRequests();
+    } else {
+      this.pinAllianceEvents = !this.pinAllianceEvents;
     }
     this.requestUpdate();
   }
