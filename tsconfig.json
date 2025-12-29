@@ -9,8 +9,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "resources/*": ["resources/*"],
-      "lit/decorators": ["node_modules/lit/decorators.js"]
+      "resources/*": ["resources/*"]
     },
     // Emit
     "sourceMap": true,
