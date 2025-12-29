@@ -12,7 +12,12 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  PlayerActions,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -241,6 +246,7 @@ export class ClientGameRunner {
     if (this.myPlayer === null) {
       return;
     }
+    this.recordLocalWin(update);
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
@@ -265,6 +271,43 @@ export class ClientGameRunner {
       this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
+  }
+
+  private didPlayerWin(update: WinUpdate): boolean {
+    if (this.myPlayer === null || update.winner === undefined) {
+      return false;
+    }
+    if (update.winner[0] === "player") {
+      const myClient = this.myPlayer.clientID();
+      return myClient !== null && update.winner[1] === myClient;
+    }
+    if (update.winner[0] === "team") {
+      const myTeam = this.myPlayer.team();
+      return myTeam !== null && update.winner[1] === myTeam;
+    }
+    return false;
+  }
+
+  private recordLocalWin(update: WinUpdate) {
+    if (!this.lobby.gameStartInfo) return;
+    if (!this.didPlayerWin(update)) return;
+
+    const { gameMap, difficulty } = this.lobby.gameStartInfo.config;
+    if (difficulty !== Difficulty.Easy) return;
+
+    type WinRecord = Partial<Record<GameMapType, Difficulty[]>>;
+    const storageKey = "singleplayerWins";
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed: WinRecord = raw ? JSON.parse(raw) : {};
+      const existing = new Set(parsed[gameMap] ?? []);
+      existing.add(difficulty);
+      parsed[gameMap] = Array.from(existing);
+      localStorage.setItem(storageKey, JSON.stringify(parsed));
+    } catch (error) {
+      console.warn("Failed to record singleplayer win", error);
+    }
   }
 
   public start() {
