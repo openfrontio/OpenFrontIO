@@ -64,7 +64,7 @@ func DetermineLogLevel(
 	return level
 }
 
-// GeneratorLogger is a custom slog.Handler that outputs logs based on log level and performance flags.
+// GeneratorLogger is a custom slog.Handler that outputs logs based on log level and additional LogFlags.
 type GeneratorLogger struct {
 	opts   slog.HandlerOptions
 	w      io.Writer
