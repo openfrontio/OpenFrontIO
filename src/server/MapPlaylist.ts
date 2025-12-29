@@ -95,6 +95,8 @@ export class MapPlaylist {
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium,
+      chatEnabled: false,
       difficulty: Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,

@@ -25,6 +25,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/LobbyChatPanel";
 import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
@@ -54,6 +55,7 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
+  @state() private chatEnabled: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
@@ -405,6 +407,28 @@ export class HostLobbyModal extends LitElement {
                   </div>
                 </label>
 
+                <!-- Enable Lobby Chat (Private only) -->
+                <label
+                  for="enable-chat"
+                  class="option-card ${this.chatEnabled ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="enable-chat"
+                    @change=${(e: Event) => {
+                      this.chatEnabled = Boolean(
+                        (e.target as HTMLInputElement).checked,
+                      );
+                      this.putGameConfig();
+                    }}
+                    .checked=${this.chatEnabled}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("lobby_chat.enable")}
+                  </div>
+                </label>
+
                 <label
                   for="donate-gold"
                   class="option-card ${this.donateGold ? "selected" : ""}"
@@ -567,6 +591,19 @@ export class HostLobbyModal extends LitElement {
             .nationCount=${this.disableNations ? 0 : this.nationCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
+
+          ${
+            this.chatEnabled
+              ? html`
+                  <div class="mt-4">
+                    <div class="option-title">
+                      ${translateText("lobby_chat.title")}
+                    </div>
+                    <lobby-chat-panel></lobby-chat-panel>
+                  </div>
+                `
+              : ""
+          }
         </div>
 
         <div class="start-game-button-container">
@@ -774,6 +811,7 @@ export class HostLobbyModal extends LitElement {
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           randomSpawn: this.randomSpawn,
+          chatEnabled: this.chatEnabled,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,

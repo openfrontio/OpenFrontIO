@@ -15,6 +15,7 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientLobbyChatMessage,
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
@@ -174,6 +175,11 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+// New event: send a basic lobby chat message
+export class SendLobbyChatEvent implements GameEvent {
+  constructor(public readonly text: string) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -259,6 +265,7 @@ export class Transport {
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
+    this.eventBus.on(SendLobbyChatEvent, (e) => this.onSendLobbyChat(e));
   }
 
   private startPing() {
@@ -655,6 +662,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       target: event.target,
     });
+  }
+
+  private onSendLobbyChat(event: SendLobbyChatEvent) {
+    this.sendMsg({
+      type: "lobby_chat",
+      text: event.text,
+      clientID: this.lobbyConfig.clientID,
+    } satisfies ClientLobbyChatMessage);
   }
 
   private sendIntent(intent: Intent) {
