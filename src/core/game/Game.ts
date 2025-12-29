@@ -126,7 +126,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Oceania,
   ],
   regional: [
-
     GameMapType.UnitedKingdom,
     GameMapType.Philippines,
     GameMapType.BlackSea,
@@ -149,7 +148,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
     GameMapType.Lemnos,
-
   ],
   fantasy: [
     GameMapType.Pangaea,

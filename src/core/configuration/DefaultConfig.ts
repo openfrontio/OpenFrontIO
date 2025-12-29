@@ -87,7 +87,6 @@ const numPlayersConfig = {
   [GameMapType.Lemnos]: [20, 15, 10],
   [GameMapType.UnitedKingdom]: [50, 30, 20],
   [GameMapType.Philippines]: [70, 50, 40],
-
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
