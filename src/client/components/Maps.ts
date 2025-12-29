@@ -115,6 +115,8 @@ export class MapDisplay extends LitElement {
       width: 20px;
       height: 20px;
       object-fit: contain;
+      opacity: 0.3;
+      filter: grayscale(1);
     }
   `;
 
