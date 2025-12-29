@@ -1,6 +1,7 @@
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { within } from "../Util";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, AStarResult, PathFindResultType } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
@@ -31,22 +32,18 @@ export class ParabolaPathFinder {
     const mapHeight = this.mg.height();
     const p1 = {
       x: p0.x + (p3.x - p0.x) / 4,
-      y: Math.max(
+      y: within(
+        p0.y + (p3.y - p0.y) / 4 + heightMultiplier * maxHeight,
         0,
-        Math.min(
-          p0.y + (p3.y - p0.y) / 4 + heightMultiplier * maxHeight,
-          mapHeight - 1,
-        ),
+        mapHeight - 1,
       ),
     };
     const p2 = {
       x: p0.x + ((p3.x - p0.x) * 3) / 4,
-      y: Math.max(
+      y: within(
+        p0.y + ((p3.y - p0.y) * 3) / 4 + heightMultiplier * maxHeight,
         0,
-        Math.min(
-          p0.y + ((p3.y - p0.y) * 3) / 4 + heightMultiplier * maxHeight,
-          mapHeight - 1,
-        ),
+        mapHeight - 1,
       ),
     };
 
