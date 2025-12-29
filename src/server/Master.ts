@@ -104,12 +104,8 @@ export async function startMaster() {
     connectedClients.add(ws);
 
     // Send current lobbies immediately (always send, even if empty)
-    ws.send(
-      JSON.stringify({
-        type: "lobbies_update",
-        data: JSON.parse(publicLobbiesJsonStr || '{"lobbies":[]}'),
-      }),
-    );
+    const lobbiesJson = publicLobbiesJsonStr || '{"lobbies":[]}';
+    ws.send(`{"type":"lobbies_update","data":${lobbiesJson}}`);
 
     ws.on("close", () => {
       connectedClients.delete(ws);
