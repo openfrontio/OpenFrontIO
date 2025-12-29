@@ -294,7 +294,7 @@ export class PublicLobby extends LitElement {
     }
 
     if (typeof teamCount === "string" && teamCount === HumansVsNations) {
-      return null;
+      return { label: null, isFullLabel: false };
     }
 
     if (typeof teamCount === "string") {
