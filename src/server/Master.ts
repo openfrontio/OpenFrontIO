@@ -70,12 +70,18 @@ function broadcastLobbies() {
   const dataStr = publicLobbiesJsonStr || '{"lobbies":[]}';
   const message = `{"type":"lobbies_update","data":${dataStr}}`;
 
+  const clientsToRemove: WebSocket[] = [];
+
   connectedClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     } else {
-      connectedClients.delete(client);
+      clientsToRemove.push(client);
     }
+  });
+
+  clientsToRemove.forEach((client) => {
+    connectedClients.delete(client);
   });
 }
 
