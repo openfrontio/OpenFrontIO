@@ -184,6 +184,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.RECEIVED_GOLD_FROM_PLAYER:
     case MessageType.RECEIVED_TROOPS_FROM_PLAYER:
     case MessageType.VASSALAGE_FORMED:
+    case MessageType.VASSAL_ACCEPTED:
       return severityColors["blue"];
     case MessageType.MIRV_INBOUND:
     case MessageType.NUKE_INBOUND:
@@ -195,7 +196,10 @@ export function getMessageTypeClasses(type: MessageType): string {
       return severityColors["warn"];
     case MessageType.CHAT:
     case MessageType.ALLIANCE_REQUEST:
+    case MessageType.VASSAL_REQUEST:
       return severityColors["info"];
+    case MessageType.VASSAL_REJECTED:
+      return severityColors["fail"];
     default:
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];

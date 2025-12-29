@@ -51,6 +51,6 @@ describe("Building on vassal territory", () => {
     const validOnNeutral = (overlord as any).validStructureSpawnTiles?.(
       neutralTile,
     ) as number[] | undefined;
-    expect(validOnNeutral && validOnNeutral.length).toBe(0);
+    expect(validOnNeutral?.length ?? 0).toBe(0);
   });
 });

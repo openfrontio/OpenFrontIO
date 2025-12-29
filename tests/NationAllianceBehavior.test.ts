@@ -77,7 +77,10 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
       }
     });
 
-    jest.spyOn(player, "alliances").mockReturnValue(new Array(alliancesCount));
+    const allianceList = Array.from({ length: alliancesCount }, () => ({
+      isEnforced: () => false,
+    })) as any;
+    jest.spyOn(player, "alliances").mockReturnValue(allianceList);
 
     const mockRequest = {
       requestor: () => requestor,

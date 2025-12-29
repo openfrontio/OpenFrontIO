@@ -296,8 +296,6 @@ export class NationMIRVBehavior {
     myShoreTiles: TileRef[],
   ): number {
     const effective = this.effectiveTroops(enemy);
-    if (effective < 100_000) return -Infinity;
-
     const troopScore =
       effective <= 500_000
         ? effective

@@ -3,7 +3,14 @@
  */
 jest.mock("../../../src/client/Transport", () => {
   return {
-    SendSurrenderIntentEvent: class SendSurrenderIntentEventMock {},
+    SendSurrenderIntentEvent: class SendSurrenderIntentEventMock {
+      constructor(
+        public requestor: any,
+        public recipient: any,
+        public goldRatio?: number,
+        public troopRatio?: number,
+      ) {}
+    },
   };
 });
 
@@ -43,6 +50,10 @@ describe("PlayerActionHandler surrender confirmation", () => {
     expect(eventBus.emit).toHaveBeenCalledTimes(1);
     const emitted = eventBus.emit.mock.calls[0][0];
     expect(emitted).toBeInstanceOf(SendSurrenderIntentEvent);
+    expect(emitted.requestor).toBe(player);
+    expect(emitted.recipient).toBe(recipient);
+    expect(emitted.goldRatio).toBeUndefined();
+    expect(emitted.troopRatio).toBeUndefined();
     expect(document.querySelector('[data-role="confirm"]')).toBeNull();
   });
 

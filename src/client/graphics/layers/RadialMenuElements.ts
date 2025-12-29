@@ -263,18 +263,18 @@ const surrenderElement: MenuElement = {
         },
       ];
     }
-    if (params.myPlayer.overlord()) {
-      return [
-        {
-          text: translateText("vassal_menu.already_has_overlord"),
-          className: "description",
-        },
-      ];
-    }
     if (params.myPlayer.overlord() === target) {
       return [
         {
           text: translateText("vassal_menu.already_vassal_of_target"),
+          className: "description",
+        },
+      ];
+    }
+    if (params.myPlayer.overlord()) {
+      return [
+        {
+          text: translateText("vassal_menu.already_has_overlord"),
           className: "description",
         },
       ];

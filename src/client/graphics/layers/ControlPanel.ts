@@ -54,9 +54,10 @@ export class ControlPanel extends LitElement implements Layer {
     this.vassalSupportRatio = Number(
       localStorage.getItem("settings.vassalSupportRatio") ?? "0",
     );
+    this.uiState.vassalSupportRatio = this.vassalSupportRatio;
     // Push the saved value to both UI state and server so vassals know it
     // even if the player doesn't move the slider this session.
-    if (vassalsEnabledFrom(this.game)) {
+    if (this.game && vassalsEnabledFrom(this.game)) {
       this.onVassalSupportChange(this.vassalSupportRatio);
     }
     this.eventBus.on(AttackRatioEvent, (event) => {

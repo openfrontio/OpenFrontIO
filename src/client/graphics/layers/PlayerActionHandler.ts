@@ -54,20 +54,51 @@ export class PlayerActionHandler {
     panel.style.boxShadow = "0 12px 36px rgba(0,0,0,0.45)";
     panel.style.border = "1px solid rgba(255,255,255,0.06)";
     panel.style.letterSpacing = "0.01em";
-    panel.innerHTML = `
-      <div style="font-weight:700; margin-bottom:8px;">${opts.title}</div>
-      <div style="font-size:14px; line-height:1.4; margin-bottom:12px;">
-        ${opts.message}
-      </div>
-      <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button data-role="cancel" style="padding:7px 12px; border:none; border-radius:10px; background:#4b5563; color:white; cursor:pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);">
-          ${opts.cancelText ?? "Cancel"}
-        </button>
-        <button data-role="confirm" style="padding:7px 12px; border:none; border-radius:10px; background:linear-gradient(135deg,#22c55e,#16a34a); color:white; cursor:pointer; box-shadow: 0 6px 16px rgba(22,163,74,0.35);">
-          ${opts.confirmText ?? "Confirm"}
-        </button>
-      </div>
-    `;
+    const title = document.createElement("div");
+    title.style.fontWeight = "700";
+    title.style.marginBottom = "8px";
+    title.textContent = opts.title;
+
+    const message = document.createElement("div");
+    message.style.fontSize = "14px";
+    message.style.lineHeight = "1.4";
+    message.style.marginBottom = "12px";
+    message.textContent = opts.message;
+
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "10px";
+    actions.style.justifyContent = "flex-end";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.dataset.role = "cancel";
+    cancelButton.style.padding = "7px 12px";
+    cancelButton.style.border = "none";
+    cancelButton.style.borderRadius = "10px";
+    cancelButton.style.background = "#4b5563";
+    cancelButton.style.color = "white";
+    cancelButton.style.cursor = "pointer";
+    cancelButton.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.06)";
+    cancelButton.textContent =
+      opts.cancelText ?? translateText("common.cancel");
+
+    const confirmButton = document.createElement("button");
+    confirmButton.dataset.role = "confirm";
+    confirmButton.style.padding = "7px 12px";
+    confirmButton.style.border = "none";
+    confirmButton.style.borderRadius = "10px";
+    confirmButton.style.background = "linear-gradient(135deg,#22c55e,#16a34a)";
+    confirmButton.style.color = "white";
+    confirmButton.style.cursor = "pointer";
+    confirmButton.style.boxShadow = "0 6px 16px rgba(22,163,74,0.35)";
+    confirmButton.textContent =
+      opts.confirmText ?? translateText("common.confirm");
+
+    actions.appendChild(cancelButton);
+    actions.appendChild(confirmButton);
+    panel.appendChild(title);
+    panel.appendChild(message);
+    panel.appendChild(actions);
     overlay.appendChild(panel);
 
     const cleanup = () => overlay.remove();
@@ -196,6 +227,7 @@ export class PlayerActionHandler {
   }
 
   handleForceVassal(recipient: PlayerView) {
+    if (!recipient.config().vassalsEnabled()) return;
     this.eventBus.emit(new SendForceVassalIntentEvent(recipient));
   }
 }

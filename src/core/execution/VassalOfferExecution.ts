@@ -34,10 +34,13 @@ export class VassalOfferExecution implements Execution {
     }
     this.mg = mg;
     this.target = mg.player(this.targetID);
-    if (
-      this.requestor.type() === PlayerType.Bot ||
-      this.target.type() === PlayerType.Bot
-    ) {
+    const requestorType = this.requestor.type();
+    const targetType = this.target.type();
+    if (requestorType === PlayerType.Bot) {
+      this.active = false;
+      return;
+    }
+    if (targetType === PlayerType.Bot && requestorType !== PlayerType.Human) {
       this.active = false;
       return;
     }
@@ -57,7 +60,8 @@ export class VassalOfferExecution implements Execution {
 
     // Extreme weakness accepts
     const troopRatio = this.target.troops() / this.requestor.troops();
-    const tileRatio = this.target.troops() / this.requestor.troops();
+    const tileRatio =
+      this.target.numTilesOwned() / this.requestor.numTilesOwned();
     const massivelyOutgunned = troopRatio < 0.1 && tileRatio < 0.1;
     if(massivelyOutgunned) return true;
 
@@ -87,7 +91,7 @@ export class VassalOfferExecution implements Execution {
                     allowedOwners,
                 );
         })();
-        const allianceTimeLeft = alliance.expiresAt() - this.mg.ticks() / 10;
+        const allianceTimeLeft = (alliance.expiresAt() - this.mg.ticks()) / 10;
         // surrounded and imminent annexation
         // this gives time for say a nuke to land and give them a way out
         // or an existing transport boat to land an attack etc.
@@ -171,18 +175,6 @@ export class VassalOfferExecution implements Execution {
       this.requestSent = true;
       this.active = false;
       return;
-    }
-
-    if (this.target.type() === PlayerType.Human) {
-      // Send a request message and keep the execution alive until reply/expiry.
-      const message = `${this.requestor.displayName()} offered you vassalage`;
-      this.mg.displayMessage(
-        message,
-        MessageType.VASSAL_REQUEST,
-        this.target.id(),
-        undefined,
-        { target: this.requestor.displayName() },
-      );
     }
 
     // Expire silently after a short duration to avoid dangling offers

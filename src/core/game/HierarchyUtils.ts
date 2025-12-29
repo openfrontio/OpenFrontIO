@@ -50,7 +50,9 @@ export function sharesHierarchy(a: Player, b: Player): boolean {
 // Count a player's owned tiles plus all of their vassals recursively.
 export function hierarchyTiles(player: Player): number {
   let total = player.numTilesOwned();
-  for (const vassal of player.vassals()) {
+  const vassals =
+    typeof (player as any).vassals === "function" ? player.vassals() : [];
+  for (const vassal of vassals ?? []) {
     total += hierarchyTiles(vassal);
   }
   return total;
@@ -58,7 +60,11 @@ export function hierarchyTiles(player: Player): number {
 
 // Only consider root players (no overlord) when attributing vassal territory.
 export function rootPlayers(game: Game): Player[] {
-  return game.players().filter((p) => p.overlord() === null);
+  return game
+    .players()
+    .filter((p) =>
+      typeof (p as any).overlord === "function" ? p.overlord() === null : true,
+    );
 }
 
 // Attribute vassal land to the root overlord's team to avoid double counting.

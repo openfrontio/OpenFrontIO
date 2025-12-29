@@ -1239,12 +1239,14 @@ export class PlayerImpl implements Player {
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       const other = owner as Player;
-      if (this.isOnSameTeam(other)) return false; // just no
+      if (other !== this) {
+        if (this.isOnSameTeam(other)) return false; // just no
 
-      // Allow nuking down the hierarchy (any depth), but not up or sideways.
-      const relation = hierarchyPosition(this, other);
-      if (relation === "Descendant") return false; // vassal cannot nuke overlord chain
-      if (relation === "Sibling") return false; // siblings under same overlord
+        // Allow nuking down the hierarchy (any depth), but not up or sideways.
+        const relation = hierarchyPosition(this, other);
+        if (relation === "Descendant") return false; // vassal cannot nuke overlord chain
+        if (relation === "Sibling") return false; // siblings under same overlord
+      }
 
       // otherwise, nuking self, temp ally, vassal, or hostile/neutral, all ok
       // or non-owned tile in the implicit else
@@ -1269,17 +1271,19 @@ export class PlayerImpl implements Player {
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       const other = owner as Player;
-      if (this.isOnSameTeam(other)) {
-        return { spawn: false, reason: "build_menu.same_team" };
-      }
+      if (other !== this) {
+        if (this.isOnSameTeam(other)) {
+          return { spawn: false, reason: "build_menu.same_team" };
+        }
 
-      // Allow nuking down the hierarchy (any depth), but not up or sideways.
-      const relation = hierarchyPosition(this, other);
-      if (relation === "Descendant") {
-        return { spawn: false, reason: "build_menu.no_overlord_target" };
-      }
-      if (relation === "Sibling") {
-        return { spawn: false, reason: "build_menu.no_sibling_target" };
+        // Allow nuking down the hierarchy (any depth), but not up or sideways.
+        const relation = hierarchyPosition(this, other);
+        if (relation === "Descendant") {
+          return { spawn: false, reason: "build_menu.no_overlord_target" };
+        }
+        if (relation === "Sibling") {
+          return { spawn: false, reason: "build_menu.no_sibling_target" };
+        }
       }
     }
 
