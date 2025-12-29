@@ -83,7 +83,10 @@ export class PublicLobby extends LitElement {
             try {
               this.ws.close();
             } catch (closeError) {
-              console.error("Error closing WebSocket after parse failure:", closeError);
+              console.error(
+                "Error closing WebSocket after parse failure:",
+                closeError,
+              );
             }
           }
         }
