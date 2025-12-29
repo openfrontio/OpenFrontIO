@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -128,13 +129,15 @@ func processMap(name string, isTest bool) error {
 		return fmt.Errorf("failed to parse info.json for %s: %w", name, err)
 	}
 
+	var MapLogTag = slog.String("map", name)
+	logger := slog.Default().With(MapLogTag)
+
 	// Generate maps
 	result, err := GenerateMap(GeneratorArgs{
 		ImageBuffer: imageBuffer,
 		RemoveSmall: !isTest, // Don't remove small islands for test maps
 		Name:        name,
-		Verbose:     verboseFlag,
-		Performance: performanceFlag && !isTest,
+		Logger:      logger,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to generate map for %s: %w", name, err)
@@ -254,6 +257,19 @@ func main() {
 	flag.BoolVar(&verboseFlag, "v", false, "Turns on additional logging (shorthand)")
 	flag.BoolVar(&performanceFlag, "performance", false, "Adds additional logging checks for performance-based recommendations")
 	flag.Parse()
+
+	var currentLevel = slog.LevelInfo
+	if verboseFlag {
+		currentLevel = slog.LevelDebug
+	}
+
+	opts := &slog.HandlerOptions{
+		Level: currentLevel,
+	}
+	// logger := slog.New(NewPrettyHandler(os.Stdout, opts))
+	logger := slog.New(NewPrettyHandler(os.Stdout, opts))
+
+	slog.SetDefault(logger)
 
 	if err := loadTerrainMaps(); err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)

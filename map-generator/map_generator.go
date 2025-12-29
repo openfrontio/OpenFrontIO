@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
-	"log"
+	"log/slog"
 	"math"
 
 	"github.com/chai2010/webp"
@@ -22,10 +22,9 @@ const (
 const (
 	minRecommendedPixelSize = 2000000
 	maxRecommendedPixelSize = 3000000
+	// the recommended max number of land tiles in the output bin at full size
+	maxRecommendedLandTileCount = 3000000
 )
-
-// the recommended max number of land tiles in the output bin at full size
-const maxRecommendedLandTileCount = 3000000
 
 // Holds raw RGBA image data for the thumbnail
 type ThumbData struct {
@@ -78,39 +77,7 @@ type GeneratorArgs struct {
 	Name        string
 	ImageBuffer []byte
 	RemoveSmall bool
-	Verbose     bool
-	Performance bool
-}
-
-// loggerArgs are the props that logs can define to control when they are shown
-type loggerArgs struct {
-	isVerbose     bool
-	isPerformance bool
-}
-
-// Logger defines a function signature for logging with formatting and conditional output.
-// Other than loggerArgs providing additional context, it is a proxy to log.Printf
-type Logger func(logArgs loggerArgs, format string, v ...interface{})
-
-// createLogger creates a logger instance that handles formatting and conditional output
-func createLogger(args GeneratorArgs) Logger {
-	return func(logArgs loggerArgs, format string, v ...interface{}) {
-		// dont log verbose messages when not in verbose mode
-		if logArgs.isVerbose && !args.Verbose {
-			return
-		}
-		// dont log performance messages when not in performance mode
-		if logArgs.isPerformance && !args.Performance {
-			return
-		}
-		// log the name of the map first in verbose mode: [world] Log Message Here
-		if args.Verbose {
-			log.Printf("[%s] %s", args.Name, fmt.Sprintf(format, v...))
-		} else {
-			// by default, we proxy to log.Printf
-			log.Printf(format, v...)
-		}
-	}
+	Logger      *slog.Logger
 }
 
 // GenerateMap is the main map-generator workflow.
@@ -137,7 +104,7 @@ func createLogger(args GeneratorArgs) Logger {
 // Misc Notes
 //   - It normalizes map width/height to multiples of 4 for the mini map downscaling.
 func GenerateMap(args GeneratorArgs) (MapResult, error) {
-	logger := createLogger(args)
+	logger := args.Logger
 	img, err := png.Decode(bytes.NewReader(args.ImageBuffer))
 	if err != nil {
 		return MapResult{}, fmt.Errorf("failed to decode PNG: %w", err)
@@ -152,10 +119,10 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 
 	area := width * height
 	if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
-		logger(loggerArgs{isPerformance: true}, "⚠️ Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize)
+		logger.Debug(fmt.Sprintf("⚠️ Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
 	}
 
-	logger(loggerArgs{}, "Processing Map: %s, dimensions: %dx%d", args.Name, width, height)
+	logger.Info(fmt.Sprintf("Processing Map: %s, dimensions: %dx%d", args.Name, width, height))
 
 	// Initialize terrain grid
 	terrain := make([][]Terrain, width)
@@ -208,15 +175,15 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	mapData4x, numLandTiles4x := packTerrain(terrain4x, logger)
 	mapData16x, numLandTiles16x := packTerrain(terrain16x, logger)
 
-	logger(loggerArgs{isVerbose: true}, "Land Tile Count (1x): %d", mapNumLandTiles)
-	logger(loggerArgs{isVerbose: true}, "Land Tile Count (4x): %d", numLandTiles4x)
-	logger(loggerArgs{isVerbose: true}, "Land Tile Count (16x): %d", numLandTiles16x)
+	logger.Debug(fmt.Sprintf("Land Tile Count (1x): %d", mapNumLandTiles))
+	logger.Debug(fmt.Sprintf("Land Tile Count (4x): %d", numLandTiles4x))
+	logger.Debug(fmt.Sprintf("Land Tile Count (16x): %d", numLandTiles16x))
 
 	if mapNumLandTiles == 0 {
-		logger(loggerArgs{isPerformance: true}, "⚠️ Map has 0 land tiles")
+		logger.Debug("⚠️ Map has 0 land tiles", PerformanceLogTag)
 	}
 	if mapNumLandTiles > maxRecommendedLandTileCount {
-		logger(loggerArgs{isPerformance: true}, "⚠️ Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount)
+		logger.Debug(fmt.Sprintf("⚠️ Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
 	}
 
 	return MapResult{
@@ -301,8 +268,8 @@ func createMiniMap(tm [][]Terrain) [][]Terrain {
 // It marks Land tiles as shoreline if they neighbor Water, and Water tiles as
 // shoreline if they neighbor Land.
 // Returns a list of coordinates for all shoreline Water tiles found.
-func processShore(terrain [][]Terrain, logger Logger) []Coord {
-	logger(loggerArgs{}, "Identifying shorelines")
+func processShore(terrain [][]Terrain, logger *slog.Logger) []Coord {
+	logger.Info("Identifying shorelines")
 	var shorelineWaters []Coord
 	width := len(terrain)
 	height := len(terrain[0])
@@ -339,8 +306,8 @@ func processShore(terrain [][]Terrain, logger Logger) []Coord {
 // processDistToLand calculates the distance of water tiles from the nearest land.
 // It uses a Breadth-First Search (BFS) starting from the shoreline water tiles.
 // The distance is stored in the Magnitude field of the Water tiles.
-func processDistToLand(shorelineWaters []Coord, terrain [][]Terrain, logger Logger) {
-	logger(loggerArgs{}, "Setting Water tiles magnitude = Manhattan distance from nearest land")
+func processDistToLand(shorelineWaters []Coord, terrain [][]Terrain, logger *slog.Logger) {
+	logger.Info("Setting Water tiles magnitude = Manhattan distance from nearest land")
 
 	width := len(terrain)
 	height := len(terrain[0])
@@ -421,8 +388,8 @@ func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 // It finds all connected water bodies and marks the largest one as Ocean.
 // If removeSmall is true, lakes smaller than minLakeSize are converted to Land.
 // Finally, it triggers shoreline identification and distance-to-land calculations.
-func processWater(terrain [][]Terrain, removeSmall bool, logger Logger) {
-	logger(loggerArgs{}, "Processing water bodies")
+func processWater(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
+	logger.Info("Processing water bodies")
 	visited := make(map[string]bool)
 
 	type waterBody struct {
@@ -467,14 +434,14 @@ func processWater(terrain [][]Terrain, removeSmall bool, logger Logger) {
 		for _, coord := range largestWaterBody.coords {
 			terrain[coord.X][coord.Y].Ocean = true
 		}
-		logger(loggerArgs{}, "Identified ocean with %d water tiles", largestWaterBody.size)
+		logger.Info(fmt.Sprintf("Identified ocean with %d water tiles", largestWaterBody.size))
 
 		if removeSmall {
 			// Remove small water bodies
-			logger(loggerArgs{}, "Searching for small water bodies for removal")
+			logger.Info("Searching for small water bodies for removal")
 			for w := 1; w < len(waterBodies); w++ {
 				if waterBodies[w].size < minLakeSize {
-					logger(loggerArgs{isVerbose: true}, "Removing small lake at %d,%d (size %d)", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size)
+					logger.Debug(fmt.Sprintf("Removing small lake at %d,%d (size %d)", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size))
 					smallLakes++
 					for _, coord := range waterBodies[w].coords {
 						terrain[coord.X][coord.Y].Type = Land
@@ -482,15 +449,14 @@ func processWater(terrain [][]Terrain, removeSmall bool, logger Logger) {
 					}
 				}
 			}
-			logger(loggerArgs{}, "Identified and removed %d bodies of water smaller than %d tiles",
-				smallLakes, minLakeSize)
+			logger.Info(fmt.Sprintf("Identified and removed %d bodies of water smaller than %d tiles", smallLakes, minLakeSize))
 		}
 
 		// Process shorelines and distances
 		shorelineWaters := processShore(terrain, logger)
 		processDistToLand(shorelineWaters, terrain, logger)
 	} else {
-		logger(loggerArgs{}, "No water bodies found in the map")
+		logger.Info("No water bodies found in the map")
 	}
 }
 
@@ -525,7 +491,7 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 
 // removeSmallIslands identifies and removes small land masses from the terrain.
 // If removeSmall is true, any removed bodies are converted to Water.
-func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger Logger) {
+func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
 	if !removeSmall {
 		return
 	}
@@ -561,7 +527,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger Logger) {
 
 	for _, body := range landBodies {
 		if body.size < minIslandSize {
-			logger(loggerArgs{isVerbose: true}, "Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size)
+			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size))
 			smallIslands++
 			for _, coord := range body.coords {
 				terrain[coord.X][coord.Y].Type = Water
@@ -570,8 +536,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger Logger) {
 		}
 	}
 
-	logger(loggerArgs{}, "Identified and removed %d islands smaller than %d tiles",
-		smallIslands, minIslandSize)
+	logger.Info(fmt.Sprintf("Identified and removed %d islands smaller than %d tiles", smallIslands, minIslandSize))
 }
 
 // packTerrain serializes the terrain grid into a byte slice.
@@ -582,7 +547,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger Logger) {
 //   - Bits 0-4: Magnitude (0-31). For Water, this is (Distance / 2).
 //
 // Returns the packed data and the count of land tiles.
-func packTerrain(terrain [][]Terrain, logger Logger) (data []byte, numLandTiles int) {
+func packTerrain(terrain [][]Terrain, logger *slog.Logger) (data []byte, numLandTiles int) {
 	width := len(terrain)
 	height := len(terrain[0])
 	packedData := make([]byte, width*height)
@@ -621,8 +586,8 @@ func packTerrain(terrain [][]Terrain, logger Logger) (data []byte, numLandTiles 
 // createMapThumbnail generates an RGBA image representation of the terrain.
 // It scales the map dimensions based on the provided quality factor.
 // Each pixel's color is determined by the terrain type and magnitude via getThumbnailColor.
-func createMapThumbnail(terrain [][]Terrain, quality float64, logger Logger) *image.RGBA {
-	logger(loggerArgs{}, "Creating thumbnail")
+func createMapThumbnail(terrain [][]Terrain, quality float64, logger *slog.Logger) *image.RGBA {
+	logger.Info("Creating thumbnail")
 
 	srcWidth := len(terrain)
 	srcHeight := len(terrain[0])
@@ -725,7 +690,7 @@ func getThumbnailColor(t Terrain) RGBA {
 
 // logBinaryAsBits logs the binary representation of the first 'length' bytes of data.
 // It is a helper function for debugging packed terrain data.
-func logBinaryAsBits(data []byte, length int, logger Logger) {
+func logBinaryAsBits(data []byte, length int, logger *slog.Logger) {
 	if length > len(data) {
 		length = len(data)
 	}
@@ -734,7 +699,7 @@ func logBinaryAsBits(data []byte, length int, logger Logger) {
 	for i := 0; i < length; i++ {
 		bits += fmt.Sprintf("%08b ", data[i])
 	}
-	logger(loggerArgs{}, "Binary data (bits): %s", bits)
+	logger.Info(fmt.Sprintf("Binary data (bits): %s", bits))
 }
 
 // createCombinedBinary combines the info JSON, map data, and mini-map data into a single binary buffer.
