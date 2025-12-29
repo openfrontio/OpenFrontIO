@@ -9,7 +9,10 @@ import {
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { PauseGameIntentEvent, SendSurrenderIntentEvent } from "../../Transport";
+import {
+  PauseGameIntentEvent,
+  SendSurrenderIntentEvent,
+} from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -240,4 +243,3 @@ export class GameRightSidebar extends LitElement implements Layer {
     `;
   }
 }
-
