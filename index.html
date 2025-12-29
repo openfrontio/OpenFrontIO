@@ -122,9 +122,22 @@
       }
     </style>
 
-    <!-- Immediate execution to prevent FOUC -->
+    <!-- Immediate execution to prevent FOUC + apply persisted dark mode -->
     <script>
-      document.documentElement.className = "preload";
+      (function () {
+        const root = document.documentElement;
+        root.classList.add("preload");
+        try {
+          const storedDarkMode = localStorage.getItem("settings.darkMode");
+          if (storedDarkMode === "true") {
+            root.classList.add("dark");
+          } else if (storedDarkMode === "false") {
+            root.classList.remove("dark");
+          }
+        } catch (error) {
+          // Ignore storage access errors.
+        }
+      })();
     </script>
 
     <!-- CrazyGames SDK -->
