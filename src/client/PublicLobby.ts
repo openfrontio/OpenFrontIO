@@ -136,6 +136,7 @@ export class PublicLobby extends LitElement {
       teamCount,
       teamTotal,
     );
+    // True when the detail label already includes the full mode text.
     const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
       this.getTeamDetailLabel(
         lobby.gameConfig.gameMode,
@@ -144,11 +145,12 @@ export class PublicLobby extends LitElement {
         teamSize,
       );
 
-    const fullModeLabel = teamDetailLabel
-      ? isTeamDetailFullLabel
+    let fullModeLabel = modeLabel;
+    if (teamDetailLabel) {
+      fullModeLabel = isTeamDetailFullLabel
         ? teamDetailLabel
-        : `${modeLabel} ${teamDetailLabel}`
-      : modeLabel;
+        : `${modeLabel} ${teamDetailLabel}`;
+    }
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
@@ -289,6 +291,7 @@ export class PublicLobby extends LitElement {
 
     if (typeof teamCount === "string" && teamCount !== HumansVsNations) {
       const teamKey = `public_lobby.teams_${teamCount}`;
+      // translateText returns the key when a translation is missing.
       const maybeTranslated = translateText(teamKey, {
         team_count: teamTotal ?? 0,
       });
@@ -298,6 +301,7 @@ export class PublicLobby extends LitElement {
     }
 
     if (teamTotal !== undefined && teamSize !== undefined) {
+      // Fallback when there's no specific team label translation.
       return {
         label: translateText("public_lobby.players_per_team", {
           num: teamSize,
