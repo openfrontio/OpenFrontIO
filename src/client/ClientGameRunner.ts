@@ -296,7 +296,7 @@ export class ClientGameRunner {
     if (difficulty !== Difficulty.Easy) return;
 
     type WinRecord = Partial<Record<GameMapType, Difficulty[]>>;
-    const storageKey = "singleplayerWins";
+    const storageKey = "achievements.singleplayerWins";
 
     try {
       const raw = localStorage.getItem(storageKey);
