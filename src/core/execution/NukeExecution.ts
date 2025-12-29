@@ -44,6 +44,24 @@ export class NukeExecution implements Execution {
     return this.mg.owner(this.dst);
   }
 
+  private tilesInRange(): Map<TileRef, number> {
+    if (this.nuke === null) {
+      throw new Error("Not initialized");
+    }
+    const tilesInRange = new Map<TileRef, number>();
+    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const inner2 = magnitude.inner * magnitude.inner;
+    this.mg.circleSearch(
+      this.dst,
+      magnitude.outer,
+      (t: TileRef, d2: number) => {
+        tilesInRange.set(t, d2 <= inner2 ? 1 : 0.5);
+        return true;
+      },
+    );
+    return tilesInRange;
+  }
+
   private tilesToDestroy(): Set<TileRef> {
     if (this.tilesToDestroyCache !== undefined) {
       return this.tilesToDestroyCache;
@@ -62,23 +80,27 @@ export class NukeExecution implements Execution {
     return this.tilesToDestroyCache;
   }
 
-  private maybeBreakAlliances(toDestroy: Set<TileRef>) {
+  /**
+   * Break alliances based on all tiles in range.
+   * Tiles are weighted roughly based on their chance of being destroyed.
+   */
+  private maybeBreakAlliances(inRange: Map<TileRef, number>) {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
     const attacked = new Map<Player, number>();
-    for (const tile of toDestroy) {
+    for (const [tile, weight] of inRange.entries()) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
         const prev = attacked.get(owner) ?? 0;
-        attacked.set(owner, prev + 1);
+        attacked.set(owner, prev + weight);
       }
     }
 
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
-    for (const [attackedPlayer, tilesDestroyed] of attacked) {
+    for (const [attackedPlayer, totalWeight] of attacked) {
       if (
-        tilesDestroyed > threshold &&
+        totalWeight > threshold &&
         this.nuke.type() !== UnitType.MIRVWarhead
       ) {
         // Resolves exploit of alliance breaking in which a pending alliance request
@@ -120,7 +142,9 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
-      this.maybeBreakAlliances(this.tilesToDestroy());
+      if (this.nuke.type() !== UnitType.MIRVWarhead) {
+        this.maybeBreakAlliances(this.tilesInRange());
+      }
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -233,7 +257,6 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
-    this.maybeBreakAlliances(toDestroy);
 
     const maxTroops = this.target().isPlayer()
       ? this.mg.config().maxTroops(this.target() as Player)

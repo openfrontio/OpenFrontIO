@@ -155,7 +155,8 @@ async function refreshJwt(): Promise<void> {
     __jwt = jwt;
   } catch (e) {
     console.error("Refresh failed", e);
-    logOut();
+    // if server unreachable, just clear jwt
+    __jwt = null;
     return;
   }
 }

@@ -270,24 +270,6 @@ export async function startWorker() {
     }
   });
 
-  app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
-    if (req.headers[config.adminHeader()] !== config.adminToken()) {
-      res.status(401).send("Unauthorized");
-      return;
-    }
-
-    const { gameID, clientID } = req.params;
-
-    const game = gm.game(gameID);
-    if (!game) {
-      res.status(404).send("Game not found");
-      return;
-    }
-
-    game.kickClient(clientID);
-    res.status(200).send("Player kicked successfully");
-  });
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on("message", async (message: string) => {

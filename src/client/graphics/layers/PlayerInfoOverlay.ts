@@ -260,11 +260,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (
-      player.type() === PlayerType.FakeHuman &&
-      myPlayer !== null &&
-      !isAllied
-    ) {
+    if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
@@ -299,7 +295,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       case PlayerType.Bot:
         playerType = translateText("player_type.bot");
         break;
-      case PlayerType.FakeHuman:
+      case PlayerType.Nation:
         playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:

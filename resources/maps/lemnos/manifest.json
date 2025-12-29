@@ -1,0 +1,65 @@
+{
+  "map": {
+    "height": 1420,
+    "num_land_tiles": 874650,
+    "width": 1750
+  },
+  "map16x": {
+    "height": 355,
+    "num_land_tiles": 53106,
+    "width": 437
+  },
+  "map4x": {
+    "height": 710,
+    "num_land_tiles": 216592,
+    "width": 875
+  },
+  "name": "lemnos",
+  "nations": [
+    {
+      "coordinates": [550, 317],
+      "flag": "",
+      "name": "Gomati"
+    },
+    {
+      "coordinates": [1371, 254],
+      "flag": "",
+      "name": "Zematas"
+    },
+    {
+      "coordinates": [1096, 605],
+      "flag": "",
+      "name": "Kotsinas"
+    },
+    {
+      "coordinates": [518, 894],
+      "flag": "",
+      "name": "Evgatis"
+    },
+    {
+      "coordinates": [250, 879],
+      "flag": "",
+      "name": "Kavala"
+    },
+    {
+      "coordinates": [814, 460],
+      "flag": "",
+      "name": "Atsiki"
+    },
+    {
+      "coordinates": [474, 542],
+      "flag": "",
+      "name": "Sardes"
+    },
+    {
+      "coordinates": [691, 755],
+      "flag": "",
+      "name": "Portianou"
+    },
+    {
+      "coordinates": [1177, 975],
+      "flag": "",
+      "name": "Pyrgos"
+    }
+  ]
+}

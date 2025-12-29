@@ -78,6 +78,9 @@ export class RadialMenu implements Layer {
   private backButtonHoverTimeout: number | null = null;
   private navigationInProgress: boolean = false;
   private originalCenterButtonIcon: string = "";
+  private readonly defaultCenterButtonColor = "#2c3e50";
+  private centerButtonColor: string;
+  private centerButtonIconSize: number;
 
   private params: MenuElementParams | null = null;
 
@@ -103,6 +106,8 @@ export class RadialMenu implements Layer {
     };
     this.originalCenterButtonIcon = this.config.centerButtonIcon;
     this.backIconSize = this.config.centerIconSize * 0.8;
+    this.centerButtonColor = this.defaultCenterButtonColor;
+    this.centerButtonIconSize = this.config.centerIconSize;
   }
 
   init() {
@@ -193,17 +198,17 @@ export class RadialMenu implements Layer {
       .append("circle")
       .attr("class", "center-button-visible")
       .attr("r", this.config.centerButtonSize)
-      .attr("fill", "#2c3e50")
+      .attr("fill", this.centerButtonColor)
       .style("pointer-events", "none");
 
     centerButton
       .append("image")
       .attr("class", "center-button-icon")
       .attr("xlink:href", this.config.centerButtonIcon)
-      .attr("width", this.config.centerIconSize)
-      .attr("height", this.config.centerIconSize)
-      .attr("x", -this.config.centerIconSize / 2)
-      .attr("y", -this.config.centerIconSize / 2)
+      .attr("width", this.centerButtonIconSize)
+      .attr("height", this.centerButtonIconSize)
+      .attr("x", -this.centerButtonIconSize / 2)
+      .attr("y", -this.centerButtonIconSize / 2)
       .style("pointer-events", "none");
   }
 
@@ -888,10 +893,10 @@ export class RadialMenu implements Layer {
       const iconImg = this.menuElement.select(".center-button-icon");
       iconImg
         .attr("xlink:href", this.originalCenterButtonIcon)
-        .attr("width", this.config.centerIconSize)
-        .attr("height", this.config.centerIconSize)
-        .attr("x", -this.config.centerIconSize / 2)
-        .attr("y", -this.config.centerIconSize / 2);
+        .attr("width", this.centerButtonIconSize)
+        .attr("height", this.centerButtonIconSize)
+        .attr("x", -this.centerButtonIconSize / 2)
+        .attr("y", -this.centerButtonIconSize / 2);
     }
 
     const centerButton = this.menuElement.select(".center-button");
@@ -904,7 +909,7 @@ export class RadialMenu implements Layer {
 
     centerButton
       .select(".center-button-visible")
-      .attr("fill", enabled ? "#2c3e50" : "#999999");
+      .attr("fill", enabled ? this.centerButtonColor : "#999999");
 
     centerButton
       .select(".center-button-icon")
@@ -951,6 +956,39 @@ export class RadialMenu implements Layer {
 
   public setParams(params: MenuElementParams) {
     this.params = params;
+  }
+
+  public getDefaultCenterIconSize(): number {
+    return this.config.centerIconSize;
+  }
+
+  public setCenterButtonAppearance(
+    icon: string,
+    color?: string,
+    iconSize?: number,
+  ) {
+    this.originalCenterButtonIcon = icon;
+    this.centerButtonColor = color ?? this.defaultCenterButtonColor;
+    this.centerButtonIconSize = iconSize ?? this.config.centerIconSize;
+
+    if (!this.menuElement) return;
+
+    const iconImg = this.menuElement.select(".center-button-icon");
+    iconImg
+      .attr("xlink:href", icon)
+      .attr("width", this.centerButtonIconSize)
+      .attr("height", this.centerButtonIconSize)
+      .attr("x", -this.centerButtonIconSize / 2)
+      .attr("y", -this.centerButtonIconSize / 2);
+
+    this.menuElement
+      .select(".center-button-visible")
+      .attr(
+        "fill",
+        this.isCenterButtonEnabled() ? this.centerButtonColor : "#999999",
+      );
+
+    this.updateCenterButtonState(this.centerButtonState);
   }
 
   private findMenuItem(id: string): MenuElement | undefined {

@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (АЛЬФА)",
-    "join_discord": "Присоединяйтесь к Discord!",
+    "join_discord": "Discord",
     "login_discord": "Войти через Discord",
     "checking_login": "Проверка авторизации...",
     "logged_in": "Вход выполнен!",
@@ -30,8 +30,6 @@
     "join_lobby": "Присоединиться к лобби",
     "single_player": "Одиночная игра",
     "instructions": "Инструкции",
-    "how_to_play": "Как играть",
-    "advertise": "Рекламирование",
     "wiki": "Вики",
     "privacy_policy": "Политика конфиденциальности",
     "terms_of_service": "Пользовательское соглашение",
@@ -135,6 +133,7 @@
   },
   "single_modal": {
     "title": "Одиночная игра",
+    "random_spawn": "Случайное появление",
     "allow_alliances": "Разрешить союзы",
     "options_title": "Настройки",
     "bots": "Боты: ",
@@ -144,10 +143,9 @@
     "instant_build": "Мгновенная стройка",
     "infinite_gold": "Неограниченное золото",
     "infinite_troops": "Неограниченные войска",
-    "compact_map": "Мини-карта",
+    "compact_map": "Компактная карта",
     "max_timer": "Продолжительность игры (минуты)",
     "disable_nukes": "Отключить бомбы",
-    "automatic_difficulty": "Автоматическая сложность",
     "enables_title": "Разрешения",
     "start": "Начать игру"
   },
@@ -162,6 +160,18 @@
     "fetching_account": "Получение информации об аккаунте...",
     "logged_in_with_discord": "Вы вошли через Discord",
     "recovery_email_sent": "Письмо для восстановления отправлено на {email}"
+  },
+  "stats_modal": {
+    "title": "Статистика",
+    "clan_stats": "Статистика кланов",
+    "loading": "Загрузка...",
+    "error": "Ошибка загрузки статистики кланов",
+    "no_stats": "Статистика кланов недоступна",
+    "clan": "Клан",
+    "games": "Игры",
+    "win_score": "Счёт побед",
+    "loss_score": "Счёт поражений",
+    "win_loss_ratio": "Победы/Поражения"
   },
   "map": {
     "map": "Карта",
@@ -197,7 +207,10 @@
     "pluto": "Плутон",
     "montreal": "Монреаль",
     "achiran": "Акиран",
-    "baikalnukewars": "Байкал (ядерные войны)"
+    "baikalnukewars": "Байкал (ядерные войны)",
+    "fourislands": "Четыре острова",
+    "gulfofstlawrence": "Залив Св. Лоуренса",
+    "lisbon": "Лиссабон"
   },
   "map_categories": {
     "continental": "Континентальные",
@@ -222,11 +235,12 @@
   "public_lobby": {
     "join": "Присоединиться к следующей игре",
     "waiting": "игрока(-ов) в ожидании",
-    "teams_Duos": "Дуо (команды по 2)",
-    "teams_Trios": "Трио (команды по 3)",
-    "teams_Quads": "Квады (команды по 4)",
+    "teams_Duos": "по 2 (дуо)",
+    "teams_Trios": "по 3 (трио)",
+    "teams_Quads": "по 4 (квады)",
     "teams_hvn": "Люди против наций",
-    "teams": "Команд: {num}"
+    "teams": "Команд: {num}",
+    "players_per_team": "по {num}"
   },
   "matchmaking_modal": {
     "title": "Подбор игроков",
@@ -256,14 +270,20 @@
     "donate_gold": "Пожертвование золота",
     "infinite_troops": "Неограниченные войска",
     "donate_troops": "Пожертвование войск",
-    "compact_map": "Мини-карта",
-    "automatic_difficulty": "Автоматическая сложность",
+    "compact_map": "Компактная карта",
     "enables_title": "Разрешения",
     "player": "Игрок",
     "players": "Игрока(-ов)",
+    "nation_players": "Нации",
+    "nation_player": "Нация",
     "waiting": "Ожидание игроков...",
+    "random_spawn": "Случайное появление",
     "start": "Начать игру",
-    "host_badge": "Хост"
+    "host_badge": "Хост",
+    "assigned_teams": "Распределённые команды",
+    "empty_teams": "Пустые команды",
+    "empty_team": "Пусто",
+    "remove_player": "Удалить {username}"
   },
   "team_colors": {
     "red": "Красный",
@@ -315,7 +335,7 @@
     "emojis_label": "Эмодзи",
     "emojis_desc": "Включение/выключение видимости эмодзи в игре",
     "alert_frame_label": "Рамка тревоги",
-    "alert_frame_desc": "Включить/выключить рамку тревоги. Когда включено, она будет отображаться, когда вас предают.",
+    "alert_frame_desc": "Включить/выключить рамку тревоги. Когда включено, она будет отображаться, когда вас предают или атакуют по суше.",
     "special_effects_label": "Спецэффекты",
     "special_effects_desc": "Включить/выключить спецэффекты. Отключите для улучшения производительности",
     "structure_sprites_label": "Спрайты структур",
@@ -512,7 +532,14 @@
     "exit": "Выйти из игры",
     "keep": "Продолжить игру",
     "spectate": "Наблюдать",
-    "wishlist": "Добавляйте в список желаемого в Steam!"
+    "wishlist": "Добавляйте в список желаемого в Steam!",
+    "ofm_winter": "Зимний турнир OpenFront Masters!",
+    "ofm_winter_description": "Присоединяйтесь к турниру и состязайтесь с лучшими игроками",
+    "join_tournament": "Присоединиться к турниру",
+    "join_discord": "Присоединяйтесь к нашему сообществу в Discord!",
+    "discord_description": "Связывайтесь с другими игроками, получайте новости и делитесь стратегиями",
+    "join_server": "Присоединиться к серверу",
+    "youtube_tutorial": "Нужна помощь?"
   },
   "leaderboard": {
     "title": "Таблица лидеров",
@@ -552,6 +579,7 @@
   },
   "events_display": {
     "retreating": "отступает",
+    "retaliate": "Напасть в ответ",
     "boat": "Лодка",
     "alliance_request_status": "{name} {status} ваш запрос",
     "alliance_accepted": "принял",
@@ -570,8 +598,10 @@
     "accept_alliance": "Принять",
     "reject_alliance": "Отклонить",
     "alliance_renewed": "Ваш союз с {name} был продлён",
+    "wants_to_renew_alliance": "{name} хочет продлить ваш союз",
     "ignore": "Игнорировать",
-    "unit_voluntarily_deleted": "Объект добровольно удалён"
+    "unit_voluntarily_deleted": "Объект добровольно удалён",
+    "betrayal_debuff_ends": "Осталось {time} сек до окончания наказания предателя"
   },
   "unit_info_modal": {
     "structure_info": "Информация о структуре",
@@ -618,7 +648,6 @@
     "flag": "Флаг",
     "chat": "Чат",
     "target": "Цель",
-    "break": "Разорвать",
     "break_alliance": "Разорвать союз",
     "alliance": "Союз",
     "send_alliance": "Отправить предложение союза",
@@ -630,10 +659,7 @@
     "title_with_name": "Отправить войска игроку {name}",
     "available_tooltip": "Ваши доступные в данный момент войска",
     "min_keep": "Минимальный остаток",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "Используйте панель атаки, чтобы отправить войска",
-    "warning_attackbar": "После включения этой функции вы не сможете открыть это окно напрямую. Вы сможете отправлять войска только через панель атаки.",
     "aria_slider": "Ползунок войск",
     "capacity_note": "Получатель в данный момент может принять только {{amount}}."
   },
@@ -655,15 +681,34 @@
     "copy_clipboard": "Копировать в буфер обмена",
     "copied": "Скопировано!",
     "failed_copy": "Не удалось скопировать",
+    "spawn_failed": {
+      "title": "Появление не удалось",
+      "description": "Автоматическое появление не удалось. Невозможно принять участие в этой игре."
+    },
     "desync_notice": "Вы десинхронизированы с другими игроками. То, что вы видите, может отличаться от того, что видят другие игроки."
   },
+  "performance_overlay": {
+    "reset": "Сбросить",
+    "copy_json_title": "Копировать текущие метрики производительности как JSON",
+    "copy_clipboard": "Копировать JSON",
+    "copied": "Скопировано!",
+    "failed_copy": "Не удалось скопировать",
+    "fps": "FPS:",
+    "avg_60s": "Среднее (60 сек):",
+    "frame": "Кадр:",
+    "tick_exec": "Выполнение на тик:",
+    "tick_delay": "Задержка на тик:",
+    "layers_header": "Слои (ср. / макс., отсортированы по суммарному времени):"
+  },
   "heads_up_message": {
-    "choose_spawn": "Выберите стартовое местоположение"
+    "choose_spawn": "Выберите стартовое местоположение",
+    "random_spawn": "Случайное появление включено. Выбираем стартовое местоположение за вас..."
   },
   "territory_patterns": {
     "title": "Скины",
     "colors": "Цвета",
     "purchase": "Купить",
+    "show_only_owned": "Мои скины",
     "blocked": {
       "login": "Вы должны войти, чтобы получить доступ к этому скину.",
       "purchase": "Купите этот скин, чтобы разблокировать его."

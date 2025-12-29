@@ -49,3 +49,4 @@ Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://ope
 ### [The Noun Project](https://thenounproject.com/)
 
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
+Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/

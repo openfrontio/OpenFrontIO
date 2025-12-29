@@ -30,7 +30,7 @@ import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
-export class PauseGameEvent implements GameEvent {
+export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
 }
 
@@ -192,6 +192,7 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -243,7 +244,7 @@ export class Transport {
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
+    this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
@@ -582,16 +583,12 @@ export class Transport {
     });
   }
 
-  private onPauseGameEvent(event: PauseGameEvent) {
-    if (!this.isLocal) {
-      console.log(`cannot pause multiplayer games`);
-      return;
-    }
-    if (event.paused) {
-      this.localServer.pause();
-    } else {
-      this.localServer.resume();
-    }
+  private onPauseGameIntent(event: PauseGameIntentEvent) {
+    this.sendIntent({
+      type: "toggle_pause",
+      clientID: this.lobbyConfig.clientID,
+      paused: event.paused,
+    });
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {

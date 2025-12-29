@@ -7,17 +7,19 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
+import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
 describe("Hydrogen Bomb and MIRV flows", () => {
   let game: Game;
   let player: Player;
+  const gameID: GameID = "game_id";
 
   beforeEach(async () => {
     game = await setup("plains", { infiniteGold: true, instantBuild: true });
     const info = new PlayerInfo("p", PlayerType.Human, null, "p");
     game.addPlayer(info);
-    game.addExecution(new SpawnExecution(info, game.ref(1, 1)));
+    game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
     while (game.inSpawnPhase()) game.executeNextTick();
     player = game.player(info.id);
 
@@ -57,7 +59,7 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     const info = new PlayerInfo("p", PlayerType.Human, null, "p");
     gameWithConstruction.addPlayer(info);
     gameWithConstruction.addExecution(
-      new SpawnExecution(info, gameWithConstruction.ref(1, 1)),
+      new SpawnExecution(gameID, info, gameWithConstruction.ref(1, 1)),
     );
     while (gameWithConstruction.inSpawnPhase())
       gameWithConstruction.executeNextTick();

@@ -97,14 +97,6 @@ export class LocalServer {
     } satisfies ServerStartGameMessage);
   }
 
-  pause() {
-    this.paused = true;
-  }
-
-  resume() {
-    this.paused = false;
-  }
-
   onMessage(clientMsg: ClientMessage) {
     if (clientMsg.type === "rejoin") {
       this.clientMessage({
@@ -115,13 +107,25 @@ export class LocalServer {
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {
-      if (this.lobbyConfig.gameRecord) {
-        // If we are replaying a game, we don't want to process intents
+      if (clientMsg.intent.type === "toggle_pause") {
+        if (clientMsg.intent.paused) {
+          // Pausing: add intent and end turn before pause takes effect
+          this.intents.push(clientMsg.intent);
+          this.endTurn();
+          this.paused = true;
+        } else {
+          // Unpausing: clear pause flag before adding intent so next turn can execute
+          this.paused = false;
+          this.intents.push(clientMsg.intent);
+          this.endTurn();
+        }
         return;
       }
-      if (this.paused) {
+      // Don't process non-pause intents during replays or while paused
+      if (this.lobbyConfig.gameRecord || this.paused) {
         return;
       }
+
       this.intents.push(clientMsg.intent);
     }
     if (clientMsg.type === "hash") {

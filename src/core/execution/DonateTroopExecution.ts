@@ -1,9 +1,15 @@
 import { Difficulty, Execution, Game, Player, PlayerID } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever } from "../Util";
+import { EmojiExecution } from "./EmojiExecution";
+import {
+  EMOJI_DONATION_TOO_SMALL,
+  EMOJI_LOVE,
+} from "./nation/NationEmojiBehavior";
 
 export class DonateTroopsExecution implements Execution {
   private recipient: Player;
+
   private random: PseudoRandom;
   private mg: Game;
 
@@ -47,6 +53,16 @@ export class DonateTroopsExecution implements Execution {
       if (this.troops >= minTroops) {
         this.recipient.updateRelation(this.sender, 50);
       }
+
+      this.mg.addExecution(
+        new EmojiExecution(
+          this.recipient,
+          this.sender.id(),
+          this.random.randElement(
+            this.troops >= minTroops ? EMOJI_LOVE : EMOJI_DONATION_TOO_SMALL,
+          ),
+        ),
+      );
     } else {
       console.warn(
         `cannot send troops from ${this.sender} to ${this.recipient}`,

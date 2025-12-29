@@ -19,56 +19,47 @@
     {
       "coordinates": [1545, 785],
       "flag": "an_pe",
-      "name": "Penguin Empire",
-      "strength": 2
+      "name": "Penguin Empire"
     },
     {
       "coordinates": [1365, 155],
       "flag": "no",
-      "name": "Norwegian Claim",
-      "strength": 2
+      "name": "Norwegian Claim"
     },
     {
       "coordinates": [1810, 450],
       "flag": "au",
-      "name": "Upper Australian Claim",
-      "strength": 2
+      "name": "Upper Australian Claim"
     },
     {
       "coordinates": [1980, 980],
       "flag": "au",
-      "name": "Lower Australian Claim",
-      "strength": 1
+      "name": "Lower Australian Claim"
     },
     {
       "coordinates": [495, 605],
       "flag": "ar",
-      "name": "Argentinian Claim",
-      "strength": 2
+      "name": "Argentinian Claim"
     },
     {
       "coordinates": [1150, 715],
       "flag": "gb",
-      "name": "United Kingdom Claim",
-      "strength": 2
+      "name": "United Kingdom Claim"
     },
     {
       "coordinates": [1060, 935],
       "flag": "cl",
-      "name": "Chilean Claim",
-      "strength": 2
+      "name": "Chilean Claim"
     },
     {
       "coordinates": [1365, 1400],
       "flag": "nz",
-      "name": "New Zealand Claim",
-      "strength": 2
+      "name": "New Zealand Claim"
     },
     {
       "coordinates": [1590, 1120],
       "flag": "fr",
-      "name": "French Claim",
-      "strength": 2
+      "name": "French Claim"
     }
   ]
 }

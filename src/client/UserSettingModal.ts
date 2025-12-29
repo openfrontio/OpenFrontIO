@@ -143,6 +143,15 @@ export class UserSettingModal extends LitElement {
     console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
   }
 
+  private toggleCursorCostLabel(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.cursorCostLabel", enabled);
+
+    console.log("💰 Cursor build cost:", enabled ? "ON" : "OFF");
+  }
+
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -307,6 +316,15 @@ export class UserSettingModal extends LitElement {
         id="structure_sprites-toggle"
         .checked=${this.userSettings.structureSprites()}
         @change=${this.toggleStructureSprites}
+      ></setting-toggle>
+
+      <!-- 💰 Cursor Price Pill -->
+      <setting-toggle
+        label="${translateText("user_setting.cursor_cost_label_label")}"
+        description="${translateText("user_setting.cursor_cost_label_desc")}"
+        id="cursor_cost_label-toggle"
+        .checked=${this.userSettings.cursorCostLabel()}
+        @change=${this.toggleCursorCostLabel}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->

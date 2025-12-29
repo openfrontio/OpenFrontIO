@@ -19,194 +19,162 @@
     {
       "coordinates": [718, 738],
       "flag": "au",
-      "name": "Australia",
-      "strength": 1
+      "name": "Australia"
     },
     {
       "coordinates": [1050, 809],
       "flag": "nz",
-      "name": "New Zealand",
-      "strength": 1
+      "name": "New Zealand"
     },
     {
       "coordinates": [436, 407],
       "flag": "tl",
-      "name": "Timor-Leste",
-      "strength": 1
+      "name": "Timor-Leste"
     },
     {
       "coordinates": [182, 378],
       "flag": "id",
-      "name": "Indonesia",
-      "strength": 1
+      "name": "Indonesia"
     },
     {
       "coordinates": [292, 243],
       "flag": "bn",
-      "name": "Brunei Darussalam",
-      "strength": 1
+      "name": "Brunei Darussalam"
     },
     {
       "coordinates": [152, 282],
       "flag": "sg",
-      "name": "Singapore",
-      "strength": 1
+      "name": "Singapore"
     },
     {
       "coordinates": [120, 261],
       "flag": "my",
-      "name": "Malaysia",
-      "strength": 1
+      "name": "Malaysia"
     },
     {
       "coordinates": [106, 129],
       "flag": "th",
-      "name": "Thailand",
-      "strength": 1
+      "name": "Thailand"
     },
     {
       "coordinates": [51, 42],
       "flag": "mm",
-      "name": "Myanmar",
-      "strength": 1
+      "name": "Myanmar"
     },
     {
       "coordinates": [158, 162],
       "flag": "kh",
-      "name": "Cambodia",
-      "strength": 1
+      "name": "Cambodia"
     },
     {
       "coordinates": [182, 43],
       "flag": "vn",
-      "name": "Vietnam",
-      "strength": 1
+      "name": "Vietnam"
     },
     {
       "coordinates": [143, 37],
       "flag": "la",
-      "name": "Lao PDR",
-      "strength": 1
+      "name": "Lao PDR"
     },
     {
       "coordinates": [278, 18],
       "flag": "hk",
-      "name": "Hong Kong",
-      "strength": 1
+      "name": "Hong Kong"
     },
     {
       "coordinates": [359, 1],
       "flag": "tw",
-      "name": "Taiwan, Province of China",
-      "strength": 1
+      "name": "Taiwan, Province of China"
     },
     {
       "coordinates": [366, 119],
       "flag": "ph",
-      "name": "Philippines",
-      "strength": 1
+      "name": "Philippines"
     },
     {
       "coordinates": [536, 207],
       "flag": "pw",
-      "name": "Palau",
-      "strength": 1
+      "name": "Palau"
     },
     {
       "coordinates": [834, 215],
       "flag": "fm",
-      "name": "Micronesia",
-      "strength": 1
+      "name": "Micronesia"
     },
     {
       "coordinates": [664, 113],
       "flag": "gu",
-      "name": "Guam",
-      "strength": 1
+      "name": "Guam"
     },
     {
       "coordinates": [1042, 317],
       "flag": "mh",
-      "name": "Marshall Islands",
-      "strength": 1
+      "name": "Marshall Islands"
     },
     {
       "coordinates": [799, 385],
       "flag": "pg",
-      "name": "Papua New Guinea",
-      "strength": 1
+      "name": "Papua New Guinea"
     },
     {
       "coordinates": [862, 442],
       "flag": "sb",
-      "name": "Solomon Islands",
-      "strength": 1
+      "name": "Solomon Islands"
     },
     {
       "coordinates": [945, 497],
       "flag": "vu",
-      "name": "Vanuatu",
-      "strength": 1
+      "name": "Vanuatu"
     },
     {
       "coordinates": [930, 574],
       "flag": "nc",
-      "name": "New Caledonia",
-      "strength": 1
+      "name": "New Caledonia"
     },
     {
       "coordinates": [1085, 526],
       "flag": "fj",
-      "name": "Fiji",
-      "strength": 1
+      "name": "Fiji"
     },
     {
       "coordinates": [1169, 568],
       "flag": "to",
-      "name": "Tonga",
-      "strength": 1
+      "name": "Tonga"
     },
     {
       "coordinates": [1236, 541],
       "flag": "nu",
-      "name": "Niue",
-      "strength": 1
+      "name": "Niue"
     },
     {
       "coordinates": [1204, 473],
       "flag": "ws",
-      "name": "Samoa",
-      "strength": 1
+      "name": "Samoa"
     },
     {
       "coordinates": [1491, 523],
       "flag": "ck",
-      "name": "Cook Islands",
-      "strength": 1
+      "name": "Cook Islands"
     },
     {
       "coordinates": [1623, 424],
       "flag": "pf",
-      "name": "French Polynesia",
-      "strength": 1
+      "name": "French Polynesia"
     },
     {
       "coordinates": [1393, 278],
       "flag": "ki",
-      "name": "Kiribati",
-      "strength": 1
+      "name": "Kiribati"
     },
     {
       "coordinates": [1420, 56],
       "flag": "us",
-      "name": "United States",
-      "strength": 1
+      "name": "United States"
     },
     {
       "coordinates": [1996, 644],
       "flag": "cl",
-      "name": "Chile",
-      "strength": 1
+      "name": "Chile"
     }
   ]
 }

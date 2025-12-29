@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerGame } from "../../../../core/ApiSchemas";
 import { GameMode } from "../../../../core/game/Game";
+import { GameInfoModal } from "../../../GameInfoModal";
 import { translateText } from "../../../Utils";
 
 @customElement("game-list")
@@ -62,6 +63,19 @@ export class GameList extends LitElement {
     this.expandedGameId = this.expandedGameId === gameId ? null : gameId;
   }
 
+  private showRanking(gameId: string) {
+    const gameInfoModal = document.querySelector(
+      "game-info-modal",
+    ) as GameInfoModal;
+
+    if (!gameInfoModal) {
+      console.warn("Game info modal element not found");
+    } else {
+      gameInfoModal.loadGame(gameId);
+      gameInfoModal.open();
+    }
+  }
+
   render() {
     return html` <div class="mt-4 w-full max-w-md">
       <div class="text-sm text-gray-400 font-semibold mb-1">
@@ -96,6 +110,12 @@ export class GameList extends LitElement {
                       @click=${() => this.toggle(game.gameId)}
                     >
                       ${translateText("game_list.details")}
+                    </button>
+                    <button
+                      class="btn secondary"
+                      @click=${() => this.showRanking(game.gameId)}
+                    >
+                      ${translateText("game_list.ranking")}
                     </button>
                   </div>
                 </div>

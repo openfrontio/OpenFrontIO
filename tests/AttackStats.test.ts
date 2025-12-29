@@ -1,10 +1,12 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { GameID } from "../src/core/Schemas";
 import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
 let game: Game;
+const gameID: GameID = "game_id";
 let player1: Player;
 let player2: Player;
 
@@ -18,8 +20,12 @@ describe("AttackStats", () => {
     player1 = game.player("player1");
     player2 = game.player("player2");
 
-    game.addExecution(new SpawnExecution(player1.info(), game.ref(50, 50)));
-    game.addExecution(new SpawnExecution(player2.info(), game.ref(50, 55)));
+    game.addExecution(
+      new SpawnExecution(gameID, player1.info(), game.ref(50, 50)),
+    );
+    game.addExecution(
+      new SpawnExecution(gameID, player2.info(), game.ref(50, 55)),
+    );
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();

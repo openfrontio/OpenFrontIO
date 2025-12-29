@@ -19,152 +19,127 @@
     {
       "coordinates": [165, 422],
       "flag": "ru",
-      "name": "Russia",
-      "strength": 3
+      "name": "Russia"
     },
     {
       "coordinates": [83, 612],
       "flag": "tr",
-      "name": "Türkiye",
-      "strength": 2
+      "name": "Türkiye"
     },
     {
       "coordinates": [278, 789],
       "flag": "sa",
-      "name": "Saudi Arabia",
-      "strength": 1
+      "name": "Saudi Arabia"
     },
     {
       "coordinates": [238, 907],
       "flag": "ye",
-      "name": "Yemen",
-      "strength": 2
+      "name": "Yemen"
     },
     {
       "coordinates": [126, 710],
       "flag": "jo",
-      "name": "Jordan",
-      "strength": 3
+      "name": "Jordan"
     },
     {
       "coordinates": [239, 689],
       "flag": "iq",
-      "name": "Iraq",
-      "strength": 3
+      "name": "Iraq"
     },
     {
       "coordinates": [327, 655],
       "flag": "ir",
-      "name": "Iran",
-      "strength": 3
+      "name": "Iran"
     },
     {
       "coordinates": [594, 675],
       "flag": "pk",
-      "name": "Pakistan",
-      "strength": 3
+      "name": "Pakistan"
     },
     {
       "coordinates": [654, 745],
       "flag": "in",
-      "name": "India",
-      "strength": 2
+      "name": "India"
     },
     {
       "coordinates": [830, 808],
       "flag": "bd",
-      "name": "Bangladesh",
-      "strength": 1
+      "name": "Bangladesh"
     },
     {
       "coordinates": [909, 845],
       "flag": "mm",
-      "name": "Myanmar",
-      "strength": 3
+      "name": "Myanmar"
     },
     {
       "coordinates": [1035, 845],
       "flag": "vn",
-      "name": "Vietnam",
-      "strength": 2
+      "name": "Vietnam"
     },
     {
       "coordinates": [980, 1055],
       "flag": "my",
-      "name": "Malaysia",
-      "strength": 1
+      "name": "Malaysia"
     },
     {
       "coordinates": [1046, 1170],
       "flag": "id",
-      "name": "Indonesia",
-      "strength": 1
+      "name": "Indonesia"
     },
     {
       "coordinates": [1129, 909],
       "flag": "ph",
-      "name": "Philippines",
-      "strength": 2
+      "name": "Philippines"
     },
     {
       "coordinates": [1237, 791],
       "flag": "tw",
-      "name": "Taiwan",
-      "strength": 2
+      "name": "Taiwan"
     },
     {
       "coordinates": [1166, 661],
       "flag": "cn",
-      "name": "China",
-      "strength": 2
+      "name": "China"
     },
     {
       "coordinates": [1314, 639],
       "flag": "kr",
-      "name": "South Korea",
-      "strength": 3
+      "name": "South Korea"
     },
     {
       "coordinates": [1485, 659],
       "flag": "jp",
-      "name": "Japan",
-      "strength": 1
+      "name": "Japan"
     },
     {
       "coordinates": [591, 492],
       "flag": "kz",
-      "name": "Kazakhstan",
-      "strength": 2
+      "name": "Kazakhstan"
     },
     {
       "coordinates": [546, 629],
       "flag": "tj",
-      "name": "Tajikistan",
-      "strength": 3
+      "name": "Tajikistan"
     },
     {
       "coordinates": [1053, 528],
       "flag": "mn",
-      "name": "Mongolia",
-      "strength": 1
+      "name": "Mongolia"
     },
     {
       "coordinates": [243, 1067],
       "flag": "so",
-      "name": "Somalia",
-      "strength": 1
+      "name": "Somalia"
     },
     {
       "coordinates": [61, 733],
       "flag": "eg",
-      "name": "Egypt",
-      "strength": 3
+      "name": "Egypt"
     },
     {
       "coordinates": [59, 490],
       "flag": "ua",
-      "name": "Ukraine",
-      "strength": 2
+      "name": "Ukraine"
     }
   ]
 }

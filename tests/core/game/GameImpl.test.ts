@@ -1,3 +1,4 @@
+import { GameID } from "../../../src/core/Schemas";
 import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 //import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
@@ -12,6 +13,7 @@ import {
 import { TileRef } from "../../../src/core/game/GameMap";
 import { setup } from "../../util/Setup";
 
+const gameID: GameID = "game_id";
 let game: Game;
 let attacker: Player;
 let defender: Player;
@@ -44,8 +46,16 @@ describe("GameImpl", () => {
     attackerSpawn = game.ref(0, 14);
 
     game.addExecution(
-      new SpawnExecution(game.player(attackerInfo.id).info(), attackerSpawn),
-      new SpawnExecution(game.player(defenderInfo.id).info(), defenderSpawn),
+      new SpawnExecution(
+        gameID,
+        game.player(attackerInfo.id).info(),
+        attackerSpawn,
+      ),
+      new SpawnExecution(
+        gameID,
+        game.player(defenderInfo.id).info(),
+        defenderSpawn,
+      ),
     );
 
     while (game.inSpawnPhase()) {

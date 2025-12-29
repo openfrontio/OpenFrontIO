@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (نسخه آلفا)",
-    "join_discord": "به Discord بپیوندید!",
+    "join_discord": "دیسکورد",
     "login_discord": "ورود از طریق Discord",
     "checking_login": "در حال بررسی ورود...",
     "logged_in": "ورود!",
@@ -30,8 +30,6 @@
     "join_lobby": "ملحق شدن به لابی",
     "single_player": "تک نفره",
     "instructions": "دستورالعمل ها",
-    "how_to_play": "روش بازی",
-    "advertise": "اعلان",
     "wiki": "ویکی",
     "privacy_policy": "سیاست حفظ حریم خصوصی",
     "terms_of_service": "شرایط استفاده",
@@ -135,6 +133,7 @@
   },
   "single_modal": {
     "title": "تک نفره",
+    "random_spawn": "اسپاون تصادفی",
     "allow_alliances": "اجازه ایجاد اتحاد",
     "options_title": "تنظیمات",
     "bots": "ربات: ",
@@ -144,10 +143,9 @@
     "instant_build": "ساخت سریع",
     "infinite_gold": "طلای نامحدود",
     "infinite_troops": "سربازان نامحدود",
-    "compact_map": "نقشه کوچک",
+    "compact_map": "نقشه فشرده",
     "max_timer": "مدت زمان بازی (دقیقه)",
     "disable_nukes": "غیرفعال کردن سلاح‌های هسته‌ای",
-    "automatic_difficulty": "تنظیم خودکار درجه سختی",
     "enables_title": "فعال کردن تنظیمات",
     "start": "شروع بازی"
   },
@@ -162,6 +160,18 @@
     "fetching_account": "در حال دریافت اطلاعات حساب...",
     "logged_in_with_discord": "ورود با دیسکرد",
     "recovery_email_sent": "یمیل بازیابی به {email} ارسال شد"
+  },
+  "stats_modal": {
+    "title": "آمار",
+    "clan_stats": "آمار کلن",
+    "loading": "در حال بارگذاری...",
+    "error": "ارور هنگام بارگذاری آمار کلن",
+    "no_stats": "آماری برای کلن در دسترس نیست",
+    "clan": "کلن",
+    "games": "بازی ها",
+    "win_score": "امتیاز برد",
+    "loss_score": "امتیاز باخت",
+    "win_loss_ratio": "برد/باخت"
   },
   "map": {
     "map": "نقشه",
@@ -197,7 +207,10 @@
     "pluto": "پلوتو",
     "montreal": "مونترئال",
     "achiran": "آچی‌ران",
-    "baikalnukewars": "بایکال (جنگ‌های هسته‌ای)"
+    "baikalnukewars": "بایکال (جنگ‌های هسته‌ای)",
+    "fourislands": "چهار جزیره",
+    "gulfofstlawrence": "خلیج سنت لارنس",
+    "lisbon": "لیسبون"
   },
   "map_categories": {
     "continental": "قاره",
@@ -222,11 +235,12 @@
   "public_lobby": {
     "join": "ورود به بازی بعدی",
     "waiting": "در حال انتظار بازیکنان",
-    "teams_Duos": "دو تایی‌ (تیم‌های 2 نفره)",
-    "teams_Trios": "سه تایی (تیم‌های 3 نفره)",
-    "teams_Quads": "چهار تایی (تیم‌های 4 نفره)",
+    "teams_Duos": "از ۲ نفر (تیم دو نفره)",
+    "teams_Trios": "از 3 نفر (تیم سه نفره)",
+    "teams_Quads": "از 4 نفر (تیم چهار نفره)",
     "teams_hvn": "انسان‌ها در برابر ملت‌ها",
-    "teams": "تیم‌ها {num}"
+    "teams": "تیم‌ها {num}",
+    "players_per_team": "از {num}"
   },
   "matchmaking_modal": {
     "title": "یافتن حریف",
@@ -256,14 +270,20 @@
     "donate_gold": "اهدای طلا",
     "infinite_troops": "سربازان نامحدود",
     "donate_troops": "اهدای نیروها",
-    "compact_map": "نقشه کوچک",
-    "automatic_difficulty": "تنظیم خودکار درجه سختی",
+    "compact_map": "نقشه فشرده",
     "enables_title": "فعال کردن تنظیمات",
     "player": "بازیکن",
     "players": "بازیکنان",
+    "nation_players": "ملت ها",
+    "nation_player": "ملت",
     "waiting": "در انتظار برای بازیکن ها...",
+    "random_spawn": "اسپاون تصادفی",
     "start": "شروع بازی",
-    "host_badge": "میزبان"
+    "host_badge": "میزبان",
+    "assigned_teams": "تیم‌های واگذار شده",
+    "empty_teams": "تیم های خالی",
+    "empty_team": "خالی",
+    "remove_player": "حذف {username}"
   },
   "team_colors": {
     "red": "قرمز",
@@ -315,7 +335,7 @@
     "emojis_label": "ایموجی ها",
     "emojis_desc": "فعال/غیرفعال کردن نمایش ایموجی‌ها در بازی",
     "alert_frame_label": "قاب هشدار",
-    "alert_frame_desc": "نمایش قاب هشدار را فعال یا غیرفعال کنید. وقتی فعال باشد، قاب زمانی که خیانت می‌شوید نمایش داده می‌شود.",
+    "alert_frame_desc": "کادر هشدار را فعال کنید. وقتی فعال باشد، وقتی به شما خیانت شود یا از طریق خشکی مورد حمله قرار بگیرید، کادر نمایش داده می‌شود.",
     "special_effects_label": "افکت‌های ویژه",
     "special_effects_desc": "فعال/غیرفعال کردن افکت‌های ویژه. برای بهبود عملکرد، غیرفعال کنید",
     "structure_sprites_label": "اسپرایت‌های سازه",
@@ -512,7 +532,14 @@
     "exit": "خروج از بازی",
     "keep": "به بازی کردن ادامه دهید",
     "spectate": "تماشا کردن",
-    "wishlist": "افزودن به لیست علاقه‌مندی‌ها در استیم!"
+    "wishlist": "افزودن به لیست علاقه‌مندی‌ها در استیم!",
+    "ofm_winter": "مسابقات زمستانی مسترز OpenFront!",
+    "ofm_winter_description": "به مسابقات رقابتی بپیوندید و با بهترین بازیکنان رقابت کنید",
+    "join_tournament": "به مسابقات بپیوندید",
+    "join_discord": "به انجمن دیسکورد ما بپیوندید!",
+    "discord_description": "با دیگر بازیکنان ارتباط برقرار کنید، به‌روزرسانی‌ها را دریافت کنید و استراتژی‌ها را به اشتراک بگذارید",
+    "join_server": "به سرور بپیوندید",
+    "youtube_tutorial": "نیاز به کمک دارید؟"
   },
   "leaderboard": {
     "title": "جدول رده‌بندی",
@@ -552,6 +579,7 @@
   },
   "events_display": {
     "retreating": "عقب‌نشینی",
+    "retaliate": "تلافی کردن",
     "boat": "قایق",
     "alliance_request_status": "{name} {status} درخواست اتحاد شما",
     "alliance_accepted": "پذیرفته شد",
@@ -570,8 +598,10 @@
     "accept_alliance": "پذیرفتن",
     "reject_alliance": "رد کردن",
     "alliance_renewed": "اتحاد شما با {name} تمدید شد",
+    "wants_to_renew_alliance": "{name} می‌خواهد اتحاد شما را تمدید کند",
     "ignore": "نادیده گرفتن",
-    "unit_voluntarily_deleted": "واحد به‌صورت داوطلبانه حذف شد"
+    "unit_voluntarily_deleted": "واحد به‌صورت داوطلبانه حذف شد",
+    "betrayal_debuff_ends": "{time} ثانیه تا پایان خنثی‌سازی خیانت باقی مانده است"
   },
   "unit_info_modal": {
     "structure_info": "اطلاعات سازه",
@@ -618,7 +648,6 @@
     "flag": "پرچم",
     "chat": "چت",
     "target": "هدف",
-    "break": "وقفه",
     "break_alliance": "شکستن اتحاد",
     "alliance": "اتحاد",
     "send_alliance": "ارسال درخواست اتحاد",
@@ -630,10 +659,7 @@
     "title_with_name": "ارسال نیروها به {name}",
     "available_tooltip": "نیروهای فعلی در دسترس شما",
     "min_keep": "حداقل نگهداری",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "برای ارسال نیروها از نوار حمله استفاده کنید",
-    "warning_attackbar": "پس از فعال‌شدن، دیگر نمی‌توانید این پنجره را مستقیماً باز کنید. تنها از طریق نوار حمله می‌توانید نیرو ارسال کنید.",
     "aria_slider": "نوار نیروها",
     "capacity_note": "گیرنده فقط می‌تواند {{amount}} را در حال حاضر بپذیرد."
   },
@@ -655,15 +681,34 @@
     "copy_clipboard": "کپی به کلیپ بورد",
     "copied": "کپی شد!",
     "failed_copy": "کپی کردن ناموفق بود",
+    "spawn_failed": {
+      "title": "اسپاون شکست خورد",
+      "description": "انتخاب خودکار اسپاون ناموفق بود. شما نمی‌توانید این بازی را انجام دهید."
+    },
     "desync_notice": "شما با سایر بازیکنان همگام نیستید. آنچه می‌بینید ممکن است با آنچه سایر بازیکنان می‌بینند متفاوت باشد."
   },
+  "performance_overlay": {
+    "reset": "بازنشانی",
+    "copy_json_title": "معیارهای عملکرد فعلی را به عنوان JSON کپی کنید",
+    "copy_clipboard": "کپی JSON",
+    "copied": "کپی شد!",
+    "failed_copy": "کپی کردن ناموفق بود",
+    "fps": "فریم بر ثانیه:",
+    "avg_60s": "میانگین(60ث):",
+    "frame": "فریم:",
+    "tick_exec": "تیک اجرایی:",
+    "tick_delay": "تأخیر تیک:",
+    "layers_header": "لایه‌ها (میانگین / حداکثر، مرتب شده بر اساس کل زمان):"
+  },
   "heads_up_message": {
-    "choose_spawn": "یک مکان شروع انتخاب کنید"
+    "choose_spawn": "یک مکان شروع انتخاب کنید",
+    "random_spawn": "تخم ریزی تصادفی فعال است. در حال انتخاب مکان شروع برای شما..."
   },
   "territory_patterns": {
     "title": "پوسته ها",
     "colors": "رنگ ها",
     "purchase": "خرید",
+    "show_only_owned": "پوسته‌های من",
     "blocked": {
       "login": "برای دسترسی به این پوسته باید وارد حساب خود شوید.",
       "purchase": "برای باز کردن این پوسته، آن را خریداری کنید."

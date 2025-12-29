@@ -6,11 +6,22 @@
     "lang_code": "fr"
   },
   "common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "available": "Disponible",
+    "preset_max": "Max",
+    "summary_send": "Envoyer",
+    "summary_keep": "Conserver",
+    "cancel": "Annuler",
+    "send": "Envoyer",
+    "cap_label": "Limite",
+    "cap_tooltip": "Capacité restante du destinataire",
+    "target_dead": "Cible éliminée",
+    "target_dead_note": "Vous ne pouvez pas envoyer de ressources à un joueur éliminé.",
+    "none": "Aucun"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Rejoignez le Discord !",
+    "join_discord": "Discord",
     "login_discord": "Se connecter avec Discord",
     "checking_login": "Vérification de la connexion...",
     "logged_in": "Connecté !",
@@ -19,11 +30,10 @@
     "join_lobby": "Rejoindre un salon",
     "single_player": "Mode solo",
     "instructions": "Instructions",
-    "how_to_play": "Comment jouer ?",
-    "advertise": "Faire de la publicité",
     "wiki": "Wiki",
     "privacy_policy": "Politique de confidentialité",
-    "terms_of_service": "Conditions d'utilisation"
+    "terms_of_service": "Conditions d'utilisation",
+    "reddit": "Reddit"
   },
   "news": {
     "see_all_releases": "Voir toutes les versions",
@@ -123,15 +133,18 @@
   },
   "single_modal": {
     "title": "Joueur seul",
+    "random_spawn": "Spawn aléatoire",
     "allow_alliances": "Autoriser les alliances",
     "options_title": "Options",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
+    "nations": "Nations : ",
     "disable_nations": "Désactiver les nations",
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
     "infinite_troops": "Troupes infinies",
-    "compact_map": "Mini-carte",
+    "compact_map": "Carte compacte",
+    "max_timer": "Durée de jeu (minutes)",
     "disable_nukes": "Désactiver les armes nucléaires",
     "enables_title": "Activer les paramètres",
     "start": "Commencer la partie"
@@ -144,8 +157,21 @@
   "account_modal": {
     "title": "Compte",
     "logged_in_as": "Connecté en tant que {email}",
+    "fetching_account": "Récupération des informations du compte...",
     "logged_in_with_discord": "Connecté avec Discord",
     "recovery_email_sent": "Courriel de récupération envoyé à {email}"
+  },
+  "stats_modal": {
+    "title": "Statistiques",
+    "clan_stats": "Statistiques de Clan",
+    "loading": "Chargement...",
+    "error": "Erreur lors du chargement des statistiques du clan",
+    "no_stats": "Pas de statistique de clan disponible",
+    "clan": "Clan",
+    "games": "Parties",
+    "win_score": "Score de Victoire",
+    "loss_score": "Score de Défaite",
+    "win_loss_ratio": "Victoires/Défaites"
   },
   "map": {
     "map": "Carte",
@@ -179,7 +205,12 @@
     "japan": "Japon",
     "yenisei": "Ienisseï",
     "pluto": "Pluton",
-    "montreal": "Montréal"
+    "montreal": "Montréal",
+    "achiran": "Achiran",
+    "baikalnukewars": "Baïkal (Guerres Nucléaires)",
+    "fourislands": "Quatre Îles",
+    "gulfofstlawrence": "Golfe du Saint-Laurent",
+    "lisbon": "Lisbonne"
   },
   "map_categories": {
     "continental": "Continental",
@@ -204,10 +235,18 @@
   "public_lobby": {
     "join": "Rejoindre la prochaine partie",
     "waiting": "joueurs en attente",
-    "teams_Duos": "Duos (équipes de 2)",
-    "teams_Trios": "Trios (équipes de 3)",
-    "teams_Quads": "Quatuors (équipes de 4)",
-    "teams": "{num} équipes"
+    "teams_Duos": "de 2 (Duos)",
+    "teams_Trios": "de 3 (Trios)",
+    "teams_Quads": "de 4 (Quatuors)",
+    "teams_hvn": "Humains Vs Nations",
+    "teams": "{num} équipes",
+    "players_per_team": "de {num}"
+  },
+  "matchmaking_modal": {
+    "title": "Matchmaking",
+    "connecting": "Connexion au serveur de matchmaking...",
+    "searching": "Recherche d'une partie...",
+    "waiting_for_game": "En attente du début de la partie..."
   },
   "username": {
     "enter_username": "Entrez votre nom d'utilisateur",
@@ -223,19 +262,28 @@
     "options_title": "Paramètres",
     "bots": "Bots : ",
     "bots_disabled": "Désactivé",
+    "nations": "Nations : ",
     "disable_nations": "Désactiver les nations",
+    "max_timer": "Durée de jeu (minutes)",
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
     "donate_gold": "Donner de l'or",
     "infinite_troops": "Troupes infinies",
     "donate_troops": "Donner des troupes",
-    "compact_map": "Mini-carte",
+    "compact_map": "Carte compacte",
     "enables_title": "Activer les paramètres",
     "player": "Joueur",
     "players": "Joueurs",
+    "nation_players": "Nations",
+    "nation_player": "Nation",
     "waiting": "En attente de joueurs...",
+    "random_spawn": "Apparition aléatoire",
     "start": "Commencer la partie",
-    "host_badge": "Hôte"
+    "host_badge": "Hôte",
+    "assigned_teams": "Équipes Attribuées",
+    "empty_teams": "Équipes vides",
+    "empty_team": "Vide",
+    "remove_player": "Retirer {username}"
   },
   "team_colors": {
     "red": "Rouge",
@@ -249,7 +297,8 @@
   },
   "game_starting_modal": {
     "title": "La partie est en train de commencer...",
-    "desc": "Préparation du salon. Veuillez patienter."
+    "credits": "Crédits",
+    "code_license": "Code sous licence AGPL-3.0 (sans garantie)"
   },
   "difficulty": {
     "difficulty": "Difficulté",
@@ -283,42 +332,28 @@
     "tab_keybinds": "Raccourcis clavier",
     "dark_mode_label": "Mode sombre",
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
-    "dark_mode_enabled": "Mode sombre activé",
-    "light_mode_enabled": "Mode jour activé",
     "emojis_label": "Émojis",
-    "emojis_visible": "Les émojis sont visibles",
-    "emojis_hidden": "Les émojis sont masqués",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
     "alert_frame_label": "Fenêtre d'alertes",
-    "alert_frame_desc": "Activer/désactiver la fenêtre d'alertes. Lorsqu'elle est activée, la fenêtre s'affichera lorsque vous serez trahi.",
+    "alert_frame_desc": "Activer/Désactiver le cadre d'alerte. Lorsqu'il est activé, le cadre s'affichera lorsque vous serez trahi ou attaqué par la terre.",
     "special_effects_label": "Effets spéciaux",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
-    "special_effects_enabled": "Effets spéciaux activés",
-    "special_effects_disabled": "Effets spéciaux désactivés",
     "structure_sprites_label": "Sprites de structure",
     "structure_sprites_desc": "Activer/désactiver les sprites de structure",
-    "structure_sprites_enabled": "Sprites de structure activés",
-    "structure_sprites_disabled": "Sprites de structure désactivés",
     "anonymous_names_label": "Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
-    "anonymous_names_enabled": "Noms anonymes activés",
     "lobby_id_visibility_label": "ID du salon masqué",
     "lobby_id_visibility_desc": "Cacher l'ID du salon lors de la création du salon privé",
-    "real_names_shown": "Noms réels affichés",
     "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
     "left_click_menu": "Menu Clic gauche",
-    "left_click_opens_menu": "Un clic gauche ouvre le menu",
-    "right_click_opens_menu": "Un clic droit ouvre le menu",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
-    "territory_patterns_label": "🏳️ Modèles de territoire",
-    "territory_patterns_desc": "Choisissez si vous voulez afficher les motifs de territoire en jeu",
+    "territory_patterns_label": "🏳️ Skins de territoire",
+    "territory_patterns_desc": "Choisissez d'afficher ou non les designs des skins de territoire dans le jeu",
     "performance_overlay_label": "Surcouche de performances",
     "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
-    "performance_overlay_enabled": "Affichage des performances activé",
-    "performance_overlay_disabled": "Affichage des performances désactivé",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -326,6 +361,27 @@
     "view_options": "Options d'affichage",
     "toggle_view": "Activer/désactiver l'affichage",
     "toggle_view_desc": "Vue alternative (terrain/pays)",
+    "build_controls": "Contrôles des constructions",
+    "build_city": "Construire une ville",
+    "build_city_desc": "Construire une ville sous votre curseur.",
+    "build_factory": "Construire une usine",
+    "build_factory_desc": "Construire une ville sous votre curseur.",
+    "build_defense_post": "Construire un poste de défense",
+    "build_defense_post_desc": "Construire un poste de défense sous votre curseur.",
+    "build_port": "Construire un port",
+    "build_port_desc": "Construire un port sous votre curseur.",
+    "build_warship": "Construire un navire de guerre",
+    "build_warship_desc": "Construire un bateau de guerre sous votre curseur.",
+    "build_missile_silo": "Construire un silo à missile",
+    "build_missile_silo_desc": "Construire un silo à missile sous votre curseur.",
+    "build_sam_launcher": "Construire un lanceur SAM",
+    "build_sam_launcher_desc": "Construire un lanceur SAM sous votre curseur.",
+    "build_atom_bomb": "Envoyer une bombe atomique",
+    "build_atom_bomb_desc": "Envoyer une bombe atomique sous votre curseur.",
+    "build_hydrogen_bomb": "Envoyer une bombe à hydrogène",
+    "build_hydrogen_bomb_desc": "Envoyer une bombe à hydrogène sous votre curseur.",
+    "build_mirv": "Construire un MIRV",
+    "build_mirv_desc": "Construire un MIRV sous votre curseur.",
     "attack_ratio_controls": "Contrôles du ratio d'attaque",
     "attack_ratio_up": "Augmenter le ratio d'attaque",
     "attack_ratio_up_desc": "Augmenter le ratio d'attaque de 10%",
@@ -357,10 +413,10 @@
     "on": "Activé",
     "off": "Désactivé",
     "toggle_terrain": "Activer/désactiver le terrain",
-    "terrain_enabled": "Affichage du terrain activé",
-    "terrain_disabled": "Affichage du terrain désactivé",
     "exit_game_label": "Quitter la partie",
-    "exit_game_info": "Retour au menu principal"
+    "exit_game_info": "Retour au menu principal",
+    "background_music_volume": "Volume de la musique de fond",
+    "sound_effects_volume": "Volume des effets sonores"
   },
   "chat": {
     "title": "Discussion",
@@ -467,7 +523,7 @@
   },
   "win_modal": {
     "support_openfront": "Soutenir OpenFront!",
-    "territory_pattern": "Achetez un modèle de territoire pour supporter OpenFront !",
+    "territory_pattern": "Achetez une décoration de territoire pour retirer les publicités !",
     "died": "Vous êtes mort",
     "your_team": "Votre équipe a gagné !",
     "other_team": "L'équipe {team} a gagné !",
@@ -475,7 +531,15 @@
     "other_won": "{player} a gagné !",
     "exit": "Quitter la partie",
     "keep": "Continuer à jouer",
-    "wishlist": "Liste de souhaits sur Steam !"
+    "spectate": "Regarder",
+    "wishlist": "Liste de souhaits sur Steam !",
+    "ofm_winter": "Tournoi d'Hiver OpenFront Masters !",
+    "ofm_winter_description": "Rejoignez le tournoi et affrontez les meilleurs joueurs",
+    "join_tournament": "Rejoindre le tournoi",
+    "join_discord": "Rejoignez notre communauté Discord !",
+    "discord_description": "Connectez-vous avec d'autres joueurs, recevez les nouvelles et partagez des stratégies",
+    "join_server": "Rejoindre le Serveur",
+    "youtube_tutorial": "Besoin d'aide ?"
   },
   "leaderboard": {
     "title": "Classement",
@@ -515,6 +579,7 @@
   },
   "events_display": {
     "retreating": "en retraite",
+    "retaliate": "Riposte",
     "boat": "Bateau",
     "alliance_request_status": "{name} {status} votre demande d'alliance",
     "alliance_accepted": "a accepté",
@@ -533,8 +598,10 @@
     "accept_alliance": "Accepter",
     "reject_alliance": "Refuser",
     "alliance_renewed": "Votre alliance avec {name} a été renouvelée",
+    "wants_to_renew_alliance": "{name} souhaite renouveler votre alliance",
     "ignore": "Ignorer",
-    "unit_voluntarily_deleted": "Unité volontairement supprimée"
+    "unit_voluntarily_deleted": "Unité volontairement supprimée",
+    "betrayal_debuff_ends": "{time} secondes restantes jusqu'à la fin du malus de trahison"
   },
   "unit_info_modal": {
     "structure_info": "Infos sur la structure",
@@ -544,6 +611,11 @@
     "type": "Type",
     "upgrade": "Mettre à niveau",
     "level": "Niveau"
+  },
+  "player_type": {
+    "player": "Joueur",
+    "nation": "Nation",
+    "bot": "Robot"
   },
   "relation": {
     "hostile": "Hostile",
@@ -560,23 +632,47 @@
   "player_panel": {
     "gold": "Or",
     "troops": "Troupes",
-    "betrayals": "Nombre de trahisons",
+    "betrayals": "Trahisons",
     "traitor": "Traître",
+    "trading": "Commerce",
+    "active": "Actif",
+    "stopped": "Arrêté",
     "alliance_time_remaining": "L'alliance expire dans",
     "embargo": "A cessé le commerce avec vous",
     "nuke": "Bombes nucléaires qu'ils vous envoient",
     "start_trade": "Commencer le commerce",
     "stop_trade": "Arrêter le commerce",
-    "yes": "Oui",
-    "no": "Non",
-    "none": "Aucun",
+    "stop_trade_all": "Arrêter le commerce avec tout le monde",
+    "start_trade_all": "Commencer le commerce avec tout le monde",
     "alliances": "Alliances",
-    "flag": "Drapeau"
+    "flag": "Drapeau",
+    "chat": "Chat",
+    "target": "Cible",
+    "break_alliance": "Briser l'alliance",
+    "alliance": "Alliance",
+    "send_alliance": "Envoyer une alliance",
+    "send_troops": "Envoyer des troupes",
+    "send_gold": "Envoyer de l'or",
+    "emotes": "Émojis"
+  },
+  "send_troops_modal": {
+    "title_with_name": "Envoyer des troupes à {name}",
+    "available_tooltip": "Vos troupes actuellement disponibles",
+    "min_keep": "Garder au minimum",
+    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "aria_slider": "Curseur de troupes",
+    "capacity_note": "Le destinataire ne peut accepter que {{amount}} pour le moment."
+  },
+  "send_gold_modal": {
+    "title_with_name": "Envoyer de l'or à {name}",
+    "available_tooltip": "Votre or disponible",
+    "aria_slider": "Curseur de quantité",
+    "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
     "replay_speed": "Vitesse de relecture",
     "game_speed": "Vitesse de jeu",
-    "fastest_game_speed": "max"
+    "fastest_game_speed": "Max"
   },
   "error_modal": {
     "crashed": "Le jeu a planté !",
@@ -585,52 +681,40 @@
     "copy_clipboard": "Copier dans le presse-papier",
     "copied": "Copié !",
     "failed_copy": "Échec de la copie",
+    "spawn_failed": {
+      "title": "Échec du spawn",
+      "description": "La sélection automatique du spawn a échoué. Vous ne pouvez pas jouer à cette partie."
+    },
     "desync_notice": "Vous êtes désynchronisé des autres joueurs. Ce que vous voyez peut être différent des autres joueurs."
   },
+  "performance_overlay": {
+    "reset": "Réinitialiser",
+    "copy_json_title": "Copier les métriques de performance actuelles en JSON",
+    "copy_clipboard": "Copier le JSON",
+    "copied": "Copié !",
+    "failed_copy": "Copie non réussie",
+    "fps": "IPS :",
+    "avg_60s": "Moy. (60s):",
+    "frame": "Image :",
+    "tick_exec": "Exec. de ticks :",
+    "tick_delay": "Délai des ticks :",
+    "layers_header": "Couches (moyenne / max, triées par durée totale) :"
+  },
   "heads_up_message": {
-    "choose_spawn": "Choisissez un emplacement de départ"
+    "choose_spawn": "Choisissez un emplacement de départ",
+    "random_spawn": "Le spawn aléatoire est activé. Sélection de l'emplacement de départ pour vous..."
   },
   "territory_patterns": {
-    "title": "Sélectionner un motif de territoire",
+    "title": "Skins",
+    "colors": "Couleurs",
     "purchase": "Acheter",
+    "show_only_owned": "Mes skins",
     "blocked": {
-      "login": "Vous devez être connecté pour accéder à ce motif.",
-      "purchase": "Acheter ce motif pour le déverrouiller."
+      "login": "Vous devez être connecté pour accéder à ce skin.",
+      "purchase": "Achetez ce skin pour le débloquer."
     },
     "pattern": {
-      "default": "Par défaut",
-      "custom": "Personnalisé",
-      "stripes_v": "Vertical",
-      "stripes_h": "Horizontal",
-      "horizontal_stripes": "Horizontal (Alt)",
-      "vertical_bars": "Vertical (Alt)",
-      "checkerboard": "Damier",
-      "choco": "Choco",
-      "diagonal": "Diagonal",
-      "cross": "Croix",
-      "mini_cross": "Petite croix",
-      "sword": "Épée",
-      "sparse_dots": "Points épars",
-      "evan": "Evan",
-      "diagonal_stripe": "Bande diagonale",
-      "mountain_ridge": "Crête de montagne",
-      "scattered_dots": "Pointillés",
-      "circuit_board": "Circuit imprimé",
-      "shells": "Coquilles",
-      "-w-": ".w.",
-      "white_rabbit": "Lapin blanc",
-      "goat": "Chèvre",
-      "cats": "Chats",
-      "cursor": "Curseur",
-      "hand": "Main",
-      "radiation": "Radiation",
-      "openfront_qr": "QR code OpenFront.io",
-      "openfront": "OpenFront",
-      "t_rex": "T-Rex",
-      "embelem": "Emblème",
-      "contributor": "Contributeur·ice",
-      "grogu_head": "Tête de Grogu",
-      "grogu": "Grogu"
+      "default": "Par défaut"
     }
   },
   "flag_input": {
@@ -708,5 +792,17 @@
     "map": "Carte",
     "difficulty": "Difficulté",
     "type": "Type"
+  },
+  "player_stats_tree": {
+    "public": "Public",
+    "private": "Privé",
+    "singleplayer": "Mode solo",
+    "mode": "Mode",
+    "stats_wins": "Victoires",
+    "stats_losses": "Défaites",
+    "stats_wlr": "Ratio Victoires:Défaites",
+    "stats_games_played": "Parties jouées",
+    "mode_ffa": "Chacun pour soi",
+    "mode_team": "En équipe"
   }
 }

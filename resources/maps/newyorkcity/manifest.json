@@ -18,112 +18,92 @@
   "nations": [
     {
       "coordinates": [127, 1323],
-      "name": "Unami Tribe",
-      "strength": 2
+      "name": "Unami Tribe"
     },
     {
       "coordinates": [116, 765],
-      "name": "Unalachtigo",
-      "strength": 2
+      "name": "Unalachtigo"
     },
     {
       "coordinates": [163, 135],
-      "name": "Munsee Tribe",
-      "strength": 2
+      "name": "Munsee Tribe"
     },
     {
       "coordinates": [661, 531],
-      "name": "Mannahatta Village",
-      "strength": 2
+      "name": "Mannahatta Village"
     },
     {
       "coordinates": [558, 760],
       "flag": "nl",
-      "name": "New Netherland Colony",
-      "strength": 3
+      "name": "New Netherland Colony"
     },
     {
       "coordinates": [756, 833],
       "flag": "gb-eng",
-      "name": "New York Colony",
-      "strength": 3
+      "name": "New York Colony"
     },
     {
       "coordinates": [240, 1818],
       "flag": "gb-eng",
-      "name": "New Jersey Colony",
-      "strength": 3
+      "name": "New Jersey Colony"
     },
     {
       "coordinates": [1065, 1085],
       "flag": "gb-eng",
-      "name": "Long Island Territory",
-      "strength": 2
+      "name": "Long Island Territory"
     },
     {
       "coordinates": [1454, 989],
-      "name": "Montaukett Nation",
-      "strength": 1
+      "name": "Montaukett Nation"
     },
     {
       "coordinates": [1367, 762],
-      "name": "Unkechaug Nation",
-      "strength": 1
+      "name": "Unkechaug Nation"
     },
     {
       "coordinates": [1109, 824],
-      "name": "Shinnecock Nation",
-      "strength": 1
+      "name": "Shinnecock Nation"
     },
     {
       "coordinates": [969, 269],
-      "name": "Weckquaesgeek",
-      "strength": 2
+      "name": "Weckquaesgeek"
     },
     {
       "coordinates": [746, 1172],
-      "name": "Siwanoy",
-      "strength": 2
+      "name": "Siwanoy"
     },
     {
       "coordinates": [927, 86],
       "flag": "nl",
-      "name": "Colen Donck",
-      "strength": 3
+      "name": "Colen Donck"
     },
     {
       "coordinates": [849, 1043],
-      "name": "Canarsie",
-      "strength": 2
+      "name": "Canarsie"
     },
     {
       "coordinates": [991, 1247],
-      "name": "Rockaway",
-      "strength": 2
+      "name": "Rockaway"
     },
     {
       "coordinates": [929, 642],
       "flag": "gb-eng",
-      "name": "Maspeth",
-      "strength": 1
+      "name": "Maspeth"
     },
     {
       "coordinates": [647, 1018],
       "flag": "nl",
-      "name": "Breukelen",
-      "strength": 3
+      "name": "Breukelen"
     },
     {
       "coordinates": [1150, 532],
       "flag": "nl",
-      "name": "Vlissingen",
-      "strength": 2
+      "name": "Vlissingen"
     },
     {
       "coordinates": [629, 690],
       "flag": "gb-eng",
-      "name": "Gravesend",
-      "strength": 1
+      "name": "Gravesend"
     }
   ]
 }

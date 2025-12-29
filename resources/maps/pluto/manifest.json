@@ -19,98 +19,82 @@
     {
       "coordinates": [396, 364],
       "flag": "us",
-      "name": "United States Colony",
-      "strength": 3
+      "name": "United States Colony"
     },
     {
       "coordinates": [285, 970],
       "flag": "ru",
-      "name": "Russian Colony",
-      "strength": 3
+      "name": "Russian Colony"
     },
     {
       "coordinates": [1700, 400],
       "flag": "",
-      "name": "European Space Agency",
-      "strength": 3
+      "name": "European Space Agency"
     },
     {
       "coordinates": [1190, 1210],
       "flag": "gb",
-      "name": "United Kingdom Colony",
-      "strength": 2
+      "name": "United Kingdom Colony"
     },
     {
       "coordinates": [1700, 1000],
       "flag": "cn",
-      "name": "Chinese Colony",
-      "strength": 3
+      "name": "Chinese Colony"
     },
     {
       "coordinates": [1200, 185],
       "flag": "jp",
-      "name": "Japanese Colony",
-      "strength": 2
+      "name": "Japanese Colony"
     },
     {
       "coordinates": [830, 1000],
       "flag": "in",
-      "name": "Indian Colony",
-      "strength": 1
+      "name": "Indian Colony"
     },
     {
       "coordinates": [75, 300],
       "flag": "",
-      "name": "African Space Agency",
-      "strength": 2
+      "name": "African Space Agency"
     },
     {
       "coordinates": [750, 560],
       "flag": "au",
-      "name": "Australian Colony",
-      "strength": 1
+      "name": "Australian Colony"
     },
     {
       "coordinates": [1075, 325],
       "flag": "",
-      "name": "North Korean Colony",
-      "strength": 1
+      "name": "North Korean Colony"
     },
     {
       "coordinates": [1920, 100],
       "flag": "",
-      "name": "United Nations Base",
-      "strength": 1
+      "name": "United Nations Base"
     },
     {
       "coordinates": [25, 1245],
       "flag": "pl",
-      "name": "Polish Colony",
-      "strength": 1
+      "name": "Polish Colony"
     },
     {
       "coordinates": [1170, 1080],
       "flag": "ie",
-      "name": "Irish Colony",
-      "strength": 1
+      "name": "Irish Colony"
     },
     {
       "coordinates": [1466, 1233],
       "flag": "cl",
-      "name": "Chilean Colony",
-      "strength": 1
+      "name": "Chilean Colony"
     },
     {
       "coordinates": [560, 20],
       "flag": "za",
-      "name": "South African Colony",
-      "strength": 1
+      "name": "South African Colony"
     },
     {
       "coordinates": [2088, 1008],
       "flag": "",
-      "name": "Free Pluto State",
-      "strength": 3
+      "name": "Free Pluto State"
     }
   ]
 }

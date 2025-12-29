@@ -4,157 +4,131 @@
     {
       "coordinates": [88, 364],
       "name": "Quebec",
-      "strength": 3,
       "flag": "Quebec"
     },
     {
       "coordinates": [777, 170],
       "name": "Nitassinan",
-      "strength": 3,
       "flag": "Quebec"
     },
     {
       "coordinates": [570, 460],
       "name": "Anticosti Island",
-      "strength": 2,
       "flag": "Quebec"
     },
     {
       "coordinates": [300, 568],
       "name": "Gaspesia",
-      "strength": 2,
       "flag": "Quebec"
     },
     {
       "coordinates": [256, 60],
       "name": "Manicouagan",
-      "strength": 3,
       "flag": "Quebec"
     },
     {
       "coordinates": [522, 266],
       "name": "Mingan",
-      "strength": 1,
       "flag": "Quebec"
     },
     {
       "coordinates": [1220, 632],
       "name": "Newfoundland",
-      "strength": 3,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1166, 38],
       "name": "Labrador",
-      "strength": 2,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1180, 199],
       "name": "Northern Peninsula",
-      "strength": 2,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1544, 740],
       "name": "St Johns",
-      "strength": 2,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1456, 620],
       "name": "Bonavista",
-      "strength": 1,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1030, 528],
       "name": "Corner Brook",
-      "strength": 1,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1254, 511],
       "name": "Grand Falls",
-      "strength": 1,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [1040, 400],
       "name": "Gros Morne",
-      "strength": 1,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [912, 720],
       "name": "Port aux Basques",
-      "strength": 1,
       "flag": "Newfoundland"
     },
     {
       "coordinates": [82, 912],
       "name": "New Brunswick",
-      "strength": 3,
       "flag": "ca_nb"
     },
     {
       "coordinates": [288, 742],
       "name": "Acadia",
-      "strength": 2,
       "flag": "ca_nb"
     },
     {
       "coordinates": [184, 1000],
       "name": "Fredericton",
-      "strength": 1,
       "flag": "ca_nb"
     },
     {
       "coordinates": [338, 938],
       "name": "Moncton",
-      "strength": 1,
       "flag": "ca_nb"
     },
     {
       "coordinates": [44, 1110],
       "name": "Maine",
-      "strength": 2,
       "flag": "Maine"
     },
     {
       "coordinates": [475, 915],
       "name": "Prince Edward Island",
-      "strength": 3,
       "flag": "ca_pe"
     },
     {
       "coordinates": [588, 1054],
       "name": "Nova Scotia",
-      "strength": 3,
       "flag": "ca_ns"
     },
     {
       "coordinates": [725, 920],
       "name": "Cape Breton Island",
-      "strength": 2,
       "flag": "ca_ns"
     },
     {
       "coordinates": [310, 1130],
       "name": "Annapolis",
-      "strength": 1,
       "flag": "ca_ns"
     },
     {
       "coordinates": [445, 1160],
       "name": "Halifax",
-      "strength": 1,
       "flag": "ca_ns"
     },
     {
       "coordinates": [235, 1255],
       "name": "Yarmouth",
-      "strength": 1,
       "flag": "ca_ns"
     }
   ]

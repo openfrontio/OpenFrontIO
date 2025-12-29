@@ -19,50 +19,42 @@
     {
       "coordinates": [455, 1115],
       "flag": "is",
-      "name": "Southern Peninsula",
-      "strength": 2
+      "name": "Southern Peninsula"
     },
     {
       "coordinates": [550, 1050],
       "flag": "is",
-      "name": "Capital Region",
-      "strength": 2
+      "name": "Capital Region"
     },
     {
       "coordinates": [370, 810],
       "flag": "is",
-      "name": "Western Region",
-      "strength": 1
+      "name": "Western Region"
     },
     {
       "coordinates": [290, 560],
       "flag": "is",
-      "name": "Westfjords",
-      "strength": 2
+      "name": "Westfjords"
     },
     {
       "coordinates": [790, 555],
       "flag": "is",
-      "name": "Northwestern Region",
-      "strength": 2
+      "name": "Northwestern Region"
     },
     {
       "coordinates": [1050, 1235],
       "flag": "is",
-      "name": "Southern Region",
-      "strength": 2
+      "name": "Southern Region"
     },
     {
       "coordinates": [1240, 660],
       "flag": "is",
-      "name": "Northeastern Region",
-      "strength": 2
+      "name": "Northeastern Region"
     },
     {
       "coordinates": [1740, 740],
       "flag": "is",
-      "name": "Eastern Region",
-      "strength": 2
+      "name": "Eastern Region"
     }
   ]
 }

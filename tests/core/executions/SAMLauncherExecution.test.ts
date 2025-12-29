@@ -9,10 +9,12 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
+import { GameID } from "../../../src/core/Schemas";
 import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
 
 let game: Game;
+const gameID: GameID = "game_id";
 let attacker: Player;
 let defender: Player;
 let far_defender: Player;
@@ -54,16 +56,26 @@ describe("SAM", () => {
     game.addPlayer(attacker_info);
 
     game.addExecution(
-      new SpawnExecution(game.player(defender_info.id).info(), game.ref(1, 1)),
       new SpawnExecution(
+        gameID,
+        game.player(defender_info.id).info(),
+        game.ref(1, 1),
+      ),
+      new SpawnExecution(
+        gameID,
         game.player(middle_defender_info.id).info(),
         game.ref(50, 1),
       ),
       new SpawnExecution(
+        gameID,
         game.player(far_defender_info.id).info(),
         game.ref(199, 1),
       ),
-      new SpawnExecution(game.player(attacker_info.id).info(), game.ref(7, 7)),
+      new SpawnExecution(
+        gameID,
+        game.player(attacker_info.id).info(),
+        game.ref(7, 7),
+      ),
     );
 
     while (game.inSpawnPhase()) {

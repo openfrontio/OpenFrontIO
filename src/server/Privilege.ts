@@ -100,7 +100,7 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
   isColorAllowed(flares: string[], color: string): PlayerColor {
     const allowedColors = flares
       .filter((flare) => flare.startsWith("color:"))
-      .map((flare) => "#" + flare.split(":")[1]);
+      .map((flare) => flare.split(":")[1]);
     if (!allowedColors.includes(color)) {
       throw new Error(`Color ${color} not allowed`);
     }

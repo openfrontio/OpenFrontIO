@@ -1,7 +1,7 @@
 #!/bin/bash
-# build.sh - Build and upload Docker image to Docker Hub
+# build.sh - Build and upload image to GitHub Container Registry
 # This script:
-# 1. Builds and uploads the Docker image to Docker Hub with appropriate tag
+# 1. Builds and uploads the image to GitHub Container Registry with appropriate tag
 # 2. Optionally saves container metadata to a file (if METADATA_FILE is provided as 3rd argument)
 
 set -e # Exit immediately if a command exits with a non-zero status
@@ -57,23 +57,22 @@ if [ -f .env.$DEPLOY_ENV ]; then
 fi
 
 # Check required environment variables for build
-if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_REPO" ]; then
-    echo "Error: DOCKER_USERNAME or DOCKER_REPO not defined in .env file or environment"
+if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_REPO" ]; then
+    echo "Error: GHCR_USERNAME or GHCR_REPO not defined in .env file or environment"
     exit 1
 fi
 
-DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
+GHCR_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:${VERSION_TAG}"
 
-# If ADDITIONAL_VERSION_TAG is provided ADDITIONAL_DOCKER_IMAGE will be set
+# If ADDITIONAL_VERSION_TAG is provided ADDITIONAL_GHCR_IMAGE will be set
 # example usage: adding latest tag
 if [ -n "$ADDITIONAL_VERSION_TAG" ]; then
-    ADDITIONAL_DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${ADDITIONAL_VERSION_TAG}"
+    ADDITIONAL_GHCR_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:${ADDITIONAL_VERSION_TAG}"
 fi
 
-# Build and upload Docker image to Docker Hub
 echo "Environment: ${DEPLOY_ENV}"
 echo "Using version tag: $VERSION_TAG"
-echo "Docker repository: $DOCKER_REPO"
+echo "Docker repository: $GHCR_REPO"
 echo "Metadata file: $METADATA_FILE"
 
 # Get Git commit for build info
@@ -87,12 +86,32 @@ if [ -n "$VERSION_TXT" ]; then
     echo "$VERSION_TXT" > resources/version.txt
 fi
 
+# Set up cache image reference
+CACHE_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:latest"
+BUILDCACHE_IMAGE="${GHCR_USERNAME}/${GHCR_REPO}:buildcache"
+
+echo "Building with buildx and registry cache..."
+
+# Create buildx builder with docker-container driver if it doesn't exist
+if ! docker buildx inspect cache-builder > /dev/null 2>&1; then
+    echo "Creating buildx builder..."
+    docker buildx create --name cache-builder --driver docker-container --use
+else
+    echo "Using existing buildx builder..."
+    docker buildx use cache-builder
+fi
+
+# Use buildx with registry cache for best performance
+# --push will push all tags automatically
 docker buildx build \
     --platform linux/amd64 \
-    --build-arg GIT_COMMIT=$GIT_COMMIT \
     --metadata-file $METADATA_FILE \
-    -t $DOCKER_IMAGE \
-    ${ADDITIONAL_DOCKER_IMAGE:+-t "$ADDITIONAL_DOCKER_IMAGE"} \
+    --build-arg GIT_COMMIT=$GIT_COMMIT \
+    --cache-from type=registry,ref=$BUILDCACHE_IMAGE \
+    --cache-to type=registry,ref=$BUILDCACHE_IMAGE,mode=max \
+    --tag $GHCR_IMAGE \
+    --tag $CACHE_IMAGE \
+    ${ADDITIONAL_GHCR_IMAGE:+--tag "$ADDITIONAL_GHCR_IMAGE"} \
     --push \
     .
 
@@ -102,6 +121,6 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Docker image built and pushed successfully."
-echo "Image: $DOCKER_IMAGE"
+echo "Image: $GHCR_IMAGE"
 
-print_header "BUILD COMPLETED SUCCESSFULLY ${DOCKER_IMAGE}"
+print_header "BUILD COMPLETED SUCCESSFULLY ${GHCR_IMAGE}"

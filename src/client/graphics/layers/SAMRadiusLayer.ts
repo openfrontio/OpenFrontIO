@@ -1,49 +1,54 @@
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import type { GameView, PlayerView } from "../../../core/game/GameView";
+import type {
+  GameView,
+  PlayerView,
+  UnitView,
+} from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
-import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
+type Interval = [number, number];
+interface SAMRadius {
+  x: number;
+  y: number;
+  r: number;
+  owner: PlayerView;
+  arcs: Interval[];
+}
+
+interface SamInfo {
+  ownerId: number;
+  level: number;
+}
 /**
  * Layer responsible for rendering SAM launcher defense radii
  */
 export class SAMRadiusLayer implements Layer {
-  private readonly canvas: HTMLCanvasElement;
-  private readonly context: CanvasRenderingContext2D;
-  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
-  private needsRedraw = true;
+  private readonly samLaunchers: Map<number, SamInfo> = new Map(); // Track SAM launcher IDs -> SAM info
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
-  private showStroke: boolean = false;
+  private visible: boolean = false;
+  private samRanges: SAMRadius[] = [];
   private dashOffset = 0;
   private rotationSpeed = 14; // px per second
-  private lastTickTime = Date.now();
+  private lastRefresh = Date.now();
+  private needsRedraw = false;
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
     this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
-    this.updateStrokeVisibility();
+    this.updateVisibility();
   }
 
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
-    private readonly transformHandler: TransformHandler,
     private readonly uiState: UIState,
-  ) {
-    this.canvas = document.createElement("canvas");
-    const ctx = this.canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("2d context not supported");
-    }
-    this.context = ctx;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
-  }
+  ) {}
 
   init() {
     // Listen for game updates to detect SAM launcher changes
@@ -53,15 +58,6 @@ export class SAMRadiusLayer implements Layer {
     this.eventBus.on(ToggleStructureEvent, (e) =>
       this.handleToggleStructure(e),
     );
-    this.redraw();
-  }
-
-  private updateStrokeVisibility() {
-    const next = this.hoveredShow || this.ghostShow;
-    if (next !== this.showStroke) {
-      this.showStroke = next;
-      this.needsRedraw = true;
-    }
   }
 
   shouldTransform(): boolean {
@@ -70,40 +66,16 @@ export class SAMRadiusLayer implements Layer {
 
   tick() {
     // Check for updates to SAM launchers
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates?.[GameUpdateType.Unit];
-
+    const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
     if (unitUpdates) {
-      let hasChanges = false;
-
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
         if (unit && unit.type() === UnitType.SAMLauncher) {
-          const wasTracked = this.samLaunchers.has(update.id);
-          const shouldTrack = unit.isActive();
-          const owner = unit.owner().smallID();
-
-          if (wasTracked && !shouldTrack) {
-            // SAM was destroyed
-            this.samLaunchers.delete(update.id);
-            hasChanges = true;
-          } else if (!wasTracked && shouldTrack) {
-            // New SAM was built
-            this.samLaunchers.set(update.id, owner);
-            hasChanges = true;
-          } else if (wasTracked && shouldTrack) {
-            // SAM still exists; check if owner changed
-            const prevOwner = this.samLaunchers.get(update.id);
-            if (prevOwner !== owner) {
-              this.samLaunchers.set(update.id, owner);
-              hasChanges = true;
-            }
+          if (this.hasChanged(unit)) {
+            this.needsRedraw = true; // A SAM changed: radiuses shall be recomputed when necessary
+            break;
           }
         }
-      }
-
-      if (hasChanges) {
-        this.needsRedraw = true;
       }
     }
 
@@ -113,40 +85,48 @@ export class SAMRadiusLayer implements Layer {
       this.uiState.ghostStructure === UnitType.SAMLauncher ||
       this.uiState.ghostStructure === UnitType.AtomBomb ||
       this.uiState.ghostStructure === UnitType.HydrogenBomb;
-    this.updateStrokeVisibility();
-
-    // Redraw if transform changed or if we need to redraw
-    const now = Date.now();
-    const dt = now - this.lastTickTime;
-    this.lastTickTime = now;
-
-    if (this.showStroke) {
-      this.dashOffset += (this.rotationSpeed * dt) / 1000;
-      if (this.dashOffset > 1e6) this.dashOffset = this.dashOffset % 1000000;
-      // animate by redrawing each frame whilst visible
-      this.needsRedraw = true;
-    }
-
-    if (this.transformHandler.hasChanged() || this.needsRedraw) {
-      this.redraw();
-      this.needsRedraw = false;
-    }
+    this.updateVisibility();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
+    if (this.visible) {
+      if (this.needsRedraw) {
+        // SAM changed: the radiuses needs to be updated
+        this.computeCircleUnions();
+        this.needsRedraw = false;
+      }
+      this.updateDashAnimation();
+      this.drawCirclesUnion(context);
+    }
   }
 
-  redraw() {
-    // Clear the canvas
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  private updateDashAnimation() {
+    const now = Date.now();
+    const dt = now - this.lastRefresh;
+    this.lastRefresh = now;
+    this.dashOffset += (this.rotationSpeed * dt) / 1000;
+    if (this.dashOffset > 1e6) this.dashOffset = this.dashOffset % 1000000;
+  }
 
+  private updateVisibility() {
+    const next = this.hoveredShow || this.ghostShow;
+    if (next !== this.visible) {
+      this.visible = next;
+    }
+  }
+
+  private hasChanged(unit: UnitView): boolean {
+    const samInfos = this.samLaunchers.get(unit.id());
+    const isNew = samInfos === undefined;
+    const active = unit.isActive();
+    const ownerId = unit.owner().smallID();
+    let hasChanges = isNew || !active; // was built or destroyed
+    hasChanges ||= !isNew && samInfos.ownerId !== ownerId; // Sam owner changed
+    hasChanges ||= !isNew && samInfos.level !== unit.level(); // Sam leveled up
+    return hasChanges;
+  }
+
+  private getAllSamRanges(): SAMRadius[] {
     // Get all active SAM launchers
     const samLaunchers = this.game
       .units(UnitType.SAMLauncher)
@@ -155,67 +135,36 @@ export class SAMRadiusLayer implements Layer {
     // Update our tracking set
     this.samLaunchers.clear();
     samLaunchers.forEach((sam) =>
-      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
+      this.samLaunchers.set(sam.id(), {
+        ownerId: sam.owner().smallID(),
+        level: sam.level(),
+      }),
     );
 
-    // Draw union of SAM radii. Collect circle data then draw union outer arcs only
-    const circles = samLaunchers.map((sam) => {
+    // Collect radius data
+    const radiuses = samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().samRange(sam.level()),
         owner: sam.owner(),
+        arcs: [],
       };
     });
-
-    this.drawCirclesUnion(circles);
+    return radiuses;
   }
 
-  /**
-   * Draw union of multiple circles: fill the union, then stroke only the outer arcs
-   * so overlapping circles appear as one combined shape.
-   */
-  private drawCirclesUnion(
-    circles: Array<{ x: number; y: number; r: number; owner: PlayerView }>,
-  ) {
-    const ctx = this.context;
-    if (circles.length === 0) return;
-
-    // Line Parameters
-    const outlineColor = "rgba(0, 0, 0, 1)";
-    const lineColorSelf = "rgba(0, 255, 0, 1)";
-    const lineColorEnemy = "rgba(255, 0, 0, 1)";
-    const lineColorFriend = "rgba(255, 255, 0, 1)";
-    const extraOutlineWidth = 1; // adds onto below
-    const lineWidth = 2;
-    const lineDash = [12, 6];
-
-    // 1) Fill union simply by drawing all full circle paths and filling once
-    ctx.save();
-    ctx.beginPath();
-    for (const c of circles) {
-      ctx.moveTo(c.x + c.r, c.y);
-      ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-    }
-    ctx.restore();
-
-    // 2) For stroke, compute for each circle which angular segments are NOT covered by any other circle,
-    //    and stroke only those segments. This produces a union outline without overlapping inner strokes.
-    // Only draw the stroke when UI toggle indicates SAM launchers are focused (e.g. hovering Atom/Hydrogen option).
-    if (!this.showStroke) return;
-
-    ctx.save();
-
+  private computeUncoveredArcIntervals(a: SAMRadius, circles: SAMRadius[]) {
+    a.arcs = [];
     const TWO_PI = Math.PI * 2;
-
+    const EPS = 1e-9;
     // helper functions
     const normalize = (a: number) => {
       while (a < 0) a += TWO_PI;
       while (a >= TWO_PI) a -= TWO_PI;
       return a;
     };
-
     // merge a list of intervals [s,e] (both between 0..2pi), taking wraparound into account
     const mergeIntervals = (
       intervals: Array<[number, number]>,
@@ -239,7 +188,7 @@ export class SAMRadiusLayer implements Layer {
       let cur = flat[0].slice() as [number, number];
       for (let i = 1; i < flat.length; i++) {
         const it = flat[i];
-        if (it[0] <= cur[1] + 1e-9) {
+        if (it[0] <= cur[1] + EPS) {
           cur[1] = Math.max(cur[1], it[1]);
         } else {
           merged.push([cur[0], cur[1]]);
@@ -249,103 +198,133 @@ export class SAMRadiusLayer implements Layer {
       merged.push([cur[0], cur[1]]);
       return merged;
     };
+    const covered: Interval[] = [];
+    let fullyCovered = false;
 
-    for (let i = 0; i < circles.length; i++) {
-      const a = circles[i];
-      // collect intervals on circle a that are covered by other circles
-      const covered: Array<[number, number]> = [];
-      let fullyCovered = false;
+    for (const b of circles) {
+      if (a === b) continue;
 
-      for (let j = 0; j < circles.length; j++) {
-        if (i === j) continue;
-        // Only consider coverage from circles owned by the same player.
-        // This shows separate boundaries for different players' SAM coverage,
-        // making contested areas visually distinct.
-        if (a.owner.smallID() !== circles[j].owner.smallID()) continue;
+      // Only same-owner coverage
+      if (a.owner.smallID() !== b.owner.smallID()) continue;
 
-        const b = circles[j];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const d = Math.hypot(dx, dy);
-        if (d + a.r <= b.r + 1e-9) {
-          // circle a is fully inside b
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const d = Math.hypot(dx, dy);
+
+      // a fully inside b
+      if (d + a.r <= b.r + EPS) {
+        fullyCovered = true;
+        break;
+      }
+
+      // no overlap
+      if (d >= a.r + b.r - EPS) continue;
+
+      // coincident centers
+      if (d <= EPS) {
+        if (b.r >= a.r) {
           fullyCovered = true;
           break;
         }
-        if (d >= a.r + b.r - 1e-9) {
-          // no overlap
-          continue;
-        }
-        if (d <= 1e-9) {
-          // coincident centers but not fully covered (should be covered by previous check if radii differ)
-          if (b.r >= a.r) {
-            fullyCovered = true;
-            break;
-          }
-          continue;
-        }
-
-        // compute angular span on circle a that is inside circle b
-        const theta = Math.atan2(dy, dx);
-        // law of cosines for angle between center-line and intersection points
-        const cosPhi = (a.r * a.r + d * d - b.r * b.r) / (2 * a.r * d);
-        // numerical clamp
-        const clamp = Math.max(-1, Math.min(1, cosPhi));
-        const phi = Math.acos(clamp);
-        const start = theta - phi;
-        const end = theta + phi;
-        covered.push([start, end]);
+        continue;
       }
 
-      if (fullyCovered) continue; // nothing to stroke for this circle
+      // angular span on a covered by b
+      const theta = Math.atan2(dy, dx);
+      const cosPhi = (a.r * a.r + d * d - b.r * b.r) / (2 * a.r * d);
+      const phi = Math.acos(Math.max(-1, Math.min(1, cosPhi)));
 
-      const merged = mergeIntervals(covered);
+      covered.push([theta - phi, theta + phi]);
+    }
 
-      // subtract merged covered intervals from [0,2pi) to get uncovered intervals
-      const uncovered: Array<[number, number]> = [];
-      if (merged.length === 0) {
-        uncovered.push([0, TWO_PI]);
-      } else {
-        let cursor = 0;
-        for (const [s, e] of merged) {
-          if (s > cursor + 1e-9) {
-            uncovered.push([cursor, s]);
-          }
-          cursor = Math.max(cursor, e);
+    if (fullyCovered) return;
+
+    const merged = mergeIntervals(covered);
+
+    // subtract from [0, 2π)
+    const uncovered: Interval[] = [];
+    if (merged.length === 0) {
+      uncovered.push([0, TWO_PI]);
+    } else {
+      let cursor = 0;
+      for (const [s, e] of merged) {
+        if (s > cursor + EPS) {
+          uncovered.push([cursor, s]);
         }
-        if (cursor < TWO_PI - 1e-9) uncovered.push([cursor, TWO_PI]);
+        cursor = Math.max(cursor, e);
       }
-
-      // draw uncovered arcs
-      for (const [s, e] of uncovered) {
-        // skip tiny arcs
-        if (e - s < 1e-3) continue;
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, s, e);
-
-        // Outline
-        ctx.strokeStyle = outlineColor;
-        ctx.lineWidth = lineWidth + extraOutlineWidth;
-        ctx.setLineDash([
-          lineDash[0] + extraOutlineWidth,
-          Math.max(lineDash[1] - extraOutlineWidth, 0),
-        ]);
-        ctx.lineDashOffset = this.dashOffset + extraOutlineWidth / 2;
-        ctx.stroke();
-        // Inline
-        if (a.owner.isMe()) {
-          ctx.strokeStyle = lineColorSelf;
-        } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
-          ctx.strokeStyle = lineColorFriend;
-        } else {
-          ctx.strokeStyle = lineColorEnemy;
-        }
-        ctx.lineWidth = lineWidth;
-        ctx.setLineDash(lineDash);
-        ctx.lineDashOffset = this.dashOffset;
-        ctx.stroke();
+      if (cursor < TWO_PI - EPS) {
+        uncovered.push([cursor, TWO_PI]);
       }
     }
-    ctx.restore();
+    a.arcs = uncovered;
+  }
+
+  private drawArcSegments(ctx: CanvasRenderingContext2D, a: SAMRadius) {
+    const outlineColor = "rgba(0, 0, 0, 1)";
+    const lineColorSelf = "rgba(0, 255, 0, 1)";
+    const lineColorEnemy = "rgba(255, 0, 0, 1)";
+    const lineColorFriend = "rgba(255, 255, 0, 1)";
+    const extraOutlineWidth = 1; // adds onto below
+    const lineWidth = 3;
+    const lineDash = [12, 6];
+
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+    for (const [s, e] of a.arcs) {
+      // skip tiny arcs
+      if (e - s < 1e-3) continue;
+      ctx.beginPath();
+      ctx.arc(a.x + offsetX, a.y + offsetY, a.r, s, e);
+
+      // Outline
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = lineWidth + extraOutlineWidth;
+      ctx.setLineDash([
+        lineDash[0] + extraOutlineWidth,
+        Math.max(lineDash[1] - extraOutlineWidth, 0),
+      ]);
+      ctx.lineDashOffset = this.dashOffset + extraOutlineWidth / 2;
+      ctx.stroke();
+
+      // Inline
+      if (a.owner.isMe()) {
+        ctx.strokeStyle = lineColorSelf;
+      } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+        ctx.strokeStyle = lineColorFriend;
+      } else {
+        ctx.strokeStyle = lineColorEnemy;
+      }
+
+      ctx.lineWidth = lineWidth;
+      ctx.setLineDash(lineDash);
+      ctx.lineDashOffset = this.dashOffset;
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * Compute for each circle which angular segments are NOT covered by any other circle
+   */
+  private computeCircleUnions() {
+    this.samRanges = this.getAllSamRanges();
+    for (let i = 0; i < this.samRanges.length; i++) {
+      const a = this.samRanges[i];
+      this.computeUncoveredArcIntervals(a, this.samRanges);
+    }
+  }
+
+  /**
+   * Draw union of multiple circles: stroke only the outer arcs so overlapping circles appear as one combined shape.
+   */
+  private drawCirclesUnion(context: CanvasRenderingContext2D) {
+    const circles = this.samRanges;
+    if (circles.length === 0 || !this.visible) return;
+    // Only draw the stroke when UI toggle indicates SAM launchers are focused (e.g. hovering Atom/Hydrogen option).
+    context.save();
+    for (let i = 0; i < circles.length; i++) {
+      this.drawArcSegments(context, circles[i]);
+    }
+    context.restore();
   }
 }

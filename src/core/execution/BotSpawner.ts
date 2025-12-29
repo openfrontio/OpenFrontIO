@@ -1,5 +1,4 @@
 import { Game, PlayerInfo, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -17,46 +16,29 @@ export class BotSpawner {
 
   constructor(
     private gs: Game,
-    gameID: GameID,
+    private gameID: GameID,
   ) {
     this.random = new PseudoRandom(simpleHash(gameID));
   }
 
   spawnBots(numBots: number): SpawnExecution[] {
-    let tries = 0;
-    while (this.bots.length < numBots) {
-      if (tries > 10000) {
-        console.log("too many retries while spawning bots, giving up");
-        return this.bots;
-      }
+    for (let i = 0; i < numBots; i++) {
       const candidate = this.nextCandidateName();
       const spawn = this.spawnBot(candidate.name);
-      if (spawn !== null) {
-        // Only use candidate name once bot successfully spawned
-        if (candidate.source === "list") {
-          this.nameIndex++;
-        }
-        this.bots.push(spawn);
-      } else {
-        tries++;
+
+      if (candidate.source === "list") {
+        this.nameIndex++;
       }
+      this.bots.push(spawn);
     }
+
     return this.bots;
   }
 
-  spawnBot(botName: string): SpawnExecution | null {
-    const tile = this.randTile();
-    if (!this.gs.isLand(tile)) {
-      return null;
-    }
-    for (const spawn of this.bots) {
-      if (this.gs.manhattanDist(spawn.tile, tile) < 30) {
-        return null;
-      }
-    }
+  spawnBot(botName: string): SpawnExecution {
     return new SpawnExecution(
+      this.gameID,
       new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
-      tile,
     );
   }
 
@@ -96,12 +78,5 @@ export class BotSpawner {
   private getRandomElf(): string {
     const suffixNumber = this.random.nextInt(1, 10001);
     return `Elf ${suffixNumber}`;
-  }
-
-  private randTile(): TileRef {
-    return this.gs.ref(
-      this.random.nextInt(0, this.gs.width()),
-      this.random.nextInt(0, this.gs.height()),
-    );
   }
 }

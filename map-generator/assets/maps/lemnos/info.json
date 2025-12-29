@@ -1,0 +1,50 @@
+{
+  "name": "Lemnos",
+  "nations": [
+    {
+      "coordinates": [550, 317],
+      "name": "Gomati",
+      "flag": ""
+    },
+    {
+      "coordinates": [1371, 254],
+      "name": "Zematas",
+      "flag": ""
+    },
+    {
+      "coordinates": [1096, 605],
+      "name": "Kotsinas",
+      "flag": ""
+    },
+    {
+      "coordinates": [518, 894],
+      "name": "Evgatis",
+      "flag": ""
+    },
+    {
+      "coordinates": [250, 879],
+      "name": "Kavala",
+      "flag": ""
+    },
+    {
+      "coordinates": [814, 460],
+      "name": "Atsiki",
+      "flag": ""
+    },
+    {
+      "coordinates": [474, 542],
+      "name": "Sardes",
+      "flag": ""
+    },
+    {
+      "coordinates": [691, 755],
+      "name": "Portianou",
+      "flag": ""
+    },
+    {
+      "coordinates": [1074, 913],
+      "name": "Pyrgos",
+      "flag": ""
+    }
+  ]
+}

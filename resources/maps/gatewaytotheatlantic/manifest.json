@@ -19,182 +19,152 @@
     {
       "coordinates": [2144, 344],
       "flag": "ch",
-      "name": "Swiss Confederation",
-      "strength": 2
+      "name": "Swiss Confederation"
     },
     {
       "coordinates": [1964, 371],
       "flag": "burgundy",
-      "name": "Kingdom of Burgundy",
-      "strength": 2
+      "name": "Kingdom of Burgundy"
     },
     {
       "coordinates": [1334, 537],
       "flag": "aquitaine",
-      "name": "Duchy of Aquitaine",
-      "strength": 2
+      "name": "Duchy of Aquitaine"
     },
     {
       "coordinates": [2115, 684],
       "flag": "provence",
-      "name": "County of Provence",
-      "strength": 2
+      "name": "County of Provence"
     },
     {
       "coordinates": [1207, 763],
       "flag": "es-pv",
-      "name": "The Basque",
-      "strength": 3
+      "name": "The Basque"
     },
     {
       "coordinates": [1281, 1142],
       "flag": "valencia",
-      "name": "Kingdom of Valencia",
-      "strength": 2
+      "name": "Kingdom of Valencia"
     },
     {
       "coordinates": [1660, 891],
       "flag": "catalonia",
-      "name": "Catalonia",
-      "strength": 2
+      "name": "Catalonia"
     },
     {
       "coordinates": [561, 764],
       "flag": "es-ga",
-      "name": "Kingdom of Galicia",
-      "strength": 2
+      "name": "Kingdom of Galicia"
     },
     {
       "coordinates": [1004, 1436],
       "flag": "granada",
-      "name": "Emirate of Granada",
-      "strength": 2
+      "name": "Emirate of Granada"
     },
     {
       "coordinates": [431, 1197],
       "flag": "pt",
-      "name": "Portuguese Republic",
-      "strength": 2
+      "name": "Portuguese Republic"
     },
     {
       "coordinates": [560, 1894],
       "flag": "ma",
-      "name": "Kingdom of Morocco",
-      "strength": 2
+      "name": "Kingdom of Morocco"
     },
     {
       "coordinates": [1609, 1837],
       "flag": "dz",
-      "name": "Algeria'",
-      "strength": 2
+      "name": "Algeria'"
     },
     {
       "coordinates": [1733, 622],
       "flag": "armagnac",
-      "name": "County of Armagnac",
-      "strength": 2
+      "name": "County of Armagnac"
     },
     {
       "coordinates": [896, 1240],
       "flag": "cordoba",
-      "name": "City of Cordoba",
-      "strength": 2
+      "name": "City of Cordoba"
     },
     {
       "coordinates": [636, 1781],
       "flag": "seville",
-      "name": "City of Seville",
-      "strength": 2
+      "name": "City of Seville"
     },
     {
       "coordinates": [750, 873],
       "flag": "leon",
-      "name": "Kingdom of Leon",
-      "strength": 2
+      "name": "Kingdom of Leon"
     },
     {
       "coordinates": [1001, 882],
       "flag": "castille",
-      "name": "Kingdom of Castille",
-      "strength": 2
+      "name": "Kingdom of Castille"
     },
     {
       "coordinates": [775, 724],
       "flag": "asturias",
-      "name": "Principality of Asturias",
-      "strength": 2
+      "name": "Principality of Asturias"
     },
     {
       "coordinates": [1755, 1130],
       "flag": "neuragic_empire",
-      "name": "The Old Ones",
-      "strength": 3
+      "name": "The Old Ones"
     },
     {
       "coordinates": [2097, 1670],
       "flag": "Amazigh flag",
-      "name": "Tamazgha",
-      "strength": 2
+      "name": "Tamazgha"
     },
     {
       "coordinates": [979, 1013],
       "flag": "es",
-      "name": "Kingdom of Spain",
-      "strength": 2
+      "name": "Kingdom of Spain"
     },
     {
       "coordinates": [468, 930],
       "flag": "sardines",
-      "name": "Sardines",
-      "strength": 3
+      "name": "Sardines"
     },
     {
       "coordinates": [1667, 96],
       "flag": "paris",
-      "name": "City of Paris",
-      "strength": 2
+      "name": "City of Paris"
     },
     {
       "coordinates": [1716, 296],
       "flag": "baguette",
-      "name": "Baguettes",
-      "strength": 3
+      "name": "Baguettes"
     },
     {
       "coordinates": [1017, 180],
       "flag": "brittany",
-      "name": "Kingdom of Brittany",
-      "strength": 2
+      "name": "Kingdom of Brittany"
     },
     {
       "coordinates": [2072, 567],
       "flag": "antipope",
-      "name": "An Anti-Pope",
-      "strength": 3
+      "name": "An Anti-Pope"
     },
     {
       "coordinates": [1355, 76],
       "flag": "normandy",
-      "name": "Duchy of Normandy",
-      "strength": 2
+      "name": "Duchy of Normandy"
     },
     {
       "coordinates": [1402, 529],
       "flag": "",
-      "name": "Wine",
-      "strength": 1
+      "name": "Wine"
     },
     {
       "coordinates": [1475, 1657],
       "flag": "French foreign legion",
-      "name": "French Foreign Legion",
-      "strength": 3
+      "name": "French Foreign Legion"
     },
     {
       "coordinates": [1685, 417],
       "flag": "fr",
-      "name": "French Republic",
-      "strength": 3
+      "name": "French Republic"
     }
   ]
 }

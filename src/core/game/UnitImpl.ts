@@ -25,6 +25,7 @@ export class UnitImpl implements Unit {
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
+  private _destroyer: Player | undefined = undefined;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _underConstruction: boolean = false;
   private _lastOwner: PlayerImpl | null = null;
@@ -258,6 +259,7 @@ export class UnitImpl implements Unit {
 
     // Record whether this unit was destroyed by an enemy (vs. arrived / retreated)
     this._wasDestroyedByEnemy = destroyer !== undefined;
+    this._destroyer = destroyer ?? undefined;
 
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
@@ -300,6 +302,10 @@ export class UnitImpl implements Unit {
 
   wasDestroyedByEnemy(): boolean {
     return this._wasDestroyedByEnemy;
+  }
+
+  destroyer(): Player | undefined {
+    return this._destroyer;
   }
 
   retreating(): boolean {

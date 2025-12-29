@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "加入 Discord",
+    "join_discord": "Discord",
     "login_discord": "用 Discord 登录",
     "checking_login": "正在检查登录...",
     "logged_in": "登录成功！",
@@ -30,8 +30,6 @@
     "join_lobby": "加入房间",
     "single_player": "单人游戏",
     "instructions": "操作说明",
-    "how_to_play": "如何游玩",
-    "advertise": "广告",
     "wiki": "游戏百科",
     "privacy_policy": "隐私政策",
     "terms_of_service": "服务条款",
@@ -135,6 +133,7 @@
   },
   "single_modal": {
     "title": "单人玩家",
+    "random_spawn": "随机出生点",
     "allow_alliances": "允许结盟",
     "options_title": "选项",
     "bots": "机器人： ",
@@ -144,10 +143,9 @@
     "instant_build": "立即建造",
     "infinite_gold": "无限黄金",
     "infinite_troops": "无限军队",
-    "compact_map": "小地图",
+    "compact_map": "紧凑地图",
     "max_timer": "游戏时长（分钟）",
     "disable_nukes": "禁用核弹",
-    "automatic_difficulty": "自动难度",
     "enables_title": "启用设置",
     "start": "开始游戏"
   },
@@ -162,6 +160,18 @@
     "fetching_account": "正在获取帐户信息......",
     "logged_in_with_discord": "使用 Discord 登录",
     "recovery_email_sent": "账号找回邮件已发送至 {email}"
+  },
+  "stats_modal": {
+    "title": "统计",
+    "clan_stats": "军团统计",
+    "loading": "正在加载……",
+    "error": "加载军团统计数据时出错",
+    "no_stats": "暂无军团统计数据",
+    "clan": "军团",
+    "games": "游戏场数",
+    "win_score": "胜者积分",
+    "loss_score": "败者积分",
+    "win_loss_ratio": "胜负比"
   },
   "map": {
     "map": "地图",
@@ -197,7 +207,10 @@
     "pluto": "冥王星",
     "montreal": "蒙特利尔",
     "achiran": "阿基尔岛/阿伦群岛",
-    "baikalnukewars": "贝加尔湖（核战争）"
+    "baikalnukewars": "贝加尔湖（核战争）",
+    "fourislands": "四岛争霸",
+    "gulfofstlawrence": "圣劳伦斯湾",
+    "lisbon": "里斯本"
   },
   "map_categories": {
     "continental": "大陆",
@@ -222,11 +235,12 @@
   "public_lobby": {
     "join": "加入下一场游戏",
     "waiting": "等待中的玩家",
-    "teams_Duos": "2人小队",
-    "teams_Trios": "3人小队",
-    "teams_Quads": "4人小队",
+    "teams_Duos": "/ 2（2人小队）",
+    "teams_Trios": "/ 3（3人小队）",
+    "teams_Quads": "/ 4（4人小队）",
     "teams_hvn": "人类 VS 国家",
-    "teams": "{num} 个队伍"
+    "teams": "{num} 个队伍",
+    "players_per_team": "/ {num}"
   },
   "matchmaking_modal": {
     "title": "匹配中",
@@ -256,14 +270,20 @@
     "donate_gold": "捐赠金币",
     "infinite_troops": "无限军队",
     "donate_troops": "捐赠军队",
-    "compact_map": "小地图",
-    "automatic_difficulty": "自动难度",
+    "compact_map": "紧凑地图",
     "enables_title": "启用设置",
     "player": "玩家",
     "players": "玩家",
+    "nation_players": "国家",
+    "nation_player": "国家",
     "waiting": "正在等待玩家...",
+    "random_spawn": "随机出生点",
     "start": "开始游戏",
-    "host_badge": "主机"
+    "host_badge": "主机",
+    "assigned_teams": "已分配的队伍",
+    "empty_teams": "空队伍",
+    "empty_team": "空",
+    "remove_player": "移除 {username}"
   },
   "team_colors": {
     "red": "红色",
@@ -315,7 +335,7 @@
     "emojis_label": "表情符号",
     "emojis_desc": "切换是否在游戏中显示表情符号",
     "alert_frame_label": "警告框",
-    "alert_frame_desc": "切换警告框显示。若启用，当您被背叛时会弹出警告框。",
+    "alert_frame_desc": "切换警告框显示。若启用，则当你被背叛或被陆上攻击时将会显示此警告框。",
     "special_effects_label": "特效",
     "special_effects_desc": "切换特效开关。停用以改进性能",
     "structure_sprites_label": "建筑贴图",
@@ -512,7 +532,14 @@
     "exit": "退出游戏",
     "keep": "继续游戏",
     "spectate": "观战",
-    "wishlist": "将游戏加入 Steam 愿望单！"
+    "wishlist": "将游戏加入 Steam 愿望单！",
+    "ofm_winter": "OpenFront 大师冬季锦标赛！",
+    "ofm_winter_description": "加入竞技比赛，与最强玩家一较高下",
+    "join_tournament": "加入比赛",
+    "join_discord": "加入我们的 Discord 社区！",
+    "discord_description": "与其他玩家交流，获取最新消息，分享游戏战略",
+    "join_server": "加入服务器",
+    "youtube_tutorial": "需要帮助吗？"
   },
   "leaderboard": {
     "title": "排行榜",
@@ -552,6 +579,7 @@
   },
   "events_display": {
     "retreating": "正在撤退",
+    "retaliate": "反击",
     "boat": "船",
     "alliance_request_status": "{name} {status}你的联盟请求",
     "alliance_accepted": "已接受",
@@ -570,8 +598,10 @@
     "accept_alliance": "接受",
     "reject_alliance": "拒绝",
     "alliance_renewed": "你与 {name} 的结盟已续期",
+    "wants_to_renew_alliance": "{name} 想与你续签盟约",
     "ignore": "忽略",
-    "unit_voluntarily_deleted": "单位已自毁"
+    "unit_voluntarily_deleted": "单位已自毁",
+    "betrayal_debuff_ends": "距离背叛减益效果结束还剩 {time} 秒"
   },
   "unit_info_modal": {
     "structure_info": "建筑信息",
@@ -618,7 +648,6 @@
     "flag": "旗帜",
     "chat": "聊天",
     "target": "目标",
-    "break": "破裂",
     "break_alliance": "撕毁盟约",
     "alliance": "结盟",
     "send_alliance": "请求结盟",
@@ -630,10 +659,7 @@
     "title_with_name": "向 {name} 发送军队",
     "available_tooltip": "你的剩余军队",
     "min_keep": "最小保留值",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "在攻击栏中发送军队",
-    "warning_attackbar": "启用后，你无法直接打开此模式，只能在攻击栏中发送军队。",
     "aria_slider": "军队滑块",
     "capacity_note": "接收者现在仅能接收 {{amount}}。"
   },
@@ -655,15 +681,34 @@
     "copy_clipboard": "复制到剪贴板",
     "copied": "已复制！",
     "failed_copy": "复制失败",
+    "spawn_failed": {
+      "title": "出生失败",
+      "description": "自动选择出生点失败了。您无法参与这场游戏。"
+    },
     "desync_notice": "你与其他玩家失去同步。你看到的可能与其他玩家不同。"
   },
+  "performance_overlay": {
+    "reset": "重置",
+    "copy_json_title": "将当前性能指标复制为 JSON 格式",
+    "copy_clipboard": "复制 JSON",
+    "copied": "已复制！",
+    "failed_copy": "复制失败",
+    "fps": "FPS：",
+    "avg_60s": "平均值(60秒)：",
+    "frame": "帧：",
+    "tick_exec": "Tick 执行：",
+    "tick_delay": "Tick 延迟：",
+    "layers_header": "图层（平均值 / 最大值，按总时间排序）："
+  },
   "heads_up_message": {
-    "choose_spawn": "选择出生点"
+    "choose_spawn": "选择出生点",
+    "random_spawn": "随机出生点已启用。正在为你选择出生点……"
   },
   "territory_patterns": {
     "title": "皮肤",
     "colors": "颜色",
     "purchase": "购买",
+    "show_only_owned": "我的皮肤",
     "blocked": {
       "login": "您必须登录才能使用此皮肤。",
       "purchase": "购买以解锁此皮肤。"

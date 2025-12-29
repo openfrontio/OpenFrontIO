@@ -9,7 +9,8 @@ import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { PauseGameEvent } from "../../Transport";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -36,6 +37,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   private timer: number = 0;
 
   private hasWinner = false;
+  private isLobbyCreator = false;
 
   createRenderRoot() {
     return this;
@@ -47,6 +49,7 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
+
     this.requestUpdate();
   }
 
@@ -56,6 +59,13 @@ export class GameRightSidebar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
+
+    // Check if the player is the lobby creator
+    if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
+      this.isLobbyCreator = true;
+      this.requestUpdate();
+    }
+
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {
       if (this.game.inSpawnPhase()) {
@@ -95,7 +105,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
   private onExitButtonClick() {
@@ -106,8 +116,10 @@ export class GameRightSidebar extends LitElement implements Layer {
       );
       if (!isConfirmed) return;
     }
-    // redirect to the home page
-    window.location.href = "/";
+    crazyGamesSDK.gameplayStop().then(() => {
+      // redirect to the home page
+      window.location.href = "/";
+    });
   }
 
   private onSettingsButtonClick() {
@@ -150,25 +162,35 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   maybeRenderReplayButtons() {
-    if (this._isSinglePlayer || this.game?.config()?.isReplay()) {
-      return html` <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
-          <img
-            src=${FastForwardIconSolid}
-            alt="replay"
-            width="20"
-            height="20"
-          />
-        </div>
-        <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
-          <img
-            src=${this.isPaused ? playIcon : pauseIcon}
-            alt="play/pause"
-            width="20"
-            height="20"
-          />
-        </div>`;
-    } else {
-      return html``;
-    }
+    const isReplayOrSingleplayer =
+      this._isSinglePlayer || this.game?.config()?.isReplay();
+    const showPauseButton = isReplayOrSingleplayer || this.isLobbyCreator;
+
+    return html`
+      ${isReplayOrSingleplayer
+        ? html`
+            <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
+              <img
+                src=${FastForwardIconSolid}
+                alt="replay"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+      ${showPauseButton
+        ? html`
+            <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
+              <img
+                src=${this.isPaused ? playIcon : pauseIcon}
+                alt="play/pause"
+                width="20"
+                height="20"
+              />
+            </div>
+          `
+        : ""}
+    `;
   }
 }

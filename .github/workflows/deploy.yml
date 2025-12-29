@@ -84,11 +84,12 @@ jobs:
           token: ${{ steps.generate-token.outputs.token }}
           environment-url: https://${{ env.FQDN }}
           environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
-      - name: 🔗 Log in to Docker Hub
+      - name: 🔗 Log in to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
@@ -105,21 +106,14 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚢 Deploy
         env:
-          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          DOCKER_REPO: ${{ vars.DOCKERHUB_REPO }}
-          DOCKER_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          GHCR_REPO: ${{ vars.GHCR_REPO }}
+          GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           HOST: ${{ github.event_name == 'workflow_dispatch' && inputs.target_host || 'staging' }}
-          OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
-          OTEL_PASSWORD: ${{ secrets.OTEL_PASSWORD }}
-          OTEL_USERNAME: ${{ secrets.OTEL_USERNAME }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
-          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}

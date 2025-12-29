@@ -19,92 +19,77 @@
     {
       "coordinates": [40, 674],
       "flag": "bg",
-      "name": "Bulgaria",
-      "strength": 2
+      "name": "Bulgaria"
     },
     {
       "coordinates": [354, 820],
       "flag": "tr",
-      "name": "Republic of Turkiye",
-      "strength": 3
+      "name": "Republic of Turkiye"
     },
     {
       "coordinates": [105, 474],
       "flag": "ro",
-      "name": "Romania",
-      "strength": 2
+      "name": "Romania"
     },
     {
       "coordinates": [172, 382],
       "flag": "md",
-      "name": "Moldova",
-      "strength": 2
+      "name": "Moldova"
     },
     {
       "coordinates": [465, 296],
       "flag": "ua",
-      "name": "Ukraine",
-      "strength": 3
+      "name": "Ukraine"
     },
     {
       "coordinates": [980, 24],
       "flag": "ru",
-      "name": "Russian Federation",
-      "strength": 3
+      "name": "Russian Federation"
     },
     {
       "coordinates": [1003, 674],
       "flag": "ge",
-      "name": "Georgia",
-      "strength": 1
+      "name": "Georgia"
     },
     {
       "coordinates": [1131, 804],
       "flag": "am",
-      "name": "Republic of Armenia",
-      "strength": 1
+      "name": "Republic of Armenia"
     },
     {
       "coordinates": [856, 1044],
       "flag": "sy",
-      "name": "Syrian Arab Republic",
-      "strength": 2
+      "name": "Syrian Arab Republic"
     },
     {
       "coordinates": [1355, 1022],
       "flag": "ir",
-      "name": "Islamic Republic of Iran",
-      "strength": 3
+      "name": "Islamic Republic of Iran"
     },
     {
       "coordinates": [1355, 18],
       "flag": "az",
-      "name": "Republic of Azerbaijan",
-      "strength": 1
+      "name": "Republic of Azerbaijan"
     },
     {
       "coordinates": [334, 18],
       "flag": "by",
-      "name": "Belarus",
-      "strength": 1
+      "name": "Belarus"
     },
     {
       "coordinates": [1689, 467],
       "flag": "kz",
-      "name": "Kazakhstan",
-      "strength": 1
+      "name": "Kazakhstan"
     },
     {
       "coordinates": [1727, 831],
       "flag": "tm",
-      "name": "Turkmenistan",
-      "strength": 1
+      "name": "Turkmenistan"
     },
     {
       "coordinates": [851, 589],
       "flag": "Circassia",
-      "name": "Circassia",
-      "strength": 1
+      "name": "Circassia"
     }
   ]
 }

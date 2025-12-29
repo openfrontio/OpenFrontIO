@@ -12,28 +12,35 @@ import (
 	"github.com/chai2010/webp"
 )
 
+// The smallest a body of land or lake can be, all smaller are removed
 const (
 	minIslandSize = 30
 	minLakeSize   = 200
 )
 
+// Holds raw RGBA image data for the thumbnail
 type ThumbData struct {
 	Data   []byte
 	Width  int
 	Height int
 }
 
+// XY coord, origin top left, x extending right, y extends down
 type Coord struct {
 	X, Y int
 }
 
+// TerrainType represents the classification of a map tile (e.g., Land or Water).
 type TerrainType int
 
+// Enumeration of possible TerrainType values.
 const (
 	Land TerrainType = iota
 	Water
 )
 
+// Terrain represents the properties of a single map tile.
+// Magnitude represents elevation for Land (0-30) or distance to land for Water.
 type Terrain struct {
 	Type      TerrainType
 	Shoreline bool
@@ -41,6 +48,7 @@ type Terrain struct {
 	Ocean     bool
 }
 
+// MapResult is the output format from the GenerateMap workflow
 type MapResult struct {
 	Thumbnail []byte
 	Map       MapInfo
@@ -48,19 +56,44 @@ type MapResult struct {
 	Map16x    MapInfo
 }
 
+// MapInfo contains the serialized map data and metadata for a specific scale.
 type MapInfo struct {
-	Data         []byte
+	Data         []byte // packed map data
 	Width        int
 	Height       int
 	NumLandTiles int
 }
 
+// GeneratorArgs defines the input parameters for the map generation process.
 type GeneratorArgs struct {
 	Name        string
 	ImageBuffer []byte
 	RemoveSmall bool
 }
 
+// GenerateMap is the main map-generator workflow.
+//   - Maps each pixel to a Terrain type based on its blue value
+//   - Removes small islands and lakes
+//   - Creates a WebP thumbnail
+//   - Packs the map data into binary format for full scale, 1/4 tile count (half dimensions), and 1/16 tile count (quarter dimensions)
+//
+// Red/green pixel values have no impact, only blue values are used
+// For Land tiles, "Magnitude" is determined by `(Blue - 140) / 2“.
+// For Water tiles, "Magnitude" is calculated during generation as the distance to the nearest land.
+//
+// Pixel -> Terrain & Magnitude mapping
+// | Input Condition    | Terrain Type    | Magnitude          | Notes                            |
+// | :----------------- | :-------------- | :----------------- | :------------------------------- |
+// | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
+// | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
+// | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
+// | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 					 					 					 		|
+// | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 					 					 					 		|
+// | **Blue 179 - 200** | Land (Mountain) | 20 - 30            | 				 					 					 			|
+// | **Blue > 200**     | Land (Mountain) | 30                 | Clamped to maximum magnitude.    |
+//
+// Misc Notes
+//   - It normalizes map width/height to multiples of 4 for the mini map downscaling.
 func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	img, err := png.Decode(bytes.NewReader(args.ImageBuffer))
 	if err != nil {
@@ -150,6 +183,7 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	}, nil
 }
 
+// convertToWebP encodes raw RGBA thumbnail data into WebP format.
 func convertToWebP(thumb ThumbData) ([]byte, error) {
 	// Create RGBA image from raw data
 	img := image.NewRGBA(image.Rect(0, 0, thumb.Width, thumb.Height))
@@ -171,6 +205,10 @@ func convertToWebP(thumb ThumbData) ([]byte, error) {
 	return webpData, nil
 }
 
+// createMiniMap downscales the terrain grid by half.
+// It maps 2x2 blocks of input tiles to a single output tile.
+// The logic prioritizes Water: if any of the 4 source tiles is Water,
+// the resulting mini-map tile becomes Water.
 func createMiniMap(tm [][]Terrain) [][]Terrain {
 	width := len(tm)
 	height := len(tm[0])
@@ -200,6 +238,10 @@ func createMiniMap(tm [][]Terrain) [][]Terrain {
 	return miniMap
 }
 
+// processShore identifies shoreline tiles by checking adjacency.
+// It marks Land tiles as shoreline if they neighbor Water, and Water tiles as
+// shoreline if they neighbor Land.
+// Returns a list of coordinates for all shoreline Water tiles found.
 func processShore(terrain [][]Terrain) []Coord {
 	log.Println("Identifying shorelines")
 	var shorelineWaters []Coord
@@ -235,6 +277,9 @@ func processShore(terrain [][]Terrain) []Coord {
 	return shorelineWaters
 }
 
+// processDistToLand calculates the distance of water tiles from the nearest land.
+// It uses a Breadth-First Search (BFS) starting from the shoreline water tiles.
+// The distance is stored in the Magnitude field of the Water tiles.
 func processDistToLand(shorelineWaters []Coord, terrain [][]Terrain) {
 	log.Println("Setting Water tiles magnitude = Manhattan distance from nearest land")
 
@@ -280,6 +325,7 @@ func processDistToLand(shorelineWaters []Coord, terrain [][]Terrain) {
 	}
 }
 
+// getNeighbors returns a list of Terrain tiles adjacent to the specified coordinates.
 func getNeighbors(x, y int, terrain [][]Terrain) []Terrain {
 	coords := getNeighborCoords(x, y, terrain)
 	neighbors := make([]Terrain, len(coords))
@@ -289,6 +335,8 @@ func getNeighbors(x, y int, terrain [][]Terrain) []Terrain {
 	return neighbors
 }
 
+// getNeighborCoords returns a list of valid adjacent coordinates (up, down, left, right).
+// It ensures that the returned coordinates are within the bounds of the terrain grid.
 func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 	width := len(terrain)
 	height := len(terrain[0])
@@ -310,6 +358,10 @@ func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 	return coords
 }
 
+// processWater identifies and processes bodies of water in the terrain.
+// It finds all connected water bodies and marks the largest one as Ocean.
+// If removeSmall is true, lakes smaller than minLakeSize are converted to Land.
+// Finally, it triggers shoreline identification and distance-to-land calculations.
 func processWater(terrain [][]Terrain, removeSmall bool) {
 	log.Println("Processing water bodies")
 	visited := make(map[string]bool)
@@ -382,6 +434,9 @@ func processWater(terrain [][]Terrain, removeSmall bool) {
 	}
 }
 
+// getArea performs a Breadth-First Search (BFS) to find a contiguous area of tiles
+// sharing the same TerrainType as the passed x,y coordinates.
+// The visited map is updated to prevent reprocessing tiles.
 func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 	targetType := terrain[x][y].Type
 	var area []Coord
@@ -408,6 +463,8 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 	return area
 }
 
+// removeSmallIslands identifies and removes small land masses from the terrain.
+// If removeSmall is true, any removed bodies are converted to Water.
 func removeSmallIslands(terrain [][]Terrain, removeSmall bool) {
 	if !removeSmall {
 		return
@@ -456,6 +513,14 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool) {
 		smallIslands, minIslandSize)
 }
 
+// packTerrain serializes the terrain grid into a byte slice.
+// Each byte represents a single tile with bit flags:
+//   - Bit 7: Land (1) / Water (0)
+//   - Bit 6: Shoreline
+//   - Bit 5: Ocean
+//   - Bits 0-4: Magnitude (0-31). For Water, this is (Distance / 2).
+//
+// Returns the packed data and the count of land tiles.
 func packTerrain(terrain [][]Terrain) (data []byte, numLandTiles int) {
 	width := len(terrain)
 	height := len(terrain[0])
@@ -492,6 +557,9 @@ func packTerrain(terrain [][]Terrain) (data []byte, numLandTiles int) {
 	return packedData, numLandTiles
 }
 
+// createMapThumbnail generates an RGBA image representation of the terrain.
+// It scales the map dimensions based on the provided quality factor.
+// Each pixel's color is determined by the terrain type and magnitude via getThumbnailColor.
 func createMapThumbnail(terrain [][]Terrain, quality float64) *image.RGBA {
 	log.Println("Creating thumbnail")
 
@@ -520,10 +588,28 @@ func createMapThumbnail(terrain [][]Terrain, quality float64) *image.RGBA {
 	return img
 }
 
+// RGBA represents a color with Red, Green, Blue, and Alpha channels.
+// It is used locally for thumbnail generation.
 type RGBA struct {
 	R, G, B, A uint8
 }
 
+// getThumbnailColor determines the RGBA color for a specific terrain tile for
+// the map preview thumbnail.
+//
+// It handles color generation for Water (shoreline vs deep water) and Land
+// (shoreline, plains, highlands, mountains) based on the tile's magnitude.
+//
+// The thumbnail renders its own set of colors separate from the in-game light/dark
+// color schemes.
+//
+// For thumbnail purposes, the terrain type -> color mapping:
+//   - Water Shoreline: (Transparent)
+//   - Deep Water: (Transparent)
+//   - Land Shoreline: `rgb(204, 203, 158)`
+//   - Plains (Mag < 10): `rgb(190, 220, 138)` - `rgb(190, 202, 138)`
+//   - Highlands (Mag 10-19): `rgb(220, 203, 158)` - `rgb(238, 221, 176)`
+//   - Mountains (Mag >= 20): `rgb(240, 240, 240)` - `rgb(245, 245, 245)`
 func getThumbnailColor(t Terrain) RGBA {
 	if t.Type == Water {
 		// Shoreline water
@@ -576,6 +662,8 @@ func getThumbnailColor(t Terrain) RGBA {
 	}
 }
 
+// logBinaryAsBits logs the binary representation of the first 'length' bytes of data.
+// It is a helper function for debugging packed terrain data.
 func logBinaryAsBits(data []byte, length int) {
 	if length > len(data) {
 		length = len(data)
@@ -588,20 +676,22 @@ func logBinaryAsBits(data []byte, length int) {
 	log.Printf("Binary data (bits): %s", bits)
 }
 
+// createCombinedBinary combines the info JSON, map data, and mini-map data into a single binary buffer.
+//
+// Note: This function is currently unused by the main workflow, which writes separate files instead.
+// It creates a header with the following structure:
+//   - Bytes 0-3: Version (1)
+//   - Bytes 4-7: Info section offset
+//   - Bytes 8-11: Info section size
+//   - Bytes 12-15: Map section offset
+//   - Bytes 16-19: Map section size
+//   - Bytes 20-23: MiniMap section offset
+//   - Bytes 24-27: MiniMap section size
 func createCombinedBinary(infoBuffer []byte, mapData []byte, miniMapData []byte) []byte {
 	// Calculate section sizes
 	infoSize := len(infoBuffer)
 	mapSize := len(mapData)
 	miniMapSize := len(miniMapData)
-
-	// Header structure:
-	// Bytes 0-3: Version (1)
-	// Bytes 4-7: Info section offset (always 28)
-	// Bytes 8-11: Info section size
-	// Bytes 12-15: Map section offset
-	// Bytes 16-19: Map section size
-	// Bytes 20-23: MiniMap section offset
-	// Bytes 24-27: MiniMap section size
 
 	headerSize := 28
 	infoOffset := headerSize
@@ -634,6 +724,9 @@ func createCombinedBinary(infoBuffer []byte, mapData []byte, miniMapData []byte)
 	return combined
 }
 
+// writeUint32 writes a 32-bit unsigned integer to the byte slice at the specified offset.
+// It uses Little Endian byte order.
+// Note: This function is currently unused.
 func writeUint32(data []byte, offset int, value uint32) {
 	data[offset] = byte(value & 0xff)
 	data[offset+1] = byte((value >> 8) & 0xff)
@@ -641,10 +734,16 @@ func writeUint32(data []byte, offset int, value uint32) {
 	data[offset+3] = byte((value >> 24) & 0xff)
 }
 
+// readUint32 reads a 32-bit unsigned integer from the byte slice at the specified offset.
+// It assumes Little Endian byte order.
+// Note: This function is currently unused.
 func readUint32(data []byte, offset int) uint32 {
 	return uint32(data[offset]) | uint32(data[offset+1])<<8 | uint32(data[offset+2])<<16 | uint32(data[offset+3])<<24
 }
 
+// decodeCombinedBinary parses a combined binary buffer into its constituent parts.
+// It validates the header and extracts the Info JSON, Map data, and MiniMap data sections.
+// Note: This function is currently unused.
 func decodeCombinedBinary(data []byte) (*CombinedBinaryHeader, []byte, []byte, []byte, error) {
 	if len(data) < 28 {
 		return nil, nil, nil, nil, fmt.Errorf("data too short for header")
@@ -675,6 +774,8 @@ func decodeCombinedBinary(data []byte) (*CombinedBinaryHeader, []byte, []byte, [
 	return header, infoData, mapData, miniMapData, nil
 }
 
+// CombinedBinaryHeader represents the metadata header of the combined map file format.
+// Note: This struct is currently unused.
 type CombinedBinaryHeader struct {
 	Version       uint32
 	InfoOffset    uint32

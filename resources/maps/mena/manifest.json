@@ -19,212 +19,177 @@
     {
       "coordinates": [257, 82],
       "flag": "es",
-      "name": "Spain",
-      "strength": 3
+      "name": "Spain"
     },
     {
       "coordinates": [142, 134],
       "flag": "pt",
-      "name": "Portugal",
-      "strength": 2
+      "name": "Portugal"
     },
     {
       "coordinates": [142, 348],
       "flag": "ma",
-      "name": "Morocco",
-      "strength": 1
+      "name": "Morocco"
     },
     {
       "coordinates": [490, 296],
       "flag": "dz",
-      "name": "Algeria",
-      "strength": 1
+      "name": "Algeria"
     },
     {
       "coordinates": [675, 225],
       "flag": "tn",
-      "name": "Tunisia",
-      "strength": 1
+      "name": "Tunisia"
     },
     {
       "coordinates": [825, 352],
       "flag": "ly",
-      "name": "Libyan Arab Jamahiriya",
-      "strength": 1
+      "name": "Libyan Arab Jamahiriya"
     },
     {
       "coordinates": [1280, 389],
       "flag": "eg",
-      "name": "Egypt",
-      "strength": 2
+      "name": "Egypt"
     },
     {
       "coordinates": [1444, 341],
       "flag": "il",
-      "name": "Israel",
-      "strength": 3
+      "name": "Israel"
     },
     {
       "coordinates": [1409, 372],
       "flag": "ps",
-      "name": "Palestine",
-      "strength": 1
+      "name": "Palestine"
     },
     {
       "coordinates": [1460, 294],
       "flag": "lb",
-      "name": "Lebanon",
-      "strength": 1
+      "name": "Lebanon"
     },
     {
       "coordinates": [1259, 761],
       "flag": "sd",
-      "name": "Sudan",
-      "strength": 1
+      "name": "Sudan"
     },
     {
       "coordinates": [1500, 221],
       "flag": "sy",
-      "name": "Syrian Arab Republic",
-      "strength": 1
+      "name": "Syrian Arab Republic"
     },
     {
       "coordinates": [1743, 303],
       "flag": "iq",
-      "name": "Iraq",
-      "strength": 2
+      "name": "Iraq"
     },
     {
       "coordinates": [1729, 534],
       "flag": "sa",
-      "name": "Saudi Arabia",
-      "strength": 3
+      "name": "Saudi Arabia"
     },
     {
       "coordinates": [1726, 884],
       "flag": "ye",
-      "name": "Yemen",
-      "strength": 1
+      "name": "Yemen"
     },
     {
       "coordinates": [2134, 654],
       "flag": "om",
-      "name": "Oman",
-      "strength": 1
+      "name": "Oman"
     },
     {
       "coordinates": [2025, 576],
       "flag": "ae",
-      "name": "United Arab Emirates",
-      "strength": 1
+      "name": "United Arab Emirates"
     },
     {
       "coordinates": [1924, 538],
       "flag": "qa",
-      "name": "Qatar",
-      "strength": 1
+      "name": "Qatar"
     },
     {
       "coordinates": [1948, 333],
       "flag": "ir",
-      "name": "Islamic Republic of Iran",
-      "strength": 3
+      "name": "Islamic Republic of Iran"
     },
     {
       "coordinates": [1313, 127],
       "flag": "tr",
-      "name": "Turkiye",
-      "strength": 3
+      "name": "Turkiye"
     },
     {
       "coordinates": [776, 39],
       "flag": "it",
-      "name": "Italy",
-      "strength": 2
+      "name": "Italy"
     },
     {
       "coordinates": [1087, 145],
       "flag": "gr",
-      "name": "Greece",
-      "strength": 2
+      "name": "Greece"
     },
     {
       "coordinates": [1181, 20],
       "flag": "bg",
-      "name": "Bulgaria",
-      "strength": 1
+      "name": "Bulgaria"
     },
     {
       "coordinates": [2156, 18],
       "flag": "uz",
-      "name": "Uzbekistan",
-      "strength": 1
+      "name": "Uzbekistan"
     },
     {
       "coordinates": [1480, 342],
       "flag": "jo",
-      "name": "Jordan",
-      "strength": 1
+      "name": "Jordan"
     },
     {
       "coordinates": [1050, 725],
       "flag": "td",
-      "name": "Chad",
-      "strength": 2
+      "name": "Chad"
     },
     {
       "coordinates": [767, 734],
       "flag": "ne",
-      "name": "Niger",
-      "strength": 2
+      "name": "Niger"
     },
     {
       "coordinates": [408, 553],
       "flag": "ml",
-      "name": "Mali",
-      "strength": 1
+      "name": "Mali"
     },
     {
       "coordinates": [98, 55],
       "flag": "mr",
-      "name": "Mauritania",
-      "strength": 1
+      "name": "Mauritania"
     },
     {
       "coordinates": [1562, 828],
       "flag": "er",
-      "name": "Eritrea",
-      "strength": 1
+      "name": "Eritrea"
     },
     {
       "coordinates": [1811, 414],
       "flag": "kw",
-      "name": "Kuwait",
-      "strength": 1
+      "name": "Kuwait"
     },
     {
       "coordinates": [1667, 30],
       "flag": "ge",
-      "name": "Georgia",
-      "strength": 1
+      "name": "Georgia"
     },
     {
       "coordinates": [1848, 116],
       "flag": "az",
-      "name": "Azerbaijan",
-      "strength": 1
+      "name": "Azerbaijan"
     },
     {
       "coordinates": [1385, 248],
       "flag": "cy",
-      "name": "Cyprus",
-      "strength": 1
+      "name": "Cyprus"
     },
     {
       "coordinates": [1994, 19],
       "flag": "kz",
-      "name": "Kazakhstan",
-      "strength": 2
+      "name": "Kazakhstan"
     }
   ]
 }

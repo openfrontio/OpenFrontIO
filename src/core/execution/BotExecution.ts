@@ -2,7 +2,7 @@ import { Execution, Game, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
-import { BotBehavior } from "./utils/BotBehavior";
+import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class BotExecution implements Execution {
   private active = true;
@@ -10,7 +10,7 @@ export class BotExecution implements Execution {
   private mg: Game;
   private neighborsTerraNullius = true;
 
-  private behavior: BotBehavior | null = null;
+  private attackBehavior: AiAttackBehavior | null = null;
   private attackRate: number;
   private attackTick: number;
   private triggerRatio: number;
@@ -42,8 +42,8 @@ export class BotExecution implements Execution {
       return;
     }
 
-    if (this.behavior === null) {
-      this.behavior = new BotBehavior(
+    if (this.attackBehavior === null) {
+      this.attackBehavior = new AiAttackBehavior(
         this.random,
         this.mg,
         this.bot,
@@ -53,7 +53,7 @@ export class BotExecution implements Execution {
       );
 
       // Send an attack on the first tick
-      this.behavior.sendAttack(this.mg.terraNullius());
+      this.attackBehavior.sendAttack(this.mg.terraNullius());
       return;
     }
 
@@ -81,10 +81,10 @@ export class BotExecution implements Execution {
   }
 
   private maybeAttack() {
-    if (this.behavior === null) {
+    if (this.attackBehavior === null) {
       throw new Error("not initialized");
     }
-    const toAttack = this.behavior.getNeighborTraitorToAttack();
+    const toAttack = this.attackBehavior.getNeighborTraitorToAttack();
     if (toAttack !== null) {
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
@@ -95,20 +95,20 @@ export class BotExecution implements Execution {
           this.bot.breakAlliance(alliance);
         }
 
-        this.behavior.sendAttack(toAttack);
+        this.attackBehavior.sendAttack(toAttack);
         return;
       }
     }
 
     if (this.neighborsTerraNullius) {
       if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
-        this.behavior.sendAttack(this.mg.terraNullius());
+        this.attackBehavior.sendAttack(this.mg.terraNullius());
         return;
       }
       this.neighborsTerraNullius = false;
     }
 
-    this.behavior.attackRandomTarget();
+    this.attackBehavior.attackRandomTarget();
   }
 
   isActive(): boolean {

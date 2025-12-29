@@ -19,38 +19,32 @@
     {
       "coordinates": [920, 1780],
       "flag": "fo",
-      "name": "Suduroy Region",
-      "strength": 2
+      "name": "Suduroy Region"
     },
     {
       "coordinates": [880, 1070],
       "flag": "fo",
-      "name": "Sandoy Region",
-      "strength": 2
+      "name": "Sandoy Region"
     },
     {
       "coordinates": [480, 630],
       "flag": "fo",
-      "name": "Vagar Region",
-      "strength": 1
+      "name": "Vagar Region"
     },
     {
       "coordinates": [735, 580],
       "flag": "fo",
-      "name": "Streymoy Region",
-      "strength": 2
+      "name": "Streymoy Region"
     },
     {
       "coordinates": [815, 375],
       "flag": "fo",
-      "name": "Eysturoy Region",
-      "strength": 2
+      "name": "Eysturoy Region"
     },
     {
       "coordinates": [1115, 265],
       "flag": "fo",
-      "name": "Nordoyar Region",
-      "strength": 2
+      "name": "Nordoyar Region"
     }
   ]
 }

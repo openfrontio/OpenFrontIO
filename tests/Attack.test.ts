@@ -9,11 +9,13 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";
 
 let game: Game;
+const gameID: GameID = "game_id";
 let attacker: Player;
 let defender: Player;
 let defenderSpawn: TileRef;
@@ -51,8 +53,16 @@ describe("Attack", () => {
     attackerSpawn = game.ref(0, 10);
 
     game.addExecution(
-      new SpawnExecution(game.player(attackerInfo.id).info(), attackerSpawn),
-      new SpawnExecution(game.player(defenderInfo.id).info(), defenderSpawn),
+      new SpawnExecution(
+        gameID,
+        game.player(attackerInfo.id).info(),
+        attackerSpawn,
+      ),
+      new SpawnExecution(
+        gameID,
+        game.player(defenderInfo.id).info(),
+        defenderSpawn,
+      ),
     );
 
     while (game.inSpawnPhase()) {
@@ -142,7 +152,7 @@ function addPlayerToGame(
   tile: TileRef,
 ): Player {
   game.addPlayer(playerInfo);
-  game.addExecution(new SpawnExecution(playerInfo, tile));
+  game.addExecution(new SpawnExecution(gameID, playerInfo, tile));
   return game.player(playerInfo.id);
 }
 
