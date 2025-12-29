@@ -111,7 +111,10 @@ export class PublicLobby extends LitElement {
       });
     } catch (error) {
       console.error("Error connecting WebSocket:", error);
-      this.wsConnectionAttempts++;
+      if (!this.wsAttemptCounted) {
+        this.wsAttemptCounted = true;
+        this.wsConnectionAttempts++;
+      }
       if (this.wsConnectionAttempts >= this.maxWsAttempts) {
         this.startFallbackPolling();
       } else {
