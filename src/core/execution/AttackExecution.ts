@@ -13,6 +13,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
@@ -168,6 +169,8 @@ export class AttackExecution implements Execution {
         case Difficulty.Impossible:
           relationChange = -100;
           break;
+        default:
+          assertNever(difficulty);
       }
       this.target.updateRelation(this._owner, relationChange);
     }
