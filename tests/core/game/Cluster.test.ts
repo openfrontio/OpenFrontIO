@@ -1,18 +1,19 @@
+import { vi, type Mocked } from "vitest";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
-const createMockStation = (id: string): jest.Mocked<TrainStation> => {
+const createMockStation = (id: string): Mocked<TrainStation> => {
   return {
     id,
-    setCluster: jest.fn(),
-    getCluster: jest.fn(() => null),
+    setCluster: vi.fn(),
+    getCluster: vi.fn(() => null),
   } as any;
 };
 
 describe("Cluster tests", () => {
   let cluster: Cluster;
-  let stationA: jest.Mocked<TrainStation>;
-  let stationB: jest.Mocked<TrainStation>;
-  let stationC: jest.Mocked<TrainStation>;
+  let stationA: Mocked<TrainStation>;
+  let stationB: Mocked<TrainStation>;
+  let stationC: Mocked<TrainStation>;
 
   beforeEach(() => {
     cluster = new Cluster();

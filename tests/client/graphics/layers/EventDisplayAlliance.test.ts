@@ -1,20 +1,20 @@
-jest.mock("lit", () => ({
+vi.mock("lit", () => ({
   html: () => {},
   LitElement: class {},
 }));
 
-jest.mock("lit/decorators.js", () => ({
+vi.mock("lit/decorators.js", () => ({
   customElement: () => (clazz: any) => clazz,
   query: () => () => {},
   state: () => () => {},
   property: () => () => {},
 }));
 
-jest.mock("lit/directive.js", () => ({
+vi.mock("lit/directive.js", () => ({
   DirectiveResult: class {},
 }));
 
-jest.mock("lit/directives/unsafe-html.js", () => ({
+vi.mock("lit/directives/unsafe-html.js", () => ({
   unsafeHTML: () => {},
   UnsafeHTMLDirective: class {},
 }));

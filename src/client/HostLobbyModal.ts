@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -32,6 +31,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -551,9 +551,9 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.disableNations ? 0 : this.nationCount}
+            ${this.getEffectiveNationCount()}
             ${
-              this.nationCount === 1
+              this.getEffectiveNationCount() === 1
                 ? translateText("host_modal.nation_player")
                 : translateText("host_modal.nation_players")
             }
@@ -564,7 +564,7 @@ export class HostLobbyModal extends LitElement {
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
-            .nationCount=${this.disableNations ? 0 : this.nationCount}
+            .nationCount=${this.getEffectiveNationCount()}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
         </div>
@@ -875,6 +875,21 @@ export class HostLobbyModal extends LitElement {
       console.warn("Failed to load nation count", error);
       this.nationCount = 0;
     }
+  }
+
+  /**
+   * Returns the effective nation count for display purposes.
+   * In HumansVsNations mode, this equals the number of human players.
+   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
+   */
+  private getEffectiveNationCount(): number {
+    if (this.disableNations) {
+      return 0;
+    }
+    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
+      return this.clients.length;
+    }
+    return this.nationCount;
   }
 }
 
