@@ -12,15 +12,6 @@ import (
 	"sync"
 )
 
-// mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
-var mapsFlag string
-
-// verboseFlag performanceFlag and removalFlag logLevelFlag impact logging, see ./logger.go
-var verboseFlag bool
-var performanceFlag bool
-var removalFlag bool
-var logLevelFlag string
-
 // maps defines the registry of available maps to be processed.
 // Each entry contains the folder name and a flag indicating if it's a test map.
 //
@@ -74,6 +65,16 @@ var maps = []struct {
 	{Name: "giantworldmap", IsTest: true},
 }
 
+// mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
+var mapsFlag string
+
+// The log-level (most -> least wordy): ALL, DEBUG, INFO (default), WARN, ERROR
+var logLevelFlag string
+
+var verboseFlag bool          // sets log-level=DEBUG
+var debugPerformanceFlag bool // opts-in to performance checks and sets log-level=DEBUG
+var debugRemovalFlag bool     // opts-in to island/lake removal logging and sets log-level=DEBUG
+
 // outputMapDir returns the absolute path to the directory where generated map files should be written.
 // It distinguishes between test and production output locations.
 func outputMapDir(isTest bool) (string, error) {
@@ -102,7 +103,8 @@ func inputMapDir(isTest bool) (string, error) {
 }
 
 // processMap handles the end-to-end generation for a single map.
-// It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
+// It reads the source image and JSON, generates the terrain data, and writes
+// the binary outputs and updated manifest.
 func processMap(name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
@@ -260,13 +262,13 @@ func main() {
 	flag.StringVar(&logLevelFlag, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
 	flag.BoolVar(&verboseFlag, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
 	flag.BoolVar(&verboseFlag, "v", false, "-verbose shorthand")
-	flag.BoolVar(&performanceFlag, "log-performance", false, "Adds additional logging for performance-based recommendations, sets log-level=DEBUG")
-	flag.BoolVar(&removalFlag, "log-removal", false, "Adds additional logging of removed island and lake position/size, sets log-level=DEBUG")
+	flag.BoolVar(&debugPerformanceFlag, "log-performance", false, "Adds additional logging for performance-based recommendations, sets log-level=DEBUG")
+	flag.BoolVar(&debugRemovalFlag, "log-removal", false, "Adds additional logging of removed island and lake position/size, sets log-level=DEBUG")
 	flag.Parse()
 
 	var level = slog.LevelInfo
 
-	if verboseFlag || performanceFlag || removalFlag {
+	if verboseFlag || debugPerformanceFlag || debugRemovalFlag {
 		level = slog.LevelDebug
 	}
 
@@ -295,8 +297,8 @@ func main() {
 			Level: level,
 		},
 		LogFlags{
-			performance: performanceFlag,
-			removal:     removalFlag,
+			performance: debugPerformanceFlag,
+			removal:     debugRemovalFlag,
 		},
 	))
 

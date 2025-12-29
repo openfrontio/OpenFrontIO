@@ -43,9 +43,24 @@ To process a subset of maps, pass a comma-separated list:
 
 ## Command Line Flags
 
-- `--maps`: Comma-separated list of maps to process.
-- `--verbose` or `-v`: Turns on additional logging during the map generation process.
-- `--performance`: Adds additional logging checks for performance-based recommendations.
+- `--maps`: Optional comma-separated list of maps to process.
+  - ex: `go run . --maps=world,eastasia,big_plains`
+
+### Logging
+
+- `--log-level`: Explicitly sets the log level.
+  - ex: `go run . --log-level=debug`
+  - values: `ALL`, `DEBUG`, `INFO` (default), `WARN`, `ERROR`.
+- `--verbose` or `-v`: Adds additional logging and prefixes logs with the `[mapname]`. Alias of `--log-level=DEBUG`.
+- `--debug-performance`: Adds additional logging for performance-based recommendations, sets `--log-level=DEBUG`.
+- `--debug-removal`: Adds additional logging of removed island and lake position/size, sets `--log-level=DEBUG`.
+
+The Generator outputs logs using `slog` with standard log-levels, and an additional ALL level.
+
+The `--verbose`, `-v`, `--debug-performance`, and `--debug-removal` flags all set the log level to `DEBUG`.
+`debug-performance` and `debug-removal` are opt-in on top of the debug log level, as they can produce wordy output. You must pass the specific flag to see the corresponding logs if the `log-level` is set to `DEBUG`.
+
+Setting `--log-level=ALL` will output all possible logs, including all `DEBUG` tiers, regardless of whether the specific flags are passed.
 
 ## Create image.png
 

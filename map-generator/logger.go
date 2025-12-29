@@ -24,7 +24,7 @@ var PerformanceLogTag = slog.String("tag", "performance")
 // RemovalLogTag is a slog attribute used to tag land/water removal-related log messages.
 var RemovalLogTag = slog.String("tag", "removal")
 
-// GeneratorLogger is a custom slog.Handler that outputs logs based on verbosity and performance flags.
+// GeneratorLogger is a custom slog.Handler that outputs logs based on log level and performance flags.
 type GeneratorLogger struct {
 	opts   slog.HandlerOptions
 	w      io.Writer
@@ -35,7 +35,7 @@ type GeneratorLogger struct {
 }
 
 // NewGeneratorLogger creates a new GeneratorLogger.
-// It initializes a handler with specific output, options, and flags for verbosity and performance.
+// It initializes a handler with specific output, options, and flags for log level and performance.
 func NewGeneratorLogger(
 	out io.Writer,
 	opts *slog.HandlerOptions,
