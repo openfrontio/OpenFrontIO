@@ -103,8 +103,7 @@ func inputMapDir(isTest bool) (string, error) {
 }
 
 // processMap handles the end-to-end generation for a single map.
-// It reads the source image and JSON, generates the terrain data, and writes
-// the binary outputs and updated manifest.
+// It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
 func processMap(name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {

@@ -18,8 +18,8 @@ const (
 	minLakeSize   = 200
 )
 
-// the recommended max area pixel size for input images
 const (
+	// the recommended max area pixel size for input images
 	minRecommendedPixelSize = 2000000
 	maxRecommendedPixelSize = 3000000
 	// the recommended max number of land tiles in the output bin at full size
@@ -117,12 +117,12 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	width = width - (width % 4)
 	height = height - (height % 4)
 
+	logger.Info(fmt.Sprintf("Processing Map: %s, dimensions: %dx%d", args.Name, width, height))
+
 	area := width * height
 	if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
 		logger.Info(fmt.Sprintf("Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
 	}
-
-	logger.Info(fmt.Sprintf("Processing Map: %s, dimensions: %dx%d", args.Name, width, height))
 
 	// Initialize terrain grid
 	terrain := make([][]Terrain, width)
@@ -180,7 +180,7 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	logger.Debug(fmt.Sprintf("Land Tile Count (16x): %d", numLandTiles16x))
 
 	if mapNumLandTiles == 0 {
-		logger.Info("Map has 0 land tiles", PerformanceLogTag)
+		logger.Error("Map has 0 land tiles")
 	}
 	if mapNumLandTiles > maxRecommendedLandTileCount {
 		logger.Info(fmt.Sprintf("Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
