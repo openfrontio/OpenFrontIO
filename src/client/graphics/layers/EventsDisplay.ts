@@ -46,6 +46,7 @@ import {
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import allianceRequestIcon from "/images/AllianceRequestWhiteIcon.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import nukeIcon from "/images/NukeIconWhite.svg?url";
@@ -67,6 +68,7 @@ interface GameEvent {
   // lower number: lower on the display
   priority?: number;
   duration?: Tick;
+  pinned?: boolean;
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
@@ -93,6 +95,7 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private newEvents: number = 0;
   @state() private latestGoldAmount: bigint | null = null;
   @state() private goldAmountAnimating: boolean = false;
+  @state() private pinAllianceEvents: boolean = true;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
@@ -146,18 +149,26 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
-  private renderToggleButton(src: string, category: MessageCategory) {
+  private renderToggleButton(
+    src: string,
+    category: MessageCategory | null,
+    onClick?: () => void,
+    isActive?: boolean,
+  ) {
     // Adding the literal for the default size ensures tailwind will generate the class
     const toggleButtonSizeMap = { default: "h-5" };
+    const isHidden =
+      category !== null
+        ? this.eventsFilters.get(category)
+        : !(isActive ?? true);
     return this.renderButton({
       content: html`<img
         src="${src}"
         class="${toggleButtonSizeMap["default"]}"
-        style="filter: ${this.eventsFilters.get(category)
-          ? "grayscale(1) opacity(0.5)"
-          : "none"}"
+        style="filter: ${isHidden ? "grayscale(1) opacity(0.5)" : "none"}"
       />`,
-      onClick: () => this.toggleEventFilter(category),
+      onClick:
+        category !== null ? () => this.toggleEventFilter(category) : onClick,
       className: "cursor-pointer pointer-events-auto",
     });
   }
@@ -174,6 +185,19 @@ export class EventsDisplay extends LitElement implements Layer {
     const currentState = this.eventsFilters.get(filterName) ?? false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
+  }
+
+  private togglePinAllianceEvents() {
+    this.pinAllianceEvents = !this.pinAllianceEvents;
+    const settings = this.game?.config().userSettings();
+    if (settings?.set) {
+      settings.set("settings.pinAllianceRequests", this.pinAllianceEvents);
+    }
+    this.requestUpdate();
+  }
+
+  private isPinnedEvent(event: GameEvent): boolean {
+    return !!event.pinned && this.pinAllianceEvents;
   }
 
   private updateMap = [
@@ -199,7 +223,12 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingBoats = [];
   }
 
-  init() {}
+  init() {
+    const settings = this.game?.config().userSettings();
+    if (settings?.pinAllianceRequests) {
+      this.pinAllianceEvents = settings.pinAllianceRequests();
+    }
+  }
 
   tick() {
     this.active = true;
@@ -236,8 +265,10 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     let remainingEvents = this.events.filter((event) => {
+      const withinDuration =
+        this.game.ticks() - event.createdAt < (event.duration ?? 600);
       const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
+        (this.isPinnedEvent(event) ? true : withinDuration) &&
         !event.shouldDelete?.(this.game);
       if (!shouldKeep && event.onDelete) {
         event.onDelete();
@@ -246,7 +277,21 @@ export class EventsDisplay extends LitElement implements Layer {
     });
 
     if (remainingEvents.length > 30) {
-      remainingEvents = remainingEvents.slice(-30);
+      const pinnedEvents = remainingEvents.filter((event) =>
+        this.isPinnedEvent(event),
+      );
+      const unpinnedEvents = remainingEvents.filter(
+        (event) => !this.isPinnedEvent(event),
+      );
+      if (pinnedEvents.length >= 30) {
+        remainingEvents = pinnedEvents;
+      } else {
+        const maxUnpinned = Math.max(0, 30 - pinnedEvents.length);
+        remainingEvents = [
+          ...unpinnedEvents.slice(-maxUnpinned),
+          ...pinnedEvents,
+        ];
+      }
     }
 
     if (this.events.length !== remainingEvents.length) {
@@ -312,6 +357,7 @@ export class EventsDisplay extends LitElement implements Layer {
           name: other.name(),
         }),
         type: MessageType.RENEW_ALLIANCE,
+        pinned: true,
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
         buttons: [
           {
@@ -338,6 +384,16 @@ export class EventsDisplay extends LitElement implements Layer {
         createdAt: this.game.ticks(),
         focusID: other.smallID(),
         allianceID: alliance.id,
+        shouldDelete: (game) => {
+          const me = game.myPlayer();
+          if (!me) return true;
+          const current = me.alliances().find((a) => a.id === alliance.id);
+          if (!current) return true;
+          return (
+            current.expiresAt >
+            game.ticks() + game.config().allianceExtensionPromptOffset()
+          );
+        },
       });
     }
   }
@@ -507,12 +563,17 @@ export class EventsDisplay extends LitElement implements Layer {
       ],
       highlight: true,
       type: MessageType.ALLIANCE_REQUEST,
-      createdAt: this.game.ticks(),
+      createdAt: update.createdAt ?? this.game.ticks(),
+      pinned: true,
       priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
       shouldDelete: (game) => {
+        const createdAt = update.createdAt ?? this.game.ticks();
+        const expired =
+          game.ticks() - createdAt >
+          game.config().allianceRequestDuration() - 20;
         // Recipient sent a separate request, so they became allied without the recipient responding.
-        return requestor.isAlliedWith(recipient);
+        return expired || requestor.isAlliedWith(recipient);
       },
       focusID: update.requestorID,
     });
@@ -1000,6 +1061,11 @@ export class EventsDisplay extends LitElement implements Layer {
     });
 
     filteredEvents.sort((a, b) => {
+      const aPinned = this.isPinnedEvent(a) ? 1 : 0;
+      const bPinned = this.isPinnedEvent(b) ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return aPinned - bPinned; // pinned events go to the bottom
+      }
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
       if (aPrior === bPrior) {
@@ -1051,6 +1117,12 @@ export class EventsDisplay extends LitElement implements Layer {
                     ${this.renderToggleButton(
                       allianceIcon,
                       MessageCategory.ALLIANCE,
+                    )}
+                    ${this.renderToggleButton(
+                      allianceRequestIcon,
+                      null,
+                      () => this.togglePinAllianceEvents(),
+                      this.pinAllianceEvents,
                     )}
                     ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
                   </div>

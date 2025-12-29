@@ -78,6 +78,10 @@ export class UserSettings {
     return this.get("settings.cursorCostLabel", legacy);
   }
 
+  pinAllianceRequests() {
+    return this.get("settings.pinAllianceRequests", true);
+  }
+
   focusLocked() {
     return false;
     // TODO: re-enable when performance issues are fixed.
@@ -122,6 +126,10 @@ export class UserSettings {
 
   toggleCursorCostLabel() {
     this.set("settings.cursorCostLabel", !this.cursorCostLabel());
+  }
+
+  togglePinAllianceRequests() {
+    this.set("settings.pinAllianceRequests", !this.pinAllianceRequests());
   }
 
   toggleTerritoryPatterns() {
