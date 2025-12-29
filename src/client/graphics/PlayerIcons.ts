@@ -1,18 +1,18 @@
-import allianceIcon from "../../../resources/images/AllianceIcon.svg";
-import allianceIconFaded from "../../../resources/images/AllianceIconFaded.svg";
-import allianceRequestBlackIcon from "../../../resources/images/AllianceRequestBlackIcon.svg";
-import allianceRequestWhiteIcon from "../../../resources/images/AllianceRequestWhiteIcon.svg";
-import crownIcon from "../../../resources/images/CrownIcon.svg";
-import disconnectedIcon from "../../../resources/images/DisconnectedIcon.svg";
-import embargoBlackIcon from "../../../resources/images/EmbargoBlackIcon.svg";
-import embargoWhiteIcon from "../../../resources/images/EmbargoWhiteIcon.svg";
-import nukeRedIcon from "../../../resources/images/NukeIconRed.svg";
-import nukeWhiteIcon from "../../../resources/images/NukeIconWhite.svg";
-import questionMarkIcon from "../../../resources/images/QuestionMarkIcon.svg";
-import targetIcon from "../../../resources/images/TargetIcon.svg";
-import traitorIcon from "../../../resources/images/TraitorIcon.svg";
 import { AllPlayers, nukeTypes } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
+import allianceIcon from "/images/AllianceIcon.svg?url";
+import allianceIconFaded from "/images/AllianceIconFaded.svg?url";
+import allianceRequestBlackIcon from "/images/AllianceRequestBlackIcon.svg?url";
+import allianceRequestWhiteIcon from "/images/AllianceRequestWhiteIcon.svg?url";
+import crownIcon from "/images/CrownIcon.svg?url";
+import disconnectedIcon from "/images/DisconnectedIcon.svg?url";
+import embargoBlackIcon from "/images/EmbargoBlackIcon.svg?url";
+import embargoWhiteIcon from "/images/EmbargoWhiteIcon.svg?url";
+import nukeRedIcon from "/images/NukeIconRed.svg?url";
+import nukeWhiteIcon from "/images/NukeIconWhite.svg?url";
+import questionMarkIcon from "/images/QuestionMarkIcon.svg?url";
+import targetIcon from "/images/TargetIcon.svg?url";
+import traitorIcon from "/images/TraitorIcon.svg?url";
 
 export type PlayerIconId =
   | "crown"
