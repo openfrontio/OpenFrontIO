@@ -1,14 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
-import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -32,6 +24,14 @@ import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import allianceIcon from "/images/AllianceIcon.svg?url";
+import warshipIcon from "/images/BattleshipIconWhite.svg?url";
+import cityIcon from "/images/CityIconWhite.svg?url";
+import factoryIcon from "/images/FactoryIconWhite.svg?url";
+import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
+import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
+import portIcon from "/images/PortIcon.svg?url";
+import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },

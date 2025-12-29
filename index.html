@@ -7,12 +7,8 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
     <title>OpenFront (ALPHA)</title>
-    <link rel="manifest" href="../../resources/manifest.json" />
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="../../resources/images/Favicon.svg"
-    />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/x-icon" href="/images/Favicon.svg" />
 
     <!-- SEO -->
     <link rel="canonical" href="https://openfront.io/" />
@@ -119,6 +115,7 @@
         from {
           transform: translateY(-100%) rotate(0deg); /* Start off-screen */
         }
+
         to {
           transform: translateY(105vh) rotate(360deg); /* Fall completely out of view */
         }
@@ -338,7 +335,7 @@
       style="width: 80px; height: 80px; background-color: var(--primaryColor)"
     >
       <img
-        src="../../resources/images/SettingIconWhite.svg"
+        src="/images/SettingIconWhite.svg"
         alt="Settings"
         style="width: 72px; height: 72px"
       />
@@ -416,7 +413,7 @@
           >
             © OpenFront™ and Contributors
             <img
-              src="../../resources/icons/github-mark-white.svg"
+              src="/icons/github-mark-white.svg"
               alt="GitHub"
               width="20"
               height="20"
@@ -513,5 +510,6 @@
       src="https://static.cloudflareinsights.com/beacon.min.js"
       data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
     ></script>
+    <script type="module" src="/src/client/Main.ts"></script>
   </body>
 </html>
