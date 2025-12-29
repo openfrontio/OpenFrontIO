@@ -1,3 +1,5 @@
+// This is the custom logger providing the multi-level and flag-based logging for
+// the map-generator.  It uses slog.
 package main
 
 import (
@@ -10,6 +12,7 @@ import (
 	"sync"
 )
 
+// Flags supported for conditional logging
 type LogFlags struct {
 	performance bool
 	removal     bool
@@ -35,7 +38,7 @@ type GeneratorLogger struct {
 }
 
 // NewGeneratorLogger creates a new GeneratorLogger.
-// It initializes a handler with specific output, options, and flags for log level and performance.
+// It initializes a handler with specific output, options, and flags
 func NewGeneratorLogger(
 	out io.Writer,
 	opts *slog.HandlerOptions,
@@ -139,4 +142,20 @@ func (h *GeneratorLogger) WithGroup(name string) slog.Handler {
 	}
 	newHandler.prefix += name
 	return &newHandler
+}
+
+type loggerKey struct{}
+
+// LoggerFromContext retrieves the logger from the context.
+// If no logger is found, it returns the default logger.
+func LoggerFromContext(ctx context.Context) *slog.Logger {
+	if logger, ok := ctx.Value(loggerKey{}).(*slog.Logger); ok {
+		return logger
+	}
+	return slog.Default()
+}
+
+// ContextWithLogger returns a new context with the provided logger.
+func ContextWithLogger(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, logger)
 }

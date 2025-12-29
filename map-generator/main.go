@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -104,7 +105,7 @@ func inputMapDir(isTest bool) (string, error) {
 
 // processMap handles the end-to-end generation for a single map.
 // It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
-func processMap(name string, isTest bool) error {
+func processMap(ctx context.Context, name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
 		return fmt.Errorf("failed to get map directory: %w", err)
@@ -134,15 +135,11 @@ func processMap(name string, isTest bool) error {
 		return fmt.Errorf("failed to parse info.json for %s: %w", name, err)
 	}
 
-	var MapLogTag = slog.String("map", name)
-	logger := slog.Default().With(MapLogTag)
-
 	// Generate maps
-	result, err := GenerateMap(GeneratorArgs{
+	result, err := GenerateMap(ctx, GeneratorArgs{
 		ImageBuffer: imageBuffer,
 		RemoveSmall: !isTest, // Don't remove small islands for test maps
 		Name:        name,
-		Logger:      logger,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to generate map for %s: %w", name, err)
@@ -234,7 +231,10 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
-			if err := processMap(mapItem.Name, mapItem.IsTest); err != nil {
+			var MapLogTag = slog.String("map", mapItem.Name)
+			logger := slog.Default().With(MapLogTag)
+			ctx := ContextWithLogger(context.Background(), logger)
+			if err := processMap(ctx, mapItem.Name, mapItem.IsTest); err != nil {
 				errChan <- err
 			}
 		}()

@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
-	"log/slog"
 	"math"
 
 	"github.com/chai2010/webp"
@@ -77,7 +77,6 @@ type GeneratorArgs struct {
 	Name        string
 	ImageBuffer []byte
 	RemoveSmall bool
-	Logger      *slog.Logger
 }
 
 // GenerateMap is the main map-generator workflow.
@@ -103,8 +102,8 @@ type GeneratorArgs struct {
 //
 // Misc Notes
 //   - It normalizes map width/height to multiples of 4 for the mini map downscaling.
-func GenerateMap(args GeneratorArgs) (MapResult, error) {
-	logger := args.Logger
+func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
+	logger := LoggerFromContext(ctx)
 	img, err := png.Decode(bytes.NewReader(args.ImageBuffer))
 	if err != nil {
 		return MapResult{}, fmt.Errorf("failed to decode PNG: %w", err)
@@ -152,16 +151,16 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 		}
 	}
 
-	removeSmallIslands(terrain, args.RemoveSmall, logger)
-	processWater(terrain, args.RemoveSmall, logger)
+	removeSmallIslands(ctx, terrain, args.RemoveSmall)
+	processWater(ctx, terrain, args.RemoveSmall)
 
 	terrain4x := createMiniMap(terrain)
-	processWater(terrain4x, false, logger)
+	processWater(ctx, terrain4x, false)
 
 	terrain16x := createMiniMap(terrain4x)
-	processWater(terrain16x, false, logger)
+	processWater(ctx, terrain16x, false)
 
-	thumb := createMapThumbnail(terrain4x, 0.5, logger)
+	thumb := createMapThumbnail(ctx, terrain4x, 0.5)
 	webp, err := convertToWebP(ThumbData{
 		Data:   thumb.Pix,
 		Width:  thumb.Bounds().Dx(),
@@ -171,9 +170,9 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 		return MapResult{}, fmt.Errorf("failed to save thumbnail: %w", err)
 	}
 
-	mapData, mapNumLandTiles := packTerrain(terrain, logger)
-	mapData4x, numLandTiles4x := packTerrain(terrain4x, logger)
-	mapData16x, numLandTiles16x := packTerrain(terrain16x, logger)
+	mapData, mapNumLandTiles := packTerrain(ctx, terrain)
+	mapData4x, numLandTiles4x := packTerrain(ctx, terrain4x)
+	mapData16x, numLandTiles16x := packTerrain(ctx, terrain16x)
 
 	logger.Debug(fmt.Sprintf("Land Tile Count (1x): %d", mapNumLandTiles))
 	logger.Debug(fmt.Sprintf("Land Tile Count (4x): %d", numLandTiles4x))
@@ -268,7 +267,8 @@ func createMiniMap(tm [][]Terrain) [][]Terrain {
 // It marks Land tiles as shoreline if they neighbor Water, and Water tiles as
 // shoreline if they neighbor Land.
 // Returns a list of coordinates for all shoreline Water tiles found.
-func processShore(terrain [][]Terrain, logger *slog.Logger) []Coord {
+func processShore(ctx context.Context, terrain [][]Terrain) []Coord {
+	logger := LoggerFromContext(ctx)
 	logger.Info("Identifying shorelines")
 	var shorelineWaters []Coord
 	width := len(terrain)
@@ -306,7 +306,8 @@ func processShore(terrain [][]Terrain, logger *slog.Logger) []Coord {
 // processDistToLand calculates the distance of water tiles from the nearest land.
 // It uses a Breadth-First Search (BFS) starting from the shoreline water tiles.
 // The distance is stored in the Magnitude field of the Water tiles.
-func processDistToLand(shorelineWaters []Coord, terrain [][]Terrain, logger *slog.Logger) {
+func processDistToLand(ctx context.Context, shorelineWaters []Coord, terrain [][]Terrain) {
+	logger := LoggerFromContext(ctx)
 	logger.Info("Setting Water tiles magnitude = Manhattan distance from nearest land")
 
 	width := len(terrain)
@@ -388,7 +389,8 @@ func getNeighborCoords(x, y int, terrain [][]Terrain) []Coord {
 // It finds all connected water bodies and marks the largest one as Ocean.
 // If removeSmall is true, lakes smaller than minLakeSize are converted to Land.
 // Finally, it triggers shoreline identification and distance-to-land calculations.
-func processWater(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
+func processWater(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
+	logger := LoggerFromContext(ctx)
 	logger.Info("Processing water bodies")
 	visited := make(map[string]bool)
 
@@ -453,8 +455,8 @@ func processWater(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
 		}
 
 		// Process shorelines and distances
-		shorelineWaters := processShore(terrain, logger)
-		processDistToLand(shorelineWaters, terrain, logger)
+		shorelineWaters := processShore(ctx, terrain)
+		processDistToLand(ctx, shorelineWaters, terrain)
 	} else {
 		logger.Info("No water bodies found in the map")
 	}
@@ -491,7 +493,8 @@ func getArea(x, y int, terrain [][]Terrain, visited map[string]bool) []Coord {
 
 // removeSmallIslands identifies and removes small land masses from the terrain.
 // If removeSmall is true, any removed bodies are converted to Water.
-func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
+func removeSmallIslands(ctx context.Context, terrain [][]Terrain, removeSmall bool) {
+	logger := LoggerFromContext(ctx)
 	if !removeSmall {
 		return
 	}
@@ -547,7 +550,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger *slog.Logg
 //   - Bits 0-4: Magnitude (0-31). For Water, this is (Distance / 2).
 //
 // Returns the packed data and the count of land tiles.
-func packTerrain(terrain [][]Terrain, logger *slog.Logger) (data []byte, numLandTiles int) {
+func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLandTiles int) {
 	width := len(terrain)
 	height := len(terrain[0])
 	packedData := make([]byte, width*height)
@@ -579,14 +582,15 @@ func packTerrain(terrain [][]Terrain, logger *slog.Logger) (data []byte, numLand
 		}
 	}
 
-	logBinaryAsBits(packedData, 8, logger)
+	logBinaryAsBits(ctx, packedData, 8)
 	return packedData, numLandTiles
 }
 
 // createMapThumbnail generates an RGBA image representation of the terrain.
 // It scales the map dimensions based on the provided quality factor.
 // Each pixel's color is determined by the terrain type and magnitude via getThumbnailColor.
-func createMapThumbnail(terrain [][]Terrain, quality float64, logger *slog.Logger) *image.RGBA {
+func createMapThumbnail(ctx context.Context, terrain [][]Terrain, quality float64) *image.RGBA {
+	logger := LoggerFromContext(ctx)
 	logger.Info("Creating thumbnail")
 
 	srcWidth := len(terrain)
@@ -690,7 +694,8 @@ func getThumbnailColor(t Terrain) RGBA {
 
 // logBinaryAsBits logs the binary representation of the first 'length' bytes of data.
 // It is a helper function for debugging packed terrain data.
-func logBinaryAsBits(data []byte, length int, logger *slog.Logger) {
+func logBinaryAsBits(ctx context.Context, data []byte, length int) {
+	logger := LoggerFromContext(ctx)
 	if length > len(data) {
 		length = len(data)
 	}
