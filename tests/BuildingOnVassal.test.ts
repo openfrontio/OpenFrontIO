@@ -1,4 +1,4 @@
-import { UnitType, PlayerType } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 describe("Building on vassal territory", () => {
@@ -40,14 +40,14 @@ describe("Building on vassal territory", () => {
     expect(overlord.vassals().length).toBe(1);
 
     // Overlord should see vassal territory as valid build tiles
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const validOnVassal = (overlord as any).validStructureSpawnTiles?.(
       vassalTile,
     ) as number[] | undefined;
-    expect(validOnVassal && validOnVassal.includes(vassalTile)).toBe(true);
+    expect(validOnVassal?.includes(vassalTile) ?? false).toBe(true);
 
     // Overlord should NOT see neutral territory as valid
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const validOnNeutral = (overlord as any).validStructureSpawnTiles?.(
       neutralTile,
     ) as number[] | undefined;

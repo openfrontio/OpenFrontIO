@@ -37,10 +37,6 @@ import {
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
-import {
-  hierarchyPosition,
-  sharesHierarchy as sharesHierarchyUtil,
-} from "./HierarchyUtils";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
@@ -48,6 +44,10 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import {
+  hierarchyPosition,
+  sharesHierarchy as sharesHierarchyUtil,
+} from "./HierarchyUtils";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -324,12 +324,7 @@ export class PlayerImpl implements Player {
     }
     partners.push(...this.vassals());
     for (const p of partners) {
-      if (
-        this.sharesBorderAcrossTiles(
-          (p as PlayerImpl)._borderTiles,
-          other,
-        )
-      ) {
+      if (this.sharesBorderAcrossTiles((p as PlayerImpl)._borderTiles, other)) {
         return true;
       }
     }
@@ -351,8 +346,7 @@ export class PlayerImpl implements Player {
     if (!owner.isPlayer()) return false;
     const p = owner as Player;
     return (
-      p === this ||
-      this.isOverlordOf(p) // my vassal
+      p === this || this.isOverlordOf(p) // my vassal
     );
   }
 
@@ -546,12 +540,10 @@ export class PlayerImpl implements Player {
     this.mg.addUpdate(this.toUpdate());
   }
 
-  vassalTribute():
-    | {
-        goldRatio: number;
-        troopRatio: number;
-      }
-    | null {
+  vassalTribute(): {
+    goldRatio: number;
+    troopRatio: number;
+  } | null {
     const rel = this.mg.vassalages_.find((v) => v.vassal() === this);
     if (!rel) return null;
     return {
@@ -582,14 +574,10 @@ export class PlayerImpl implements Player {
   hasTerritorialAccess(owner: Player): boolean {
     if (owner === this) return true;
     if (!owner.isPlayer()) return false;
-    return this.isOverlordOf(owner) || this.isVassalOf(owner);
+    return this.isOverlordOf(owner);
   }
 
-  surrenderTo(
-    overlord: Player,
-    goldRatio?: number,
-    troopRatio?: number,
-  ): void {
+  surrenderTo(overlord: Player, goldRatio?: number, troopRatio?: number): void {
     const v = this.mg.vassalize(
       this,
       overlord,
@@ -1307,8 +1295,7 @@ export class PlayerImpl implements Player {
     )
       .filter(
         (t) =>
-          this.canUseTerritoryOf(this.mg.owner(t)) &&
-          this.mg.isOceanShore(t),
+          this.canUseTerritoryOf(this.mg.owner(t)) && this.mg.isOceanShore(t),
       )
       .sort(
         (a, b) =>
@@ -1490,7 +1477,7 @@ export class PlayerImpl implements Player {
       this.mg.hasOwner(tile) &&
       this.mg.config().numSpawnPhaseTurns() +
         this.mg.config().spawnImmunityDuration() >
-      this.mg.ticks()
+        this.mg.ticks()
     ) {
       return false;
     }

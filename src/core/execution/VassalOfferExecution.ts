@@ -1,11 +1,17 @@
-import { Execution, Game, MessageType, Player, PlayerID, PlayerType, UnitType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  MessageType,
+  Player,
+  PlayerID,
+  PlayerType,
+} from "../game/Game";
 import { GameUpdateType } from "../game/GameUpdates";
-import { calculateBoundingBox, inscribed } from "../Util";
 import { isClusterSurroundedBy } from "./utils/surround";
 
 /**
-  * Negotiated vassalage offer. Target auto-accepts if desperate or very long ally.
-  */
+ * Negotiated vassalage offer. Target auto-accepts if desperate or very long ally.
+ */
 export class VassalOfferExecution implements Execution {
   private active = true;
   private target: Player | null = null;
@@ -63,7 +69,7 @@ export class VassalOfferExecution implements Execution {
     const tileRatio =
       this.target.numTilesOwned() / this.requestor.numTilesOwned();
     const massivelyOutgunned = troopRatio < 0.1 && tileRatio < 0.1;
-    if(massivelyOutgunned) return true;
+    if (massivelyOutgunned) return true;
 
     // must generally be weaker to even consider it
     const clearlyWeaker = troopRatio < 0.7 && tileRatio < 0.7;
@@ -71,38 +77,41 @@ export class VassalOfferExecution implements Execution {
     // Weak + Loyal: long-standing alliance or Surrounded/annex-imminent
     const alliance = this.requestor.allianceWith(this.target);
     if (alliance) {
-        const longAlliance = this.mg.ticks() - alliance.createdAt() > 4 * this.mg.config().allianceDuration();
-        if (clearlyWeaker && longAlliance) return true;
+      const longAlliance =
+        this.mg.ticks() - alliance.createdAt() >
+        4 * this.mg.config().allianceDuration();
+      if (clearlyWeaker && longAlliance) return true;
 
-        // Surrounded heuristic using annex-style bounding box with allowed owners (requestor + vassals).
-        // only checked if allied since they'll simply be annexed otherwise
-        // TODO actually make annexation work with coordinated vassals
-        const surrounded = (() => {
-            const borders = this.target.borderTiles();
-            if (borders.size === 0) return false;
-            const allowedOwners = new Set<number>([
-                this.requestor.smallID(),
-                ...this.requestor.vassals().map((v) => v.smallID()),
-            ]);
-                return isClusterSurroundedBy(
-                    this.mg,
-                    borders,
-                    this.target.smallID(),
-                    allowedOwners,
-                );
-        })();
-        const allianceTimeLeft = (alliance.expiresAt() - this.mg.ticks()) / 10;
-        // surrounded and imminent annexation
-        // this gives time for say a nuke to land and give them a way out
-        // or an existing transport boat to land an attack etc.
-        // TODO maybe instead check just prior to annexation if there's an
-        // awaiting request from surrounding player/hierarchy?
-        if (surrounded && allianceTimeLeft < 3) return true;
+      // Surrounded heuristic using annex-style bounding box with allowed owners (requestor + vassals).
+      // only checked if allied since they'll simply be annexed otherwise
+      // TODO actually make annexation work with coordinated vassals
+      const surrounded = (() => {
+        const borders = this.target.borderTiles();
+        if (borders.size === 0) return false;
+        const allowedOwners = new Set<number>([
+          this.requestor.smallID(),
+          ...this.requestor.vassals().map((v) => v.smallID()),
+        ]);
+        return isClusterSurroundedBy(
+          this.mg,
+          borders,
+          this.target.smallID(),
+          allowedOwners,
+        );
+      })();
+      const allianceTimeLeft = (alliance.expiresAt() - this.mg.ticks()) / 10;
+      // surrounded and imminent annexation
+      // this gives time for say a nuke to land and give them a way out
+      // or an existing transport boat to land an attack etc.
+      // TODO maybe instead check just prior to annexation if there's an
+      // awaiting request from surrounding player/hierarchy?
+      if (surrounded && allianceTimeLeft < 3) return true;
     }
 
     // Desperation: much weaker AND under attack or heavily Nuked
     const troopsGap = this.requestor.troops() >= this.target.troops() * 3;
-    const tileGap = this.requestor.numTilesOwned() >= this.target.numTilesOwned() * 3;
+    const tileGap =
+      this.requestor.numTilesOwned() >= this.target.numTilesOwned() * 3;
     if (!(troopsGap && tileGap)) return false;
 
     const underAttack = this.target.incomingAttacks().some((a) => {
@@ -110,11 +119,7 @@ export class VassalOfferExecution implements Execution {
       if (attacker === this.requestor) return true;
       // Treat attacks from the requestor's direct vassals as pressure too
       // (does not recurse through deeper hierarchy).
-      return (
-        attacker.overlord &&
-        attacker.overlord() &&
-        attacker.overlord()!.smallID() === this.requestor.smallID()
-      );
+      return attacker.overlord?.()?.smallID() === this.requestor.smallID();
     });
     if (troopsGap && tileGap && underAttack) return true;
 
@@ -133,7 +138,8 @@ export class VassalOfferExecution implements Execution {
           if (borderingFalloutCount >= falloutThreshold) break; // short-circuit
         }
       }
-      heavilyNukedAndWeak = borderingFalloutCount >= falloutThreshold &&
+      heavilyNukedAndWeak =
+        borderingFalloutCount >= falloutThreshold &&
         target.troops() < mg.config().maxTroops(target) * 0.3;
     }
     return heavilyNukedAndWeak;

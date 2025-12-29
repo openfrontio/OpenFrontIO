@@ -12,13 +12,13 @@ import {
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendForceVassalIntentEvent,
   SendSpawnIntentEvent,
   SendSurrenderIntentEvent,
   SendTargetPlayerIntentEvent,
-  SendForceVassalIntentEvent,
 } from "../../Transport";
-import { UIState } from "../UIState";
 import { translateText } from "../../Utils";
+import { UIState } from "../UIState";
 
 export class PlayerActionHandler {
   constructor(
@@ -102,11 +102,15 @@ export class PlayerActionHandler {
     overlay.appendChild(panel);
 
     const cleanup = () => overlay.remove();
-    panel.querySelector('[data-role="cancel"]')?.addEventListener("click", cleanup);
-    panel.querySelector('[data-role="confirm"]')?.addEventListener("click", () => {
-      cleanup();
-      opts.onConfirm();
-    });
+    panel
+      .querySelector('[data-role="cancel"]')
+      ?.addEventListener("click", cleanup);
+    panel
+      .querySelector('[data-role="confirm"]')
+      ?.addEventListener("click", () => {
+        cleanup();
+        opts.onConfirm();
+      });
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") cleanup();
@@ -129,8 +133,7 @@ export class PlayerActionHandler {
   }
 
   handleAttack(player: PlayerView, targetId: string | null) {
-    const availableTroops =
-      player.effectiveTroops?.() ?? player.troops();
+    const availableTroops = player.effectiveTroops?.() ?? player.troops();
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
@@ -145,8 +148,7 @@ export class PlayerActionHandler {
     targetTile: TileRef,
     spawnTile: TileRef | null,
   ) {
-    const availableTroops =
-      player.effectiveTroops?.() ?? player.troops();
+    const availableTroops = player.effectiveTroops?.() ?? player.troops();
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetId,
@@ -185,13 +187,17 @@ export class PlayerActionHandler {
     if (!player.config().vassalsEnabled()) return;
     this.showInlineConfirm({
       title: translateText("vassal_confirm.title"),
-      message:
-        translateText("vassal_confirm.message"),
+      message: translateText("vassal_confirm.message"),
       confirmText: translateText("vassal_confirm.confirm"),
       cancelText: translateText("common.cancel"),
       onConfirm: () =>
         this.eventBus.emit(
-          new SendSurrenderIntentEvent(player, recipient, goldRatio, troopRatio),
+          new SendSurrenderIntentEvent(
+            player,
+            recipient,
+            goldRatio,
+            troopRatio,
+          ),
         ),
     });
   }
@@ -227,7 +233,8 @@ export class PlayerActionHandler {
   }
 
   handleForceVassal(recipient: PlayerView) {
-    if (!recipient.config().vassalsEnabled()) return;
+    const player = this.uiState.selectedPlayer;
+    if (!player?.config().vassalsEnabled()) return;
     this.eventBus.emit(new SendForceVassalIntentEvent(recipient));
   }
 }

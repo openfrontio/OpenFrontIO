@@ -1,0 +1,3 @@
+# Ensure husky hooks stay LF so sh can source them on Windows Git Bash.
+* text=auto
+.husky/* text eol=lf
