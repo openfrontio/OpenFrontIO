@@ -176,11 +176,11 @@ export class MapDisplay extends LitElement {
       "Custom",
     ];
     const colors: Record<Difficulty | "Custom", string> = {
-      [Difficulty.Easy]: "#CD7F32",
-      [Difficulty.Medium]: "#C0C0C0",
-      [Difficulty.Hard]: "#FFD700",
-      [Difficulty.Impossible]: "#D32F2F",
-      Custom: "#2196F3",
+      [Difficulty.Easy]: "var(--medal-easy)",
+      [Difficulty.Medium]: "var(--medal-medium)",
+      [Difficulty.Hard]: "var(--medal-hard)",
+      [Difficulty.Impossible]: "var(--medal-impossible)",
+      Custom: "var(--medal-custom)",
     };
     const wins = this.readWins();
     return medalOrder.map((medal) => {
