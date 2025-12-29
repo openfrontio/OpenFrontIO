@@ -60,7 +60,7 @@ export class MapDisplay extends LitElement {
       width: 100%;
       min-width: 100px;
       max-width: 120px;
-      padding: 4px 4px 0 4px;
+      padding: 6px 6px 10px 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -70,6 +70,7 @@ export class MapDisplay extends LitElement {
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
+      gap: 6px;
     }
 
     .option-card:hover {
@@ -87,7 +88,7 @@ export class MapDisplay extends LitElement {
       font-size: 14px;
       color: #aaa;
       text-align: center;
-      margin: 0 0 4px 0;
+      margin: 0;
     }
 
     .option-image {
@@ -101,6 +102,19 @@ export class MapDisplay extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .medal-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .medal-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
     }
   `;
 
@@ -139,6 +153,17 @@ export class MapDisplay extends LitElement {
                 class="option-image"
               />`
             : html`<div class="option-image">Error</div>`}
+        <div class="medal-row">
+          ${Array.from({ length: 5 }).map(
+            () =>
+              html`<img
+                src="/images/MedalIconWhite.svg"
+                alt="Medal icon"
+                class="medal-icon"
+                loading="lazy"
+              />`,
+          )}
+        </div>
         <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;
