@@ -103,6 +103,7 @@ export class SinglePlayerModal extends LitElement {
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
+                              .showMedals=${true}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}

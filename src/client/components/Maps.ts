@@ -1,6 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../core/game/Game";
+import { Difficulty, GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
@@ -51,6 +51,7 @@ export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
+  @property({ type: Boolean }) showMedals = false;
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -114,9 +115,14 @@ export class MapDisplay extends LitElement {
     .medal-icon {
       width: 20px;
       height: 20px;
-      object-fit: contain;
-      opacity: 0.3;
-      filter: grayscale(1);
+      background: rgba(255, 255, 255, 0.12);
+      mask: url("/images/MedalIconWhite.svg") no-repeat center / contain;
+      -webkit-mask: url("/images/MedalIconWhite.svg") no-repeat center / contain;
+      opacity: 0.25;
+    }
+
+    .medal-icon.earned {
+      opacity: 1;
     }
   `;
 
@@ -155,19 +161,59 @@ export class MapDisplay extends LitElement {
                 class="option-image"
               />`
             : html`<div class="option-image">Error</div>`}
-        <div class="medal-row">
-          ${Array.from({ length: 5 }).map(
-            () =>
-              html`<img
-                src="/images/MedalIconWhite.svg"
-                alt="Medal icon"
-                class="medal-icon"
-                loading="lazy"
-              />`,
-          )}
-        </div>
+        ${this.showMedals ? html`<div class="medal-row">${this.renderMedals()}</div>` : null}
         <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;
+  }
+
+  private renderMedals() {
+    const medalOrder: (Difficulty | "Custom")[] = [
+      Difficulty.Easy,
+      Difficulty.Medium,
+      Difficulty.Hard,
+      Difficulty.Impossible,
+      "Custom",
+    ];
+    const colors: Record<Difficulty | "Custom", string> = {
+      [Difficulty.Easy]: "#CD7F32",
+      [Difficulty.Medium]: "#C0C0C0",
+      [Difficulty.Hard]: "#FFD700",
+      [Difficulty.Impossible]: "#D32F2F",
+      Custom: "#2196F3",
+    };
+    const wins = this.readWins();
+    return medalOrder.map((medal) => {
+      const earned = wins.has(medal);
+      return html`<div
+        class="medal-icon ${earned ? "earned" : ""}"
+        style="background-color:${colors[medal]};"
+        title=${medal}
+      ></div>`;
+    });
+  }
+
+  private readWins(): Set<Difficulty | "Custom"> {
+    const mapValue = this.mapKey
+      ? GameMapType[this.mapKey as keyof typeof GameMapType]
+      : undefined;
+    if (!mapValue) return new Set();
+    const storageKey = "achievements.singleplayerWins";
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      const values: unknown = parsed[mapValue];
+      if (Array.isArray(values)) {
+        return new Set(
+          values.filter(
+            (v): v is Difficulty | "Custom" =>
+              v === "Custom" || Object.values(Difficulty).includes(v as any),
+          ),
+        );
+      }
+      return new Set();
+    } catch {
+      return new Set();
+    }
   }
 }

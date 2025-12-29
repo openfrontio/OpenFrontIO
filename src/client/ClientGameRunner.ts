@@ -295,7 +295,6 @@ export class ClientGameRunner {
 
     const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
     if (gameType !== GameType.Singleplayer) return;
-    if (difficulty !== Difficulty.Easy) return;
 
     type WinRecord = Partial<Record<GameMapType, Difficulty[]>>;
     const storageKey = "achievements.singleplayerWins";
