@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -26,13 +27,9 @@ export class PublicLobby extends LitElement {
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
-  private ws: WebSocket | null = null;
-  private wsReconnectTimeout: number | null = null;
-  private wsReconnectDelay: number = 3000;
-  private fallbackPollInterval: number | null = null;
-  private wsConnectionAttempts: number = 0;
-  private maxWsAttempts: number = 3;
-  private wsAttemptCounted: boolean = false;
+  private lobbySocket = new PublicLobbySocket((lobbies) =>
+    this.handleLobbiesUpdate(lobbies),
+  );
 
   createRenderRoot() {
     return this;
@@ -40,138 +37,13 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.connectWebSocket();
+    this.lobbySocket.start();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.disconnectWebSocket();
+    this.lobbySocket.stop();
     this.stopJoiningAnimation();
-  }
-
-  private connectWebSocket() {
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/socket`;
-
-      this.ws = new WebSocket(wsUrl);
-      this.wsAttemptCounted = false;
-
-      this.ws.addEventListener("open", () => {
-        console.log("WebSocket connected to lobby updates");
-        this.wsConnectionAttempts = 0;
-        // Clear any pending reconnect attempts
-        if (this.wsReconnectTimeout !== null) {
-          clearTimeout(this.wsReconnectTimeout);
-          this.wsReconnectTimeout = null;
-        }
-        // Stop fallback polling if it's running
-        this.stopFallbackPolling();
-      });
-
-      this.ws.addEventListener("message", (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === "lobbies_update") {
-            this.handleLobbiesUpdate(message.data?.lobbies ?? []);
-          }
-        } catch (error) {
-          console.error("Error parsing WebSocket message:", error);
-          // Close the WebSocket so that the 'close' handler can perform
-          // reconnect attempts or fall back to HTTP polling.
-          if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            try {
-              this.ws.close();
-            } catch (closeError) {
-              console.error(
-                "Error closing WebSocket after parse failure:",
-                closeError,
-              );
-            }
-          }
-        }
-      });
-
-      this.ws.addEventListener("close", () => {
-        console.log("WebSocket disconnected, attempting to reconnect...");
-        if (!this.wsAttemptCounted) {
-          this.wsAttemptCounted = true;
-          this.wsConnectionAttempts++;
-        }
-        if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-          console.log(
-            "Max WebSocket attempts reached, falling back to HTTP polling",
-          );
-          this.startFallbackPolling();
-        } else {
-          this.scheduleReconnect();
-        }
-      });
-
-      this.ws.addEventListener("error", (error) => {
-        console.error("WebSocket error:", error);
-        // Do not increment here; close will handle counting.
-      });
-    } catch (error) {
-      console.error("Error connecting WebSocket:", error);
-      if (!this.wsAttemptCounted) {
-        this.wsAttemptCounted = true;
-        this.wsConnectionAttempts++;
-      }
-      if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-        this.startFallbackPolling();
-      } else {
-        this.scheduleReconnect();
-      }
-    }
-  }
-
-  private disconnectWebSocket() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    if (this.wsReconnectTimeout !== null) {
-      clearTimeout(this.wsReconnectTimeout);
-      this.wsReconnectTimeout = null;
-    }
-  }
-
-  private scheduleReconnect() {
-    if (this.wsReconnectTimeout !== null) return;
-    this.wsReconnectTimeout = window.setTimeout(() => {
-      this.wsReconnectTimeout = null;
-      this.connectWebSocket();
-    }, this.wsReconnectDelay);
-  }
-
-  private startFallbackPolling() {
-    if (this.fallbackPollInterval !== null) return;
-    console.log("Starting HTTP fallback polling");
-    // Fetch immediately to avoid initial delay before first update
-    this.fetchLobbiesHTTP();
-    this.fallbackPollInterval = window.setInterval(() => {
-      this.fetchLobbiesHTTP();
-    }, 1000);
-  }
-
-  private stopFallbackPolling() {
-    if (this.fallbackPollInterval !== null) {
-      clearInterval(this.fallbackPollInterval);
-      this.fallbackPollInterval = null;
-    }
-  }
-
-  private async fetchLobbiesHTTP() {
-    try {
-      const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      this.handleLobbiesUpdate(data.lobbies as GameInfo[]);
-    } catch (error) {
-      console.error("Error fetching lobbies via HTTP:", error);
-    }
   }
 
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
@@ -306,8 +178,7 @@ export class PublicLobby extends LitElement {
   }
 
   public stop() {
-    this.disconnectWebSocket();
-    this.stopFallbackPolling();
+    this.lobbySocket.stop();
     this.isLobbyHighlighted = false;
     this.currLobby = null;
     this.stopJoiningAnimation();
