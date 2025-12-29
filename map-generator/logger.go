@@ -6,25 +6,45 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 )
 
+type LogFlags struct {
+	performance bool
+	removal     bool
+}
+
+// LevelAll allows for manually setting a log level that outputs all messages, regardless of other passed flags
+const LevelAll = slog.Level(-8)
+
+// PerformanceLogTag is a slog attribute used to tag performance-related log messages.
 var PerformanceLogTag = slog.String("tag", "performance")
 
-// PrettyHandler is a custom slog.Handler that outputs logs with each property on a separate line.
-type PrettyHandler struct {
+// RemovalLogTag is a slog attribute used to tag land/water removal-related log messages.
+var RemovalLogTag = slog.String("tag", "removal")
+
+// GeneratorLogger is a custom slog.Handler that outputs logs based on verbosity and performance flags.
+type GeneratorLogger struct {
 	opts   slog.HandlerOptions
 	w      io.Writer
 	mu     *sync.Mutex
 	attrs  []slog.Attr
 	prefix string
+	flags  LogFlags
 }
 
-// NewPrettyHandler creates a new PrettyHandler.
-func NewPrettyHandler(out io.Writer, opts *slog.HandlerOptions) *PrettyHandler {
-	h := &PrettyHandler{
-		w:  out,
-		mu: &sync.Mutex{},
+// NewGeneratorLogger creates a new GeneratorLogger.
+// It initializes a handler with specific output, options, and flags for verbosity and performance.
+func NewGeneratorLogger(
+	out io.Writer,
+	opts *slog.HandlerOptions,
+	flags LogFlags) *GeneratorLogger {
+
+	h := &GeneratorLogger{
+		w:     out,
+		mu:    &sync.Mutex{},
+		flags: flags,
 	}
 	if opts != nil {
 		h.opts = *opts
@@ -35,28 +55,64 @@ func NewPrettyHandler(out io.Writer, opts *slog.HandlerOptions) *PrettyHandler {
 	return h
 }
 
-func (h *PrettyHandler) Enabled(_ context.Context, level slog.Level) bool {
+// Enabled checks if a given log level is enabled for this handler.
+func (h *GeneratorLogger) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.opts.Level.Level()
 }
 
-func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
-	buf := &bytes.Buffer{}
+// Handle processes a log record.
+// It formats the log message and decides whether to output it based on log level and flags
+func (h *GeneratorLogger) Handle(_ context.Context, r slog.Record) error {
+	isPerformanceLog := false
+	isRemovalLog := false
+	var mapName string
 
-	if r.Message != "" {
-		fmt.Fprintf(buf, "msg: %s\n", r.Message)
+	findAttrs := func(a slog.Attr) {
+		if a.Equal(PerformanceLogTag) {
+			isPerformanceLog = true
+		}
+		if a.Equal(RemovalLogTag) {
+			isRemovalLog = true
+		}
+		if a.Key == "map" {
+			mapName = a.Value.String()
+		}
 	}
 
-	currentAttrs := h.attrs
+	// Check record attributes for performance tag and map name
 	r.Attrs(func(a slog.Attr) bool {
-		currentAttrs = append(currentAttrs, a)
+		findAttrs(a)
 		return true
 	})
 
-	for _, a := range currentAttrs {
-		h.appendAttr(buf, a, h.prefix)
+	// Check handler's own attributes for performance tag and map name
+	for _, a := range h.attrs {
+		findAttrs(a)
 	}
 
-	buf.WriteString("--\n")
+	// Don't log messages if the flags are not set
+	// If the log level is set to LevelAll, disregard
+	if h.opts.Level != LevelAll && isPerformanceLog && !h.flags.performance {
+		return nil
+	}
+	if h.opts.Level != LevelAll && (isRemovalLog && !h.flags.removal) {
+		return nil
+	}
+
+	buf := &bytes.Buffer{}
+
+	// Add map name as a prefix in log Level DEBUG and ALL
+	if h.opts.Level == slog.LevelDebug || h.opts.Level == LevelAll && mapName != "" {
+		mapName = strings.Trim(mapName, `"`)
+		fmt.Fprintf(buf, "[%s] ", mapName)
+	}
+
+	// Add prefix for performance messages
+	if isPerformanceLog {
+		fmt.Fprintf(buf, "[PERF] ")
+	}
+
+	fmt.Fprintln(buf, r.Message)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -64,31 +120,16 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 	return err
 }
 
-func (h *PrettyHandler) appendAttr(buf *bytes.Buffer, a slog.Attr, prefix string) {
-	key := a.Key
-	if prefix != "" {
-		key = prefix + "." + key
-	}
-
-	if a.Value.Kind() == slog.KindGroup {
-		if key != "" {
-			prefix = key
-		}
-		for _, groupAttr := range a.Value.Group() {
-			h.appendAttr(buf, groupAttr, prefix)
-		}
-	} else if key != "" {
-		fmt.Fprintf(buf, "%s: %s\n", key, a.Value)
-	}
-}
-
-func (h *PrettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+// WithAttrs returns a new handler with the given attributes added.
+func (h *GeneratorLogger) WithAttrs(attrs []slog.Attr) slog.Handler {
 	newHandler := *h
 	newHandler.attrs = append(newHandler.attrs, attrs...)
 	return &newHandler
 }
 
-func (h *PrettyHandler) WithGroup(name string) slog.Handler {
+// WithGroup returns a new handler with the given group name.
+// The group name is added as a prefix to subsequent log messages.
+func (h *GeneratorLogger) WithGroup(name string) slog.Handler {
 	if name == "" {
 		return h
 	}

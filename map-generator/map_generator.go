@@ -119,7 +119,7 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 
 	area := width * height
 	if area < minRecommendedPixelSize || area > maxRecommendedPixelSize {
-		logger.Debug(fmt.Sprintf("⚠️ Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
+		logger.Info(fmt.Sprintf("Map area %d pixels is outside recommended range (%d - %d)", area, minRecommendedPixelSize, maxRecommendedPixelSize), PerformanceLogTag)
 	}
 
 	logger.Info(fmt.Sprintf("Processing Map: %s, dimensions: %dx%d", args.Name, width, height))
@@ -180,10 +180,10 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	logger.Debug(fmt.Sprintf("Land Tile Count (16x): %d", numLandTiles16x))
 
 	if mapNumLandTiles == 0 {
-		logger.Debug("⚠️ Map has 0 land tiles", PerformanceLogTag)
+		logger.Info("Map has 0 land tiles", PerformanceLogTag)
 	}
 	if mapNumLandTiles > maxRecommendedLandTileCount {
-		logger.Debug(fmt.Sprintf("⚠️ Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
+		logger.Info(fmt.Sprintf("Map has more land tiles (%d) than recommended maximum (%d)", mapNumLandTiles, maxRecommendedLandTileCount), PerformanceLogTag)
 	}
 
 	return MapResult{
@@ -441,7 +441,7 @@ func processWater(terrain [][]Terrain, removeSmall bool, logger *slog.Logger) {
 			logger.Info("Searching for small water bodies for removal")
 			for w := 1; w < len(waterBodies); w++ {
 				if waterBodies[w].size < minLakeSize {
-					logger.Debug(fmt.Sprintf("Removing small lake at %d,%d (size %d)", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size))
+					logger.Debug(fmt.Sprintf("Removing small lake at %d,%d (size %d)", waterBodies[w].coords[0].X, waterBodies[w].coords[0].Y, waterBodies[w].size), RemovalLogTag)
 					smallLakes++
 					for _, coord := range waterBodies[w].coords {
 						terrain[coord.X][coord.Y].Type = Land
@@ -527,7 +527,7 @@ func removeSmallIslands(terrain [][]Terrain, removeSmall bool, logger *slog.Logg
 
 	for _, body := range landBodies {
 		if body.size < minIslandSize {
-			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size))
+			logger.Debug(fmt.Sprintf("Removing small island at %d,%d (size %d)", body.coords[0].X, body.coords[0].Y, body.size), RemovalLogTag)
 			smallIslands++
 			for _, coord := range body.coords {
 				terrain[coord.X][coord.Y].Type = Water

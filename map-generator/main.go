@@ -14,8 +14,12 @@ import (
 
 // mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
 var mapsFlag string
+
+// verboseFlag performanceFlag and removalFlag logLevelFlag impact logging, see ./logger.go
 var verboseFlag bool
 var performanceFlag bool
+var removalFlag bool
+var logLevelFlag string
 
 // maps defines the registry of available maps to be processed.
 // Each entry contains the folder name and a flag indicating if it's a test map.
@@ -253,21 +257,48 @@ func loadTerrainMaps() error {
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
-	flag.BoolVar(&verboseFlag, "verbose", false, "Turns on additional logging during the map generation process")
-	flag.BoolVar(&verboseFlag, "v", false, "Turns on additional logging (shorthand)")
-	flag.BoolVar(&performanceFlag, "performance", false, "Adds additional logging checks for performance-based recommendations")
+	flag.StringVar(&logLevelFlag, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
+	flag.BoolVar(&verboseFlag, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
+	flag.BoolVar(&verboseFlag, "v", false, "-verbose shorthand")
+	flag.BoolVar(&performanceFlag, "log-performance", false, "Adds additional logging for performance-based recommendations, sets log-level=DEBUG")
+	flag.BoolVar(&removalFlag, "log-removal", false, "Adds additional logging of removed island and lake position/size, sets log-level=DEBUG")
 	flag.Parse()
 
-	var currentLevel = slog.LevelInfo
-	if verboseFlag {
-		currentLevel = slog.LevelDebug
+	var level = slog.LevelInfo
+
+	if verboseFlag || performanceFlag || removalFlag {
+		level = slog.LevelDebug
 	}
 
-	opts := &slog.HandlerOptions{
-		Level: currentLevel,
+	// parse the log-level input string to the slog.Level type
+	if logLevelFlag != "" {
+		switch strings.ToLower(logLevelFlag) {
+		case "all":
+			level = LevelAll
+		case "debug":
+			level = slog.LevelDebug
+		case "info":
+			level = slog.LevelInfo
+		case "warn":
+			level = slog.LevelWarn
+		case "error":
+			level = slog.LevelError
+		default:
+			fmt.Printf("invalid log level: %s, defaulting to info\n", logLevelFlag)
+			level = slog.LevelInfo
+		}
 	}
-	// logger := slog.New(NewPrettyHandler(os.Stdout, opts))
-	logger := slog.New(NewPrettyHandler(os.Stdout, opts))
+
+	logger := slog.New(NewGeneratorLogger(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: level,
+		},
+		LogFlags{
+			performance: performanceFlag,
+			removal:     removalFlag,
+		},
+	))
 
 	slog.SetDefault(logger)
 
