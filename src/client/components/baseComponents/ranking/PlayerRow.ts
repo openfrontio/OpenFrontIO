@@ -27,7 +27,9 @@ export class PlayerRow extends LitElement {
           : "bg-slate-700"} border-[2px]
           ${player.winner
           ? "border-yellow-500"
-          : "border-yellow-50"} ${visibleBorder ? "" : "border-opacity-0"}
+          : visibleBorder
+            ? "border-yellow-50"
+            : "border-yellow-50/0"}
           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-[5px] rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
       >
         <div

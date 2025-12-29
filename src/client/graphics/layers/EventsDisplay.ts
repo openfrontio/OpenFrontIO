@@ -854,10 +854,10 @@ export class EventsDisplay extends LitElement implements Layer {
                       ? this.renderButton({
                           content: "❌",
                           onClick: () => this.emitCancelAttackIntent(attack.id),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: attack.retreating,
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -890,10 +890,10 @@ export class EventsDisplay extends LitElement implements Layer {
                           content: "❌",
                           onClick: () =>
                             this.emitCancelAttackIntent(landAttack.id),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: landAttack.retreating,
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -926,10 +926,10 @@ export class EventsDisplay extends LitElement implements Layer {
                       ? this.renderButton({
                           content: "❌",
                           onClick: () => this.emitBoatCancelIntent(boat.id()),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: boat.retreating(),
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span

@@ -485,7 +485,7 @@ export class PlayerPanel extends LitElement implements Layer {
       <div class="mb-1 flex justify-between gap-2">
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white w-[140px] min-w-[140px] flex-shrink-0"
+                    text-white w-[140px] min-w-[140px] shrink-0"
         >
           <span class="mr-0.5">💰</span>
           <span translate="no" class="tabular-nums w-[5ch]font-semibold">
@@ -498,7 +498,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white w-[140px] min-w-[140px] flex-shrink-0"
+                    text-white w-[140px] min-w-[140px] shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">

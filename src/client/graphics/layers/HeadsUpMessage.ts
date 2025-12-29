@@ -60,7 +60,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
       <div
         class="flex items-center relative
                     w-full justify-evenly h-8 lg:h-10 md:top-[70px] left-0 lg:left-4
-                    bg-opacity-60 bg-gray-900 rounded-md lg:rounded-lg
+                    bg-gray-900/60 rounded-md lg:rounded-lg
                     backdrop-blur-md text-white text-md lg:text-xl p-1 lg:p-2"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
