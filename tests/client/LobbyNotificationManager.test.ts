@@ -1,6 +1,7 @@
 /**
- * @jest-environment jsdom
+ * @vitest-environment jsdom
  */
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { LobbyNotificationManager } from "../../src/client/LobbyNotificationManager";
 import { GameConfig, GameInfo } from "../../src/core/Schemas";
 import {
@@ -14,6 +15,7 @@ import {
 describe("LobbyNotificationManager", () => {
   let manager: LobbyNotificationManager;
   let localStorageMock: Record<string, string>;
+  let mockAudioContext: any;
 
   beforeEach(() => {
     // Mock localStorage
@@ -35,32 +37,34 @@ describe("LobbyNotificationManager", () => {
     });
 
     // Mock AudioContext
-    const mockAudioContext = {
-      createOscillator: jest.fn().mockReturnValue({
-        connect: jest.fn().mockReturnThis(),
+    mockAudioContext = {
+      createOscillator: vi.fn().mockReturnValue({
+        connect: vi.fn().mockReturnThis(),
         frequency: { value: 0 },
         type: "sine",
-        start: jest.fn(),
-        stop: jest.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
       }),
-      createGain: jest.fn().mockReturnValue({
-        connect: jest.fn().mockReturnThis(),
+      createGain: vi.fn().mockReturnValue({
+        connect: vi.fn().mockReturnThis(),
         gain: {
-          setValueAtTime: jest.fn(),
-          exponentialRampToValueAtTime: jest.fn(),
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
         },
       }),
       destination: {},
       currentTime: 0,
-      close: jest.fn(),
+      close: vi.fn(),
     };
 
-    (window as any).AudioContext = jest.fn().mockReturnValue(mockAudioContext);
-    (window as any).webkitAudioContext = jest
-      .fn()
-      .mockReturnValue(mockAudioContext);
+    const audioContextFactory = function AudioContextMock(this: unknown) {
+      return mockAudioContext;
+    };
 
-    jest.clearAllMocks();
+    (window as any).AudioContext = vi.fn(audioContextFactory);
+    (window as any).webkitAudioContext = vi.fn(audioContextFactory);
+
+    vi.clearAllMocks();
     manager = new LobbyNotificationManager();
   });
 
@@ -141,7 +145,7 @@ describe("LobbyNotificationManager", () => {
         detail: [{ gameID: "test-lobby", gameConfig, numClients: 5 }],
       });
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       window.dispatchEvent(lobbyEvent);
 
       // Should trigger notification since FFA is enabled in settings
@@ -231,7 +235,7 @@ describe("LobbyNotificationManager", () => {
       });
       window.dispatchEvent(settingsEvent);
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const gameConfig: GameConfig = {
         gameMap: GameMapType.World,
         difficulty: Difficulty.Hard,
@@ -305,19 +309,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
 
-      expect(
-        (window as any).AudioContext.mock.calls.length,
-      ).toBeGreaterThanOrEqual(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
+      expect((window as any).AudioContext).toHaveBeenCalled();
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     });
 
     test("should match Trios (3 players per team)", () => {
@@ -345,19 +345,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 30,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
 
-      expect(
-        (window as any).AudioContext.mock.calls.length,
-      ).toBeGreaterThanOrEqual(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
+      expect((window as any).AudioContext).toHaveBeenCalled();
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     });
 
     test("should match Quads (4 players per team)", () => {
@@ -385,19 +381,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 25,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
 
-      expect(
-        (window as any).AudioContext.mock.calls.length,
-      ).toBeGreaterThanOrEqual(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
+      expect((window as any).AudioContext).toHaveBeenCalled();
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     });
 
     test("should not match teams with players per team below min (50 players, 25 teams = 2 per team)", () => {
@@ -437,7 +429,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -485,7 +477,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 50,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -521,19 +513,15 @@ describe("LobbyNotificationManager", () => {
         numClients: 100,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
 
       window.dispatchEvent(event);
 
-      expect(
-        (window as any).AudioContext.mock.calls.length,
-      ).toBeGreaterThanOrEqual(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator).toHaveBeenCalled();
+      expect((window as any).AudioContext).toHaveBeenCalled();
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     });
 
     test("should not match when Team is disabled", () => {
@@ -574,7 +562,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 10,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -671,7 +659,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -694,9 +682,11 @@ describe("LobbyNotificationManager", () => {
       );
       manager.destroy();
 
-      (window as any).AudioContext = jest.fn().mockImplementation(() => {
+      const failingAudioContext = function FailingAudioContext(this: unknown) {
         throw new Error("AudioContext not supported");
-      });
+      };
+
+      (window as any).AudioContext = vi.fn(failingAudioContext);
 
       manager = new LobbyNotificationManager();
 
@@ -771,7 +761,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event1 = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -807,7 +797,7 @@ describe("LobbyNotificationManager", () => {
         maxPlayers: 10,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
       // First lobby
       const gameInfo1: GameInfo = {
@@ -822,9 +812,7 @@ describe("LobbyNotificationManager", () => {
 
       // AudioContext created once
       expect((window as any).AudioContext.mock.calls.length).toBe(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator.mock.calls.length).toBe(1);
+      expect(mockAudioContext.createOscillator.mock.calls.length).toBe(1);
 
       // Add second lobby
       const gameInfo2: GameInfo = {
@@ -841,7 +829,7 @@ describe("LobbyNotificationManager", () => {
 
       // AudioContext still only created once (reused), but oscillator called twice
       expect((window as any).AudioContext.mock.calls.length).toBe(1);
-      expect(audioContextInstance.createOscillator.mock.calls.length).toBe(2);
+      expect(mockAudioContext.createOscillator.mock.calls.length).toBe(2);
     });
 
     test("should clear seen lobbies when they are removed from the list", () => {
@@ -868,7 +856,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
       // Add lobby first time
       const event1 = new CustomEvent("lobbies-updated", {
@@ -877,9 +865,7 @@ describe("LobbyNotificationManager", () => {
       window.dispatchEvent(event1);
 
       expect((window as any).AudioContext.mock.calls.length).toBe(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
-      expect(audioContextInstance.createOscillator.mock.calls.length).toBe(1);
+      expect(mockAudioContext.createOscillator.mock.calls.length).toBe(1);
 
       // Keep lobby but add a second one
       const gameInfo2: GameInfo = {
@@ -895,7 +881,7 @@ describe("LobbyNotificationManager", () => {
 
       // AudioContext still only created once, but oscillator called twice (once for each unique lobby)
       expect((window as any).AudioContext.mock.calls.length).toBe(1);
-      expect(audioContextInstance.createOscillator.mock.calls.length).toBe(2);
+      expect(mockAudioContext.createOscillator.mock.calls.length).toBe(2);
 
       // Remove both lobbies
       const event3 = new CustomEvent("lobbies-updated", {
@@ -910,13 +896,13 @@ describe("LobbyNotificationManager", () => {
       window.dispatchEvent(event4);
 
       // Oscillator called 3 times total
-      expect(audioContextInstance.createOscillator.mock.calls.length).toBe(3);
+      expect(mockAudioContext.createOscillator.mock.calls.length).toBe(3);
     });
   });
 
   describe("Cleanup and Destruction", () => {
     test("should remove event listeners on destroy", () => {
-      const removeEventListenerSpy = jest.spyOn(window, "removeEventListener");
+      const removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
       manager.destroy();
 
       expect(removeEventListenerSpy).toHaveBeenCalledWith(
@@ -968,7 +954,7 @@ describe("LobbyNotificationManager", () => {
         numClients: 5,
       };
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       const event = new CustomEvent("lobbies-updated", {
         detail: [gameInfo],
       });
@@ -976,13 +962,11 @@ describe("LobbyNotificationManager", () => {
 
       // Verify notification was triggered and get AudioContext instance
       expect((window as any).AudioContext.mock.calls.length).toBe(1);
-      const audioContextInstance = (window as any).AudioContext.mock.results[0]
-        .value;
 
       manager.destroy();
 
       // Verify close() was called on the AudioContext
-      expect(audioContextInstance.close).toHaveBeenCalled();
+      expect(mockAudioContext.close).toHaveBeenCalled();
     });
   });
 
