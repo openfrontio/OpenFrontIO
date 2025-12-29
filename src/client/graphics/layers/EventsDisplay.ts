@@ -200,6 +200,22 @@ export class EventsDisplay extends LitElement implements Layer {
     return !!event.pinned && this.pinAllianceEvents;
   }
 
+  private sortEvents(events: GameEvent[]): GameEvent[] {
+    return [...events].sort((a, b) => {
+      const aPinned = this.isPinnedEvent(a) ? 1 : 0;
+      const bPinned = this.isPinnedEvent(b) ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return aPinned - bPinned; // pinned events go to the bottom
+      }
+      const aPrior = a.priority ?? 100000;
+      const bPrior = b.priority ?? 100000;
+      if (aPrior === bPrior) {
+        return a.createdAt - b.createdAt;
+      }
+      return bPrior - aPrior;
+    });
+  }
+
   private updateMap = [
     [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
     [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
@@ -1060,19 +1076,7 @@ export class EventsDisplay extends LitElement implements Layer {
       return !this.eventsFilters.get(category);
     });
 
-    filteredEvents.sort((a, b) => {
-      const aPinned = this.isPinnedEvent(a) ? 1 : 0;
-      const bPinned = this.isPinnedEvent(b) ? 1 : 0;
-      if (aPinned !== bPinned) {
-        return aPinned - bPinned; // pinned events go to the bottom
-      }
-      const aPrior = a.priority ?? 100000;
-      const bPrior = b.priority ?? 100000;
-      if (aPrior === bPrior) {
-        return a.createdAt - b.createdAt;
-      }
-      return bPrior - aPrior;
-    });
+    const sortedEvents = this.sortEvents(filteredEvents);
 
     return html`
       ${styles}
@@ -1159,7 +1163,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     style="pointer-events: auto;"
                   >
                     <tbody>
-                      ${filteredEvents.map(
+                      ${sortedEvents.map(
                         (event, index) => html`
                           <tr>
                             <td
