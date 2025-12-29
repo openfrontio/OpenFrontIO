@@ -21,7 +21,7 @@ describe("AllianceExtensionExecution", () => {
       [
         playerInfo("player1", PlayerType.Human),
         playerInfo("player2", PlayerType.Human),
-        playerInfo("player3", PlayerType.FakeHuman),
+        playerInfo("player3", PlayerType.Nation),
       ],
     );
 
@@ -82,7 +82,6 @@ describe("AllianceExtensionExecution", () => {
   });
 
   test("Successfully extends existing alliance between Human and non-Human", () => {
-    //test of handleAllianceExtensions is done in BotBehavior tests
     jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
     jest.spyOn(player3, "isAlive").mockReturnValue(true);
     jest.spyOn(player1, "isAlive").mockReturnValue(true);

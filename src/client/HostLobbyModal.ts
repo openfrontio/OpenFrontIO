@@ -25,8 +25,10 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -35,10 +37,11 @@ export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs = false;
+  @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
@@ -249,7 +252,7 @@ export class HostLobbyModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
+                        ${translateText(`difficulty.${key.toLowerCase()}`)}
                       </p>
                     </div>
                   `,
@@ -313,7 +316,7 @@ export class HostLobbyModal extends LitElement {
                               ${typeof o === "string"
                                 ? o === HumansVsNations
                                   ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`public_lobby.teams_${o}`)
+                                  : translateText(`host_modal.teams_${o}`)
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
@@ -332,25 +335,17 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-                <label for="bots-count" class="option-card">
-                  <input
-                    type="range"
-                    id="bots-count"
+                <div class="option-card">
+                <fluent-slider
                     min="0"
                     max="400"
                     step="1"
-                    @input=${this.handleBotsChange}
-                    @change=${this.handleBotsChange}
-                    .value="${String(this.bots)}"
-                  />
-                  <div class="option-card-title">
-                    <span>${translateText("host_modal.bots")}</span>${
-                      this.bots === 0
-                        ? translateText("host_modal.bots_disabled")
-                        : this.bots
-                    }
-                  </div>
-                </label>
+                    .value=${this.bots}
+                  labelKey="host_modal.bots"
+                  disabledKey="host_modal.bots_disabled"
+                  @value-changed=${this.handleBotsChange}
+                ></fluent-slider>
+              </div>
 
                 ${
                   !(
@@ -359,17 +354,17 @@ export class HostLobbyModal extends LitElement {
                   )
                     ? html`
                         <label
-                          for="disable-npcs"
-                          class="option-card ${this.disableNPCs
+                          for="disable-nations"
+                          class="option-card ${this.disableNations
                             ? "selected"
                             : ""}"
                         >
                           <div class="checkbox-icon"></div>
                           <input
                             type="checkbox"
-                            id="disable-npcs"
-                            @change=${this.handleDisableNPCsChange}
-                            .checked=${this.disableNPCs}
+                            id="disable-nations"
+                            @change=${this.handleDisableNationsChange}
+                            .checked=${this.disableNations}
                           />
                           <div class="option-card-title">
                             ${translateText("host_modal.disable_nations")}
@@ -576,7 +571,7 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.nationCount}
+            ${this.disableNations ? 0 : this.nationCount}
             ${
               this.nationCount === 1
                 ? translateText("host_modal.nation_player")
@@ -589,7 +584,7 @@ export class HostLobbyModal extends LitElement {
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
-            .nationCount=${this.disableNPCs ? 0 : this.nationCount}
+            .nationCount=${this.disableNations ? 0 : this.nationCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
         </div>
@@ -627,7 +622,7 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
-        // join lobby
+        crazyGamesSDK.showInviteButton(this.lobbyId);
       })
       .then(() => {
         this.dispatchEvent(
@@ -642,11 +637,16 @@ export class HostLobbyModal extends LitElement {
         );
       });
     this.modalEl?.open();
+    this.modalEl.onClose = () => {
+      this.close();
+    };
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
   public close() {
+    console.log("Closing host lobby modal");
+    crazyGamesSDK.hideInviteButton();
     this.modalEl?.close();
     this.copySuccess = false;
     if (this.playersInterval) {
@@ -681,7 +681,8 @@ export class HostLobbyModal extends LitElement {
 
   // Modified to include debouncing
   private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+    const customEvent = e as CustomEvent<{ value: number }>;
+    const value = customEvent.detail.value;
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
@@ -755,9 +756,9 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleDisableNPCsChange(e: Event) {
-    this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    console.log(`updating disable npcs to ${this.disableNPCs}`);
+  private async handleDisableNationsChange(e: Event) {
+    this.disableNations = Boolean((e.target as HTMLInputElement).checked);
+    console.log(`updating disable nations to ${this.disableNations}`);
     this.putGameConfig();
   }
 
@@ -800,10 +801,10 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                disableNPCs: false,
+                disableNations: false,
               }
             : {
-                disableNPCs: this.disableNPCs,
+                disableNations: this.disableNations,
               }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,
@@ -849,7 +850,6 @@ export class HostLobbyModal extends LitElement {
 
   private async copyToClipboard() {
     try {
-      //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
         `${location.origin}/#join=${this.lobbyId}`,
       );
@@ -872,8 +872,6 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
-
         this.clients = data.clients ?? [];
       });
   }

@@ -26,6 +26,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
+import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -36,7 +37,6 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentID } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
@@ -57,7 +57,6 @@ export interface LobbyConfig {
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
-  token: string;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
@@ -238,7 +237,7 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private saveGame(update: WinUpdate) {
+  private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
     }
@@ -329,6 +328,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
+
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
@@ -433,7 +433,17 @@ export class ClientGameRunner {
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
-          this.worker.sendTurn(message.turn);
+          this.worker.sendTurn(
+            // Filter out pause intents in replays
+            this.gameView.config().isReplay()
+              ? {
+                  ...message.turn,
+                  intents: message.turn.intents.filter(
+                    (i) => i.type !== "toggle_pause",
+                  ),
+                }
+              : message.turn,
+          );
           this.turnsSeen++;
         }
       }

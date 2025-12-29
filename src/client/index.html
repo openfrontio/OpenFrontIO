@@ -73,6 +73,13 @@
         position: absolute;
         width: 100%;
         height: 100vh;
+
+        background: linear-gradient(
+          to bottom,
+          rgba(139, 26, 26, 0.5),
+          rgba(255, 255, 255, 0.5),
+          rgba(39, 174, 96, 0.5)
+        );
       }
 
       .dark .bg-image {
@@ -83,12 +90,51 @@
       .component-hideable:has(> .parent-hidden) {
         display: none;
       }
+
+      .snow {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1050;
+      }
+
+      .snowflake {
+        position: absolute;
+        background-size: contain;
+        background-repeat: no-repeat;
+        pointer-events: none;
+        animation-name: snowflake-fall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-duration: 10s; /* Adjust duration to taste */
+        z-index: 9999; /* Increased z-index for visibility */
+        opacity: 0.8; /* Default opacity */
+        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5)); /* Subtle glow */
+      }
+
+      @keyframes snowflake-fall {
+        from {
+          transform: translateY(-100%) rotate(0deg); /* Start off-screen */
+        }
+        to {
+          transform: translateY(105vh) rotate(360deg); /* Fall completely out of view */
+        }
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
     <script>
       document.documentElement.className = "preload";
     </script>
+
+    <!-- CrazyGames SDK -->
+    <script
+      src="https://sdk.crazygames.com/crazygames-sdk-v3.js"
+      async
+    ></script>
 
     <!-- Cloudflare Turnstile -->
     <script
@@ -144,6 +190,7 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
   >
+    <div class="snow"></div>
     <header class="l-header">
       <div class="l-header__content">
         <svg
@@ -162,8 +209,10 @@
               x2="100%"
               y2="0%"
             >
-              <stop offset="0%" style="stop-color: #2563eb" />
-              <stop offset="100%" style="stop-color: #3b82f6" />
+              <stop offset="0%" style="stop-color: #e53935" />
+              <!-- Vibrant Red -->
+              <stop offset="100%" style="stop-color: #388e3c" />
+              <!-- Deep Green -->
             </linearGradient>
           </defs>
           <g>
@@ -286,7 +335,7 @@
       id="settings-button"
       title="Settings"
       class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: #0075ff"
+      style="width: 80px; height: 80px; background-color: var(--primaryColor)"
     >
       <img
         src="../../resources/images/SettingIconWhite.svg"
@@ -321,7 +370,7 @@
         <chat-display></chat-display>
         <events-display></events-display>
       </div>
-      <div style="pointer-events: auto">
+      <div>
         <control-panel></control-panel>
       </div>
     </div>
@@ -416,6 +465,7 @@
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <help-modal></help-modal>
+    <game-info-modal></game-info-modal>
     <dark-mode-button></dark-mode-button>
     <stats-button></stats-button>
     <alert-frame></alert-frame>
@@ -437,7 +487,9 @@
         ></div>
         <button
           class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-          onclick="document.getElementById('language-modal').classList.add('hidden')"
+          onclick="
+            document.getElementById('language-modal').classList.add('hidden')
+          "
         >
           Close
         </button>

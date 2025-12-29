@@ -19,44 +19,37 @@
     {
       "coordinates": [1941, 1031],
       "flag": "Rif",
-      "name": "Rif",
-      "strength": 2
+      "name": "Rif"
     },
     {
       "coordinates": [2733, 1190],
       "flag": "dz",
-      "name": "Algeria",
-      "strength": 2
+      "name": "Algeria"
     },
     {
       "coordinates": [1287, 1175],
       "flag": "ma",
-      "name": "Morocco",
-      "strength": 2
+      "name": "Morocco"
     },
     {
       "coordinates": [414, 59],
       "flag": "pt",
-      "name": "Portugal",
-      "strength": 2
+      "name": "Portugal"
     },
     {
       "coordinates": [2675, 49],
       "flag": "es",
-      "name": "Spain",
-      "strength": 2
+      "name": "Spain"
     },
     {
       "coordinates": [1271, 1393],
       "flag": "Shilha",
-      "name": "Shilha",
-      "strength": 1
+      "name": "Shilha"
     },
     {
       "coordinates": [1555, 258],
       "flag": "Andalusia",
-      "name": "Andalusia",
-      "strength": 2
+      "name": "Andalusia"
     }
   ]
 }

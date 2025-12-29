@@ -1,9 +1,16 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
-import { GameImpl } from "../game/GameImpl";
-import { GameMap, TileRef } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 import { isClusterSurroundedBy } from "./utils/surround";
+
+interface ClusterTraversalState {
+  visited: Uint32Array;
+  gen: number;
+}
+
+// Per-game traversal state used by calculateClusters() to avoid per-player buffers.
+const traversalStates = new WeakMap<Game, ClusterTraversalState>();
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -139,17 +146,39 @@ export class PlayerExecution implements Execution {
 
   private removeClusters() {
     const clusters = this.calculateClusters();
-    clusters.sort((a, b) => b.size - a.size);
 
-    const main = clusters.shift();
-    if (main === undefined) throw new Error("No clusters");
-    this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
-    const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
-      this.removeCluster(main);
+    if (clusters.length === 0) {
+      this.player.largestClusterBoundingBox = null;
+      return;
     }
 
-    for (const cluster of clusters) {
+    // Find the largest cluster with a single linear scan (O(n)).
+    let largestIndex = 0;
+    let largestSize = clusters[0].size;
+    for (let i = 1; i < clusters.length; i++) {
+      const size = clusters[i].size;
+      if (size > largestSize) {
+        largestSize = size;
+        largestIndex = i;
+      }
+    }
+
+    const largestCluster = clusters[largestIndex];
+    if (largestCluster === undefined) throw new Error("No clusters");
+
+    this.player.largestClusterBoundingBox = calculateBoundingBox(
+      this.mg,
+      largestCluster,
+    );
+    const surroundedBy = this.surroundedBySamePlayer(largestCluster);
+    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+      this.removeCluster(largestCluster);
+    }
+
+    // Process remaining clusters
+    for (let i = 0; i < clusters.length; i++) {
+      if (i === largestIndex) continue;
+      const cluster = clusters[i];
       if (this.isSurrounded(cluster)) {
         this.removeCluster(cluster);
       }
@@ -159,17 +188,23 @@ export class PlayerExecution implements Execution {
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
     const enemies = new Set<number>();
     for (const tile of cluster) {
-      if (
-        this.mg.isOceanShore(tile) ||
-        this.mg.isOnEdgeOfMap(tile) ||
-        this.mg.neighbors(tile).some((n) => !this.mg?.hasOwner(n))
-      ) {
+      let hasUnownedNeighbor = false;
+      if (this.mg.isOceanShore(tile) || this.mg.isOnEdgeOfMap(tile)) {
         return false;
       }
-      this.mg
-        .neighbors(tile)
-        .filter((n) => this.mg?.ownerID(n) !== this.player?.smallID())
-        .forEach((p) => this.mg && enemies.add(this.mg.ownerID(p)));
+      this.mg.forEachNeighbor(tile, (n) => {
+        if (!this.mg.hasOwner(n)) {
+          hasUnownedNeighbor = true;
+          return;
+        }
+        const ownerId = this.mg.ownerID(n);
+        if (ownerId !== this.player.smallID()) {
+          enemies.add(ownerId);
+        }
+      });
+      if (hasUnownedNeighbor) {
+        return false;
+      }
       if (enemies.size !== 1) {
         return false;
       }
@@ -192,14 +227,12 @@ export class PlayerExecution implements Execution {
       if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
         return false;
       }
-      this.mg
-        .neighbors(tr)
-        .filter(
-          (n) =>
-            this.mg?.owner(n).isPlayer() &&
-            this.mg?.ownerID(n) !== this.player?.smallID(),
-        )
-        .forEach((n) => enemyTiles.add(n));
+      this.mg.forEachNeighbor(tr, (n) => {
+        const owner = this.mg.owner(n);
+        if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
+          enemyTiles.add(n);
+        }
+      });
     }
     if (enemyTiles.size === 0) {
       return false;
@@ -230,9 +263,13 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const filter = (_: GameMap, t: TileRef): boolean =>
-      this.mg?.ownerID(t) === this.player?.smallID();
-    const tiles = this.mg.bfs(firstTile, filter);
+    const tiles = this.floodFillWithGen(
+      this.bumpGeneration(),
+      this.traversalState().visited,
+      [firstTile],
+      (tile, cb) => this.mg.forEachNeighbor(tile, cb),
+      (tile) => this.mg.ownerID(tile) === this.player.smallID(),
+    );
 
     if (this.player.numTilesOwned() === tiles.size) {
       this.mg.conquerPlayer(capturing, this.player);
@@ -246,7 +283,7 @@ export class PlayerExecution implements Execution {
   private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
     const neighbors = new Map<Player, number>();
     for (const t of cluster) {
-      for (const neighbor of this.mg.neighbors(t)) {
+      this.mg.forEachNeighbor(t, (neighbor) => {
         const owner = this.mg.owner(neighbor);
         if (
           owner.isPlayer() &&
@@ -255,7 +292,7 @@ export class PlayerExecution implements Execution {
         ) {
           neighbors.set(owner, (neighbors.get(owner) ?? 0) + 1);
         }
-      }
+      });
     }
 
     // If there are no enemies, return null
@@ -317,30 +354,25 @@ export class PlayerExecution implements Execution {
   }
 
   private calculateClusters(): Set<TileRef>[] {
-    const seen = new Set<TileRef>();
-    const border = this.player.borderTiles();
+    const borderTiles = this.player.borderTiles();
+    if (borderTiles.size === 0) return [];
+
+    const state = this.traversalState();
+    const currentGen = this.bumpGeneration();
+    const visited = state.visited;
+
     const clusters: Set<TileRef>[] = [];
-    for (const tile of border) {
-      if (seen.has(tile)) {
-        continue;
-      }
 
-      const cluster = new Set<TileRef>();
-      const queue: TileRef[] = [tile];
-      seen.add(tile);
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        if (curr === undefined) throw new Error("curr is undefined");
-        cluster.add(curr);
+    for (const startTile of borderTiles) {
+      if (visited[startTile] === currentGen) continue;
 
-        const neighbors = (this.mg as GameImpl).neighborsWithDiag(curr);
-        for (const neighbor of neighbors) {
-          if (border.has(neighbor) && !seen.has(neighbor)) {
-            queue.push(neighbor);
-            seen.add(neighbor);
-          }
-        }
-      }
+      const cluster = this.floodFillWithGen(
+        currentGen,
+        visited,
+        [startTile],
+        (tile, cb) => this.mg.forEachNeighborWithDiag(tile, cb),
+        (tile) => borderTiles.has(tile),
+      );
       clusters.push(cluster);
     }
     return clusters;
@@ -355,5 +387,64 @@ export class PlayerExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private traversalState(): ClusterTraversalState {
+    const totalTiles = this.mg.width() * this.mg.height();
+    let state = traversalStates.get(this.mg);
+    if (!state || state.visited.length < totalTiles) {
+      state = {
+        visited: new Uint32Array(totalTiles),
+        gen: 0,
+      };
+      traversalStates.set(this.mg, state);
+    }
+    return state;
+  }
+
+  private bumpGeneration(): number {
+    const state = this.traversalState();
+    state.gen++;
+    if (state.gen === 0xffffffff) {
+      state.visited.fill(0);
+      state.gen = 1;
+    }
+    return state.gen;
+  }
+
+  private floodFillWithGen(
+    currentGen: number,
+    visited: Uint32Array,
+    startTiles: TileRef[],
+    neighborFn: (tile: TileRef, callback: (neighbor: TileRef) => void) => void,
+    includeFn: (tile: TileRef) => boolean,
+  ): Set<TileRef> {
+    const result = new Set<TileRef>();
+    const stack: TileRef[] = [];
+
+    for (const start of startTiles) {
+      if (visited[start] === currentGen) continue;
+      if (!includeFn(start)) continue;
+      visited[start] = currentGen;
+      result.add(start);
+      stack.push(start);
+    }
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      neighborFn(tile, (neighbor) => {
+        if (visited[neighbor] === currentGen) {
+          return;
+        }
+        if (!includeFn(neighbor)) {
+          return;
+        }
+        visited[neighbor] = currentGen;
+        result.add(neighbor);
+        stack.push(neighbor);
+      });
+    }
+
+    return result;
   }
 }

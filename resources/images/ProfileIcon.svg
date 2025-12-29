@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 24 24"
+   fill="currentColor"
+   overflow="hidden"
+   shape-rendering="geometricPrecision"
+   image-rendering="optimizeQuality"
+   fill-rule="evenodd"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4">
+      <rect
+         style="fill:#ffffff"
+         id="rect4"
+         width="28.25"
+         height="10.0625"
+         x="-2.125"
+         y="13.9375" />
+    </clipPath>
+  </defs>
+  <g
+     id="g6"
+     style="display:inline">
+    <circle
+       style="display:inline;fill:#ffffff"
+       id="path1"
+       cx="12.186869"
+       cy="8.7946405"
+       r="5.6568542" />
+    <ellipse
+       style="display:inline;fill:#ffffff;stroke-width:1.59306"
+       id="path1-8"
+       cx="12.419416"
+       cy="23.649515"
+       rx="9.5459414"
+       ry="8.5073786"
+       clip-path="url(#clipPath4)"
+       transform="translate(-0.1875)" />
+  </g>
+</svg>

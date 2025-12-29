@@ -254,6 +254,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);
     let relationHtml: TemplateResult | null = null;
+    const maxTroops = this.game.config().maxTroops(player);
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
@@ -275,11 +276,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const vassals =
       showVassal && player.vassals ? (player.vassals() as PlayerView[]) : [];
 
-    if (
-      player.type() === PlayerType.FakeHuman &&
-      myPlayer !== null &&
-      !isAllied
-    ) {
+    if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
@@ -317,7 +314,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       case PlayerType.Bot:
         playerType = translateText("player_type.bot");
         break;
-      case PlayerType.FakeHuman:
+      case PlayerType.Nation:
         playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:
@@ -410,6 +407,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                         ${renderTroops(effectiveTroops)}
                       </span>
                     </div>`
+                : ""}
+              ${maxTroops >= 1
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.maxtroops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(maxTroops)}
+                    </span>
+                  </div>`
                 : ""}
               ${attackingTroops >= 1
                 ? html`<div

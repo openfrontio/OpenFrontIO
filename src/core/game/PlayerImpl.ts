@@ -9,7 +9,6 @@ import {
   toInt,
   within,
 } from "../Util";
-import { sanitizeUsername } from "../validations/username";
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
@@ -107,7 +106,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
   public lastVassalSupportUseTick: number = -1;
 
-  private _hasSpawned = false;
+  private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
   constructor(
@@ -117,7 +116,7 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private readonly _team: Team | null,
   ) {
-    this._name = sanitizeUsername(playerInfo.name);
+    this._name = playerInfo.name;
     this._troops = toInt(startTroops);
     this._gold = 0n;
     this._displayName = this._name;
@@ -206,6 +205,7 @@ export class PlayerImpl implements Player {
       hasSpawned: this.hasSpawned(),
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
+      isLobbyCreator: this.isLobbyCreator(),
     };
   }
 
@@ -407,16 +407,25 @@ export class PlayerImpl implements Player {
   info(): PlayerInfo {
     return this.playerInfo;
   }
+
+  isLobbyCreator(): boolean {
+    return this.playerInfo.isLobbyCreator;
+  }
+
   isAlive(): boolean {
     return this._tiles.size > 0;
   }
 
   hasSpawned(): boolean {
-    return this._hasSpawned;
+    return this._spawnTile !== undefined;
   }
 
-  setHasSpawned(hasSpawned: boolean): void {
-    this._hasSpawned = hasSpawned;
+  setSpawnTile(spawnTile: TileRef): void {
+    this._spawnTile = spawnTile;
+  }
+
+  spawnTile(): TileRef | undefined {
+    return this._spawnTile;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
@@ -510,7 +519,7 @@ export class PlayerImpl implements Player {
     return delta >= this.mg.config().allianceRequestCooldown();
   }
 
-  breakAlliance(alliance: Alliance): void {
+  breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
   }
 
@@ -611,7 +620,7 @@ export class PlayerImpl implements Player {
 
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
-    this._betrayalCount++; // Keep count for FakeHumans too
+    this._betrayalCount++; // Keep count for Nations too
 
     // Record stats (only for real Humans)
     this.mg.stats().betray(this);
@@ -1037,7 +1046,7 @@ export class PlayerImpl implements Player {
       );
     }
 
-    const cost = this.mg.unitInfo(type).cost(this);
+    const cost = this.mg.unitInfo(type).cost(this.mg, this);
     const b = new UnitImpl(
       type,
       this.mg,
@@ -1084,7 +1093,9 @@ export class PlayerImpl implements Player {
     if (this.mg.config().isUnitDisabled(unit.type())) {
       return false;
     }
-    if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
+    if (
+      this._gold < this.mg.config().unitInfo(unit.type()).cost(this.mg, this)
+    ) {
       return false;
     }
     if (unit.owner() !== this) {
@@ -1094,7 +1105,7 @@ export class PlayerImpl implements Player {
   }
 
   upgradeUnit(unit: Unit) {
-    const cost = this.mg.unitInfo(unit.type()).cost(this);
+    const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
@@ -1117,7 +1128,7 @@ export class PlayerImpl implements Player {
             ? false
             : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this),
+        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
       } as BuildableUnit;
     });
   }
@@ -1131,7 +1142,7 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this);
+    const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;
     }

@@ -51,7 +51,8 @@ export type Intent =
   | UpgradeStructureIntent
   | DeleteUnitIntent
   | KickPlayerIntent
-  | VassalSupportIntent;
+  | VassalSupportIntent
+  | TogglePauseIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -89,6 +90,7 @@ export type AllianceExtensionIntent = z.infer<
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 export type VassalSupportIntent = z.infer<typeof VassalSupportIntentSchema>;
+export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -101,6 +103,7 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage;
+
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
@@ -174,7 +177,7 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
-  disableNPCs: z.boolean(),
+  disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -220,7 +223,11 @@ export const ID = z
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
-export const UsernameSchema = SafeString;
+export const UsernameSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .min(3)
+  .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 
 export const QuickChatKeySchema = z.enum(
@@ -384,6 +391,11 @@ export const VassalSupportIntentSchema = BaseIntentSchema.extend({
   ratio: z.number().min(0).max(1),
 });
 
+export const TogglePauseIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("toggle_pause"),
+  paused: z.boolean().default(false),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -411,6 +423,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
   VassalSupportIntentSchema,
+  TogglePauseIntentSchema,
 ]);
 
 //
@@ -464,6 +477,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
+  isLobbyCreator: z.boolean().optional(),
 });
 
 export const GameStartInfoSchema = z.object({

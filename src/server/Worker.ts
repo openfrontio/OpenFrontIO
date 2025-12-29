@@ -270,24 +270,6 @@ export async function startWorker() {
     }
   });
 
-  app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
-    if (req.headers[config.adminHeader()] !== config.adminToken()) {
-      res.status(401).send("Unauthorized");
-      return;
-    }
-
-    const { gameID, clientID } = req.params;
-
-    const game = gm.game(gameID);
-    if (!game) {
-      res.status(404).send("Game not found");
-      return;
-    }
-
-    game.kickClient(clientID);
-    res.status(200).send("Player kicked successfully");
-  });
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on("message", async (message: string) => {
@@ -337,9 +319,14 @@ export async function startWorker() {
 
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token, config);
-        if (result === false) {
-          log.warn("Unauthorized: Invalid token");
-          ws.close(1002, "Unauthorized");
+        if (result.type === "error") {
+          log.warn(`Invalid token: ${result.message}`, {
+            clientID: clientMsg.clientID,
+          });
+          ws.close(
+            1002,
+            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
+          );
           return;
         }
         const { persistentId, claims } = result;
@@ -374,13 +361,18 @@ export async function startWorker() {
         } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token, config);
-          if (result === false) {
-            log.warn("Unauthorized: Invalid session");
-            ws.close(1002, "Unauthorized");
+          if (result.type === "error") {
+            log.warn(`Unauthorized: ${result.message}`, {
+              clientID: clientMsg.clientID,
+            });
+            ws.close(
+              1002,
+              `Unauthorized: user me fetch failed for client ${clientMsg.clientID}`,
+            );
             return;
           }
-          roles = result.player.roles;
-          flares = result.player.flares;
+          roles = result.response.player.roles;
+          flares = result.response.player.flares;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -422,7 +414,7 @@ export async function startWorker() {
                 clientID: clientMsg.clientID,
                 reason: turnstileResult.reason,
               });
-              ws.close(1002, "Unauthorized");
+              ws.close(1002, "Unauthorized: Turnstile token rejected");
               return;
             case "error":
               // Fail open, allow the client to join.
