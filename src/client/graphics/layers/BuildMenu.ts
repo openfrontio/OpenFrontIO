@@ -419,6 +419,9 @@ export class BuildMenu extends LitElement implements Layer {
                 const enabled =
                   buildableUnit.canBuild !== false ||
                   buildableUnit.canUpgrade !== false;
+                const disabledReason =
+                  buildableUnit.cannotBuildReason ??
+                  "build_menu.not_enough_money";
                 return html`
                   <button
                     class="build-button"
@@ -426,7 +429,7 @@ export class BuildMenu extends LitElement implements Layer {
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
+                      ? translateText(disabledReason)
                       : ""}
                   >
                     <img

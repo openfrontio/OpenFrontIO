@@ -34,6 +34,13 @@ export class VassalOfferExecution implements Execution {
     }
     this.mg = mg;
     this.target = mg.player(this.targetID);
+    if (
+      this.requestor.type() === PlayerType.Bot ||
+      this.target.type() === PlayerType.Bot
+    ) {
+      this.active = false;
+      return;
+    }
     this.expiresAt = mg.ticks() + mg.config().vassalOfferDuration();
   }
 

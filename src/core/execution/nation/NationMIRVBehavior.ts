@@ -7,11 +7,18 @@ import {
   PlayerType,
   UnitType,
 } from "../../game/Game";
+import {
+  hierarchyTiles,
+  hierarchyPlayers,
+  hierarchyShoreTiles,
+  sharesHierarchy,
+  teamHierarchyTiles,
+} from "../../game/HierarchyUtils";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { MirvExecution } from "../MIRVExecution";
-import { calculateTerritoryCenter } from "../Util";
+import { calculateTerritoryCenter, closestTwoTiles } from "../Util";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 
 export class NationMIRVBehavior {
@@ -142,8 +149,18 @@ export class NationMIRVBehavior {
       this.isInboundMIRVFrom(p),
     );
     if (attackers.length === 0) return null;
-    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-    return attackers[0];
+    const myHierarchyPlayers = hierarchyPlayers(this.game, this.player);
+    const myShoreTiles = hierarchyShoreTiles(this.game, this.player);
+    attackers.sort(
+      (a, b) =>
+        this.threatScore(b, myHierarchyPlayers, myShoreTiles) -
+        this.threatScore(a, myHierarchyPlayers, myShoreTiles),
+    );
+    const best = attackers[0];
+    if (best === undefined) return null;
+    return this.threatScore(best, myHierarchyPlayers, myShoreTiles) > 0
+      ? best
+      : null;
   }
 
   private selectVictoryDenialTarget(): Player | null {
@@ -151,37 +168,26 @@ export class NationMIRVBehavior {
     const totalLand = this.game.numLandTiles();
     if (totalLand === 0) return null;
     let best: { p: Player; severity: number } | null = null;
+    const teamToTiles = teamHierarchyTiles(this.game);
+    const myHierarchyPlayers = hierarchyPlayers(this.game, this.player);
+    const myShoreTiles = hierarchyShoreTiles(this.game, this.player);
     for (const p of this.getValidMirvTargetPlayers()) {
       let severity = 0;
       const team = p.team();
       if (team !== null) {
-        const teamMembers = this.game
-          .players()
-          .filter((x) => x.team() === team && x.isPlayer());
-        const teamTerritory = teamMembers
-          .map((x) => x.numTilesOwned())
-          .reduce((a, b) => a + b, 0);
+        const teamTerritory = teamToTiles.get(team) ?? 0;
         const teamShare = teamTerritory / totalLand;
         if (teamShare >= this.victoryDenialTeamThreshold) {
-          // Only consider the largest team member as the target when team exceeds threshold
-          let largestMember: Player | null = null;
-          let largestTiles = -1;
-          for (const member of teamMembers) {
-            const tiles = member.numTilesOwned();
-            if (tiles > largestTiles) {
-              largestTiles = tiles;
-              largestMember = member;
-            }
-          }
-          if (largestMember === p) {
-            severity = teamShare;
-          } else {
-            severity = 0; // Skip non-largest members
-          }
+          // Team is close to winning; pick the highest threat within that team.
+          const score = this.threatScore(p, myHierarchyPlayers, myShoreTiles);
+          severity = score > 0 ? score : 0;
         }
       } else {
-        const share = p.numTilesOwned() / totalLand;
-        if (share >= this.victoryDenialIndividualThreshold) severity = share;
+        const share = hierarchyTiles(p) / totalLand;
+        if (share >= this.victoryDenialIndividualThreshold) {
+          const score = this.threatScore(p, myHierarchyPlayers, myShoreTiles);
+          severity = score > 0 ? score : 0;
+        }
       }
       if (severity > 0) {
         if (best === null || severity > best.severity) best = { p, severity };
@@ -228,7 +234,8 @@ export class NationMIRVBehavior {
         p !== this.player &&
         p.isPlayer() &&
         p.type() !== PlayerType.Bot &&
-        !this.player!.isOnSameTeam(p)
+        !this.player!.isOnSameTeam(p) &&
+        !sharesHierarchy(this.player!, p)
       );
     });
   }
@@ -272,5 +279,59 @@ export class NationMIRVBehavior {
   private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
     return this.game.unitInfo(type).cost(this.game, this.player);
+  }
+
+  private effectiveTroops(player: Player): number {
+    const overlord = player.overlord?.() ?? null;
+    const support =
+      overlord !== null
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+        : 0;
+    return player.troops() + support;
+  }
+
+  private threatScore(
+    enemy: Player,
+    myHierarchyPlayers: Player[],
+    myShoreTiles: TileRef[],
+  ): number {
+    const effective = this.effectiveTroops(enemy);
+    if (effective < 100_000) return -Infinity;
+
+    const troopScore =
+      effective <= 500_000
+        ? effective
+        : 500_000 + (effective - 500_000) * 0.2;
+
+    const distance = this.hierarchyDistanceToEnemy(
+      enemy,
+      myHierarchyPlayers,
+      myShoreTiles,
+    );
+    const proximity =
+      distance === Infinity ? 0 : Math.max(0, 1 - distance / 250);
+    const multiplier = 1 + 2.5 * proximity;
+    return troopScore * multiplier;
+  }
+
+  private hierarchyDistanceToEnemy(
+    enemy: Player,
+    myHierarchyPlayers: Player[],
+    myShoreTiles: TileRef[],
+  ): number {
+    const enemyHierarchyPlayers = hierarchyPlayers(this.game, enemy);
+    for (const mine of myHierarchyPlayers) {
+      for (const theirs of enemyHierarchyPlayers) {
+        if (mine.sharesBorderWith(theirs)) return 0;
+      }
+    }
+
+    const enemyShoreTiles = hierarchyShoreTiles(this.game, enemy);
+    if (myShoreTiles.length === 0 || enemyShoreTiles.length === 0) {
+      return Infinity;
+    }
+    const closest = closestTwoTiles(this.game, myShoreTiles, enemyShoreTiles);
+    if (!closest) return Infinity;
+    return this.game.manhattanDist(closest.x, closest.y);
   }
 }

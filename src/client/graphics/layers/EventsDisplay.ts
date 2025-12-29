@@ -577,7 +577,9 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.displayName()} offered you vassalage`,
+      description: translateText("events_display.vassal_offer", {
+        name: requestor.displayName(),
+      }),
       buttons: [
         {
           text: translateText("events_display.focus"),
@@ -586,7 +588,7 @@ export class EventsDisplay extends LitElement implements Layer {
           preventClose: true,
         },
         {
-          text: "Accept vassalage",
+          text: translateText("events_display.accept_vassalage"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -594,7 +596,7 @@ export class EventsDisplay extends LitElement implements Layer {
             ),
         },
         {
-          text: "Reject",
+          text: translateText("events_display.reject"),
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
@@ -620,9 +622,14 @@ export class EventsDisplay extends LitElement implements Layer {
       update.recipientID,
     ) as PlayerView;
     this.addEvent({
-      description: `${recipient.displayName()} ${
-        update.accept ? "accepted" : "rejected"
-      } your vassalage offer`,
+      description: translateText("events_display.vassal_offer_reply", {
+        name: recipient.displayName(),
+        status: translateText(
+          update.accept
+            ? "events_display.vassal_offer_accepted"
+            : "events_display.vassal_offer_rejected",
+        ),
+      }),
       createdAt: this.game.ticks(),
       highlight: true,
       type: update.accept ? MessageType.VASSAL_ACCEPTED : MessageType.VASSAL_REJECTED,

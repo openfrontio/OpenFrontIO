@@ -38,7 +38,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import {
-  hierarchyRelation,
+  hierarchyPosition,
   sharesHierarchy as sharesHierarchyUtil,
 } from "./HierarchyUtils";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
@@ -1121,14 +1121,26 @@ export class PlayerImpl implements Player {
           canUpgrade = existingUnit.id();
         }
       }
+      let canBuild: TileRef | false = false;
+      let cannotBuildReason: string | undefined;
+      if (tile === null) {
+        cannotBuildReason = "build_menu.no_target";
+      } else if (this.mg.inSpawnPhase()) {
+        cannotBuildReason = "build_menu.spawn_phase";
+      } else {
+        const result = this.canBuildWithReason(u, tile, validTiles);
+        canBuild = result.canBuild;
+        if (canBuild === false) {
+          cannotBuildReason = result.reason;
+        }
+      }
+
       return {
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
+        canBuild,
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+        cannotBuildReason,
       } as BuildableUnit;
     });
   }
@@ -1138,44 +1150,86 @@ export class PlayerImpl implements Player {
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
   ): TileRef | false {
+    return this.canBuildWithReason(unitType, targetTile, validTiles).canBuild;
+  }
+
+  private canBuildWithReason(
+    unitType: UnitType,
+    targetTile: TileRef,
+    validTiles: TileRef[] | null = null,
+  ): { canBuild: TileRef | false; reason?: string } {
     if (this.mg.config().isUnitDisabled(unitType)) {
-      return false;
+      return { canBuild: false, reason: "build_menu.unit_disabled" };
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (!this.isAlive() || this.gold() < cost) {
-      return false;
+    if (!this.isAlive()) {
+      return { canBuild: false, reason: "build_menu.not_alive" };
+    }
+    if (this.gold() < cost) {
+      return { canBuild: false, reason: "build_menu.not_enough_money" };
     }
     switch (unitType) {
-      case UnitType.MIRV:
+      case UnitType.MIRV: {
         if (!this.mg.hasOwner(targetTile)) {
-          return false;
+          return { canBuild: false, reason: "build_menu.target_unowned" };
         }
-        return this.nukeSpawn(targetTile);
+        const spawn = this.nukeSpawnWithReason(targetTile);
+        return { canBuild: spawn.spawn, reason: spawn.reason };
+      }
       case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile);
+      case UnitType.HydrogenBomb: {
+        const spawn = this.nukeSpawnWithReason(targetTile);
+        return { canBuild: spawn.spawn, reason: spawn.reason };
+      }
       case UnitType.MIRVWarhead:
-        return targetTile;
-      case UnitType.Port:
-        return this.portSpawn(targetTile, validTiles);
-      case UnitType.Warship:
-        return this.warshipSpawn(targetTile);
+        return { canBuild: targetTile };
+      case UnitType.Port: {
+        const spawn = this.portSpawn(targetTile, validTiles);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.port_location" }
+          : { canBuild: spawn };
+      }
+      case UnitType.Warship: {
+        if (!this.mg.isOcean(targetTile)) {
+          return { canBuild: false, reason: "build_menu.warship_ocean" };
+        }
+        const spawn = this.warshipSpawn(targetTile);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.no_port" }
+          : { canBuild: spawn };
+      }
       case UnitType.Shell:
       case UnitType.SAMMissile:
-        return targetTile;
-      case UnitType.TransportShip:
-        return canBuildTransportShip(this.mg, this, targetTile);
-      case UnitType.TradeShip:
-        return this.tradeShipSpawn(targetTile);
-      case UnitType.Train:
-        return this.landBasedUnitSpawn(targetTile);
+        return { canBuild: targetTile };
+      case UnitType.TransportShip: {
+        const spawn = canBuildTransportShip(this.mg, this, targetTile);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.transport_location" }
+          : { canBuild: spawn };
+      }
+      case UnitType.TradeShip: {
+        const spawn = this.tradeShipSpawn(targetTile);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.trade_port" }
+          : { canBuild: spawn };
+      }
+      case UnitType.Train: {
+        const spawn = this.landBasedUnitSpawn(targetTile);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.train_land" }
+          : { canBuild: spawn };
+      }
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
-      case UnitType.Factory:
-        return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.Factory: {
+        const spawn = this.landBasedStructureSpawn(targetTile, validTiles);
+        return spawn === false
+          ? { canBuild: false, reason: "build_menu.structure_location" }
+          : { canBuild: spawn };
+      }
       default:
         assertNever(unitType);
     }
@@ -1188,7 +1242,7 @@ export class PlayerImpl implements Player {
       if (this.isOnSameTeam(other)) return false; // just no
 
       // Allow nuking down the hierarchy (any depth), but not up or sideways.
-      const relation = hierarchyRelation(this, other);
+      const relation = hierarchyPosition(this, other);
       if (relation === "Descendant") return false; // vassal cannot nuke overlord chain
       if (relation === "Sibling") return false; // siblings under same overlord
 
@@ -1206,6 +1260,38 @@ export class PlayerImpl implements Player {
       return false;
     }
     return spawns[0].tile();
+  }
+
+  private nukeSpawnWithReason(tile: TileRef): {
+    spawn: TileRef | false;
+    reason?: string;
+  } {
+    const owner = this.mg.owner(tile);
+    if (owner.isPlayer()) {
+      const other = owner as Player;
+      if (this.isOnSameTeam(other)) {
+        return { spawn: false, reason: "build_menu.same_team" };
+      }
+
+      // Allow nuking down the hierarchy (any depth), but not up or sideways.
+      const relation = hierarchyPosition(this, other);
+      if (relation === "Descendant") {
+        return { spawn: false, reason: "build_menu.no_overlord_target" };
+      }
+      if (relation === "Sibling") {
+        return { spawn: false, reason: "build_menu.no_sibling_target" };
+      }
+    }
+
+    const spawns = this.units(UnitType.MissileSilo)
+      .filter((silo) => {
+        return !silo.isInCooldown() && !silo.isUnderConstruction();
+      })
+      .sort(distSortUnit(this.mg, tile));
+    if (spawns.length === 0) {
+      return { spawn: false, reason: "build_menu.no_ready_silo" };
+    }
+    return { spawn: spawns[0].tile() };
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {

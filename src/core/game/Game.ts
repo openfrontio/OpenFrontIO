@@ -817,6 +817,8 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
+  // Optional translation key describing why canBuild is false.
+  cannotBuildReason?: string;
 }
 
 export interface PlayerProfile {

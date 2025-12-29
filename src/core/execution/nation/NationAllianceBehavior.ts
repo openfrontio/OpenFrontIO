@@ -16,6 +16,8 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
+import { rootOf, sharesHierarchy } from "../../game/HierarchyUtils";
+import { VassalOfferExecution } from "../VassalOfferExecution";
 
 export class NationAllianceBehavior {
   constructor(
@@ -58,6 +60,10 @@ export class NationAllianceBehavior {
       p.type() !== PlayerType.Bot;
 
     for (const enemy of borderingEnemies) {
+      if (this.shouldOfferVassal(enemy)) {
+        this.game.addExecution(new VassalOfferExecution(this.player, enemy.id()));
+        continue;
+      }
       if (
         this.random.chance(20) &&
         isAcceptablePlayerType(enemy) &&
@@ -75,6 +81,20 @@ export class NationAllianceBehavior {
     otherPlayer: Player,
     isResponse: boolean,
   ): boolean {
+    if (sharesHierarchy(this.player, otherPlayer)) {
+      return false;
+    }
+
+    const overlord = this.player.overlord?.() ?? null;
+    if (isResponse && overlord) {
+      const root = rootOf(this.player);
+      const alliedWithOverlord = otherPlayer.isAlliedWith(overlord);
+      const alliedWithRoot = otherPlayer.isAlliedWith(root);
+      if (!alliedWithOverlord && !alliedWithRoot) {
+        return false;
+      }
+    }
+
     // Easy (dumb) nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
     if (this.isConfused()) {
       return this.random.chance(2);
@@ -175,31 +195,33 @@ export class NationAllianceBehavior {
 
   private isAlliancePartnerThreat(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
+    const myTroops = this.effectiveTroops(this.player);
+    const otherTroops = this.effectiveTroops(otherPlayer);
+    const myTiles = this.weightedHierarchyTiles(this.player);
+    const otherTiles = this.weightedHierarchyTiles(otherPlayer);
     switch (difficulty) {
       case Difficulty.Easy:
         // On easy we are very dumb, we don't see anybody as a threat
         return false;
       case Difficulty.Medium:
         // On medium we just see players with much more troops as a threat
-        return otherPlayer.troops() > this.player.troops() * 2.5;
+        return otherTroops > myTroops * 2.5;
       case Difficulty.Hard:
         // On hard we are smarter, we check for maxTroops to see the actual strength
         return (
-          otherPlayer.troops() > this.player.troops() &&
+          otherTroops > myTroops &&
           this.game.config().maxTroops(otherPlayer) >
             this.game.config().maxTroops(this.player) * 2
         );
       case Difficulty.Impossible: {
         // On impossible we check for multiple factors and try to not mess with stronger players (we want to steamroll over weaklings)
-        const otherHasMoreTroops =
-          otherPlayer.troops() > this.player.troops() * 1.5;
+        const otherHasMoreTroops = otherTroops > myTroops * 1.5;
         const otherHasMoreMaxTroops =
-          otherPlayer.troops() > this.player.troops() &&
+          otherTroops > myTroops &&
           this.game.config().maxTroops(otherPlayer) >
             this.game.config().maxTroops(this.player) * 1.5;
         const otherHasMoreTiles =
-          otherPlayer.troops() > this.player.troops() &&
-          otherPlayer.numTilesOwned() > this.player.numTilesOwned() * 1.5;
+          otherTroops > myTroops && otherTiles > myTiles * 1.5;
         return otherHasMoreTroops || otherHasMoreMaxTroops || otherHasMoreTiles;
       }
       default:
@@ -209,11 +231,14 @@ export class NationAllianceBehavior {
 
   private checkAlreadyEnoughAlliances(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
+    const nonEnforcedAlliances = this.player
+      .alliances()
+      .filter((a) => !a.isEnforced()).length;
     switch (difficulty) {
       case Difficulty.Easy:
         return false; // On easy we never think we have enough alliances
       case Difficulty.Medium:
-        return this.player.alliances().length >= this.random.nextInt(5, 8);
+        return nonEnforcedAlliances >= this.random.nextInt(5, 8);
       case Difficulty.Hard:
       case Difficulty.Impossible: {
         // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
@@ -232,9 +257,9 @@ export class NationAllianceBehavior {
           return borderingPlayers.length <= borderingFriends.length + 1;
         }
         if (difficulty === Difficulty.Hard) {
-          return this.player.alliances().length >= this.random.nextInt(3, 6);
+          return nonEnforcedAlliances >= this.random.nextInt(3, 6);
         }
-        return this.player.alliances().length >= this.random.nextInt(2, 5);
+        return nonEnforcedAlliances >= this.random.nextInt(2, 5);
       }
       default:
         assertNever(difficulty);
@@ -265,26 +290,28 @@ export class NationAllianceBehavior {
   // It would make a lot of sense to use nextFloat here, but "there's a chance floats can cause desyncs"
   private isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
+    const myTroops = this.effectiveTroops(this.player);
+    const otherTroops = this.effectiveTroops(otherPlayer);
     switch (difficulty) {
       case Difficulty.Easy:
         return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(60, 70) / 100)
+          otherTroops >
+          myTroops * (this.random.nextInt(60, 70) / 100)
         );
       case Difficulty.Medium:
         return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(70, 80) / 100)
+          otherTroops >
+          myTroops * (this.random.nextInt(70, 80) / 100)
         );
       case Difficulty.Hard:
         return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(75, 85) / 100)
+          otherTroops >
+          myTroops * (this.random.nextInt(75, 85) / 100)
         );
       case Difficulty.Impossible:
         return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(80, 90) / 100)
+          otherTroops >
+          myTroops * (this.random.nextInt(80, 90) / 100)
         );
       default:
         assertNever(difficulty);
@@ -298,8 +325,10 @@ export class NationAllianceBehavior {
   // Check if target is distracted
   // Check the targets territory size
   maybeBetray(otherPlayer: Player): boolean {
+    const alliance = this.player.allianceWith(otherPlayer);
+    if (alliance?.isEnforced()) return false;
     if (
-      this.player.isAlliedWith(otherPlayer) &&
+      alliance &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
@@ -312,5 +341,50 @@ export class NationAllianceBehavior {
     const alliance = this.player.allianceWith(target);
     if (!alliance) return;
     this.player.breakAlliance(alliance);
+  }
+
+  private effectiveTroops(player: Player): number {
+    const overlord = player.overlord?.() ?? null;
+    const support =
+      overlord !== null
+        ? Math.floor(overlord.troops() * overlord.vassalSupportRatio())
+        : 0;
+    return player.troops() + support;
+  }
+
+  private weightedHierarchyTiles(player: Player, vassalWeight = 0.3): number {
+    let total = player.numTilesOwned();
+    for (const vassal of player.vassals()) {
+      total += vassalWeight * this.weightedHierarchyTiles(vassal, vassalWeight);
+    }
+    return total;
+  }
+
+  private shouldOfferVassal(other: Player): boolean {
+    if (!this.game.config().vassalsEnabled()) return false;
+    if (sharesHierarchy(this.player, other)) return false;
+    if (other.overlord?.()) return false;
+    if (!other.isPlayer()) return false;
+    if (other.type() === PlayerType.Bot) return false;
+
+    const alliance = this.player.allianceWith(other);
+    const longAlliance =
+      alliance &&
+      this.game.ticks() - alliance.createdAt() >
+        4 * this.game.config().allianceDuration();
+
+    const myTroops = this.effectiveTroops(this.player);
+    const otherTroops = this.effectiveTroops(other);
+    const myTiles = this.weightedHierarchyTiles(this.player);
+    const otherTiles = this.weightedHierarchyTiles(other);
+
+    const massivelyOutgunned =
+      otherTroops < myTroops * 0.25 && otherTiles < myTiles * 0.25;
+    const clearlyWeaker =
+      otherTroops < myTroops * 0.7 && otherTiles < myTiles * 0.7;
+
+    if (massivelyOutgunned) return true;
+    if (longAlliance && clearlyWeaker) return true;
+    return false;
   }
 }

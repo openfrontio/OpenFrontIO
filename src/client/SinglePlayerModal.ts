@@ -304,7 +304,9 @@ export class SinglePlayerModal extends LitElement {
                   }}
                   .checked=${this.enableVassals}
                 />
-                <div class="option-card-title">Enable vassals</div>
+                <div class="option-card-title">
+                  ${translateText("common.enable_vassals")}
+                </div>
               </label>
 
               <label

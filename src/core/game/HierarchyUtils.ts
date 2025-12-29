@@ -1,7 +1,8 @@
-import { Player } from "./Game";
+import { Game, Player, Team } from "./Game";
+import { TileRef } from "./GameMap";
 
 // Directional relationship within the vassal hierarchy.
-export type HierarchyRelation =
+export type HierarchyPosition =
   | "Ancestor" // a is ancestor (overlord chain) of b
   | "Descendant" // a is descendant (vassal chain) of b
   | "Sibling" // share same root but neither ancestor of other
@@ -34,7 +35,7 @@ export function isDescendantOf(
   return isAncestorOf(root, maybeDescendant);
 }
 
-export function hierarchyRelation(a: Player, b: Player): HierarchyRelation {
+export function hierarchyPosition(a: Player, b: Player): HierarchyPosition {
   if (isAncestorOf(a, b)) return "Ancestor";
   if (isAncestorOf(b, a)) return "Descendant";
   if (rootOf(a) === rootOf(b)) return "Sibling";
@@ -43,5 +44,45 @@ export function hierarchyRelation(a: Player, b: Player): HierarchyRelation {
 
 // Players share a hierarchy if they have any of the directional relations.
 export function sharesHierarchy(a: Player, b: Player): boolean {
-  return hierarchyRelation(a, b) !== "Unrelated";
+  return hierarchyPosition(a, b) !== "Unrelated";
+}
+
+// Count a player's owned tiles plus all of their vassals recursively.
+export function hierarchyTiles(player: Player): number {
+  let total = player.numTilesOwned();
+  for (const vassal of player.vassals()) {
+    total += hierarchyTiles(vassal);
+  }
+  return total;
+}
+
+// Only consider root players (no overlord) when attributing vassal territory.
+export function rootPlayers(game: Game): Player[] {
+  return game.players().filter((p) => p.overlord() === null);
+}
+
+// Attribute vassal land to the root overlord's team to avoid double counting.
+export function teamHierarchyTiles(game: Game): Map<Team, number> {
+  const teamToTiles = new Map<Team, number>();
+  for (const root of rootPlayers(game)) {
+    const team = root.team();
+    if (team === null) continue;
+    const tiles = hierarchyTiles(root);
+    teamToTiles.set(team, (teamToTiles.get(team) ?? 0) + tiles);
+  }
+  return teamToTiles;
+}
+
+export function hierarchyPlayers(game: Game, player: Player): Player[] {
+  return game.players().filter((p) => sharesHierarchy(player, p));
+}
+
+export function hierarchyShoreTiles(game: Game, player: Player): TileRef[] {
+  const tiles: TileRef[] = [];
+  for (const p of hierarchyPlayers(game, player)) {
+    for (const t of p.borderTiles()) {
+      if (game.isShore(t)) tiles.push(t);
+    }
+  }
+  return tiles;
 }

@@ -12,6 +12,7 @@
     "summary_send": "Send",
     "summary_keep": "Keep",
     "cancel": "Cancel",
+    "enable_vassals": "Enable vassals",
     "send": "Send",
     "cap_label": "Cap",
     "cap_tooltip": "Recipient’s remaining capacity",
@@ -559,7 +560,23 @@
       "city": "Increases max population",
       "factory": "Creates railroads and spawns trains"
     },
-    "not_enough_money": "Not enough money"
+    "not_enough_money": "Not enough money",
+    "not_alive": "You are eliminated",
+    "unit_disabled": "Unit disabled in game settings",
+    "spawn_phase": "Cannot build during spawn phase",
+    "no_target": "No target selected",
+    "target_unowned": "Cannot target unowned land",
+    "same_team": "Cannot target your team",
+    "no_overlord_target": "Cannot target overlords",
+    "no_sibling_target": "Cannot target sibling vassals",
+    "no_ready_silo": "No ready missile silo",
+    "port_location": "Port must be on shore in your territory",
+    "warship_ocean": "Warship must target ocean",
+    "transport_location": "No valid coast for transport",
+    "trade_port": "Must target a port",
+    "train_land": "Train must target land",
+    "structure_location": "No valid build location nearby",
+    "no_port": "Requires a port"
   },
   "win_modal": {
     "support_openfront": "Support OpenFront!",
@@ -604,6 +621,11 @@
     "player": "Player",
     "team": "Team",
     "alliance_timeout": "Alliance ends in",
+    "alliance_permanent_vassal": "Permanent (vassal hierarchy)",
+    "vassal_of": "Vassal of: {name}",
+    "overlord_of": "Overlord of: {names}",
+    "support_from_overlord": "Support from overlord",
+    "attack_capacity": "Attack capacity",
     "troops": "Troops",
     "maxtroops": "Max troops",
     "a_troops": "Attacking troops",
@@ -638,6 +660,12 @@
     "focus": "Focus",
     "accept_alliance": "Accept",
     "reject_alliance": "Reject",
+    "vassal_offer": "{name} offered you vassalage",
+    "accept_vassalage": "Accept vassalage",
+    "reject": "Reject",
+    "vassal_offer_reply": "{name} {status} your vassalage offer",
+    "vassal_offer_accepted": "accepted",
+    "vassal_offer_rejected": "rejected",
     "alliance_renewed": "Your alliance with {name} has been renewed",
     "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "ignore": "Ignore",
@@ -668,7 +696,8 @@
   "control_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "attack_ratio": "Attack Ratio"
+    "attack_ratio": "Attack Ratio",
+    "vassal_support_pool": "Vassal support pool"
   },
   "player_panel": {
     "gold": "Gold",
@@ -778,6 +807,32 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "vassal_menu": {
+    "surrender": "Surrender (vassalize)",
+    "offer": "Offer vassalage",
+    "no_target": "No target selected",
+    "cannot_surrender_self": "You cannot surrender to yourself",
+    "already_has_overlord": "You already serve an overlord",
+    "already_vassal_of_target": "Already a vassal of this nation",
+    "you_are_overlord": "You are their overlord",
+    "cannot_surrender_bots": "Cannot surrender to bots",
+    "surrender_unavailable": "Surrender unavailable right now",
+    "cannot_vassalize_self": "You cannot vassalize yourself",
+    "target_has_overlord": "Target already serves an overlord",
+    "bots_reject": "Bots do not accept vassalage",
+    "cannot_offer": "Cannot offer vassalage: {reasons}",
+    "offer_unavailable_server": "Offer unavailable (server rules)",
+    "offer_unavailable": "Offer unavailable right now",
+    "reason_same_team": "Same team",
+    "reason_in_hierarchy": "Already in your hierarchy",
+    "reason_target_has_overlord": "Target already has an overlord",
+    "reason_self_target": "You cannot target yourself"
+  },
+  "vassal_confirm": {
+    "title": "Confirm surrender",
+    "message": "Are you sure you want to surrender and become a vassal? This alliance will be permanent.",
+    "confirm": "Surrender"
   },
   "discord_user_header": {
     "avatar_alt": "Avatar"

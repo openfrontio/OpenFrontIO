@@ -485,7 +485,7 @@ export class HostLobbyModal extends LitElement {
                     .checked=${this.enableVassals}
                   />
                   <div class="option-card-title">
-                    Enable vassals
+                    ${translateText("common.enable_vassals")}
                   </div>
                 </label>
                 <label

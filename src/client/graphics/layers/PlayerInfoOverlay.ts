@@ -304,7 +304,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             style="vertical-align: middle;"
           />
           ${currentAlliance.expiresAt === Number.MAX_SAFE_INTEGER
-            ? "Permanent (vassal hierarchy)"
+            ? translateText("player_info_overlay.alliance_permanent_vassal")
             : this.allianceExpirationText(currentAlliance)}
         </span>`;
       }
@@ -355,13 +355,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </button>
         ${vassalOf
           ? html`<div class="text-xs text-blue-300 mb-1">
-              Vassal of: ${vassalOf.name()}
+              ${translateText("player_info_overlay.vassal_of", {
+                name: vassalOf.name(),
+              })}
             </div>`
           : ""}
         ${vassals.length > 0
           ? html`<div class="text-xs text-green-300 mb-1">
-              Overlord of:
-              ${vassals.map((v) => v.name()).join(", ")}
+              ${translateText("player_info_overlay.overlord_of", {
+                names: vassals.map((v) => v.name()).join(", "),
+              })}
             </div>`
           : ""}
 
@@ -391,7 +394,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                       class="flex gap-2 text-sm opacity-80"
                       translate="no"
                     >
-                      Support from overlord
+                      ${translateText("player_info_overlay.support_from_overlord")}
                       <span class="ml-auto mr-0 font-bold text-yellow-300">
                         ${supportTroops > 0 ? "+" : ""}${renderTroops(
                           supportTroops,
@@ -402,7 +405,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                       class="flex gap-2 text-sm opacity-80"
                       translate="no"
                     >
-                      Attack capacity
+                      ${translateText("player_info_overlay.attack_capacity")}
                       <span class="ml-auto mr-0 font-bold text-green-300">
                         ${renderTroops(effectiveTroops)}
                       </span>

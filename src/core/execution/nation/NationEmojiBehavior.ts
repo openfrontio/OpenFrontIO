@@ -9,6 +9,11 @@ import {
   Team,
   Tick,
 } from "../../game/Game";
+import {
+  hierarchyTiles,
+  rootPlayers,
+  teamHierarchyTiles,
+} from "../../game/HierarchyUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
 import { EmojiExecution } from "../EmojiExecution";
@@ -119,15 +124,7 @@ export class NationEmojiBehavior {
 
     if (isTeamGame) {
       // Team game: all nations congratulate if another team won
-      const teamToTiles = new Map<Team, number>();
-      for (const player of this.game.players()) {
-        const team = player.team();
-        if (team === null) continue;
-        teamToTiles.set(
-          team,
-          (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-        );
-      }
+      const teamToTiles = teamHierarchyTiles(this.game);
 
       const sorted = Array.from(teamToTiles.entries()).sort(
         (a, b) => b[1] - a[1],
@@ -145,9 +142,9 @@ export class NationEmojiBehavior {
       this.sendEmoji(AllPlayers, EMOJI_CONGRATULATE);
     } else {
       // FFA game: The largest nation congratulates if a human player won
-      const sorted = this.game
-        .players()
-        .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+      const sorted = rootPlayers(this.game).sort(
+        (a, b) => hierarchyTiles(b) - hierarchyTiles(a),
+      );
 
       if (sorted.length === 0) return;
 
@@ -155,17 +152,16 @@ export class NationEmojiBehavior {
 
       // Check if first place has won (crossed the win threshold)
       const firstPlacePercent =
-        (firstPlace.numTilesOwned() / numTilesWithoutFallout) * 100;
+        (hierarchyTiles(firstPlace) / numTilesWithoutFallout) * 100;
       if (firstPlacePercent < percentToWin) return;
 
       // Only send if first place is a human
       if (firstPlace.type() !== PlayerType.Human) return;
 
       // Only the largest nation sends the congratulation
-      const largestNation = this.game
-        .players()
+      const largestNation = rootPlayers(this.game)
         .filter((p) => p.type() === PlayerType.Nation)
-        .sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0];
+        .sort((a, b) => hierarchyTiles(b) - hierarchyTiles(a))[0];
       if (largestNation !== this.player) return;
 
       this.hasSentWinnerClap = true;
@@ -177,9 +173,9 @@ export class NationEmojiBehavior {
   private brag(): void {
     if (!this.random.chance(100)) return;
 
-    const sorted = this.game
-      .players()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    const sorted = rootPlayers(this.game).sort(
+      (a, b) => hierarchyTiles(b) - hierarchyTiles(a),
+    );
 
     if (sorted.length === 0 || sorted[0] !== this.player) return;
 
@@ -223,14 +219,12 @@ export class NationEmojiBehavior {
     const totalLand = this.game.numLandTiles();
     const threshold = totalLand * 0.01; // 1% of land
 
-    const smallPlayers = this.game
-      .players()
-      .filter(
-        (p) =>
-          p.type() === PlayerType.Human &&
-          p.numTilesOwned() < threshold &&
-          p.numTilesOwned() > 0,
-      );
+    const smallPlayers = rootPlayers(this.game).filter(
+      (p) =>
+        p.type() === PlayerType.Human &&
+        hierarchyTiles(p) < threshold &&
+        hierarchyTiles(p) > 0,
+    );
 
     if (smallPlayers.length === 0) return;
 

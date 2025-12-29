@@ -279,7 +279,7 @@ export class ControlPanel extends LitElement implements Layer {
           ? html`
               <div class="relative mb-0 sm:mb-4 mt-4">
                 <label class="block text-white mb-1">
-                  Vassal support pool:
+                  ${translateText("control_panel.vassal_support_pool")}:
                   <span
                     class="inline-flex items-center gap-1"
                     dir="ltr"

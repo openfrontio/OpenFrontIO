@@ -18,6 +18,7 @@ import {
   SendForceVassalIntentEvent,
 } from "../../Transport";
 import { UIState } from "../UIState";
+import { translateText } from "../../Utils";
 
 export class PlayerActionHandler {
   constructor(
@@ -152,11 +153,11 @@ export class PlayerActionHandler {
   ) {
     if (!player.config().vassalsEnabled()) return;
     this.showInlineConfirm({
-      title: "Confirm Surrender",
+      title: translateText("vassal_confirm.title"),
       message:
-        "Are you sure you want to surrender and become a vassal? This alliance will be permanent.",
-      confirmText: "Surrender",
-      cancelText: "Cancel",
+        translateText("vassal_confirm.message"),
+      confirmText: translateText("vassal_confirm.confirm"),
+      cancelText: translateText("common.cancel"),
       onConfirm: () =>
         this.eventBus.emit(
           new SendSurrenderIntentEvent(player, recipient, goldRatio, troopRatio),

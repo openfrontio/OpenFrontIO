@@ -2,7 +2,7 @@ import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
-import { sharesHierarchy } from "./HierarchyUtils";
+import { hierarchyShoreTiles } from "./HierarchyUtils";
 
 export function canBuildTransportShip(
   game: Game,
@@ -269,17 +269,3 @@ function closestShoreTN(
   return tn[0];
 }
 
-function hierarchyPlayers(game: Game, player: Player): Player[] {
-  return game.players().filter((p) => sharesHierarchy(player, p));
-}
-
-function hierarchyShoreTiles(gm: Game, player: Player): TileRef[] {
-  const players = hierarchyPlayers(gm, player);
-  const tiles: TileRef[] = [];
-  for (const p of players) {
-    Array.from(p.borderTiles())
-      .filter((t) => gm.isShore(t))
-      .forEach((t) => tiles.push(t));
-  }
-  return tiles;
-}
