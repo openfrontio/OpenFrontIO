@@ -267,7 +267,7 @@ export class TerritoryPatternsModal extends LitElement {
   ): TemplateResult {
     return html`
       <div
-        class="rounded"
+        class="rounded-sm"
         style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
       ></div>
     `;

@@ -98,7 +98,7 @@ export class PatternButton extends LitElement {
               `
             : null}
           <div
-            class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded p-1 mx-auto"
+            class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded-sm p-1 mx-auto"
             style="overflow: hidden;"
           >
             ${renderPatternPreview(

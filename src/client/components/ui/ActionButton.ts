@@ -25,9 +25,9 @@ const TEXT_SIZE =
 const getButtonStyles = () => {
   const btnBase =
     "group w-full min-w-[50px] select-none flex flex-col items-center justify-center " +
-    "gap-1 rounded-lg py-1.5 border border-white/10 bg-white/[0.04] shadow-sm " +
+    "gap-1 rounded-lg py-1.5 border border-white/10 bg-white/[0.04] shadow-xs " +
     "transition-all duration-150 " +
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 " +
+    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/20 " +
     "active:translate-y-[1px]";
 
   return {

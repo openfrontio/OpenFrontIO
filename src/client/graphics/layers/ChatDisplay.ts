@@ -153,7 +153,7 @@ export class ChatDisplay extends LitElement implements Layer {
             <span
               class="${this.newEvents
                 ? ""
-                : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
+                : "hidden"} inline-block px-2 bg-red-500 rounded-xs"
               >${this.newEvents}</span
             >
           </button>

@@ -23,7 +23,7 @@ export class FlagInputModal extends LitElement {
         <div class="flex justify-center w-full p-[1rem]">
           <input
             class="h-[2rem] border-none border border-gray-300 
-          rounded-xl shadow-sm text-2xl text-center focus:outline-none
+          rounded-xl shadow-xs text-2xl text-center focus:outline-hidden
           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black
           dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
             type="text"

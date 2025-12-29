@@ -132,7 +132,7 @@ export class UnitDisplay extends LitElement implements Layer {
       <div
         class="hidden 2xl:flex lg:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col lg:flex-col 2xl:gap-5 xl:gap-2 lg:gap-2 justify-center items-center"
       >
-        <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5">
+        <div class="bg-gray-800/70 backdrop-blur-xs rounded-lg p-0.5">
           <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 w-fit">
             ${this.renderUnitItem(
               cityIcon,
@@ -178,7 +178,7 @@ export class UnitDisplay extends LitElement implements Layer {
             )}
           </div>
         </div>
-        <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5 w-fit">
+        <div class="bg-gray-800/70 backdrop-blur-xs rounded-lg p-0.5 w-fit">
           <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
             ${this.renderUnitItem(
               warshipIcon,
@@ -242,7 +242,7 @@ export class UnitDisplay extends LitElement implements Layer {
         ${hovered
           ? html`
               <div
-                class="absolute -top-[250%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-sm rounded p-1 z-20 shadow-lg pointer-events-none"
+                class="absolute -top-[250%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-20 shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
                   ${translateText(
@@ -264,9 +264,9 @@ export class UnitDisplay extends LitElement implements Layer {
         <div
           class="${this.canBuild(unitType)
             ? ""
-            : "opacity-40"} border border-slate-500 rounded pr-2 pb-1 flex items-center gap-2 cursor-pointer 
+            : "opacity-40"} border border-slate-500 rounded-sm pr-2 pb-1 flex items-center gap-2 cursor-pointer 
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
-             rounded text-white ${selected ? "bg-slate-400/20" : ""}"
+             rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}"
           @click=${() => {
             if (selected) {
               this.uiState.ghostStructure = null;

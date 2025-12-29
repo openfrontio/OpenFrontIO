@@ -848,7 +848,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   <div class="sticky top-0 z-20 flex justify-end p-2">
                     <button
                       @click=${this.handleClose}
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors"
                       aria-label=${translateText("common.close") || "Close"}
                       title=${translateText("common.close") || "Close"}
                     >

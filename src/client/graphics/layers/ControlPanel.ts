@@ -161,12 +161,12 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
+          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur-sm"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         style="pointer-events: auto;"
       >
-        <div class="block bg-black/30 text-white mb-4 p-2 rounded">
+        <div class="block bg-black/30 text-white mb-4 p-2 rounded-sm">
           <div class="flex justify-between mb-1">
             <span class="font-bold"
               >${translateText("control_panel.troops")}:</span
@@ -210,11 +210,11 @@ export class ControlPanel extends LitElement implements Layer {
           <div class="relative h-8">
             <!-- Background track -->
             <div
-              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
+              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded-sm"
             ></div>
             <!-- Fill track -->
             <div
-              class="absolute left-0 top-3 h-2 bg-red-500/60 rounded transition-all duration-300"
+              class="absolute left-0 top-3 h-2 bg-red-500/60 rounded-sm transition-all duration-300"
               style="width: ${this.attackRatio * 100}%"
             ></div>
             <!-- Range input - exactly overlaying the visual elements -->

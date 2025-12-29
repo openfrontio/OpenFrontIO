@@ -255,7 +255,7 @@ export class SendResourceModal extends LitElement {
         <button
           type="button"
           @click=${() => this.closeModal()}
-          class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus:outline-none"
+          class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus:outline-hidden"
           aria-label=${this.i18n.closeLabel()}
           title=${this.i18n.closeLabel()}
         >
@@ -361,7 +361,7 @@ export class SendResourceModal extends LitElement {
               const clamped = Math.min(raw, hardMax);
               this.sendAmount = this.clampSend(clamped);
             }}
-            class="w-full appearance-none bg-transparent range-x focus:outline-none"
+            class="w-full appearance-none bg-transparent range-x focus:outline-hidden"
             aria-label=${this.i18n.ariaSlider()}
             aria-valuemin="0"
             aria-valuemax=${hardMax}
@@ -378,7 +378,7 @@ export class SendResourceModal extends LitElement {
             style="left:${percentNow}%"
           >
             <div
-              class="rounded bg-[#0f1116] ring-1 ring-zinc-700 text-zinc-100 px-1.5 py-0.5 text-[12px] shadow whitespace-nowrap w-max z-50"
+              class="rounded-sm bg-[#0f1116] ring-1 ring-zinc-700 text-zinc-100 px-1.5 py-0.5 text-[12px] shadow-sm whitespace-nowrap w-max z-50"
             >
               ${percentNow}% • ${this.format(this.sendAmount)}
             </div>
@@ -388,7 +388,7 @@ export class SendResourceModal extends LitElement {
           ${capPercent !== null
             ? html`
                 <div
-                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-[2px] bg-amber-400/80 shadow"
+                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-[2px] bg-amber-400/80 shadow-sm"
                   style="left:${capPercent}%;"
                   title=${this.i18n.capTooltip()}
                 ></div>
@@ -397,7 +397,7 @@ export class SendResourceModal extends LitElement {
                   style="left:${capPercent}%"
                 >
                   <div
-                    class="rounded bg-[#0f1116] ring-1 ring-amber-400/40 text-amber-200 px-1 py-0.5 text-[11px] shadow whitespace-nowrap"
+                    class="rounded-sm bg-[#0f1116] ring-1 ring-amber-400/40 text-amber-200 px-1 py-0.5 text-[11px] shadow-sm whitespace-nowrap"
                   >
                     ${this.i18n.cap()}
                   </div>
@@ -451,7 +451,7 @@ export class SendResourceModal extends LitElement {
         <button
           class="h-10 min-w-24 rounded-lg px-3 text-sm font-semibold
                  text-zinc-100 bg-zinc-800 ring-1 ring-zinc-700
-                 hover:bg-zinc-700 focus:outline-none
+                 hover:bg-zinc-700 focus:outline-hidden
                  focus-visible:ring-2 focus-visible:ring-white/20"
           @click=${() => this.closeModal()}
         >
@@ -460,7 +460,7 @@ export class SendResourceModal extends LitElement {
         <button
           class="h-10 min-w-24 rounded-lg px-3 text-sm font-semibold text-white
                  bg-indigo-600 enabled:hover:bg-indigo-500
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50
+                 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-400/50
                  disabled:cursor-not-allowed disabled:opacity-50"
           ?disabled=${disabled}
           @click=${() => this.confirm()}
@@ -553,7 +553,7 @@ export class SendResourceModal extends LitElement {
           role="dialog"
           aria-modal="true"
           aria-labelledby="send-title"
-          class="relative z-10 w-full max-w-[540px] focus:outline-none"
+          class="relative z-10 w-full max-w-[540px] focus:outline-hidden"
           tabindex="0"
           @keydown=${this.handleKeydown}
         >

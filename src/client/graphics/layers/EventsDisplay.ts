@@ -816,7 +816,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           content: translateText("events_display.retaliate"),
                           onClick: () => this.handleRetaliate(attack),
                           className:
-                            "inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
+                            "inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
                           translate: true,
                         })
                       : ""}
@@ -1026,14 +1026,14 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur-sm",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
               <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
@@ -1123,7 +1123,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                               ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(

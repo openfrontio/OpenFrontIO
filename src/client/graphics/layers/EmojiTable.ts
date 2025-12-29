@@ -80,7 +80,7 @@ export class EmojiTable extends LitElement {
           <!-- Close button -->
           <button
             class="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center
-                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow transition-colors z-[10004]"
+                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow-sm transition-colors z-[10004]"
             @click=${this.hideTable}
           >
             ✕
