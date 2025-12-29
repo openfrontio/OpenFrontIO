@@ -15,9 +15,7 @@ import { EmojiExecution } from "../EmojiExecution";
 
 const emojiId = (e: (typeof flattenedEmojiTable)[number]) =>
   flattenedEmojiTable.indexOf(e);
-export const EMOJI_ASSIST_ACCEPT = (["👍", "⛵", "🤝", "🎯"] as const).map(
-  emojiId,
-);
+export const EMOJI_ASSIST_ACCEPT = (["👍", "🤝", "🎯"] as const).map(emojiId);
 export const EMOJI_ASSIST_RELATION_TOO_LOW = (["🥱", "🤦‍♂️"] as const).map(
   emojiId,
 );
@@ -34,7 +32,7 @@ export const EMOJI_LOVE = (["❤️", "😊", "🥰"] as const).map(emojiId);
 export const EMOJI_CONFUSED = (["❓", "🤡"] as const).map(emojiId);
 export const EMOJI_BRAG = (["👑", "🥇", "💪"] as const).map(emojiId);
 export const EMOJI_CHARM_ALLIES = (["🤝", "😇", "💪"] as const).map(emojiId);
-export const EMOJI_CLOWN = (["🤡"] as const).map(emojiId);
+export const EMOJI_CLOWN = (["🤡", "🤦‍♂️"] as const).map(emojiId);
 export const EMOJI_RAT = (["🐀"] as const).map(emojiId);
 export const EMOJI_OVERWHELMED = (
   ["💀", "🆘", "😱", "🥺", "😭", "😞", "🫡", "👋"] as const
@@ -67,7 +65,7 @@ export class NationEmojiBehavior {
   }
 
   private checkOverwhelmedByAttacks(): void {
-    if (!this.random.chance(4)) return;
+    if (!this.random.chance(16)) return;
 
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length === 0) return;
@@ -85,7 +83,7 @@ export class NationEmojiBehavior {
   }
 
   private checkVerySmallAttack(): void {
-    if (!this.random.chance(4)) return;
+    if (!this.random.chance(8)) return;
 
     const incomingAttacks = this.player.incomingAttacks();
     if (incomingAttacks.length === 0) return;
@@ -175,7 +173,7 @@ export class NationEmojiBehavior {
 
   // Brag with our crown
   private brag(): void {
-    if (!this.random.chance(100)) return;
+    if (!this.random.chance(300)) return;
 
     const sorted = this.game
       .players()
@@ -218,6 +216,7 @@ export class NationEmojiBehavior {
   }
 
   private findRat(): void {
+    if (this.game.ticks() < 6000) return; // Ignore first 10 minutes (everybody is small in the early game)
     if (!this.random.chance(10000)) return;
 
     const totalLand = this.game.numLandTiles();
@@ -339,4 +338,20 @@ export function respondToEmoji(
       ),
     );
   }
+}
+
+export function respondToMIRV(
+  game: Game,
+  random: PseudoRandom,
+  mirvTarget: Player,
+) {
+  if (!random.chance(8)) return;
+
+  game.addExecution(
+    new EmojiExecution(
+      mirvTarget,
+      AllPlayers,
+      random.randElement(EMOJI_OVERWHELMED),
+    ),
+  );
 }
