@@ -100,7 +100,7 @@ export class PlayerImpl implements Player {
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
 
-  private _hasSpawned = false;
+  private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
   constructor(
@@ -179,6 +179,7 @@ export class PlayerImpl implements Player {
       hasSpawned: this.hasSpawned(),
       betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
+      isLobbyCreator: this.isLobbyCreator(),
     };
   }
 
@@ -338,16 +339,25 @@ export class PlayerImpl implements Player {
   info(): PlayerInfo {
     return this.playerInfo;
   }
+
+  isLobbyCreator(): boolean {
+    return this.playerInfo.isLobbyCreator;
+  }
+
   isAlive(): boolean {
     return this._tiles.size > 0;
   }
 
   hasSpawned(): boolean {
-    return this._hasSpawned;
+    return this._spawnTile !== undefined;
   }
 
-  setHasSpawned(hasSpawned: boolean): void {
-    this._hasSpawned = hasSpawned;
+  setSpawnTile(spawnTile: TileRef): void {
+    this._spawnTile = spawnTile;
+  }
+
+  spawnTile(): TileRef | undefined {
+    return this._spawnTile;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
@@ -426,7 +436,7 @@ export class PlayerImpl implements Player {
     return delta >= this.mg.config().allianceRequestCooldown();
   }
 
-  breakAlliance(alliance: Alliance): void {
+  breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
   }
 

@@ -2,7 +2,6 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -25,6 +24,7 @@ import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
+import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -39,6 +39,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
+import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
 extend([a11yPlugin]);
 
@@ -58,6 +59,10 @@ class StructureRenderInfo {
 export class StructureIconsLayer implements Layer {
   private ghostUnit: {
     container: PIXI.Container;
+    priceText: PIXI.BitmapText;
+    priceBg: PIXI.Graphics;
+    priceGroup: PIXI.Container;
+    priceBox: { height: number; y: number; paddingX: number; minWidth: number };
     range: PIXI.Container | null;
     rangeLevel?: number;
     buildableUnit: BuildableUnit;
@@ -70,7 +75,8 @@ export class StructureIconsLayer implements Layer {
   public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
-  private renderer: PIXI.Renderer;
+  private renderer: PIXI.Renderer | null = null;
+  private rendererInitialized: boolean = false;
   private renders: StructureRenderInfo[] = [];
   private readonly seenUnits: Set<UnitView> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
@@ -108,7 +114,7 @@ export class StructureIconsLayer implements Layer {
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    this.renderer = new PIXI.WebGLRenderer();
+    const renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
@@ -138,7 +144,7 @@ export class StructureIconsLayer implements Layer {
     this.rootStage.position.set(0, 0);
     this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await this.renderer.init({
+    await renderer.init({
       canvas: this.pixicanvas,
       resolution: 1,
       width: this.pixicanvas.width,
@@ -148,6 +154,9 @@ export class StructureIconsLayer implements Layer {
       backgroundAlpha: 0,
       backgroundColor: 0x00000000,
     });
+
+    this.renderer = renderer;
+    this.rendererInitialized = true;
   }
 
   shouldTransform(): boolean {
@@ -197,7 +206,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
+    if (!this.renderer || !this.rendererInitialized) {
       return;
     }
 
@@ -266,11 +275,13 @@ export class StructureIconsLayer implements Layer {
         const unit = actions.buildableUnits.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
+        const showPrice = this.game.config().userSettings().cursorCostLabel();
         if (!unit) {
           Object.assign(this.ghostUnit.buildableUnit, {
             canBuild: false,
             canUpgrade: false,
           });
+          this.updateGhostPrice(0, showPrice);
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
@@ -278,6 +289,7 @@ export class StructureIconsLayer implements Layer {
         }
 
         this.ghostUnit.buildableUnit = unit;
+        this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
         const targetLevel = this.resolveGhostRangeLevel(unit);
         this.updateGhostRange(targetLevel);
@@ -312,6 +324,33 @@ export class StructureIconsLayer implements Layer {
       });
   }
 
+  private updateGhostPrice(cost: bigint | number, showPrice: boolean) {
+    if (!this.ghostUnit) return;
+    const { priceText, priceBg, priceBox, priceGroup } = this.ghostUnit;
+    priceGroup.visible = showPrice;
+    if (!showPrice) return;
+
+    priceText.text = renderNumber(cost);
+    priceText.position.set(0, priceBox.y);
+
+    const textWidth = priceText.width;
+    const boxWidth = Math.max(
+      priceBox.minWidth,
+      textWidth + priceBox.paddingX * 2,
+    );
+
+    priceBg.clear();
+    priceBg
+      .roundRect(
+        -boxWidth / 2,
+        priceBox.y - priceBox.height / 2,
+        boxWidth,
+        priceBox.height,
+        4,
+      )
+      .fill({ color: 0x000000, alpha: 0.65 });
+  }
+
   private createStructure(e: MouseUpEvent) {
     if (!this.ghostUnit) return;
     if (
@@ -334,10 +373,16 @@ export class StructureIconsLayer implements Layer {
         ),
       );
     } else if (this.ghostUnit.buildableUnit.canBuild) {
+      const unitType = this.ghostUnit.buildableUnit.type;
+      const rocketDirectionUp =
+        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
       this.eventBus.emit(
         new BuildUnitIntentEvent(
-          this.ghostUnit.buildableUnit.type,
+          unitType,
           this.game.ref(tile.x, tile.y),
+          rocketDirectionUp,
         ),
       );
     }
@@ -367,16 +412,23 @@ export class StructureIconsLayer implements Layer {
     const rect = this.transformHandler.boundingRect();
     const localX = this.mousePos.x - rect.left;
     const localY = this.mousePos.y - rect.top;
+    const ghost = this.factory.createGhostContainer(
+      player,
+      this.ghostStage,
+      { x: localX, y: localY },
+      type,
+    );
     this.ghostUnit = {
-      container: this.factory.createGhostContainer(
-        player,
-        this.ghostStage,
-        { x: localX, y: localY },
-        type,
-      ),
+      container: ghost.container,
+      priceText: ghost.priceText,
+      priceBg: ghost.priceBg,
+      priceGroup: ghost.priceGroup,
+      priceBox: ghost.priceBox,
       range: null,
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
+    const showPrice = this.game.config().userSettings().cursorCostLabel();
+    this.updateGhostPrice(0, showPrice);
     const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
     this.updateGhostRange(baseLevel);
   }

@@ -19,26 +19,22 @@
     {
       "coordinates": [403, 1296],
       "flag": "",
-      "name": "Korinthal",
-      "strength": 2
+      "name": "Korinthal"
     },
     {
       "coordinates": [1152, 1251],
       "flag": "",
-      "name": "Lunareth",
-      "strength": 2
+      "name": "Lunareth"
     },
     {
       "coordinates": [1328, 322],
       "flag": "",
-      "name": "Sylvoria",
-      "strength": 2
+      "name": "Sylvoria"
     },
     {
       "coordinates": [114, 121],
       "flag": "",
-      "name": "Myrkwind",
-      "strength": 2
+      "name": "Myrkwind"
     }
   ]
 }

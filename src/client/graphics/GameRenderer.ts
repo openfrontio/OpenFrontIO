@@ -50,7 +50,11 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20, ghostStructure: null } as UIState;
+  const uiState = {
+    attackRatio: 20,
+    ghostStructure: null,
+    rocketDirectionUp: true,
+  } as UIState;
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -73,6 +77,7 @@ export function createRenderer(
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
+  buildMenu.uiState = uiState;
   buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
@@ -205,12 +210,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -246,7 +246,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
+    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
@@ -303,7 +303,7 @@ export class GameRenderer {
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
   ) {
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }

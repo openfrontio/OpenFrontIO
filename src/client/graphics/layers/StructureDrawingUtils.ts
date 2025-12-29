@@ -3,13 +3,12 @@ import { Theme } from "../../../core/configuration/Config";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
-
-import anchorIcon from "../../../../resources/images/AnchorIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
-import factoryIcon from "../../../../resources/images/FactoryUnit.png";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
-import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import anchorIcon from "/images/AnchorIcon.png?url";
+import cityIcon from "/images/CityIcon.png?url";
+import factoryIcon from "/images/FactoryUnit.png?url";
+import missileSiloIcon from "/images/MissileSiloUnit.png?url";
+import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
+import shieldIcon from "/images/ShieldIcon.png?url";
 
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
@@ -110,7 +109,13 @@ export class SpriteFactory {
     ghostStage: PIXI.Container,
     pos: { x: number; y: number },
     structureType: UnitType,
-  ): PIXI.Container {
+  ): {
+    container: PIXI.Container;
+    priceText: PIXI.BitmapText;
+    priceBg: PIXI.Graphics;
+    priceGroup: PIXI.Container;
+    priceBox: { height: number; y: number; paddingX: number; minWidth: number };
+  } {
     const parentContainer = new PIXI.Container();
     const texture = this.createTexture(
       structureType,
@@ -123,12 +128,46 @@ export class SpriteFactory {
     sprite.anchor.set(0.5);
     sprite.alpha = 0.5;
     parentContainer.addChild(sprite);
+
+    const priceText = new PIXI.BitmapText({
+      text: "125K",
+      style: { fontFamily: "round_6x6_modified", fontSize: 12 },
+    });
+    priceText.anchor.set(0.5);
+    const priceGroup = new PIXI.Container();
+    const boxHeight = 18;
+    const boxY =
+      (sprite.height > 0 ? sprite.height / 2 : 16) + boxHeight / 2 + 4;
+
+    // a way to resize the pill horizontally based on the text width
+    const paddingX = 8;
+    const minWidth = 32;
+    const textWidth = priceText.width;
+    const boxWidth = Math.max(minWidth, textWidth + paddingX * 2);
+
+    const priceBg = new PIXI.Graphics();
+    priceBg
+      .roundRect(-boxWidth / 2, boxY - boxHeight / 2, boxWidth, boxHeight, 4)
+      .fill({ color: 0x000000, alpha: 0.65 });
+
+    priceText.position.set(0, boxY);
+
+    priceGroup.addChild(priceBg);
+    priceGroup.addChild(priceText);
+    parentContainer.addChild(priceGroup);
+
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(
       Math.min(1, this.transformHandler.scale / ICON_SCALE_FACTOR_ZOOMED_OUT),
     );
     ghostStage.addChild(parentContainer);
-    return parentContainer;
+    return {
+      container: parentContainer,
+      priceText,
+      priceBg,
+      priceGroup,
+      priceBox: { height: boxHeight, y: boxY, paddingX, minWidth },
+    };
   }
 
   // --- internal helpers ---

@@ -9,9 +9,11 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 import { constructionExecution, executeTicks } from "./util/utils";
 
+const gameID: GameID = "game_id";
 let game: Game;
 let attacker: Player;
 
@@ -41,7 +43,11 @@ describe("MissileSilo", () => {
     game.addPlayer(attacker_info);
 
     game.addExecution(
-      new SpawnExecution(game.player(attacker_info.id).info(), game.ref(1, 1)),
+      new SpawnExecution(
+        gameID,
+        game.player(attacker_info.id).info(),
+        game.ref(1, 1),
+      ),
     );
 
     while (game.inSpawnPhase()) {

@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
   Difficulty,
@@ -21,12 +20,14 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/FluentSlider";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -153,7 +154,7 @@ export class SinglePlayerModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
+                        ${translateText(`difficulty.${key.toLowerCase()}`)}
                       </p>
                     </div>
                   `,
@@ -236,24 +237,17 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
+              <div class="option-card">
+                <fluent-slider
                   min="0"
                   max="400"
                   step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("single_modal.bots")}</span>${this
-                    .bots === 0
-                    ? translateText("single_modal.bots_disabled")
-                    : this.bots}
-                </div>
-              </label>
+                  .value=${this.bots}
+                  labelKey="single_modal.bots"
+                  disabledKey="single_modal.bots_disabled"
+                  @value-changed=${this.handleBotsChange}
+                ></fluent-slider>
+              </div>
 
               ${!(
                 this.gameMode === GameMode.Team &&
@@ -448,7 +442,8 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+    const customEvent = e as CustomEvent<{ value: number }>;
+    const value = customEvent.detail.value;
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }

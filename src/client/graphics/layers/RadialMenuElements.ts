@@ -4,6 +4,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
+import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
@@ -11,19 +12,19 @@ import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
-import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import infoIcon from "../../../../resources/images/InfoIcon.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import boatIcon from "/images/BoatIconWhite.svg?url";
+import buildIcon from "/images/BuildIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
+import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import infoIcon from "/images/InfoIcon.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
+import targetIcon from "/images/TargetIconWhite.svg?url";
+import traitorIcon from "/images/TraitorIconWhite.svg?url";
+import xIcon from "/images/XIcon.svg?url";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -37,6 +38,7 @@ export interface MenuElementParams {
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
+  uiState?: UIState;
   closeMenu: () => void;
 }
 
@@ -105,6 +107,14 @@ export enum Slot {
   Ally = "ally",
   Back = "back",
   Delete = "delete",
+}
+
+function isFriendlyTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  if (selectedPlayer === null) return false;
+  const isFriendly = (selectedPlayer as PlayerView).isFriendly;
+  if (typeof isFriendly !== "function") return false;
+  return isFriendly.call(selectedPlayer, params.myPlayer);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -423,6 +433,24 @@ export const attackMenuElement: MenuElement = {
   },
 };
 
+const donateGoldRadialElement: MenuElement = {
+  id: Slot.Attack,
+  name: "radial_donate_gold",
+  disabled: (params: MenuElementParams) =>
+    params.game.inSpawnPhase() ||
+    !params.playerActions?.interaction?.canDonateGold,
+  icon: donateGoldIcon,
+  color: "#EAB308",
+  action: (params: MenuElementParams) => {
+    if (!params.selected) return;
+    params.playerPanel.openSendGoldModal(
+      params.playerActions,
+      params.tile,
+      params.selected,
+    );
+  },
+};
+
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
@@ -549,16 +577,33 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
+
+    if (isFriendlyTarget(params)) {
+      return !params.playerActions.interaction?.canDonateTroops;
+    }
+
     return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      params.playerActionHandler.handleAttack(
-        params.myPlayer,
-        params.selected?.id() ?? null,
-      );
+      if (isFriendlyTarget(params)) {
+        const selectedPlayer = params.selected as PlayerView;
+        const ratio = params.uiState?.attackRatio ?? 1;
+        const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
+        if (troopsToDonate > 0) {
+          params.playerActionHandler.handleDonateTroops(
+            selectedPlayer,
+            troopsToDonate,
+          );
+        }
+      } else {
+        params.playerActionHandler.handleAttack(
+          params.myPlayer,
+          params.selected?.id() ?? null,
+        );
+      }
     }
     params.closeMenu();
   },
@@ -585,7 +630,13 @@ export const rootMenuElement: MenuElement = {
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
-        : [boatMenuElement, ally, attackMenuElement]),
+        : [
+            boatMenuElement,
+            ally,
+            isFriendlyTarget(params)
+              ? donateGoldRadialElement
+              : attackMenuElement,
+          ]),
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);

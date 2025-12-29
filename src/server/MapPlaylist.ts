@@ -36,6 +36,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   EuropeClassic: 3,
   FalklandIslands: 4,
   FaroeIslands: 4,
+  FourIslands: 4,
   GatewayToTheAtlantic: 5,
   GulfOfStLawrence: 4,
   Halkidiki: 4,
@@ -55,6 +56,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   StraitOfGibraltar: 5,
   Svalmel: 8,
   World: 8,
+  Lemnos: 3,
 };
 
 interface MapWithMode {
@@ -72,6 +74,7 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
+  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
@@ -93,7 +96,8 @@ export class MapPlaylist {
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Normal,
-      difficulty: Difficulty.Medium,
+      difficulty:
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,

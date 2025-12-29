@@ -68,7 +68,7 @@
     "ui_events_desc": "The Event panel displays the latest events, requests and Quick Chat messages. Some examples are:",
     "ui_events_alliance": "Alliance - Alliance requests can be accepted or rejected. Allies can share resources and troops, but can't attack each other. Clicking Focus moves the view to the player who sent the request.",
     "ui_events_attack": "Attacks - Incoming attacks and your outgoing attacks are shown. Click the message to center the view on the attack, nuke or Boat (transport ship). You can retreat troops by clicking the red X button. This will cost the lives of 25% of your attacking troops. If you retrieve a Boat attack, the boat returns to its starting point and will attack there if the land has been captured since. Nukes can't be retreated once launched.",
-    "ui_events_quickchat": "Quick Chat - You can see sent and recieved chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
+    "ui_events_quickchat": "Quick Chat - You can see sent and received chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
@@ -115,7 +115,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. The SAM has a 7.5 second cooldown.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
@@ -130,7 +130,8 @@
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "info_enemy_panel": "Enemy info panel",
-    "exit_confirmation": "Are you sure you want to exit the game?"
+    "exit_confirmation": "Are you sure you want to exit the game?",
+    "bomb_direction": "Atom / Hydrogen bomb arc direction"
   },
   "single_modal": {
     "title": "Single Player",
@@ -243,7 +244,8 @@
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
     "svalmel": "Svalmel",
-    "manicouagan": "Manicouagan"
+    "manicouagan": "Manicouagan",
+    "lemnos": "Lemnos"
   },
   "map_categories": {
     "continental": "Continental",
@@ -269,10 +271,13 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "waiting_for_players": "Waiting for players",
+    "starting_game": "Starting game…",
     "teams_Duos": "of 2 (Duos)",
     "teams_Trios": "of 3 (Trios)",
     "teams_Quads": "of 4 (Quads)",
-    "teams_hvn": "Humans Vs Nations",
+    "teams_hvn": "Humans vs Nations",
+    "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}"
   },
@@ -341,10 +346,10 @@
   },
   "difficulty": {
     "difficulty": "Difficulty",
-    "Easy": "Relaxed",
-    "Medium": "Balanced",
-    "Hard": "Intense",
-    "Impossible": "Impossible"
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "impossible": "Impossible"
   },
   "game_mode": {
     "ffa": "Free for All",
@@ -379,6 +384,8 @@
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",
     "structure_sprites_desc": "Toggle structure sprites",
+    "cursor_cost_label_label": "Cursor Build Cost",
+    "cursor_cost_label_desc": "Show a cost pill under the build cursor icon",
     "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "lobby_id_visibility_label": "Hidden Lobby IDs",
@@ -575,7 +582,7 @@
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
-    "discord_description": "Connect with other players, get updates, and share strategies",
+    "discord_description": "Connect with players, discover new features, and win prizes!",
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
@@ -741,7 +748,9 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
-    "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
+    "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",
