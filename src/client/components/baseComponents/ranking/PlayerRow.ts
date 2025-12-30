@@ -33,7 +33,7 @@ export class PlayerRow extends LitElement {
           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-1.25 rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
       >
         <div
-          class="font-bold text-right w-[30px] text-lg text-white absolute -left-10"
+          class="font-bold text-right w-7.5 text-lg text-white absolute -left-10"
         >
           ${this.rank}
         </div>
@@ -52,7 +52,7 @@ export class PlayerRow extends LitElement {
     return html`
       <img
         src="/images/CrownIcon.svg"
-        class="absolute -top-0.75 left-4 w-[15px] h-[15px] sm:-top-1.75 sm:left-7.5 sm:w-[20px] sm:h-[20px]"
+        class="absolute -top-0.75 left-4 size-3.75 sm:-top-1.75 sm:left-7.5 sm:size-5"
       />
     `;
   }
@@ -86,7 +86,7 @@ export class PlayerRow extends LitElement {
       </div>
       <div>
         <div
-          class="font-bold rounded-[50%] w-[30px] h-[30px] leading-[1.6rem] border border-gray-200 text-center bg-white text-black"
+          class="font-bold rounded-[50%] size-7.5 leading-[1.6rem] border border-gray-200 text-center bg-white text-black"
         >
           ${Number(this.score).toFixed(0)}
         </div>
@@ -99,9 +99,9 @@ export class PlayerRow extends LitElement {
     const width = Math.min(Math.max((this.score / bestScore) * 100, 0), 100);
     return html`
       <div class="w-full pr-2.5 m-auto">
-        <div class="h-[7px] bg-neutral-800" style="width: 100%;">
+        <div class="h-1.75 bg-neutral-800" style="width: 100%;">
           <!-- bar background -->
-          <div class="h-[7px] bg-white" style="width: ${width}%;"></div>
+          <div class="h-1.75 bg-white" style="width: ${width}%;"></div>
         </div>
       </div>
     `;
@@ -111,7 +111,7 @@ export class PlayerRow extends LitElement {
       <div
         class="${highlight
           ? "font-bold text-[18px]"
-          : ""} min-w-[30px] sm:min-w-[60px] inline-block text-center"
+          : ""} min-w-7.5 sm:min-w-15 inline-block text-center"
       >
         ${value}
       </div>
@@ -154,32 +154,27 @@ export class PlayerRow extends LitElement {
     return html`
       <div class="flex gap-3 items-center">
         ${this.renderPlayerIcon()}
-        <div
-          class="text-left w-[125px] max-w-[125px] sm:w-[250px] sm:max-w-[250px]"
-        >
+        <div class="text-left w-31.25 sm:w-62.5">
           ${this.renderPlayerName()}
         </div>
       </div>
       <div class="flex gap-2">
         <div
-          class="font-bold rounded-md w-[60px] max-w-[60px] h-[30px] text-sm sm:w-[100px] sm:h-[30px] leading-[1.9rem] text-center"
+          class="font-bold rounded-md w-15 h-7.5 text-sm sm:w-25 sm:h-7.5 leading-[1.9rem] text-center"
         >
           ${renderNumber(this.score)}
         </div>
-        <img
-          src="/images/GoldCoinIcon.svg"
-          class="w-[14px] h-[14px] sm:w-[20px] sm:h-[20px] m-auto"
-        />
+        <img src="/images/GoldCoinIcon.svg" class="size-3.5 sm:size-5 m-auto" />
       </div>
     `;
   }
 
   private renderPlayerName() {
     return html`
-      <div class="flex gap-1 items-center max-w-[200px] min-w-[200px]">
+      <div class="flex gap-1 items-center w-50">
         ${this.player.tag ? this.renderTag(this.player.tag) : ""}
         <div
-          class="text-xs sm:text-sm font-bold text-ellipsis max-w-[150px] min-w-[150px] overflow-hidden whitespace-nowrap"
+          class="text-xs sm:text-sm font-bold text-ellipsis w-37.5 overflow-hidden whitespace-nowrap"
         >
           ${this.player.username}
         </div>
@@ -190,7 +185,7 @@ export class PlayerRow extends LitElement {
   private renderTag(tag: string) {
     return html`
       <div
-        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-[12px] sm:leading-[18px] text-blue-900 h-[15px] pr-[4px] pl-[4px] sm:h-[20px] sm:pr-[8px] sm:pl-[8px] font-bold"
+        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-[12px] sm:leading-[18px] text-blue-900 h-3.75 px-1 sm:h-5 sm:px-2 font-bold"
       >
         ${tag}
       </div>
@@ -200,24 +195,24 @@ export class PlayerRow extends LitElement {
   private renderIcon() {
     if (this.player.killedAt) {
       return html` <div
-        class="w-[30px] h-[30px] leading-[5px] text-lg sm:min-w-[40px] sm:w-[40px] sm:h-[40px] pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
+        class="size-7.5 leading-[5px] text-lg sm:size-10 pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
       >
         💀
       </div>`;
     } else if (this.player.flag) {
       return html`<img
         src="/flags/${this.player.flag}.svg"
-        class="min-w-[30px] h-[30px] sm:min-w-[40px] sm:h-[40px]"
+        class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10"
       />`;
     }
 
     return html`
       <div
-        class="w-[30px] h-[30px] min-w-[30px] leading-[5px] rounded-[50%] sm:min-w-[40px] sm:w-[40px] sm:h-[40px] sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
+        class="size-7.5 leading-[5px] rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
       >
         <img
           src="/images/ProfileIcon.svg"
-          class="w-[20px] h-[20px] mt-0.5 sm:w-[25px] sm:h-[25px] sm:-mt-1.25 m-auto"
+          class="size-5 mt-0.5 sm:size-6.25 sm:-mt-1.25 m-auto"
         />
       </div>
     `;

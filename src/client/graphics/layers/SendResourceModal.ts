@@ -388,7 +388,7 @@ export class SendResourceModal extends LitElement {
           ${capPercent !== null
             ? html`
                 <div
-                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-[2px] bg-amber-400/80 shadow-sm"
+                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-0.5 bg-amber-400/80 shadow-sm"
                   style="left:${capPercent}%;"
                   title=${this.i18n.capTooltip()}
                 ></div>
@@ -553,7 +553,7 @@ export class SendResourceModal extends LitElement {
           role="dialog"
           aria-modal="true"
           aria-labelledby="send-title"
-          class="relative z-10 w-full max-w-[540px] focus:outline-hidden"
+          class="relative z-10 w-full max-w-135 focus:outline-hidden"
           tabindex="0"
           @keydown=${this.handleKeydown}
         >

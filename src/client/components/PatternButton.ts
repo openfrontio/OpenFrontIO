@@ -70,7 +70,7 @@ export class PatternButton extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-[200px]"
+        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-50"
       >
         <button
           class="bg-white/90 border-2 border-black/10 rounded-lg cursor-pointer transition-all duration-200 w-full
@@ -98,7 +98,7 @@ export class PatternButton extends LitElement {
               `
             : null}
           <div
-            class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded-sm p-1 mx-auto"
+            class="size-30 flex items-center justify-center bg-white rounded-sm p-1 mx-auto"
             style="overflow: hidden;"
           >
             ${renderPatternPreview(

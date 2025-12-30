@@ -87,8 +87,8 @@ export class EmojiTable extends LitElement {
           </button>
 
           <div
-            class="bg-zinc-900/95 p-2 sm:p-3 rounded-[10px] z-[10003] shadow-2xl shadow-black/50 ring-1 ring-white/5 
-                   w-[calc(100vw-32px)] sm:w-[400px] max-h-[calc(100vh-60px)] overflow-y-auto"
+            class="bg-zinc-900/95 p-2 sm:p-3 rounded-[10px] z-[10003] shadow-2xl shadow-black/50 ring-1 ring-white/5
+                   w-[calc(100vw-32px)] sm:w-100 max-h-[calc(100vh-60px)] overflow-y-auto"
             @contextmenu=${(e: MouseEvent) => e.preventDefault()}
             @wheel=${(e: WheelEvent) => e.stopPropagation()}
             @click=${(e: MouseEvent) => e.stopPropagation()}

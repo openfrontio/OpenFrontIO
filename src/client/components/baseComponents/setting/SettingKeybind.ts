@@ -25,7 +25,7 @@ export class SettingKeybind extends LitElement {
 
           <div class="setting-keybind-box flex flex-wrap items-start gap-2">
             <div
-              class="setting-keybind-description flex-1 min-w-[240px] max-w-full whitespace-normal break-words text-sm text-gray-300"
+              class="setting-keybind-description flex-1 min-w-60 max-w-full whitespace-normal break-words text-sm text-gray-300"
               style="word-break: break-word;"
             >
               ${this.description}

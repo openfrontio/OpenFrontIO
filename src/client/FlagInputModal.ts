@@ -22,7 +22,7 @@ export class FlagInputModal extends LitElement {
       <o-modal alwaysMaximized title=${translateText("flag_input.title")}>
         <div class="flex justify-center w-full p-4">
           <input
-            class="h-[2rem] border-none border border-gray-300
+            class="h-8 border-none border border-gray-300
           rounded-xl shadow-xs text-2xl text-center focus:outline-hidden
           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black
           dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
@@ -50,7 +50,7 @@ export class FlagInputModal extends LitElement {
                     class="text-center cursor-pointer border-none bg-none opacity-70
                   w-[calc(100%/2-15px)] sm:w-[calc(100%/4-15px)]
                   md:w-[calc(100%/6-15px)] lg:w-[calc(100%/8-15px)]
-                  xl:w-[calc(100%/10-15px)] min-w-[80px]"
+                  xl:w-[calc(100%/10-15px)] min-w-20"
                   >
                     <img
                       class="country-flag w-full h-auto"

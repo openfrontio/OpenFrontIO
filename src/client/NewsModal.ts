@@ -163,7 +163,7 @@ export class NewsButton extends LitElement {
           @click=${this.openNewsModel}
         >
           <img
-            class="size-[48px] dark:invert"
+            class="size-12 dark:invert"
             src="${megaphone}"
             alt=${translateText("news.title")}
           />

@@ -377,7 +377,7 @@ export class PlayerPanel extends LitElement implements Layer {
     const label = secs !== null ? renderDuration(secs) : null;
     const dotCls =
       secs !== null
-        ? `mx-1 h-[4px] w-[4px] rounded-full bg-red-400/70 ${secs <= 10 ? "animate-pulse" : ""}`
+        ? `mx-1 size-1 rounded-full bg-red-400/70 ${secs <= 10 ? "animate-pulse" : ""}`
         : "";
 
     return html`
@@ -388,12 +388,7 @@ export class PlayerPanel extends LitElement implements Layer {
             shadow-[inset_0_0_8px_rgba(239,68,68,0.12)]"
           title=${translateText("player_panel.traitor")}
         >
-          <img
-            src=${traitorIcon}
-            alt=""
-            aria-hidden="true"
-            class="h-[18px] w-[18px]"
-          />
+          <img src=${traitorIcon} alt="" aria-hidden="true" class="size-4.5" />
           <span class="tracking-tight"
             >${translateText("player_panel.traitor")}</span
           >
@@ -485,7 +480,7 @@ export class PlayerPanel extends LitElement implements Layer {
       <div class="mb-1 flex justify-between gap-2">
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
-                    text-white w-[140px] min-w-[140px] shrink-0"
+                    text-white w-35 shrink-0"
         >
           <span class="mr-0.5">💰</span>
           <span translate="no" class="tabular-nums w-[5ch]font-semibold">
@@ -498,7 +493,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
-                    text-white w-[140px] min-w-[140px] shrink-0"
+                    text-white w-35 shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
@@ -569,7 +564,7 @@ export class PlayerPanel extends LitElement implements Layer {
           </div>
           <span
             aria-labelledby="alliances-title"
-            class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[10px]
+            class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-[10px]
                  text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
             ${allies.length}
@@ -580,7 +575,7 @@ export class PlayerPanel extends LitElement implements Layer {
           class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
         >
           <ul
-            class="max-h-[120px] overflow-y-auto p-2
+            class="max-h-30 overflow-y-auto p-2
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
@@ -830,7 +825,7 @@ export class PlayerPanel extends LitElement implements Layer {
         @click=${() => this.hide()}
       >
         <div
-          class="pointer-events-auto max-h-[90vh] min-w-[300px] max-w-[400px] px-4 py-2"
+          class="pointer-events-auto max-h-[90vh] min-w-75 max-w-100 px-4 py-2"
           @click=${(e: MouseEvent) => e.stopPropagation()}
         >
           <div class="relative">

@@ -50,7 +50,7 @@ export class GameInfoModal extends LitElement {
         translationKey="main.game_info"
       >
         <div class="flex flex-col items-center px-25 text-center mb-4">
-          <div class="w-[300px] sm:w-[500px]">
+          <div class="w-75 sm:w-125">
             ${this.isLoadingGame
               ? this.renderLoadingAnimation()
               : this.renderRanking()}
@@ -107,7 +107,7 @@ export class GameInfoModal extends LitElement {
     }
     return html`
       <div
-        class="h-[150px] flex relative justify-between rounded-xl bg-blue-600 items-center"
+        class="h-37.5 flex relative justify-between rounded-xl bg-blue-600 items-center"
       >
         ${this.mapImage
           ? html`<img
