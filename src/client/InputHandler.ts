@@ -460,7 +460,7 @@ export class InputHandler {
     }
 
     // Ignore right mouse button and other non-left buttons
-    if (this.isNonLeftMouseButton(event.button)) {
+    if (!this.isLeftMouseButton(event.button)) {
       return;
     }
 
@@ -488,7 +488,7 @@ export class InputHandler {
     }
 
     // Ignore right mouse button and other non-left buttons
-    if (this.isNonLeftMouseButton(event.button)) {
+    if (!this.isLeftMouseButton(event.button)) {
       return;
     }
     this.pointerDown = false;
@@ -557,7 +557,7 @@ export class InputHandler {
       return;
     }
 
-    if (this.isNonLeftMouseButton(event.button)) {
+    if (!this.isLeftMouseButton(event.button)) {
       return;
     }
 
@@ -666,7 +666,7 @@ export class InputHandler {
     return button === 1;
   }
 
-  private isNonLeftMouseButton(button: number): boolean {
-    return button > 0;
+  private isLeftMouseButton(button: number): boolean {
+    return button !== 0;
   }
 }
