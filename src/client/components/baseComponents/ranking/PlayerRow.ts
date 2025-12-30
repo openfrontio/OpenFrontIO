@@ -33,7 +33,7 @@ export class PlayerRow extends LitElement {
           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-1.25 rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
       >
         <div
-          class="font-bold text-right w-[30px] text-lg text-white absolute left-[-40px]"
+          class="font-bold text-right w-[30px] text-lg text-white absolute -left-10"
         >
           ${this.rank}
         </div>
@@ -52,7 +52,7 @@ export class PlayerRow extends LitElement {
     return html`
       <img
         src="/images/CrownIcon.svg"
-        class="absolute top-[-3px] left-[16px] w-[15px] h-[15px] sm:top-[-7px] sm:left-[30px] sm:w-[20px] sm:h-[20px]"
+        class="absolute -top-0.75 left-4 w-[15px] h-[15px] sm:-top-1.75 sm:left-7.5 sm:w-[20px] sm:h-[20px]"
       />
     `;
   }
