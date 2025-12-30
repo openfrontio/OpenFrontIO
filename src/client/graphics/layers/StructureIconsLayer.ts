@@ -4,6 +4,7 @@ import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
@@ -260,7 +261,7 @@ export class StructureIconsLayer implements Layer {
     }
 
     // Check if targeting an ally (for nuke warning visual)
-    // Uses same logic as NukeExecution.maybeBreakAlliances()
+    // Uses shared logic with NukeExecution.maybeBreakAlliances()
     let targetingAlly = false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
@@ -272,33 +273,13 @@ export class StructureIconsLayer implements Layer {
       // Only check if player has allies
       const allies = myPlayer.allies();
       if (allies.length > 0) {
-        const allySmallIds = new Set(allies.map((a) => a.smallID()));
-        const magnitude = this.game.config().nukeMagnitudes(nukeType);
-        const outerSquared = magnitude.outer * magnitude.outer;
-        const threshold = this.game.config().nukeAllianceBreakThreshold();
-
-        // Count tiles per ally within blast radius (same as NukeExecution.tilesToDestroy logic)
-        // For preview, we check the full outer radius since any tile there could be destroyed
-        // The warning might show even if the alliance won't definitely break
-        // But it will always show when there's a possibility of breaking
-        const allyTileCounts = new Map<number, number>();
-        const tilesInBlast = this.game.bfs(tileRef, (gm, t) => {
-          const d2 = gm.euclideanDistSquared(tileRef!, t);
-          return d2 <= outerSquared;
+        targetingAlly = wouldNukeBreakAlliance({
+          gm: this.game,
+          targetTile: tileRef,
+          magnitude: this.game.config().nukeMagnitudes(nukeType),
+          allySmallIds: new Set(allies.map((a) => a.smallID())),
+          threshold: this.game.config().nukeAllianceBreakThreshold(),
         });
-
-        for (const nearbyTile of tilesInBlast) {
-          const ownerSmallId = this.game.ownerID(nearbyTile);
-          if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
-            const count = (allyTileCounts.get(ownerSmallId) ?? 0) + 1;
-            allyTileCounts.set(ownerSmallId, count);
-            // Check if any ally exceeds threshold
-            if (count > threshold) {
-              targetingAlly = true;
-              break;
-            }
-          }
-        }
       }
     }
 
