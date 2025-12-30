@@ -17,7 +17,6 @@ COPY tailwind.config.js ./
 COPY postcss.config.js ./
 COPY eslint.config.js ./
 COPY index.html ./
-COPY scripts ./scripts
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
