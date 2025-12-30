@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import { AutoUpgradeEvent } from "../src/client/InputHandler";
 import { EventBus } from "../src/core/EventBus";
 
@@ -19,7 +16,7 @@ describe("AutoUpgrade Feature", () => {
     });
 
     test("should emit AutoUpgradeEvent when created", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const event = new AutoUpgradeEvent(150, 250);
       eventBus.emit(event);
@@ -36,7 +33,7 @@ describe("AutoUpgrade Feature", () => {
 
   describe("AutoUpgradeEvent Integration", () => {
     test("should handle multiple AutoUpgradeEvents", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const event1 = new AutoUpgradeEvent(100, 200);
       const event2 = new AutoUpgradeEvent(300, 400);
@@ -70,7 +67,7 @@ describe("AutoUpgrade Feature", () => {
 
   describe("AutoUpgradeEvent Event Bus Integration", () => {
     test("should allow event listeners to subscribe to AutoUpgradeEvent", () => {
-      const mockListener = jest.fn();
+      const mockListener = vi.fn();
       const event = new AutoUpgradeEvent(100, 200);
 
       eventBus.on(AutoUpgradeEvent, mockListener);
@@ -80,8 +77,8 @@ describe("AutoUpgrade Feature", () => {
     });
 
     test("should allow multiple listeners for AutoUpgradeEvent", () => {
-      const mockListener1 = jest.fn();
-      const mockListener2 = jest.fn();
+      const mockListener1 = vi.fn();
+      const mockListener2 = vi.fn();
       const event = new AutoUpgradeEvent(100, 200);
 
       eventBus.on(AutoUpgradeEvent, mockListener1);
@@ -93,7 +90,7 @@ describe("AutoUpgrade Feature", () => {
     });
 
     test("should not call unsubscribed listeners", () => {
-      const mockListener = jest.fn();
+      const mockListener = vi.fn();
       const event = new AutoUpgradeEvent(100, 200);
 
       eventBus.on(AutoUpgradeEvent, mockListener);

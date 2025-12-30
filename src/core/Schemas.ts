@@ -1,6 +1,6 @@
+import countries from "resources/countries.json";
+import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
-import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import countries from "../client/data/countries.json" with { type: "json" };
 import {
   ColorPaletteSchema,
   PatternDataSchema,
@@ -311,6 +311,7 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
   tile: z.number(),
+  rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({

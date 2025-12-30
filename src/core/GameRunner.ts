@@ -9,7 +9,6 @@ import {
   Game,
   GameUpdates,
   NameViewData,
-  Nation,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -26,6 +25,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
+import { createNationsForGame } from "./game/NationUtils";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -56,15 +56,12 @@ export async function createGameRunner(
     );
   });
 
-  const nations = gameStart.config.disableNations
-    ? []
-    : gameMap.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
-          ),
-      );
+  const nations = createNationsForGame(
+    gameStart,
+    gameMap.nations,
+    humans.length,
+    random,
+  );
 
   const game: Game = createGame(
     humans,

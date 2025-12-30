@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Game,
+  GameMode,
   Player,
   PlayerType,
   Relation,
@@ -59,7 +60,7 @@ export class NationAllianceBehavior {
 
     for (const enemy of borderingEnemies) {
       if (
-        this.random.chance(20) &&
+        this.random.chance(30) &&
         isAcceptablePlayerType(enemy) &&
         this.player.canSendAllianceRequest(enemy) &&
         this.getAllianceDecision(enemy, false)
@@ -86,17 +87,26 @@ export class NationAllianceBehavior {
       }
       return false;
     }
+    // Reject if otherPlayer has allied with 50% or more of all players (Hard and Impossible only)
+    // To make sure there are enough non-friendly players in the game to stop the crown with nukes
+    if (this.hasTooManyAlliances(otherPlayer)) {
+      return false;
+    }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
     // Impossible (smart) nations on the other hand are analyzing the facts
     if (this.isAlliancePartnerThreat(otherPlayer)) {
-      if (!isResponse && this.random.chance(3)) {
+      if (!isResponse && this.random.chance(6)) {
         this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_SCARED_OF_THREAT);
       }
-      if (isResponse && this.random.chance(3)) {
+      if (isResponse && this.random.chance(6)) {
         this.emojiBehavior.sendEmoji(otherPlayer, EMOJI_LOVE);
       }
       return true;
+    }
+    // Maybe reject if we are in a team game (allying makes less sense there)
+    if (this.shouldRejectInTeamGame()) {
+      return false;
     }
     // Reject if relation is bad
     if (this.player.relation(otherPlayer) < Relation.Neutral) {
@@ -122,6 +132,21 @@ export class NationAllianceBehavior {
     }
     // Accept if we are similarly strong
     return this.isAlliancePartnerSimilarlyStrong(otherPlayer);
+  }
+
+  private hasTooManyAlliances(otherPlayer: Player): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty !== Difficulty.Hard &&
+      difficulty !== Difficulty.Impossible
+    ) {
+      return false;
+    }
+
+    const totalPlayers = this.game.players().length;
+    const otherPlayerAlliances = otherPlayer.alliances().length;
+
+    return otherPlayerAlliances >= totalPlayers * 0.5;
   }
 
   private isConfused(): boolean {
@@ -202,6 +227,26 @@ export class NationAllianceBehavior {
           otherPlayer.numTilesOwned() > this.player.numTilesOwned() * 1.5;
         return otherHasMoreTroops || otherHasMoreMaxTroops || otherHasMoreTiles;
       }
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  private shouldRejectInTeamGame(): boolean {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return false; // 0% chance to reject on easy
+      case Difficulty.Medium:
+        return this.random.nextInt(0, 100) < 20; // 20% chance to reject on medium
+      case Difficulty.Hard:
+        return this.random.nextInt(0, 100) < 40; // 40% chance to reject on hard
+      case Difficulty.Impossible:
+        return this.random.nextInt(0, 100) < 60; // 60% chance to reject on impossible
       default:
         assertNever(difficulty);
     }
