@@ -1,4 +1,4 @@
-import version from "../assets/data/version.txt?raw";
+import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
