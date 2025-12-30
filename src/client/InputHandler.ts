@@ -435,7 +435,6 @@ export class InputHandler {
       if (e.code === this.keybinds.swapDirection) {
         e.preventDefault();
         const nextDirection = !this.uiState.rocketDirectionUp;
-        this.uiState.rocketDirectionUp = nextDirection;
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
