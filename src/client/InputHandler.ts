@@ -667,6 +667,6 @@ export class InputHandler {
   }
 
   private isLeftMouseButton(button: number): boolean {
-    return button !== 0;
+    return button === 0;
   }
 }

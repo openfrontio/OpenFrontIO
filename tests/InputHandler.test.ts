@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import {
   AutoUpgradeEvent,
   ContextMenuEvent,
@@ -464,8 +461,8 @@ describe("InputHandler AutoUpgrade", () => {
   describe("Mac Ctrl+Click Context Menu", () => {
     test("should create context menu with Ctrl+Click on Mac, but not attack", () => {
       // Mock isMac() to return true
-      jest.spyOn(inputHandler as any, "isMac").mockReturnValue(true);
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      vi.spyOn(inputHandler as any, "isMac").mockReturnValue(true);
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       // Simulate ControlLeft being held
       inputHandler["activeKeys"].add("ControlLeft");
