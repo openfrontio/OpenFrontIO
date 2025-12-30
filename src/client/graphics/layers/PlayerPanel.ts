@@ -308,9 +308,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private handleToggleRocketDirection(e: Event) {
     e.stopPropagation();
     const next = !this.uiState.rocketDirectionUp;
-    this.uiState.rocketDirectionUp = next;
     this.eventBus.emit(new SwapRocketDirectionEvent(next));
-    this.requestUpdate();
   }
 
   private identityChipProps(type: PlayerType) {
