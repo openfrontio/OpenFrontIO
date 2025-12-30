@@ -14,7 +14,11 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  MouseUpEvent,
+  SwapRocketDirectionEvent,
+} from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -65,6 +69,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private suppressNextHide: boolean = false;
 
   private ctModal: ChatModal;
+  @state() private rocketDirectionUp = true;
 
   createRenderRoot() {
     return this;
@@ -76,6 +81,11 @@ export class PlayerPanel extends LitElement implements Layer {
       if (this.isVisible) {
         this.hide();
       }
+    });
+    eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      this.rocketDirectionUp = event.rocketDirectionUp;
+      this.requestUpdate();
     });
   }
   init() {
@@ -91,6 +101,9 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.ctModal) {
       console.warn("ChatModal element not found in DOM");
     }
+
+    // Initialise from shared state
+    this.rocketDirectionUp = this.uiState?.rocketDirectionUp ?? this.rocketDirectionUp;
   }
 
   async tick() {
@@ -295,6 +308,15 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
     this.hide();
+  }
+
+  private handleToggleRocketDirection(e: Event) {
+    e.stopPropagation();
+    const next = !this.uiState.rocketDirectionUp;
+    this.uiState.rocketDirectionUp = next;
+    this.rocketDirectionUp = next;
+    this.eventBus.emit(new SwapRocketDirectionEvent(next));
+    this.requestUpdate();
   }
 
   private identityChipProps(type: PlayerType) {
@@ -512,6 +534,26 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
+  private renderRocketDirectionToggle() {
+    return html`
+    <ui-divider></ui-divider>
+      <button
+        class="flex w-full items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2 text-left text-white hover:bg-white/[0.08] active:scale-[0.995] transition"
+        @click=${(e: Event) => this.handleToggleRocketDirection(e)}
+      >
+        <div class="flex flex-col">
+          <span class="text-sm font-semibold tracking-tight">
+            ${translateText("player_panel.flip_rocket_trajectory")}
+          </span>
+          <span class="text-xs text-zinc-300" translate="no">
+            ${this.rocketDirectionUp ? translateText("player_panel.arc_up") : translateText("player_panel.arc_down")}
+          </span>
+        </div>
+        <span class="text-lg" aria-hidden="true">🔀</span>
+      </button>
+    `;
+  }
+
   private renderStats(other: PlayerView, my: PlayerView) {
     return html`
       <!-- Betrayals -->
@@ -696,7 +738,7 @@ export class PlayerPanel extends LitElement implements Layer {
             : ""}
         </div>
         <ui-divider></ui-divider>
-
+        ${other === my ? html`` : html`
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${other !== my
             ? canEmbargo
@@ -742,6 +784,7 @@ export class PlayerPanel extends LitElement implements Layer {
               })
             : ""}
         </div>
+        `}
 
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
@@ -845,16 +888,14 @@ export class PlayerPanel extends LitElement implements Layer {
                 <div
                   style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
                 >
-                  <div class="sticky top-0 z-20 flex justify-end p-2">
-                    <button
-                      @click=${this.handleClose}
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-                      aria-label=${translateText("common.close") || "Close"}
-                      title=${translateText("common.close") || "Close"}
-                    >
-                      ✕
-                    </button>
-                  </div>
+                  <button
+                    @click=${this.handleClose}
+                    class="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                    aria-label=${translateText("common.close") || "Close"}
+                    title=${translateText("common.close") || "Close"}
+                  >
+                    ✕
+                  </button>
 
                   <div
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
@@ -888,6 +929,9 @@ export class PlayerPanel extends LitElement implements Layer {
 
                     <!-- Resources -->
                     ${this.renderResources(other)}
+                    
+                    <!-- Rocket direction toggle -->
+                    ${other === my ? this.renderRocketDirectionToggle() : ""}
 
                     <ui-divider></ui-divider>
 
@@ -902,7 +946,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
 
-                    <ui-divider class="mt-1"></ui-divider>
+                    <ui-divider></ui-divider>
 
                     <!-- Actions -->
                     ${this.renderActions(my, other)}
