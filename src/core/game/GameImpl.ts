@@ -632,7 +632,7 @@ export class GameImpl implements Game {
     });
   }
 
-  public breakAlliance(breaker: Player, alliance: Alliance) {
+  public breakAlliance(breaker: Player, alliance: MutableAlliance) {
     let other: Player;
     if (alliance.requestor() === breaker) {
       other = alliance.recipient();
@@ -648,18 +648,13 @@ export class GameImpl implements Game {
       breaker.markTraitor();
     }
 
-    const breakerSet = new Set(breaker.alliances());
-    const alliances = other.alliances().filter((a) => breakerSet.has(a));
-    if (alliances.length !== 1) {
-      throw new Error(
-        `must have exactly one alliance, have ${alliances.length}`,
-      );
-    }
-    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliance);
+
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
       traitorID: breaker.smallID(),
       betrayedID: other.smallID(),
+      allianceID: alliance.id(),
     });
   }
 

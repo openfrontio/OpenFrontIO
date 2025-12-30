@@ -3,13 +3,12 @@ import { Theme } from "../../../core/configuration/Config";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
-
-import anchorIcon from "../../../../resources/images/AnchorIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
-import factoryIcon from "../../../../resources/images/FactoryUnit.png";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
-import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import anchorIcon from "/images/AnchorIcon.png?url";
+import cityIcon from "/images/CityIcon.png?url";
+import factoryIcon from "/images/FactoryUnit.png?url";
+import missileSiloIcon from "/images/MissileSiloUnit.png?url";
+import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
+import shieldIcon from "/images/ShieldIcon.png?url";
 
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",

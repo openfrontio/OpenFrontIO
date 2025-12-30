@@ -1,5 +1,4 @@
-import Snowflake3Png from "../../resources/images/Snowflake.webp";
-import version from "../../resources/version.txt";
+import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -46,7 +45,17 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./snow.css";
 import "./styles.css";
-
+import "./styles/components/button.css";
+import "./styles/components/controls.css";
+import "./styles/components/modal.css";
+import "./styles/components/setting.css";
+import "./styles/core/flag-animation.css";
+import "./styles/core/typography.css";
+import "./styles/core/variables.css";
+import "./styles/layout/container.css";
+import "./styles/layout/header.css";
+import "./styles/modal/chat.css";
+import Snowflake3Png from "/images/Snowflake.webp?url";
 declare global {
   interface Window {
     turnstile: any;

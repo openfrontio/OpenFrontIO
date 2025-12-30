@@ -130,7 +130,8 @@
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "info_enemy_panel": "Enemy info panel",
-    "exit_confirmation": "Are you sure you want to exit the game?"
+    "exit_confirmation": "Are you sure you want to exit the game?",
+    "bomb_direction": "Atom / Hydrogen bomb arc direction"
   },
   "single_modal": {
     "title": "Single Player",
@@ -274,7 +275,8 @@
     "teams_Duos": "of 2 (Duos)",
     "teams_Trios": "of 3 (Trios)",
     "teams_Quads": "of 4 (Quads)",
-    "teams_hvn": "Humans Vs Nations",
+    "teams_hvn": "Humans vs Nations",
+    "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}"
   },

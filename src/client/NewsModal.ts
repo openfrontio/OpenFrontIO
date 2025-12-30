@@ -1,13 +1,13 @@
 import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
-import changelog from "../../resources/changelog.md";
-import megaphone from "../../resources/images/Megaphone.svg";
-import santaHatIcon from "../../resources/images/SantaHat.webp";
-import version from "../../resources/version.txt";
+import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import changelog from "/changelog.md?url";
+import megaphone from "/images/Megaphone.svg?url";
+import santaHatIcon from "/images/SantaHat.webp?url";
 
 @customElement("news-modal")
 export class NewsModal extends LitElement {
