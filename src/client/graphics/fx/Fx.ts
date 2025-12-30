@@ -16,9 +16,4 @@ export enum FxType {
   UnderConstruction = "UnderConstruction",
   Dust = "Dust",
   Conquest = "Conquest",
-  Santa = "Santa",
-  Snowman = "Snowman",
-  HappyElf = "HappyElf",
-  SadElf = "SadElf",
-  Sparks = "Sparks",
 }
