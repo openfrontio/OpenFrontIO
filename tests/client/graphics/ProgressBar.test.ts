@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import { ProgressBar } from "../../../src/client/graphics/ProgressBar";
 
 describe("ProgressBar", () => {
@@ -15,9 +12,9 @@ describe("ProgressBar", () => {
   });
 
   it("should initialize and draw the background", () => {
-    const spyClearRect = jest.spyOn(ctx, "clearRect");
-    const spyFillRect = jest.spyOn(ctx, "fillRect");
-    const spyFillStyle = jest.spyOn(ctx, "fillStyle", "set");
+    const spyClearRect = vi.spyOn(ctx, "clearRect");
+    const spyFillRect = vi.spyOn(ctx, "fillRect");
+    const spyFillStyle = vi.spyOn(ctx, "fillStyle", "set");
     const bar = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, 0.5);
     expect(spyClearRect).toHaveBeenCalledWith(0, 0, 82, 12);
     expect(spyFillRect).toHaveBeenCalledWith(1, 1, 80, 10);
@@ -28,7 +25,7 @@ describe("ProgressBar", () => {
 
   it("should set progress and draw the progress bar", () => {
     const bar = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10);
-    const spyFillRect = jest.spyOn(ctx, "fillRect");
+    const spyFillRect = vi.spyOn(ctx, "fillRect");
     bar.setProgress(0.5);
     expect(bar.getProgress()).toBe(0.5);
     expect(spyFillRect).toHaveBeenCalledWith(

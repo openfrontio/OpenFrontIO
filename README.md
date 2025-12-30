@@ -76,7 +76,7 @@ This will:
 
 - Start the webpack dev server for the client
 - Launch the game server with development settings
-- Open the game in your default browser
+- Open the game in your default browser (to disable this behavior, set `SKIP_BROWSER_OPEN=true` in your environment)
 
 ### Client Only
 

@@ -1,6 +1,7 @@
 import { Game } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { within } from "../Util";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, AStarResult, PathFindResultType } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
@@ -16,6 +17,7 @@ export class ParabolaPathFinder {
     dst: TileRef,
     increment: number = 3,
     distanceBasedHeight = true,
+    directionUp = true,
   ) {
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
     const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
@@ -25,14 +27,24 @@ export class ParabolaPathFinder {
     const maxHeight = distanceBasedHeight
       ? Math.max(distance / 3, parabolaMinHeight)
       : 0;
-    // Use a bezier curve always pointing up
+    // Use a bezier curve pointing up or down based on directionUp parameter
+    const heightMultiplier = directionUp ? -1 : 1;
+    const mapHeight = this.mg.height();
     const p1 = {
       x: p0.x + (p3.x - p0.x) / 4,
-      y: Math.max(p0.y + (p3.y - p0.y) / 4 - maxHeight, 0),
+      y: within(
+        p0.y + (p3.y - p0.y) / 4 + heightMultiplier * maxHeight,
+        0,
+        mapHeight - 1,
+      ),
     };
     const p2 = {
       x: p0.x + ((p3.x - p0.x) * 3) / 4,
-      y: Math.max(p0.y + ((p3.y - p0.y) * 3) / 4 - maxHeight, 0),
+      y: within(
+        p0.y + ((p3.y - p0.y) * 3) / 4 + heightMultiplier * maxHeight,
+        0,
+        mapHeight - 1,
+      ),
     };
 
     this.curve = new DistanceBasedBezierCurve(p0, p1, p2, p3, increment);

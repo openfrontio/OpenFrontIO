@@ -27,6 +27,7 @@ import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
@@ -88,20 +89,20 @@ const numPlayersConfig = {
 
 export abstract class DefaultServerConfig implements ServerConfig {
   turnstileSecretKey(): string {
-    return process.env.TURNSTILE_SECRET_KEY ?? "";
+    return Env.TURNSTILE_SECRET_KEY ?? "";
   }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
   }
   stripePublishableKey(): string {
-    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+    return Env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
   domain(): string {
-    return process.env.DOMAIN ?? "";
+    return Env.DOMAIN ?? "";
   }
   subdomain(): string {
-    return process.env.SUBDOMAIN ?? "";
+    return Env.SUBDOMAIN ?? "";
   }
 
   private publicKey: JWK;
@@ -134,24 +135,24 @@ export abstract class DefaultServerConfig implements ServerConfig {
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
+    return Env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
   }
   otelAuthHeader(): string {
-    return process.env.OTEL_AUTH_HEADER ?? "";
+    return Env.OTEL_AUTH_HEADER ?? "";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT ?? "";
+    return Env.GIT_COMMIT ?? "";
   }
 
   apiKey(): string {
-    return process.env.API_KEY ?? "";
+    return Env.API_KEY ?? "";
   }
 
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    const token = process.env.ADMIN_TOKEN;
+    const token = Env.ADMIN_TOKEN;
     if (!token) {
       throw new Error("ADMIN_TOKEN not set");
     }
@@ -187,7 +188,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
         p -= p % 4;
         break;
       case HumansVsNations:
-        // For HumansVsNations, return the base team player count
+        // Half the slots are for humans, the other half will get filled with nations
+        p = Math.floor(p / 2);
         break;
       default:
         p -= p % numPlayerTeams;
@@ -224,7 +226,7 @@ export class DefaultConfig implements Config {
   ) {}
 
   stripePublishableKey(): string {
-    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+    return Env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
 
   isReplay(): boolean {

@@ -28,11 +28,11 @@ describe("NukeExecution", () => {
       ],
     );
 
-    (game.config() as TestConfig).nukeMagnitudes = jest.fn(() => ({
+    (game.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
       inner: 10,
       outer: 10,
     }));
-    (game.config() as TestConfig).nukeAllianceBreakThreshold = jest.fn(() => 5);
+    (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(() => 5);
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -51,14 +51,14 @@ describe("NukeExecution", () => {
     player.buildUnit(UnitType.MissileSilo, game.ref(1, 10), {});
     // Build a SAM out of range
     const sam = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 11), {});
-    sam.touch = jest.fn();
+    sam.touch = vi.fn();
     // Build a Defense post out of range AND out of redraw range
     const defensePost = player.buildUnit(
       UnitType.DefensePost,
       game.ref(1, 27),
       {},
     );
-    defensePost.touch = jest.fn();
+    defensePost.touch = vi.fn();
     // Add a nuke execution targeting the city
     const nukeExec = new NukeExecution(
       UnitType.AtomBomb,

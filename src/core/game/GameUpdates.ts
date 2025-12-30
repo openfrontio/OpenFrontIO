@@ -202,6 +202,7 @@ export interface BrokeAllianceUpdate {
   type: GameUpdateType.BrokeAlliance;
   traitorID: number;
   betrayedID: number;
+  allianceID: number;
 }
 
 export interface AllianceExpiredUpdate {

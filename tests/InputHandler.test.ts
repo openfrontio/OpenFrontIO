@@ -23,7 +23,7 @@ class MockPointerEvent {
     this.clientX = init.clientX;
     this.clientY = init.clientY;
     this.pointerId = init.pointerId;
-    this.preventDefault = jest.fn();
+    this.preventDefault = vi.fn();
   }
 }
 
@@ -42,7 +42,7 @@ describe("InputHandler AutoUpgrade", () => {
     eventBus = new EventBus();
 
     inputHandler = new InputHandler(
-      { attackRatio: 20, ghostStructure: null },
+      { attackRatio: 20, ghostStructure: null, rocketDirectionUp: true },
       mockCanvas,
       eventBus,
     );
@@ -50,7 +50,7 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Middle Mouse Button Handling", () => {
     test("should emit AutoUpgradeEvent on middle mouse button press", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -70,7 +70,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should emit MouseDownEvent on left mouse button press instead of AutoUpgradeEvent", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 0,
@@ -94,7 +94,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should not emit AutoUpgradeEvent on right mouse button press", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 2,
@@ -114,7 +114,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle multiple middle mouse button presses", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent1 = new PointerEvent("pointerdown", {
         button: 1,
@@ -150,7 +150,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle middle mouse button press with zero coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -170,7 +170,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle middle mouse button press with negative coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -190,7 +190,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle middle mouse button press with decimal coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -212,7 +212,7 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Pointer Event Handling", () => {
     test("should handle pointer events with different pointer IDs", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent1 = new PointerEvent("pointerdown", {
         button: 1,
@@ -234,7 +234,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle pointer events with same pointer ID", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent1 = new PointerEvent("pointerdown", {
         button: 1,
@@ -258,7 +258,7 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Edge Cases", () => {
     test("should handle very large coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -278,7 +278,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle very small coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -298,7 +298,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle NaN coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -318,7 +318,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should handle Infinity coordinates", () => {
-      const mockEmit = jest.spyOn(eventBus, "emit");
+      const mockEmit = vi.spyOn(eventBus, "emit");
 
       const pointerEvent = new PointerEvent("pointerdown", {
         button: 1,
@@ -340,7 +340,7 @@ describe("InputHandler AutoUpgrade", () => {
 
   describe("Integration with Event Bus", () => {
     test("should allow event listeners to receive AutoUpgradeEvents", () => {
-      const mockListener = jest.fn();
+      const mockListener = vi.fn();
 
       eventBus.on(AutoUpgradeEvent, mockListener);
 
@@ -361,8 +361,8 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should allow multiple listeners for AutoUpgradeEvent", () => {
-      const mockListener1 = jest.fn();
-      const mockListener2 = jest.fn();
+      const mockListener1 = vi.fn();
+      const mockListener2 = vi.fn();
 
       eventBus.on(AutoUpgradeEvent, mockListener1);
       eventBus.on(AutoUpgradeEvent, mockListener2);
@@ -390,7 +390,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("should not call unsubscribed listeners", () => {
-      const mockListener = jest.fn();
+      const mockListener = vi.fn();
 
       eventBus.on(AutoUpgradeEvent, mockListener);
       eventBus.off(AutoUpgradeEvent, mockListener);
@@ -449,7 +449,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("handles invalid JSON gracefully and warns", () => {
-      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       localStorage.setItem("settings.keybinds", "not a json");
 
       inputHandler.initialize();
