@@ -18,8 +18,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Pangaea: "Pangaea",
   Asia: "Asia",
   Mars: "Mars",
-  SouthAmerica: "South America",
   Britannia: "Britannia",
+  SouthAmerica: "South America",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
   Iceland: "Iceland",
@@ -44,6 +44,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Lisbon: "Lisbon",
   Manicouagan: "Manicouagan",
   Lemnos: "Lemnos",
+  UnitedKingdom: "United Kingdom",
+  Philippines: "Philippines",
 };
 
 @customElement("map-display")
