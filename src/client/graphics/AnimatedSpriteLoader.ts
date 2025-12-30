@@ -1,10 +1,5 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
 import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
-import happyElf from "../../../resources/sprites/christmas/happy_elf.png";
-import sadElf from "../../../resources/sprites/christmas/sad_elf.png";
-import santa from "../../../resources/sprites/christmas/santa.png";
-import snowman from "../../../resources/sprites/christmas/snowman.png";
-import sparks from "../../../resources/sprites/christmas/sparks.png";
 import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
@@ -139,51 +134,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 10,
     originY: 16,
-  },
-  [FxType.Santa]: {
-    url: santa,
-    frameWidth: 34,
-    frameCount: 8,
-    frameDuration: 90,
-    looping: true,
-    originX: 16,
-    originY: 15,
-  },
-  [FxType.Snowman]: {
-    url: snowman,
-    frameWidth: 16,
-    frameCount: 19,
-    frameDuration: 200,
-    looping: false,
-    originX: 8,
-    originY: 12,
-  },
-  [FxType.HappyElf]: {
-    url: happyElf,
-    frameWidth: 7,
-    frameCount: 5,
-    frameDuration: 90,
-    looping: true,
-    originX: 3,
-    originY: 7,
-  },
-  [FxType.SadElf]: {
-    url: sadElf,
-    frameWidth: 14,
-    frameCount: 10,
-    frameDuration: 90,
-    looping: true,
-    originX: 6,
-    originY: 10,
-  },
-  [FxType.Sparks]: {
-    url: sparks,
-    frameWidth: 13,
-    frameCount: 13,
-    frameDuration: 60,
-    looping: false,
-    originX: 6,
-    originY: 6,
   },
 };
 
