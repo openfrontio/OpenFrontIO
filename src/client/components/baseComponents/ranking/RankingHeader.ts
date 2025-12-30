@@ -14,7 +14,7 @@ export class RankingHeader extends LitElement {
   render() {
     return html`
       <li
-        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-[5px] rounded-md flex justify-between items-center"
+        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-1.25 rounded-md flex justify-between items-center"
       >
         ${this.renderHeaderContent()}
       </li>

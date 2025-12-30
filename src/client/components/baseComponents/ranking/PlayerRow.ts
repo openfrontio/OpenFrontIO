@@ -30,7 +30,7 @@ export class PlayerRow extends LitElement {
           : visibleBorder
             ? "border-yellow-50"
             : "border-yellow-50/0"}
-          relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-[5px] rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
+          relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-1.25 rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
       >
         <div
           class="font-bold text-right w-[30px] text-lg text-white absolute left-[-40px]"
@@ -217,7 +217,7 @@ export class PlayerRow extends LitElement {
       >
         <img
           src="/images/ProfileIcon.svg"
-          class="w-[20px] h-[20px] mt-[2px] sm:w-[25px] sm:h-[25px] sm:mt-[-5px] m-auto"
+          class="w-[20px] h-[20px] mt-0.5 sm:w-[25px] sm:h-[25px] sm:-mt-1.25 m-auto"
         />
       </div>
     `;
