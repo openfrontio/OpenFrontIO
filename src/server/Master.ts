@@ -60,14 +60,14 @@ app.use(
   }),
 );
 
-let publicLobbiesJsonStr = "";
+let publicLobbiesData: { lobbies: GameInfo[] } = { lobbies: [] };
 
 const publicLobbyIDs: Set<string> = new Set();
 const connectedClients: Set<WebSocket> = new Set();
 
 // Broadcast lobbies to all connected clients
 function broadcastLobbies() {
-  const dataStr = publicLobbiesJsonStr || '{"lobbies":[]}';
+  const dataStr = JSON.stringify(publicLobbiesData);
   const message = `{"type":"lobbies_update","data":${dataStr}}`;
 
   const clientsToRemove: WebSocket[] = [];
@@ -97,19 +97,17 @@ export async function startMaster() {
   log.info(`Setting up ${config.numWorkers()} workers...`);
 
   // Setup WebSocket server for clients
-  const wss = new WebSocketServer({ server, path: "/socket" });
+  const wss = new WebSocketServer({ server, path: "/lobbies" });
 
   wss.on("connection", (ws: WebSocket) => {
-    log.info(`Client connected. Total clients: ${connectedClients.size + 1}`);
     connectedClients.add(ws);
 
     // Send current lobbies immediately (always send, even if empty)
-    const lobbiesJson = publicLobbiesJsonStr || '{"lobbies":[]}';
+    const lobbiesJson = JSON.stringify(publicLobbiesData);
     ws.send(`{"type":"lobbies_update","data":${lobbiesJson}}`);
 
     ws.on("close", () => {
       connectedClients.delete(ws);
-      log.info(`Client disconnected. Total clients: ${connectedClients.size}`);
     });
 
     ws.on("error", (error) => {
@@ -212,7 +210,7 @@ app.get("/api/env", async (req, res) => {
 
 // Add lobbies endpoint to list public games for this worker
 app.get("/api/public_lobbies", async (req, res) => {
-  res.send(publicLobbiesJsonStr);
+  res.json(publicLobbiesData);
 });
 
 async function fetchLobbies(): Promise<number> {
@@ -279,16 +277,12 @@ async function fetchLobbies(): Promise<number> {
     }
   });
 
-  // Update the JSON string
-  const newLobbiesJson = JSON.stringify({
+  // Update the lobbies data
+  publicLobbiesData = {
     lobbies: lobbyInfos,
-  });
+  };
 
-  // Only broadcast if lobbies changed
-  if (publicLobbiesJsonStr !== newLobbiesJson) {
-    publicLobbiesJsonStr = newLobbiesJson;
-    broadcastLobbies();
-  }
+  broadcastLobbies();
 
   return publicLobbyIDs.size;
 }

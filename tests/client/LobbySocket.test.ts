@@ -52,7 +52,7 @@ describe("PublicLobbySocket", () => {
 
     socket.start();
     const ws = MockWebSocket.instances.at(-1);
-    expect(ws?.url).toContain("/socket");
+    expect(ws?.url).toContain("/lobbies");
 
     ws?.dispatchEvent(
       new MessageEvent("message", {
