@@ -494,6 +494,7 @@ export class PlayerImpl implements Player {
 
   allRelationsSorted(): { player: Player; relation: Relation }[] {
     return Array.from(this.relations, ([k, v]) => ({ player: k, relation: v }))
+      .filter((r) => r.player.isAlive())
       .sort((a, b) => a.relation - b.relation)
       .map((r) => ({
         player: r.player,

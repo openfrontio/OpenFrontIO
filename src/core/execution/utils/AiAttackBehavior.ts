@@ -114,7 +114,6 @@ export class AiAttackBehavior {
     const hated = (): boolean => {
       const mostHated = this.player.allRelationsSorted()[0];
       if (
-        mostHated !== undefined &&
         mostHated.relation === Relation.Hostile &&
         this.player.isFriendly(mostHated.player) === false
       ) {
@@ -170,7 +169,6 @@ export class AiAttackBehavior {
     // Find the most hated player with hostile relation
     const mostHated = this.player.allRelationsSorted()[0];
     if (
-      mostHated !== undefined &&
       mostHated.relation === Relation.Hostile &&
       this.player.isFriendly(mostHated.player) === false
     ) {
