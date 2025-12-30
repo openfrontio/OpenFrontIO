@@ -103,7 +103,8 @@ export class PlayerPanel extends LitElement implements Layer {
     }
 
     // Initialise from shared state
-    this.rocketDirectionUp = this.uiState?.rocketDirectionUp ?? this.rocketDirectionUp;
+    this.rocketDirectionUp =
+      this.uiState?.rocketDirectionUp ?? this.rocketDirectionUp;
   }
 
   async tick() {
@@ -536,7 +537,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private renderRocketDirectionToggle() {
     return html`
-    <ui-divider></ui-divider>
+      <ui-divider></ui-divider>
       <button
         class="flex w-full items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2 text-left text-white hover:bg-white/[0.08] active:scale-[0.995] transition"
         @click=${(e: Event) => this.handleToggleRocketDirection(e)}
@@ -546,7 +547,9 @@ export class PlayerPanel extends LitElement implements Layer {
             ${translateText("player_panel.flip_rocket_trajectory")}
           </span>
           <span class="text-xs text-zinc-300" translate="no">
-            ${this.rocketDirectionUp ? translateText("player_panel.arc_up") : translateText("player_panel.arc_down")}
+            ${this.rocketDirectionUp
+              ? translateText("player_panel.arc_up")
+              : translateText("player_panel.arc_down")}
           </span>
         </div>
         <span class="text-lg" aria-hidden="true">🔀</span>
@@ -738,54 +741,55 @@ export class PlayerPanel extends LitElement implements Layer {
             : ""}
         </div>
         <ui-divider></ui-divider>
-        ${other === my ? html`` : html`
-        <div class="grid auto-cols-fr grid-flow-col gap-1">
-          ${other !== my
-            ? canEmbargo
-              ? actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleEmbargoClick(e, my, other),
-                  icon: stopTradingIcon,
-                  iconAlt: "Stop Trading",
-                  title: translateText("player_panel.stop_trade"),
-                  label: translateText("player_panel.stop_trade"),
-                  type: "yellow",
-                })
-              : actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleStopEmbargoClick(e, my, other),
-                  icon: startTradingIcon,
-                  iconAlt: "Start Trading",
-                  title: translateText("player_panel.start_trade"),
-                  label: translateText("player_panel.start_trade"),
-                  type: "green",
-                })
-            : ""}
-          ${canBreakAlliance
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleBreakAllianceClick(e, my, other),
-                icon: breakAllianceIcon,
-                iconAlt: "Break Alliance",
-                title: translateText("player_panel.break_alliance"),
-                label: translateText("player_panel.break_alliance"),
-                type: "red",
-              })
-            : ""}
-          ${canSendAllianceRequest
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleAllianceClick(e, my, other),
-                icon: allianceIcon,
-                iconAlt: "Alliance",
-                title: translateText("player_panel.send_alliance"),
-                label: translateText("player_panel.send_alliance"),
-                type: "indigo",
-              })
-            : ""}
-        </div>
-        `}
-
+        ${other === my
+          ? html``
+          : html`
+              <div class="grid auto-cols-fr grid-flow-col gap-1">
+                ${other !== my
+                  ? canEmbargo
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleEmbargoClick(e, my, other),
+                        icon: stopTradingIcon,
+                        iconAlt: "Stop Trading",
+                        title: translateText("player_panel.stop_trade"),
+                        label: translateText("player_panel.stop_trade"),
+                        type: "yellow",
+                      })
+                    : actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleStopEmbargoClick(e, my, other),
+                        icon: startTradingIcon,
+                        iconAlt: "Start Trading",
+                        title: translateText("player_panel.start_trade"),
+                        label: translateText("player_panel.start_trade"),
+                        type: "green",
+                      })
+                  : ""}
+                ${canBreakAlliance
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleBreakAllianceClick(e, my, other),
+                      icon: breakAllianceIcon,
+                      iconAlt: "Break Alliance",
+                      title: translateText("player_panel.break_alliance"),
+                      label: translateText("player_panel.break_alliance"),
+                      type: "red",
+                    })
+                  : ""}
+                ${canSendAllianceRequest
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleAllianceClick(e, my, other),
+                      icon: allianceIcon,
+                      iconAlt: "Alliance",
+                      title: translateText("player_panel.send_alliance"),
+                      label: translateText("player_panel.send_alliance"),
+                      type: "indigo",
+                    })
+                  : ""}
+              </div>
+            `}
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
@@ -929,7 +933,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
                     <!-- Resources -->
                     ${this.renderResources(other)}
-                    
+
                     <!-- Rocket direction toggle -->
                     ${other === my ? this.renderRocketDirectionToggle() : ""}
 
