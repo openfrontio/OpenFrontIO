@@ -42,6 +42,12 @@ export class PublicLobbySocket {
 
   private connectWebSocket() {
     try {
+      // Clean up existing WebSocket before creating a new one
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/lobbies`;
 
