@@ -1,0 +1,25 @@
+{
+  "name": "Two Lakes",
+  "nations": [
+    {
+      "coordinates": [1025, 750],
+      "name": "Galicica"
+    },
+    {
+      "coordinates": [1815, 820],
+      "name": "Pelister"
+    },
+    {
+      "coordinates": [920, 1250],
+      "name": "Podgorie"
+    },
+    {
+      "coordinates": [100, 1410],
+      "name": "Valamara"
+    },
+    {
+      "coordinates": [1320, 1485],
+      "name": "Prespa"
+    }
+  ]
+}
