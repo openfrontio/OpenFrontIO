@@ -736,27 +736,25 @@ export class PlayerPanel extends LitElement implements Layer {
           ? html``
           : html`
               <div class="grid auto-cols-fr grid-flow-col gap-1">
-                ${other !== my
-                  ? canEmbargo
-                    ? actionButton({
-                        onClick: (e: MouseEvent) =>
-                          this.handleEmbargoClick(e, my, other),
-                        icon: stopTradingIcon,
-                        iconAlt: "Stop Trading",
-                        title: translateText("player_panel.stop_trade"),
-                        label: translateText("player_panel.stop_trade"),
-                        type: "yellow",
-                      })
-                    : actionButton({
-                        onClick: (e: MouseEvent) =>
-                          this.handleStopEmbargoClick(e, my, other),
-                        icon: startTradingIcon,
-                        iconAlt: "Start Trading",
-                        title: translateText("player_panel.start_trade"),
-                        label: translateText("player_panel.start_trade"),
-                        type: "green",
-                      })
-                  : ""}
+                ${canEmbargo
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleEmbargoClick(e, my, other),
+                      icon: stopTradingIcon,
+                      iconAlt: "Stop Trading",
+                      title: translateText("player_panel.stop_trade"),
+                      label: translateText("player_panel.stop_trade"),
+                      type: "yellow",
+                    })
+                  : actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleStopEmbargoClick(e, my, other),
+                      icon: startTradingIcon,
+                      iconAlt: "Start Trading",
+                      title: translateText("player_panel.start_trade"),
+                      label: translateText("player_panel.start_trade"),
+                      type: "green",
+                    })}
                 ${canBreakAlliance
                   ? actionButton({
                       onClick: (e: MouseEvent) =>
