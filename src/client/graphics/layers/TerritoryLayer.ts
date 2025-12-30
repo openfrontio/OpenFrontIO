@@ -237,7 +237,7 @@ export class TerritoryLayer implements Layer {
         human.smallID() !== myPlayer.smallID() &&
         myPlayer.isOnSameTeam(human)
       ) {
-        this.drawTeammateGlowForPlayer(human, centerTile);
+        this.drawTeammateGlowForPlayer(human);
       }
     }
   }
@@ -288,92 +288,24 @@ export class TerritoryLayer implements Layer {
       focusedPlayer.smallID() !== myPlayer.smallID() &&
       myPlayer.isOnSameTeam(focusedPlayer)
     ) {
-      const centerTile = this.game.ref(center.x, center.y);
-      if (centerTile) {
-        this.drawTeammateGlowForPlayer(focusedPlayer, centerTile);
-      }
+      this.drawTeammateGlowForPlayer(focusedPlayer);
     }
   }
 
-  private spawnCenterFromOwnedTiles(
-    ownedTiles: TileRef[],
-    ownedSumX: number,
-    ownedSumY: number,
-  ): { x: number; y: number; innerRadius: number } | null {
-    if (ownedTiles.length === 0) {
-      return null;
+  private drawTeammateGlowForPlayer(player: PlayerView): void {
+    const spawnTile = player.spawnTile();
+    if (spawnTile === undefined) {
+      return;
     }
-
-    const avgX = ownedSumX / ownedTiles.length;
-    const avgY = ownedSumY / ownedTiles.length;
-    let centerTile = ownedTiles[0];
-    let minDistSq = Infinity;
-
-    for (const tile of ownedTiles) {
-      const dx = this.game.x(tile) - avgX;
-      const dy = this.game.y(tile) - avgY;
-      const distSq = dx * dx + dy * dy;
-      if (distSq < minDistSq) {
-        minDistSq = distSq;
-        centerTile = tile;
-      }
-    }
-
-    const centerX = this.game.x(centerTile);
-    const centerY = this.game.y(centerTile);
-    let maxDistSq = 0;
-
-    for (const tile of ownedTiles) {
-      const dx = this.game.x(tile) - centerX;
-      const dy = this.game.y(tile) - centerY;
-      const distSq = dx * dx + dy * dy;
-      if (distSq > maxDistSq) {
-        maxDistSq = distSq;
-      }
-    }
-
-    const innerRadius = Math.max(
-      2,
-      Math.min(TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1, Math.sqrt(maxDistSq)),
-    );
-
-    return {
-      x: centerX,
-      y: centerY,
-      innerRadius,
-    };
-  }
-
-  private drawTeammateGlowForPlayer(
-    player: PlayerView,
-    centerTile: TileRef,
-  ): void {
-    const ownedTiles: TileRef[] = [];
-    let ownedSumX = 0;
-    let ownedSumY = 0;
-
-    for (const tile of this.game.bfs(
-      centerTile,
-      euclDistFN(centerTile, TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS, true),
-    )) {
-      if (this.game.ownerID(tile) === player.smallID()) {
-        ownedTiles.push(tile);
-        ownedSumX += this.game.x(tile);
-        ownedSumY += this.game.y(tile);
-      }
-    }
-
-    const spawnCenter = this.spawnCenterFromOwnedTiles(
-      ownedTiles,
-      ownedSumX,
-      ownedSumY,
-    );
-    if (spawnCenter) {
-      drawTeammateGlow(this.highlightContext, spawnCenter.x, spawnCenter.y, {
-        outerRadius: Math.max(3, spawnCenter.innerRadius),
+    drawTeammateGlow(
+      this.highlightContext,
+      this.game.x(spawnTile),
+      this.game.y(spawnTile),
+      {
+        outerRadius: TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1,
         pulsePhase: this.game.ticks() * TerritoryLayer.PULSE_SPEED,
-      });
-    }
+      },
+    );
   }
 
   init() {
