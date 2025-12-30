@@ -484,7 +484,7 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
                     text-white w-[140px] min-w-[140px] shrink-0"
         >
           <span class="mr-0.5">💰</span>
@@ -497,7 +497,7 @@ export class PlayerPanel extends LitElement implements Layer {
         </div>
 
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
                     text-white w-[140px] min-w-[140px] shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
@@ -569,7 +569,7 @@ export class PlayerPanel extends LitElement implements Layer {
           </div>
           <span
             aria-labelledby="alliances-title"
-            class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px]
+            class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[10px]
                  text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
             ${allies.length}

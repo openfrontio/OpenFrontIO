@@ -98,7 +98,7 @@ export class PlayerRow extends LitElement {
     const bestScore = Math.max(this.bestScore, 1);
     const width = Math.min(Math.max((this.score / bestScore) * 100, 0), 100);
     return html`
-      <div class="w-full pr-[10px] m-auto">
+      <div class="w-full pr-2.5 m-auto">
         <div class="h-[7px] bg-neutral-800" style="width: 100%;">
           <!-- bar background -->
           <div class="h-[7px] bg-white" style="width: ${width}%;"></div>
@@ -200,7 +200,7 @@ export class PlayerRow extends LitElement {
   private renderIcon() {
     if (this.player.killedAt) {
       return html` <div
-        class="w-[30px] h-[30px] leading-[5px] text-lg sm:min-w-[40px] sm:w-[40px] sm:h-[40px] pt-[12px] sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
+        class="w-[30px] h-[30px] leading-[5px] text-lg sm:min-w-[40px] sm:w-[40px] sm:h-[40px] pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
       >
         💀
       </div>`;
@@ -213,7 +213,7 @@ export class PlayerRow extends LitElement {
 
     return html`
       <div
-        class="w-[30px] h-[30px] min-w-[30px] leading-[5px] rounded-[50%] sm:min-w-[40px] sm:w-[40px] sm:h-[40px] sm:pt-[10px] sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
+        class="w-[30px] h-[30px] min-w-[30px] leading-[5px] rounded-[50%] sm:min-w-[40px] sm:w-[40px] sm:h-[40px] sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
       >
         <img
           src="/images/ProfileIcon.svg"

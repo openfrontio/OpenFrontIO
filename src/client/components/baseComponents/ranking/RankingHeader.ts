@@ -35,7 +35,7 @@ export class RankingHeader extends LitElement {
       case RankType.Hydros:
       case RankType.MIRV:
         return html`
-          <div class="flex justify-between sm:pl-[70px] sm:pr-[70px] w-full">
+          <div class="flex justify-between sm:px-17.5 w-full">
             ${this.renderBombHeaderButton(
               translateText("game_info_modal.atoms"),
               RankType.Atoms,

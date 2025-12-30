@@ -49,9 +49,7 @@ export class GameInfoModal extends LitElement {
         title="${translateText("game_info_modal.title")}"
         translationKey="main.game_info"
       >
-        <div
-          class="flex flex-col items-center pl-[100px] pr-[100px] text-center mb-4"
-        >
+        <div class="flex flex-col items-center px-25 text-center mb-4">
           <div class="w-[300px] sm:w-[500px]">
             ${this.isLoadingGame
               ? this.renderLoadingAnimation()
