@@ -69,7 +69,6 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private suppressNextHide: boolean = false;
 
   private ctModal: ChatModal;
-  @state() private rocketDirectionUp = true;
 
   createRenderRoot() {
     return this;
@@ -84,7 +83,6 @@ export class PlayerPanel extends LitElement implements Layer {
     });
     eventBus.on(SwapRocketDirectionEvent, (event) => {
       this.uiState.rocketDirectionUp = event.rocketDirectionUp;
-      this.rocketDirectionUp = event.rocketDirectionUp;
       this.requestUpdate();
     });
   }
@@ -101,10 +99,6 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.ctModal) {
       console.warn("ChatModal element not found in DOM");
     }
-
-    // Initialise from shared state
-    this.rocketDirectionUp =
-      this.uiState?.rocketDirectionUp ?? this.rocketDirectionUp;
   }
 
   async tick() {
@@ -315,7 +309,6 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     const next = !this.uiState.rocketDirectionUp;
     this.uiState.rocketDirectionUp = next;
-    this.rocketDirectionUp = next;
     this.eventBus.emit(new SwapRocketDirectionEvent(next));
     this.requestUpdate();
   }
@@ -547,7 +540,7 @@ export class PlayerPanel extends LitElement implements Layer {
             ${translateText("player_panel.flip_rocket_trajectory")}
           </span>
           <span class="text-xs text-zinc-300" translate="no">
-            ${this.rocketDirectionUp
+            ${this.uiState.rocketDirectionUp
               ? translateText("player_panel.arc_up")
               : translateText("player_panel.arc_down")}
           </span>
