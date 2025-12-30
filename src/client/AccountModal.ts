@@ -376,7 +376,7 @@ export class AccountButton extends LitElement {
     }
 
     return html`
-      <div class="fixed top-4 right-4 z-[9998]">
+      <div class="fixed top-4 right-4 z-9998">
         <button
           @click="${this.open}"
           class="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-hidden focus:ring-4 focus:ring-red-500 focus:ring-offset-4"

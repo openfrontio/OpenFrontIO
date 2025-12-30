@@ -64,7 +64,7 @@ export class LanguageModal extends LitElement {
 
     return html`
       <aside
-        class="fixed p-4 z-[9999] inset-0 bg-black/50 overflow-y-auto flex items-center justify-center"
+        class="fixed p-4 z-9999 inset-0 bg-black/50 overflow-y-auto flex items-center justify-center"
       >
         <div
           class="bg-gray-800/80 dark:bg-gray-900/90 backdrop-blur-md rounded-lg min-w-85 max-w-120 w-full"

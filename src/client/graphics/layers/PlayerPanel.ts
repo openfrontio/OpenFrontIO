@@ -818,7 +818,7 @@ export class PlayerPanel extends LitElement implements Layer {
       </style>
 
       <div
-        class="fixed inset-0 z-[10001] flex items-center justify-center overflow-auto
+        class="fixed inset-0 z-10001 flex items-center justify-center overflow-auto
                bg-black/15 backdrop-brightness-110 pointer-events-auto"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}

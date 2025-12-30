@@ -541,9 +541,7 @@ export class SendResourceModal extends LitElement {
     const allowed = this.limitAmount(this.sendAmount);
 
     return html`
-      <div
-        class="absolute inset-0 z-[1100] flex items-center justify-center p-4"
-      >
+      <div class="absolute inset-0 z-1100 flex items-center justify-center p-4">
         <div
           class="absolute inset-0 bg-black/60 rounded-2xl"
           @click=${() => this.closeModal()}
