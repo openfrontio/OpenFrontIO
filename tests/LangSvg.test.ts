@@ -8,7 +8,7 @@ describe("Lang SVG Field and File Existence Check", () => {
   test("each lang.json file has a valid lang.svg string and the SVG file exists", () => {
     const files = fs
       .readdirSync(langDir)
-      .filter((file) => file.endsWith(".json"));
+      .filter((file) => file.endsWith(".json") && file !== "metadata.json");
 
     if (files.length === 0) {
       console.log("No resources/lang/*.json files found. Skipping check.");

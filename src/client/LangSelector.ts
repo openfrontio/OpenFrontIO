@@ -2,40 +2,12 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
-import ar from "../../resources/lang/ar.json";
-import bg from "../../resources/lang/bg.json";
-import bn from "../../resources/lang/bn.json";
-import cs from "../../resources/lang/cs.json";
-import da from "../../resources/lang/da.json";
-import de from "../../resources/lang/de.json";
-import el from "../../resources/lang/el.json";
-import en from "../../resources/lang/en.json";
-import eo from "../../resources/lang/eo.json";
-import es from "../../resources/lang/es.json";
-import fa from "../../resources/lang/fa.json";
-import fi from "../../resources/lang/fi.json";
-import fr from "../../resources/lang/fr.json";
-import gl from "../../resources/lang/gl.json";
-import he from "../../resources/lang/he.json";
-import hi from "../../resources/lang/hi.json";
-import hu from "../../resources/lang/hu.json";
-import it from "../../resources/lang/it.json";
-import ja from "../../resources/lang/ja.json";
-import ko from "../../resources/lang/ko.json";
-import mk from "../../resources/lang/mk.json";
-import nl from "../../resources/lang/nl.json";
-import pl from "../../resources/lang/pl.json";
-import pt_BR from "../../resources/lang/pt-BR.json";
-import pt_PT from "../../resources/lang/pt-PT.json";
-import ru from "../../resources/lang/ru.json";
-import sh from "../../resources/lang/sh.json";
-import sk from "../../resources/lang/sk.json";
-import sl from "../../resources/lang/sl.json";
-import sv_SE from "../../resources/lang/sv-SE.json";
-import tp from "../../resources/lang/tp.json";
-import tr from "../../resources/lang/tr.json";
-import uk from "../../resources/lang/uk.json";
-import zh_CN from "../../resources/lang/zh-CN.json";
+type LanguageMetadata = {
+  code: string;
+  native: string;
+  en: string;
+  svg: string;
+};
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -47,43 +19,8 @@ export class LangSelector extends LitElement {
   @state() private debugMode: boolean = false;
 
   private debugKeyPressed: boolean = false;
-
-  private languageMap: Record<string, any> = {
-    ar,
-    bg,
-    bn,
-    de,
-    el,
-    en,
-    es,
-    eo,
-    fr,
-    it,
-    hi,
-    hu,
-    ja,
-    nl,
-    pl,
-    "pt-PT": pt_PT,
-    "pt-BR": pt_BR,
-    ru,
-    sh,
-    tr,
-    tp,
-    uk,
-    cs,
-    he,
-    da,
-    fa,
-    fi,
-    "sv-SE": sv_SE,
-    "zh-CN": zh_CN,
-    ko,
-    mk,
-    gl,
-    sl,
-    sk,
-  };
+  private languageMetadata: LanguageMetadata[] | null = null;
+  private languageCache = new Map<string, Record<string, string>>();
 
   createRenderRoot() {
     return this;
@@ -104,12 +41,37 @@ export class LangSelector extends LitElement {
     });
   }
 
-  private getClosestSupportedLang(lang: string): string {
+  private async getLanguageMetadata(): Promise<LanguageMetadata[]> {
+    if (this.languageMetadata) return this.languageMetadata;
+
+    try {
+      const response = await fetch("/lang/metadata.json");
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch language metadata: ${response.status}`,
+        );
+      }
+      const data = (await response.json()) as LanguageMetadata[];
+      if (!Array.isArray(data)) {
+        throw new Error("Language metadata is not an array");
+      }
+      this.languageMetadata = data;
+    } catch (err) {
+      console.error("Failed to load language metadata:", err);
+      this.languageMetadata = [];
+    }
+
+    return this.languageMetadata;
+  }
+
+  private async getClosestSupportedLang(lang: string): Promise<string> {
     if (!lang) return "en";
-    if (lang in this.languageMap) return lang;
+    const metadata = await this.getLanguageMetadata();
+    const supported = new Set(metadata.map((entry) => entry.code));
+    if (supported.has(lang)) return lang;
 
     const base = lang.slice(0, 2);
-    const candidates = Object.keys(this.languageMap).filter((key) =>
+    const candidates = Array.from(supported).filter((key) =>
       key.startsWith(base),
     );
     if (candidates.length > 0) {
@@ -123,43 +85,52 @@ export class LangSelector extends LitElement {
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
+    const userLang = await this.getClosestSupportedLang(
+      savedLang ?? browserLocale,
+    );
 
-    this.defaultTranslations = this.loadLanguage("en");
-    this.translations = this.loadLanguage(userLang);
+    const [defaultTranslations, translations] = await Promise.all([
+      this.loadLanguage("en"),
+      this.loadLanguage(userLang),
+    ]);
+
+    this.defaultTranslations = defaultTranslations;
+    this.translations = translations;
     this.currentLang = userLang;
 
     await this.loadLanguageList();
     this.applyTranslation();
   }
 
-  private loadLanguage(lang: string): Record<string, string> {
-    const language = this.languageMap[lang] ?? {};
-    const flat = flattenTranslations(language);
-    return flat;
+  private async loadLanguage(lang: string): Promise<Record<string, string>> {
+    if (!lang) return {};
+    const cached = this.languageCache.get(lang);
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(`/lang/${encodeURIComponent(lang)}.json`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch language ${lang}: ${response.status}`);
+      }
+      const language = (await response.json()) as Record<string, any>;
+      const flat = flattenTranslations(language);
+      this.languageCache.set(lang, flat);
+      return flat;
+    } catch (err) {
+      console.error(`Failed to load language ${lang}:`, err);
+      return {};
+    }
   }
 
   private async loadLanguageList() {
     try {
-      const data = this.languageMap;
+      const data = await this.getLanguageMetadata();
       let list: any[] = [];
 
       const browserLang = new Intl.Locale(navigator.language).language;
 
-      for (const langCode of Object.keys(data)) {
-        const langData = data[langCode].lang;
-        if (!langData) continue;
-
-        list.push({
-          code: langData.lang_code ?? langCode,
-          native: langData.native ?? langCode,
-          en: langData.en ?? langCode,
-          svg: langData.svg ?? langCode,
-        });
-      }
-
       let debugLang: any = null;
-      if (this.debugKeyPressed) {
+      if (this.debugKeyPressed || this.currentLang === "debug") {
         debugLang = {
           code: "debug",
           native: "Debug",
@@ -167,6 +138,16 @@ export class LangSelector extends LitElement {
           svg: "xx",
         };
         this.debugMode = true;
+      }
+
+      for (const langData of data) {
+        if (langData.code === "debug" && !debugLang) continue;
+        list.push({
+          code: langData.code,
+          native: langData.native,
+          en: langData.en,
+          svg: langData.svg,
+        });
       }
 
       const currentLangEntry = list.find((l) => l.code === this.currentLang);
@@ -202,9 +183,9 @@ export class LangSelector extends LitElement {
     }
   }
 
-  private changeLanguage(lang: string) {
+  private async changeLanguage(lang: string) {
     localStorage.setItem("lang", lang);
-    this.translations = this.loadLanguage(lang);
+    this.translations = await this.loadLanguage(lang);
     this.currentLang = lang;
     this.applyTranslation();
     this.showModal = false;
@@ -277,10 +258,10 @@ export class LangSelector extends LitElement {
     return text;
   }
 
-  private openModal() {
+  private async openModal() {
     this.debugMode = this.debugKeyPressed;
     this.showModal = true;
-    this.loadLanguageList();
+    await this.loadLanguageList();
   }
 
   render() {

@@ -7,7 +7,7 @@ describe("LangCode Filename Check", () => {
   test("lang_code matches filename", () => {
     const files = fs
       .readdirSync(langDir)
-      .filter((file) => file.endsWith(".json"));
+      .filter((file) => file.endsWith(".json") && file !== "metadata.json");
 
     if (files.length === 0) {
       console.log("No resources/lang/*.json files found. Skipping check.");
