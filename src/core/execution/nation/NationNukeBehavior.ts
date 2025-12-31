@@ -252,15 +252,16 @@ export class NationNukeBehavior {
     let tileValue = targets
       .filter((unit) => dist(this.mg, unit.tile()))
       .map((unit): number => {
+        const level = unit.level();
         switch (unit.type()) {
           case UnitType.City:
-            return 25_000;
+            return 25_000 * level;
           case UnitType.DefensePost:
-            return 5_000;
+            return 5_000 * level;
           case UnitType.MissileSilo:
-            return 50_000;
+            return 50_000 * level;
           case UnitType.Port:
-            return 10_000;
+            return 10_000 * level;
           default:
             return 0;
         }
