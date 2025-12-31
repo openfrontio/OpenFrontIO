@@ -82,7 +82,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
-  Britannia = "Britannia",
+  BritanniaClassic = "Britannia Classic",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
   Iceland = "Iceland",
@@ -107,7 +107,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
-  UnitedKingdom = "United Kingdom",
+  Britannia = "Britannia",
   Philippines = "Philippines",
 }
 
@@ -126,7 +126,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Oceania,
   ],
   regional: [
-    GameMapType.UnitedKingdom,
+    GameMapType.BritanniaClassic, 
+    GameMapType.Britannia,
     GameMapType.Philippines,
     GameMapType.BlackSea,
     GameMapType.GatewayToTheAtlantic,

@@ -30,7 +30,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   BetweenTwoSeas: 5,
   BlackSea: 6,
   DeglaciatedAntarctica: 4,
-  Britannia: 5,
   EastAsia: 5,
   Europe: 3,
   EuropeClassic: 3,
@@ -57,7 +56,8 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Svalmel: 8,
   World: 8,
   Lemnos: 3,
-  UnitedKingdom: 5,
+  Britannia: 5,
+  BritanniaClassic: 4,
   Philippines: 5,
 };
 

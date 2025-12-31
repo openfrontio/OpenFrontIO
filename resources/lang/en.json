@@ -217,7 +217,7 @@
     "asia": "Asia",
     "mars": "Mars",
     "southamerica": "South America",
-    "britannia": "Britannia",
+    "britanniaclassic": "Britannia (Classic)",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "australia": "Australia",
     "random": "Random",
@@ -246,7 +246,7 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
-    "unitedkingdom": "United Kingdom",
+    "britannia": "Britannia",
     "philippines": "Philippines"
   },
   "map_categories": {

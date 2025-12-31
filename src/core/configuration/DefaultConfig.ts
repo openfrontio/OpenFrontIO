@@ -56,6 +56,7 @@ const numPlayersConfig = {
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
+  [GameMapType.BritanniaClassic]: [50, 30, 20],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EastAsia]: [50, 30, 20],
   [GameMapType.Europe]: [100, 70, 50],
@@ -85,7 +86,6 @@ const numPlayersConfig = {
   [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
   [GameMapType.Lemnos]: [20, 15, 10],
-  [GameMapType.UnitedKingdom]: [50, 30, 20],
   [GameMapType.Philippines]: [70, 50, 40],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 

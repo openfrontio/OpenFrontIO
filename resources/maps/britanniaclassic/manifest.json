@@ -1,0 +1,135 @@
+{
+  "map": {
+    "height": 1396,
+    "num_land_tiles": 933571,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 349,
+    "num_land_tiles": 54975,
+    "width": 500
+  },
+  "map4x": {
+    "height": 698,
+    "num_land_tiles": 228849,
+    "width": 1000
+  },
+  "name": "Britannia",
+  "nations": [
+    {
+      "coordinates": [960, 1258],
+      "flag": "1_Dumnonia",
+      "name": "Dumnonia"
+    },
+    {
+      "coordinates": [918, 1088],
+      "flag": "1_Dyfed",
+      "name": "Dyfed"
+    },
+    {
+      "coordinates": [1114, 1108],
+      "flag": "1_Gwent",
+      "name": "Gwent"
+    },
+    {
+      "coordinates": [1048, 936],
+      "flag": "1_Gwynedd",
+      "name": "Gwynedd"
+    },
+    {
+      "coordinates": [1108, 986],
+      "flag": "1_Powys",
+      "name": "Powys"
+    },
+    {
+      "coordinates": [952, 536],
+      "flag": "1_Strathclyde",
+      "name": "Strathclyde"
+    },
+    {
+      "coordinates": [748, 556],
+      "flag": "1_Dalriata",
+      "name": "Dalriata"
+    },
+    {
+      "coordinates": [1228, 1176],
+      "flag": "1_Wessex",
+      "name": "Wessex"
+    },
+    {
+      "coordinates": [1442, 1226],
+      "flag": "1_Sussex",
+      "name": "Sussex"
+    },
+    {
+      "coordinates": [1600, 1188],
+      "flag": "1_Kent",
+      "name": "Kent"
+    },
+    {
+      "coordinates": [1621, 1085],
+      "flag": "1_Essex",
+      "name": "Essex"
+    },
+    {
+      "coordinates": [1707, 1018],
+      "flag": "1_East Anglia",
+      "name": "East Anglia"
+    },
+    {
+      "coordinates": [1370, 1002],
+      "flag": "1_Mercia",
+      "name": "Mercia"
+    },
+    {
+      "coordinates": [1298, 724],
+      "flag": "1_Northumbria",
+      "name": "Northumbria"
+    },
+    {
+      "coordinates": [962, 366],
+      "flag": "1_Fortriu",
+      "name": "Fortriu"
+    },
+    {
+      "coordinates": [272, 1041],
+      "flag": "1_Munster",
+      "name": "Munster"
+    },
+    {
+      "coordinates": [264, 830],
+      "flag": "1_Connacht",
+      "name": "Connacht"
+    },
+    {
+      "coordinates": [608, 975],
+      "flag": "1_Laigin",
+      "name": "Laigin"
+    },
+    {
+      "coordinates": [564, 845],
+      "flag": "1_Southern Ui Neill",
+      "name": "Southern Uí Néill"
+    },
+    {
+      "coordinates": [639, 680],
+      "flag": "1_Ulaid",
+      "name": "Ulaid"
+    },
+    {
+      "coordinates": [509, 759],
+      "flag": "1_Airgialla",
+      "name": "Airgialla"
+    },
+    {
+      "coordinates": [416, 678],
+      "flag": "1_Northern Ui Neill",
+      "name": "Northern Uí Néill"
+    },
+    {
+      "coordinates": [1869, 1308],
+      "flag": "1_Franks",
+      "name": "Franks"
+    }
+  ]
+}
