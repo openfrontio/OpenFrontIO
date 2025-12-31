@@ -37,6 +37,8 @@ import tr from "../../resources/lang/tr.json";
 import uk from "../../resources/lang/uk.json";
 import zh_CN from "../../resources/lang/zh-CN.json";
 
+import ru_flags from "../../resources/lang/flags/ru.json";
+
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
@@ -83,6 +85,10 @@ export class LangSelector extends LitElement {
     gl,
     sl,
     sk,
+  };
+
+  private flagsLanguageMap: Record<string, any> = {
+    "ru": ru_flags
   };
 
   createRenderRoot() {
@@ -135,8 +141,10 @@ export class LangSelector extends LitElement {
 
   private loadLanguage(lang: string): Record<string, string> {
     const language = this.languageMap[lang] ?? {};
-    const flat = flattenTranslations(language);
-    return flat;
+    const flagsLanguage = this.flagsLanguageMap[lang] ?? {};
+    const flatLanguage = flattenTranslations(language);
+    const flagFlagsLanguage = flattenTranslations(flagsLanguage);
+    return {...flatLanguage, ...flagFlagsLanguage};
   }
 
   private async loadLanguageList() {

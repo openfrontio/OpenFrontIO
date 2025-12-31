@@ -63,7 +63,7 @@ export class FlagInputModal extends LitElement {
                         }
                       }}
                     />
-                    <span class="country-name">${country.name}</span>
+                    <span class="country-name">${translateText(country.name)}</span>
                   </button>
                 `,
               )
