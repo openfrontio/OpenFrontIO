@@ -141,6 +141,22 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
   }
 
+  private isValidLobbyId(value: string): boolean {
+    return /^[a-zA-Z0-9]{8}$/.test(value);
+  }
+
+  private normalizeLobbyId(input: string): string | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const extracted = this.extractLobbyIdFromUrl(trimmed).trim();
+    if (!this.isValidLobbyId(extracted)) return null;
+    return extracted;
+  }
+
+  private sanitizeForLog(value: string): string {
+    return value.replace(/[\r\n]/g, "");
+  }
+
   private extractLobbyIdFromUrl(input: string): string {
     if (input.startsWith("http")) {
       if (input.includes("#join=")) {
@@ -175,8 +191,14 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async joinLobby(): Promise<void> {
-    const lobbyId = this.lobbyIdInput.value;
-    console.log(`Joining lobby with ID: ${lobbyId}`);
+    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    if (!lobbyId) {
+      this.message = translateText("private_lobby.not_found");
+      return;
+    }
+
+    this.lobbyIdInput.value = lobbyId;
+    console.log(`Joining lobby with ID: ${this.sanitizeForLog(lobbyId)}`);
     this.message = `${translateText("private_lobby.checking")}`;
 
     try {
@@ -283,8 +305,9 @@ export class JoinPrivateLobbyModal extends LitElement {
 
     // Allow DEV to join games created with a different version for debugging.
     if (myGitCommit !== "DEV" && parsed.data.gitCommit !== myGitCommit) {
+      const safeLobbyId = this.sanitizeForLog(lobbyId);
       console.warn(
-        `Git commit hash mismatch for game ${lobbyId}`,
+        `Git commit hash mismatch for game ${safeLobbyId}`,
         archiveData.details,
       );
       return "version_mismatch";
@@ -305,18 +328,16 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    if (!this.lobbyIdInput?.value) return;
+    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    if (!lobbyId) return;
     const config = await getServerConfigFromClient();
 
-    fetch(
-      `/${config.workerPath(this.lobbyIdInput.value)}/api/game/${this.lobbyIdInput.value}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    fetch(`/${config.workerPath(lobbyId)}/api/game/${lobbyId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
       },
-    )
+    })
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];

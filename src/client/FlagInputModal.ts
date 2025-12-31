@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import Countries from "../assets/data/countries.json" with { type: "json" };
+import Countries from "resources/countries.json" with { type: "json" };
 import { translateText } from "./Utils";
 
 @customElement("flag-input-modal")
