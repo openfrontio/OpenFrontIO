@@ -1,0 +1,105 @@
+{
+  "name": "Strait of Hormuz",
+  "nations": [
+    {
+      "coordinates": [837, 356],
+      "name": "Hormozgan",
+      "flag": ""
+    },
+    {
+      "coordinates": [717, 162],
+      "name": "Fars",
+      "flag": ""
+    },
+    {
+      "coordinates": [97, 939],
+      "name": "Ash Sharqiyah",
+      "flag": ""
+    },
+    {
+      "coordinates": [1725, 360],
+      "name": "Sistan and Baluchestan",
+      "flag": ""
+    },
+    {
+      "coordinates": [745, 1003],
+      "name": "Abu Dhabi",
+      "flag": ""
+    },
+    {
+      "coordinates": [1513, 289],
+      "name": "Kerman",
+      "flag": ""
+    },
+    {
+      "coordinates": [311, 147],
+      "name": "Bushehr",
+      "flag": ""
+    },
+    {
+      "coordinates": [1165, 1092],
+      "name": "Al Dhahira",
+      "flag": ""
+    },
+    {
+      "coordinates": [1219, 959],
+      "name": "Al Batnah North",
+      "flag": ""
+    },
+    {
+      "coordinates": [1114, 956],
+      "name": "Al Buraymi",
+      "flag": ""
+    },
+    {
+      "coordinates": [1316, 1141],
+      "name": "Ad Dakhliyah",
+      "flag": ""
+    },
+    {
+      "coordinates": [1431, 1111],
+      "name": "Al Batnah South",
+      "flag": ""
+    },
+    {
+      "coordinates": [979, 807],
+      "name": "Dubay",
+      "flag": ""
+    },
+    {
+      "coordinates": [1615, 1134],
+      "name": "Muscat",
+      "flag": ""
+    },
+    {
+      "coordinates": [1070, 774],
+      "name": "Sharjah",
+      "flag": ""
+    },
+    {
+      "coordinates": [1166, 583],
+      "name": "Musandam",
+      "flag": ""
+    },
+    {
+      "coordinates": [159, 756],
+      "name": "Ar Rayyān",
+      "flag": ""
+    },
+    {
+      "coordinates": [1103, 647],
+      "name": "Ras Al Khaymah",
+      "flag": ""
+    },
+    {
+      "coordinates": [1155, 703],
+      "name": "Fujayrah",
+      "flag": ""
+    },
+    {
+      "coordinates": [216, 815],
+      "name": "Al Wakrah",
+      "flag": ""
+    }
+  ]
+}
