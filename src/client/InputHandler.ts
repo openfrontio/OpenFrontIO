@@ -153,12 +153,6 @@ export class InputHandler {
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
 
-  private readonly isMacReal = /Mac/.test(navigator.userAgent);
-  isMac(): boolean {
-    // Method exists so we can mock during tests
-    return this.isMacReal;
-  }
-
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
@@ -192,6 +186,9 @@ export class InputHandler {
       console.warn("Invalid keybinds JSON:", e);
     }
 
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -205,9 +202,8 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
-      // Mac users might have different keybinds
-      modifierKey: this.isMac() ? "MetaLeft" : "ControlLeft",
       swapDirection: "KeyU",
+      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
       buildFactory: "Digit2",
@@ -452,15 +448,13 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
-    // Handle middle mouse button (wheel click) for auto-upgrade
-    if (this.isMiddleMouseButton(event.button)) {
+    if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
       return;
     }
 
-    // Ignore right mouse button and other non-left buttons
-    if (!this.isLeftMouseButton(event.button)) {
+    if (event.button > 0) {
       return;
     }
 
@@ -481,14 +475,12 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
-    // Prevent default behavior for middle mouse button, but don't process further
-    if (this.isMiddleMouseButton(event.button)) {
+    if (event.button === 1) {
       event.preventDefault();
       return;
     }
 
-    // Ignore right mouse button and other non-left buttons
-    if (!this.isLeftMouseButton(event.button)) {
+    if (event.button > 0) {
       return;
     }
     this.pointerDown = false;
@@ -498,19 +490,8 @@ export class InputHandler {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-
     if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
-      return;
-    }
-
-    // If Ctrl is held down (for example, on a Mac which doesn't have a right-click)
-    // then Ctrl+Click is used to open context menu.
-    //
-    // Without this conditional, Ctrl+click causes the player to attack someone
-    // if they are not allied, effectively removing ability to ally with bots/nations.
-    if (this.isMac() && this.activeKeys.has("ControlLeft")) {
-      this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       return;
     }
 
@@ -518,7 +499,6 @@ export class InputHandler {
       Math.abs(event.x - this.lastPointerDownX) +
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
-      // Handle touch events separately (prevents both touch and click events from firing)
       if (event.pointerType === "touch") {
         this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();
@@ -552,18 +532,17 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
-    if (this.isMiddleMouseButton(event.button)) {
+    if (event.button === 1) {
       event.preventDefault();
       return;
     }
 
-    if (!this.isLeftMouseButton(event.button)) {
+    if (event.button > 0) {
       return;
     }
 
     this.pointers.set(event.pointerId, event);
 
-    // When not dragging, just track mouse position for hover effects
     if (!this.pointerDown) {
       this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
@@ -593,7 +572,6 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
-    // If placing a structure, right-click cancels instead of opening context menu
     if (this.uiState.ghostStructure !== null) {
       this.setGhostStructure(null);
       return;
@@ -660,13 +638,5 @@ export class InputHandler {
       (this.keybinds.altKey === "ShiftLeft" && event.shiftKey) ||
       (this.keybinds.altKey === "MetaLeft" && event.metaKey)
     );
-  }
-
-  private isMiddleMouseButton(button: number): boolean {
-    return button === 1;
-  }
-
-  private isLeftMouseButton(button: number): boolean {
-    return button === 0;
   }
 }
