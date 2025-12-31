@@ -124,53 +124,30 @@ export function joinLobby(
       ).then((r) => r.start());
     }
     if (message.type === "error") {
+      const displayMessage = message.translationKey
+        ? translateText(
+            message.translationKey,
+            (message.args ?? {}) as Record<string, string | number>,
+          )
+        : message.message;
+
+      showErrorModal(
+        message.error,
+        displayMessage,
+        lobbyConfig.gameID,
+        lobbyConfig.clientID,
+        true,
+        false,
+        "error_modal.connection_error",
+      );
+
       if (message.error === "full-lobby") {
-        // Parse the message to get the player limit
-        let limitInfo = "";
-        try {
-          if (message.message) {
-            const data = JSON.parse(message.message);
-            if (data.maxPlayers) {
-              limitInfo = translateText("private_lobby.lobby_full", {
-                limit: data.maxPlayers,
-              });
-            }
-          }
-        } catch {
-          limitInfo = translateText("private_lobby.lobby_full", {
-            limit: "?",
-          });
-        }
-
-        // Show the full lobby message
-        if (limitInfo) {
-          showErrorModal(
-            message.error,
-            limitInfo,
-            lobbyConfig.gameID,
-            lobbyConfig.clientID,
-            true,
-            false,
-            "error_modal.connection_error",
-          );
-        }
-
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
             detail: { lobby: lobbyConfig.gameID },
             bubbles: true,
             composed: true,
           }),
-        );
-      } else {
-        showErrorModal(
-          message.error,
-          message.message,
-          lobbyConfig.gameID,
-          lobbyConfig.clientID,
-          true,
-          false,
-          "error_modal.connection_error",
         );
       }
     }

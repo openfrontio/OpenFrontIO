@@ -23,6 +23,7 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
+import "./components/CheckboxWithInput";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyTeamView";
@@ -489,82 +490,51 @@ export class HostLobbyModal extends LitElement {
                 </div>
               </label>
 
-                <label
-                  for="max-timer"
-                class="option-card ${this.maxTimer ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="max-timer"
-                    @change=${(e: Event) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (!checked) {
-                        this.maxTimerValue = undefined;
-                      }
-                      this.maxTimer = checked;
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.maxTimer}
-                  />
-                    ${
-                      this.maxTimer === false
-                        ? ""
-                        : html`<input
-                            type="number"
-                            id="end-timer-value"
-                            min="0"
-                            max="120"
-                            .value=${String(this.maxTimerValue ?? "")}
-                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                            @input=${this.handleMaxTimerValueChanges}
-                            @keydown=${this.handleMaxTimerValueKeyDown}
-                          />`
+                <checkbox-with-input
+                  inputId="max-timer"
+                  labelKey="host_modal.max_timer"
+                  .checked=${this.maxTimer}
+                  .value=${this.maxTimerValue}
+                  .defaultValue=${60}
+                  .min=${1}
+                  .max=${120}
+                  @checkbox-change=${(e: CustomEvent) => {
+                    this.maxTimer = e.detail.checked;
+                    if (!e.detail.checked) {
+                      this.maxTimerValue = undefined;
                     }
-                  <div class="option-card-title">
-                    ${translateText("host_modal.max_timer")}
-                  </div>
-                </label>
+                    this.putGameConfig();
+                  }}
+                  @value-change=${(e: CustomEvent) => {
+                    this.maxTimerValue = e.detail.value;
+                    this.putGameConfig();
+                  }}
+                ></checkbox-with-input>
 
-                                <!-- Player Limit -->
-                <label
-                  for="player-limit"
-                  class="option-card ${this.playerLimit !== null ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="player-limit"
-                    @change=${(e: Event) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (checked) {
-                        this.playerLimit = 20; // Default value
-                      } else {
-                        this.playerLimit = null;
-                      }
-                      this.updatePlayerLimitWarning();
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.playerLimit !== null}
-                  />
-                  ${
-                    this.playerLimit === null
-                      ? ""
-                      : html`<input
-                          type="number"
-                          id="player-limit-value"
-                          min="${HostLobbyModal.MIN_PLAYER_LIMIT}"
-                          max="${HostLobbyModal.MAX_PLAYER_LIMIT}"
-                          .value=${String(this.playerLimit ?? "")}
-                          style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                          @input=${this.handlePlayerLimitChange}
-                          @keydown=${this.handlePlayerLimitKeyDown}
-                        />`
-                  }
-                  <div class="option-card-title">
-                    ${translateText("host_modal.player_limit")}
-                  </div>
-                </label>
+                <!-- Player Limit -->
+                <checkbox-with-input
+                  inputId="player-limit"
+                  labelKey="host_modal.player_limit"
+                  .checked=${this.playerLimit !== null}
+                  .value=${this.playerLimit}
+                  .defaultValue=${20}
+                  .min=${HostLobbyModal.MIN_PLAYER_LIMIT}
+                  .max=${HostLobbyModal.MAX_PLAYER_LIMIT}
+                  @checkbox-change=${(e: CustomEvent) => {
+                    if (e.detail.checked) {
+                      this.playerLimit = e.detail.defaultValue;
+                    } else {
+                      this.playerLimit = null;
+                    }
+                    this.updatePlayerLimitWarning();
+                    this.putGameConfig();
+                  }}
+                  @value-change=${(e: CustomEvent) => {
+                    this.playerLimit = e.detail.value;
+                    this.updatePlayerLimitWarning();
+                    this.putGameConfig();
+                  }}
+                ></checkbox-with-input>
                 ${
                   this.playerLimitWarning
                     ? html`<div
@@ -703,33 +673,6 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handlePlayerLimitKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
-
-  private handlePlayerLimitChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    // Remove invalid characters
-    input.value = input.value.replace(/[e+-]/gi, "");
-
-    const value = parseInt(input.value);
-
-    // Validate: must be a number between MIN and MAX
-    if (
-      isNaN(value) ||
-      value < HostLobbyModal.MIN_PLAYER_LIMIT ||
-      value > HostLobbyModal.MAX_PLAYER_LIMIT
-    ) {
-      return;
-    }
-
-    this.playerLimit = value;
-    this.updatePlayerLimitWarning();
-    this.putGameConfig();
-  }
-
   private updatePlayerLimitWarning() {
     this.playerLimitWarning =
       this.playerLimit !== null && this.clients.length > this.playerLimit;
@@ -802,25 +745,6 @@ export class HostLobbyModal extends LitElement {
 
   private handleDonateTroopsChange(e: Event) {
     this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
-
-  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
-
-  private handleMaxTimerValueChanges(e: Event) {
-    (e.target as HTMLInputElement).value = (
-      e.target as HTMLInputElement
-    ).value.replace(/[e+-]/gi, "");
-    const value = parseInt((e.target as HTMLInputElement).value);
-
-    if (isNaN(value) || value < 0 || value > 120) {
-      return;
-    }
-    this.maxTimerValue = value;
     this.putGameConfig();
   }
 

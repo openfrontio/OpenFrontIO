@@ -498,6 +498,8 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  translationKey: z.string().optional(),
+  args: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [

@@ -166,10 +166,8 @@ export class GameServer {
         JSON.stringify({
           type: "error",
           error: "full-lobby",
-          message: JSON.stringify({
-            currentPlayers: this.activeClients.length,
-            maxPlayers: this.gameConfig.maxPlayers,
-          }),
+          translationKey: "private_lobby.lobby_full",
+          args: { limit: this.gameConfig.maxPlayers ?? "?" },
         } satisfies ServerErrorMessage),
       );
       return;
