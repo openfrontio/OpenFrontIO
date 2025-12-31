@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef, euclDistFN } from "../../game/GameMap";
+import { ParabolaPathFinder } from "../../pathfinding/PathFinding";
 import { PseudoRandom } from "../../PseudoRandom";
 import { boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
@@ -20,6 +21,10 @@ import { randTerritoryTileArray } from "./NationUtils";
 
 export class NationNukeBehavior {
   private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private atomBombsLaunched = 0;
+  private atomBombPerceivedCost = this.cost(UnitType.AtomBomb);
+  private hydrogenBombsLaunched = 0;
+  private hydrogenBombPerceivedCost = this.cost(UnitType.HydrogenBomb);
 
   constructor(
     private random: PseudoRandom,
@@ -34,7 +39,7 @@ export class NationNukeBehavior {
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
-      this.player.gold() < this.cost(UnitType.AtomBomb) ||
+      this.player.gold() < this.getPerceivedNukeCost(UnitType.AtomBomb) ||
       other === null ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
       this.player.isOnSameTeam(other) ||
@@ -43,10 +48,11 @@ export class NationNukeBehavior {
       return;
     }
 
+    const hydroCost = this.getPerceivedNukeCost(UnitType.HydrogenBomb);
+    const atomCost = this.getPerceivedNukeCost(UnitType.AtomBomb);
+    const minCost = hydroCost < atomCost ? hydroCost : atomCost;
     const nukeType =
-      this.player.gold() > this.cost(UnitType.HydrogenBomb)
-        ? UnitType.HydrogenBomb
-        : UnitType.AtomBomb;
+      this.player.gold() > minCost ? UnitType.HydrogenBomb : UnitType.AtomBomb;
     const range = nukeType === UnitType.HydrogenBomb ? 80 : 20;
 
     const structures = other.units(
@@ -74,7 +80,19 @@ export class NationNukeBehavior {
           continue outer;
         }
       }
-      if (!this.player.canBuild(nukeType, tile)) continue;
+      const spawnTile = this.player.canBuild(nukeType, tile);
+      if (spawnTile === false) continue;
+
+      // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
+      const difficulty = this.mg.config().gameConfig().difficulty;
+      if (
+        (difficulty === Difficulty.Hard ||
+          difficulty === Difficulty.Impossible) &&
+        this.isTrajectoryInterceptableBySam(spawnTile, tile)
+      ) {
+        continue;
+      }
+
       const value = this.nukeTileScore(tile, silos, structures);
       if (value > bestValue) {
         bestTile = tile;
@@ -84,6 +102,117 @@ export class NationNukeBehavior {
     if (bestTile !== null) {
       this.sendNuke(bestTile, nukeType, other);
     }
+  }
+
+  // Simulate saving up for a MIRV
+  private getPerceivedNukeCost(type: UnitType): Gold {
+    // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
+    // or if we already have enough gold to buy both a MIRV and a hydro
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team ||
+      this.player.gold() >
+        this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
+    ) {
+      return this.cost(type);
+    }
+
+    if (type === UnitType.AtomBomb) {
+      return this.atomBombPerceivedCost;
+    } else {
+      return this.hydrogenBombPerceivedCost;
+    }
+  }
+
+  // mirroring NukeTrajectoryPreviewLayer.ts logic a bit
+  private isTrajectoryInterceptableBySam(
+    spawnTile: TileRef,
+    targetTile: TileRef,
+  ): boolean {
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    if (
+      difficulty !== Difficulty.Hard &&
+      difficulty !== Difficulty.Impossible
+    ) {
+      return false;
+    }
+
+    const pathFinder = new ParabolaPathFinder(this.mg);
+    const speed = this.mg.config().defaultNukeSpeed();
+    const distanceBasedHeight = true; // Atom/Hydrogen bombs use distance-based height
+    const rocketDirectionUp = true; // AI nukes always go "up" for now
+
+    pathFinder.computeControlPoints(
+      spawnTile,
+      targetTile,
+      speed,
+      distanceBasedHeight,
+      rocketDirectionUp,
+    );
+
+    const trajectory = pathFinder.allTiles();
+    if (trajectory.length === 0) {
+      return false;
+    }
+
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
+
+    let untargetableStart = -1;
+    let untargetableEnd = -1;
+    for (let i = 0; i < trajectory.length; i++) {
+      const tile = trajectory[i];
+      if (untargetableStart === -1) {
+        if (
+          this.mg.euclideanDistSquared(tile, spawnTile) > targetRangeSquared
+        ) {
+          if (
+            this.mg.euclideanDistSquared(tile, targetTile) < targetRangeSquared
+          ) {
+            // Overlapping spawn & target range – no untargetable segment.
+            break;
+          } else {
+            untargetableStart = i;
+          }
+        }
+      } else if (
+        this.mg.euclideanDistSquared(tile, targetTile) < targetRangeSquared
+      ) {
+        untargetableEnd = i;
+        break;
+      }
+    }
+
+    for (let i = 0; i < trajectory.length; i++) {
+      // Skip the mid-air untargetable portion
+      if (
+        untargetableStart !== -1 &&
+        untargetableEnd !== -1 &&
+        i === untargetableStart
+      ) {
+        i = untargetableEnd - 1;
+        continue;
+      }
+
+      const tile = trajectory[i];
+      const nearbySams = this.mg.nearbyUnits(
+        tile,
+        this.mg.config().maxSamRange(),
+        UnitType.SAMLauncher,
+      );
+
+      for (const sam of nearbySams) {
+        const owner = sam.unit.owner();
+        if (owner === this.player || this.player.isFriendly(owner)) {
+          continue;
+        }
+        const rangeSquared = this.mg.config().samRange(sam.unit.level()) ** 2;
+        if (sam.distSquared <= rangeSquared) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private isValidNukeTile(t: TileRef, other: Player | null): boolean {
@@ -138,8 +267,11 @@ export class NationNukeBehavior {
       })
       .reduce((prev, cur) => prev + cur, 0);
 
-    // Avoid areas defended by SAM launchers (not on easy difficulty)
-    if (this.mg.config().gameConfig().difficulty !== Difficulty.Easy) {
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    // On Easy, ignore SAMs entirely.
+    // On Medium, apply a simple local SAM penalty.
+    // On Hard & Impossible we rely on trajectory-based interception checks instead. See maybeSendNuke().
+    if (difficulty === Difficulty.Medium) {
       const dist50 = euclDistFN(tile, 50, false);
       tileValue -=
         50_000 *
@@ -177,6 +309,16 @@ export class NationNukeBehavior {
       throw new Error("not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
+    if (nukeType === UnitType.AtomBomb) {
+      this.atomBombsLaunched++;
+      // Increase perceived cost by 20% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
+      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 120n) / 100n;
+    } else if (nukeType === UnitType.HydrogenBomb) {
+      this.hydrogenBombsLaunched++;
+      // Increase perceived cost by 10% each time to simulate saving up for a MIRV
+      this.hydrogenBombPerceivedCost =
+        (this.hydrogenBombPerceivedCost * 110n) / 100n;
+    }
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
   }
