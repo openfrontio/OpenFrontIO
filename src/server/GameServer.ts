@@ -348,6 +348,60 @@ export class GameServer {
                 this.kickClient(clientMsg.intent.target);
                 return;
               }
+              case "update_game_config": {
+                // Only lobby creator can update config
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can update game config`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                // Cannot update public games (mirrors Worker.ts line 197-203)
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot update public game via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                // Cannot update after game starts (mirrors Worker.ts line 204-208)
+                if (this.hasStarted()) {
+                  this.log.warn(
+                    `Cannot update game config after it has started`,
+                    {
+                      gameID: this.id,
+                      clientID: client.clientID,
+                    },
+                  );
+                  return;
+                }
+
+                // Config must not set gameType to Public (mirrors Worker.ts line 188-191)
+                if (clientMsg.intent.config.gameType === GameType.Public) {
+                  this.log.warn(`Cannot update game to public via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                this.log.info(
+                  `Lobby creator updated game config via WebSocket`,
+                  {
+                    creatorID: client.clientID,
+                    gameID: this.id,
+                    configKeys: Object.keys(clientMsg.intent.config),
+                  },
+                );
+
+                // Same method call as Worker.ts line 210
+                this.updateGameConfig(clientMsg.intent.config);
+                return;
+              }
               case "toggle_pause": {
                 // Only lobby creator can pause/resume
                 if (client.clientID !== this.lobbyCreatorID) {
