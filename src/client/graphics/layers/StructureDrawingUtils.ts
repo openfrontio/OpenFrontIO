@@ -454,6 +454,7 @@ export class SpriteFactory {
     stage: PIXI.Container,
     pos: { x: number; y: number },
     level?: number,
+    targetingAlly: boolean = false,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -478,10 +479,18 @@ export class SpriteFactory {
       default:
         return null;
     }
+    // Add warning colors (red/orange) when targeting an ally to indicate alliance will break
+    const isNuke = type === UnitType.AtomBomb || type === UnitType.HydrogenBomb;
+    const fillColor = targetingAlly && isNuke ? 0xff6b35 : 0xffffff;
+    const fillAlpha = targetingAlly && isNuke ? 0.35 : 0.2;
+    const strokeColor = targetingAlly && isNuke ? 0xff4444 : 0xffffff;
+    const strokeAlpha = targetingAlly && isNuke ? 0.8 : 0.5;
+    const strokeWidth = targetingAlly && isNuke ? 2 : 1;
+
     circle
       .circle(0, 0, radius)
-      .fill({ color: 0xffffff, alpha: 0.2 })
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
+      .fill({ color: fillColor, alpha: fillAlpha })
+      .stroke({ width: strokeWidth, color: strokeColor, alpha: strokeAlpha });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);
