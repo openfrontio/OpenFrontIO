@@ -440,4 +440,34 @@ describe("Attack immunity", () => {
     game.executeNextTick();
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
   });
+
+  test("Should be able to attack nations during immunity phase", async () => {
+    const nation = new PlayerInfo(
+      "nation dude",
+      PlayerType.Nation,
+      null,
+      "nation_id",
+    );
+    game.addPlayer(nation);
+    // Player A attacks the nation
+    const attackExecution = new AttackExecution(
+      null,
+      playerA,
+      "nation_id",
+      null,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Should be able to attack bots during immunity phase", async () => {
+    const nation = new PlayerInfo("bot dude", PlayerType.Bot, null, "bot_id");
+    game.addPlayer(nation);
+    // Player A attacks the nation
+    const attackExecution = new AttackExecution(null, playerA, "bot_id", null);
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
 });
