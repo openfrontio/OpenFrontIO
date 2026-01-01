@@ -153,9 +153,9 @@ export class EventsDisplay extends LitElement implements Layer {
       content: html`<img
         src="${src}"
         class="${toggleButtonSizeMap["default"]}"
-        style="filter: ${this.eventsFilters.get(category)
-          ? "grayscale(1) opacity(0.5)"
-          : "none"}"
+        style="${this.eventsFilters.get(category)
+          ? "filter: grayscale(1) opacity(0.5);"
+          : ""}"
       />`,
       onClick: () => this.toggleEventFilter(category),
       className: "cursor-pointer pointer-events-auto",
@@ -816,7 +816,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           content: translateText("events_display.retaliate"),
                           onClick: () => this.handleRetaliate(attack),
                           className:
-                            "inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
+                            "inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
                           translate: true,
                         })
                       : ""}
@@ -854,10 +854,10 @@ export class EventsDisplay extends LitElement implements Layer {
                       ? this.renderButton({
                           content: "❌",
                           onClick: () => this.emitCancelAttackIntent(attack.id),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: attack.retreating,
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -890,10 +890,10 @@ export class EventsDisplay extends LitElement implements Layer {
                           content: "❌",
                           onClick: () =>
                             this.emitCancelAttackIntent(landAttack.id),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: landAttack.retreating,
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -926,10 +926,10 @@ export class EventsDisplay extends LitElement implements Layer {
                       ? this.renderButton({
                           content: "❌",
                           onClick: () => this.emitBoatCancelIntent(boat.id()),
-                          className: "text-left flex-shrink-0",
+                          className: "text-left shrink-0",
                           disabled: boat.retreating(),
                         })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                      : html`<span class="shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
@@ -1026,14 +1026,14 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur-sm",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
               <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
@@ -1083,8 +1083,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div>
                   <table
-                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
-                    style="pointer-events: auto;"
+                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
                   >
                     <tbody>
                       ${filteredEvents.map(
@@ -1123,7 +1122,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                               ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(

@@ -537,12 +537,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
       return html``;
     }
 
-    const style = `
-      left: ${this.position.x}px;
-      top: ${this.position.y}px;
-      transform: none;
-    `;
-
     const copyLabel =
       this.copyStatus === "success"
         ? translateText("performance_overlay.copied")
@@ -557,8 +551,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="performance-overlay ${this.isDragging ? "dragging" : ""}"
-        style="${style}"
+        class="performance-overlay ${this.isDragging
+          ? "dragging"
+          : ""} transform-none left-(--left) top-(--top)"
+        style="--left: ${this.position.x}; --top: ${this.position.y};"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="reset-button" @click="${this.handleReset}">
@@ -612,10 +608,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
                 );
                 return html`<div class="layer-row">
                   <span class="layer-name" title=${layer.name}
-                    >${layer.name}</span
-                  >
+                    >${layer.name}
+                  </span>
                   <div class="layer-bar">
-                    <div class="layer-bar-fill" style="width: ${width}%;"></div>
+                    <div
+                      class="layer-bar-fill w-(--width)"
+                      style="--width: ${width}%;"
+                    ></div>
                   </div>
                   <span class="layer-metrics">
                     ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms

@@ -49,10 +49,8 @@ export class GameInfoModal extends LitElement {
         title="${translateText("game_info_modal.title")}"
         translationKey="main.game_info"
       >
-        <div
-          class="flex flex-col items-center pl-[100px] pr-[100px] text-center mb-4"
-        >
-          <div class="w-[300px] sm:w-[500px]">
+        <div class="flex flex-col items-center px-25 text-center mb-4">
+          <div class="w-75 sm:w-125">
             ${this.isLoadingGame
               ? this.renderLoadingAnimation()
               : this.renderRanking()}
@@ -109,13 +107,12 @@ export class GameInfoModal extends LitElement {
     }
     return html`
       <div
-        class="h-[150px] flex relative justify-between rounded-xl bg-blue-600 items-center"
+        class="h-37.5 flex relative justify-between rounded-xl bg-blue-600 items-center"
       >
         ${this.mapImage
           ? html`<img
               src="${this.mapImage}"
-              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
+              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl mask-[linear-gradient(to_left,transparent,#fff)]"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full rounded-xl bg-gray-300"

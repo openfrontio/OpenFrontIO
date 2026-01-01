@@ -87,7 +87,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   render() {
     return html`
       <aside
-        class=${`fixed top-4 left-4 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg transition-transform duration-300 ease-out transform ${
+        class=${`fixed top-4 left-4 z-1000 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-xs shadow-xs rounded-lg transition-transform duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
@@ -98,14 +98,17 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
                 ${translateText("help_modal.ui_your_team")}
-                <span style="color: ${this.playerColor.toRgbString()}">
+                <span
+                  style="--color: ${this.playerColor.toRgbString()}"
+                  class="text-(--color)"
+                >
                   &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
                 </span>
               </div>
             `
           : null}
         <div
-          class=${`flex items-center gap-2 space-x-2 text-white ${
+          class=${`flex items-center gap-2 text-white ${
             this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
           }`}
         >

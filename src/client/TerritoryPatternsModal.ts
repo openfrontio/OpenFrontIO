@@ -140,10 +140,7 @@ export class TerritoryPatternsModal extends LitElement {
             ? this.renderMySkinsButton()
             : this.renderNotLoggedInWarning()}
         </div>
-        <div
-          class="flex flex-wrap gap-4 p-2"
-          style="justify-content: center; align-items: flex-start;"
-        >
+        <div class="flex flex-wrap gap-4 p-2 justify-center items-start">
           ${this.affiliateCode === null
             ? html`
                 <pattern-button
@@ -193,8 +190,8 @@ export class TerritoryPatternsModal extends LitElement {
         ${hexCodes.map(
           (hexCode) => html`
             <div
-              class="w-12 h-12 rounded-lg border-2 border-white/30 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
-              style="background-color: ${hexCode};"
+              class="w-12 h-12 rounded-lg border-2 border-white/30 bg-(--bg) cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
+              style="--bg: ${hexCode};"
               title="${hexCode}"
               @click=${() => this.selectColor(hexCode)}
             ></div>
@@ -267,8 +264,8 @@ export class TerritoryPatternsModal extends LitElement {
   ): TemplateResult {
     return html`
       <div
-        class="rounded"
-        style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
+        class="rounded-sm size-(--size) bg-(--bg)"
+        style="--size: ${width}px; --bg: ${hexCode};"
       ></div>
     `;
   }

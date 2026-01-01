@@ -79,10 +79,7 @@ export class FlagInput extends LitElement {
           title=${translateText("flag_input.button_title")}
         >
           <span
-            id="flag-preview"
-            style="display:inline-block;
-            vertical-align:middle; background:#333; border-radius:6px;
-            overflow:hidden;"
+            id="flag-preview inline-block align-middle bg-[#333] overflow-hidden rounded-[6px]"
           ></span>
         </button>
       </div>

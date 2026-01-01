@@ -55,9 +55,8 @@ export class RankingControls extends LitElement {
     return html`
       <button
         class="rounded-lg bg-blue-600 text-white text-lg p-3 hover:bg-blue-400 ${active
-          ? "active"
+          ? "active outline-2 outline-white font-bold"
           : ""}"
-        style="${active ? "outline: solid 2px white; font-weight: bold;" : ""}"
         @click=${() => this.onSort(type)}
       >
         ${translateText(label)}
@@ -107,8 +106,9 @@ export class RankingControls extends LitElement {
     return html`
       <button
         @click=${() => this.onSort(type)}
-        class="rounded-md bg-blue-50 text-black text-sm p-2 hover:bg-blue-200"
-        style="${active ? "outline: solid 2px white; font-weight: bold;" : ""}"
+        class="rounded-md bg-blue-50 text-black text-sm p-2 hover:bg-blue-200 ${active
+          ? "outline-2 outline-white font-bold"
+          : ""}"
       >
         ${translateText(label)}
       </button>

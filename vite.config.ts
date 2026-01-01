@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -67,6 +68,7 @@ export default defineConfig(({ mode }) => {
           },
         ],
       }),
+      tailwindcss(),
     ],
 
     define: {

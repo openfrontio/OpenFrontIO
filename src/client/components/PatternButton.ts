@@ -70,7 +70,7 @@ export class PatternButton extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-[200px]"
+        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-50"
       >
         <button
           class="bg-white/90 border-2 border-black/10 rounded-lg cursor-pointer transition-all duration-200 w-full
@@ -98,8 +98,7 @@ export class PatternButton extends LitElement {
               `
             : null}
           <div
-            class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded p-1 mx-auto"
-            style="overflow: hidden;"
+            class="size-30 flex items-center justify-center bg-white rounded-sm p-1 mx-auto overflow-hidden"
           >
             ${renderPatternPreview(
               this.pattern !== null
@@ -143,43 +142,27 @@ export function renderPatternPreview(
   return html`<img
     src="${generatePreviewDataUrl(pattern, width, height)}"
     alt="Pattern preview"
-    class="w-full h-full object-contain"
-    style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"
+    <!-- pixelated should also handle crisp-edges -->
+    class="w-full h-full object-contain [image-rendering:pixelated]"
   />`;
 }
 
 function renderBlankPreview(width: number, height: number): TemplateResult {
   return html`
     <div
+      class="flex items-center justify-center bg-white rounded-sm box-border overflow-hidden relative border border-[#ccc] w-(--width) h-(--height)"
       style="
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: ${height}px;
-        width: ${width}px;
-        background-color: #ffffff;
-        border-radius: 4px;
-        box-sizing: border-box;
-        overflow: hidden;
-        position: relative;
-        border: 1px solid #ccc;
+        --height: ${height}px;
+        --width: ${width}px;
       "
     >
       <div
-        style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0; width: calc(100% - 1px); height: calc(100% - 2px); box-sizing: border-box;"
+        class="grid grid-cols-2 grid-rows-2 gap-0 w-[calc(100%-1px)] h-[calc(100%-2px)] box-border"
       >
-        <div
-          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
-        ></div>
-        <div
-          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
-        ></div>
-        <div
-          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
-        ></div>
-        <div
-          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
-        ></div>
+        <div class="bg-white border border-black/10 box-border"></div>
+        <div class="bg-white border border-black/10 box-border"></div>
+        <div class="bg-white border border-black/10 box-border"></div>
+        <div class="bg-white border border-black/10 box-border"></div>
       </div>
     </div>
   `;

@@ -460,7 +460,7 @@ export class BuildMenu extends LitElement implements Layer {
                         alt="gold"
                         width="12"
                         height="12"
-                        style="vertical-align: middle;"
+                        class="align-middle"
                       />
                     </span>
                     ${item.countable

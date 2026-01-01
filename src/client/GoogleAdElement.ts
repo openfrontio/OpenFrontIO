@@ -55,8 +55,7 @@ export class GoogleAdElement extends LitElement {
     return html`
       <div class="google-ad-container">
         <ins
-          class="adsbygoogle"
-          style="display:block"
+          class="adsbygoogle block"
           data-ad-client="${this.adClient}"
           data-ad-slot="${this.adSlot}"
           data-ad-format="${this.adFormat}"

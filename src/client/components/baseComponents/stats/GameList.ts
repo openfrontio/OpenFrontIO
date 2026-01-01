@@ -120,21 +120,19 @@ export class GameList extends LitElement {
                   </div>
                 </div>
                 <div
-                  class="details"
-                  style="max-height:${this.expandedGameId === game.gameId
-                    ? "200px"
-                    : "0"}; ${this.expandedGameId === game.gameId
-                    ? ""
-                    : "padding-top:0; padding-bottom:0;"}"
+                  class="details max-h-(--max-height) ${this.expandedGameId ===
+                  game.gameId
+                    ? "max-h-50"
+                    : "py-0"}"
                 >
                   <div>
-                    <span class="title" style="font-size:0.75rem;"
+                    <span class="title text-xs"
                       >${translateText("game_list.started")}:</span
                     >
                     ${new Date(game.start).toLocaleString()}
                   </div>
                   <div>
-                    <span class="title" style="font-size:0.75rem;"
+                    <span class="title text-xs"
                       >${translateText("game_list.mode")}:</span
                     >
                     ${game.mode === GameMode.FFA
@@ -142,19 +140,19 @@ export class GameList extends LitElement {
                       : translateText("game_list.mode_team")}
                   </div>
                   <div>
-                    <span class="title" style="font-size:0.75rem;"
+                    <span class="title text-xs"
                       >${translateText("game_list.map")}:</span
                     >
                     ${game.map}
                   </div>
                   <div>
-                    <span class="title" style="font-size:0.75rem;"
+                    <span class="title text-xs"
                       >${translateText("game_list.difficulty")}:</span
                     >
                     ${game.difficulty}
                   </div>
                   <div>
-                    <span class="title" style="font-size:0.75rem;"
+                    <span class="title text-xs"
                       >${translateText("game_list.type")}:</span
                     >
                     ${game.type}

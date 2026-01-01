@@ -6,7 +6,7 @@
     // Modules
     "module": "ESNext",
     "rootDir": ".",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
       "resources/*": ["resources/*"]

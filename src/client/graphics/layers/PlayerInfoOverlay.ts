@@ -203,7 +203,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             width="20"
             height="20"
             alt="${translateText(description)}"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           <span class="w-full text-right p-1"
             >${player.totalUnitLevels(type)}</span
@@ -284,7 +284,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             alt=${translateText("player_info_overlay.alliance_timeout")}
             width="20"
             height="20"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           ${this.allianceExpirationText(alliance)}
         </span>`;
@@ -388,7 +388,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   alt=${translateText("player_info_overlay.gold")}
                   width="15"
                   height="15"
-                  style="vertical-align: middle;"
+                  class="align-middle"
                 />
                 <span class="w-full text-center"
                   >${renderNumber(player.gold())}</span
@@ -475,11 +475,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="block lg:flex fixed top-[150px] right-4 w-full z-50 flex-col max-w-[180px]"
+        class="block lg:flex fixed top-37.5 right-4 w-full z-50 flex-col max-w-45"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-xs shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

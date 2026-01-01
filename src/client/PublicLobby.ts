@@ -126,8 +126,7 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)]"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
@@ -147,7 +146,7 @@ export class PublicLobby extends LitElement {
                 : translateText("public_lobby.join")}
             </div>
             <div class="text-md font-medium text-white-400">
-              <span class="text-sm text-red-800 bg-white rounded-sm px-1 mr-1">
+              <span class="text-sm text-red-800 bg-white rounded-xs px-1 mr-1">
                 ${fullModeLabel}
               </span>
               <span>

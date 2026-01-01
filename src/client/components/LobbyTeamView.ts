@@ -83,7 +83,7 @@ export class LobbyTeamView extends LitElement {
           this.clients,
           (c) => c.clientID ?? c.username,
           (client) =>
-            html`<div class="px-2 py-1 rounded bg-gray-700/70 mb-1 text-xs">
+            html`<div class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs">
               ${client.username}
             </div>`,
         )}
@@ -162,9 +162,9 @@ export class LobbyTeamView extends LitElement {
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
           ${this.showTeamColors
-            ? html`<span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
-                style="background:${this.teamHeaderColor(preview.team)};"
+            ? html` <span
+                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
+                style="--bg:${this.teamHeaderColor(preview.team)};"
               ></span>`
             : null}
           <span class="truncate">${preview.team}</span>
@@ -180,7 +180,7 @@ export class LobbyTeamView extends LitElement {
                 (p) => p.clientID ?? p.username,
                 (p) =>
                   html` <div
-                    class="bg-gray-700/70 px-2 py-1 rounded text-xs flex items-center justify-between"
+                    class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
                     <span class="truncate">${p.username}</span>
                     ${p.clientID === this.lobbyCreatorClientID

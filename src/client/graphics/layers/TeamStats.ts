@@ -129,8 +129,8 @@ export class TeamStats extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="grid w-full"
-          style="grid-template-columns: repeat(${this.showUnits ? 5 : 4}, 1fr);"
+          class="grid w-full grid-cols-[repeat(var(--cols),1fr)]"
+          style="--cols:${this.showUnits ? 5 : 4};"
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/50">
