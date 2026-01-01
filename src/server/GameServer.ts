@@ -71,6 +71,8 @@ export class GameServer {
     { winner: ClientSendWinnerMessage; ips: Set<string> }
   > = new Map();
 
+  public desyncCount = 0;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -833,6 +835,8 @@ export class GameServer {
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
+
+    this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;
