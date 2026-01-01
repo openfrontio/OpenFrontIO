@@ -67,8 +67,10 @@ const connectedClients: Set<WebSocket> = new Set();
 
 // Broadcast lobbies to all connected clients
 function broadcastLobbies() {
-  const dataStr = JSON.stringify(publicLobbiesData);
-  const message = `{"type":"lobbies_update","data":${dataStr}}`;
+  const message = JSON.stringify({
+    type: "lobbies_update",
+    data: publicLobbiesData,
+  });
 
   const clientsToRemove: WebSocket[] = [];
 
@@ -103,8 +105,9 @@ export async function startMaster() {
     connectedClients.add(ws);
 
     // Send current lobbies immediately (always send, even if empty)
-    const lobbiesJson = JSON.stringify(publicLobbiesData);
-    ws.send(`{"type":"lobbies_update","data":${lobbiesJson}}`);
+    ws.send(
+      JSON.stringify({ type: "lobbies_update", data: publicLobbiesData }),
+    );
 
     ws.on("close", () => {
       connectedClients.delete(ws);
