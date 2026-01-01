@@ -15,6 +15,7 @@ import { getConfig } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
   GameType,
+  Difficulty,
   PlayerActions,
   UnitType,
 } from "../core/game/Game";
@@ -296,6 +297,12 @@ export class ClientGameRunner {
     const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
     if (gameType !== GameType.Singleplayer) return;
 
+    const difficultyOrCustom = this.isDefaultSingleplayerSettings(
+      this.lobby.gameStartInfo.config,
+    )
+      ? difficulty
+      : "Custom";
+
     const authHeader = await getAuthHeader();
     if (!authHeader) {
       console.warn("Failed to record singleplayer win: missing auth token");
@@ -304,7 +311,7 @@ export class ClientGameRunner {
 
     const payload: Record<string, unknown> = {
       mapName: gameMap,
-      difficulty,
+      difficulty: difficultyOrCustom,
     };
 
     const gameIdNumeric = Number(this.lobby.gameID);
