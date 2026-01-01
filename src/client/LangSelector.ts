@@ -2,6 +2,9 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
+import en from "../../resources/lang/en.json";
+import metadata from "../../resources/lang/metadata.json";
+
 type LanguageMetadata = {
   code: string;
   native: string;
@@ -19,7 +22,7 @@ export class LangSelector extends LitElement {
   @state() private debugMode: boolean = false;
 
   private debugKeyPressed: boolean = false;
-  private languageMetadata: LanguageMetadata[] | null = null;
+  private languageMetadata: LanguageMetadata[] = metadata;
   private languageCache = new Map<string, Record<string, string>>();
 
   createRenderRoot() {
@@ -41,33 +44,10 @@ export class LangSelector extends LitElement {
     });
   }
 
-  private async getLanguageMetadata(): Promise<LanguageMetadata[]> {
-    if (this.languageMetadata) return this.languageMetadata;
-
-    try {
-      const response = await fetch("/lang/metadata.json");
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch language metadata: ${response.status}`,
-        );
-      }
-      const data = (await response.json()) as LanguageMetadata[];
-      if (!Array.isArray(data)) {
-        throw new Error("Language metadata is not an array");
-      }
-      this.languageMetadata = data;
-    } catch (err) {
-      console.error("Failed to load language metadata:", err);
-      this.languageMetadata = [];
-    }
-
-    return this.languageMetadata;
-  }
-
-  private async getClosestSupportedLang(lang: string): Promise<string> {
+  private getClosestSupportedLang(lang: string): string {
     if (!lang) return "en";
-    const metadata = await this.getLanguageMetadata();
-    const supported = new Set(metadata.map((entry) => entry.code));
+    if (lang === "debug") return "debug";
+    const supported = new Set(this.languageMetadata.map((entry) => entry.code));
     if (supported.has(lang)) return lang;
 
     const base = lang.slice(0, 2);
@@ -85,9 +65,7 @@ export class LangSelector extends LitElement {
   private async initializeLanguage() {
     const browserLocale = navigator.language;
     const savedLang = localStorage.getItem("lang");
-    const userLang = await this.getClosestSupportedLang(
-      savedLang ?? browserLocale,
-    );
+    const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     const [defaultTranslations, translations] = await Promise.all([
       this.loadLanguage("en"),
@@ -107,6 +85,12 @@ export class LangSelector extends LitElement {
     const cached = this.languageCache.get(lang);
     if (cached) return cached;
 
+    if (lang === "en") {
+      const flat = flattenTranslations(en);
+      this.languageCache.set(lang, flat);
+      return flat;
+    }
+
     try {
       const response = await fetch(`/lang/${encodeURIComponent(lang)}.json`);
       if (!response.ok) {
@@ -124,7 +108,6 @@ export class LangSelector extends LitElement {
 
   private async loadLanguageList() {
     try {
-      const data = await this.getLanguageMetadata();
       let list: any[] = [];
 
       const browserLang = new Intl.Locale(navigator.language).language;
@@ -140,7 +123,7 @@ export class LangSelector extends LitElement {
         this.debugMode = true;
       }
 
-      for (const langData of data) {
+      for (const langData of this.languageMetadata) {
         if (langData.code === "debug" && !debugLang) continue;
         list.push({
           code: langData.code,
