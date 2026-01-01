@@ -46,38 +46,16 @@ export class PublicLobby extends LitElement {
     this.stopJoiningAnimation();
   }
 
-  private async fetchAndUpdateLobbies(): Promise<void> {
-    try {
-      const lobbies = await this.fetchLobbies();
-
-      // Emit event for LobbyNotificationManager to consume
-      window.dispatchEvent(
-        new CustomEvent("lobbies-updated", {
-          detail: lobbies,
-        }),
-      );
-
-      this.handleLobbiesUpdate(lobbies);
-    } catch (error) {
-      console.error("Error fetching lobbies:", error);
-    }
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
     this.lobbies = lobbies;
-    this.lobbies.forEach((l) => {
-      if (!this.lobbyIDToStart.has(l.gameID)) {
-        const msUntilStart = l.msUntilStart ?? 0;
-        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
-      }
 
-      if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-        this.loadMapImage(l.gameID, l.gameConfig.gameMap);
-      }
-    });
-    this.requestUpdate();
-  }
+    // Emit event for LobbyNotificationManager to consume
+    window.dispatchEvent(
+      new CustomEvent("lobbies-updated", {
+        detail: this.lobbies,
+      }),
+    );
 
-  private handleLobbiesUpdate(lobbies: GameInfo[]) {
-    this.lobbies = lobbies;
     this.lobbies.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
         const msUntilStart = l.msUntilStart ?? 0;
