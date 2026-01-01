@@ -200,7 +200,7 @@ export class AiAttackBehavior {
     }
   }
 
-  findBestNukeTarget(borderingEnemies: Player[]): Player | null {
+  findBestNukeTarget(): Player | null {
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
@@ -238,6 +238,12 @@ export class AiAttackBehavior {
     const crownTarget = this.findFFACrownTarget();
     if (crownTarget) {
       return crownTarget;
+    }
+
+    // In Teams, nuke the strongest team
+    const teamTarget = this.findStrongestTeamTarget();
+    if (teamTarget) {
+      return teamTarget;
     }
 
     return null;
@@ -297,6 +303,64 @@ export class AiAttackBehavior {
     }
 
     return null;
+  }
+
+  private findStrongestTeamTarget(): Player | null {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return null;
+    }
+
+    if (this.game.players().length <= 1) {
+      return null;
+    }
+
+    const teamTiles = new Map<string, number>();
+    const teamPlayers = new Map<string, Player[]>();
+
+    for (const p of this.game.players()) {
+      const team = p.team();
+      if (team === null) continue;
+
+      teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
+      let players = teamPlayers.get(team);
+      if (!players) {
+        players = [];
+        teamPlayers.set(team, players);
+      }
+      players.push(p);
+    }
+
+    const sortedTeams = Array.from(teamTiles.entries()).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    if (sortedTeams.length === 0) {
+      return null;
+    }
+
+    let strongestTeam = sortedTeams[0][0];
+    if (strongestTeam === this.player.team()) {
+      if (sortedTeams.length > 1) {
+        strongestTeam = sortedTeams[1][0];
+      } else {
+        return null;
+      }
+    }
+
+    const targetTeamPlayers = teamPlayers.get(strongestTeam)!;
+
+    if (this.random.chance(2)) {
+      // Strongest player
+      return targetTeamPlayers.reduce((prev, current) =>
+        this.game.config().maxTroops(prev) >
+        this.game.config().maxTroops(current)
+          ? prev
+          : current,
+      );
+    } else {
+      // Random player
+      return this.random.randElement(targetTeamPlayers);
+    }
   }
 
   private hasReserveRatioTroops(): boolean {

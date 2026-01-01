@@ -35,11 +35,9 @@ export class NationNukeBehavior {
   ) {}
 
   maybeSendNuke(other: Player | null) {
-    if (this.attackBehavior === null) throw new Error("not initialized");
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
-      this.player.gold() < this.getPerceivedNukeCost(UnitType.AtomBomb) ||
       other === null ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
       this.player.isOnSameTeam(other) ||
@@ -50,10 +48,15 @@ export class NationNukeBehavior {
 
     const hydroCost = this.getPerceivedNukeCost(UnitType.HydrogenBomb);
     const atomCost = this.getPerceivedNukeCost(UnitType.AtomBomb);
-    const minCost = hydroCost < atomCost ? hydroCost : atomCost;
-    const nukeType =
-      this.player.gold() > minCost ? UnitType.HydrogenBomb : UnitType.AtomBomb;
-    const range = nukeType === UnitType.HydrogenBomb ? 80 : 20;
+    let nukeType: UnitType;
+    if (this.player.gold() >= hydroCost) {
+      nukeType = UnitType.HydrogenBomb;
+    } else if (this.player.gold() >= atomCost) {
+      nukeType = UnitType.AtomBomb;
+    } else {
+      return;
+    }
+    const range = this.mg.config().nukeMagnitudes(nukeType).inner;
 
     const structures = other.units(
       UnitType.City,
@@ -93,7 +96,7 @@ export class NationNukeBehavior {
         continue;
       }
 
-      const value = this.nukeTileScore(tile, silos, structures);
+      const value = this.nukeTileScore(tile, silos, structures, nukeType);
       if (value > bestValue) {
         bestTile = tile;
         bestValue = value;
@@ -246,9 +249,14 @@ export class NationNukeBehavior {
     }
   }
 
-  private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
-    // Potential damage in a 25-tile radius
-    const dist = euclDistFN(tile, 25, false);
+  private nukeTileScore(
+    tile: TileRef,
+    silos: Unit[],
+    targets: Unit[],
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+  ): number {
+    const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+    const dist = euclDistFN(tile, magnitude.inner, false);
     let tileValue = targets
       .filter((unit) => dist(this.mg, unit.tile()))
       .map((unit): number => {
@@ -261,7 +269,9 @@ export class NationNukeBehavior {
           case UnitType.MissileSilo:
             return 50_000 * level;
           case UnitType.Port:
-            return 10_000 * level;
+            return 15_000 * level;
+          case UnitType.Factory:
+            return 15_000 * level;
           default:
             return 0;
         }
@@ -274,13 +284,11 @@ export class NationNukeBehavior {
     // On Hard & Impossible we rely on trajectory-based interception checks instead. See maybeSendNuke().
     if (difficulty === Difficulty.Medium) {
       const dist50 = euclDistFN(tile, 50, false);
-      tileValue -=
-        50_000 *
-        targets.filter(
-          (unit) =>
-            unit.type() === UnitType.SAMLauncher &&
-            dist50(this.mg, unit.tile()),
-        ).length;
+      const hasSam = targets.some(
+        (unit) =>
+          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+      );
+      if (hasSam) return -1;
     }
 
     // Prefer tiles that are closer to a silo
@@ -293,8 +301,9 @@ export class NationNukeBehavior {
     tileValue -= distanceToClosestSilo * 30;
 
     // Don't target near recent targets
+    const dist25 = euclDistFN(tile, 25, false);
     tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist(this.mg, tile))
+      .filter(([_tick, tile]) => dist25(this.mg, tile))
       .map((_) => 1_000_000)
       .reduce((prev, cur) => prev + cur, 0);
 
@@ -306,19 +315,17 @@ export class NationNukeBehavior {
     nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
     targetPlayer: Player,
   ) {
-    if (this.attackBehavior === null || this.emojiBehavior === null)
-      throw new Error("not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
-      // Increase perceived cost by 20% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
-      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 120n) / 100n;
+      // Increase perceived cost by 25% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
+      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 125n) / 100n;
     } else if (nukeType === UnitType.HydrogenBomb) {
       this.hydrogenBombsLaunched++;
-      // Increase perceived cost by 10% each time to simulate saving up for a MIRV
+      // Increase perceived cost by 15% each time to simulate saving up for a MIRV
       this.hydrogenBombPerceivedCost =
-        (this.hydrogenBombPerceivedCost * 110n) / 100n;
+        (this.hydrogenBombPerceivedCost * 115n) / 100n;
     }
     this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
