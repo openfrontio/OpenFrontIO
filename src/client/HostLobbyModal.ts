@@ -251,6 +251,7 @@ export class HostLobbyModal extends LitElement {
                         this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
+                        class="${this.disableNations ? "disabled-parent" : ""}"
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
