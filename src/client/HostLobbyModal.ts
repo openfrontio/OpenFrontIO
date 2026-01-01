@@ -753,9 +753,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
-    // Send config update via WebSocket instead of HTTP PUT
-    // Maintains same partial update semantics as before
-    // Debouncing handled by individual event handlers (e.g., handleBotsChange)
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
