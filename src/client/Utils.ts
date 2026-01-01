@@ -296,5 +296,23 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
     // fetch may fail due to CORS or non-SVG..
   }
 
+  const imgRatio = await new Promise<number | null>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        resolve(img.naturalWidth / img.naturalHeight);
+      } else {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+
+  if (imgRatio !== null) {
+    self.svgAspectRatioCache.set(src, imgRatio);
+    return imgRatio;
+  }
+
   return null;
 }
