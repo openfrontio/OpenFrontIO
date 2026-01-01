@@ -33,7 +33,8 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { getPersistentID } from "./Auth";
+import { getApiBase } from "./Api";
+import { getAuthHeader, getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -248,7 +249,7 @@ export class ClientGameRunner {
     if (this.myPlayer === null) {
       return;
     }
-    this.recordLocalWin(update);
+    void this.recordLocalWin(update);
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
@@ -290,32 +291,51 @@ export class ClientGameRunner {
     return false;
   }
 
-  private recordLocalWin(update: WinUpdate) {
+  private async recordLocalWin(update: WinUpdate) {
     if (!this.lobby.gameStartInfo) return;
     if (!this.didPlayerWin(update)) return;
 
     const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
     if (gameType !== GameType.Singleplayer) return;
 
-    type Medal = Difficulty | "Custom";
-    type WinRecord = Partial<Record<GameMapType, Medal[]>>;
-    const storageKey = "achievements.singleplayerWins";
+    const authHeader = await getAuthHeader();
+    if (!authHeader) {
+      console.warn("Failed to record singleplayer win: missing auth token");
+      return;
+    }
 
-    const medal: Medal = this.isDefaultSingleplayerSettings(
-      this.lobby.gameStartInfo.config,
-    )
-      ? difficulty
-      : "Custom";
+    const payload: Record<string, unknown> = {
+      mapName: gameMap,
+      difficulty,
+    };
+
+    const gameIdNumeric = Number(this.lobby.gameID);
+    if (Number.isFinite(gameIdNumeric)) {
+      payload.gameId = gameIdNumeric;
+    }
 
     try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed: WinRecord = raw ? JSON.parse(raw) : {};
-      const existing = new Set(parsed[gameMap] ?? []);
-      existing.add(medal);
-      parsed[gameMap] = Array.from(existing);
-      localStorage.setItem(storageKey, JSON.stringify(parsed));
+      const response = await fetch(
+        `${getApiBase()}/player_map_completions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        console.warn(
+          "Failed to record singleplayer win via API",
+          response.status,
+          response.statusText,
+        );
+      }
     } catch (error) {
-      console.warn("Failed to record singleplayer win", error);
+      console.warn("Failed to record singleplayer win via API", error);
     }
   }
 
