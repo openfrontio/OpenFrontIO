@@ -1,6 +1,6 @@
 import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
-import { Game, Player, PlayerType, UnitType } from "./Game";
+import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
 export function canBuildTransportShip(
@@ -8,16 +8,6 @@ export function canBuildTransportShip(
   player: Player,
   tile: TileRef,
 ): TileRef | false {
-  if (
-    game.config().numSpawnPhaseTurns() + game.config().spawnImmunityDuration() >
-    game.ticks()
-  ) {
-    const targetOwner = game.owner(tile);
-    if (targetOwner.isPlayer() && targetOwner.type() === PlayerType.Human) {
-      return false;
-    }
-  }
-
   if (
     player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
   ) {
@@ -33,7 +23,7 @@ export function canBuildTransportShip(
   if (other === player) {
     return false;
   }
-  if (other.isPlayer() && player.isFriendly(other)) {
+  if (other.isPlayer() && !player.canAttackPlayer(other)) {
     return false;
   }
 

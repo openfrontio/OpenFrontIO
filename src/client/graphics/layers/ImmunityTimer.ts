@@ -4,8 +4,8 @@ import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
-@customElement("ceasefire-timer")
-export class CeasefireTimer extends LitElement implements Layer {
+@customElement("immunity-timer")
+export class ImmunityTimer extends LitElement implements Layer {
   public game: GameView;
 
   private isVisible = false;
@@ -38,18 +38,18 @@ export class CeasefireTimer extends LitElement implements Layer {
 
     this.style.top = showTeamOwnershipBar ? "7px" : "0px";
 
-    const ceasefireDuration = this.game.config().spawnImmunityDuration();
+    const immunityDuration = this.game.config().spawnImmunityDuration();
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
 
-    if (ceasefireDuration <= 5 * 10 || this.game.inSpawnPhase()) {
+    if (immunityDuration <= 5 * 10 || this.game.inSpawnPhase()) {
       this.setInactive();
       return;
     }
 
-    const ceasefireEnd = spawnPhaseTurns + ceasefireDuration;
+    const immunityEnd = spawnPhaseTurns + immunityDuration;
     const ticks = this.game.ticks();
 
-    if (ticks >= ceasefireEnd || ticks < spawnPhaseTurns) {
+    if (ticks >= immunityEnd || ticks < spawnPhaseTurns) {
       this.setInactive();
       return;
     }
@@ -57,7 +57,7 @@ export class CeasefireTimer extends LitElement implements Layer {
     const elapsedTicks = Math.max(0, ticks - spawnPhaseTurns);
     this.progressRatio = Math.min(
       1,
-      Math.max(0, elapsedTicks / ceasefireDuration),
+      Math.max(0, elapsedTicks / immunityDuration),
     );
     this.isActive = true;
     this.requestUpdate();

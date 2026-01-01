@@ -22,7 +22,6 @@ import {
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
@@ -46,7 +45,8 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
-  @state() private spawnImmunityDurationSeconds: number = 5;
+  @state() private spawnImmunity: boolean = false;
+  @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -512,7 +512,7 @@ export class HostLobbyModal extends LitElement {
                             id="end-timer-value"
                             min="0"
                             max="120"
-                            .value=${String(this.maxTimerValue ?? "")}
+                            .value=${String(this.maxTimerValue ?? 0)}
                             style="width: 60px; color: black; text-align: right; border-radius: 8px;"
                             @input=${this.handleMaxTimerValueChanges}
                             @keydown=${this.handleMaxTimerValueKeyDown}
@@ -524,20 +524,40 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="spawn-immunity-duration"
-                  class="option-card"
+                  for="spawn-immunity"
+                  class="option-card  ${this.spawnImmunity ? "selected" : ""}"
                 >
+                  <div class="checkbox-icon"></div>
                   <input
-                    type="number"
-                    id="spawn-immunity-duration"
-                    min="0"
-                    max="300"
-                    step="1"
-                    .value=${String(this.spawnImmunityDurationSeconds)}
-                    style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                    @input=${this.handleSpawnImmunityDurationInput}
-                    @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                    type="checkbox"
+                    id="spawn-immunity"
+                    @change=${(e: Event) => {
+                      const checked = (e.target as HTMLInputElement).checked;
+                      if (!checked) {
+                        this.spawnImmunityDurationMinutes = undefined;
+                      }
+                      this.spawnImmunity = checked;
+                      this.putGameConfig();
+                    }}
+                    .checked=${this.spawnImmunity}
                   />
+                    ${
+                      this.spawnImmunity === false
+                        ? ""
+                        : html`<input
+                            type="number"
+                            id="spawn-immunity-duration"
+                            min="0"
+                            max="120"
+                            step="1"
+                            .value=${String(
+                              this.spawnImmunityDurationMinutes ?? 0,
+                            )}
+                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                            @input=${this.handleSpawnImmunityDurationInput}
+                            @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                          />`
+                    }
                   <div class="option-card-title">
                     <span>${translateText("host_modal.spawn_immunity_duration")}</span>
                   </div>
@@ -723,7 +743,7 @@ export class HostLobbyModal extends LitElement {
     if (Number.isNaN(value) || value < 0 || value > 300) {
       return;
     }
-    this.spawnImmunityDurationSeconds = value;
+    this.spawnImmunityDurationMinutes = value;
     this.putGameConfig();
   }
 
@@ -794,6 +814,9 @@ export class HostLobbyModal extends LitElement {
 
   private async putGameConfig() {
     const config = await getServerConfigFromClient();
+    const spawnImmunityTicks = this.spawnImmunityDurationMinutes
+      ? this.spawnImmunityDurationMinutes * 60 * 10
+      : 0;
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
       {
@@ -816,7 +839,9 @@ export class HostLobbyModal extends LitElement {
           randomSpawn: this.randomSpawn,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
-          spawnImmunityDuration: this.spawnImmunityDurationSeconds * 10,
+          spawnImmunityDuration: this.spawnImmunity
+            ? spawnImmunityTicks
+            : undefined,
           playerTeams: this.teamCount,
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations

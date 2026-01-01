@@ -9,7 +9,6 @@ import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
-import { CeasefireTimer } from "./layers/CeasefireTimer";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
@@ -19,6 +18,7 @@ import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
+import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -235,13 +235,13 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
-  const ceasefireTimer = document.querySelector(
-    "ceasefire-timer",
-  ) as CeasefireTimer;
-  if (!(ceasefireTimer instanceof CeasefireTimer)) {
-    console.error("ceasefire timer not found");
+  const immunityTimer = document.querySelector(
+    "immunity-timer",
+  ) as ImmunityTimer;
+  if (!(immunityTimer instanceof ImmunityTimer)) {
+    console.error("immunity timer not found");
   }
-  ceasefireTimer.game = game;
+  immunityTimer.game = game;
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
@@ -271,7 +271,7 @@ export function createRenderer(
       playerPanel,
     ),
     spawnTimer,
-    ceasefireTimer,
+    immunityTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,

@@ -1206,25 +1206,25 @@ export class PlayerImpl implements Player {
     return this._incomingAttacks;
   }
 
+  public isImmune(): boolean {
+    return this.type() === PlayerType.Human && this.mg.isSpawnImmunityActive();
+  }
+
+  public canAttackPlayer(
+    player: Player,
+    treatAFKFriendly: boolean = false,
+  ): boolean {
+    return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+  }
+
   public canAttack(tile: TileRef): boolean {
     const owner = this.mg.owner(tile);
-    if (
-      owner.isPlayer() &&
-      owner.type() === PlayerType.Human &&
-      this.mg.config().numSpawnPhaseTurns() +
-        this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
-    ) {
-      return false;
-    }
-
     if (owner === this) {
       return false;
     }
-    if (owner.isPlayer()) {
-      if (this.isFriendly(owner)) {
-        return false;
-      }
+
+    if (owner.isPlayer() && !this.canAttackPlayer(owner)) {
+      return false;
     }
 
     if (!this.mg.isLand(tile)) {

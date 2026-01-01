@@ -244,7 +244,7 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return this._gameConfig.spawnImmunityDuration;
+    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
   }
 
   gameConfig(): GameConfig {

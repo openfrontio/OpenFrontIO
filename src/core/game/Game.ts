@@ -654,6 +654,8 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+  canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;
+  isImmune(): boolean;
 
   createAttack(
     target: Player | TerraNullius,
@@ -707,6 +709,9 @@ export interface Game extends GameMap {
   // Alliances
   alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
+
+  // Immunity timer
+  isSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
