@@ -244,12 +244,8 @@ export class HostLobbyModal extends LitElement {
                     <div
                       class="option-card ${this.selectedDifficulty === value
                         ? "selected"
-                        : ""}"
-                      style="opacity: ${this.disableNations
-                        ? "0.3"
-                        : "1"}; cursor: ${this.disableNations
-                        ? "not-allowed"
-                        : "pointer"};"
+                        : ""} ${this.disableNations ? "disabled" : ""}"
+                      aria-disabled="${this.disableNations}"
                       @click=${() =>
                         !this.disableNations &&
                         this.handleDifficultySelection(value)}

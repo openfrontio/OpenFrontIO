@@ -102,6 +102,11 @@
   background: rgba(229, 57, 53, 0.1);
 }
 
+.option-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .option-card-title {
   font-size: 14px;
   color: #aaa;
