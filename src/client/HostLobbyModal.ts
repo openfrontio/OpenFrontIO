@@ -245,7 +245,14 @@ export class HostLobbyModal extends LitElement {
                       class="option-card ${this.selectedDifficulty === value
                         ? "selected"
                         : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
+                      style="opacity: ${this.disableNations
+                        ? "0.3"
+                        : "1"}; cursor: ${this.disableNations
+                        ? "not-allowed"
+                        : "pointer"};"
+                      @click=${() =>
+                        !this.disableNations &&
+                        this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
                         .difficultyKey=${key}

@@ -344,7 +344,7 @@
     "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
-    "difficulty": "Difficulty",
+    "difficulty": "Nation difficulty",
     "easy": "Easy",
     "medium": "Medium",
     "hard": "Hard",
