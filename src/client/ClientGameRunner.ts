@@ -294,11 +294,12 @@ export class ClientGameRunner {
     if (!this.lobby.gameStartInfo) return;
     if (!this.didPlayerWin(update)) return;
 
-    const { gameMap, difficulty, gameType } = this.lobby.gameStartInfo.config;
+    const { config, gameID } = this.lobby.gameStartInfo;
+    const { gameMap, difficulty, gameType } = config;
     if (gameType !== GameType.Singleplayer) return;
 
     const difficultyOrCustom = this.isDefaultSingleplayerSettings(
-      this.lobby.gameStartInfo.config,
+      config,
     )
       ? difficulty
       : "Custom";
@@ -312,12 +313,8 @@ export class ClientGameRunner {
     const payload: Record<string, unknown> = {
       mapName: gameMap,
       difficulty: difficultyOrCustom,
+      gameId: gameID,
     };
-
-    const gameIdNumeric = Number(this.lobby.gameID);
-    if (Number.isFinite(gameIdNumeric)) {
-      payload.gameId = gameIdNumeric;
-    }
 
     try {
       const response = await fetch(
