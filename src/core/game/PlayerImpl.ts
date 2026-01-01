@@ -1010,11 +1010,7 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
-    if (
-      this.mg.config().numSpawnPhaseTurns() +
-        this.mg.config().spawnImmunityDuration() >
-      this.mg.ticks()
-    ) {
+    if (this.mg.isSpawnImmunityActive()) {
       return false;
     }
     const owner = this.mg.owner(tile);

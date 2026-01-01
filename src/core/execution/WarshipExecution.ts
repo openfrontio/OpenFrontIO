@@ -89,7 +89,7 @@ export class WarshipExecution implements Execution {
       if (
         unit.owner() === this.warship.owner() ||
         unit === this.warship ||
-        !unit.owner().canAttackPlayer(this.warship.owner(), true) ||
+        !this.warship.owner().canAttackPlayer(unit.owner(), true) ||
         this.alreadySentShell.has(unit)
       ) {
         continue;
