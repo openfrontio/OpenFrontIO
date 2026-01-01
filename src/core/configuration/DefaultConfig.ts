@@ -212,7 +212,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 3001 + index;
   }
   enableMatchmaking(): boolean {
-    return false;
+    return true;
   }
 }
 

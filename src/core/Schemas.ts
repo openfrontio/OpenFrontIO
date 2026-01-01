@@ -177,6 +177,7 @@ export const GameConfigSchema = z.object({
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  isOneVOne: z.boolean().optional(),
 });
 
 export const TeamSchema = z.string();

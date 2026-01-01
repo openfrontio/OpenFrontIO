@@ -18,6 +18,7 @@ export class MatchmakingModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
 
   constructor() {
@@ -64,8 +65,8 @@ export class MatchmakingModal extends LitElement {
       }, 1000);
       this.socket?.send(
         JSON.stringify({
-          type: "auth",
-          playToken: await getPlayToken(),
+          type: "join",
+          jwt: await getPlayToken(),
         }),
       );
     };
@@ -87,6 +88,7 @@ export class MatchmakingModal extends LitElement {
   }
 
   public close() {
+    console.log("Closing matchmaking modal");
     this.connected = false;
     this.socket?.close();
     this.modalEl?.close();
@@ -97,6 +99,7 @@ export class MatchmakingModal extends LitElement {
   }
 
   public async open() {
+    this.modalEl!.onClose = () => this.close();
     this.modalEl?.open();
     this.requestUpdate();
     this.connect();
