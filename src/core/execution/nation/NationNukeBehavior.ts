@@ -64,13 +64,14 @@ export class NationNukeBehavior {
       UnitType.MissileSilo,
       UnitType.Port,
       UnitType.SAMLauncher,
+      UnitType.Factory,
     );
     const structureTiles = structures.map((u) => u.tile());
     const randomTiles = randTerritoryTileArray(this.random, this.mg, other, 10);
     const allTiles = randomTiles.concat(structureTiles);
 
     let bestTile: TileRef | null = null;
-    let bestValue = 0;
+    let bestValue = -1; // -1 is important, so that we can also nuke land without structures
     this.removeOldNukeEvents();
 
     outer: for (const tile of new Set(allTiles)) {
@@ -291,14 +292,15 @@ export class NationNukeBehavior {
       if (hasSam) return -1;
     }
 
-    // Prefer tiles that are closer to a silo
+    // Prefer tiles that are closer to a silo (but don't drop below 0)
     const siloTiles = silos.map((u) => u.tile());
     const result = closestTwoTiles(this.mg, siloTiles, [tile]);
     if (result === null) throw new Error("Missing result");
     const { x: closestSilo } = result;
     const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
     const distanceToClosestSilo = Math.sqrt(distanceSquared);
-    tileValue -= distanceToClosestSilo * 30;
+    const distancePenalty = distanceToClosestSilo * 30;
+    tileValue = Math.max(0, tileValue - distancePenalty);
 
     // Don't target near recent targets
     const dist25 = euclDistFN(tile, 25, false);
