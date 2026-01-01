@@ -132,14 +132,6 @@ export class NationNukeBehavior {
     spawnTile: TileRef,
     targetTile: TileRef,
   ): boolean {
-    const difficulty = this.mg.config().gameConfig().difficulty;
-    if (
-      difficulty !== Difficulty.Hard &&
-      difficulty !== Difficulty.Impossible
-    ) {
-      return false;
-    }
-
     const pathFinder = new ParabolaPathFinder(this.mg);
     const speed = this.mg.config().defaultNukeSpeed();
     const distanceBasedHeight = true; // Atom/Hydrogen bombs use distance-based height
