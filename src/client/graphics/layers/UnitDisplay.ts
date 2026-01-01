@@ -302,11 +302,7 @@ export class UnitDisplay extends LitElement implements Layer {
             ${hotkey.toUpperCase()}
           </div>`}
           <div class="flex items-center gap-1 pt-1">
-            <img
-              src=${icon}
-              alt=${structureKey}
-              style="vertical-align: middle; width: 24px; height: 24px;"
-            />
+            <img src=${icon} alt=${structureKey} class="align-middle size-6" />
             ${number !== null ? renderNumber(number) : null}
           </div>
         </div>

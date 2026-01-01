@@ -836,9 +836,9 @@ export class PlayerPanel extends LitElement implements Layer {
               class=${`relative w-full bg-zinc-900/95 rounded-2xl text-zinc-100 shadow-2xl shadow-black/50
                  ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
             >
-              <div style="overflow: visible;">
+              <div class="overflow-visible">
                 <div
-                  style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
+                  class="overflow-auto [-webkit-overflow-scrolling:touch] resize-y max-h-[calc(100vh-120px-env(safe-area-inset-bottom))]"
                 >
                   <div class="sticky top-0 z-20 flex justify-end p-2">
                     <button

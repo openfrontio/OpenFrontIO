@@ -417,8 +417,7 @@ export class HelpModal extends LitElement {
               <li class="mb-4">
                 <img
                   src="/images/InfoIcon.svg"
-                  class="inline-block icon"
-                  style="fill: white; background: transparent;"
+                  class="inline-block icon fill-white bg-transparent"
                   loading="lazy"
                 />
                 <span>${translateText("help_modal.radial_info")}</span>

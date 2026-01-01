@@ -98,7 +98,10 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
                 ${translateText("help_modal.ui_your_team")}
-                <span style="color: ${this.playerColor.toRgbString()}">
+                <span
+                  style="--color: ${this.playerColor.toRgbString()}"
+                  class="text-(--color)"
+                >
                   &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
                 </span>
               </div>

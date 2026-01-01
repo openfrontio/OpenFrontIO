@@ -21,12 +21,11 @@ export class SettingKeybind extends LitElement {
     return html`
       <div class="setting-item column${this.easter ? " easter-egg" : ""}">
         <div class="setting-label-group">
-          <label class="setting-label block mb-1">${this.label}</label>
+          <label class="setting-label block mb-1">${this.label} </label>
 
           <div class="setting-keybind-box flex flex-wrap items-start gap-2">
             <div
-              class="setting-keybind-description flex-1 min-w-60 max-w-full whitespace-normal break-words text-sm text-gray-300"
-              style="word-break: break-word;"
+              class="setting-keybind-description flex-1 min-w-60 max-w-full whitespace-normal wrap-break-words text-sm text-gray-300 [word-break:break-word]"
             >
               ${this.description}
             </div>

@@ -98,8 +98,8 @@ export class SpawnTimer extends LitElement implements Layer {
           const color = this.colors[i] || "rgba(0, 0, 0, 0.5)";
           return html`
             <div
-              class="h-full transition-all duration-100 ease-in-out"
-              style="width: ${ratio * 100}%; background-color: ${color};"
+              class="h-full transition-all duration-100 ease-in-out w-(--width) bg-(--bg)"
+              style="--width: ${ratio * 100}%; --bg: ${color};"
             ></div>
           `;
         })}

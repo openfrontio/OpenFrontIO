@@ -112,8 +112,7 @@ export class GameInfoModal extends LitElement {
         ${this.mapImage
           ? html`<img
               src="${this.mapImage}"
-              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
+              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl mask-[linear-gradient(to_left,transparent,#fff)]"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full rounded-xl bg-gray-300"

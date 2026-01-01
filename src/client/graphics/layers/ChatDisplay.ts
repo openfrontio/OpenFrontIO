@@ -125,10 +125,9 @@ export class ChatDisplay extends LitElement implements Layer {
     }
     return html`
       <div
-        class="${this._hidden
+        class="pointer-events-auto ${this._hidden
           ? "w-fit px-2.5 py-1.25"
           : ""} rounded-md bg-black/60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
-        style="pointer-events: auto"
       >
         <div>
           <div class="w-full bg-black/80 sticky top-0 px-2.5">
@@ -159,11 +158,10 @@ export class ChatDisplay extends LitElement implements Layer {
           </button>
 
           <table
-            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
+            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs pointer-events-none ${this
               ._hidden
               ? "hidden"
               : ""}"
-            style="pointer-events: auto;"
           >
             <tbody>
               ${this.chatEvents.map(

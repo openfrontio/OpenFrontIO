@@ -162,9 +162,9 @@ export class LobbyTeamView extends LitElement {
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
           ${this.showTeamColors
-            ? html`<span
-                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
-                style="background:${this.teamHeaderColor(preview.team)};"
+            ? html` <span
+                class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
+                style="--bg:${this.teamHeaderColor(preview.team)};"
               ></span>`
             : null}
           <span class="truncate">${preview.team}</span>

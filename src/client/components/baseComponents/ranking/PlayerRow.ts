@@ -99,9 +99,12 @@ export class PlayerRow extends LitElement {
     const width = Math.min(Math.max((this.score / bestScore) * 100, 0), 100);
     return html`
       <div class="w-full pr-2.5 m-auto">
-        <div class="h-1.75 bg-neutral-800" style="width: 100%;">
+        <div class="h-1.75 bg-neutral-800 w-full">
           <!-- bar background -->
-          <div class="h-1.75 bg-white" style="width: ${width}%;"></div>
+          <div
+            class="h-1.75 bg-white w-(--width)"
+            style="--width: ${width}%;"
+          ></div>
         </div>
       </div>
     `;

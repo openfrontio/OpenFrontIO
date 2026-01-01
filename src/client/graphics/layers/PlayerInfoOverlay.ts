@@ -203,7 +203,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             width="20"
             height="20"
             alt="${translateText(description)}"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           <span class="w-full text-right p-1"
             >${player.totalUnitLevels(type)}</span
@@ -284,7 +284,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             alt=${translateText("player_info_overlay.alliance_timeout")}
             width="20"
             height="20"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           ${this.allianceExpirationText(alliance)}
         </span>`;
@@ -388,7 +388,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   alt=${translateText("player_info_overlay.gold")}
                   width="15"
                   height="15"
-                  style="vertical-align: middle;"
+                  class="align-middle"
                 />
                 <span class="w-full text-center"
                   >${renderNumber(player.gold())}</span

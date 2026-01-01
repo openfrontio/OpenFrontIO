@@ -127,7 +127,8 @@ export class WinModal extends LitElement implements Layer {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.youtube_tutorial")}
         </h3>
-        <div class="relative w-full" style="padding-bottom: 56.25%;">
+        <!-- 56.25% = 9:16 -->
+        <div class="relative w-full pb-[56.25%]">
           <iframe
             class="absolute top-0 left-0 w-full h-full rounded-sm"
             src="${this.isVisible

@@ -374,8 +374,8 @@ export class SendResourceModal extends LitElement {
 
           <!-- Tooltip -->
           <div
-            class="pointer-events-none absolute -top-6 -translate-x-1/2 select-none"
-            style="left:${percentNow}%"
+            class="pointer-events-none absolute -top-6 -translate-x-1/2 select-none left-(--pos)"
+            style="--pos: ${percentNow}%"
           >
             <div
               class="rounded-sm bg-[#0f1116] ring-1 ring-zinc-700 text-zinc-100 px-1.5 py-0.5 text-[12px] shadow-sm whitespace-nowrap w-max z-50"
@@ -388,13 +388,13 @@ export class SendResourceModal extends LitElement {
           ${capPercent !== null
             ? html`
                 <div
-                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-0.5 bg-amber-400/80 shadow-sm"
-                  style="left:${capPercent}%;"
+                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-0.5 bg-amber-400/80 shadow-sm left-(--pos)"
+                  style="--pos:${capPercent}%;"
                   title=${this.i18n.capTooltip()}
                 ></div>
                 <div
-                  class="pointer-events-none absolute top-full mt-1.5 -translate-x-1/2 select-none"
-                  style="left:${capPercent}%"
+                  class="pointer-events-none absolute top-full mt-1.5 -translate-x-1/2 select-none left-(--pos)"
+                  style="--pos:${capPercent}%"
                 >
                   <div
                     class="rounded-sm bg-[#0f1116] ring-1 ring-amber-400/40 text-amber-200 px-1 py-0.5 text-[11px] shadow-sm whitespace-nowrap"

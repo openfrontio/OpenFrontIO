@@ -153,9 +153,9 @@ export class EventsDisplay extends LitElement implements Layer {
       content: html`<img
         src="${src}"
         class="${toggleButtonSizeMap["default"]}"
-        style="filter: ${this.eventsFilters.get(category)
-          ? "grayscale(1) opacity(0.5)"
-          : "none"}"
+        style="${this.eventsFilters.get(category)
+          ? "filter: grayscale(1) opacity(0.5);"
+          : ""}"
       />`,
       onClick: () => this.toggleEventFilter(category),
       className: "cursor-pointer pointer-events-auto",
@@ -1083,8 +1083,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div>
                   <table
-                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs"
-                    style="pointer-events: auto;"
+                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
                   >
                     <tbody>
                       ${filteredEvents.map(

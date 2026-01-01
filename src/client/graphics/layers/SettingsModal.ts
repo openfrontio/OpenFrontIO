@@ -204,7 +204,7 @@ export class SettingsModal extends LitElement implements Layer {
                 alt="settings"
                 width="24"
                 height="24"
-                style="vertical-align: middle;"
+                class="align-middle"
               />
               <h2 class="text-xl font-semibold text-white">
                 ${translateText("user_setting.tab_basic")}

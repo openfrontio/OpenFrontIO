@@ -344,14 +344,9 @@
     <button
       id="settings-button"
       title="Settings"
-      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: var(--primaryColor)"
+      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center size-20 bg-(--primaryColor)"
     >
-      <img
-        src="/images/SettingIconWhite.svg"
-        alt="Settings"
-        style="width: 72px; height: 72px"
-      />
+      <img src="/images/SettingIconWhite.svg" alt="Settings" class="size-18" />
     </button>
 
     <!-- Game components -->
@@ -370,12 +365,10 @@
     </div>
 
     <div
-      class="left-0 bottom-0 sm:left-4 sm:bottom-4 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px]"
-      style="position: fixed; pointer-events: none"
+      class="left-0 bottom-0 sm:left-4 sm:bottom-4 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px] fixed pointer-events-none"
     >
       <div
-        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end"
-        style="pointer-events: none"
+        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end pointer-events-none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
