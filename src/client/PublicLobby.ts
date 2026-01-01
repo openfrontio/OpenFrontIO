@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -22,12 +23,13 @@ export class PublicLobby extends LitElement {
   @state() private mapImages: Map<GameID, string> = new Map();
   @state() private joiningDotIndex: number = 0;
 
-  private lobbiesInterval: number | null = null;
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
-  private lobbiesFetchInFlight: Promise<GameInfo[]> | null = null;
+  private lobbySocket = new PublicLobbySocket((lobbies) =>
+    this.handleLobbiesUpdate(lobbies),
+  );
 
   createRenderRoot() {
     return this;
@@ -35,38 +37,28 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.fetchAndUpdateLobbies();
-    this.lobbiesInterval = window.setInterval(
-      () => this.fetchAndUpdateLobbies(),
-      1000,
-    );
+    this.lobbySocket.start();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.lobbiesInterval !== null) {
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
-    }
+    this.lobbySocket.stop();
     this.stopJoiningAnimation();
   }
 
-  private async fetchAndUpdateLobbies(): Promise<void> {
-    try {
-      this.lobbies = await this.fetchLobbies();
-      this.lobbies.forEach((l) => {
-        if (!this.lobbyIDToStart.has(l.gameID)) {
-          const msUntilStart = l.msUntilStart ?? 0;
-          this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
-        }
+  private handleLobbiesUpdate(lobbies: GameInfo[]) {
+    this.lobbies = lobbies;
+    this.lobbies.forEach((l) => {
+      if (!this.lobbyIDToStart.has(l.gameID)) {
+        const msUntilStart = l.msUntilStart ?? 0;
+        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
+      }
 
-        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching lobbies:", error);
-    }
+      if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+        this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+      }
+    });
+    this.requestUpdate();
   }
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
@@ -77,38 +69,6 @@ export class PublicLobby extends LitElement {
       this.requestUpdate();
     } catch (error) {
       console.error("Failed to load map image:", error);
-    }
-  }
-
-  async fetchLobbies(): Promise<GameInfo[]> {
-    if (this.lobbiesFetchInFlight) {
-      return this.lobbiesFetchInFlight;
-    }
-
-    this.lobbiesFetchInFlight = (async () => {
-      try {
-        const response = await fetch(`/api/public_lobbies`);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        return data.lobbies as GameInfo[];
-      } catch (error) {
-        console.error("Error fetching lobbies:", error);
-        throw error;
-      } finally {
-        this.lobbiesFetchInFlight = null;
-      }
-    })();
-
-    return this.lobbiesFetchInFlight;
-  }
-
-  public stop() {
-    if (this.lobbiesInterval !== null) {
-      this.isLobbyHighlighted = false;
-      this.stopJoiningAnimation();
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
     }
   }
 
@@ -212,6 +172,13 @@ export class PublicLobby extends LitElement {
   }
 
   leaveLobby() {
+    this.isLobbyHighlighted = false;
+    this.currLobby = null;
+    this.stopJoiningAnimation();
+  }
+
+  public stop() {
+    this.lobbySocket.stop();
     this.isLobbyHighlighted = false;
     this.currLobby = null;
     this.stopJoiningAnimation();
