@@ -479,7 +479,7 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 shrink-0
                     text-white w-35 shrink-0"
         >
           <span class="mr-0.5">💰</span>

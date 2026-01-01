@@ -160,7 +160,7 @@ export class PlayerRow extends LitElement {
       </div>
       <div class="flex gap-2">
         <div
-          class="font-bold rounded-md w-15 h-7.5 text-sm sm:w-25 sm:h-7.5 leading-[1.9rem] text-center"
+          class="font-bold rounded-md w-15 shrink-0 h-7.5 text-sm sm:w-25 sm:h-7.5 leading-[1.9rem] text-center"
         >
           ${renderNumber(this.score)}
         </div>
@@ -171,10 +171,10 @@ export class PlayerRow extends LitElement {
 
   private renderPlayerName() {
     return html`
-      <div class="flex gap-1 items-center w-50">
+      <div class="flex gap-1 items-center w-50 shrink-0">
         ${this.player.tag ? this.renderTag(this.player.tag) : ""}
         <div
-          class="text-xs sm:text-sm font-bold text-ellipsis w-37.5 overflow-hidden whitespace-nowrap"
+          class="text-xs sm:text-sm font-bold text-ellipsis w-37.5 shrink-0 overflow-hidden whitespace-nowrap"
         >
           ${this.player.username}
         </div>
@@ -195,20 +195,20 @@ export class PlayerRow extends LitElement {
   private renderIcon() {
     if (this.player.killedAt) {
       return html` <div
-        class="size-7.5 leading-[5px] text-lg sm:size-10 pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
+        class="size-7.5 leading-[5px] shrink-0 text-lg sm:size-10 pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
       >
         💀
       </div>`;
     } else if (this.player.flag) {
       return html`<img
         src="/flags/${this.player.flag}.svg"
-        class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10"
+        class="min-w-7.5 h-7.5 sm:min-w-10 sm:h-10 shrink-0"
       />`;
     }
 
     return html`
       <div
-        class="size-7.5 leading-[5px] rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
+        class="size-7.5 leading-[5px] shrink-0 rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
       >
         <img
           src="/images/ProfileIcon.svg"
