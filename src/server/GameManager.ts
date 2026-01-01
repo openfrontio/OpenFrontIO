@@ -94,6 +94,14 @@ export class GameManager {
     return totalClients;
   }
 
+  desyncCount(): number {
+    let totalDesyncs = 0;
+    this.games.forEach((game: GameServer) => {
+      totalDesyncs += game.desyncCount;
+    });
+    return totalDesyncs;
+  }
+
   tick() {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {

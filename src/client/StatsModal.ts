@@ -80,7 +80,7 @@ export class StatsModal extends LitElement {
             ${translateText("stats_modal.loading")}
           </p>
           <div
-            class="w-6 h-6 border-4 border-red-500 border-t-transparent rounded-full animate-spin"
+            class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
           ></div>
         </div>
       `;
@@ -91,7 +91,7 @@ export class StatsModal extends LitElement {
         <div class="flex flex-col items-center justify-center p-6 text-white">
           <p class="mb-4 text-center">${this.error}</p>
           <button
-            class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
             @click=${() => this.loadLeaderboard()}
           >
             Retry
@@ -225,7 +225,7 @@ export class StatsButton extends LitElement {
       <div class="fixed top-20 right-4 z-[9998]">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-offset-4"
+          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
           title="${translateText("stats_modal.title")}"
         >
           <img src="/icons/stats.svg" alt="Stats" class="w-6 h-6" />
