@@ -21,9 +21,9 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Dołącz do Discord'a!",
+    "join_discord": "Dołącz do Discorda!",
     "login_discord": "Zaloguj się przez Discorda",
-    "checking_login": "Sprawdzanie logowania...",
+    "checking_login": "Sprawdzanie logowania…",
     "logged_in": "Zalogowano!",
     "log_out": "Wyloguj się",
     "create_lobby": "Utwórz lobby",
@@ -67,7 +67,7 @@
     "ui_attack_ratio": "Współczynnik ataku - ilość jednostek, która będzie użyta podczas ataku. Możesz dostosować współczynnik ataku używając suwaka. Posiadanie większej ilości atakujących jednostek niż jednostek obronnych wroga sprawi, że stracisz mniej jednostek podczas ataku, natomiast gdy będziesz miał mniej, zwiększy się ilość obrażeń zadanym twoim jednostkom. Efekt nie wykracza poza stosunek 2:1.",
     "ui_events": "Panel Wydarzeń",
     "ui_events_desc": "Panel Wydarzeń wyświetla najnowsze wydarzenia, prośby i wiadomości z Szybkiego Czat. Przykłady to:",
-    "ui_events_alliance": "Sojusz – Prośby o sojusz można zaakceptować lub odrzucić. Sojusznicy mogą dzielić się zasobami i wojskami, ale nie mogą się nawzajem atakować. Kliknięcie „Skup widok” przenosi widok do gracza, który wysłał prośbę.",
+    "ui_events_alliance": "Sojusz – Prośby o sojusz można przyjąć lub odrzucić. Sojusznicy mogą dzielić się zasobami i wojskami, ale nie mogą się nawzajem atakować. Kliknięcie „Skup widok” przenosi widok do gracza, który wysłał prośbę.",
     "ui_events_attack": "Ataki – Pokazywane są nadchodzące ataki oraz twoje ataki wychodzące. Kliknij wiadomość, aby wyśrodkować widok na ataku, nuklearce lub łodzi (statku transportowym). Możesz wycofać wojska, klikając czerwony przycisk X. To będzie kosztować życie 25% twoich atakujących żołnierzy. Jeśli wycofasz atak łodzią, łódź wróci do punktu startowego i zaatakuje tam, jeśli ziemia została przejęta od tego czasu. Nuków nie można wycofać po ich wystrzeleniu.",
     "ui_events_quickchat": "Szybki czat – Tutaj możesz zobaczyć wysłane i otrzymane wiadomości na czacie. Wyślij wiadomość do gracza, klikając ikonę szybkiego czatu w jego menu informacji.",
     "ui_options": "Opcje",
@@ -152,15 +152,15 @@
     "start": "Rozpocznij Grę"
   },
   "token_login_modal": {
-    "title": "Logowanie...",
-    "logging_in": "Logowanie...",
+    "title": "Logowanie…",
+    "logging_in": "Logowanie…",
     "success": "Pomyślnie zalogowano jako {email}!"
   },
   "account_modal": {
     "title": "Konto",
     "logged_in_as": "Zalogowany jako {email}",
-    "fetching_account": "Pobieranie informacji o koncie...",
-    "logged_in_with_discord": "Zalogowany przez Discord'a",
+    "fetching_account": "Pobieranie informacji o koncie…",
+    "logged_in_with_discord": "Zalogowany przez Discorda",
     "recovery_email_sent": "Wysłano e-mail odzyskiwania na adres {email}"
   },
   "map": {
@@ -205,18 +205,18 @@
     "fantasy": "Pozostałe"
   },
   "map_component": {
-    "loading": "Ładowanie..."
+    "loading": "Ładowanie…"
   },
   "private_lobby": {
     "title": "Dołącz do prywatnego Lobby",
     "enter_id": "Wprowadź ID Lobby",
     "player": "Gracz",
     "players": "Gracze",
-    "join_lobby": "Dołącz do Lobby",
-    "checking": "Sprawdzanie lobby...",
-    "not_found": "Lobby nie zostało znalezione. Proszę sprawdzić ID i spróbować ponownie.",
+    "join_lobby": "Dołącz do poczekalni",
+    "checking": "Sprawdzanie poczekalni…",
+    "not_found": "Nie znaleziono poczekalni. Prosimy sprawdzić ID i spróbować ponownie.",
     "error": "Wystąpił błąd. Spróbuj ponownie lub skontaktuj się z pomocą techniczną.",
-    "joined_waiting": "Dołączono pomyślnie! Oczekiwanie na rozpoczęcie gry...",
+    "joined_waiting": "Dołączono pomyślnie! Oczekiwanie na rozpoczęcie gry…",
     "version_mismatch": "Ta gra została utworzona w innej wersji. Nie można dołączyć."
   },
   "public_lobby": {
@@ -230,9 +230,9 @@
   },
   "matchmaking_modal": {
     "title": "Wyszukiwanie meczy",
-    "connecting": "Łączenie z serwerem wyszukiwania meczów...",
-    "searching": "Wyszukiwanie gier...",
-    "waiting_for_game": "Oczekiwanie na rozpoczęcie gry..."
+    "connecting": "Łączenie z serwerem wyszukiwania meczów…",
+    "searching": "Wyszukiwanie gier…",
+    "waiting_for_game": "Oczekiwanie na rozpoczęcie gry…"
   },
   "username": {
     "enter_username": "Wprowadź swoją nazwę użytkownika",
@@ -261,7 +261,7 @@
     "enables_title": "Włącz ustawienia",
     "player": "Gracz",
     "players": "Gracze",
-    "waiting": "Oczekiwanie na graczy...",
+    "waiting": "Oczekiwanie na graczy…",
     "start": "Rozpocznij grę",
     "host_badge": "Host"
   },
@@ -276,7 +276,7 @@
     "bot": "Bot"
   },
   "game_starting_modal": {
-    "title": "Gra się rozpoczyna...",
+    "title": "Gra się rozpoczyna…",
     "credits": "Autorzy",
     "code_license": "Kod licencjonowany zgodnie z AGPL-3.0 (bez gwarancji)"
   },
@@ -288,7 +288,7 @@
     "Impossible": "Niemożliwy"
   },
   "game_mode": {
-    "ffa": "Każdy na Każdego",
+    "ffa": "Każdy na każdego",
     "teams": "Drużyny"
   },
   "select_lang": {
@@ -296,7 +296,7 @@
   },
   "unit_type": {
     "city": "Miasto",
-    "defense_post": "Punkt Obronny",
+    "defense_post": "Punkt obronny",
     "port": "Port",
     "warship": "Okręt wojenny",
     "missile_silo": "Silos rakietowy",
@@ -320,7 +320,7 @@
     "special_effects_desc": "Włącz/wyłącz efekty specjalne. Wyłącz, żeby gra działała płynniej",
     "structure_sprites_label": "Grafiki budynków",
     "structure_sprites_desc": "Przełącz grafikę struktur",
-    "anonymous_names_label": "Ukryte Nazwy",
+    "anonymous_names_label": "Ukryte nazwy",
     "anonymous_names_desc": "Ukryj prawdziwe nazwy graczy, zastępując je losowymi na swoim ekranie.",
     "lobby_id_visibility_label": "Ukryte ID lobby",
     "lobby_id_visibility_desc": "Ukryj ID lobby podczas tworzenia prywatnej poczekalni",
@@ -332,7 +332,7 @@
     "troop_ratio_desc": "Dostosuj balans między żołnierzami (do walki) a pracownikami (do produkcji złota) (1–100%)",
     "territory_patterns_label": "🏳️ Wzory terytorium",
     "territory_patterns_desc": "Wybierz, czy wyświetlać wzory terytorium w grze",
-    "performance_overlay_label": "Nakładka Wydajności",
+    "performance_overlay_label": "Nakładka wydajności",
     "performance_overlay_desc": "Przełącz nakładkę wydajności. Gdy jest włączona, będzie ona wyświetlana na ekranie. Naciśnij Shift+D w trakcie gry, aby ją przełączyć.",
     "easter_writing_speed_label": "Mnożnik prędkości pisania",
     "easter_writing_speed_desc": "Dostosuj, jak szybko udajesz, że programujesz (x1–x100)",
@@ -341,7 +341,7 @@
     "view_options": "Opcje widoku",
     "toggle_view": "Przełącz widok",
     "toggle_view_desc": "Alternatywny widok (teren/państwa)",
-    "build_controls": "Skróty Klawiszowe Budowania",
+    "build_controls": "Skróty klawiszowe budowania",
     "build_city": "Zbuduj miasto",
     "build_city_desc": "Zbuduj miasto pod twoim kursorem.",
     "build_factory": "Zbuduj fabrykę",
@@ -356,10 +356,10 @@
     "build_missile_silo_desc": "Zbuduj silos rakietowy pod twoim kursorem.",
     "build_sam_launcher": "Zbuduj wyrzutnię SAM",
     "build_sam_launcher_desc": "Zbuduj wyrzutnię SAM pod twoim kursorem.",
-    "build_atom_bomb": "Zbuduj Bombę Atomową",
-    "build_atom_bomb_desc": "Zbuduj Bombę Atomową pod twoim kursorem.",
-    "build_hydrogen_bomb": "Zbuduj Bombę Wodorową",
-    "build_hydrogen_bomb_desc": "Zbuduj Bombę Wodorową pod twoim kursorem.",
+    "build_atom_bomb": "Zbuduj bombę atomową",
+    "build_atom_bomb_desc": "Zbuduj bombę atomową pod twoim kursorem.",
+    "build_hydrogen_bomb": "Zbuduj bombę wodorową",
+    "build_hydrogen_bomb_desc": "Zbuduj bombę wodorową pod twoim kursorem.",
     "build_mirv": "Zbuduj MIRV",
     "build_mirv_desc": "Zbuduj MIRV pod twoim kursorem.",
     "attack_ratio_controls": "Sterowanie współczynnikiem ataku",
@@ -406,8 +406,8 @@
     "phrase": "Fraza",
     "player": "Gracz",
     "send": "Wyślij",
-    "search": "Wyszukaj gracza...",
-    "build": "Utwórz wiadomość...",
+    "search": "Wyszukaj gracza…",
+    "build": "Utwórz wiadomość…",
     "cat": {
       "help": "Pomoc",
       "attack": "Atak",
@@ -417,7 +417,7 @@
       "warnings": "Ostrzeżenia"
     },
     "help": {
-      "troops": "Proszę, daj mi żołnierzy!",
+      "troops": "Proszę, powierz mi żołnierzy!",
       "troops_frontlines": "Wyślij jednostki na front!",
       "gold": "Proszę, daj mi złoto!",
       "no_attack": "Proszę, nie atakuj mnie!",
@@ -453,7 +453,7 @@
       "thanks": "Dzięki!",
       "oops": "Ups, zły przycisk!",
       "trust_me": "Możesz mi zaufać. Obiecuję!",
-      "trust_broken": "Ufałem ci...",
+      "trust_broken": "Ufałem ci…",
       "ruining_games": "Niszczysz grę nam obu.",
       "dont_do_that": "Nie rób tego!",
       "same_team": "Jestem po twojej stronie!"
@@ -463,7 +463,7 @@
       "strategy": "Dobra strategia!",
       "fun": "Ta gra jest świetna!",
       "team_up": "Połączmy siły przeciwko [P1]!",
-      "pr": "Kiedy w końcu mój PR zostanie połączony...?",
+      "pr": "Kiedy w końcu mój PR zostanie połączony…?",
       "build_closer": "Buduj bliżej, a zdobędziesz pociągi!",
       "coastline": "Proszę, pozwól mi dotrzeć do wybrzeża."
     },
@@ -488,8 +488,8 @@
   },
   "build_menu": {
     "desc": {
-      "atom_bomb": "Mała Eksplozja",
-      "hydrogen_bomb": "Duża eksplozja",
+      "atom_bomb": "Mały wybuch",
+      "hydrogen_bomb": "Duży wybuch",
       "mirv": "Potężny wybuch skierowany tylko na konkretnego gracza",
       "missile_silo": "Używane do wystrzelania bomb nuklearnych",
       "sam_launcher": "Chroni przed przychodzącymi bombami nuklearnymi",
@@ -554,7 +554,7 @@
     "retreating": "wycofuje się",
     "boat": "Łódź",
     "alliance_request_status": "{name} {status} twoją prośbę sojuszu",
-    "alliance_accepted": "zaakceptował",
+    "alliance_accepted": "przyjął",
     "alliance_rejected": "odrzucił",
     "duration_second": "1 sekunda",
     "betrayal_description": "Zerwałeś sojusz z {name}, co czyni cię ZDRADCĄ ({malusPercent}% osłabienia obrony na {durationText})",
@@ -567,7 +567,7 @@
     "renew_alliance": "Wniosek o przedłużenie",
     "request_alliance": "{name} prosi o sojusz!",
     "focus": "Przejdź do miejsca",
-    "accept_alliance": "Akceptuj",
+    "accept_alliance": "Przyjmij",
     "reject_alliance": "Odrzuć",
     "alliance_renewed": "Twój sojusz z {name} został przedłużony",
     "ignore": "Ignoruj",
@@ -602,7 +602,7 @@
   "player_panel": {
     "gold": "Złoto",
     "troops": "Wojsko",
-    "betrayals": "Liczba Zdrad",
+    "betrayals": "Liczba zdrad",
     "traitor": "Zdrajca",
     "trading": "Handel",
     "active": "Aktywny",
@@ -610,7 +610,7 @@
     "alliance_time_remaining": "Sojusz wygasa za",
     "embargo": "Zaprzestali wymiany handlowej z tobą",
     "nuke": "Bomby nuklearne, które oni wysłali w twoją stronę",
-    "start_trade": "Rozpocznij Handel",
+    "start_trade": "Rozpocznij handel",
     "stop_trade": "Zatrzymaj handel",
     "stop_trade_all": "Zatrzymaj handel ze Wszystkimi",
     "start_trade_all": "Rozpocznij handel ze Wszystkimi",
@@ -619,11 +619,11 @@
     "chat": "Czat",
     "target": "Cel",
     "break": "Zerwij",
-    "break_alliance": "Zerwij Sojusz",
+    "break_alliance": "Zerwij sojusz",
     "alliance": "Sojusz",
-    "send_alliance": "Poproś o Sojusz",
+    "send_alliance": "Poproś o sojusz",
     "send_troops": "Wyślij wojska",
-    "send_gold": "Wyślij Złoto",
+    "send_gold": "Wyślij złoto",
     "emotes": "Emotikony"
   },
   "send_troops_modal": {
@@ -634,13 +634,13 @@
     "slider_tooltip": "{{percent}}% • {{amount}}",
     "toggle_attack_bar_mode": "Użyj suwaka ataku, aby wysłać wojsko",
     "warning_attackbar": "Po włączeniu tej opcji nie możesz bezpośrednio otworzyć tego modułu. Będziesz wysyłał wojsko tylko przez suwak ataku.",
-    "aria_slider": "Suwak Jednostek",
-    "capacity_note": "Odbiorca może teraz zaakceptować tylko {{amount}}."
+    "aria_slider": "Suwak jednostek",
+    "capacity_note": "Odbiorca może teraz przyjąć tylko {{amount}}."
   },
   "send_gold_modal": {
-    "title_with_name": "Wyślij Złoto do {name}",
+    "title_with_name": "Wyślij złoto do {name}",
     "available_tooltip": "Obecnie dostępne złoto",
-    "aria_slider": "Suwak Ilości Złota",
+    "aria_slider": "Suwak ilości złota",
     "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
@@ -651,14 +651,14 @@
   "error_modal": {
     "crashed": "Gra uległa awarii!",
     "connection_error": "Błąd połączenia!",
-    "paste_discord": "Proszę wkleić poniższą treść do swojego zgłoszenia błędu na Discordzie:",
+    "paste_discord": "Prosimy wkleić poniższą treść do swojego zgłoszenia błędu na Discordzie:",
     "copy_clipboard": "Kopiuj do schowka",
     "copied": "Skopiowano!",
     "failed_copy": "Kopiowanie nie powiodło się",
     "desync_notice": "Jesteś desynchronizowany względem innych graczy. To, co widzisz, może się różnić od tego, co widzą inni."
   },
   "heads_up_message": {
-    "choose_spawn": "Wybierz lokalizację początkową"
+    "choose_spawn": "Wybierz początkowe położenie"
   },
   "territory_patterns": {
     "title": "Skórki",
@@ -673,16 +673,16 @@
     }
   },
   "flag_input": {
-    "title": "Wybierz Flagę",
+    "title": "Wybierz flagę",
     "button_title": "Wybierz flagę!",
-    "search_flag": "Szukaj..."
+    "search_flag": "Szukaj…"
   },
   "spawn_ad": {
-    "loading": "Ładowanie reklamy..."
+    "loading": "Ładowanie reklamy…"
   },
   "auth": {
     "login_required": "Logowanie jest wymagane, aby uzyskać dostęp do tej strony.",
-    "redirecting": "Trwa przekierowanie...",
+    "redirecting": "Trwa przekierowanie…",
     "not_authorized": "Brak autoryzacji dostępu do tej strony.",
     "contact_admin": "Jeśli uważasz, że ta wiadomość wyświetla się przez pomyłkę, skontaktuj się z administratorem witryny."
   },
@@ -697,9 +697,9 @@
     "building_stats": "Statystyki budynków",
     "ship_arrivals": "Przybycia statków",
     "nuke_stats": "Statystyki bomb",
-    "player_metrics": "Statystyki Gracza",
+    "player_metrics": "Statystyki gracza",
     "building": "Budynek",
-    "ship_type": "Typ Statku",
+    "ship_type": "Rodzaj okrętu",
     "weapon": "Broń",
     "built": "Wybudowano",
     "destroyed": "Zniszczono",
@@ -722,13 +722,13 @@
     "unit": {
       "city": "Miasto",
       "port": "Port",
-      "defp": "Punkt Obronny",
+      "defp": "Punkt obronny",
       "saml": "Wyrzutnia SAM",
       "silo": "Silos rakietowy",
       "wshp": "Okręt wojenny",
       "fact": "Fabryka",
-      "trade": "Statek Handlowy",
-      "trans": "Statek Transportowy",
+      "trade": "Statek handlowy",
+      "trans": "Statek transportowy",
       "abomb": "Bomba atomowa",
       "hbomb": "Bomba wodorowa",
       "mirv": "MIRV",
@@ -736,10 +736,10 @@
     }
   },
   "game_list": {
-    "recent_games": "Ostatnie Rozgrywki",
-    "game_id": "Identyfikator Gry",
+    "recent_games": "Ostatnie rozgrywki",
+    "game_id": "Identyfikator gry",
     "mode": "Tryb",
-    "mode_ffa": "Każdy na Każdego",
+    "mode_ffa": "Każdy na każdego",
     "mode_team": "Drużyna",
     "view": "Widok",
     "details": "Szczegóły",
@@ -755,9 +755,9 @@
     "mode": "Tryb",
     "stats_wins": "Wygrane",
     "stats_losses": "Przegrane",
-    "stats_wlr": "Współczynnik Wygranych do Przegranych",
+    "stats_wlr": "Współczynnik wygranych do przegranych",
     "stats_games_played": "Gry zagrane",
-    "mode_ffa": "Każdy na Każdego",
+    "mode_ffa": "Każdy na każdego",
     "mode_team": "Drużyna"
   }
 }
