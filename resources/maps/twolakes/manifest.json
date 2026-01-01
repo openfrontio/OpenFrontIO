@@ -1,0 +1,40 @@
+{
+  "map": {
+    "height": 1840,
+    "num_land_tiles": 3426566,
+    "width": 2100
+  },
+  "map16x": {
+    "height": 460,
+    "num_land_tiles": 211836,
+    "width": 525
+  },
+  "map4x": {
+    "height": 920,
+    "num_land_tiles": 853511,
+    "width": 1050
+  },
+  "name": "Two Lakes",
+  "nations": [
+    {
+      "coordinates": [1025, 750],
+      "name": "Galicica"
+    },
+    {
+      "coordinates": [1815, 820],
+      "name": "Pelister"
+    },
+    {
+      "coordinates": [920, 1250],
+      "name": "Podgorie"
+    },
+    {
+      "coordinates": [100, 1410],
+      "name": "Valamara"
+    },
+    {
+      "coordinates": [1320, 1485],
+      "name": "Prespa"
+    }
+  ]
+}
