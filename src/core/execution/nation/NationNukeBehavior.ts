@@ -284,7 +284,7 @@ export class NationNukeBehavior {
       if (hasSam) return -1;
     }
 
-    // Prefer tiles that are closer to a silo (but don't drop below 0)
+    // Prefer tiles that are closer to a silo (but preserve structure value)
     const siloTiles = silos.map((u) => u.tile());
     const result = closestTwoTiles(this.mg, siloTiles, [tile]);
     if (result === null) throw new Error("Missing result");
@@ -292,7 +292,8 @@ export class NationNukeBehavior {
     const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
     const distanceToClosestSilo = Math.sqrt(distanceSquared);
     const distancePenalty = distanceToClosestSilo * 30;
-    tileValue = Math.max(0, tileValue - distancePenalty);
+    const baseTileValue = tileValue;
+    tileValue = Math.max(baseTileValue * 0.2, tileValue - distancePenalty); // Keep at least 20% of structure value
 
     // Don't target near recent targets
     const dist25 = euclDistFN(tile, 25, false);
