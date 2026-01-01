@@ -411,7 +411,8 @@ export class NationExecution implements Execution {
     if (
       this.player === null ||
       this.attackBehavior === null ||
-      this.allianceBehavior === null
+      this.allianceBehavior === null ||
+      this.nukeBehavior === null
     ) {
       throw new Error("not initialized");
     }
@@ -459,9 +460,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-    this.nukeBehavior?.maybeSendNuke(
-      this.attackBehavior.findBestNukeTarget(borderingEnemies),
-    );
+    this.nukeBehavior.maybeSendNuke(this.attackBehavior.findBestNukeTarget());
   }
 
   private sendBoatRandomly(borderingEnemies: Player[] = []) {
