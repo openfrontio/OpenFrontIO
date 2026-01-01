@@ -106,10 +106,10 @@ describe("StatsModal", () => {
       expect(winScoreHeader).toBeTruthy();
       expect(lossScoreHeader).toBeTruthy();
 
-      expect(winScoreHeader?.getAttribute("title")).toBe(
+      expect(winScoreHeader!.getAttribute("title")).toBe(
         "Weighted wins based on clan participation and match difficulty",
       );
-      expect(lossScoreHeader?.getAttribute("title")).toBe(
+      expect(lossScoreHeader!.getAttribute("title")).toBe(
         "Weighted losses based on clan participation and match difficulty",
       );
     });
