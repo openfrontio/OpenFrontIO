@@ -792,9 +792,9 @@ export class DefaultConfig implements Config {
         case Difficulty.Medium:
           return 25_000; // Like humans
         case Difficulty.Hard:
-          return 31_250;
+          return 28_125;
         case Difficulty.Impossible:
-          return 37_500;
+          return 31_250;
         default:
           assertNever(this._gameConfig.difficulty);
       }
@@ -827,9 +827,9 @@ export class DefaultConfig implements Config {
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
-        return maxTroops * 1.25;
+        return maxTroops * 1.125;
       case Difficulty.Impossible:
-        return maxTroops * 1.5;
+        return maxTroops * 1.25;
       default:
         assertNever(this._gameConfig.difficulty);
     }
@@ -856,10 +856,10 @@ export class DefaultConfig implements Config {
           toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
-          toAdd *= 1.05;
+          toAdd *= 1.025;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.1;
+          toAdd *= 1.05;
           break;
         default:
           assertNever(this._gameConfig.difficulty);

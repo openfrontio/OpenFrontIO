@@ -177,7 +177,9 @@
     "clan": "Clan",
     "games": "Games",
     "win_score": "Win Score",
+    "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "loss_score": "Loss Score",
+    "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
     "win_loss_ratio": "Win/Loss",
     "rank": "Rank"
   },
