@@ -27,6 +27,8 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import { getApiBase, getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
@@ -50,6 +52,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private showAchievements: boolean = false;
+  @state() private mapWins: Map<GameMapType, Set<Difficulty | "Custom">> =
+    new Map();
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -127,6 +131,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .showMedals=${this.showAchievements}
+                              .wins=${this.mapWins.get(mapValue) ?? new Set()}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
@@ -443,8 +448,71 @@ export class SinglePlayerModal extends LitElement {
     return this; // light DOM
   }
 
+  private async loadSingleplayerWins() {
+    const auth = await userAuth();
+    const user = await getUserMe();
+    if (!auth || !user) {
+      this.mapWins = new Map();
+      return;
+    }
+
+    const playerId = user.player.publicId;
+    if (!playerId) {
+      console.warn("Missing player publicId for wins fetch");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${getApiBase()}/player_map_completions?playerId=${encodeURIComponent(playerId)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.jwt}`,
+          },
+        },
+      );
+      if (!response.ok) {
+        console.warn(
+          "Failed to fetch singleplayer wins",
+          response.status,
+          response.statusText,
+        );
+        return;
+      }
+      const body = await response.json();
+      if (!Array.isArray(body)) {
+        console.warn("Unexpected player_map_completions response");
+        return;
+      }
+
+      const winsMap = new Map<GameMapType, Set<Difficulty | "Custom">>();
+      for (const entry of body) {
+        const { mapName, difficulty } = entry ?? {};
+        const isValidMap =
+          typeof mapName === "string" &&
+          Object.values(GameMapType).includes(mapName as GameMapType);
+        const isValidDifficulty =
+          typeof difficulty === "string" &&
+          (difficulty === "Custom" ||
+            Object.values(Difficulty).includes(difficulty as Difficulty));
+        if (!isValidMap || !isValidDifficulty) continue;
+
+        const map = mapName as GameMapType;
+        const set =
+          winsMap.get(map) ??
+          new Set<Difficulty | "Custom">();
+        set.add(difficulty as Difficulty | "Custom");
+        winsMap.set(map, set);
+      }
+
+      this.mapWins = winsMap;
+    } catch (error) {
+      console.warn("Failed to fetch singleplayer wins", error);
+    }
+  }
+
   public open() {
     this.modalEl?.open();
+    void this.loadSingleplayerWins();
     this.useRandomMap = false;
   }
 

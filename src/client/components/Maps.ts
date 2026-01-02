@@ -54,6 +54,7 @@ export class MapDisplay extends LitElement {
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
   @property({ type: Boolean }) showMedals = false;
+  @property({ attribute: false }) wins: Set<Difficulty | "Custom"> = new Set();
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -198,26 +199,6 @@ export class MapDisplay extends LitElement {
   }
 
   private readWins(): Set<Difficulty | "Custom"> {
-    const mapValue = this.mapKey
-      ? GameMapType[this.mapKey as keyof typeof GameMapType]
-      : undefined;
-    if (!mapValue) return new Set();
-    const storageKey = "achievements.singleplayerWins";
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed = raw ? JSON.parse(raw) : {};
-      const values: unknown = parsed[mapValue];
-      if (Array.isArray(values)) {
-        return new Set(
-          values.filter(
-            (v): v is Difficulty | "Custom" =>
-              v === "Custom" || Object.values(Difficulty).includes(v as any),
-          ),
-        );
-      }
-      return new Set();
-    } catch {
-      return new Set();
-    }
+    return this.wins ?? new Set();
   }
 }
