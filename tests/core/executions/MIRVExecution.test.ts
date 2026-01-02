@@ -197,7 +197,7 @@ describe("MIRVExecution", () => {
     const warheads = player.units(UnitType.MIRVWarhead);
     expect(warheads.length).toBeGreaterThan(0);
 
-    const targets = warheads.map((w) => w.targetTile())
+    const targets = warheads.map((w) => w.targetTile());
 
     // Check that targets have minimum spacing (minimumSpread = 55 from MIRVExecution)
     const minimumSpread = 55;
@@ -242,7 +242,6 @@ describe("MIRVExecution", () => {
     expect(player.units(UnitType.MIRV)).toHaveLength(0);
     expect(mirvExec.isActive()).toBe(false);
   });
-
 
   test("MIRV should not launch when targeting terra nullius", async () => {
     // Find an unowned land tile near player territory

@@ -12,9 +12,7 @@ const sparseTerritoryGame = await setup(
     infiniteGold: true,
     instantBuild: true,
   },
-  [
-    new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
-  ],
+  [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
   dirname(fileURLToPath(import.meta.url)),
 );
 
@@ -41,7 +39,11 @@ claimRow(90, 15);
 claimRow(140, 15);
 claimRow(185, 15);
 
-sparsePlayer.buildUnit(UnitType.MissileSilo, sparseTerritoryGame.ref(10, 10), {});
+sparsePlayer.buildUnit(
+  UnitType.MissileSilo,
+  sparseTerritoryGame.ref(10, 10),
+  {},
+);
 
 // Setup dense territory scenario (large target area)
 const denseTerritoryGame = await setup(
@@ -50,9 +52,7 @@ const denseTerritoryGame = await setup(
     infiniteGold: true,
     instantBuild: true,
   },
-  [
-    new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
-  ],
+  [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
   dirname(fileURLToPath(import.meta.url)),
 );
 
@@ -80,9 +80,7 @@ const giantMapGame = await setup(
     infiniteGold: true,
     instantBuild: true,
   },
-  [
-    new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
-  ],
+  [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
   dirname(fileURLToPath(import.meta.url)),
 );
 
@@ -108,7 +106,7 @@ console.log(`Conquered ${conqueredCount} tiles on giant world map`);
 
 giantMapPlayer.buildUnit(UnitType.MissileSilo, giantMapGame.ref(800, 350), {});
 
-const results: string[] = []
+const results: string[] = [];
 
 new Benchmark.Suite()
   .add("MIRV target selection - sparse territory", () => {
