@@ -442,32 +442,37 @@ describe("Attack immunity", () => {
   });
 
   test("Should be able to attack nations during immunity phase", async () => {
-    const nation = new PlayerInfo(
-      "nation dude",
-      PlayerType.Nation,
-      null,
-      "nation_id",
-    );
+    const nationId = "nation_id";
+    const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
     game.addPlayer(nation);
     // Player A attacks the nation
-    const attackExecution = new AttackExecution(
-      null,
-      playerA,
-      "nation_id",
-      null,
-    );
+    const attackExecution = new AttackExecution(null, playerA, nationId, null);
     game.addExecution(attackExecution);
     game.executeNextTick();
     expect(playerA.outgoingAttacks()).toHaveLength(1);
   });
 
   test("Should be able to attack bots during immunity phase", async () => {
-    const nation = new PlayerInfo("bot dude", PlayerType.Bot, null, "bot_id");
-    game.addPlayer(nation);
-    // Player A attacks the nation
-    const attackExecution = new AttackExecution(null, playerA, "bot_id", null);
+    const botId = "bot_id";
+    const bot = new PlayerInfo("bot", PlayerType.Bot, null, botId);
+    game.addPlayer(bot);
+    // Player A attacks the bot
+    const attackExecution = new AttackExecution(null, playerA, botId, null);
     game.addExecution(attackExecution);
     game.executeNextTick();
     expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Can't send nuke during immunity phase", async () => {
+    constructionExecution(game, playerA, 7, 0, UnitType.MissileSilo);
+    expect(playerA.units(UnitType.MissileSilo)).toHaveLength(1);
+    // Player A sends a bomb to player B
+    constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
+    expect(playerA.units(UnitType.AtomBomb)).toHaveLength(0);
+    // Now wait for immunity to end
+    waitForImmunityToEnd();
+    // And send the exact same order
+    constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
+    expect(playerA.units(UnitType.AtomBomb)).toHaveLength(1);
   });
 });

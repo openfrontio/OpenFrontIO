@@ -548,7 +548,7 @@ export class HostLobbyModal extends LitElement {
                             type="number"
                             id="spawn-immunity-duration"
                             min="0"
-                            max="120"
+                            max="300"
                             step="1"
                             .value=${String(
                               this.spawnImmunityDurationMinutes ?? 0,
@@ -740,7 +740,7 @@ export class HostLobbyModal extends LitElement {
     const input = e.target as HTMLInputElement;
     input.value = input.value.replace(/[eE+-]/g, "");
     const value = parseInt(input.value, 10);
-    if (Number.isNaN(value) || value < 0 || value > 300) {
+    if (Number.isNaN(value) || value < 0 || value > 120) {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
