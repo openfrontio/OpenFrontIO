@@ -87,6 +87,7 @@ const numPlayersConfig = {
   [GameMapType.Lemnos]: [20, 15, 10],
   [GameMapType.TwoLakes]: [60, 50, 40],
   [GameMapType.StraitOfHormuz]: [40, 36, 30],
+  [GameMapType.Surrounded]: [56, 28, 14], // 4, 2, 1 players per island
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {

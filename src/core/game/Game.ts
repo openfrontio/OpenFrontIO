@@ -109,6 +109,7 @@ export enum GameMapType {
   Lemnos = "Lemnos",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
+  Surrounded = "Surrounded",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -159,6 +160,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
     GameMapType.Svalmel,
+    GameMapType.Surrounded,
   ],
 };
 

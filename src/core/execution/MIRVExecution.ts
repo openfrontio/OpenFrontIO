@@ -20,8 +20,13 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit | null = null;
 
-  private mirvRange = 1500;
+  private range = 1500;
+  private rangeSquared = this.range * this.range;
+  private minimumSpread = 55;
   private warheadCount = 350;
+
+  private baseX: number;
+  private baseY: number;
 
   private random: PseudoRandom;
 
@@ -98,25 +103,15 @@ export class MirvExecution implements Execution {
   }
 
   private separate() {
-    if (this.nuke === null) throw new Error("uninitialized");
-    const dsts: TileRef[] = [this.dst];
-    let attempts = 1000;
-    while (attempts > 0 && dsts.length < this.warheadCount) {
-      attempts--;
-      const potential = this.randomLand(this.dst, dsts);
-      if (potential === null) {
-        continue;
-      }
-      dsts.push(potential);
+    if (this.nuke === null) {
+      throw new Error("uninitialized");
     }
-    console.log(`dsts: ${dsts.length}`);
-    dsts.sort(
-      (a, b) =>
-        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
-    );
-    console.log(`got ${dsts.length} dsts!!`);
 
-    for (const [i, dst] of dsts.entries()) {
+    this.baseX = this.mg.x(this.dst);
+    this.baseY = this.mg.y(this.dst);
+
+    const destinations = this.selectDestinations();
+    for (const [i, dst] of destinations.entries()) {
       this.mg.addExecution(
         new NukeExecution(
           UnitType.MIRVWarhead,
@@ -132,47 +127,67 @@ export class MirvExecution implements Execution {
     this.nuke.delete(false);
   }
 
-  randomLand(ref: TileRef, taken: TileRef[]): TileRef | null {
-    let tries = 0;
-    const mirvRange2 = this.mirvRange * this.mirvRange;
-    while (tries < 100) {
-      tries++;
-      const x = this.random.nextInt(
-        this.mg.x(ref) - this.mirvRange,
-        this.mg.x(ref) + this.mirvRange,
-      );
-      const y = this.random.nextInt(
-        this.mg.y(ref) - this.mirvRange,
-        this.mg.y(ref) + this.mirvRange,
-      );
+  private selectDestinations(): TileRef[] {
+    const targets: TileRef[] = [this.dst];
+
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      const target = this.tryGenerateTarget(targets);
+      if (target) targets.push(target);
+      if (targets.length >= this.warheadCount) break;
+    }
+
+    return targets.sort(
+      (a, b) =>
+        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
+    );
+  }
+
+  private tryGenerateTarget(taken: TileRef[]): TileRef | undefined {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const r1 = this.random.next();
+      const r2 = (r1 * 15485863) % 1;
+
+      const x = Math.round(r1 * this.range * 2 - this.range + this.baseX);
+      const y = Math.round(r2 * this.range * 2 - this.range + this.baseY);
+
       if (!this.mg.isValidCoord(x, y)) {
         continue;
       }
+
       const tile = this.mg.ref(x, y);
+
       if (!this.mg.isLand(tile)) {
         continue;
       }
-      if (this.mg.euclideanDistSquared(tile, ref) > mirvRange2) {
+
+      if ((x - this.baseX) ** 2 + (y - this.baseY) ** 2 > this.rangeSquared) {
         continue;
       }
+
       if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
-      if (this.proximityCheck(tile, taken)) {
+
+      if (this.isOverlapping(x, y, taken)) {
         continue;
       }
+
       return tile;
     }
-    console.log("couldn't find place, giving up");
-    return null;
   }
 
-  private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
-    for (const t of taken) {
-      if (this.mg.manhattanDist(tile, t) < 55) {
+  private isOverlapping(x: number, y: number, taken: TileRef[]): boolean {
+    for (const existingTile of taken) {
+      const existingTileX = this.mg.x(existingTile);
+      const existingTileY = this.mg.y(existingTile);
+      const manhattanDistance =
+        Math.abs(x - existingTileX) + Math.abs(y - existingTileY);
+
+      if (manhattanDistance < this.minimumSpread) {
         return true;
       }
     }
+
     return false;
   }
 
