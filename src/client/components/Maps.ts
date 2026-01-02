@@ -54,7 +54,7 @@ export class MapDisplay extends LitElement {
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
   @property({ type: Boolean }) showMedals = false;
-  @property({ attribute: false }) wins: Set<Difficulty | "Custom"> = new Set();
+  @property({ attribute: false }) wins: Set<Difficulty> = new Set();
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -173,19 +173,17 @@ export class MapDisplay extends LitElement {
   }
 
   private renderMedals() {
-    const medalOrder: (Difficulty | "Custom")[] = [
+    const medalOrder: Difficulty[] = [
       Difficulty.Easy,
       Difficulty.Medium,
       Difficulty.Hard,
       Difficulty.Impossible,
-      "Custom",
     ];
-    const colors: Record<Difficulty | "Custom", string> = {
+    const colors: Record<Difficulty, string> = {
       [Difficulty.Easy]: "var(--medal-easy)",
       [Difficulty.Medium]: "var(--medal-medium)",
       [Difficulty.Hard]: "var(--medal-hard)",
       [Difficulty.Impossible]: "var(--medal-impossible)",
-      Custom: "var(--medal-custom)",
     };
     const wins = this.readWins();
     return medalOrder.map((medal) => {
@@ -198,7 +196,7 @@ export class MapDisplay extends LitElement {
     });
   }
 
-  private readWins(): Set<Difficulty | "Custom"> {
+  private readWins(): Set<Difficulty> {
     return this.wins ?? new Set();
   }
 }

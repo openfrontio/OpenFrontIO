@@ -51,8 +51,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private showAchievements: boolean = false;
-  @state() private mapWins: Map<GameMapType, Set<Difficulty | "Custom">> =
-    new Map();
+  @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -108,7 +107,7 @@ export class SinglePlayerModal extends LitElement {
         .find((achievement) => achievement?.type === "singleplayer-map")
         ?.data ?? [];
 
-    const winsMap = new Map<GameMapType, Set<Difficulty | "Custom">>();
+    const winsMap = new Map<GameMapType, Set<Difficulty>>();
     for (const entry of completions) {
       const { mapName, difficulty } = entry ?? {};
       const isValidMap =
@@ -120,7 +119,7 @@ export class SinglePlayerModal extends LitElement {
       if (!isValidMap || !isValidDifficulty) continue;
 
       const map = mapName as GameMapType;
-      const set = winsMap.get(map) ?? new Set<Difficulty | "Custom">();
+      const set = winsMap.get(map) ?? new Set<Difficulty>();
       set.add(difficulty as Difficulty);
       winsMap.set(map, set);
     }
