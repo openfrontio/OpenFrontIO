@@ -17,8 +17,7 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getApiBase, getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { UserMeResponse } from "../core/ApiSchemas";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -62,9 +61,17 @@ export class SinglePlayerModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
   }
 
   disconnectedCallback() {
+    document.removeEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
@@ -79,6 +86,45 @@ export class SinglePlayerModal extends LitElement {
   private toggleAchievements = () => {
     this.showAchievements = !this.showAchievements;
   };
+
+  private handleUserMeResponse = (
+    event: CustomEvent<UserMeResponse | false>,
+  ) => {
+    this.applyAchievements(event.detail);
+  };
+
+  private applyAchievements(userMe: UserMeResponse | false) {
+    if (!userMe) {
+      this.mapWins = new Map();
+      return;
+    }
+
+    const completions = userMe.player.achievements?.playerMapCompletions ?? [];
+    if (!Array.isArray(completions)) {
+      this.mapWins = new Map();
+      return;
+    }
+
+    const winsMap = new Map<GameMapType, Set<Difficulty | "Custom">>();
+    for (const entry of completions) {
+      const { mapName, difficulty } = entry ?? {};
+      const isValidMap =
+        typeof mapName === "string" &&
+        Object.values(GameMapType).includes(mapName as GameMapType);
+      const isValidDifficulty =
+        typeof difficulty === "string" &&
+        (difficulty === "Custom" ||
+          Object.values(Difficulty).includes(difficulty as Difficulty));
+      if (!isValidMap || !isValidDifficulty) continue;
+
+      const map = mapName as GameMapType;
+      const set = winsMap.get(map) ?? new Set<Difficulty | "Custom">();
+      set.add(difficulty as Difficulty | "Custom");
+      winsMap.set(map, set);
+    }
+
+    this.mapWins = winsMap;
+  }
 
   render() {
     return html`
@@ -448,69 +494,8 @@ export class SinglePlayerModal extends LitElement {
     return this; // light DOM
   }
 
-  private async loadSingleplayerWins() {
-    const auth = await userAuth();
-    const user = await getUserMe();
-    if (!auth || !user) {
-      this.mapWins = new Map();
-      return;
-    }
-
-    const playerId = user.player.publicId;
-    if (!playerId) {
-      console.warn("Missing player publicId for wins fetch");
-      return;
-    }
-    try {
-      const response = await fetch(
-        `${getApiBase()}/player_map_completions?playerId=${encodeURIComponent(playerId)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${auth.jwt}`,
-          },
-        },
-      );
-      if (!response.ok) {
-        console.warn(
-          "Failed to fetch singleplayer wins",
-          response.status,
-          response.statusText,
-        );
-        return;
-      }
-      const body = await response.json();
-      if (!Array.isArray(body)) {
-        console.warn("Unexpected player_map_completions response");
-        return;
-      }
-
-      const winsMap = new Map<GameMapType, Set<Difficulty | "Custom">>();
-      for (const entry of body) {
-        const { mapName, difficulty } = entry ?? {};
-        const isValidMap =
-          typeof mapName === "string" &&
-          Object.values(GameMapType).includes(mapName as GameMapType);
-        const isValidDifficulty =
-          typeof difficulty === "string" &&
-          (difficulty === "Custom" ||
-            Object.values(Difficulty).includes(difficulty as Difficulty));
-        if (!isValidMap || !isValidDifficulty) continue;
-
-        const map = mapName as GameMapType;
-        const set = winsMap.get(map) ?? new Set<Difficulty | "Custom">();
-        set.add(difficulty as Difficulty | "Custom");
-        winsMap.set(map, set);
-      }
-
-      this.mapWins = winsMap;
-    } catch (error) {
-      console.warn("Failed to fetch singleplayer wins", error);
-    }
-  }
-
   public open() {
     this.modalEl?.open();
-    void this.loadSingleplayerWins();
     this.useRandomMap = false;
   }
 
