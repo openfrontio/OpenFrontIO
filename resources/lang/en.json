@@ -177,7 +177,9 @@
     "clan": "Clan",
     "games": "Games",
     "win_score": "Win Score",
+    "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "loss_score": "Loss Score",
+    "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
     "win_loss_ratio": "Win/Loss",
     "rank": "Rank"
   },
@@ -246,7 +248,8 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
-    "twolakes": "Two Lakes"
+    "twolakes": "Two Lakes",
+    "straitofhormuz": "Strait of Hormuz"
   },
   "map_categories": {
     "continental": "Continental",
@@ -272,11 +275,11 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "teams_Duos": "{team_count} of 2 (Duos)",
+    "teams_Trios": "{team_count} of 3 (Trios)",
+    "teams_Quads": "{team_count} of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
     "starting_game": "Starting game…",
-    "teams_Duos": "of 2 (Duos)",
-    "teams_Trios": "of 3 (Trios)",
-    "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
@@ -346,7 +349,7 @@
     "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
-    "difficulty": "Difficulty",
+    "difficulty": "Nation difficulty",
     "easy": "Easy",
     "medium": "Medium",
     "hard": "Hard",
@@ -700,7 +703,10 @@
     "send_alliance": "Send Alliance",
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
-    "emotes": "Emojis"
+    "emotes": "Emojis",
+    "arc_up": "Upward arc",
+    "arc_down": "Downward arc",
+    "flip_rocket_trajectory": "Flip rocket trajectory"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",

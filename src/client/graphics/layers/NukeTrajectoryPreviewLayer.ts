@@ -56,9 +56,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         this.cachedSpawnTile = null;
       }
     });
-    this.eventBus.on(SwapRocketDirectionEvent, () => {
-      // Toggle rocket direction
-      this.uiState.rocketDirectionUp = !this.uiState.rocketDirectionUp;
+    this.eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
       // Force trajectory recalculation
       this.lastTargetTile = null;
     });
