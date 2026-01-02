@@ -13,8 +13,6 @@ import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import {
-  GameMapSize,
-  GameType,
   PlayerActions,
   UnitType,
 } from "../core/game/Game";
@@ -31,8 +29,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { getApiBase, getUserMe } from "./Api";
-import { getPersistentID, userAuth } from "./Auth";
+import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -271,38 +268,6 @@ export class ClientGameRunner {
       this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
-  }
-
-  private didPlayerWin(update: WinUpdate): boolean {
-    if (this.myPlayer === null || update.winner === undefined) {
-      return false;
-    }
-    if (update.winner[0] === "player") {
-      const myClient = this.myPlayer.clientID();
-      return myClient !== null && update.winner[1] === myClient;
-    }
-    if (update.winner[0] === "team") {
-      const myTeam = this.myPlayer.team();
-      return myTeam !== null && update.winner[1] === myTeam;
-    }
-    return false;
-  }
-
-  private isDefaultSingleplayerSettings(
-    config: GameStartInfo["config"],
-  ): boolean {
-    if (config.gameMapSize !== GameMapSize.Normal) return false;
-    if (config.donateGold !== true) return false;
-    if (config.donateTroops !== true) return false;
-    if (config.disableNations !== false) return false;
-    if (config.bots !== 400) return false;
-    if (config.infiniteGold !== false) return false;
-    if (config.infiniteTroops !== false) return false;
-    if (config.instantBuild !== false) return false;
-    if (config.randomSpawn !== false) return false;
-    if (config.maxTimerValue !== undefined) return false;
-    if ((config.disabledUnits?.length ?? 0) !== 0) return false;
-    return true;
   }
 
   public start() {
