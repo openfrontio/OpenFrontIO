@@ -1,0 +1,45 @@
+{
+  "name": "Surrounded",
+  "nations": [
+    {
+      "coordinates": [1043, 910],
+      "flag": "",
+      "name": "Endangered Islander"
+    },
+    {
+      "coordinates": [684, 271],
+      "flag": "",
+      "name": "North Islander"
+    },
+    {
+      "coordinates": [1429, 429],
+      "flag": "",
+      "name": "Isolated Islander"
+    },
+    {
+      "coordinates": [1726, 1022],
+      "flag": "",
+      "name": "Volcano Islander"
+    },
+    {
+      "coordinates": [1422, 1569],
+      "flag": "",
+      "name": "Resilient Islander"
+    },
+    {
+      "coordinates": [670, 1742],
+      "flag": "",
+      "name": "Vulnerable Islander"
+    },
+    {
+      "coordinates": [282, 1160],
+      "flag": "",
+      "name": "Unyielding Islander"
+    },
+    {
+      "coordinates": [384, 469],
+      "flag": "",
+      "name": "Rugged Islander"
+    }
+  ]
+}
