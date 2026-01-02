@@ -1,6 +1,7 @@
 import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
 import {
   Game,
+  MessageType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -221,7 +222,7 @@ describe("MIRVExecution", () => {
     expect(displaySpy).toHaveBeenCalled();
     const callArgs = displaySpy.mock.calls[0];
     expect(callArgs[1]).toContain("MIRV INBOUND");
-    expect(callArgs[2]).toBe(4); // MessageType.MIRV_INBOUND
+    expect(callArgs[2]).toBe(MessageType.MIRV_INBOUND);
     expect(callArgs[3]).toBe(otherPlayer.id());
   });
 
