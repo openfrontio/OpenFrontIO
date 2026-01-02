@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Game,
+  GameMode,
   Player,
   PlayerType,
   Relation,
@@ -118,13 +119,11 @@ export class AiAttackBehavior {
     };
 
     const hated = (): boolean => {
-      const mostHated = this.player.allRelationsSorted()[0];
-      if (
-        mostHated !== undefined &&
-        mostHated.relation === Relation.Hostile &&
-        this.player.isFriendly(mostHated.player) === false
-      ) {
-        this.sendAttack(mostHated.player);
+      for (const relation of this.player.allRelationsSorted()) {
+        if (relation.relation !== Relation.Hostile) continue;
+        const other = relation.player;
+        if (this.player.isFriendly(other)) continue;
+        this.sendAttack(other);
         return true;
       }
       return false;
@@ -201,7 +200,7 @@ export class AiAttackBehavior {
     }
   }
 
-  findBestNukeTarget(borderingEnemies: Player[]): Player | null {
+  findBestNukeTarget(): Player | null {
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
@@ -221,17 +220,147 @@ export class AiAttackBehavior {
       }
     }
 
-    // Find the most hated player with hostile relation
-    const mostHated = this.player.allRelationsSorted()[0];
-    if (
-      mostHated !== undefined &&
-      mostHated.relation === Relation.Hostile &&
-      this.player.isFriendly(mostHated.player) === false
-    ) {
-      return mostHated.player;
+    // Find the most hated player
+    // Ignore much weaker players (we don't need nukes to deal with them)
+    const myMaxTroops = this.game.config().maxTroops(this.player);
+    for (const relation of this.player.allRelationsSorted()) {
+      if (relation.relation !== Relation.Hostile) continue;
+      const other = relation.player;
+      if (this.player.isFriendly(other)) continue;
+
+      const otherMaxTroops = this.game.config().maxTroops(other);
+      if (myMaxTroops >= otherMaxTroops * 2) continue;
+
+      return other;
+    }
+
+    // In FFAs, nuke the crown if they're far enough ahead
+    const crownTarget = this.findFFACrownTarget();
+    if (crownTarget) {
+      return crownTarget;
+    }
+
+    // In Teams, nuke the strongest team
+    const teamTarget = this.findStrongestTeamTarget();
+    if (teamTarget) {
+      return teamTarget;
     }
 
     return null;
+  }
+
+  private findFFACrownTarget(): Player | null {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    if (gameMode !== GameMode.FFA) {
+      return null;
+    }
+
+    if (this.game.players().length <= 1) {
+      return null;
+    }
+
+    const sortedByTiles = this.game
+      .players()
+      .slice()
+      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    const firstPlace = sortedByTiles[0];
+
+    // Don't target ourselves or allies
+    if (firstPlace === this.player || this.player.isFriendly(firstPlace)) {
+      return null;
+    }
+
+    const numTilesWithoutFallout =
+      this.game.numLandTiles() - this.game.numTilesWithFallout();
+    if (numTilesWithoutFallout <= 0) {
+      return null;
+    }
+
+    const firstPlaceShare = firstPlace.numTilesOwned() / numTilesWithoutFallout;
+    const myShare = this.player.numTilesOwned() / numTilesWithoutFallout;
+
+    let threshold: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        threshold = 0.4; // 40%
+        break;
+      case Difficulty.Medium:
+        threshold = 0.3; // 30%
+        break;
+      case Difficulty.Hard:
+        threshold = 0.2; // 20%
+        break;
+      case Difficulty.Impossible:
+        threshold = 0.1; // 10%
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    // Check if first place has threshold% more tile-percentage of the map than us
+    if (firstPlaceShare - myShare > threshold) {
+      return firstPlace;
+    }
+
+    return null;
+  }
+
+  private findStrongestTeamTarget(): Player | null {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return null;
+    }
+
+    if (this.game.players().length <= 1) {
+      return null;
+    }
+
+    const teamTiles = new Map<string, number>();
+    const teamPlayers = new Map<string, Player[]>();
+
+    for (const p of this.game.players()) {
+      const team = p.team();
+      if (team === null) continue;
+
+      teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
+      let players = teamPlayers.get(team);
+      if (!players) {
+        players = [];
+        teamPlayers.set(team, players);
+      }
+      players.push(p);
+    }
+
+    const sortedTeams = Array.from(teamTiles.entries()).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    if (sortedTeams.length === 0) {
+      return null;
+    }
+
+    let strongestTeam = sortedTeams[0][0];
+    if (strongestTeam === this.player.team()) {
+      if (sortedTeams.length > 1) {
+        strongestTeam = sortedTeams[1][0];
+      } else {
+        return null;
+      }
+    }
+
+    const targetTeamPlayers = teamPlayers.get(strongestTeam)!;
+
+    if (this.random.chance(2)) {
+      // Strongest player
+      return targetTeamPlayers.reduce((prev, current) =>
+        this.game.config().maxTroops(prev) >
+        this.game.config().maxTroops(current)
+          ? prev
+          : current,
+      );
+    } else {
+      // Random player
+      return this.random.randElement(targetTeamPlayers);
+    }
   }
 
   private hasReserveRatioTroops(): boolean {

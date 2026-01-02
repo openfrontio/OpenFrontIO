@@ -7,7 +7,6 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import changelog from "/changelog.md?url";
 import megaphone from "/images/Megaphone.svg?url";
-import santaHatIcon from "/images/SantaHat.webp?url";
 
 @customElement("news-modal")
 export class NewsModal extends LitElement {
@@ -167,10 +166,6 @@ export class NewsButton extends LitElement {
             src="${megaphone}"
             alt=${translateText("news.title")}
           />
-          <div
-            class="santa-hat-overlay absolute bg-contain bg-no-repeat pointer-events-none"
-            style="background-image: url('${santaHatIcon}')"
-          ></div>
         </button>
       </div>
       <news-modal></news-modal>

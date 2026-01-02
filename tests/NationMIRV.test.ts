@@ -257,7 +257,7 @@ describe("Nation MIRV Retaliation", () => {
       testExecution.init(game);
 
       for (let tick = 0; tick < 200; tick++) {
-        testExecution.tick(game.ticks());
+        testExecution.tick(tick);
         // Allow the game to process executions
         if (tick % 10 === 0) {
           game.executeNextTick();
@@ -410,7 +410,7 @@ describe("Nation MIRV Retaliation", () => {
       testExecution.init(game);
 
       for (let tick = 0; tick < 200; tick++) {
-        testExecution.tick(game.ticks());
+        testExecution.tick(tick);
         // Allow the game to process executions
         if (tick % 10 === 0) {
           game.executeNextTick();
@@ -561,7 +561,7 @@ describe("Nation MIRV Retaliation", () => {
       testExecution.init(game);
 
       for (let tick = 0; tick < 200; tick++) {
-        testExecution.tick(game.ticks());
+        testExecution.tick(tick);
         game.executeNextTick();
       }
 
@@ -695,7 +695,7 @@ describe("Nation MIRV Retaliation", () => {
       testExecution.init(game);
 
       for (let tick = 0; tick < 200; tick++) {
-        testExecution.tick(game.ticks());
+        testExecution.tick(tick);
         // Allow the game to process executions
         if (tick % 10 === 0) {
           game.executeNextTick();
