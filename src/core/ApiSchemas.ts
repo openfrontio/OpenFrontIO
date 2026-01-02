@@ -42,6 +42,11 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
+const PlayerMapCompletionSchema = z.object({
+  mapName: z.string(),
+  difficulty: z.string(),
+});
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -51,6 +56,11 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
+    achievements: z
+      .object({
+        playerMapCompletions: PlayerMapCompletionSchema.array(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
