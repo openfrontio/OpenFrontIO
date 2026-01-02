@@ -41,10 +41,7 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
-  ) {
-    this.baseX = this.mg.x(this.dst);
-    this.baseY = this.mg.y(this.dst);
-  }
+  ) {}
 
   init(mg: Game, ticks: number): void {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
@@ -109,6 +106,9 @@ export class MirvExecution implements Execution {
     if (this.nuke === null) {
       throw new Error("uninitialized");
     }
+
+    this.baseX = this.mg.x(this.dst);
+    this.baseY = this.mg.y(this.dst);
 
     const destinations = this.selectDestinations();
     for (const [i, dst] of destinations.entries()) {
