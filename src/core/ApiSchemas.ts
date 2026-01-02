@@ -42,9 +42,9 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
-const PlayerMapCompletionSchema = z.object({
-  mapName: z.string(),
-  difficulty: z.enum([...Object.values(Difficulty), "Custom"]),
+const SingleplayerMapAchievementSchema = z.object({
+  mapName: z.enum(GameMapType),
+  difficulty: z.enum(Difficulty),
 });
 
 export const UserMeResponseSchema = z.object({
@@ -57,9 +57,12 @@ export const UserMeResponseSchema = z.object({
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
     achievements: z
-      .object({
-        playerMapCompletions: PlayerMapCompletionSchema.array(),
-      })
+      .array(
+        z.object({
+          type: z.literal("singleplayer-map"), // TODO: change the shape to be more flexible when we have more achievements
+          data: z.array(SingleplayerMapAchievementSchema),
+        }),
+      )
       .optional(),
   }),
 });
