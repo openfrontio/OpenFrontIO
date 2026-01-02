@@ -504,7 +504,9 @@ export class HostLobbyModal extends LitElement {
                   .max=${120}
                   @checkbox-change=${(e: CustomEvent) => {
                     this.maxTimer = e.detail.checked;
-                    if (!e.detail.checked) {
+                    if (e.detail.checked) {
+                      this.maxTimerValue = e.detail.defaultValue;
+                    } else {
                       this.maxTimerValue = undefined;
                     }
                     this.putGameConfig();
