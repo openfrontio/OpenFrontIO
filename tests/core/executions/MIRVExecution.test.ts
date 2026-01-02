@@ -88,7 +88,7 @@ describe("MIRVExecution", () => {
     expect(player.isTraitor()).toBe(true);
   });
 
-  test("MIRV should launch warheads", async () => {
+  test("MIRV should separate into warheads", async () => {
     // Increase territory to allow for multiple warhead targets
     for (let x = 75; x < 200; x++) {
       for (let y = 75; y < 200; y++) {
@@ -120,7 +120,94 @@ describe("MIRVExecution", () => {
 
     // Exact number of warheads may vary due to randomness, but should be more than 0
     expect(player.units(UnitType.MIRVWarhead).length).toBeGreaterThan(0);
-  })
+  });
+
+  test("MIRV warheads should only target tiles owned by target player", async () => {
+    // Increase territory to allow for multiple warhead targets
+    for (let x = 75; x < 200; x++) {
+      for (let y = 75; y < 200; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          otherPlayer.conquer(tile);
+        }
+      }
+    }
+
+    // Also give player some territory near the target area to test filtering
+    for (let x = 100; x < 120; x++) {
+      for (let y = 100; y < 120; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && game.owner(tile) === otherPlayer) {
+          otherPlayer.relinquish(tile);
+          player.conquer(tile);
+        }
+      }
+    }
+
+    const targetTile = game.ref(150, 150);
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+    expect(player.units(UnitType.MIRV)).toHaveLength(1);
+
+    while (mirvExec.isActive()) {
+      game.executeNextTick();
+    }
+
+    executeTicks(game, 1);
+
+    const warheads = player.units(UnitType.MIRVWarhead);
+    expect(warheads.length).toBeGreaterThan(0);
+
+    // Check all warhead targets are owned by otherPlayer
+    for (const warhead of warheads) {
+      const target = warhead.targetTile();
+      if (target) {
+        const owner = game.owner(target);
+        expect(owner).toBe(otherPlayer);
+      }
+    }
+  });
+
+  test("MIRV warheads should be distributed with minimum spacing", async () => {
+    // Increase territory to allow for multiple warhead targets
+    for (let x = 75; x < 200; x++) {
+      for (let y = 75; y < 200; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          otherPlayer.conquer(tile);
+        }
+      }
+    }
+
+    const targetTile = game.ref(110, 110);
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+    expect(player.units(UnitType.MIRV)).toHaveLength(1);
+
+    while (mirvExec.isActive()) {
+      game.executeNextTick();
+    }
+
+    executeTicks(game, 1);
+
+    const warheads = player.units(UnitType.MIRVWarhead);
+    expect(warheads.length).toBeGreaterThan(0);
+
+    const targets = warheads.map((w) => w.targetTile())
+
+    // Check that targets have minimum spacing (minimumSpread = 55 from MIRVExecution)
+    const minimumSpread = 55;
+    for (let i = 0; i < targets.length; i++) {
+      for (let j = i + 1; j < targets.length; j++) {
+        const dist = game.manhattanDist(targets[i]!, targets[j]!);
+        expect(dist).toBeGreaterThanOrEqual(minimumSpread);
+      }
+    }
+  });
 
   test("MIRV should display warning message on launch", async () => {
     const displaySpy = vi.spyOn(game, "displayIncomingUnit");
