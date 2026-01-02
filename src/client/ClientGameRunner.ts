@@ -32,8 +32,8 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
-import { getApiBase } from "./Api";
-import { getAuthHeader, getPersistentID } from "./Auth";
+import { getApiBase, getUserMe } from "./Api";
+import { getAuthHeader, getPersistentID, userAuth } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -304,13 +304,20 @@ export class ClientGameRunner {
       ? difficulty
       : "Custom";
 
-    const authHeader = await getAuthHeader();
-    if (!authHeader) {
+    const user = await getUserMe();
+    if (!user) {
+      console.warn("Failed to record singleplayer win: missing user");
+      return;
+    }
+
+    const auth = await userAuth();
+    if (!auth) {
       console.warn("Failed to record singleplayer win: missing auth token");
       return;
     }
 
     const payload: Record<string, unknown> = {
+      publicId: user.player.publicId,
       mapName: gameMap,
       difficulty: difficultyOrCustom,
       gameId: gameID,
@@ -323,7 +330,7 @@ export class ClientGameRunner {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: authHeader,
+            Authorization: `Bearer ${auth.jwt}`,
           },
           body: JSON.stringify(payload),
         },
