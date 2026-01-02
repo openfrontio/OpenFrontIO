@@ -247,7 +247,6 @@ export class ClientGameRunner {
     if (this.myPlayer === null) {
       return;
     }
-    void this.recordLocalWin(update);
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
@@ -287,59 +286,6 @@ export class ClientGameRunner {
       return myTeam !== null && update.winner[1] === myTeam;
     }
     return false;
-  }
-
-  private async recordLocalWin(update: WinUpdate) {
-    if (!this.lobby.gameStartInfo) return;
-    if (!this.didPlayerWin(update)) return;
-
-    const { config, gameID } = this.lobby.gameStartInfo;
-    const { gameMap, difficulty, gameType } = config;
-    if (gameType !== GameType.Singleplayer) return;
-
-    const difficultyOrCustom = this.isDefaultSingleplayerSettings(config)
-      ? difficulty
-      : "Custom";
-
-    const user = await getUserMe();
-    if (!user) {
-      console.warn("Failed to record singleplayer win: missing user");
-      return;
-    }
-
-    const auth = await userAuth();
-    if (!auth) {
-      console.warn("Failed to record singleplayer win: missing auth token");
-      return;
-    }
-
-    const payload: Record<string, unknown> = {
-      publicId: user.player.publicId,
-      mapName: gameMap,
-      difficulty: difficultyOrCustom,
-      gameId: gameID,
-    };
-
-    try {
-      const response = await fetch(`${getApiBase()}/player_map_completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.jwt}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        console.warn(
-          "Failed to record singleplayer win via API",
-          response.status,
-          response.statusText,
-        );
-      }
-    } catch (error) {
-      console.warn("Failed to record singleplayer win via API", error);
-    }
   }
 
   private isDefaultSingleplayerSettings(
