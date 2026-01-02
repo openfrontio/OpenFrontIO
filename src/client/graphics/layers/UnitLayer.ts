@@ -1,7 +1,7 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { GameMode, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
@@ -14,6 +14,7 @@ import {
 } from "../../InputHandler";
 import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
+import { FogOfWarLayer } from "./FogOfWarLayer";
 import { Layer } from "./Layer";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -51,10 +52,14 @@ export class UnitLayer implements Layer {
   // Configuration for unit selection
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
+  /**
+   * @param fogOfWarLayer Referência opcional à camada de Fog of War para controlar visibilidade de unidades
+   */
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     transformHandler: TransformHandler,
+    private fogOfWarLayer?: FogOfWarLayer,
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
@@ -338,7 +343,18 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.targetUnitId()) {
-      this.drawSprite(unit, colord("rgb(200,0,0)"));
+      // Check fog of war for Warship attack color
+      let attackColor = colord("rgb(200,0,0)"); // Default red color
+      
+      if (this.fogOfWarLayer && this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+        const fogValue = this.fogOfWarLayer.getFogValueAt(unit.tile());
+        if (fogValue >= 0.8) {
+          // Dark blue opaque color when in fog 0.8 or higher
+          attackColor = colord("rgb(0,0,139)").alpha(0.7); // Dark blue with 70% opacity
+        }
+      }
+      
+      this.drawSprite(unit, attackColor);
     } else {
       this.drawSprite(unit);
     }
@@ -384,12 +400,31 @@ export class UnitLayer implements Layer {
   private drawTrail(trail: number[], color: Colord, rel: Relationship) {
     // Paint new trail
     for (const t of trail) {
+      // Check fog of war for trail visibility
+      let alpha = 150;
+      if (this.fogOfWarLayer && this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+        const x = this.game.x(t);
+        const y = this.game.y(t);
+        const fullIdx = y * this.game.width() + x;
+        const fogValue = this.fogOfWarLayer.getFogValueAt(fullIdx);
+        
+        // If fog is 0.8 or higher, don't draw the trail
+        if (fogValue >= 0.8) {
+          continue; // Skip drawing this trail segment
+        }
+        // If fog is between 0 and 0.8, potentially adjust alpha
+        else if (fogValue > 0 && fogValue < 0.8) {
+          // Could apply partial opacity based on fog level
+          alpha = Math.floor(150 * (1 - fogValue));
+        }
+      }
+      
       this.paintCell(
         this.game.x(t),
         this.game.y(t),
         rel,
         color,
-        150,
+        alpha,
         this.unitTrailContext,
       );
     }
@@ -582,9 +617,47 @@ export class UnitLayer implements Layer {
 
     if (unit.isActive()) {
       const targetable = unit.targetable();
-      if (!targetable) {
+      
+      // Apply fog of war effects
+      let fogEffectAlpha = 1.0;
+      let unitVisible = true;
+      
+      if (this.fogOfWarLayer && this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+        // Check if this is a fixed unit (City, Port, Defense Post, Missile Silo, SAM Launcher, Factory)
+        const unitType = unit.type?.() || "";
+        const isFixed = ["City", "Port", "Defense Post", "Missile Silo", "SAM Launcher", "Factory"].includes(unitType);
+        
+        if (isFixed) {
+          // For fixed units, check fog visibility directly
+          const fixedUnitVisibility = this.fogOfWarLayer.getFixedUnitFogVisibility(unit);
+          if (!fixedUnitVisibility.isVisible) {
+            unitVisible = false;
+          }
+        } else {
+          // For mobile units, use the existing logic
+          const fogEffect: any = this.fogOfWarLayer.getMobileUnitFogEffect(unit.id());
+          if (fogEffect.isInvisible) {
+            // Unit is in fog 0.8 or higher, set opacity to 0.1
+            fogEffectAlpha = 0.1;
+          } else if (fogEffect.isOpacued) {
+            // Unit should be opacued immediately
+            fogEffectAlpha = 0.1;
+          }
+        }
+      }
+      
+      // If unit is not visible based on fog, set its opacity to 0
+      if (!unitVisible) {
+        fogEffectAlpha = 0;
+      }
+      
+      if (!targetable || fogEffectAlpha < 1.0) {
         this.context.save();
-        this.context.globalAlpha = 0.5;
+        if (!targetable && fogEffectAlpha === 1.0) {
+          this.context.globalAlpha = 0.5;
+        } else {
+          this.context.globalAlpha = Math.min(0.5, fogEffectAlpha);
+        }
       }
       this.context.drawImage(
         sprite,
@@ -593,7 +666,7 @@ export class UnitLayer implements Layer {
         sprite.width,
         sprite.width,
       );
-      if (!targetable) {
+      if (!targetable || fogEffectAlpha < 1.0) {
         this.context.restore();
       }
     }

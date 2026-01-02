@@ -1,7 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
+import { GameMode, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -32,6 +32,10 @@ export class MainRadialMenu extends LitElement implements Layer {
   private chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
+  /**
+   * Referência à camada de Fog of War para controlar visibilidade no menu radial
+   */
+  private fogOfWarLayer: any = null; // Reference to FogOfWarLayer
 
   constructor(
     private eventBus: EventBus,
@@ -71,6 +75,16 @@ export class MainRadialMenu extends LitElement implements Layer {
 
     this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
   }
+  
+  // Method to set the reference to FogOfWarLayer
+  public setFogOfWarLayer(fogLayer: any) {
+    this.fogOfWarLayer = fogLayer;
+  }
+  
+  // Method to set the reference to NameLayer (not used in this implementation but added for consistency)
+  public setNameLayer(nameLayer: any) {
+    // Not used in this implementation
+  }
 
   init() {
     this.radialMenu.init();
@@ -84,6 +98,13 @@ export class MainRadialMenu extends LitElement implements Layer {
       }
       if (this.game.myPlayer() === null) {
         return;
+      }
+      
+      // In Fog of War mode, allow the radial menu in all areas
+      // Filtering which buttons to show will be done in rootMenuElement
+      if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+        // The logic for which buttons to show at each fog level
+        // is handled in rootMenuElement, so we allow the menu in all areas
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
       this.game
@@ -131,6 +152,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       uiState: this.uiState,
       closeMenu: () => this.closeMenu(),
       eventBus: this.eventBus,
+      fogOfWarLayer: this.fogOfWarLayer,
     };
 
     const isFriendlyTarget =

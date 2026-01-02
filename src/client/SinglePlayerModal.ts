@@ -190,10 +190,20 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("game_mode.teams")}
                 </div>
               </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.FogOfWar
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.FogOfWar)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.fog_of_war")}
+                </div>
+              </div>
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
+          ${this.gameMode === GameMode.FFA || this.gameMode === GameMode.FogOfWar
             ? ""
             : html`
                 <!-- Team Count Selection -->
@@ -218,7 +228,7 @@ export class SinglePlayerModal extends LitElement {
                         <div
                           class="option-card ${this.teamCount === o
                             ? "selected"
-                            : ""}"
+                            : ""}
                           @click=${() => this.handleTeamCountSelection(o)}
                         >
                           <div class="option-card-title">
@@ -498,6 +508,11 @@ export class SinglePlayerModal extends LitElement {
 
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
+    
+    // When Fog of War mode is selected, always enable random spawn
+    if (value === GameMode.FogOfWar) {
+      this.randomSpawn = true;
+    }
   }
 
   private handleTeamCountSelection(value: TeamCountConfig) {
