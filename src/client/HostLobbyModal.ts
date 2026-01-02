@@ -798,37 +798,9 @@ export class HostLobbyModal extends LitElement {
                 }),
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
+            maxPlayers: this.playerLimit ?? undefined,
           } satisfies Partial<GameConfig>,
         },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          randomSpawn: this.randomSpawn,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
-            ? {
-                disableNations: false,
-              }
-            : {
-                disableNations: this.disableNations,
-              }),
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-          maxPlayers: this.playerLimit ?? undefined,
-        } satisfies Partial<GameConfig>),
-      },
         bubbles: true,
         composed: true,
       }),
