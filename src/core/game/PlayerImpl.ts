@@ -1211,7 +1211,11 @@ export class PlayerImpl implements Player {
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    if (this.type() === PlayerType.Human) {
+      return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    }
+    // Only humans are affected by immunity, bots and nations should be able to attack freely
+    return !this.isFriendly(player, treatAFKFriendly);
   }
 
   public canAttack(tile: TileRef): boolean {

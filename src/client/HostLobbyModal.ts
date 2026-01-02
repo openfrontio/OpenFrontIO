@@ -548,7 +548,7 @@ export class HostLobbyModal extends LitElement {
                             type="number"
                             id="spawn-immunity-duration"
                             min="0"
-                            max="300"
+                            max="120"
                             step="1"
                             .value=${String(
                               this.spawnImmunityDurationMinutes ?? 0,
@@ -559,7 +559,7 @@ export class HostLobbyModal extends LitElement {
                           />`
                     }
                   <div class="option-card-title">
-                    <span>${translateText("host_modal.spawn_immunity_duration")}</span>
+                    <span>${translateText("host_modal.player_immunity_duration")}</span>
                   </div>
                 </label>
                 
