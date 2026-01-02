@@ -15,7 +15,6 @@ import { getConfig } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
   GameType,
-  Difficulty,
   PlayerActions,
   UnitType,
 } from "../core/game/Game";
@@ -33,7 +32,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getApiBase, getUserMe } from "./Api";
-import { getAuthHeader, getPersistentID, userAuth } from "./Auth";
+import { getPersistentID, userAuth } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -298,9 +297,7 @@ export class ClientGameRunner {
     const { gameMap, difficulty, gameType } = config;
     if (gameType !== GameType.Singleplayer) return;
 
-    const difficultyOrCustom = this.isDefaultSingleplayerSettings(
-      config,
-    )
+    const difficultyOrCustom = this.isDefaultSingleplayerSettings(config)
       ? difficulty
       : "Custom";
 
@@ -324,17 +321,14 @@ export class ClientGameRunner {
     };
 
     try {
-      const response = await fetch(
-        `${getApiBase()}/player_map_completions`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.jwt}`,
-          },
-          body: JSON.stringify(payload),
+      const response = await fetch(`${getApiBase()}/player_map_completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) {
         console.warn(

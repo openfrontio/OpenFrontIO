@@ -17,6 +17,8 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { getApiBase, getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
@@ -27,8 +29,6 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import { getApiBase, getUserMe } from "./Api";
-import { userAuth } from "./Auth";
 import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
@@ -497,9 +497,7 @@ export class SinglePlayerModal extends LitElement {
         if (!isValidMap || !isValidDifficulty) continue;
 
         const map = mapName as GameMapType;
-        const set =
-          winsMap.get(map) ??
-          new Set<Difficulty | "Custom">();
+        const set = winsMap.get(map) ?? new Set<Difficulty | "Custom">();
         set.add(difficulty as Difficulty | "Custom");
         winsMap.set(map, set);
       }
