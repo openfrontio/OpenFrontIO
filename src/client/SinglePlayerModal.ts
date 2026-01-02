@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Difficulty,
   Duos,
@@ -17,7 +18,6 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { UserMeResponse } from "../core/ApiSchemas";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
