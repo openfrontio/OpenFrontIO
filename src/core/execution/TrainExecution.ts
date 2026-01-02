@@ -75,11 +75,6 @@ export class TrainExecution implements Execution {
       return;
     }
 
-    if (this.cars.some((car) => !car.isActive())) {
-      this.deleteTrain(true);
-      return;
-    }
-
     const tile = this.getNextTile();
     if (tile) {
       this.updateCarsPositions(tile);
@@ -133,10 +128,10 @@ export class TrainExecution implements Execution {
     return train;
   }
 
-  private deleteTrain(sendMessage: boolean = false) {
+  private deleteTrain() {
     this.active = false;
     if (this.train?.isActive()) {
-      this.train.delete(sendMessage);
+      this.train.delete(false);
     }
     for (const car of this.cars) {
       if (car.isActive()) {
