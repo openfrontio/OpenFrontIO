@@ -44,7 +44,7 @@ export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
 const PlayerMapCompletionSchema = z.object({
   mapName: z.string(),
-  difficulty: z.string(),
+  difficulty: z.enum([...Object.values(Difficulty), "Custom"]),
 });
 
 export const UserMeResponseSchema = z.object({
