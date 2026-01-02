@@ -99,11 +99,14 @@ export class SinglePlayerModal extends LitElement {
       return;
     }
 
-    const completions = userMe.player.achievements?.playerMapCompletions ?? [];
-    if (!Array.isArray(completions)) {
-      this.mapWins = new Map();
-      return;
-    }
+    const achievements = Array.isArray(userMe.player.achievements)
+      ? userMe.player.achievements
+      : [];
+
+    const completions =
+      achievements
+        .find((achievement) => achievement?.type === "singleplayer-map")
+        ?.data ?? [];
 
     const winsMap = new Map<GameMapType, Set<Difficulty | "Custom">>();
     for (const entry of completions) {
@@ -113,13 +116,12 @@ export class SinglePlayerModal extends LitElement {
         Object.values(GameMapType).includes(mapName as GameMapType);
       const isValidDifficulty =
         typeof difficulty === "string" &&
-        (difficulty === "Custom" ||
-          Object.values(Difficulty).includes(difficulty as Difficulty));
+        Object.values(Difficulty).includes(difficulty as Difficulty);
       if (!isValidMap || !isValidDifficulty) continue;
 
       const map = mapName as GameMapType;
       const set = winsMap.get(map) ?? new Set<Difficulty | "Custom">();
-      set.add(difficulty as Difficulty | "Custom");
+      set.add(difficulty as Difficulty);
       winsMap.set(map, set);
     }
 
