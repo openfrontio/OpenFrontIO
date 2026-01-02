@@ -700,7 +700,10 @@
     "send_alliance": "Send Alliance",
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
-    "emotes": "Emojis"
+    "emotes": "Emojis",
+    "arc_up": "Upward arc",
+    "arc_down": "Downward arc",
+    "flip_rocket_trajectory": "Flip rocket trajectory"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
