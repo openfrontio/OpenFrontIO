@@ -91,7 +91,7 @@
   transition: all 0.2s ease-in-out;
 }
 
-.option-card:hover {
+.option-card:hover:not(.disabled) {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.3);
   background: rgba(40, 40, 40, 0.95);
@@ -102,11 +102,18 @@
   background: rgba(74, 158, 255, 0.1);
 }
 
+.option-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .option-card-title {
   font-size: 14px;
   color: #aaa;
   text-align: center;
   margin: 0 0 4px 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .option-image {
