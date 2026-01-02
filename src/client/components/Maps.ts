@@ -44,6 +44,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Lisbon: "Lisbon",
   Manicouagan: "Manicouagan",
   Lemnos: "Lemnos",
+  TwoLakes: "Two Lakes",
+  StraitOfHormuz: "Strait of Hormuz",
 };
 
 @customElement("map-display")
@@ -79,8 +81,8 @@ export class MapDisplay extends LitElement {
     }
 
     .option-card.selected {
-      border-color: var(--primaryColor);
-      background: rgba(229, 57, 53, 0.1);
+      border-color: #4a9eff;
+      background: rgba(74, 158, 255, 0.1);
     }
 
     .option-card-title {

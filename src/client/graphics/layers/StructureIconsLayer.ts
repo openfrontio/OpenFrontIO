@@ -4,6 +4,7 @@ import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
@@ -65,6 +66,7 @@ export class StructureIconsLayer implements Layer {
     priceBox: { height: number; y: number; paddingX: number; minWidth: number };
     range: PIXI.Container | null;
     rangeLevel?: number;
+    targetingAlly?: boolean;
     buildableUnit: BuildableUnit;
   } | null = null;
   private pixicanvas: HTMLCanvasElement;
@@ -258,6 +260,29 @@ export class StructureIconsLayer implements Layer {
       tileRef = this.game.ref(tile.x, tile.y);
     }
 
+    // Check if targeting an ally (for nuke warning visual)
+    // Uses shared logic with NukeExecution.maybeBreakAlliances()
+    let targetingAlly = false;
+    const myPlayer = this.game.myPlayer();
+    const nukeType = this.ghostUnit.buildableUnit.type;
+    if (
+      tileRef &&
+      myPlayer &&
+      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
+    ) {
+      // Only check if player has allies
+      const allies = myPlayer.allies();
+      if (allies.length > 0) {
+        targetingAlly = wouldNukeBreakAlliance({
+          gm: this.game,
+          targetTile: tileRef,
+          magnitude: this.game.config().nukeMagnitudes(nukeType),
+          allySmallIds: new Set(allies.map((a) => a.smallID())),
+          threshold: this.game.config().nukeAllianceBreakThreshold(),
+        });
+      }
+    }
+
     this.game
       ?.myPlayer()
       ?.actions(tileRef)
@@ -292,7 +317,7 @@ export class StructureIconsLayer implements Layer {
         this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
         const targetLevel = this.resolveGhostRangeLevel(unit);
-        this.updateGhostRange(targetLevel);
+        this.updateGhostRange(targetLevel, targetingAlly);
 
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
@@ -470,18 +495,23 @@ export class StructureIconsLayer implements Layer {
     return 1;
   }
 
-  private updateGhostRange(level?: number) {
+  private updateGhostRange(level?: number, targetingAlly: boolean = false) {
     if (!this.ghostUnit) {
       return;
     }
 
-    if (this.ghostUnit.range && this.ghostUnit.rangeLevel === level) {
+    if (
+      this.ghostUnit.range &&
+      this.ghostUnit.rangeLevel === level &&
+      this.ghostUnit.targetingAlly === targetingAlly
+    ) {
       return;
     }
 
     this.ghostUnit.range?.destroy();
     this.ghostUnit.range = null;
     this.ghostUnit.rangeLevel = level;
+    this.ghostUnit.targetingAlly = targetingAlly;
 
     const position = this.ghostUnit.container.position;
     const range = this.factory.createRange(
@@ -489,6 +519,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostStage,
       { x: position.x, y: position.y },
       level,
+      targetingAlly,
     );
     if (range) {
       this.ghostUnit.range = range;
