@@ -48,7 +48,8 @@ export type Intent =
   | UpgradeStructureIntent
   | DeleteUnitIntent
   | KickPlayerIntent
-  | TogglePauseIntent;
+  | TogglePauseIntent
+  | UpdateGameConfigIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -81,6 +82,9 @@ export type AllianceExtensionIntent = z.infer<
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
+export type UpdateGameConfigIntent = z.infer<
+  typeof UpdateGameConfigIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -363,6 +367,11 @@ export const TogglePauseIntentSchema = BaseIntentSchema.extend({
   paused: z.boolean().default(false),
 });
 
+export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("update_game_config"),
+  config: GameConfigSchema.partial(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -387,6 +396,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
+  UpdateGameConfigIntentSchema,
 ]);
 
 //

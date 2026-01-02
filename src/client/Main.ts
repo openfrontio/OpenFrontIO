@@ -41,14 +41,16 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
-import { SendKickPlayerIntentEvent } from "./Transport";
+import {
+  SendKickPlayerIntentEvent,
+  SendUpdateGameConfigIntentEvent,
+} from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import "./snow.css";
 import "./styles.css";
 import "./styles/components/button.css";
 import "./styles/components/controls.css";
@@ -60,7 +62,6 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
-import Snowflake3Png from "/images/Snowflake.webp?url";
 declare global {
   interface Window {
     turnstile: any;
@@ -222,6 +223,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener(
+      "update-game-config",
+      this.handleUpdateGameConfig.bind(this),
+    );
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -625,9 +630,6 @@ class Client {
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
-        // Hide snowflakes when joining lobby
-        document.documentElement.classList.add("in-game");
-        removeSnowflakes(); // Stop snowflakes when joining a game
 
         crazyGamesSDK.loadingStart();
 
@@ -673,9 +675,6 @@ class Client {
 
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
-    // Show snowflakes when leaving lobby (back to homepage)
-    document.documentElement.classList.remove("in-game");
-    enableSnowflakes(); // Restart snowflakes when leaving a game
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -684,6 +683,15 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private handleUpdateGameConfig(event: CustomEvent) {
+    const { config } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
   }
 
@@ -743,58 +751,12 @@ class Client {
     }
   }
 }
-function enableSnowflakes() {
-  // Respect user's motion preferences
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  if (prefersReducedMotion) {
-    return;
-  }
 
-  const snowContainer = document.querySelector(".snow") as HTMLElement;
-  if (!snowContainer) {
-    console.warn("Snow container element not found");
-    return;
-  }
-
-  // Clear existing snowflakes if any
-  removeSnowflakes();
-
-  const isMobile = window.innerWidth <= 768;
-  const numberOfSnowflakes = isMobile ? 30 : 75; // Increased count
-
-  for (let i = 0; i < numberOfSnowflakes; i++) {
-    const snowflake = document.createElement("div");
-    snowflake.classList.add("snowflake");
-    snowflake.style.left = `${Math.random() * 100}vw`; // Random horizontal position
-    snowflake.style.animationDuration = `${Math.random() * 10 + 5}s`; // Random duration between 5-15s
-    snowflake.style.animationDelay = `${Math.random() * -10}s`; // Random delay
-    snowflake.style.opacity = `${Math.random() * 0.5 + 0.5}`; // Random opacity between 0.5-1
-    const size = Math.random() * 20 + 10; // Random size between 10-30px
-    snowflake.style.width = `${size}px`;
-    snowflake.style.height = `${size}px`;
-    snowflake.style.backgroundImage = `url(${Snowflake3Png})`;
-
-    snowContainer.appendChild(snowflake);
-  }
-}
-
-function removeSnowflakes() {
-  const snowContainer = document.querySelector(".snow") as HTMLElement;
-  if (snowContainer) {
-    snowContainer.replaceChildren();
-  }
-}
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
-
-  // Initially enable snowflakes if not in-game
-  if (!document.documentElement.classList.contains("in-game")) {
-    enableSnowflakes();
-  }
 });
+
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;

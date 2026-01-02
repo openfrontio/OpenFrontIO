@@ -753,44 +753,41 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+    this.dispatchEvent(
+      new CustomEvent("update-game-config", {
+        detail: {
+          config: {
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            difficulty: this.selectedDifficulty,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.donateGold,
+            infiniteTroops: this.infiniteTroops,
+            donateTroops: this.donateTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            gameMode: this.gameMode,
+            disabledUnits: this.disabledUnits,
+            playerTeams: this.teamCount,
+            ...(this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations
+              ? {
+                  disableNations: false,
+                }
+              : {
+                  disableNations: this.disableNations,
+                }),
+            maxTimerValue:
+              this.maxTimer === true ? this.maxTimerValue : undefined,
+          } satisfies Partial<GameConfig>,
         },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          randomSpawn: this.randomSpawn,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
-            ? {
-                disableNations: false,
-              }
-            : {
-                disableNations: this.disableNations,
-              }),
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-        } satisfies Partial<GameConfig>),
-      },
+        bubbles: true,
+        composed: true,
+      }),
     );
-    return response;
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
