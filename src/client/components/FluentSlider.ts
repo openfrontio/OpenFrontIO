@@ -84,7 +84,7 @@ export class FluentSlider extends LitElement {
     this.dispatchValueChange();
   }
 
-  private handleNumberChange(e: Event) {
+  private handleNumberInput(e: Event) {
     const target = e.target as HTMLInputElement;
     let val = target.valueAsNumber;
     if (isNaN(val)) {
@@ -93,11 +93,19 @@ export class FluentSlider extends LitElement {
     if (val < this.min) val = this.min;
     if (val > this.max) val = this.max;
     this.value = val;
+    // Don't dispatch value change on every input - only on blur/enter
+  }
+
+  private handleNumberComplete() {
+    // Dispatch the value change when editing is complete
     this.dispatchValueChange();
   }
 
   private handleNumberKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") this.isEditing = false;
+    if (e.key === "Enter") {
+      this.isEditing = false;
+      this.handleNumberComplete();
+    }
   }
 
   private enableEditing() {
@@ -125,8 +133,11 @@ export class FluentSlider extends LitElement {
                 .min=${this.min}
                 .max=${this.max}
                 .valueAsNumber=${this.value}
-                @input=${this.handleNumberChange}
-                @blur=${() => (this.isEditing = false)}
+                @input=${this.handleNumberInput}
+                @blur=${() => {
+                  this.isEditing = false;
+                  this.handleNumberComplete();
+                }}
                 @keydown=${this.handleNumberKeyDown}
               />`
             : html`<span
