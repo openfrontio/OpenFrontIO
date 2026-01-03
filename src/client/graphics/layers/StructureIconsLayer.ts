@@ -87,10 +87,10 @@ export class StructureIconsLayer implements Layer {
   private renderSprites = true;
   private factory: SpriteFactory;
   private ghostControls: {
-    container: HTMLDivElement;
-    confirm: HTMLButtonElement;
-    cancel: HTMLButtonElement;
-    flip: HTMLButtonElement;
+    container: PIXI.Container;
+    confirm: PIXI.Graphics;
+    cancel: PIXI.Graphics;
+    flip: PIXI.Graphics;
   } | null = null;
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
     [UnitType.City, { visible: true }],
@@ -181,16 +181,6 @@ export class StructureIconsLayer implements Layer {
 
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
     this.eventBus.on(ContextMenuEvent, (e) => this.updateLockedBombTarget(e));
-
-    // Prevent browser context menu when bomb is locked
-    document.addEventListener("contextmenu", (e) => {
-      if (
-        this.uiState.lockedGhostTile &&
-        this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
-      ) {
-        e.preventDefault();
-      }
-    });
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -613,62 +603,85 @@ export class StructureIconsLayer implements Layer {
   private ensureGhostControls() {
     if (this.ghostControls) return;
 
-    const container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.display = "flex";
-    container.style.gap = "8px";
-    container.style.transform = "translate(-50%, 0)";
-    container.style.pointerEvents = "auto";
-    container.style.zIndex = "5";
+    const container = new PIXI.Container();
+    this.ghostStage.addChild(container);
+
+    const buttonSize = 48;
+    const gap = 8;
+    const buttonRadius = 6;
 
     const makeButton = (
       label: string,
-      background: string,
+      color: number,
+      x: number,
       onClick: () => void,
-    ): HTMLButtonElement => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      button.style.minHeight = "48px";
-      button.style.minWidth = "48px";
-      button.style.padding = "8px 16px";
-      button.style.borderRadius = "6px";
-      button.style.border = "none";
-      button.style.fontWeight = "700";
-      button.style.fontSize = "13px";
-      button.style.color = "#ffffff";
-      button.style.background = background;
-      button.style.cursor = "pointer";
-      button.style.boxShadow = "0 2px 6px rgba(0,0,0,0.25)";
-      button.style.whiteSpace = "nowrap";
-      button.addEventListener("click", onClick);
+    ): PIXI.Graphics => {
+      const button = new PIXI.Graphics();
+      button.beginFill(color);
+      button.drawRoundedRect(0, 0, buttonSize, buttonSize, buttonRadius);
+      button.endFill();
+      button.x = x;
+      button.y = 0;
+      button.eventMode = "static";
+      button.cursor = "pointer";
+
+      // Add text label
+      const text = new PIXI.Text(label, {
+        fontFamily: "Arial",
+        fontSize: 24,
+        fontWeight: "bold",
+        fill: 0xffffff,
+      });
+      text.anchor.set(0.5);
+      text.x = buttonSize / 2;
+      text.y = buttonSize / 2;
+      button.addChild(text);
+
+      // Hover effects
+      button.on("pointerover", () => {
+        button.tint = 0xdddddd;
+      });
+      button.on("pointerout", () => {
+        button.tint = 0xffffff;
+      });
+      button.on("pointerdown", () => {
+        button.tint = 0xaaaaaa;
+      });
+      button.on("pointerup", () => {
+        button.tint = 0xffffff;
+      });
+
+      button.on("pointertap", (e) => {
+        e.stopPropagation();
+        onClick();
+      });
+
       return button;
     };
 
-    const confirm = makeButton("✓", "#2e7d32", () => {
+    const confirm = makeButton("✓", 0x2e7d32, 0, () => {
       if (this.uiState.lockedGhostTile) {
         this.emitBuildIntent(this.uiState.lockedGhostTile);
       }
     });
 
-    const flip = makeButton("↕", "#1565c0", () => {
+    const flip = makeButton("↕", 0x1565c0, buttonSize + gap, () => {
       const next = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(next));
     });
 
-    const cancel = makeButton("✕", "#b71c1c", () =>
+    const cancel = makeButton("✕", 0xb71c1c, (buttonSize + gap) * 2, () =>
       this.removeGhostStructure(),
     );
 
-    container.append(confirm, flip, cancel);
-    document.body.appendChild(container);
+    container.addChild(confirm, flip, cancel);
 
     this.ghostControls = { container, confirm, cancel, flip };
   }
 
   private destroyGhostControls() {
     if (!this.ghostControls) return;
-    this.ghostControls.container.remove();
+    this.ghostControls.container.destroy({ children: true });
     this.ghostControls = null;
   }
 
@@ -694,9 +707,13 @@ export class StructureIconsLayer implements Layer {
       0.75,
       Math.min(1.4, this.transformHandler.scale / 2),
     );
-    this.ghostControls!.container.style.left = `${rect.left + localX}px`;
-    this.ghostControls!.container.style.top = `${rect.top + localY + offsetY}px`;
-    this.ghostControls!.container.style.transform = `translate(-50%, 0) scale(${scale})`;
+
+    // Position PIXI container in world coordinates
+    const buttonWidth = 48;
+    const totalWidth = buttonWidth * 3 + 8 * 2; // 3 buttons + 2 gaps
+    this.ghostControls!.container.x = localX - totalWidth / 2;
+    this.ghostControls!.container.y = localY + offsetY;
+    this.ghostControls!.container.scale.set(scale);
   }
 
   private resolveGhostRangeLevel(

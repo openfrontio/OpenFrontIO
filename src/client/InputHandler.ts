@@ -579,6 +579,10 @@ export class InputHandler {
       this.setGhostStructure(null);
       return;
     }
+    // Don't emit ContextMenuEvent if there's a locked bomb - the StructureIconsLayer handles it
+    if (this.uiState.lockedGhostTile) {
+      return;
+    }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
