@@ -654,7 +654,14 @@ export class StructureIconsLayer implements Layer {
       return;
     }
     this.ensureGhostControls();
-    const offsetY = 40;
+    // Get the nuke radius and add 1px below it
+    const nukeType = this.ghostUnit.buildableUnit.type;
+    const magnitude =
+      nukeType === UnitType.AtomBomb
+        ? this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer
+        : this.game.config().nukeMagnitudes(UnitType.HydrogenBomb).outer;
+    const radiusPixels = magnitude * this.transformHandler.scale;
+    const offsetY = radiusPixels + 1;
     const scale = Math.max(
       0.75,
       Math.min(1.4, this.transformHandler.scale / 2),
