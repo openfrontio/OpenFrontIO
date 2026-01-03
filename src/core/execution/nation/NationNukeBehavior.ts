@@ -63,7 +63,7 @@ export class NationNukeBehavior {
     } else {
       return;
     }
-    const range = this.game.config().nukeMagnitudes(nukeType).inner;
+    const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
     const structures = nukeTarget.units(
       UnitType.City,
@@ -99,8 +99,18 @@ export class NationNukeBehavior {
       const spawnTile = this.player.canBuild(nukeType, tile);
       if (spawnTile === false) continue;
 
-      // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
+      // In team games, avoid nuking the same position as a teammate
       const difficulty = this.game.config().gameConfig().difficulty;
+      if (
+        this.game.config().gameConfig().gameMode === GameMode.Team &&
+        difficulty !== Difficulty.Easy &&
+        this.isTeammateAlreadyNukingThisSpot(tile, nukeType)
+      ) {
+        continue;
+      }
+
+      // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
+
       if (
         (difficulty === Difficulty.Hard ||
           difficulty === Difficulty.Impossible) &&
@@ -339,6 +349,62 @@ export class NationNukeBehavior {
     return totalIncomingTroops >= myTroops * 2;
   }
 
+  private removeOldNukeEvents() {
+    const maxAge = 500;
+    const tick = this.game.ticks();
+    while (
+      this.lastNukeSent.length > 0 &&
+      this.lastNukeSent[0][0] + maxAge < tick
+    ) {
+      this.lastNukeSent.shift();
+    }
+  }
+
+  private isTeammateAlreadyNukingThisSpot(
+    tile: TileRef,
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+  ): boolean {
+    // Get the inner radius for our nuke type
+    const ourInnerRadius = this.game.config().nukeMagnitudes(nukeType).inner;
+
+    // Get all active nukes in the game
+    const activeNukes = this.game.units(
+      UnitType.AtomBomb,
+      UnitType.HydrogenBomb,
+    );
+
+    // Check if any teammate's nuke blast radius overlaps with ours
+    for (const nuke of activeNukes) {
+      const nukeOwner = nuke.owner();
+
+      // Skip our own nukes and non-teammate nukes
+      if (nukeOwner === this.player || !this.player.isFriendly(nukeOwner)) {
+        continue;
+      }
+
+      // Get the target tile of the teammate's nuke
+      const targetTile = nuke.targetTile();
+      if (!targetTile) continue;
+
+      // Get the blast radius of the teammate's nuke
+      const teammateInnerRadius = this.game
+        .config()
+        .nukeMagnitudes(nuke.type()).inner;
+
+      // Check if the blast zones overlap
+      // They overlap if distance between targets < max of the two radii
+      const distSquared = this.game.euclideanDistSquared(tile, targetTile);
+      const maxRadius = Math.max(ourInnerRadius, teammateInnerRadius);
+      const maxRadiusSquared = maxRadius * maxRadius;
+
+      if (distSquared <= maxRadiusSquared) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // mirroring NukeTrajectoryPreviewLayer.ts logic a bit
   private isTrajectoryInterceptableBySam(
     spawnTile: TileRef,
@@ -444,17 +510,6 @@ export class NationNukeBehavior {
     return false;
   }
 
-  private removeOldNukeEvents() {
-    const maxAge = 500;
-    const tick = this.game.ticks();
-    while (
-      this.lastNukeSent.length > 0 &&
-      this.lastNukeSent[0][0] + maxAge < tick
-    ) {
-      this.lastNukeSent.shift();
-    }
-  }
-
   private nukeTileScore(
     tile: TileRef,
     silos: Unit[],
@@ -462,7 +517,7 @@ export class NationNukeBehavior {
     nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
   ): number {
     const magnitude = this.game.config().nukeMagnitudes(nukeType);
-    const dist = euclDistFN(tile, magnitude.inner, false);
+    const dist = euclDistFN(tile, magnitude.outer, false);
     let tileValue = targets
       .filter((unit) => dist(this.game, unit.tile()))
       .map((unit): number => {
