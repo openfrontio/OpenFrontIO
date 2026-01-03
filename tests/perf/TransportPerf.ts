@@ -25,22 +25,29 @@ const rx = 2000,
   ry = 1000,
   radius = 200;
 
-// Validate map dimensions for regional benchmark
+// Validate map dimensions
 if (map.width() < rx + radius || map.height() < ry + radius) {
   throw new Error(
     `Map too small for regional benchmark: needs at least ${rx + radius}x${ry + radius}, got ${map.width()}x${map.height()}`,
   );
 }
 
+let regionalShoreCount = 0;
 for (let x = -radius; x <= radius; x++) {
   for (let y = -radius; y <= radius; y++) {
     if (Math.abs(x) === radius || Math.abs(y) === radius) {
       const t = game.ref(rx + x, ry + y);
       if (game.isValidRef(t) && game.isShore(t)) {
         regionalPlayer.conquer(t);
+        regionalShoreCount++;
       }
     }
   }
+}
+
+// Validate that the benchmark area actually contains shore tiles
+if (regionalShoreCount === 0) {
+  throw new Error("Regional benchmark area contains no shore tiles.");
 }
 
 // Scenario 2: Global Empire (All shore tiles on earth)
