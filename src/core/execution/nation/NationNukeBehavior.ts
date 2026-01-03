@@ -307,11 +307,36 @@ export class NationNukeBehavior {
       return this.cost(type);
     }
 
+    // On Hard & Impossible, ignore perceived cost when under heavy attack (2x troops)
+    // The nation is probably going to get destroyed soon, so go all-in on nukes
+    const difficulty = this.game.config().gameConfig().difficulty;
+    if (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      this.isUnderHeavyAttack()
+    ) {
+      return this.cost(type);
+    }
+
     if (type === UnitType.AtomBomb) {
       return this.atomBombPerceivedCost;
     } else {
       return this.hydrogenBombPerceivedCost;
     }
+  }
+
+  private isUnderHeavyAttack(): boolean {
+    // Get the total incoming attack troops
+    const incomingAttacks = this.player.incomingAttacks();
+    let totalIncomingTroops = 0;
+    for (const attack of incomingAttacks) {
+      totalIncomingTroops += attack.troops();
+    }
+
+    const myTroops = this.player.troops();
+
+    // Consider it a heavy attack if total incoming attacks have 2x our troops
+    return totalIncomingTroops >= myTroops * 2;
   }
 
   // mirroring NukeTrajectoryPreviewLayer.ts logic a bit
