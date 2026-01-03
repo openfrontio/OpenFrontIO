@@ -264,7 +264,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
   }
 
-  // Shared helper to resolve the current target tile, preferring a locked ghost tile when present
+  // resolve the current target tile, preferring a locked ghost tile when present
   private getTargetTile(): TileRef | null {
     if (this.uiState.lockedGhostTile) {
       return this.uiState.lockedGhostTile;

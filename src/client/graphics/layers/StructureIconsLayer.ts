@@ -558,24 +558,22 @@ export class StructureIconsLayer implements Layer {
     this.removeGhostStructure();
   }
 
-  private getTileFromContextMenuEvent(e: ContextMenuEvent): TileRef | null {
+  private getTileFromScreenCoords(x: number, y: number): TileRef | null {
     const rect = this.transformHandler.boundingRect();
     if (!rect) return null;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    const localX = x - rect.left;
+    const localY = y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
     if (!this.game.isValidCoord(tile.x, tile.y)) return null;
     return this.game.ref(tile.x, tile.y);
   }
 
+  private getTileFromContextMenuEvent(e: ContextMenuEvent): TileRef | null {
+    return this.getTileFromScreenCoords(e.x, e.y);
+  }
+
   private getTileFromMouseEvent(e: MouseUpEvent): TileRef | null {
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return null;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
-    if (!this.game.isValidCoord(tile.x, tile.y)) return null;
-    return this.game.ref(tile.x, tile.y);
+    return this.getTileFromScreenCoords(e.x, e.y);
   }
 
   private resolveTargetTileFromEvent(e: MouseUpEvent): TileRef | null {
