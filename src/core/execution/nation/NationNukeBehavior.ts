@@ -78,11 +78,14 @@ export class NationNukeBehavior {
       UnitType.Factory,
     );
     const structureTiles = structures.map((u) => u.tile());
+    const difficulty = this.game.config().gameConfig().difficulty;
+    // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
+    const numRandomTiles = difficulty === Difficulty.Impossible ? 30 : 10;
     const randomTiles = randTerritoryTileArray(
       this.random,
       this.game,
       nukeTarget,
-      10,
+      numRandomTiles,
     );
     const allTiles = randomTiles.concat(structureTiles);
 
@@ -104,7 +107,6 @@ export class NationNukeBehavior {
       if (spawnTile === false) continue;
 
       // In team games, avoid nuking the same position as a teammate
-      const difficulty = this.game.config().gameConfig().difficulty;
       if (
         this.game.config().gameConfig().gameMode === GameMode.Team &&
         difficulty !== Difficulty.Easy &&
@@ -114,7 +116,6 @@ export class NationNukeBehavior {
       }
 
       // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
-
       if (
         (difficulty === Difficulty.Hard ||
           difficulty === Difficulty.Impossible) &&
@@ -396,12 +397,12 @@ export class NationNukeBehavior {
         .nukeMagnitudes(nuke.type()).inner;
 
       // Check if the blast zones overlap
-      // They overlap if distance between targets < max of the two radii
+      // They overlap if distance between targets < sum of the two radii
       const distSquared = this.game.euclideanDistSquared(tile, targetTile);
-      const maxRadius = Math.max(ourInnerRadius, teammateInnerRadius);
-      const maxRadiusSquared = maxRadius * maxRadius;
+      const sumRadius = ourInnerRadius + teammateInnerRadius;
+      const sumRadiusSquared = sumRadius * sumRadius;
 
-      if (distSquared <= maxRadiusSquared) {
+      if (distSquared <= sumRadiusSquared) {
         return true;
       }
     }
@@ -555,6 +556,37 @@ export class NationNukeBehavior {
           dist50(this.game, unit.tile()),
       );
       if (hasSam) return -1;
+    }
+
+    // On Impossible difficulty and a hydrogen bomb, add value for SAMs that can be outranged
+    if (
+      difficulty === Difficulty.Impossible &&
+      nukeType === UnitType.HydrogenBomb
+    ) {
+      const hydroMagnitude = this.game
+        .config()
+        .nukeMagnitudes(UnitType.HydrogenBomb);
+      const nearbySams = this.game.nearbyUnits(
+        tile,
+        hydroMagnitude.outer,
+        UnitType.SAMLauncher,
+      );
+
+      for (const sam of nearbySams) {
+        const samLevel = sam.unit.level();
+        if (samLevel >= 5) continue; // Can't outrange level 5+ SAMs
+
+        const samRange = this.game.config().samRange(samLevel);
+        const distToSam = Math.sqrt(
+          this.game.euclideanDistSquared(tile, sam.unit.tile()),
+        );
+
+        // Check if we can outrange this SAM
+        if (distToSam > samRange) {
+          // Add significant value for destroying a SAM that we can outrange
+          tileValue += 100_000 * samLevel;
+        }
+      }
     }
 
     // Prefer tiles that are closer to a silo (but preserve structure value)
