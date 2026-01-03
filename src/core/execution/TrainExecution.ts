@@ -69,7 +69,7 @@ export class TrainExecution implements Execution {
     if (this.train === null) {
       throw new Error("Not initialized");
     }
-  
+
     if (!this.train.isActive() || !this.activeSourceOrDestination()) {
       this.deleteTrain();
       return;

@@ -267,7 +267,7 @@ export class UnitImpl implements Unit {
     this.mg.removeUnit(this);
 
     if (displayMessage !== false) {
-      this.displayMessageOnDeleted()
+      this.displayMessageOnDeleted();
     }
 
     if (destroyer !== undefined) {
