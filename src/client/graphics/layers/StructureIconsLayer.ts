@@ -182,6 +182,16 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
     this.eventBus.on(ContextMenuEvent, (e) => this.updateLockedBombTarget(e));
 
+    // Prevent browser context menu when bomb is locked
+    document.addEventListener("contextmenu", (e) => {
+      if (
+        this.uiState.lockedGhostTile &&
+        this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
+      ) {
+        e.preventDefault();
+      }
+    });
+
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
     this.redraw();
