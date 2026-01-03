@@ -120,7 +120,11 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   return dstTile;
 }
 
-// Single-pass Loop Fusion
+/**
+ * Identifies the shore tile closest to a given target for a specific player.
+ * Uses a single-pass loop fusion to avoid multiple iterations and array allocations.
+ * Tie-breaking is deterministic based on Tile ID.
+ */
 export function closestShoreFromPlayer(
   gm: GameMap,
   player: Player,
@@ -128,22 +132,18 @@ export function closestShoreFromPlayer(
 ): TileRef | null {
   let bestTile: TileRef | null = null;
   let minDistance = Infinity;
-  // Tie-breaker to ensure determinism if distances are equal
-  let bestTileID = -1;
 
   for (const t of player.borderTiles()) {
     if (gm.isShore(t)) {
       const dist = gm.manhattanDist(target, t);
 
-      // Deterministic check: strict less than OR equal distance but higher ID
       if (dist < minDistance) {
         minDistance = dist;
         bestTile = t;
-        bestTileID = t; // Assuming TileRef is a number
       } else if (dist === minDistance) {
-        if (t > bestTileID) {
+        // Tie-breaker: prefer higher tile ID for determinism
+        if (bestTile !== null && t > bestTile) {
           bestTile = t;
-          bestTileID = t;
         }
       }
     }
@@ -185,7 +185,11 @@ export function bestShoreDeploymentSource(
   return neighbors[0];
 }
 
-// Loop Fusion + Avoid heavy sampling arrays
+/**
+ * Gathers a set of candidate shore tiles for naval operations, including extremum
+ * points (Min/Max X/Y) and a representative sample of the player's border.
+ * Optimized for performance on large maps with single-pass logic.
+ */
 export function candidateShoreTiles(
   gm: Game,
   player: Player,
@@ -231,17 +235,28 @@ export function candidateShoreTiles(
     if (cx < minX) {
       minX = cx;
       tMinX = tile;
+    } else if (cx === minX && tMinX !== null && tile > tMinX) {
+      tMinX = tile;
     }
+
     if (cy < minY) {
       minY = cy;
       tMinY = tile;
+    } else if (cy === minY && tMinY !== null && tile > tMinY) {
+      tMinY = tile;
     }
+
     if (cx > maxX) {
       maxX = cx;
       tMaxX = tile;
+    } else if (cx === maxX && tMaxX !== null && tile < tMaxX) {
+      tMaxX = tile;
     }
+
     if (cy > maxY) {
       maxY = cy;
+      tMaxY = tile;
+    } else if (cy === maxY && tMaxY !== null && tile < tMaxY) {
       tMaxY = tile;
     }
   }

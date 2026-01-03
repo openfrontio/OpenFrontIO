@@ -24,6 +24,14 @@ const regionalPlayer = game.addPlayer(
 const rx = 2000,
   ry = 1000,
   radius = 200;
+
+// Validate map dimensions for regional benchmark
+if (map.width() < rx + radius || map.height() < ry + radius) {
+  throw new Error(
+    `Map too small for regional benchmark: needs at least ${rx + radius}x${ry + radius}, got ${map.width()}x${map.height()}`,
+  );
+}
+
 for (let x = -radius; x <= radius; x++) {
   for (let y = -radius; y <= radius; y++) {
     if (Math.abs(x) === radius || Math.abs(y) === radius) {
@@ -51,14 +59,12 @@ for (let i = 0; i < map.width(); i++) {
 const target = game.ref(400, 1200);
 
 new Benchmark.Suite()
-  // Baseline vs Optimized for Medium Empire
   .add("closestShoreFromPlayer (Regional)", () => {
     closestShoreFromPlayer(map, regionalPlayer, target);
   })
   .add("candidateShoreTiles (Regional)", () => {
     candidateShoreTiles(game, regionalPlayer, target);
   })
-  // Baseline vs Optimized for Global Empire
   .add("closestShoreFromPlayer (Global Stress)", () => {
     closestShoreFromPlayer(map, globalPlayer, target);
   })
