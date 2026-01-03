@@ -5,6 +5,7 @@ import {
   Gold,
   Player,
   PlayerType,
+  Relation,
   Tick,
   Unit,
   UnitType,
@@ -12,7 +13,7 @@ import {
 import { TileRef, euclDistFN } from "../../game/GameMap";
 import { ParabolaPathFinder } from "../../pathfinding/PathFinding";
 import { PseudoRandom } from "../../PseudoRandom";
-import { boundingBoxTiles } from "../../Util";
+import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
 import { closestTwoTiles } from "../Util";
 import { AiAttackBehavior } from "../utils/AiAttackBehavior";
@@ -25,10 +26,12 @@ export class NationNukeBehavior {
   private atomBombPerceivedCost = this.cost(UnitType.AtomBomb);
   private hydrogenBombsLaunched = 0;
   private hydrogenBombPerceivedCost = this.cost(UnitType.HydrogenBomb);
+  // Make 1/3 of nations "hydro-nations" that only throw hydrogen bombs (to reduce atom bomb spam)
+  private readonly isHydroNation: boolean = this.random.chance(3);
 
   constructor(
     private random: PseudoRandom,
-    private mg: Game,
+    private game: Game,
     private player: Player,
     private attackBehavior: AiAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
@@ -51,12 +54,12 @@ export class NationNukeBehavior {
     let nukeType: UnitType;
     if (this.player.gold() >= hydroCost) {
       nukeType = UnitType.HydrogenBomb;
-    } else if (this.player.gold() >= atomCost) {
+    } else if (!this.isHydroNation && this.player.gold() >= atomCost) {
       nukeType = UnitType.AtomBomb;
     } else {
       return;
     }
-    const range = this.mg.config().nukeMagnitudes(nukeType).inner;
+    const range = this.game.config().nukeMagnitudes(nukeType).inner;
 
     const structures = other.units(
       UnitType.City,
@@ -67,7 +70,12 @@ export class NationNukeBehavior {
       UnitType.Factory,
     );
     const structureTiles = structures.map((u) => u.tile());
-    const randomTiles = randTerritoryTileArray(this.random, this.mg, other, 10);
+    const randomTiles = randTerritoryTileArray(
+      this.random,
+      this.game,
+      other,
+      10,
+    );
     const allTiles = randomTiles.concat(structureTiles);
 
     let bestTile: TileRef | null = null;
@@ -76,9 +84,9 @@ export class NationNukeBehavior {
 
     outer: for (const tile of new Set(allTiles)) {
       if (tile === null) continue;
-      const boundingBox = boundingBoxTiles(this.mg, tile, range)
+      const boundingBox = boundingBoxTiles(this.game, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
+        .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
       for (const t of boundingBox) {
         if (!this.isValidNukeTile(t, other)) {
           continue outer;
@@ -88,7 +96,7 @@ export class NationNukeBehavior {
       if (spawnTile === false) continue;
 
       // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
-      const difficulty = this.mg.config().gameConfig().difficulty;
+      const difficulty = this.game.config().gameConfig().difficulty;
       if (
         (difficulty === Difficulty.Hard ||
           difficulty === Difficulty.Impossible) &&
@@ -108,12 +116,175 @@ export class NationNukeBehavior {
     }
   }
 
+  findBestNukeTarget(): Player | null {
+    // Retaliate against incoming attacks (Most important!)
+    const incomingAttackPlayer = this.attackBehavior.findIncomingAttackPlayer();
+    if (incomingAttackPlayer) {
+      return incomingAttackPlayer;
+    }
+
+    // Assist allies, check their targets (this is basically the same as in assistAllies, but without sending emojis)
+    for (const ally of this.player.allies()) {
+      if (ally.targets().length === 0) continue;
+      if (this.player.relation(ally) < Relation.Friendly) continue;
+
+      for (const target of ally.targets()) {
+        if (target === this.player) continue;
+        if (this.player.isFriendly(target)) continue;
+        // Found a valid ally target to nuke
+        return target;
+      }
+    }
+
+    // Find the most hated player
+    // Ignore much weaker players (we don't need nukes to deal with them)
+    const myMaxTroops = this.game.config().maxTroops(this.player);
+    for (const relation of this.player.allRelationsSorted()) {
+      if (relation.relation !== Relation.Hostile) continue;
+      const other = relation.player;
+      if (this.player.isFriendly(other)) continue;
+
+      const otherMaxTroops = this.game.config().maxTroops(other);
+      if (myMaxTroops >= otherMaxTroops * 2) continue;
+
+      return other;
+    }
+
+    // In FFAs, nuke the crown if they're far enough ahead
+    const crownTarget = this.findFFACrownTarget();
+    if (crownTarget) {
+      return crownTarget;
+    }
+
+    // In Teams, nuke the strongest team
+    const teamTarget = this.findStrongestTeamTarget();
+    if (teamTarget) {
+      return teamTarget;
+    }
+
+    return null;
+  }
+
+  private findFFACrownTarget(): Player | null {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    if (gameMode !== GameMode.FFA) {
+      return null;
+    }
+
+    if (this.game.players().length <= 1) {
+      return null;
+    }
+
+    const sortedByTiles = this.game
+      .players()
+      .slice()
+      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    const firstPlace = sortedByTiles[0];
+
+    // Don't target ourselves or allies
+    if (firstPlace === this.player || this.player.isFriendly(firstPlace)) {
+      return null;
+    }
+
+    const numTilesWithoutFallout =
+      this.game.numLandTiles() - this.game.numTilesWithFallout();
+    if (numTilesWithoutFallout <= 0) {
+      return null;
+    }
+
+    const firstPlaceShare = firstPlace.numTilesOwned() / numTilesWithoutFallout;
+    const myShare = this.player.numTilesOwned() / numTilesWithoutFallout;
+
+    let threshold: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        threshold = 0.4; // 40%
+        break;
+      case Difficulty.Medium:
+        threshold = 0.3; // 30%
+        break;
+      case Difficulty.Hard:
+        threshold = 0.2; // 20%
+        break;
+      case Difficulty.Impossible:
+        threshold = 0.1; // 10%
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    // Check if first place has threshold% more tile-percentage of the map than us
+    if (firstPlaceShare - myShare > threshold) {
+      return firstPlace;
+    }
+
+    return null;
+  }
+
+  private findStrongestTeamTarget(): Player | null {
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return null;
+    }
+
+    if (this.game.players().length <= 1) {
+      return null;
+    }
+
+    const teamTiles = new Map<string, number>();
+    const teamPlayers = new Map<string, Player[]>();
+
+    for (const p of this.game.players()) {
+      const team = p.team();
+      if (team === null) continue;
+
+      teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
+      let players = teamPlayers.get(team);
+      if (!players) {
+        players = [];
+        teamPlayers.set(team, players);
+      }
+      players.push(p);
+    }
+
+    const sortedTeams = Array.from(teamTiles.entries()).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    if (sortedTeams.length === 0) {
+      return null;
+    }
+
+    let strongestTeam = sortedTeams[0][0];
+    if (strongestTeam === this.player.team()) {
+      if (sortedTeams.length > 1) {
+        strongestTeam = sortedTeams[1][0];
+      } else {
+        return null;
+      }
+    }
+
+    const targetTeamPlayers = teamPlayers.get(strongestTeam)!;
+
+    if (this.random.chance(2)) {
+      // Strongest player
+      return targetTeamPlayers.reduce((prev, current) =>
+        this.game.config().maxTroops(prev) >
+        this.game.config().maxTroops(current)
+          ? prev
+          : current,
+      );
+    } else {
+      // Random player
+      return this.random.randElement(targetTeamPlayers);
+    }
+  }
+
   // Simulate saving up for a MIRV
   private getPerceivedNukeCost(type: UnitType): Gold {
     // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
     // or if we already have enough gold to buy both a MIRV and a hydro
     if (
-      this.mg.config().gameConfig().gameMode === GameMode.Team ||
+      this.game.config().gameConfig().gameMode === GameMode.Team ||
       this.player.gold() >
         this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
     ) {
@@ -132,8 +303,8 @@ export class NationNukeBehavior {
     spawnTile: TileRef,
     targetTile: TileRef,
   ): boolean {
-    const pathFinder = new ParabolaPathFinder(this.mg);
-    const speed = this.mg.config().defaultNukeSpeed();
+    const pathFinder = new ParabolaPathFinder(this.game);
+    const speed = this.game.config().defaultNukeSpeed();
     const distanceBasedHeight = true; // Atom/Hydrogen bombs use distance-based height
     const rocketDirectionUp = true; // AI nukes always go "up" for now
 
@@ -151,7 +322,7 @@ export class NationNukeBehavior {
     }
 
     const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() ** 2;
+      this.game.config().defaultNukeTargetableRange() ** 2;
 
     let untargetableStart = -1;
     let untargetableEnd = -1;
@@ -159,10 +330,11 @@ export class NationNukeBehavior {
       const tile = trajectory[i];
       if (untargetableStart === -1) {
         if (
-          this.mg.euclideanDistSquared(tile, spawnTile) > targetRangeSquared
+          this.game.euclideanDistSquared(tile, spawnTile) > targetRangeSquared
         ) {
           if (
-            this.mg.euclideanDistSquared(tile, targetTile) < targetRangeSquared
+            this.game.euclideanDistSquared(tile, targetTile) <
+            targetRangeSquared
           ) {
             // Overlapping spawn & target range – no untargetable segment.
             break;
@@ -171,7 +343,7 @@ export class NationNukeBehavior {
           }
         }
       } else if (
-        this.mg.euclideanDistSquared(tile, targetTile) < targetRangeSquared
+        this.game.euclideanDistSquared(tile, targetTile) < targetRangeSquared
       ) {
         untargetableEnd = i;
         break;
@@ -190,9 +362,9 @@ export class NationNukeBehavior {
       }
 
       const tile = trajectory[i];
-      const nearbySams = this.mg.nearbyUnits(
+      const nearbySams = this.game.nearbyUnits(
         tile,
-        this.mg.config().maxSamRange(),
+        this.game.config().maxSamRange(),
         UnitType.SAMLauncher,
       );
 
@@ -201,7 +373,7 @@ export class NationNukeBehavior {
         if (owner === this.player || this.player.isFriendly(owner)) {
           continue;
         }
-        const rangeSquared = this.mg.config().samRange(sam.unit.level()) ** 2;
+        const rangeSquared = this.game.config().samRange(sam.unit.level()) ** 2;
         if (sam.distSquared <= rangeSquared) {
           return true;
         }
@@ -212,16 +384,16 @@ export class NationNukeBehavior {
   }
 
   private isValidNukeTile(t: TileRef, other: Player | null): boolean {
-    const difficulty = this.mg.config().gameConfig().difficulty;
+    const difficulty = this.game.config().gameConfig().difficulty;
 
-    const owner = this.mg.owner(t);
+    const owner = this.game.owner(t);
     if (owner === other) return true;
     // On Hard & Impossible, allow TerraNullius (hit small islands) and in team games other non-friendly players
     if (
       (difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
       (!owner.isPlayer() ||
-        (this.mg.config().gameConfig().gameMode === GameMode.Team &&
+        (this.game.config().gameConfig().gameMode === GameMode.Team &&
           owner.isPlayer() &&
           !this.player.isFriendly(owner)))
     ) {
@@ -233,7 +405,7 @@ export class NationNukeBehavior {
 
   private removeOldNukeEvents() {
     const maxAge = 500;
-    const tick = this.mg.ticks();
+    const tick = this.game.ticks();
     while (
       this.lastNukeSent.length > 0 &&
       this.lastNukeSent[0][0] + maxAge < tick
@@ -248,10 +420,10 @@ export class NationNukeBehavior {
     targets: Unit[],
     nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
   ): number {
-    const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+    const magnitude = this.game.config().nukeMagnitudes(nukeType);
     const dist = euclDistFN(tile, magnitude.inner, false);
     let tileValue = targets
-      .filter((unit) => dist(this.mg, unit.tile()))
+      .filter((unit) => dist(this.game, unit.tile()))
       .map((unit): number => {
         const level = unit.level();
         switch (unit.type()) {
@@ -271,7 +443,7 @@ export class NationNukeBehavior {
       })
       .reduce((prev, cur) => prev + cur, 0);
 
-    const difficulty = this.mg.config().gameConfig().difficulty;
+    const difficulty = this.game.config().gameConfig().difficulty;
     // On Easy, ignore SAMs entirely.
     // On Medium, apply a simple local SAM penalty.
     // On Hard & Impossible we rely on trajectory-based interception checks instead. See maybeSendNuke().
@@ -279,17 +451,18 @@ export class NationNukeBehavior {
       const dist50 = euclDistFN(tile, 50, false);
       const hasSam = targets.some(
         (unit) =>
-          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+          unit.type() === UnitType.SAMLauncher &&
+          dist50(this.game, unit.tile()),
       );
       if (hasSam) return -1;
     }
 
     // Prefer tiles that are closer to a silo (but preserve structure value)
     const siloTiles = silos.map((u) => u.tile());
-    const result = closestTwoTiles(this.mg, siloTiles, [tile]);
+    const result = closestTwoTiles(this.game, siloTiles, [tile]);
     if (result === null) throw new Error("Missing result");
     const { x: closestSilo } = result;
-    const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
+    const distanceSquared = this.game.euclideanDistSquared(tile, closestSilo);
     const distanceToClosestSilo = Math.sqrt(distanceSquared);
     const distancePenalty = distanceToClosestSilo * 30;
     const baseTileValue = tileValue;
@@ -298,7 +471,7 @@ export class NationNukeBehavior {
     // Don't target near recent targets
     const dist25 = euclDistFN(tile, 25, false);
     tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist25(this.mg, tile))
+      .filter(([_tick, tile]) => dist25(this.game, tile))
       .map((_) => 1_000_000)
       .reduce((prev, cur) => prev + cur, 0);
 
@@ -310,7 +483,7 @@ export class NationNukeBehavior {
     nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
     targetPlayer: Player,
   ) {
-    const tick = this.mg.ticks();
+    const tick = this.game.ticks();
     this.lastNukeSent.push([tick, tile]);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
@@ -322,11 +495,11 @@ export class NationNukeBehavior {
       this.hydrogenBombPerceivedCost =
         (this.hydrogenBombPerceivedCost * 115n) / 100n;
     }
-    this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
+    this.game.addExecution(new NukeExecution(nukeType, this.player, tile));
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
   }
 
   private cost(type: UnitType): Gold {
-    return this.mg.unitInfo(type).cost(this.mg, this.player);
+    return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
