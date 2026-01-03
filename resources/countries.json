@@ -1196,6 +1196,11 @@
     "name": "Louisiana"
   },
   {
+    "code": "Lower Silesia",
+    "continent": "Europe",
+    "name": "Lower Silesia"
+  },
+  {
     "code": "lu",
     "continent": "Europe",
     "name": "Luxembourg"
@@ -2181,6 +2186,11 @@
     "code": "us",
     "continent": "North America",
     "name": "United States of America"
+  },
+  {
+    "code": "Upper Silesia",
+    "continent": "Europe",
+    "name": "Upper Silesia"
   },
   {
     "code": "Urartu",
