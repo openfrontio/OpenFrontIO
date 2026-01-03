@@ -55,6 +55,7 @@ export function createRenderer(
     ghostStructure: null,
     rocketDirectionUp: true,
     lockedGhostTile: null,
+    overGhostControls: false,
   } as UIState;
 
   //hide when the game renders

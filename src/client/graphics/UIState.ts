@@ -6,4 +6,5 @@ export interface UIState {
   ghostStructure: UnitType | null;
   rocketDirectionUp: boolean;
   lockedGhostTile: TileRef | null;
+  overGhostControls: boolean;
 }

@@ -639,20 +639,25 @@ export class StructureIconsLayer implements Layer {
 
       // Hover effects
       button.on("pointerover", () => {
+        this.uiState.overGhostControls = true;
         button.tint = 0xdddddd;
       });
       button.on("pointerout", () => {
+        this.uiState.overGhostControls = false;
         button.tint = 0xffffff;
       });
       button.on("pointerdown", () => {
+        this.uiState.overGhostControls = true;
         button.tint = 0xaaaaaa;
       });
       button.on("pointerup", () => {
+        this.uiState.overGhostControls = false;
         button.tint = 0xffffff;
       });
 
       button.on("pointertap", (e) => {
         e.stopPropagation();
+        this.uiState.overGhostControls = false;
         onClick();
       });
 
@@ -681,6 +686,7 @@ export class StructureIconsLayer implements Layer {
 
   private destroyGhostControls() {
     if (!this.ghostControls) return;
+    this.uiState.overGhostControls = false;
     this.ghostControls.container.destroy({ children: true });
     this.ghostControls = null;
   }
