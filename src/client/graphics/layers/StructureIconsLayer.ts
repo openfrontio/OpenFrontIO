@@ -275,7 +275,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostUnit.range?.position.set(localX, localY);
       this.updateGhostControls(localX, localY, rect);
     } else {
-      this.hideGhostControls();
+      this.destroyGhostControls();
       const tile = this.transformHandler.screenToWorldCoordinates(
         localX,
         localY,
@@ -660,10 +660,6 @@ export class StructureIconsLayer implements Layer {
     if (!this.ghostControls) return;
     this.ghostControls.container.remove();
     this.ghostControls = null;
-  }
-
-  private hideGhostControls() {
-    this.destroyGhostControls();
   }
 
   private updateGhostControls(localX: number, localY: number, rect: DOMRect) {
