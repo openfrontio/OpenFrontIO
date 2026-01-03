@@ -7,6 +7,7 @@ import {
   rootMenuElement,
   Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
+import { GhostStructureChangedEvent } from "../../../src/client/InputHandler";
 import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
@@ -136,6 +137,16 @@ describe("RadialMenuElements", () => {
 
     mockTile = {} as TileRef;
 
+    const uiState = {
+      ghostStructure: null,
+      lockedGhostTile: null,
+      rocketDirectionUp: true,
+    } as any;
+
+    const eventBus = {
+      emit: vi.fn(),
+    } as any;
+
     mockParams = {
       myPlayer: mockPlayer,
       selected: mockPlayer,
@@ -147,7 +158,8 @@ describe("RadialMenuElements", () => {
       playerActionHandler: {} as any,
       playerPanel: {} as any,
       chatIntegration: {} as any,
-      eventBus: {} as any,
+      eventBus,
+      uiState,
       closeMenu: vi.fn(),
     };
   });
@@ -373,6 +385,29 @@ describe("RadialMenuElements", () => {
 
       const subMenu = attackMenuElement.subMenu!(mockParams);
 
+      const warshipElement = subMenu.find(
+        (item) => item.id === "attack_Warship",
+      );
+
+      expect(warshipElement).toBeDefined();
+      expect(warshipElement!.action).toBeDefined();
+
+      if (warshipElement!.action) {
+        warshipElement!.action(mockParams);
+        expect(mockBuildMenu.sendBuildOrUpgrade).toHaveBeenCalled();
+        expect(mockParams.closeMenu).toHaveBeenCalled();
+      }
+    });
+
+    it("should start nuke ghost placement instead of immediate build", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: vi.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+
+      const subMenu = attackMenuElement.subMenu!(mockParams);
+
       const atomBombElement = subMenu.find(
         (item) => item.id === "attack_Atom Bomb",
       );
@@ -382,7 +417,17 @@ describe("RadialMenuElements", () => {
 
       if (atomBombElement!.action) {
         atomBombElement!.action(mockParams);
-        expect(mockBuildMenu.sendBuildOrUpgrade).toHaveBeenCalled();
+
+        expect(mockBuildMenu.sendBuildOrUpgrade).not.toHaveBeenCalled();
+        expect(mockParams.uiState.ghostStructure).toBe(UnitType.AtomBomb);
+        expect(mockParams.uiState.lockedGhostTile).toBe(mockTile);
+        expect(mockParams.eventBus.emit).toHaveBeenCalledTimes(1);
+        const emittedEvent = (mockParams.eventBus.emit as Mock).mock
+          .calls[0][0];
+        expect(emittedEvent).toBeInstanceOf(GhostStructureChangedEvent);
+        expect(
+          (emittedEvent as GhostStructureChangedEvent).ghostStructure,
+        ).toBe(UnitType.AtomBomb);
         expect(mockParams.closeMenu).toHaveBeenCalled();
       }
     });
