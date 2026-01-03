@@ -263,6 +263,62 @@ export class TerritoryLayer implements Layer {
       baseColor, // Always draw white static semi-transparent ring
       teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
     );
+
+    // Draw breathing rings for teammates in team games (helps colorblind players identify teammates)
+    this.drawTeammateHighlights(minRad, maxRad, radius);
+  }
+
+  private drawTeammateHighlights(
+    minRad: number,
+    maxRad: number,
+    radius: number,
+  ) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null || myPlayer.team() === null) {
+      return;
+    }
+
+    const teammates = this.game
+      .playerViews()
+      .filter((p) => p !== myPlayer && myPlayer.isOnSameTeam(p));
+
+    // Smaller radius for teammates (more subtle than self highlight)
+    const teammateMinRad = 5;
+    const teammateMaxRad = 14;
+    const teammateRadius =
+      teammateMinRad +
+      (teammateMaxRad - teammateMinRad) *
+        ((radius - minRad) / (maxRad - minRad));
+
+    const teamColors = Object.values(ColoredTeams);
+    for (const teammate of teammates) {
+      const center = teammate.nameLocation();
+      if (!center) {
+        continue;
+      }
+
+      const team = teammate.team();
+      let baseColor: Colord;
+      let breathingColor: Colord;
+
+      if (team !== null && teamColors.includes(team)) {
+        baseColor = this.theme.teamColor(team).alpha(0.5);
+        breathingColor = this.theme.teamColor(team).alpha(0.5);
+      } else {
+        baseColor = this.theme.spawnHighlightTeamColor();
+        breathingColor = this.theme.spawnHighlightTeamColor();
+      }
+
+      this.drawBreathingRing(
+        center.x,
+        center.y,
+        teammateMinRad,
+        teammateMaxRad,
+        teammateRadius,
+        baseColor,
+        breathingColor,
+      );
+    }
   }
 
   init() {
