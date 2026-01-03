@@ -21,7 +21,11 @@ import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { randTerritoryTileArray } from "./NationUtils";
 
 export class NationNukeBehavior {
-  private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly recentlySentNukes: [
+    Tick,
+    TileRef,
+    UnitType.AtomBomb | UnitType.HydrogenBomb,
+  ][] = [];
   private atomBombsLaunched = 0;
   private atomBombPerceivedCost = this.cost(UnitType.AtomBomb);
   private hydrogenBombsLaunched = 0;
@@ -350,13 +354,13 @@ export class NationNukeBehavior {
   }
 
   private removeOldNukeEvents() {
-    const maxAge = 500;
+    const maxAge = 600; // 600 ticks = 1 minute
     const tick = this.game.ticks();
     while (
-      this.lastNukeSent.length > 0 &&
-      this.lastNukeSent[0][0] + maxAge < tick
+      this.recentlySentNukes.length > 0 &&
+      this.recentlySentNukes[0][0] + maxAge < tick
     ) {
-      this.lastNukeSent.shift();
+      this.recentlySentNukes.shift();
     }
   }
 
@@ -565,9 +569,14 @@ export class NationNukeBehavior {
     tileValue = Math.max(baseTileValue * 0.2, tileValue - distancePenalty); // Keep at least 20% of structure value
 
     // Don't target near recent targets
-    const dist25 = euclDistFN(tile, 25, false);
-    tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist25(this.game, tile))
+    tileValue -= this.recentlySentNukes
+      .filter(([_tick, recentTile, recentNukeType]) => {
+        const recentInnerRadius = this.game
+          .config()
+          .nukeMagnitudes(recentNukeType).inner;
+        const distSquared = this.game.euclideanDistSquared(tile, recentTile);
+        return distSquared <= recentInnerRadius * recentInnerRadius;
+      })
       .map((_) => 1_000_000)
       .reduce((prev, cur) => prev + cur, 0);
 
@@ -580,7 +589,7 @@ export class NationNukeBehavior {
     targetPlayer: Player,
   ) {
     const tick = this.game.ticks();
-    this.lastNukeSent.push([tick, tile]);
+    this.recentlySentNukes.push([tick, tile, nukeType]);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
       // Increase perceived cost by 25% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
