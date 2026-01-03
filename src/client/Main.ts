@@ -396,7 +396,9 @@ class Client {
         );
 
         if (!isConfirmed) {
-          console.debug("Player denied leaving game, restore navigator history");
+          console.debug(
+            "Player denied leaving game, restore navigator history",
+          );
 
           // Rollback navigator history
           this.preventHashUpdate = true;

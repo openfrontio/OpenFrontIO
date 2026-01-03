@@ -152,8 +152,12 @@ export function joinLobby(
   };
   transport.connect(onconnect, onmessage);
   return (force: boolean = false) => {
-    if (!force && currentGameRunner && currentGameRunner.shouldPreventWindowClose()) {
-      console.log('Player is active, prevent leaving game');
+    if (
+      !force &&
+      currentGameRunner &&
+      currentGameRunner.shouldPreventWindowClose()
+    ) {
+      console.log("Player is active, prevent leaving game");
 
       return false;
     }
