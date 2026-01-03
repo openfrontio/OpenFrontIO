@@ -64,6 +64,11 @@ for (let i = 0; i < map.width(); i++) {
 }
 
 const target = game.ref(400, 1200);
+if (!game.isValidRef(target)) {
+  throw new Error(
+    `Target (400, 1200) is outside map bounds: ${map.width()}x${map.height()}`,
+  );
+}
 
 new Benchmark.Suite()
   .add("closestShoreFromPlayer (Regional)", () => {
