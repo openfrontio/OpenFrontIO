@@ -23,4 +23,11 @@
   --secondaryColorDark: #374151;
   --secondaryColorHoverDark: #4b5563;
   --fontColorDark: #f3f4f6;
+
+  /* Achievements */
+  --medal-easy: #cd7f32;
+  --medal-medium: #c0c0c0;
+  --medal-hard: #ffd700;
+  --medal-impossible: #d32f2f;
+  --medal-custom: #2196f3;
 }
