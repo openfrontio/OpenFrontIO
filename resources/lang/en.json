@@ -861,5 +861,13 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "lobby_notification_modal": {
+    "title": "Lobby Notifications",
+    "min": "Min:",
+    "max": "Max:",
+    "sound_notifications": "Sound Notifications",
+    "enable_hint": "Select a game mode to enable notifications",
+    "team_count_range": "Players per Team"
   }
 }

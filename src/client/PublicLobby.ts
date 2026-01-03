@@ -48,6 +48,14 @@ export class PublicLobby extends LitElement {
 
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
     this.lobbies = lobbies;
+
+    // Emit event for LobbyNotificationManager to consume
+    window.dispatchEvent(
+      new CustomEvent("lobbies-updated", {
+        detail: this.lobbies,
+      }),
+    );
+
     this.lobbies.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
         const msUntilStart = l.msUntilStart ?? 0;
