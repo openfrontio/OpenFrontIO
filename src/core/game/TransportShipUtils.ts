@@ -249,14 +249,14 @@ export function candidateShoreTiles(
     if (cx > maxX) {
       maxX = cx;
       tMaxX = tile;
-    } else if (cx === maxX && tMaxX !== null && tile < tMaxX) {
+    } else if (cx === maxX && tMaxX !== null && tile > tMaxX) {
       tMaxX = tile;
     }
 
     if (cy > maxY) {
       maxY = cy;
       tMaxY = tile;
-    } else if (cy === maxY && tMaxY !== null && tile < tMaxY) {
+    } else if (cy === maxY && tMaxY !== null && tile > tMaxY) {
       tMaxY = tile;
     }
   }
