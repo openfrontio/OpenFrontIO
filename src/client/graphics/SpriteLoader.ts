@@ -80,11 +80,18 @@ export const loadAllSprites = async (): Promise<void> => {
  * The train sprites rely on the train attributes and not only on its type
  */
 function trainTypeToSpriteType(unit: UnitView): TrainTypeSprite {
-  return unit.trainType() === TrainType.Engine
-    ? TrainTypeSprite.Engine
-    : unit.isLoaded()
-      ? TrainTypeSprite.LoadedCarriage
-      : TrainTypeSprite.Carriage;
+  const trainType = unit.trainType();
+
+  switch (trainType) {
+    case TrainType.Engine:
+    case TrainType.TailEngine:
+      return TrainTypeSprite.Engine;
+    case TrainType.Carriage:
+    default:
+      return unit.isLoaded()
+        ? TrainTypeSprite.LoadedCarriage
+        : TrainTypeSprite.Carriage;
+  }
 }
 
 const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {

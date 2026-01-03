@@ -259,6 +259,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
+    const totalTroops = player.troops();
 
     if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
@@ -378,6 +379,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     </span>
                   </div>`
                 : ""}
+              ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
               <div
                 class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
                           font-bold text-yellow-400 text-sm opacity-80"
@@ -434,6 +436,43 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               </div>
             `
           : ""}
+      </div>
+    `;
+  }
+
+  private renderTroopBar(
+    totalTroops: number,
+    attackingTroops: number,
+    maxTroops: number,
+  ) {
+    const base = Math.max(maxTroops, 1);
+    const greenPercentRaw = (totalTroops / base) * 100;
+    const orangePercentRaw = (attackingTroops / base) * 100;
+
+    const greenPercent = Math.max(0, Math.min(100, greenPercentRaw));
+    const orangePercent = Math.max(
+      0,
+      Math.min(100 - greenPercent, orangePercentRaw),
+    );
+
+    return html`
+      <div
+        class="w-full mt-2 mb-2 h-5 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden"
+      >
+        <div class="h-full flex">
+          ${greenPercent > 0
+            ? html`<div
+                class="h-full bg-green-500 transition-[width] duration-200"
+                style="width: ${greenPercent}%;"
+              ></div>`
+            : ""}
+          ${orangePercent > 0
+            ? html`<div
+                class="h-full bg-orange-400 transition-[width] duration-200"
+                style="width: ${orangePercent}%;"
+              ></div>`
+            : ""}
+        </div>
       </div>
     `;
   }

@@ -217,6 +217,7 @@ export enum UnitType {
 
 export enum TrainType {
   Engine = "Engine",
+  TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
 
