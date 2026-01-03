@@ -142,6 +142,27 @@ export class NationNukeBehavior {
       return incomingAttackPlayer;
     }
 
+    // On impossible difficulty, prioritize nuking the crown if they have more than 50% of the map
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    if (difficulty === Difficulty.Impossible && gameMode === GameMode.FFA) {
+      const numTilesWithoutFallout =
+        this.game.numLandTiles() - this.game.numTilesWithFallout();
+      if (numTilesWithoutFallout > 0) {
+        const sortedByTiles = this.game
+          .players()
+          .slice()
+          .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+        const crown = sortedByTiles[0];
+
+        if (crown && crown !== this.player && !this.player.isFriendly(crown)) {
+          const crownShare = crown.numTilesOwned() / numTilesWithoutFallout;
+          if (crownShare > 0.5) {
+            return crown;
+          }
+        }
+      }
+    }
+
     // Assist allies, check their targets (this is basically the same as in assistAllies, but without sending emojis)
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
@@ -296,9 +317,18 @@ export class NationNukeBehavior {
 
     const targetTeamPlayers = teamPlayers.get(strongestTeam)!;
 
+    // Filter out friendly players
+    const validTargets = targetTeamPlayers.filter(
+      (p) => !this.player.isFriendly(p),
+    );
+
+    if (validTargets.length === 0) {
+      return null;
+    }
+
     if (this.random.chance(2)) {
       // Strongest player
-      return targetTeamPlayers.reduce((prev, current) =>
+      return validTargets.reduce((prev, current) =>
         this.game.config().maxTroops(prev) >
         this.game.config().maxTroops(current)
           ? prev
@@ -306,7 +336,7 @@ export class NationNukeBehavior {
       );
     } else {
       // Random player
-      return this.random.randElement(targetTeamPlayers);
+      return this.random.randElement(validTargets);
     }
   }
 
