@@ -774,6 +774,10 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+
+  destroyNukesBetween(p1: Player, p2: Player): DestroyNukesResult;
+
+  executions(): Execution[];
 }
 
 export interface PlayerActions {
@@ -819,6 +823,13 @@ export interface EmojiMessage {
   recipientID: number | typeof AllPlayers;
   createdAt: Tick;
 }
+
+export type DestroyNukesResult = {
+  inFlight: number;
+  queued: number;
+  fromRequestorToRecipient: number;
+  fromRecipientToRequestor: number;
+};
 
 export enum MessageType {
   ATTACK_FAILED,
