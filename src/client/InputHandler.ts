@@ -451,10 +451,6 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
-    if (this.uiState.overGhostControls) {
-      return;
-    }
-
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
@@ -482,12 +478,6 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
-    if (this.uiState.overGhostControls) {
-      this.pointerDown = false;
-      this.pointers.clear();
-      return;
-    }
-
     if (event.button === 1) {
       event.preventDefault();
       return;
