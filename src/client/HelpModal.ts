@@ -435,6 +435,14 @@ export class HelpModal extends LitElement {
                 <div class="inline-block icon betray-icon"></div>
                 <span>${translateText("help_modal.ally_betray")}</span>
               </li>
+              <li class="mb-4">
+                <div class="inline-block icon donate-icon"></div>
+                <span>${translateText("help_modal.radial_donate_troops")}</span>
+              </li>
+              <li class="mb-4">
+                <div class="inline-block icon donate-gold-icon"></div>
+                <span>${translateText("help_modal.radial_donate_gold")}</span>
+              </li>
             </ul>
           </div>
         </div>

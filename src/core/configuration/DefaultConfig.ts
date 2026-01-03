@@ -85,6 +85,9 @@ const numPlayersConfig = {
   [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
   [GameMapType.Lemnos]: [20, 15, 10],
+  [GameMapType.TwoLakes]: [60, 50, 40],
+  [GameMapType.StraitOfHormuz]: [40, 36, 30],
+  [GameMapType.Surrounded]: [56, 28, 14], // 4, 2, 1 players per island
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -790,9 +793,9 @@ export class DefaultConfig implements Config {
         case Difficulty.Medium:
           return 25_000; // Like humans
         case Difficulty.Hard:
-          return 31_250;
+          return 28_125;
         case Difficulty.Impossible:
-          return 37_500;
+          return 31_250;
         default:
           assertNever(this._gameConfig.difficulty);
       }
@@ -825,9 +828,9 @@ export class DefaultConfig implements Config {
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
-        return maxTroops * 1.25;
+        return maxTroops * 1.125;
       case Difficulty.Impossible:
-        return maxTroops * 1.5;
+        return maxTroops * 1.25;
       default:
         assertNever(this._gameConfig.difficulty);
     }
@@ -854,10 +857,10 @@ export class DefaultConfig implements Config {
           toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
-          toAdd *= 1.05;
+          toAdd *= 1.025;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.1;
+          toAdd *= 1.05;
           break;
         default:
           assertNever(this._gameConfig.difficulty);

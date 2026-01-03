@@ -107,6 +107,9 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  TwoLakes = "Two Lakes",
+  StraitOfHormuz = "Strait of Hormuz",
+  Surrounded = "Surrounded",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -145,6 +148,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
     GameMapType.Lemnos,
+    GameMapType.TwoLakes,
+    GameMapType.StraitOfHormuz,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -155,6 +160,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
     GameMapType.Svalmel,
+    GameMapType.Surrounded,
   ],
 };
 
@@ -211,6 +217,7 @@ export enum UnitType {
 
 export enum TrainType {
   Engine = "Engine",
+  TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
 

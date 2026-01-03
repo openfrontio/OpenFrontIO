@@ -14,7 +14,11 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  MouseUpEvent,
+  SwapRocketDirectionEvent,
+} from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -76,6 +80,10 @@ export class PlayerPanel extends LitElement implements Layer {
       if (this.isVisible) {
         this.hide();
       }
+    });
+    eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      this.requestUpdate();
     });
   }
   init() {
@@ -297,6 +305,12 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private handleToggleRocketDirection(e: Event) {
+    e.stopPropagation();
+    const next = !this.uiState.rocketDirectionUp;
+    this.eventBus.emit(new SwapRocketDirectionEvent(next));
+  }
+
   private identityChipProps(type: PlayerType) {
     switch (type) {
       case PlayerType.Nation:
@@ -488,7 +502,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -509,6 +523,28 @@ export class PlayerPanel extends LitElement implements Layer {
           >
         </div>
       </div>
+    `;
+  }
+
+  private renderRocketDirectionToggle() {
+    return html`
+      <ui-divider></ui-divider>
+      <button
+        class="flex w-full items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2 text-left text-white hover:bg-white/[0.08] active:scale-[0.995] transition"
+        @click=${(e: Event) => this.handleToggleRocketDirection(e)}
+      >
+        <div class="flex flex-col">
+          <span class="text-sm font-semibold tracking-tight">
+            ${translateText("player_panel.flip_rocket_trajectory")}
+          </span>
+          <span class="text-xs text-zinc-300" translate="no">
+            ${this.uiState.rocketDirectionUp
+              ? translateText("player_panel.arc_up")
+              : translateText("player_panel.arc_down")}
+          </span>
+        </div>
+        <span class="text-lg" aria-hidden="true">🔀</span>
+      </button>
     `;
   }
 
@@ -696,53 +732,53 @@ export class PlayerPanel extends LitElement implements Layer {
             : ""}
         </div>
         <ui-divider></ui-divider>
-
-        <div class="grid auto-cols-fr grid-flow-col gap-1">
-          ${other !== my
-            ? canEmbargo
-              ? actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleEmbargoClick(e, my, other),
-                  icon: stopTradingIcon,
-                  iconAlt: "Stop Trading",
-                  title: translateText("player_panel.stop_trade"),
-                  label: translateText("player_panel.stop_trade"),
-                  type: "yellow",
-                })
-              : actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleStopEmbargoClick(e, my, other),
-                  icon: startTradingIcon,
-                  iconAlt: "Start Trading",
-                  title: translateText("player_panel.start_trade"),
-                  label: translateText("player_panel.start_trade"),
-                  type: "green",
-                })
-            : ""}
-          ${canBreakAlliance
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleBreakAllianceClick(e, my, other),
-                icon: breakAllianceIcon,
-                iconAlt: "Break Alliance",
-                title: translateText("player_panel.break_alliance"),
-                label: translateText("player_panel.break_alliance"),
-                type: "red",
-              })
-            : ""}
-          ${canSendAllianceRequest
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleAllianceClick(e, my, other),
-                icon: allianceIcon,
-                iconAlt: "Alliance",
-                title: translateText("player_panel.send_alliance"),
-                label: translateText("player_panel.send_alliance"),
-                type: "indigo",
-              })
-            : ""}
-        </div>
-
+        ${other === my
+          ? html``
+          : html`
+              <div class="grid auto-cols-fr grid-flow-col gap-1">
+                ${canEmbargo
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleEmbargoClick(e, my, other),
+                      icon: stopTradingIcon,
+                      iconAlt: "Stop Trading",
+                      title: translateText("player_panel.stop_trade"),
+                      label: translateText("player_panel.stop_trade"),
+                      type: "yellow",
+                    })
+                  : actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleStopEmbargoClick(e, my, other),
+                      icon: startTradingIcon,
+                      iconAlt: "Start Trading",
+                      title: translateText("player_panel.start_trade"),
+                      label: translateText("player_panel.start_trade"),
+                      type: "green",
+                    })}
+                ${canBreakAlliance
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleBreakAllianceClick(e, my, other),
+                      icon: breakAllianceIcon,
+                      iconAlt: "Break Alliance",
+                      title: translateText("player_panel.break_alliance"),
+                      label: translateText("player_panel.break_alliance"),
+                      type: "red",
+                    })
+                  : ""}
+                ${canSendAllianceRequest
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleAllianceClick(e, my, other),
+                      icon: allianceIcon,
+                      iconAlt: "Alliance",
+                      title: translateText("player_panel.send_alliance"),
+                      label: translateText("player_panel.send_alliance"),
+                      type: "indigo",
+                    })
+                  : ""}
+              </div>
+            `}
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
@@ -845,16 +881,14 @@ export class PlayerPanel extends LitElement implements Layer {
                 <div
                   style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
                 >
-                  <div class="sticky top-0 z-20 flex justify-end p-2">
-                    <button
-                      @click=${this.handleClose}
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-                      aria-label=${translateText("common.close") || "Close"}
-                      title=${translateText("common.close") || "Close"}
-                    >
-                      ✕
-                    </button>
-                  </div>
+                  <button
+                    @click=${this.handleClose}
+                    class="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                    aria-label=${translateText("common.close") || "Close"}
+                    title=${translateText("common.close") || "Close"}
+                  >
+                    ✕
+                  </button>
 
                   <div
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
@@ -889,6 +923,9 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Resources -->
                     ${this.renderResources(other)}
 
+                    <!-- Rocket direction toggle -->
+                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
@@ -902,7 +939,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
 
-                    <ui-divider class="mt-1"></ui-divider>
+                    <ui-divider></ui-divider>
 
                     <!-- Actions -->
                     ${this.renderActions(my, other)}

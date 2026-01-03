@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { WebSocket, WebSocketServer } from "ws";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -59,9 +60,32 @@ app.use(
   }),
 );
 
-let publicLobbiesJsonStr = "";
+let publicLobbiesData: { lobbies: GameInfo[] } = { lobbies: [] };
 
 const publicLobbyIDs: Set<string> = new Set();
+const connectedClients: Set<WebSocket> = new Set();
+
+// Broadcast lobbies to all connected clients
+function broadcastLobbies() {
+  const message = JSON.stringify({
+    type: "lobbies_update",
+    data: publicLobbiesData,
+  });
+
+  const clientsToRemove: WebSocket[] = [];
+
+  connectedClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    } else {
+      clientsToRemove.push(client);
+    }
+  });
+
+  clientsToRemove.forEach((client) => {
+    connectedClients.delete(client);
+  });
+}
 
 // Start the master process
 export async function startMaster() {
@@ -73,6 +97,37 @@ export async function startMaster() {
 
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${config.numWorkers()} workers...`);
+
+  // Setup WebSocket server for clients
+  const wss = new WebSocketServer({ server, path: "/lobbies" });
+
+  wss.on("connection", (ws: WebSocket) => {
+    connectedClients.add(ws);
+
+    // Send current lobbies immediately (always send, even if empty)
+    ws.send(
+      JSON.stringify({ type: "lobbies_update", data: publicLobbiesData }),
+    );
+
+    ws.on("close", () => {
+      connectedClients.delete(ws);
+    });
+
+    ws.on("error", (error) => {
+      log.error(`WebSocket error:`, error);
+      connectedClients.delete(ws);
+      try {
+        if (
+          ws.readyState === WebSocket.OPEN ||
+          ws.readyState === WebSocket.CONNECTING
+        ) {
+          ws.close(1011, "WebSocket internal error");
+        }
+      } catch (closeError) {
+        log.error("Error while closing WebSocket after error:", closeError);
+      }
+    });
+  });
 
   // Generate admin token for worker authentication
   const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
@@ -158,7 +213,7 @@ app.get("/api/env", async (req, res) => {
 
 // Add lobbies endpoint to list public games for this worker
 app.get("/api/public_lobbies", async (req, res) => {
-  res.send(publicLobbiesJsonStr);
+  res.json(publicLobbiesData);
 });
 
 async function fetchLobbies(): Promise<number> {
@@ -225,10 +280,12 @@ async function fetchLobbies(): Promise<number> {
     }
   });
 
-  // Update the JSON string
-  publicLobbiesJsonStr = JSON.stringify({
+  // Update the lobbies data
+  publicLobbiesData = {
     lobbies: lobbyInfos,
-  });
+  };
+
+  broadcastLobbies();
 
   return publicLobbyIDs.size;
 }
