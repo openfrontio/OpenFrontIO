@@ -232,7 +232,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       targetTile = this.game.ref(worldCoords.x, worldCoords.y);
     }
 
-    if (!targetTile) {
+    if (targetTile === null) {
       this.trajectoryPoints = [];
       return;
     }
