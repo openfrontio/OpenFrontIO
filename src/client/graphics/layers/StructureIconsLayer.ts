@@ -635,18 +635,18 @@ export class StructureIconsLayer implements Layer {
       return button;
     };
 
-    const confirm = makeButton("OK", "#2e7d32", () => {
+    const confirm = makeButton("✓", "#2e7d32", () => {
       if (this.uiState.lockedGhostTile) {
         this.emitBuildIntent(this.uiState.lockedGhostTile);
       }
     });
 
-    const flip = makeButton("Flip", "#1565c0", () => {
+    const flip = makeButton("↕", "#1565c0", () => {
       const next = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(next));
     });
 
-    const cancel = makeButton("X", "#b71c1c", () =>
+    const cancel = makeButton("✕", "#b71c1c", () =>
       this.removeGhostStructure(),
     );
 
