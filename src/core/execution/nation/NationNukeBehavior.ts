@@ -37,14 +37,18 @@ export class NationNukeBehavior {
     private emojiBehavior: NationEmojiBehavior,
   ) {}
 
-  maybeSendNuke(other: Player | null) {
+  maybeSendNuke() {
+    const nukeTarget = this.findBestNukeTarget();
+    if (nukeTarget === null) {
+      return;
+    }
+
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
-      other === null ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
-      this.player.isOnSameTeam(other) ||
-      this.attackBehavior.shouldAttack(other) === false
+      nukeTarget.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
+      this.player.isOnSameTeam(nukeTarget) ||
+      this.attackBehavior.shouldAttack(nukeTarget) === false
     ) {
       return;
     }
@@ -61,7 +65,7 @@ export class NationNukeBehavior {
     }
     const range = this.game.config().nukeMagnitudes(nukeType).inner;
 
-    const structures = other.units(
+    const structures = nukeTarget.units(
       UnitType.City,
       UnitType.DefensePost,
       UnitType.MissileSilo,
@@ -73,7 +77,7 @@ export class NationNukeBehavior {
     const randomTiles = randTerritoryTileArray(
       this.random,
       this.game,
-      other,
+      nukeTarget,
       10,
     );
     const allTiles = randomTiles.concat(structureTiles);
@@ -88,7 +92,7 @@ export class NationNukeBehavior {
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
         .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
       for (const t of boundingBox) {
-        if (!this.isValidNukeTile(t, other)) {
+        if (!this.isValidNukeTile(t, nukeTarget)) {
           continue outer;
         }
       }
@@ -112,7 +116,7 @@ export class NationNukeBehavior {
       }
     }
     if (bestTile !== null) {
-      this.sendNuke(bestTile, nukeType, other);
+      this.sendNuke(bestTile, nukeType, nukeTarget);
     }
   }
 
@@ -180,6 +184,18 @@ export class NationNukeBehavior {
       .slice()
       .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
     const firstPlace = sortedByTiles[0];
+
+    // If we're the crown on Impossible difficulty, target 2nd place
+    if (
+      difficulty === Difficulty.Impossible &&
+      firstPlace === this.player &&
+      sortedByTiles.length >= 2
+    ) {
+      const secondPlace = sortedByTiles[1];
+      if (!this.player.isFriendly(secondPlace)) {
+        return secondPlace;
+      }
+    }
 
     // Don't target ourselves or allies
     if (firstPlace === this.player || this.player.isFriendly(firstPlace)) {
@@ -383,11 +399,11 @@ export class NationNukeBehavior {
     return false;
   }
 
-  private isValidNukeTile(t: TileRef, other: Player | null): boolean {
+  private isValidNukeTile(t: TileRef, nukeTarget: Player | null): boolean {
     const difficulty = this.game.config().gameConfig().difficulty;
 
     const owner = this.game.owner(t);
-    if (owner === other) return true;
+    if (owner === nukeTarget) return true;
     // On Hard & Impossible, allow TerraNullius (hit small islands) and in team games other non-friendly players
     if (
       (difficulty === Difficulty.Hard ||

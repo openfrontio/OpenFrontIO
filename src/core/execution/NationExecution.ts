@@ -460,7 +460,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-    this.nukeBehavior.maybeSendNuke(this.attackBehavior.findBestNukeTarget());
+    this.nukeBehavior.maybeSendNuke();
   }
 
   private sendBoatRandomly(borderingEnemies: Player[] = []) {
