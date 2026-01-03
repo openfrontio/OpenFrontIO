@@ -6,20 +6,47 @@
   align-items: center;
 }
 
+.settings-list--grouped {
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Wide modal for settings with groups - fixed width for consistency */
+.user-setting-modal--wide {
+  width: 720px;
+  min-width: 720px;
+  max-width: 720px;
+}
+
+@media (max-width: 768px) {
+  .user-setting-modal--wide {
+    width: 100%;
+    min-width: auto;
+    max-width: 100%;
+  }
+}
+
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: #1e1e1e;
-  border: 1px solid #333;
+  background: var(--modal-card-bg, #1e1e1e);
+  border: 1px solid var(--modal-card-border, #333);
   border-radius: 10px;
   padding: 12px 20px;
   width: 360px !important;
   max-width: 360px !important;
   min-width: 360px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--setting-item-shadow, 0 2px 6px rgba(0, 0, 0, 0.4));
   transition: background 0.3s ease;
   gap: 12px;
+}
+
+/* Allow flexible sizing inside groups */
+setting-group .setting-item {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
 }
 
 .setting-item.column {
@@ -120,7 +147,7 @@
 }
 
 .setting-item:hover {
-  background: #2a2a2a;
+  background: var(--modal-hover, #2a2a2a);
 }
 
 .setting-item.easter-egg:hover {
@@ -140,7 +167,7 @@
 }
 
 .setting-label {
-  color: #f0f0f0;
+  color: var(--modal-text, #f0f0f0);
   font-size: 15px;
   font-weight: 500;
 }
@@ -215,13 +242,13 @@
   width: 100%;
   text-align: center;
   font-size: 13px;
-  color: #aaa;
+  color: var(--modal-text-muted, #aaa);
 }
 
 .setting-input.number {
   width: 80px;
   padding: 6px 8px;
-  border: 1px solid #aaa;
+  border: 1px solid var(--modal-card-border, #aaa);
   border-radius: 6px;
   background-color: #ffffff;
   color: #000000;
@@ -284,7 +311,7 @@
 
 .setting-description {
   font-size: 12px;
-  color: #888;
+  color: var(--modal-text-muted, #888);
   margin-top: 2px;
   white-space: normal;
   word-break: break-word;
@@ -300,7 +327,7 @@
 .setting-keybind-description {
   flex: 1;
   font-size: 0.75rem;
-  color: #e5e5e5;
+  color: var(--modal-text-muted, #e5e5e5);
   word-break: break-word;
   overflow-wrap: break-word;
   min-width: 0;
@@ -323,4 +350,93 @@
 .setting-key:focus {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Cosmetics placeholder styling */
+.cosmetics-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px dashed #444;
+}
+
+.cosmetics-placeholder__icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.cosmetics-placeholder__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.cosmetics-placeholder__desc {
+  font-size: 13px;
+  color: #888;
+  max-width: 300px;
+  line-height: 1.4;
+}
+
+.cosmetics-placeholder__note {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+  padding: 8px 12px;
+  background: rgba(255, 200, 0, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 200, 0, 0.2);
+}
+
+/* Sticky tabs for settings modal */
+.settings-tabs {
+  position: sticky;
+  top: -1.4rem;
+  z-index: 10;
+  background: var(--modal-bg, rgba(35, 35, 35, 0.95));
+  backdrop-filter: blur(8px);
+  margin: -1.4rem -1.4rem 0.75rem -1.4rem !important;
+  padding: 0.75rem 1.4rem;
+  border-bottom: 1px solid var(--modal-border, rgba(255, 255, 255, 0.1));
+  width: calc(100% + 2.8rem) !important;
+  box-sizing: border-box;
+}
+
+/* Tab button styles */
+.settings-tab {
+  background: transparent;
+  color: var(--modal-text-muted, #9ca3af);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Vertical divider between tabs */
+.settings-tab:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  width: 1px;
+  background: var(--modal-border, rgba(255, 255, 255, 0.2));
+}
+
+.settings-tab:hover {
+  color: var(--modal-text, #fff);
+}
+
+.settings-tab--active {
+  background: var(--tab-active-bg, rgba(255, 255, 255, 0.1));
+  color: var(--modal-text, #fff);
 }
