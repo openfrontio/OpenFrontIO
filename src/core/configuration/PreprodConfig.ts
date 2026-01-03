@@ -6,7 +6,7 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return GameEnv.Preprod;
   }
   numWorkers(): number {
-    return 2;
+    return this.envNumWorkers(2);
   }
   turnstileSiteKey(): string {
     return "0x4AAAAAAB7QetxHwRCKw-aP";

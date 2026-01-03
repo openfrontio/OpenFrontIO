@@ -29,7 +29,7 @@ export class DevServerConfig extends DefaultServerConfig {
   }
 
   numWorkers(): number {
-    return 2;
+    return this.envNumWorkers(2);
   }
   jwtAudience(): string {
     return "localhost";
