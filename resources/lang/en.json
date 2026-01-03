@@ -84,6 +84,8 @@
     "radial_attack": "Open the Attack menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a Boat (transport ship) to attack at the selected location. Only available if you have access to water.",
+    "radial_donate_troops": "Donate troops equivalent to your attack ratio slider percentage to the ally you opened the radial menu on.",
+    "radial_donate_gold": "Opens the gold donation slider menu so you can quickly send allies gold.",
     "radial_close": "Close the menu.",
     "info_title": "Info menu",
     "info_enemy_desc": "Contains information such as the selected player's name, gold, troops, stopped trading with you, nukes sent to you, and if the player is a traitor. Stopped trading means you won't receive gold from them and they won't sent you gold via trade ships. Manually (if the player clicked \"Stop trading\", which lasts until you both click \"Start trading\") or automatically (if you betrayed your alliance, which lasts until you become allies again or after 5 minutes). Traitor displays Yes for 30 seconds when the player betrayed and attacked a player who was in an alliance with them. The icons below represent the following interactions:",
@@ -249,7 +251,8 @@
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
     "twolakes": "Two Lakes",
-    "straitofhormuz": "Strait of Hormuz"
+    "straitofhormuz": "Strait of Hormuz",
+    "surrounded": "Surrounded"
   },
   "map_categories": {
     "continental": "Continental",
