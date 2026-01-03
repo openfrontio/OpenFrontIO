@@ -618,11 +618,13 @@ export class StructureIconsLayer implements Layer {
     const makeButton = (
       label: string,
       background: string,
+      ariaLabel: string,
       onClick: () => void,
     ): HTMLButtonElement => {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = label;
+      button.setAttribute("aria-label", ariaLabel);
       button.style.minHeight = "48px";
       button.style.minWidth = "48px";
       button.style.height = "48px";
@@ -645,18 +647,18 @@ export class StructureIconsLayer implements Layer {
       return button;
     };
 
-    const confirm = makeButton("✓", "#2e7d32", () => {
+    const confirm = makeButton("✓", "#2e7d32", "Confirm bomb placement", () => {
       if (this.uiState.lockedGhostTile) {
         this.emitBuildIntent(this.uiState.lockedGhostTile);
       }
     });
 
-    const flip = makeButton("↕", "#1565c0", () => {
+    const flip = makeButton("↕", "#1565c0", "Flip rocket direction", () => {
       const next = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(next));
     });
 
-    const cancel = makeButton("✕", "#b71c1c", () =>
+    const cancel = makeButton("✕", "#b71c1c", "Cancel bomb placement", () =>
       this.removeGhostStructure(),
     );
 
