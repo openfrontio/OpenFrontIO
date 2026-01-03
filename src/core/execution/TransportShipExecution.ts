@@ -93,6 +93,10 @@ export class TransportShipExecution implements Execution {
     } else {
       this.target = mg.player(this.targetID);
     }
+    if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
+      this.active = false;
+      return;
+    }
 
     this.startTroops ??= this.mg
       .config()

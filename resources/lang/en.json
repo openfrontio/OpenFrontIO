@@ -307,6 +307,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "player_immunity_duration": "PVP immunity duration (minutes)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",

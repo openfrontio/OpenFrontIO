@@ -121,6 +121,9 @@ export class GameServer {
     if (gameConfig.randomSpawn !== undefined) {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
+    if (gameConfig.spawnImmunityDuration !== undefined) {
+      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
+    }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }

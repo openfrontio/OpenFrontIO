@@ -110,6 +110,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
+      spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }

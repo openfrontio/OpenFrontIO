@@ -145,6 +145,7 @@
     "options_title": "host_modal.options_title",
     "bots": "host_modal.bots",
     "bots_disabled": "host_modal.bots_disabled",
+    "player_immunity_duration": "host_modal.player_immunity_duration",
     "disable_nations": "host_modal.disable_nations",
     "instant_build": "host_modal.instant_build",
     "random_spawn": "host_modal.random_spawn",
