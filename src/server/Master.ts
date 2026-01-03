@@ -1,19 +1,47 @@
 import cluster from "cluster";
 import crypto from "crypto";
-import express from "express";
+import express, { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import {
+  ExternalGameInfo,
+  buildPreview,
+  renderPreview,
+} from "./GamePreviewBuilder";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
+
+const BOT_USER_AGENTS = [
+  "discordbot",
+  "twitterbot",
+  "slackbot",
+  "facebookexternalhit",
+  "linkedinbot",
+  "telegrambot",
+  "applebot",
+  "snapchat",
+  "whatsapp",
+  "pinterestbot",
+];
+
+const joinPreviewLimiter = rateLimit({
+  windowMs: 1000, // 1 second
+  max: 100, // limit each IP to 100 requests per windowMs
+  skip: (req) => {
+    const ua = req.get("user-agent")?.toLowerCase() ?? "";
+    return BOT_USER_AGENTS.some((bot) => ua.includes(bot));
+  },
+});
+
 const readyWorkers = new Set();
 
 const app = express();
@@ -24,6 +52,137 @@ const log = logger.child({ comp: "m" });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.json());
+
+const isBotRequest = (req: Request): boolean => {
+  const ua = req.get("user-agent")?.toLowerCase() ?? "";
+  return BOT_USER_AGENTS.some((token) => ua.includes(token));
+};
+
+const requestOrigin = (req: Request): string => {
+  const protoHeader = (req.headers["x-forwarded-proto"] as string) ?? "";
+  const proto = protoHeader.split(",")[0]?.trim() || req.protocol || "https";
+  const host = req.get("host") ?? `${config.subdomain()}.${config.domain()}`;
+  return `${proto}://${host}`;
+};
+
+const fetchLobbyInfo = async (gameID: string): Promise<GameInfo | null> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const workerPort = config.workerPort(gameID);
+    const response = await fetch(
+      `http://127.0.0.1:${workerPort}/api/game/${gameID}`,
+      {
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as GameInfo;
+    return data;
+  } catch (error) {
+    log.warn("failed to fetch lobby info", { gameID, error });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const fetchPublicGameInfo = async (
+  gameID: string,
+): Promise<ExternalGameInfo | null> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const apiDomain = process.env.API_DOMAIN ?? `api.${config.domain()}`;
+    const response = await fetch(`https://${apiDomain}/game/${gameID}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as ExternalGameInfo;
+  } catch (error) {
+    log.warn("failed to fetch public game info", { gameID, error });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const serveJoinPreview = async (
+  req: Request,
+  res: Response,
+  gameID: string,
+): Promise<void> => {
+  const parsed = ID.safeParse(gameID);
+  if (!parsed.success) {
+    res.redirect(302, "/");
+    return;
+  }
+
+  const joinId = parsed.data;
+  const origin = requestOrigin(req);
+  const botRequest = isBotRequest(req);
+  const [lobby, publicInfo] = await Promise.all([
+    fetchLobbyInfo(joinId),
+    fetchPublicGameInfo(joinId),
+  ]);
+
+  if (botRequest) {
+    const meta = buildPreview(joinId, origin, lobby, publicInfo);
+    const html = renderPreview(meta, joinId, true);
+
+    // Determine if public or private lobby
+    const isPrivate = lobby?.gameConfig?.gameType === "Private";
+    const isFinished = !!publicInfo?.info?.end;
+
+    if (isPrivate) {
+      // Private lobby: shorter cache (10 seconds), ETag based on settings
+      const settingsHash = JSON.stringify(lobby?.gameConfig);
+      const etag = crypto
+        .createHash("sha256")
+        .update(settingsHash)
+        .digest("hex");
+      res
+        .status(200)
+        .setHeader("Cache-Control", "public, max-age=10")
+        .setHeader("ETag", `"${etag}"`)
+        .type("html")
+        .send(html);
+    } else {
+      // Public lobby: longer cache (60 seconds), ETag based on gamestate
+      const gamestateHash = isFinished
+        ? JSON.stringify(publicInfo?.info)
+        : JSON.stringify(lobby);
+      const etag = crypto
+        .createHash("sha256")
+        .update(gamestateHash)
+        .digest("hex");
+      res
+        .status(200)
+        .setHeader("Cache-Control", "public, max-age=60")
+        .setHeader("ETag", `"${etag}"`)
+        .type("html")
+        .send(html);
+    }
+    return;
+  }
+
+  res.sendFile(path.join(__dirname, "../../static/index.html"));
+};
+
+app.get("/game/:gameId", joinPreviewLimiter, (req, res) => {
+  serveJoinPreview(req, res, req.params.gameId).catch((error) => {
+    log.error("failed to render join preview", { error });
+    res.status(500).send("Unable to render lobby preview");
+  });
+});
+
+app.use(
+  "/maps",
+  express.static(path.join(__dirname, "../../resources/maps"), {
+    maxAge: "1y",
+  }),
+);
+
 app.use(
   express.static(path.join(__dirname, "../../static"), {
     maxAge: "1y", // Set max-age to 1 year for all static assets

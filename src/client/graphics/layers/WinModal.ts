@@ -301,6 +301,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
@@ -324,6 +325,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       }
     });

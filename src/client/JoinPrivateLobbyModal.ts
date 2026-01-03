@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo, GameRecordSchema } from "../core/Schemas";
+import { GAME_ID_REGEX, GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { getApiBase } from "./Api";
@@ -13,6 +13,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
   @state() private message: string = "";
@@ -108,6 +109,9 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   public open(id: string = "") {
     this.modalEl?.open();
+    this.modalEl.onClose = () => {
+      this.close();
+    };
     if (id) {
       this.setLobbyId(id);
       this.joinLobby();
@@ -121,6 +125,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
     }
+    // Reset URL to base when modal closes
+    history.replaceState(null, "", window.location.origin + "/");
   }
 
   public closeAndLeave() {
@@ -137,7 +143,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private isValidLobbyId(value: string): boolean {
-    return /^[a-zA-Z0-9]{8}$/.test(value);
+    return GAME_ID_REGEX.test(value);
   }
 
   private normalizeLobbyId(input: string): string | null {
@@ -153,16 +159,19 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private extractLobbyIdFromUrl(input: string): string {
-    if (input.startsWith("http")) {
-      if (input.includes("#join=")) {
-        const params = new URLSearchParams(input.split("#")[1]);
-        return params.get("join") ?? input;
-      } else if (input.includes("join/")) {
-        return input.split("join/")[1];
-      } else {
-        return input;
-      }
-    } else {
+    if (!input.startsWith("http")) {
+      return input;
+    }
+
+    try {
+      const url = new URL(input);
+      const match = url.pathname.match(/game\/([^/]+)/);
+      const candidate = match?.[1];
+      if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;
+
+      return input;
+    } catch (error) {
+      console.warn("Failed to parse lobby URL", error);
       return input;
     }
   }

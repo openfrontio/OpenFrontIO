@@ -144,13 +144,13 @@ export class AccountModal extends LitElement {
 
   private viewGame(gameId: string): void {
     this.close();
-    const path = location.pathname;
-    const { search } = location;
-    const hash = `#join=${encodeURIComponent(gameId)}`;
-    const newUrl = `${path}${search}${hash}`;
+    const encodedGameId = encodeURIComponent(gameId);
+    const newUrl = `/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    window.dispatchEvent(
+      new CustomEvent("join-changed", { detail: { gameId: encodedGameId } }),
+    );
   }
 
   private renderLogoutButton(): TemplateResult {

@@ -1,7 +1,7 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -89,6 +89,7 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "join-changed": CustomEvent;
   }
 }
 
@@ -381,6 +382,7 @@ class Client {
     // Handle browser navigation & manual hash edits
     window.addEventListener("popstate", onHashUpdate);
     window.addEventListener("hashchange", onHashUpdate);
+    window.addEventListener("join-changed", onHashUpdate);
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
@@ -406,7 +408,7 @@ class Client {
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
-      if (lobbyId && ID.safeParse(lobbyId).success) {
+      if (lobbyId && GAME_ID_REGEX.test(lobbyId)) {
         this.joinModal.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -481,13 +483,13 @@ class Client {
       return;
     }
 
-    // Fallback to hash-based join for non-CrazyGames environments
-    if (decodedHash.startsWith("#join=")) {
-      const lobbyId = decodedHash.substring(6); // Remove "#join="
-      if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
-        console.log(`joining lobby ${lobbyId}`);
-      }
+    const pathMatch = window.location.pathname.match(/^\/game\/([^/]+)/);
+    const lobbyId =
+      pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
+    if (lobbyId) {
+      this.joinModal.open(lobbyId);
+      console.log(`joining lobby ${lobbyId}`);
+      return;
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
@@ -504,6 +506,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
+    this.updateJoinUrlForShare(lobby.gameID);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop();
@@ -603,9 +606,18 @@ class Client {
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
         }
-        history.pushState(null, "", `#join=${lobby.gameID}`);
+        history.pushState(null, "", `/game/${lobby.gameID}?live`);
       },
     );
+  }
+
+  private updateJoinUrlForShare(lobbyId: string) {
+    const targetUrl = `/game/${lobbyId}`;
+    const currentUrl = window.location.pathname;
+
+    if (currentUrl !== targetUrl) {
+      history.replaceState(null, "", targetUrl);
+    }
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
