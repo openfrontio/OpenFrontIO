@@ -419,8 +419,8 @@ describe("RadialMenuElements", () => {
         atomBombElement!.action(mockParams);
 
         expect(mockBuildMenu.sendBuildOrUpgrade).not.toHaveBeenCalled();
-        expect(mockParams.uiState.ghostStructure).toBe(UnitType.AtomBomb);
-        expect(mockParams.uiState.lockedGhostTile).toBe(mockTile);
+        expect(mockParams.uiState!.ghostStructure).toBe(UnitType.AtomBomb);
+        expect(mockParams.uiState!.lockedGhostTile).toBe(mockTile);
         expect(mockParams.eventBus.emit).toHaveBeenCalledTimes(1);
         const emittedEvent = (mockParams.eventBus.emit as Mock).mock
           .calls[0][0];
