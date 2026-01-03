@@ -537,6 +537,10 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.emit(new GhostStructureChangedEvent(null));
   }
 
+  /**
+   * Emit the appropriate build/upgrade intent for the current ghost unit.
+   * Used by locked-bomb controls to send the final build action.
+   */
   private emitBuildIntent(tileRef: TileRef) {
     if (!this.ghostUnit) return;
     if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
@@ -558,11 +562,17 @@ export class StructureIconsLayer implements Layer {
     }
   }
 
+  /**
+   * Finalise a locked ghost placement: emit intent and clean up ghost/controls.
+   */
   private commitStructure(tileRef: TileRef) {
     this.emitBuildIntent(tileRef);
     this.removeGhostStructure();
   }
 
+  /**
+   * Convert raw screen coordinates into a TileRef if valid; returns null when off-map.
+   */
   private getTileFromScreenCoords(x: number, y: number): TileRef | null {
     const rect = this.transformHandler.boundingRect();
     if (!rect) return null;
@@ -599,10 +609,17 @@ export class StructureIconsLayer implements Layer {
     );
   }
 
+  /**
+   * Returns true when the ghost type supports the locked bomb flow (nukes only).
+   */
   private isLockableGhost(type: UnitType | null): boolean {
     return type === UnitType.AtomBomb || type === UnitType.HydrogenBomb;
   }
 
+  /**
+   * Create the DOM controls (✓/↕/✕) for locked bomb placement.
+   * Controls are fixed-positioned so they stay put on mobile scroll/zoom.
+   */
   private ensureGhostControls() {
     if (this.ghostControls) return;
 
@@ -675,6 +692,10 @@ export class StructureIconsLayer implements Layer {
     this.ghostControlsStyle = null;
   }
 
+  /**
+   * Position and scale the ghost controls under the nuke radius.
+   * Uses cached values to avoid redundant DOM writes each frame.
+   */
   private updateGhostControls(localX: number, localY: number, rect: DOMRect) {
     if (
       !this.ghostUnit ||
