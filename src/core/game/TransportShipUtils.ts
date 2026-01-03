@@ -120,23 +120,36 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   return dstTile;
 }
 
+// Single-pass Loop Fusion
 export function closestShoreFromPlayer(
   gm: GameMap,
   player: Player,
   target: TileRef,
 ): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
-  if (shoreTiles.length === 0) {
-    return null;
+  let bestTile: TileRef | null = null;
+  let minDistance = Infinity;
+  // Tie-breaker to ensure determinism if distances are equal
+  let bestTileID = -1;
+
+  for (const t of player.borderTiles()) {
+    if (gm.isShore(t)) {
+      const dist = gm.manhattanDist(target, t);
+
+      // Deterministic check: strict less than OR equal distance but higher ID
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestTile = t;
+        bestTileID = t; // Assuming TileRef is a number
+      } else if (dist === minDistance) {
+        if (t > bestTileID) {
+          bestTile = t;
+          bestTileID = t;
+        }
+      }
+    }
   }
 
-  return shoreTiles.reduce((closest, current) => {
-    const closestDistance = gm.manhattanDist(target, closest);
-    const currentDistance = gm.manhattanDist(target, current);
-    return currentDistance < closestDistance ? current : closest;
-  });
+  return bestTile;
 }
 
 export function bestShoreDeploymentSource(
@@ -172,6 +185,7 @@ export function bestShoreDeploymentSource(
   return neighbors[0];
 }
 
+// Loop Fusion + Avoid heavy sampling arrays
 export function candidateShoreTiles(
   gm: Game,
   player: Player,
@@ -184,62 +198,73 @@ export function candidateShoreTiles(
     maxY = -Infinity;
 
   let bestByManhattan: TileRef | null = null;
-  const extremumTiles: Record<string, TileRef | null> = {
-    minX: null,
-    minY: null,
-    maxX: null,
-    maxY: null,
-  };
+  // Extremum tiles
+  let tMinX: TileRef | null = null;
+  let tMinY: TileRef | null = null;
+  let tMaxX: TileRef | null = null;
+  let tMaxY: TileRef | null = null;
 
-  const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
+  const borderShoreTiles: TileRef[] = [];
 
-  for (const tile of borderShoreTiles) {
+  // Single pass to gather tiles AND find extremums
+  for (const tile of player.borderTiles()) {
+    if (!gm.isShore(tile)) continue;
+
+    borderShoreTiles.push(tile);
     const distance = gm.manhattanDist(tile, target);
-    const cell = gm.cell(tile);
 
-    // Manhattan-closest tile
+    // Check Manhattan Best
     if (distance < closestManhattanDistance) {
       closestManhattanDistance = distance;
       bestByManhattan = tile;
+    } else if (distance === closestManhattanDistance) {
+      // Deterministic tie-break
+      if (bestByManhattan === null || tile > bestByManhattan) {
+        bestByManhattan = tile;
+      }
     }
 
-    // Extremum tiles
-    if (cell.x < minX) {
-      minX = cell.x;
-      extremumTiles.minX = tile;
-    } else if (cell.y < minY) {
-      minY = cell.y;
-      extremumTiles.minY = tile;
-    } else if (cell.x > maxX) {
-      maxX = cell.x;
-      extremumTiles.maxX = tile;
-    } else if (cell.y > maxY) {
-      maxY = cell.y;
-      extremumTiles.maxY = tile;
+    // Check Extremums (Using fast property access)
+    const cx = gm.x(tile);
+    const cy = gm.y(tile);
+
+    if (cx < minX) {
+      minX = cx;
+      tMinX = tile;
+    }
+    if (cy < minY) {
+      minY = cy;
+      tMinY = tile;
+    }
+    if (cx > maxX) {
+      maxX = cx;
+      tMaxX = tile;
+    }
+    if (cy > maxY) {
+      maxY = cy;
+      tMaxY = tile;
     }
   }
 
-  // Calculate sampling interval to ensure we get at most 50 tiles
-  const samplingInterval = Math.max(
-    10,
-    Math.ceil(borderShoreTiles.length / 50),
-  );
-  const sampledTiles = borderShoreTiles.filter(
-    (_, index) => index % samplingInterval === 0,
-  );
+  // Sampling logic
+  const len = borderShoreTiles.length;
+  if (len === 0) return [];
 
-  const candidates = [
-    bestByManhattan,
-    extremumTiles.minX,
-    extremumTiles.minY,
-    extremumTiles.maxX,
-    extremumTiles.maxY,
-    ...sampledTiles,
-  ].filter(Boolean) as number[];
+  const samplingInterval = Math.max(10, Math.ceil(len / 50));
+  const candidates: TileRef[] = [];
 
-  return candidates;
+  if (bestByManhattan !== null) candidates.push(bestByManhattan);
+  if (tMinX !== null) candidates.push(tMinX);
+  if (tMinY !== null) candidates.push(tMinY);
+  if (tMaxX !== null) candidates.push(tMaxX);
+  if (tMaxY !== null) candidates.push(tMaxY);
+
+  for (let i = 0; i < len; i += samplingInterval) {
+    candidates.push(borderShoreTiles[i]);
+  }
+
+  // Remove duplicates and return
+  return Array.from(new Set(candidates));
 }
 
 function closestShoreTN(
