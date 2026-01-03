@@ -151,7 +151,7 @@ export class PublicLobby extends LitElement {
                 : translateText("public_lobby.join")}
             </div>
             <div class="text-md font-medium text-white-400">
-              <span class="text-sm text-red-800 bg-white rounded-xs px-1 mr-1">
+              <span class="text-sm text-blue-600 bg-white rounded-xs px-1 mr-1">
                 ${fullModeLabel}
               </span>
               <span>
