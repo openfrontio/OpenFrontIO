@@ -92,6 +92,11 @@ export class StructureIconsLayer implements Layer {
     cancel: HTMLButtonElement;
     flip: HTMLButtonElement;
   } | null = null;
+  private ghostControlsStyle: {
+    left: number;
+    top: number;
+    scale: number;
+  } | null = null;
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
     [UnitType.City, { visible: true }],
     [UnitType.Factory, { visible: true }],
@@ -665,6 +670,7 @@ export class StructureIconsLayer implements Layer {
     if (!this.ghostControls) return;
     this.ghostControls.container.remove();
     this.ghostControls = null;
+    this.ghostControlsStyle = null;
   }
 
   private updateGhostControls(localX: number, localY: number, rect: DOMRect) {
@@ -689,9 +695,21 @@ export class StructureIconsLayer implements Layer {
       0.75,
       Math.min(1.4, this.transformHandler.scale / 2),
     );
-    this.ghostControls!.container.style.left = `${rect.left + localX}px`;
-    this.ghostControls!.container.style.top = `${rect.top + localY + offsetY}px`;
-    this.ghostControls!.container.style.transform = `translate(-50%, 0) scale(${scale})`;
+    const left = rect.left + localX;
+    const top = rect.top + localY + offsetY;
+
+    const cached = this.ghostControlsStyle;
+    if (
+      !cached ||
+      cached.left !== left ||
+      cached.top !== top ||
+      cached.scale !== scale
+    ) {
+      this.ghostControls!.container.style.left = `${left}px`;
+      this.ghostControls!.container.style.top = `${top}px`;
+      this.ghostControls!.container.style.transform = `translate(-50%, 0) scale(${scale})`;
+      this.ghostControlsStyle = { left, top, scale };
+    }
   }
 
   private resolveGhostRangeLevel(
