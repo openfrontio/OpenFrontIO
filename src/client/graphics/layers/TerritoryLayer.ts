@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
   ColoredTeams,
+  GameMode,
   PlayerType,
   Team,
   UnitType,
@@ -20,10 +21,13 @@ import {
   MouseOverEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
+import { drawTeammateGlow } from "../TeammateGlow";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
+  private static readonly SPAWN_HIGHLIGHT_RADIUS = 9;
+  private static readonly PULSE_SPEED = 0.2;
   private userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -183,6 +187,10 @@ export class TerritoryLayer implements Layer {
 
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);
+    const myPlayer = this.game.myPlayer();
+    const colorBlindEnabled =
+      this.userSettings.colorBlind() &&
+      this.game.config().gameConfig().gameMode === GameMode.Team;
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -196,7 +204,6 @@ export class TerritoryLayer implements Layer {
         continue;
       }
       let color = this.theme.spawnHighlightColor();
-      const myPlayer = this.game.myPlayer();
       if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
         // In FFA games (when team === null), use default yellow spawn highlight color
         color = this.theme.spawnHighlightColor();
@@ -217,11 +224,20 @@ export class TerritoryLayer implements Layer {
 
       for (const tile of this.game.bfs(
         centerTile,
-        euclDistFN(centerTile, 9, true),
+        euclDistFN(centerTile, TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS, true),
       )) {
-        if (!this.game.hasOwner(tile)) {
+        if (this.game.ownerID(tile) === 0) {
           this.paintHighlightTile(tile, color, 255);
         }
+      }
+
+      if (
+        colorBlindEnabled &&
+        myPlayer !== null &&
+        human.smallID() !== myPlayer.smallID() &&
+        myPlayer.isOnSameTeam(human)
+      ) {
+        this.drawTeammateGlowForPlayer(human);
       }
     }
   }
@@ -262,6 +278,33 @@ export class TerritoryLayer implements Layer {
       radius,
       baseColor, // Always draw white static semi-transparent ring
       teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
+    );
+
+    const myPlayer = this.game.myPlayer();
+    if (
+      this.userSettings.colorBlind() &&
+      this.game.config().gameConfig().gameMode === GameMode.Team &&
+      myPlayer !== null &&
+      focusedPlayer.smallID() !== myPlayer.smallID() &&
+      myPlayer.isOnSameTeam(focusedPlayer)
+    ) {
+      this.drawTeammateGlowForPlayer(focusedPlayer);
+    }
+  }
+
+  private drawTeammateGlowForPlayer(player: PlayerView): void {
+    const spawnTile = player.spawnTile();
+    if (spawnTile === undefined) {
+      return;
+    }
+    drawTeammateGlow(
+      this.highlightContext,
+      this.game.x(spawnTile),
+      this.game.y(spawnTile),
+      {
+        outerRadius: TerritoryLayer.SPAWN_HIGHLIGHT_RADIUS - 1,
+        pulsePhase: this.game.ticks() * TerritoryLayer.PULSE_SPEED,
+      },
     );
   }
 
