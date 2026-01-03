@@ -75,6 +75,10 @@ export class MainRadialMenu extends LitElement implements Layer {
   init() {
     this.radialMenu.init();
     this.eventBus.on(ContextMenuEvent, (event) => {
+      // Don't show radial menu if there's a locked bomb
+      if (this.uiState.lockedGhostTile) {
+        return;
+      }
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
