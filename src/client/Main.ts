@@ -43,7 +43,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe } from "./Utils";
+import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -103,8 +103,11 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: (() => void) | null = null;
+  private gameStop: ((force?: boolean) => boolean) | null = null;
   private eventBus: EventBus = new EventBus();
+
+  private currentUrl: string | null = null;
+  private preventHashUpdate: boolean = false;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -177,7 +180,7 @@ class Client {
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
-        this.gameStop();
+        this.gameStop(true);
         await crazyGamesSDK.gameplayStop();
       }
     });
@@ -368,6 +371,12 @@ class Client {
     this.handleUrl();
 
     const onHashUpdate = () => {
+      if (this.preventHashUpdate) {
+        this.preventHashUpdate = false;
+
+        return;
+      }
+
       // Reset the UI to its initial state
       this.joinModal.close();
       if (this.gameStop !== null) {
@@ -378,8 +387,31 @@ class Client {
       this.handleUrl();
     };
 
+    const onPopState = () => {
+      if (this.currentUrl !== null && this.gameStop && !this.gameStop()) {
+        console.info("Player is active, ask before leaving game");
+
+        const isConfirmed = confirm(
+          translateText("help_modal.exit_confirmation"),
+        );
+
+        if (!isConfirmed) {
+          console.debug("Player denied leaving game, restore navigator history");
+
+          // Rollback navigator history
+          this.preventHashUpdate = true;
+          history.pushState(null, "", this.currentUrl);
+          return;
+        }
+      }
+
+      console.info("Player not active, handle hash update");
+
+      onHashUpdate();
+    };
+
     // Handle browser navigation & manual hash edits
-    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
 
     function updateSliderProgress(slider: HTMLInputElement) {
@@ -604,6 +636,9 @@ class Client {
           history.replaceState(null, "", window.location.origin + "#refresh");
         }
         history.pushState(null, "", `#join=${lobby.gameID}`);
+
+        // Store current URL for popstate confirmation
+        this.currentUrl = window.location.href;
       },
     );
   }
@@ -613,8 +648,9 @@ class Client {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.gameStop();
+    this.gameStop(true);
     this.gameStop = null;
+    this.currentUrl = null;
 
     crazyGamesSDK.gameplayStop();
 

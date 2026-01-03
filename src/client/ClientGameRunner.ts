@@ -69,7 +69,7 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): () => void {
+): (force?: boolean) => boolean {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -78,6 +78,8 @@ export function joinLobby(
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
+
+  let currentGameRunner: ClientGameRunner | null = null;
 
   let hasJoined = false;
 
@@ -121,7 +123,10 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      ).then((r) => r.start());
+      ).then((r) => {
+        currentGameRunner = r;
+        r.start();
+      });
     }
     if (message.type === "error") {
       if (message.error === "full-lobby") {
@@ -146,9 +151,19 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return () => {
+  return (force: boolean = false) => {
+    if (!force && currentGameRunner && currentGameRunner.shouldPreventWindowClose()) {
+      console.log('Player is active, prevent leaving game');
+
+      return false;
+    }
+
     console.log("leaving game");
+
+    currentGameRunner = null;
     transport.leaveGame();
+
+    return true;
   };
 }
 
@@ -235,6 +250,21 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
+  }
+
+  /**
+   * Determines whether window closing should be prevented.
+   *
+   * Used to show a confirmation dialog when the user attempts to close
+   * the window or navigate away during an active game session.
+   *
+   * @returns {boolean} `true` if the window close should be prevented
+   * (when the player is alive in the game), `false` otherwise
+   * (when the player is not alive or doesn't exist)
+   */
+  public shouldPreventWindowClose(): boolean {
+    // Show confirmation dialog if player is alive in the game
+    return !!(this.myPlayer && this.myPlayer.isAlive());
   }
 
   private async saveGame(update: WinUpdate) {
