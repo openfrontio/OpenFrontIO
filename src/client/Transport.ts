@@ -19,6 +19,7 @@ import {
   ClientPingMessage,
   ClientRejoinMessage,
   ClientSendWinnerMessage,
+  GameConfig,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -175,6 +176,10 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+export class SendUpdateGameConfigIntentEvent implements GameEvent {
+  constructor(public readonly config: Partial<GameConfig>) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -259,6 +264,10 @@ export class Transport {
 
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
+    );
+
+    this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
+      this.onSendUpdateGameConfigIntent(e),
     );
   }
 
@@ -656,6 +665,14 @@ export class Transport {
       type: "kick_player",
       clientID: this.lobbyConfig.clientID,
       target: event.target,
+    });
+  }
+
+  private onSendUpdateGameConfigIntent(event: SendUpdateGameConfigIntentEvent) {
+    this.sendIntent({
+      type: "update_game_config",
+      clientID: this.lobbyConfig.clientID,
+      config: event.config,
     });
   }
 

@@ -6,21 +6,21 @@
   --boxBackgroundColor: #111827cc;
   --fontColor: #202020;
   --fontColorLight: #fff;
-  --primaryColor: #8b1a1a;
-  --primaryColorHover: #6b1515;
+  --primaryColor: #2563eb;
+  --primaryColorHover: #1d4ed8;
   --primaryColorDisabled: linear-gradient(
     to right,
-    rgba(139, 26, 26, 0.7),
-    rgba(107, 21, 21, 0.7)
+    rgb(74, 74, 74),
+    rgb(61, 61, 61)
   );
-  --secondaryColor: #27ae60;
-  --secondaryColorHover: #1e8449;
+  --secondaryColor: #dbeafe;
+  --secondaryColorHover: #bfdbfe;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --primaryColorDark: #8b1a1a;
-  --primaryColorHoverDark: #6b1515;
-  --primaryColorDisabledDark: rgba(139, 26, 26, 0.5);
-  --secondaryColorDark: #27ae60;
-  --secondaryColorHoverDark: #1e8449;
+  --primaryColorDark: #3b82f6;
+  --primaryColorHoverDark: #2563eb;
+  --primaryColorDisabledDark: #4b5563;
+  --secondaryColorDark: #374151;
+  --secondaryColorHoverDark: #4b5563;
   --fontColorDark: #f3f4f6;
 }

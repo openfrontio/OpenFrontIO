@@ -1,5 +1,4 @@
 import {
-  Cell,
   Difficulty,
   Execution,
   Game,
@@ -10,30 +9,23 @@ import {
   PlayerType,
   Relation,
   TerrainType,
-  Tick,
-  Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef, euclDistFN } from "../game/GameMap";
+import { TileRef } from "../game/GameMap";
 import { canBuildTransportShip } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import {
-  assertNever,
-  boundingBoxTiles,
-  calculateBoundingBox,
-  simpleHash,
-} from "../Util";
+import { assertNever, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
-import { EMOJI_NUKE, NationEmojiBehavior } from "./nation/NationEmojiBehavior";
+import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
+import { NationNukeBehavior } from "./nation/NationNukeBehavior";
+import { randTerritoryTileArray } from "./nation/NationUtils";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
-import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
-import { closestTwoTiles } from "./Util";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class NationExecution implements Execution {
@@ -44,6 +36,7 @@ export class NationExecution implements Execution {
   private attackBehavior: AiAttackBehavior | null = null;
   private allianceBehavior: NationAllianceBehavior | null = null;
   private warshipBehavior: NationWarshipBehavior | null = null;
+  private nukeBehavior: NationNukeBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -53,7 +46,6 @@ export class NationExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
-  private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
@@ -148,7 +140,8 @@ export class NationExecution implements Execution {
       this.mirvBehavior === null ||
       this.attackBehavior === null ||
       this.allianceBehavior === null ||
-      this.warshipBehavior === null
+      this.warshipBehavior === null ||
+      this.nukeBehavior === null
     ) {
       // Player is unavailable during init()
       this.emojiBehavior = new NationEmojiBehavior(
@@ -182,6 +175,13 @@ export class NationExecution implements Execution {
         this.reserveRatio,
         this.expandRatio,
         this.allianceBehavior,
+        this.emojiBehavior,
+      );
+      this.nukeBehavior = new NationNukeBehavior(
+        this.random,
+        this.mg,
+        this.player,
+        this.attackBehavior,
         this.emojiBehavior,
       );
 
@@ -293,7 +293,7 @@ export class NationExecution implements Execution {
     const tiles =
       type === UnitType.Port
         ? this.randCoastalTileArray(25)
-        : this.randTerritoryTileArray(25);
+        : randTerritoryTileArray(this.random, this.mg, this.player, 25);
     if (tiles.length === 0) return null;
     const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
     let bestTile: TileRef | null = null;
@@ -411,7 +411,8 @@ export class NationExecution implements Execution {
     if (
       this.player === null ||
       this.attackBehavior === null ||
-      this.allianceBehavior === null
+      this.allianceBehavior === null ||
+      this.nukeBehavior === null
     ) {
       throw new Error("not initialized");
     }
@@ -459,9 +460,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-    this.maybeSendNuke(
-      this.attackBehavior.findBestNukeTarget(borderingEnemies),
-    );
+    this.nukeBehavior.maybeSendNuke(this.attackBehavior.findBestNukeTarget());
   }
 
   private sendBoatRandomly(borderingEnemies: Player[] = []) {
@@ -554,175 +553,6 @@ export class NationExecution implements Execution {
       }
 
       return randTile;
-    }
-    return null;
-  }
-
-  private maybeSendNuke(other: Player | null) {
-    if (this.player === null || this.attackBehavior === null)
-      throw new Error("not initialized");
-    const silos = this.player.units(UnitType.MissileSilo);
-    if (
-      silos.length === 0 ||
-      this.player.gold() < this.cost(UnitType.AtomBomb) ||
-      other === null ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
-      this.player.isOnSameTeam(other) ||
-      this.attackBehavior.shouldAttack(other) === false
-    ) {
-      return;
-    }
-
-    const nukeType =
-      this.player.gold() > this.cost(UnitType.HydrogenBomb)
-        ? UnitType.HydrogenBomb
-        : UnitType.AtomBomb;
-    const range = nukeType === UnitType.HydrogenBomb ? 60 : 15;
-
-    const structures = other.units(
-      UnitType.City,
-      UnitType.DefensePost,
-      UnitType.MissileSilo,
-      UnitType.Port,
-      UnitType.SAMLauncher,
-    );
-    const structureTiles = structures.map((u) => u.tile());
-    const randomTiles = this.randTerritoryTileArray(10);
-    const allTiles = randomTiles.concat(structureTiles);
-
-    let bestTile: TileRef | null = null;
-    let bestValue = 0;
-    this.removeOldNukeEvents();
-    outer: for (const tile of new Set(allTiles)) {
-      if (tile === null) continue;
-      const boundingBox = boundingBoxTiles(this.mg, tile, range)
-        // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
-      for (const t of boundingBox) {
-        // Make sure we nuke away from the border
-        if (this.mg.owner(t) !== other) {
-          continue outer;
-        }
-      }
-      if (!this.player.canBuild(nukeType, tile)) continue;
-      const value = this.nukeTileScore(tile, silos, structures);
-      if (value > bestValue) {
-        bestTile = tile;
-        bestValue = value;
-      }
-    }
-    if (bestTile !== null) {
-      this.sendNuke(bestTile, nukeType, other);
-    }
-  }
-
-  private removeOldNukeEvents() {
-    const maxAge = 500;
-    const tick = this.mg.ticks();
-    while (
-      this.lastNukeSent.length > 0 &&
-      this.lastNukeSent[0][0] + maxAge < tick
-    ) {
-      this.lastNukeSent.shift();
-    }
-  }
-
-  private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
-    // Potential damage in a 25-tile radius
-    const dist = euclDistFN(tile, 25, false);
-    let tileValue = targets
-      .filter((unit) => dist(this.mg, unit.tile()))
-      .map((unit): number => {
-        switch (unit.type()) {
-          case UnitType.City:
-            return 25_000;
-          case UnitType.DefensePost:
-            return 5_000;
-          case UnitType.MissileSilo:
-            return 50_000;
-          case UnitType.Port:
-            return 10_000;
-          default:
-            return 0;
-        }
-      })
-      .reduce((prev, cur) => prev + cur, 0);
-
-    // Avoid areas defended by SAM launchers
-    const dist50 = euclDistFN(tile, 50, false);
-    tileValue -=
-      50_000 *
-      targets.filter(
-        (unit) =>
-          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
-      ).length;
-
-    // Prefer tiles that are closer to a silo
-    const siloTiles = silos.map((u) => u.tile());
-    const result = closestTwoTiles(this.mg, siloTiles, [tile]);
-    if (result === null) throw new Error("Missing result");
-    const { x: closestSilo } = result;
-    const distanceSquared = this.mg.euclideanDistSquared(tile, closestSilo);
-    const distanceToClosestSilo = Math.sqrt(distanceSquared);
-    tileValue -= distanceToClosestSilo * 30;
-
-    // Don't target near recent targets
-    tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist(this.mg, tile))
-      .map((_) => 1_000_000)
-      .reduce((prev, cur) => prev + cur, 0);
-
-    return tileValue;
-  }
-
-  private sendNuke(
-    tile: TileRef,
-    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
-    targetPlayer: Player,
-  ) {
-    if (
-      this.player === null ||
-      this.attackBehavior === null ||
-      this.emojiBehavior === null
-    )
-      throw new Error("not initialized");
-    const tick = this.mg.ticks();
-    this.lastNukeSent.push([tick, tile]);
-    this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
-    this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
-  }
-
-  private randTerritoryTileArray(numTiles: number): TileRef[] {
-    const boundingBox = calculateBoundingBox(
-      this.mg,
-      this.player!.borderTiles(),
-    );
-    const tiles: TileRef[] = [];
-    for (let i = 0; i < numTiles; i++) {
-      const tile = this.randTerritoryTile(this.player!, boundingBox);
-      if (tile !== null) {
-        tiles.push(tile);
-      }
-    }
-    return tiles;
-  }
-
-  private randTerritoryTile(
-    p: Player,
-    boundingBox: { min: Cell; max: Cell } | null = null,
-  ): TileRef | null {
-    boundingBox ??= calculateBoundingBox(this.mg, p.borderTiles());
-    for (let i = 0; i < 100; i++) {
-      const randX = this.random.nextInt(boundingBox.min.x, boundingBox.max.x);
-      const randY = this.random.nextInt(boundingBox.min.y, boundingBox.max.y);
-      if (!this.mg.isOnMap(new Cell(randX, randY))) {
-        // Sanity check should never happen
-        continue;
-      }
-      const randTile = this.mg.ref(randX, randY);
-      if (this.mg.owner(randTile) === p) {
-        return randTile;
-      }
     }
     return null;
   }

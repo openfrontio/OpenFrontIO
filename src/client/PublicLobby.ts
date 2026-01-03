@@ -97,16 +97,21 @@ export class PublicLobby extends LitElement {
       teamTotal,
       teamSize,
     );
-    const teamDetailLabel = this.getTeamDetailLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
-      teamSize,
-    );
+    // True when the detail label already includes the full mode text.
+    const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
+      this.getTeamDetailLabel(
+        lobby.gameConfig.gameMode,
+        teamCount,
+        teamTotal,
+        teamSize,
+      );
 
-    const fullModeLabel = teamDetailLabel
-      ? `${modeLabel} ${teamDetailLabel}`
-      : modeLabel;
+    let fullModeLabel = modeLabel;
+    if (teamDetailLabel) {
+      fullModeLabel = isTeamDetailFullLabel
+        ? teamDetailLabel
+        : `${modeLabel} ${teamDetailLabel}`;
+    }
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
@@ -116,8 +121,8 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
-          : "bg-gradient-to-r from-red-800 to-red-700"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "bg-gradient-to-r from-green-600 to-green-500"
+          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -160,10 +165,10 @@ export class PublicLobby extends LitElement {
           </div>
 
           <div>
-            <div class="text-md font-medium text-white-400">
+            <div class="text-md font-medium text-blue-100">
               ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
-            <div class="text-md font-medium text-white-400">${timeDisplay}</div>
+            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
           </div>
         </div>
       </button>
@@ -249,24 +254,37 @@ export class PublicLobby extends LitElement {
     teamCount: number | string | null,
     teamTotal: number | undefined,
     teamSize: number | undefined,
-  ): string | null {
-    if (gameMode !== GameMode.Team) return null;
+  ): { label: string | null; isFullLabel: boolean } {
+    if (gameMode !== GameMode.Team) {
+      return { label: null, isFullLabel: false };
+    }
 
     if (typeof teamCount === "string" && teamCount === HumansVsNations) {
-      return null;
+      return { label: null, isFullLabel: false };
     }
 
     if (typeof teamCount === "string") {
       const teamKey = `public_lobby.teams_${teamCount}`;
-      const maybeTranslated = translateText(teamKey);
-      if (maybeTranslated !== teamKey) return maybeTranslated;
+      // translateText returns the key when a translation is missing.
+      const maybeTranslated = translateText(teamKey, {
+        team_count: teamTotal ?? 0,
+      });
+      if (maybeTranslated !== teamKey) {
+        return { label: maybeTranslated, isFullLabel: true };
+      }
     }
 
     if (teamTotal !== undefined && teamSize !== undefined) {
-      return translateText("public_lobby.players_per_team", { num: teamSize });
+      // Fallback when there's no specific team label translation.
+      return {
+        label: translateText("public_lobby.players_per_team", {
+          num: teamSize,
+        }),
+        isFullLabel: false,
+      };
     }
 
-    return null;
+    return { label: null, isFullLabel: false };
   }
 
   private lobbyClicked(lobby: GameInfo) {

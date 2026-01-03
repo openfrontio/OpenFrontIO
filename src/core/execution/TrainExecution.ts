@@ -14,8 +14,8 @@ import { TrainStation } from "../game/TrainStation";
 export class TrainExecution implements Execution {
   private active = true;
   private mg: Game | null = null;
-  private train: Unit | null = null;
-  private cars: Unit[] = [];
+  private train: Unit | null = null; // primary unit
+  private cars: Unit[] = []; // stored back to front
   private hasCargo: boolean = false;
   private currentTile: number = 0;
   private spacing = 2;
@@ -69,6 +69,7 @@ export class TrainExecution implements Execution {
     if (this.train === null) {
       throw new Error("Not initialized");
     }
+
     if (!this.train.isActive() || !this.activeSourceOrDestination()) {
       this.deleteTrain();
       return;
@@ -113,7 +114,7 @@ export class TrainExecution implements Execution {
     this.cars.push(
       this.player.buildUnit(UnitType.Train, tile, {
         targetUnit: this.destination.unit,
-        trainType: TrainType.Engine,
+        trainType: TrainType.TailEngine,
       }),
     );
     for (let i = 0; i < this.numCars; i++) {

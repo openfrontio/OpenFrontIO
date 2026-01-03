@@ -7,7 +7,6 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import changelog from "/changelog.md?url";
 import megaphone from "/images/Megaphone.svg?url";
-import santaHatIcon from "/images/SantaHat.webp?url";
 
 @customElement("news-modal")
 export class NewsModal extends LitElement {
