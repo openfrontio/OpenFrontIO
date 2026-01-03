@@ -16,6 +16,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  ContextMenuEvent,
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
@@ -179,6 +180,7 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    this.eventBus.on(ContextMenuEvent, (e) => this.updateLockedBombTarget(e));
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -407,19 +409,11 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createStructure(e: MouseUpEvent) {
-    // When locked ghost is active, clicking changes the target location
+    // Ignore left clicks when locked bomb is active (use right-click instead)
     if (
       this.uiState.lockedGhostTile &&
       this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
     ) {
-      const newTile = this.getTileFromMouseEvent(e);
-      if (newTile) {
-        this.uiState.lockedGhostTile = newTile;
-        // Force trajectory recalculation by clearing cached tile
-        this.eventBus.emit(
-          new GhostStructureChangedEvent(this.uiState.ghostStructure),
-        );
-      }
       return;
     }
 
@@ -434,6 +428,24 @@ export class StructureIconsLayer implements Layer {
       return;
     }
     this.commitStructure(tileRef);
+  }
+
+  private updateLockedBombTarget(e: ContextMenuEvent) {
+    // Only allow right-click to change bomb target when locked
+    if (
+      !this.uiState.lockedGhostTile ||
+      !this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
+    ) {
+      return;
+    }
+    const newTile = this.getTileFromContextMenuEvent(e);
+    if (newTile) {
+      this.uiState.lockedGhostTile = newTile;
+      // Force trajectory recalculation
+      this.eventBus.emit(
+        new GhostStructureChangedEvent(this.uiState.ghostStructure),
+      );
+    }
   }
 
   private moveGhost(e: MouseMoveEvent) {
@@ -544,6 +556,16 @@ export class StructureIconsLayer implements Layer {
   private commitStructure(tileRef: TileRef) {
     this.emitBuildIntent(tileRef);
     this.removeGhostStructure();
+  }
+
+  private getTileFromContextMenuEvent(e: ContextMenuEvent): TileRef | null {
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return null;
+    const x = e.x - rect.left;
+    const y = e.y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return null;
+    return this.game.ref(tile.x, tile.y);
   }
 
   private getTileFromMouseEvent(e: MouseUpEvent): TileRef | null {
