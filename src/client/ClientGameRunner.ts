@@ -124,6 +124,23 @@ export function joinLobby(
       ).then((r) => r.start());
     }
     if (message.type === "error") {
+      const displayMessage = message.translationKey
+        ? translateText(
+            message.translationKey,
+            (message.args ?? {}) as Record<string, string | number>,
+          )
+        : message.message;
+
+      showErrorModal(
+        message.error,
+        displayMessage,
+        lobbyConfig.gameID,
+        lobbyConfig.clientID,
+        true,
+        false,
+        "error_modal.connection_error",
+      );
+
       if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
@@ -131,16 +148,6 @@ export function joinLobby(
             bubbles: true,
             composed: true,
           }),
-        );
-      } else {
-        showErrorModal(
-          message.error,
-          message.message,
-          lobbyConfig.gameID,
-          lobbyConfig.clientID,
-          true,
-          false,
-          "error_modal.connection_error",
         );
       }
     }

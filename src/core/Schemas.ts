@@ -177,7 +177,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   randomSpawn: z.boolean(),
-  maxPlayers: z.number().optional(),
+  maxPlayers: z.number().int().min(2).max(1000).optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
@@ -508,6 +508,8 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  translationKey: z.string().optional(),
+  args: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [

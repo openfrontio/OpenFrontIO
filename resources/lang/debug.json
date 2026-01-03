@@ -127,7 +127,8 @@
     "checking": "private_lobby.checking",
     "not_found": "private_lobby.not_found",
     "error": "private_lobby.error",
-    "joined_waiting": "private_lobby.joined_waiting"
+    "joined_waiting": "private_lobby.joined_waiting",
+    "lobby_full": "private_lobby.lobby_full"
   },
   "public_lobby": {
     "join": "public_lobby.join",
@@ -154,7 +155,9 @@
     "player": "host_modal.player",
     "players": "host_modal.players",
     "waiting": "host_modal.waiting",
-    "start": "host_modal.start"
+    "start": "host_modal.start",
+    "player_limit": "host_modal.player_limit",
+    "player_limit_warning": "host_modal.player_limit_warning"
   },
   "game_starting_modal": {
     "title": "game_starting_modal.title",
