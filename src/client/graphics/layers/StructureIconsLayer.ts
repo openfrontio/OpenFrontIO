@@ -19,6 +19,7 @@ import {
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
+  SwapRocketDirectionEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
 } from "../../InputHandler";
 import {
@@ -84,6 +85,12 @@ export class StructureIconsLayer implements Layer {
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
+  private ghostControls: {
+    container: HTMLDivElement;
+    confirm: HTMLButtonElement;
+    cancel: HTMLButtonElement;
+    flip: HTMLButtonElement;
+  } | null = null;
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
     [UnitType.City, { visible: true }],
     [UnitType.Factory, { visible: true }],
@@ -244,21 +251,44 @@ export class StructureIconsLayer implements Layer {
   renderGhost() {
     if (!this.ghostUnit) return;
 
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+
+    let localX = this.mousePos.x - rect.left;
+    let localY = this.mousePos.y - rect.top;
+    let tileRef: TileRef | undefined;
+
+    // Always reposition locked ghost every frame (smooth when panning)
+    if (
+      this.uiState.lockedGhostTile &&
+      this.isLockableGhost(this.ghostUnit.buildableUnit.type)
+    ) {
+      tileRef = this.uiState.lockedGhostTile;
+      const screen = this.transformHandler.worldToScreenCoordinates(
+        new Cell(this.game.x(tileRef), this.game.y(tileRef)),
+      );
+      localX = screen.x - rect.left;
+      localY = screen.y - rect.top;
+      this.ghostUnit.container.position.set(localX, localY);
+      this.ghostUnit.range?.position.set(localX, localY);
+      this.updateGhostControls(localX, localY, rect);
+    } else {
+      this.hideGhostControls();
+      const tile = this.transformHandler.screenToWorldCoordinates(
+        localX,
+        localY,
+      );
+      if (this.game.isValidCoord(tile.x, tile.y)) {
+        tileRef = this.game.ref(tile.x, tile.y);
+      }
+    }
+
+    // Throttle expensive tile action queries
     const now = performance.now();
     if (now - this.lastGhostQueryAt < 50) {
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
     this.lastGhostQueryAt = now;
-    let tileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
-    if (this.game.isValidCoord(tile.x, tile.y)) {
-      tileRef = this.game.ref(tile.x, tile.y);
-    }
 
     // Check if targeting an ally (for nuke warning visual)
     // Uses shared logic with NukeExecution.maybeBreakAlliances()
@@ -377,44 +407,42 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createStructure(e: MouseUpEvent) {
-    if (!this.ghostUnit) return;
+    // When locked ghost is active, clicking changes the target location
     if (
-      this.ghostUnit.buildableUnit.canBuild === false &&
-      this.ghostUnit.buildableUnit.canUpgrade === false
+      this.uiState.lockedGhostTile &&
+      this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
     ) {
+      const newTile = this.getTileFromMouseEvent(e);
+      if (newTile) {
+        this.uiState.lockedGhostTile = newTile;
+        // Force trajectory recalculation by clearing cached tile
+        this.eventBus.emit(
+          new GhostStructureChangedEvent(this.uiState.ghostStructure),
+        );
+      }
+      return;
+    }
+
+    if (!this.ghostUnit) return;
+    if (this.isGhostBuildBlocked()) {
       this.removeGhostStructure();
       return;
     }
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
-    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          this.ghostUnit.buildableUnit.canUpgrade,
-          this.ghostUnit.buildableUnit.type,
-        ),
-      );
-    } else if (this.ghostUnit.buildableUnit.canBuild) {
-      const unitType = this.ghostUnit.buildableUnit.type;
-      const rocketDirectionUp =
-        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
-          ? this.uiState.rocketDirectionUp
-          : undefined;
-      this.eventBus.emit(
-        new BuildUnitIntentEvent(
-          unitType,
-          this.game.ref(tile.x, tile.y),
-          rocketDirectionUp,
-        ),
-      );
+    const tileRef = this.resolveTargetTileFromEvent(e);
+    if (!tileRef) {
+      this.removeGhostStructure();
+      return;
     }
-    this.removeGhostStructure();
+    this.commitStructure(tileRef);
   }
 
   private moveGhost(e: MouseMoveEvent) {
+    if (
+      this.uiState.lockedGhostTile &&
+      this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
+    ) {
+      return;
+    }
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
 
@@ -434,9 +462,22 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
+    if (!this.isLockableGhost(type)) {
+      this.uiState.lockedGhostTile = null;
+    }
     const rect = this.transformHandler.boundingRect();
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
+    let localX = this.mousePos.x - rect.left;
+    let localY = this.mousePos.y - rect.top;
+    if (this.uiState.lockedGhostTile && this.isLockableGhost(type)) {
+      const screen = this.transformHandler.worldToScreenCoordinates(
+        new Cell(
+          this.game.x(this.uiState.lockedGhostTile),
+          this.game.y(this.uiState.lockedGhostTile),
+        ),
+      );
+      localX = screen.x - rect.left;
+      localY = screen.y - rect.top;
+    }
     const ghost = this.factory.createGhostContainer(
       player,
       this.ghostStage,
@@ -464,6 +505,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostUnit.range?.destroy();
       this.ghostUnit = null;
     }
+    this.destroyGhostControls();
     if (this.potentialUpgrade) {
       this.potentialUpgrade.iconContainer.filters = [];
       this.potentialUpgrade.dotContainer.filters = [];
@@ -474,7 +516,152 @@ export class StructureIconsLayer implements Layer {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+    this.uiState.lockedGhostTile = null;
     this.eventBus.emit(new GhostStructureChangedEvent(null));
+  }
+
+  private emitBuildIntent(tileRef: TileRef) {
+    if (!this.ghostUnit) return;
+    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          this.ghostUnit.buildableUnit.canUpgrade,
+          this.ghostUnit.buildableUnit.type,
+        ),
+      );
+    } else if (this.ghostUnit.buildableUnit.canBuild) {
+      const unitType = this.ghostUnit.buildableUnit.type;
+      const rocketDirectionUp =
+        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
+      this.eventBus.emit(
+        new BuildUnitIntentEvent(unitType, tileRef, rocketDirectionUp),
+      );
+    }
+  }
+
+  private commitStructure(tileRef: TileRef) {
+    this.emitBuildIntent(tileRef);
+    this.removeGhostStructure();
+  }
+
+  private getTileFromMouseEvent(e: MouseUpEvent): TileRef | null {
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return null;
+    const x = e.x - rect.left;
+    const y = e.y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return null;
+    return this.game.ref(tile.x, tile.y);
+  }
+
+  private resolveTargetTileFromEvent(e: MouseUpEvent): TileRef | null {
+    if (
+      this.uiState.lockedGhostTile &&
+      this.isLockableGhost(this.ghostUnit?.buildableUnit.type ?? null)
+    ) {
+      return this.uiState.lockedGhostTile;
+    }
+    return this.getTileFromMouseEvent(e);
+  }
+
+  private isGhostBuildBlocked(): boolean {
+    return (
+      !this.ghostUnit ||
+      (this.ghostUnit.buildableUnit.canBuild === false &&
+        this.ghostUnit.buildableUnit.canUpgrade === false)
+    );
+  }
+
+  private isLockableGhost(type: UnitType | null): boolean {
+    return type === UnitType.AtomBomb || type === UnitType.HydrogenBomb;
+  }
+
+  private ensureGhostControls() {
+    if (this.ghostControls) return;
+
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.display = "flex";
+    container.style.gap = "8px";
+    container.style.transform = "translate(-50%, 0)";
+    container.style.pointerEvents = "auto";
+    container.style.zIndex = "5";
+
+    const makeButton = (
+      label: string,
+      background: string,
+      onClick: () => void,
+    ): HTMLButtonElement => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.style.minHeight = "48px";
+      button.style.minWidth = "48px";
+      button.style.padding = "8px 16px";
+      button.style.borderRadius = "6px";
+      button.style.border = "none";
+      button.style.fontWeight = "700";
+      button.style.fontSize = "13px";
+      button.style.color = "#ffffff";
+      button.style.background = background;
+      button.style.cursor = "pointer";
+      button.style.boxShadow = "0 2px 6px rgba(0,0,0,0.25)";
+      button.style.whiteSpace = "nowrap";
+      button.addEventListener("click", onClick);
+      return button;
+    };
+
+    const confirm = makeButton("OK", "#2e7d32", () => {
+      if (this.uiState.lockedGhostTile) {
+        this.emitBuildIntent(this.uiState.lockedGhostTile);
+      }
+    });
+
+    const flip = makeButton("Flip", "#1565c0", () => {
+      const next = !this.uiState.rocketDirectionUp;
+      this.eventBus.emit(new SwapRocketDirectionEvent(next));
+    });
+
+    const cancel = makeButton("X", "#b71c1c", () =>
+      this.removeGhostStructure(),
+    );
+
+    container.append(confirm, flip, cancel);
+    document.body.appendChild(container);
+
+    this.ghostControls = { container, confirm, cancel, flip };
+  }
+
+  private destroyGhostControls() {
+    if (!this.ghostControls) return;
+    this.ghostControls.container.remove();
+    this.ghostControls = null;
+  }
+
+  private hideGhostControls() {
+    this.destroyGhostControls();
+  }
+
+  private updateGhostControls(localX: number, localY: number, rect: DOMRect) {
+    if (
+      !this.ghostUnit ||
+      !this.uiState.lockedGhostTile ||
+      !this.isLockableGhost(this.ghostUnit.buildableUnit.type)
+    ) {
+      this.destroyGhostControls();
+      return;
+    }
+    this.ensureGhostControls();
+    const offsetY = 40;
+    const scale = Math.max(
+      0.75,
+      Math.min(1.4, this.transformHandler.scale / 2),
+    );
+    this.ghostControls!.container.style.left = `${rect.left + localX}px`;
+    this.ghostControls!.container.style.top = `${rect.top + localY + offsetY}px`;
+    this.ghostControls!.container.style.transform = `translate(-50%, 0) scale(${scale})`;
   }
 
   private resolveGhostRangeLevel(

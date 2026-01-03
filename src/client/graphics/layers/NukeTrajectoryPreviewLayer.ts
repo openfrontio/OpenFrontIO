@@ -104,29 +104,43 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       return;
     }
 
-    // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
-      this.trajectoryPoints = [];
-      this.cachedSpawnTile = null;
-      return;
+    let targetTile: TileRef | null = null;
+
+    // If ghost is locked, use the locked tile; otherwise use mouse position
+    if (this.uiState.lockedGhostTile) {
+      targetTile = this.uiState.lockedGhostTile;
+    } else {
+      // Convert mouse position to world coordinates
+      const rect = this.transformHandler.boundingRect();
+      if (!rect) {
+        this.trajectoryPoints = [];
+        this.cachedSpawnTile = null;
+        return;
+      }
+
+      const localX = this.mousePos.x - rect.left;
+      const localY = this.mousePos.y - rect.top;
+      const worldCoords = this.transformHandler.screenToWorldCoordinates(
+        localX,
+        localY,
+      );
+
+      if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+        this.trajectoryPoints = [];
+        this.lastTargetTile = null;
+        this.cachedSpawnTile = null;
+        return;
+      }
+
+      targetTile = this.game.ref(worldCoords.x, worldCoords.y);
     }
 
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
-    const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
-    );
-
-    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+    if (!targetTile) {
       this.trajectoryPoints = [];
       this.lastTargetTile = null;
       this.cachedSpawnTile = null;
       return;
     }
-
-    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
     // Only recalculate if target tile changed
     if (this.lastTargetTile === targetTile) {
@@ -190,26 +204,38 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       return;
     }
 
-    // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
+    let targetTile: TileRef | null = null;
+
+    // If ghost is locked, use the locked tile; otherwise use mouse position
+    if (this.uiState.lockedGhostTile) {
+      targetTile = this.uiState.lockedGhostTile;
+    } else {
+      // Convert mouse position to world coordinates
+      const rect = this.transformHandler.boundingRect();
+      if (!rect) {
+        this.trajectoryPoints = [];
+        return;
+      }
+
+      const localX = this.mousePos.x - rect.left;
+      const localY = this.mousePos.y - rect.top;
+      const worldCoords = this.transformHandler.screenToWorldCoordinates(
+        localX,
+        localY,
+      );
+
+      if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+        this.trajectoryPoints = [];
+        return;
+      }
+
+      targetTile = this.game.ref(worldCoords.x, worldCoords.y);
+    }
+
+    if (!targetTile) {
       this.trajectoryPoints = [];
       return;
     }
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
-    const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
-    );
-
-    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
-      this.trajectoryPoints = [];
-      return;
-    }
-
-    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
     // Calculate trajectory using ParabolaPathFinder with cached spawn tile
     const pathFinder = new ParabolaPathFinder(this.game);
