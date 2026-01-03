@@ -4,6 +4,7 @@ import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { FogOfWarManager } from "./FogOfWar";
 import {
   Alliance,
   AllianceRequest,
@@ -81,6 +82,7 @@ export class GameImpl implements Game {
   private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
+  private fogOfWarManager?: FogOfWarManager;
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
@@ -99,6 +101,12 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+
+    // Inicializa o sistema de Fog of War se estiver no modo correto
+    if (_config.gameConfig().gameMode === GameMode.FogOfWar) {
+      this.fogOfWarManager = new FogOfWarManager(this);
+      this.fogOfWarManager.initialize();
+    }
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -149,7 +157,7 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode === GameMode.FFA) {
+    if (this.config().gameConfig().gameMode === GameMode.FFA || this.config().gameConfig().gameMode === GameMode.FogOfWar) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
@@ -384,6 +392,9 @@ export class GameImpl implements Game {
     for (const player of this._players.values()) {
       // Players change each to so always add them
       this.addUpdate(player.toUpdate());
+      
+      // Atualiza o Fog of War para este jogador
+      this.updateFogOfWar(player);
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
@@ -984,6 +995,38 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  // Fog of War methods
+  /**
+   * Verifies if a tile is visible to a player in Fog of War mode.
+   * In other game modes, all tiles are considered visible.
+   * @param player The player whose visibility is being checked
+   * @param tile The tile reference to check visibility for
+   * @returns true if the tile is visible to the player, false otherwise
+   */
+  isTileVisible(player: Player, tile: TileRef): boolean {
+    if (!this.fogOfWarManager) {
+      // If not in Fog of War mode, everything is visible
+      return true;
+    }
+    return this.fogOfWarManager.isVisible(player, tile);
+  }
+
+  getVisibleTiles(player: Player): Set<TileRef> {
+    if (!this.fogOfWarManager) {
+      // If not in Fog of War mode, returns all tiles
+      const allTiles = new Set<TileRef>();
+      this.map().forEachTile(tile => allTiles.add(tile));
+      return allTiles;
+    }
+    return this.fogOfWarManager.getVisibleTiles(player);
+  }
+
+  updateFogOfWar(player: Player): void {
+    if (this.fogOfWarManager) {
+      this.fogOfWarManager.updateVisibility(player);
+    }
   }
 }
 

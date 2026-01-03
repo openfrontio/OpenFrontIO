@@ -2,7 +2,7 @@ import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { Cell } from "../../../core/game/Game";
+import { Cell, GameMode } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
@@ -45,12 +45,18 @@ export class NameLayer implements Layer {
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private fogOfWarLayer: any = null; // Reference to FogOfWarLayer
 
+  /**
+   * @param fogOfWarLayer Referência opcional à camada de Fog of War para controlar visibilidade dos nomes dos jogadores
+   */
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
+    fogOfWarLayer: any = null, // Optional reference to FogOfWarLayer
   ) {
+    this.fogOfWarLayer = fogOfWarLayer;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
     this.shieldIconImage = new Image();
@@ -113,18 +119,111 @@ export class NameLayer implements Layer {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
       return;
     }
-
+  
+    // Check if we are in Fog of War mode and if the player is in a visible area
+    if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar && this.fogOfWarLayer) {
+      // Get the player's position
+      const nameLocation = render.player.nameLocation();
+      if (nameLocation) {
+        // Get the current player (myPlayer)
+        const myPlayer = this.game.myPlayer();
+          
+        // Always show names of allies regardless of fog
+        if (myPlayer && myPlayer.isAlliedWith(render.player)) {
+          // Check other visibility conditions
+          const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+          const size = this.transformHandler.scale * baseSize;
+          const isOnScreen = render.location
+            ? this.transformHandler.isOnScreen(render.location)
+            : false;
+          const maxZoomScale = 17;
+  
+          if (
+            !this.isVisible || 
+            size < 7 || 
+            (this.transformHandler.scale > maxZoomScale && size > 100) || 
+            !isOnScreen
+          ) {
+            render.element.style.display = "none";
+          } else {
+            render.element.style.display = "flex";
+          }
+          return;
+        }
+          
+        // Check if myPlayer exists and has a name location
+        if (myPlayer && myPlayer.nameLocation()) {
+          const myNameLocation = myPlayer.nameLocation();
+          // Calculate distance between the two players
+          const dx = nameLocation.x - myNameLocation.x;
+          const dy = nameLocation.y - myNameLocation.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+            
+          // If within 15 tiles radius, the name is always visible
+          if (distance <= 15) {
+            // Check other visibility conditions
+            const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
+            const size = this.transformHandler.scale * baseSize;
+            const isOnScreen = render.location
+              ? this.transformHandler.isOnScreen(render.location)
+              : false;
+            const maxZoomScale = 17;
+  
+            if (
+              !this.isVisible || 
+              size < 7 || 
+              (this.transformHandler.scale > maxZoomScale && size > 100) || 
+              !isOnScreen
+            ) {
+              render.element.style.display = "none";
+            } else {
+              render.element.style.display = "flex";
+            }
+            return;
+          } else {
+            // For non-allies, check fog value
+            const tileRef = this.game.ref(nameLocation.x, nameLocation.y);
+            const fogValue = this.fogOfWarLayer.getFogValueAt(tileRef);
+              
+            // If fog is 0.8 or higher (completely fogged), don't show the name
+            if (fogValue >= 0.8) {
+              render.element.style.display = "none";
+              return;
+            }
+          }
+        } else {
+          // For non-allies, fallback to original fog check
+          const tileRef = this.game.ref(nameLocation.x, nameLocation.y);
+          const fogValue = this.fogOfWarLayer.getFogValueAt(tileRef);
+            
+          // If fog is 0.8 or higher (completely fogged), don't show the name
+          if (fogValue >= 0.8) {
+            render.element.style.display = "none";
+            return;
+          }
+        }
+          
+        // Check if the player is an ally and has been eliminated
+        if (myPlayer && myPlayer.isAlliedWith(render.player) && !render.player.isAlive()) {
+          // Hide the name of eliminated allies
+          render.element.style.display = "none";
+          return;
+        }
+      }
+    }
+  
+    // Regular visibility checks for non-Fog of War modes
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
     const size = this.transformHandler.scale * baseSize;
     const isOnScreen = render.location
       ? this.transformHandler.isOnScreen(render.location)
       : false;
     const maxZoomScale = 17;
-
+  
     if (
-      !this.isVisible ||
-      size < 7 ||
-      (this.transformHandler.scale > maxZoomScale && size > 100) ||
+      !this.isVisible || 
+      size < 7 || 
+      (this.transformHandler.scale > maxZoomScale && size > 100) || 
       !isOnScreen
     ) {
       render.element.style.display = "none";
@@ -135,6 +234,27 @@ export class NameLayer implements Layer {
 
   public tick() {
     if (this.game.ticks() % 10 !== 0) {
+      return;
+    }
+    
+    // Add all players normally in Fog of War mode
+    // Visibility will be controlled in updateElementVisibility
+    if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      for (const player of this.game.playerViews()) {
+        if (player.isAlive() && !this.seenPlayers.has(player)) {
+          this.seenPlayers.add(player);
+          this.renders.push(
+            new RenderInfo(
+              player,
+              0,
+              null,
+              0,
+              "",
+              this.createPlayerElement(player),
+            ),
+          );
+        }
+      }
       return;
     }
 

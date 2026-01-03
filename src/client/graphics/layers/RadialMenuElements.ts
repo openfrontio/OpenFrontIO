@@ -1,5 +1,5 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import { AllPlayers, GameMode, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -40,6 +40,10 @@ export interface MenuElementParams {
   eventBus: EventBus;
   uiState?: UIState;
   closeMenu: () => void;
+  /**
+   * Referência opcional à camada de Fog of War para controle de visibilidade no menu radial
+   */
+  fogOfWarLayer?: any;
 }
 
 export interface MenuElement {
@@ -115,6 +119,32 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   const isFriendly = (selectedPlayer as PlayerView).isFriendly;
   if (typeof isFriendly !== "function") return false;
   return isFriendly.call(selectedPlayer, params.myPlayer);
+}
+
+// Helper function to check if a player is visible in Fog of War mode
+function isPlayerVisibleInFog(params: MenuElementParams): boolean {
+  // This function should only be called in Fog of War mode
+  // If somehow called outside Fog of War mode, return true (visible)
+  if (params.game.config().gameConfig().gameMode !== GameMode.FogOfWar || !params.fogOfWarLayer) {
+    return true;
+  }
+  
+  // If no selected player, consider as not visible
+  if (!params.selected) {
+    return false;
+  }
+  
+  // Check if the selected player's name location is visible
+  const nameLocation = params.selected.nameLocation();
+  if (!nameLocation) {
+    return false;
+  }
+  
+  const idx = nameLocation.y * params.game.width() + nameLocation.x;
+  const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+  
+  // Player is visible if fog value is less than 0.8 (consistent with NameLayer logic)
+  return fogValue < 0.8;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -251,10 +281,21 @@ const allyDonateTroopsElement: MenuElement = {
 const infoPlayerElement: MenuElement = {
   id: "info_player",
   name: "player",
-  disabled: () => false,
+  disabled: (params: MenuElementParams) => {
+    // Check if player is visible in Fog of War mode
+    if (!isPlayerVisibleInFog(params)) {
+      return true; // Disable if player is not visible
+    }
+    // Original condition - always enabled
+    return false;
+  },
   color: COLORS.info,
   icon: infoIcon,
   action: (params: MenuElementParams) => {
+    // Check if player is visible in Fog of War mode
+    if (!isPlayerVisibleInFog(params)) {
+      return; // Don't show info panel if player is not visible
+    }
     params.playerPanel.show(params.playerActions, params.tile);
   },
 };
@@ -263,7 +304,23 @@ const infoPlayerElement: MenuElement = {
 const infoEmojiElement: MenuElement = {
   id: "info_emoji",
   name: "emoji",
-  disabled: () => false,
+  disabled: (params: MenuElementParams) => {
+    // Check if we're in Fog of War mode
+    if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+      // If we have a selected player, check if their name location is visible
+      if (params.selected) {
+        const nameLocation = params.selected.nameLocation();
+        if (nameLocation) {
+          const idx = nameLocation.y * params.game.width() + nameLocation.x;
+          const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+          // Disable if fog value is 1 (completely hidden)
+          return fogValue >= 1.0;
+        }
+      }
+    }
+    // Original condition - always enabled
+    return false;
+  },
   color: COLORS.infoEmoji,
   icon: emojiIcon,
   subMenu: (params: MenuElementParams) => {
@@ -271,10 +328,42 @@ const infoEmojiElement: MenuElement = {
       {
         id: "emoji_more",
         name: "more",
-        disabled: () => false,
+        disabled: (params: MenuElementParams) => {
+          // Check if we're in Fog of War mode
+          if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+            // If we have a selected player, check if their name location is visible
+            if (params.selected) {
+              const nameLocation = params.selected.nameLocation();
+              if (nameLocation) {
+                const idx = nameLocation.y * params.game.width() + nameLocation.x;
+                const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+                // Disable if fog value is 1 (completely hidden)
+                return fogValue >= 1.0;
+              }
+            }
+          }
+          // Original condition - always enabled
+          return false;
+        },
         color: COLORS.infoEmoji,
         icon: emojiIcon,
         action: (params: MenuElementParams) => {
+          // Check if we're in Fog of War mode and verify visibility
+          if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+            // Check if the selected player's name location is visible
+            if (params.selected) {
+              const nameLocation = params.selected.nameLocation();
+              if (nameLocation) {
+                const idx = nameLocation.y * params.game.width() + nameLocation.x;
+                const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+                // Only proceed if fog value is less than 1 (visible)
+                if (fogValue >= 1.0) {
+                  params.closeMenu();
+                  return; // Don't show emoji table if player's name is not visible
+                }
+              }
+            }
+          }
           params.emojiTable.showTable((emoji) => {
             const targetPlayer =
               params.selected === params.game.myPlayer()
@@ -296,9 +385,41 @@ const infoEmojiElement: MenuElement = {
         id: `emoji_${i}`,
         name: flattenedEmojiTable[i],
         text: flattenedEmojiTable[i],
-        disabled: () => false,
+        disabled: (params: MenuElementParams) => {
+          // Check if we're in Fog of War mode
+          if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+            // If we have a selected player, check if their name location is visible
+            if (params.selected) {
+              const nameLocation = params.selected.nameLocation();
+              if (nameLocation) {
+                const idx = nameLocation.y * params.game.width() + nameLocation.x;
+                const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+                // Disable if fog value is 1 (completely hidden)
+                return fogValue >= 1.0;
+              }
+            }
+          }
+          // Original condition - always enabled
+          return false;
+        },
         fontSize: "25px",
         action: (params: MenuElementParams) => {
+          // Check if we're in Fog of War mode and verify visibility
+          if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+            // Check if the selected player's name location is visible
+            if (params.selected) {
+              const nameLocation = params.selected.nameLocation();
+              if (nameLocation) {
+                const idx = nameLocation.y * params.game.width() + nameLocation.x;
+                const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+                // Only proceed if fog value is less than 1 (visible)
+                if (fogValue >= 1.0) {
+                  params.closeMenu();
+                  return; // Don't send emoji if player's name is not visible
+                }
+              }
+            }
+          }
           const targetPlayer =
             params.selected === params.game.myPlayer()
               ? AllPlayers
@@ -316,11 +437,21 @@ const infoEmojiElement: MenuElement = {
 export const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
-  disabled: (params: MenuElementParams) =>
-    !params.selected || params.game.inSpawnPhase(),
+  disabled: (params: MenuElementParams) => {
+    // Check if player is visible in Fog of War mode
+    if (!isPlayerVisibleInFog(params)) {
+      return true; // Disable if player is not visible
+    }
+    // Original condition
+    return !params.selected || params.game.inSpawnPhase();
+  },
   icon: infoIcon,
   color: COLORS.info,
   action: (params: MenuElementParams) => {
+    // Check if player is visible in Fog of War mode
+    if (!isPlayerVisibleInFog(params)) {
+      return; // Don't show info panel if player is not visible
+    }
     params.playerPanel.show(params.playerActions, params.tile);
   },
 };
@@ -548,6 +679,20 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+      const tileX = params.game.x(params.tile);
+      const tileY = params.game.y(params.tile);
+      const idx = tileY * params.game.width() + tileX;
+      const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+      
+      // If it's exactly fog = 1, don't send the boat attack
+      if (fogValue >= 1.0) {
+        params.closeMenu();
+        return;
+      }
+    }
+    
     const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
       params.myPlayer,
       params.tile,
@@ -568,9 +713,32 @@ export const centerButtonElement: CenterButtonElement = {
   disabled: (params: MenuElementParams): boolean => {
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
-    if (!isLand) {
+    
+    // If in spawn phase (loading screen) and random spawn is enabled, disable the center button
+    if (params.game.inSpawnPhase() && params.game.config().isRandomSpawn()) {
       return true;
     }
+    
+    // In Fog of War mode, allow the center button on sea tiles for the boat button
+    if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      // No spawn phase (loading screen), disable the center button
+      if (params.game.inSpawnPhase()) {
+        return true;
+      }
+      
+      // Allow on sea tiles if the player has transport units available
+      if (!isLand) {
+        return !params.playerActions.buildableUnits.some(
+          (unit) => unit.type === UnitType.TransportShip && unit.canBuild
+        );
+      }
+    } else {
+      // In other modes, disable on sea tiles as before
+      if (!isLand) {
+        return true;
+      }
+    }
+    
     if (params.game.inSpawnPhase()) {
       if (tileOwner.isPlayer()) {
         return true;
@@ -585,6 +753,20 @@ export const centerButtonElement: CenterButtonElement = {
     return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar && params.fogOfWarLayer) {
+      const tileX = params.game.x(params.tile);
+      const tileY = params.game.y(params.tile);
+      const idx = tileY * params.game.width() + tileX;
+      const fogValue = params.fogOfWarLayer.getFogValueAt(idx);
+      
+      // If it's exactly fog = 1, don't execute the center button action
+      if (fogValue >= 1.0) {
+        params.closeMenu();
+        return;
+      }
+    }
+    
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
@@ -616,6 +798,28 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
+    // Check the fog value to determine which menus are available
+    let fogValue = 0;
+    let isFogLevel1 = false; // fog = 1
+    
+    if (params.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const tileX = params.game.x(params.tile);
+      const tileY = params.game.y(params.tile);
+      const idx = tileY * params.game.width() + tileX;
+      
+      // We need to access the FogOfWarLayer to get the fog value
+      // For now, we'll check if we can access it through the params
+      if ((params as any).fogOfWarLayer) {
+        const fogOfWarLayer = (params as any).fogOfWarLayer;
+        fogValue = fogOfWarLayer.getFogValueAt(idx);
+        
+        // Check if it's exactly fog = 1
+        if (fogValue >= 1.0) {
+          isFogLevel1 = true;
+        }
+      }
+    }
+    
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
       ally = allyBreakElement;
@@ -626,18 +830,23 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    const menuItems: (MenuElement | null)[] = [
-      infoMenuElement,
-      ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
-        : [
-            boatMenuElement,
-            ally,
-            isFriendlyTarget(params)
-              ? donateGoldRadialElement
-              : attackMenuElement,
-          ]),
-    ];
+    const menuItems: (MenuElement | null)[] = [];
+
+    // Specific logic based on fog value:
+    if (isFogLevel1) {
+      // Fog = 1: Only Attack Menu available
+      menuItems.push(attackMenuElement);
+    } else {
+      // All other fog values: All default menus available
+      menuItems.push(infoMenuElement);
+      
+      if (isOwnTerritory) {
+        menuItems.push(deleteUnitElement, ally, buildMenuElement);
+      } else {
+        menuItems.push(boatMenuElement, ally);
+        menuItems.push(isFriendlyTarget(params) ? donateGoldRadialElement : attackMenuElement);
+      }
+    }
 
     return menuItems.filter((item): item is MenuElement => item !== null);
   },

@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameMode, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -501,6 +501,22 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    if (this.gameView.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const fogOfWarLayer = this.renderer.getFogOfWarLayer();
+      if (fogOfWarLayer && typeof fogOfWarLayer.getFogValueAt === 'function') {
+        const tileX = this.gameView.x(tile);
+        const tileY = this.gameView.y(tile);
+        const idx = tileY * this.gameView.width() + tileX;
+        const fogValue = fogOfWarLayer.getFogValueAt(idx);
+        
+        // If it's exactly fog = 1, don't allow any type of attack (ground or naval)
+        if (fogValue >= 1.0) {
+          return;
+        }
+      }
+    }
+
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
@@ -598,6 +614,22 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    if (this.gameView.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const fogOfWarLayer = this.renderer.getFogOfWarLayer();
+      if (fogOfWarLayer && typeof fogOfWarLayer.getFogValueAt === 'function') {
+        const tileX = this.gameView.x(tile);
+        const tileY = this.gameView.y(tile);
+        const idx = tileY * this.gameView.width() + tileX;
+        const fogValue = fogOfWarLayer.getFogValueAt(idx);
+        
+        // If it's exactly fog = 1, don't allow the boat attack
+        if (fogValue >= 1.0) {
+          return;
+        }
+      }
+    }
+
     this.myPlayer.actions(tile).then((actions) => {
       if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
@@ -615,6 +647,22 @@ export class ClientGameRunner {
       const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
+    }
+
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    if (this.gameView.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const fogOfWarLayer = this.renderer.getFogOfWarLayer();
+      if (fogOfWarLayer && typeof fogOfWarLayer.getFogValueAt === 'function') {
+        const tileX = this.gameView.x(tile);
+        const tileY = this.gameView.y(tile);
+        const idx = tileY * this.gameView.width() + tileX;
+        const fogValue = fogOfWarLayer.getFogValueAt(idx);
+        
+        // If it's exactly fog = 1, don't allow the attack (naval or ground invasion)
+        if (fogValue >= 1.0) {
+          return;
+        }
+      }
     }
 
     this.myPlayer.actions(tile).then((actions) => {

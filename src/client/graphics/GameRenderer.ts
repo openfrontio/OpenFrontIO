@@ -19,7 +19,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
-import { Leaderboard } from "./layers/Leaderboard";
+import { Leaderboard, ViewPlayerVisionEvent } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
@@ -41,6 +41,7 @@ import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { FogOfWarLayer } from "./layers/FogOfWarLayer";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -209,7 +210,10 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
+  // Create FogOfWarLayer first so we can pass it to other layers
+  // Camada responsável por gerenciar o efeito visual do Fog of War
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
+  const fogOfWarLayer = new FogOfWarLayer(game, transformHandler);
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
@@ -236,6 +240,22 @@ export function createRenderer(
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
+  
+  // Create MainRadialMenu first to set references
+  const mainRadialMenu = new MainRadialMenu(
+    eventBus,
+    game,
+    transformHandler,
+    emojiTable as EmojiTable,
+    buildMenu,
+    uiState,
+    playerPanel,
+  );
+  
+  // Set references to FogOfWarLayer
+  const nameLayer = new NameLayer(game, transformHandler, eventBus, fogOfWarLayer);
+  mainRadialMenu.setFogOfWarLayer(fogOfWarLayer);
+  
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
@@ -243,24 +263,17 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
-    new UnitLayer(game, eventBus, transformHandler),
+    new UnitLayer(game, eventBus, transformHandler, fogOfWarLayer),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
+    new UILayer(game, eventBus, transformHandler, fogOfWarLayer),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new NameLayer(game, transformHandler, eventBus),
+    nameLayer,
+    fogOfWarLayer,
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
-    ),
+    mainRadialMenu,
     spawnTimer,
     leaderboard,
     gameLeftSidebar,
@@ -279,6 +292,27 @@ export function createRenderer(
     alertFrame,
     performanceOverlay,
   ];
+
+  // Set reference to FogOfWarLayer for Leaderboard
+  const fogOfWarLayerRef = layers.find(layer => layer.constructor.name === 'FogOfWarLayer') as any;
+  if (fogOfWarLayerRef && leaderboard) {
+    leaderboard.fogOfWarLayer = fogOfWarLayerRef;
+  }
+  
+  // Set reference to FogOfWarLayer for PlayerInfoOverlay
+  if (fogOfWarLayerRef && playerInfo) {
+    playerInfo.fogOfWarLayer = fogOfWarLayerRef;
+  }
+      
+  // Set reference to FogOfWarLayer for MainRadialMenu
+  if (fogOfWarLayerRef && mainRadialMenu) {
+    mainRadialMenu.setFogOfWarLayer(fogOfWarLayerRef);
+  }
+  
+  // Set reference to FogOfWarLayer for Leaderboard
+  if (fogOfWarLayerRef && leaderboard) {
+    leaderboard.fogOfWarLayer = fogOfWarLayerRef;
+  }
 
   return new GameRenderer(
     game,
@@ -310,6 +344,22 @@ export class GameRenderer {
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    
+    // Handle ViewPlayerVisionEvent to switch between player views in Fog of War mode
+    this.eventBus.on(ViewPlayerVisionEvent, (event: ViewPlayerVisionEvent) => {
+      // Find the FogOfWarLayer and set the observed player
+      const fogOfWarLayer = this.layers.find(l => l instanceof FogOfWarLayer) as FogOfWarLayer;
+      if (fogOfWarLayer) {
+        fogOfWarLayer.setObservedPlayer(event.player);
+      }
+      
+      // Also update the Leaderboard if available
+      const leaderboard = this.layers.find(l => l instanceof Leaderboard) as Leaderboard;
+      if (leaderboard) {
+        leaderboard.setViewingPlayerVision(event.player);
+      }
+    });
+    
     this.layers.forEach((l) => l.init?.());
 
     // only append the canvas if it's not already in the document to avoid reparenting side-effects
@@ -405,6 +455,10 @@ export class GameRenderer {
 
   tick() {
     this.layers.forEach((l) => l.tick?.());
+  }
+
+  getFogOfWarLayer() {
+    return this.layers.find(layer => layer.constructor.name === 'FogOfWarLayer') as any;
   }
 
   resize(width: number, height: number): void {
