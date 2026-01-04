@@ -21,7 +21,7 @@ import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
-import { getUserMe, verifyClientToken } from "./jwt";
+import { getUserMe, TokenPayload, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
@@ -285,7 +285,7 @@ export async function startWorker() {
         // Verify token signature (skip in dev mode)
         const isDev = config.env() === GameEnv.Dev;
         let persistentId: string;
-        let claims: any;
+        let claims: TokenPayload | null;
 
         if (!isDev) {
           const result = await verifyClientToken(clientMsg.token, config);
@@ -334,7 +334,7 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized");
             return;
           }
-        } else if (!isDev) {
+        } else if (config.env() !== GameEnv.Dev) {
           // Verify token and get player permissions (skip in dev mode)
           const result = await getUserMe(clientMsg.token, config);
           if (result.type === "error") {
