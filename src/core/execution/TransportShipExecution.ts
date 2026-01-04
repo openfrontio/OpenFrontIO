@@ -10,7 +10,10 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { targetTransportTile } from "../game/TransportShipUtils";
+import {
+  closestShoreFromPlayer,
+  targetTransportTile,
+} from "../game/TransportShipUtils";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { AttackExecution } from "./AttackExecution";
@@ -36,6 +39,7 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   private originalOwner: Player;
+  private retreatDst: TileRef | null = null;
 
   constructor(
     private attacker: Player,
@@ -196,31 +200,34 @@ export class TransportShipExecution implements Execution {
     }
 
     if (this.boat.retreating()) {
-      // Ensure retreat source is still valid for (new) owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
+      // Compute retreat destination once, based on the closest shore tile owned
+      // by the boat owner at the moment the retreat is ordered.
+      if (this.retreatDst === null) {
+        const retreatOwner = this.boat.owner();
+        this.attacker = retreatOwner;
+        const nearestOwnedShore = closestShoreFromPlayer(
+          this.mg,
+          retreatOwner,
+          this.boat.tile(),
+        );
+
+        if (nearestOwnedShore === null) {
+          console.warn(
+            `TransportShipExecution: retreat ordered but no owned shore found`,
+          );
+          this.attacker.addTroops(this.boat.troops());
+          this.boat.delete(false);
+          this.active = false;
+          return;
         }
+
+        this.retreatDst = nearestOwnedShore;
       }
 
-      if (this.src === null) {
-        console.warn(
-          `TransportShipExecution: retreating but no src found for new attacker`,
-        );
-        this.attacker.addTroops(this.boat.troops());
-        this.boat.delete(false);
-        this.active = false;
-        return;
-      } else {
-        this.dst = this.src;
+      this.dst = this.retreatDst;
 
-        if (this.boat.targetTile() !== this.dst) {
-          this.boat.setTargetTile(this.dst);
-        }
+      if (this.boat.targetTile() !== this.dst) {
+        this.boat.setTargetTile(this.dst);
       }
     }
 
