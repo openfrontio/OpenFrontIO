@@ -182,8 +182,7 @@ export class Leaderboard extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 105px;"
+          class="grid grid-cols-[30px_100px_70px_55px_90px] md:grid-cols-[30px_100px_70px_55px_105px] bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
         >
           <div class="contents font-bold bg-gray-700/50">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
