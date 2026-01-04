@@ -62,12 +62,16 @@ export class GameServer {
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
+  private isPaused = false;
+
   private websockets: Set<WebSocket> = new Set();
 
   private winnerVotes: Map<
     string,
     { winner: ClientSendWinnerMessage; ips: Set<string> }
   > = new Map();
+
+  public desyncCount = 0;
 
   constructor(
     public readonly id: string,
@@ -90,8 +94,8 @@ export class GameServer {
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableNPCs !== undefined) {
-      this.gameConfig.disableNPCs = gameConfig.disableNPCs;
+    if (gameConfig.disableNations !== undefined) {
+      this.gameConfig.disableNations = gameConfig.disableNations;
     }
     if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;
@@ -122,6 +126,9 @@ export class GameServer {
       this.gameConfig.chatEnabled = this.isPublic()
         ? false
         : gameConfig.chatEnabled;
+    }
+    if (gameConfig.spawnImmunityDuration !== undefined) {
+      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -352,8 +359,89 @@ export class GameServer {
                 this.kickClient(clientMsg.intent.target);
                 return;
               }
+              case "update_game_config": {
+                // Only lobby creator can update config
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can update game config`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot update public game via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                if (this.hasStarted()) {
+                  this.log.warn(
+                    `Cannot update game config after it has started`,
+                    {
+                      gameID: this.id,
+                      clientID: client.clientID,
+                    },
+                  );
+                  return;
+                }
+
+                if (clientMsg.intent.config.gameType === GameType.Public) {
+                  this.log.warn(`Cannot update game to public via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                this.log.info(
+                  `Lobby creator updated game config via WebSocket`,
+                  {
+                    creatorID: client.clientID,
+                    gameID: this.id,
+                  },
+                );
+
+                this.updateGameConfig(clientMsg.intent.config);
+                return;
+              }
+              case "toggle_pause": {
+                // Only lobby creator can pause/resume
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can toggle pause`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                if (clientMsg.intent.paused) {
+                  // Pausing: send intent and complete current turn before pause takes effect
+                  this.addIntent(clientMsg.intent);
+                  this.endTurn();
+                  this.isPaused = true;
+                } else {
+                  // Unpausing: clear pause flag before sending intent so next turn can execute
+                  this.isPaused = false;
+                  this.addIntent(clientMsg.intent);
+                  this.endTurn();
+                }
+
+                this.log.info(`Game ${this.isPaused ? "paused" : "resumed"}`, {
+                  clientID: client.clientID,
+                  gameID: this.id,
+                });
+                break;
+              }
               default: {
-                this.addIntent(clientMsg.intent);
+                // Don't process intents while game is paused
+                if (!this.isPaused) {
+                  this.addIntent(clientMsg.intent);
+                }
                 break;
               }
             }
@@ -484,6 +572,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
+        isLobbyCreator: this.lobbyCreatorID === c.clientID,
       })),
     });
     if (!result.success) {
@@ -511,6 +600,19 @@ export class GameServer {
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
+    // Find which client this websocket belongs to
+    const client = this.activeClients.find((c) => c.ws === ws);
+    if (!client) {
+      this.log.warn("Could not find client for websocket in sendStartGameMsg");
+      return;
+    }
+
+    this.log.info(`Sending start message to client`, {
+      clientID: client.clientID,
+      lobbyCreatorID: this.lobbyCreatorID,
+      isLobbyCreator: this.lobbyCreatorID === client.clientID,
+    });
+
     try {
       ws.send(
         JSON.stringify({
@@ -531,6 +633,11 @@ export class GameServer {
   }
 
   private endTurn() {
+    // Skip turn execution if game is paused
+    if (this.isPaused) {
+      return;
+    }
+
     const pastTurn: Turn = {
       turnNumber: this.turns.length,
       intents: this.intents,
@@ -800,6 +907,8 @@ export class GameServer {
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
+
+    this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
       this.turns[lastHashTurn].hash = mostCommonHash;

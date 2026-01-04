@@ -1,5 +1,76 @@
+import { NukeMagnitude } from "../configuration/Config";
 import { Game, Player } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+
+export interface NukeBlastParams {
+  gm: GameMap;
+  targetTile: TileRef;
+  magnitude: NukeMagnitude;
+}
+
+/**
+ * Counts how many tiles each player has in the nuke's blast zone.
+ *
+ * returns Map of player ID and weighted tile count
+ */
+export function computeNukeBlastCounts(
+  params: NukeBlastParams,
+): Map<number, number> {
+  const { gm, targetTile, magnitude } = params;
+
+  const inner2 = magnitude.inner * magnitude.inner;
+  const counts = new Map<number, number>();
+
+  gm.circleSearch(targetTile, magnitude.outer, (tile: TileRef, d2: number) => {
+    const ownerSmallId = gm.ownerID(tile);
+    if (ownerSmallId > 0) {
+      const weight = d2 <= inner2 ? 1 : 0.5;
+      const prev = counts.get(ownerSmallId) ?? 0;
+      counts.set(ownerSmallId, prev + weight);
+    }
+    return true;
+  });
+
+  return counts;
+}
+
+export interface NukeAllianceCheckParams extends NukeBlastParams {
+  allySmallIds: Set<number>;
+  threshold: number;
+}
+
+// Checks if nuking this tile would break an alliance.
+export function wouldNukeBreakAlliance(
+  params: NukeAllianceCheckParams,
+): boolean {
+  const { gm, targetTile, magnitude, allySmallIds, threshold } = params;
+
+  if (allySmallIds.size === 0) {
+    return false;
+  }
+
+  const inner2 = magnitude.inner * magnitude.inner;
+  const allyTileCounts = new Map<number, number>();
+
+  let result = false;
+
+  gm.circleSearch(targetTile, magnitude.outer, (tile: TileRef, d2: number) => {
+    const ownerSmallId = gm.ownerID(tile);
+    if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
+      const weight = d2 <= inner2 ? 1 : 0.5;
+      const newCount = (allyTileCounts.get(ownerSmallId) ?? 0) + weight;
+      allyTileCounts.set(ownerSmallId, newCount);
+
+      if (newCount > threshold) {
+        result = true;
+        return false; // Found one! Stop searching.
+      }
+    }
+    return true;
+  });
+
+  return result;
+}
 
 export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
   return Array.from(gm.bfs(tile, euclDistFN(tile, 4, true))).filter(

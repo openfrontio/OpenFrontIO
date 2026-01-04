@@ -58,6 +58,7 @@ export class TerritoryPatternsModal extends LitElement {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     if (!hasLinkedAccount(userMeResponse)) {
       this.userSettings.setSelectedPatternName(undefined);
+      this.userSettings.setSelectedColor(undefined);
       this.selectedPattern = null;
       this.selectedColor = null;
     }
@@ -186,7 +187,7 @@ export class TerritoryPatternsModal extends LitElement {
         : (this.userMeResponse.player.flares ?? [])
     )
       .filter((flare) => flare.startsWith("color:"))
-      .map((flare) => "#" + flare.split(":")[1]);
+      .map((flare) => flare.split(":")[1]);
     return html`
       <div class="flex flex-wrap gap-3 p-2 justify-center items-center">
         ${hexCodes.map(

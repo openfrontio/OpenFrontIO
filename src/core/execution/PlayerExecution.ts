@@ -119,17 +119,39 @@ export class PlayerExecution implements Execution {
 
   private removeClusters() {
     const clusters = this.calculateClusters();
-    clusters.sort((a, b) => b.size - a.size);
 
-    const main = clusters.shift();
-    if (main === undefined) throw new Error("No clusters");
-    this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
-    const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
-      this.removeCluster(main);
+    if (clusters.length === 0) {
+      this.player.largestClusterBoundingBox = null;
+      return;
     }
 
-    for (const cluster of clusters) {
+    // Find the largest cluster with a single linear scan (O(n)).
+    let largestIndex = 0;
+    let largestSize = clusters[0].size;
+    for (let i = 1; i < clusters.length; i++) {
+      const size = clusters[i].size;
+      if (size > largestSize) {
+        largestSize = size;
+        largestIndex = i;
+      }
+    }
+
+    const largestCluster = clusters[largestIndex];
+    if (largestCluster === undefined) throw new Error("No clusters");
+
+    this.player.largestClusterBoundingBox = calculateBoundingBox(
+      this.mg,
+      largestCluster,
+    );
+    const surroundedBy = this.surroundedBySamePlayer(largestCluster);
+    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+      this.removeCluster(largestCluster);
+    }
+
+    // Process remaining clusters
+    for (let i = 0; i < clusters.length; i++) {
+      if (i === largestIndex) continue;
+      const cluster = clusters[i];
       if (this.isSurrounded(cluster)) {
         this.removeCluster(cluster);
       }

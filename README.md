@@ -18,11 +18,16 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 ## License
 
-OpenFront source code is licensed under the **GNU Affero General Public License v3.0** with additional attribution requirements:
+OpenFront source code is licensed under the **GNU Affero General Public License v3.0**
 
-- Any forks or derivative works must display attribution (e.g., "Based on OpenFront", "Derived from OpenFront", "Powered by OpenFront", or "Fork of OpenFront") prominently on the main menu and/or initial title screen.
+Current copyright notices appear in:
 
-See the `ADDITIONAL TERMS` section in [LICENSE](LICENSE) for complete requirements.
+- Footer: "© OpenFront and Contributors"
+- Loading screen: "© OpenFront and Contributors"
+
+Modified versions must preserve these notices in reasonably visible locations.
+
+See the [LICENSE](LICENSE) for complete requirements.
 
 For asset licensing, see [LICENSE-ASSETS](LICENSE-ASSETS).  
 For license history, see [LICENSING.md](LICENSING.md).
@@ -52,8 +57,10 @@ For license history, see [LICENSING.md](LICENSING.md).
 2. **Install dependencies**
 
    ```bash
-   npm i
+   npm run inst
    ```
+
+   Do NOT use `npm install` nor `npm i` but instead use our `npm run inst`. It runs the safer `npm ci --ignore-scripts` to install dependencies exactly according to the versions in `package-lock.json` and doesn't run scripts. This can prevent being hit by a supply chain attack.
 
 ## 🎮 Running the Game
 
@@ -69,7 +76,7 @@ This will:
 
 - Start the webpack dev server for the client
 - Launch the game server with development settings
-- Open the game in your default browser
+- Open the game in your default browser (to disable this behavior, set `SKIP_BROWSER_OPEN=true` in your environment)
 
 ### Client Only
 

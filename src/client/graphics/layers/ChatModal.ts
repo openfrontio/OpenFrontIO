@@ -4,7 +4,7 @@ import { customElement, query } from "lit/decorators.js";
 import { PlayerType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 
-import quickChatData from "../../../../resources/QuickChat.json";
+import quickChatData from "resources/QuickChat.json" with { type: "json" };
 import { EventBus } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
 import { SendQuickChatEvent } from "../../Transport";

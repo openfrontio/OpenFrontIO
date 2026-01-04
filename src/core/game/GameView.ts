@@ -41,6 +41,10 @@ import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
 
+const FRIENDLY_TINT_TARGET = { r: 0, g: 255, b: 0, a: 1 };
+const EMBARGO_TINT_TARGET = { r: 255, g: 0, b: 0, a: 1 };
+const BORDER_TINT_RATIO = 0.35;
+
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
@@ -186,7 +190,14 @@ export class PlayerView {
   private _borderColor: Colord;
   // Update here to include structure light and dark colors
   private _structureColors: { light: Colord; dark: Colord };
-  private _defendedBorderColors: { light: Colord; dark: Colord };
+
+  // Pre-computed border color variants
+  private _borderColorNeutral: Colord;
+  private _borderColorFriendly: Colord;
+  private _borderColorEmbargo: Colord;
+  private _borderColorDefendedNeutral: { light: Colord; dark: Colord };
+  private _borderColorDefendedFriendly: { light: Colord; dark: Colord };
+  private _borderColorDefendedEmbargo: { light: Colord; dark: Colord };
 
   constructor(
     private game: GameView,
@@ -249,10 +260,57 @@ export class PlayerView {
         maybeFocusedBorderColor.toHex(),
     );
 
-    this._defendedBorderColors = this.game
-      .config()
-      .theme()
-      .defendedBorderColors(this._borderColor);
+    // Pre-compute all border color variants once
+    const theme = this.game.config().theme();
+    const baseRgb = this._borderColor.toRgb();
+
+    // Neutral is just the base color
+    this._borderColorNeutral = this._borderColor;
+
+    // Compute friendly tint
+    this._borderColorFriendly = colord({
+      r: Math.round(
+        baseRgb.r * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.r * BORDER_TINT_RATIO,
+      ),
+      g: Math.round(
+        baseRgb.g * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.g * BORDER_TINT_RATIO,
+      ),
+      b: Math.round(
+        baseRgb.b * (1 - BORDER_TINT_RATIO) +
+          FRIENDLY_TINT_TARGET.b * BORDER_TINT_RATIO,
+      ),
+      a: baseRgb.a,
+    });
+
+    // Compute embargo tint
+    this._borderColorEmbargo = colord({
+      r: Math.round(
+        baseRgb.r * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.r * BORDER_TINT_RATIO,
+      ),
+      g: Math.round(
+        baseRgb.g * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.g * BORDER_TINT_RATIO,
+      ),
+      b: Math.round(
+        baseRgb.b * (1 - BORDER_TINT_RATIO) +
+          EMBARGO_TINT_TARGET.b * BORDER_TINT_RATIO,
+      ),
+      a: baseRgb.a,
+    });
+
+    // Pre-compute defended variants
+    this._borderColorDefendedNeutral = theme.defendedBorderColors(
+      this._borderColorNeutral,
+    );
+    this._borderColorDefendedFriendly = theme.defendedBorderColors(
+      this._borderColorFriendly,
+    );
+    this._borderColorDefendedEmbargo = theme.defendedBorderColors(
+      this._borderColorEmbargo,
+    );
 
     this.decoder =
       pattern === undefined
@@ -275,18 +333,74 @@ export class PlayerView {
     return this._structureColors;
   }
 
+  /**
+   * Border color for a tile:
+   * - Tints by neighbor relations (embargo → red, friendly → green, else neutral).
+   * - If defended, applies theme checkerboard to the tinted color.
+   */
   borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
-    if (tile === undefined || !isDefended) {
+    if (tile === undefined) {
       return this._borderColor;
+    }
+
+    const { hasEmbargo, hasFriendly } = this.borderRelationFlags(tile);
+
+    let baseColor: Colord;
+    let defendedColors: { light: Colord; dark: Colord };
+
+    if (hasEmbargo) {
+      baseColor = this._borderColorEmbargo;
+      defendedColors = this._borderColorDefendedEmbargo;
+    } else if (hasFriendly) {
+      baseColor = this._borderColorFriendly;
+      defendedColors = this._borderColorDefendedFriendly;
+    } else {
+      baseColor = this._borderColorNeutral;
+      defendedColors = this._borderColorDefendedNeutral;
+    }
+
+    if (!isDefended) {
+      return baseColor;
     }
 
     const x = this.game.x(tile);
     const y = this.game.y(tile);
     const lightTile =
       (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
-    return lightTile
-      ? this._defendedBorderColors.light
-      : this._defendedBorderColors.dark;
+    return lightTile ? defendedColors.light : defendedColors.dark;
+  }
+
+  /**
+   * Border relation flags for a tile, used by both CPU and WebGL renderers.
+   */
+  borderRelationFlags(tile: TileRef): {
+    hasEmbargo: boolean;
+    hasFriendly: boolean;
+  } {
+    const mySmallID = this.smallID();
+    let hasEmbargo = false;
+    let hasFriendly = false;
+
+    for (const n of this.game.neighbors(tile)) {
+      if (!this.game.hasOwner(n)) {
+        continue;
+      }
+
+      const otherOwner = this.game.owner(n);
+      if (!otherOwner.isPlayer() || otherOwner.smallID() === mySmallID) {
+        continue;
+      }
+
+      if (this.hasEmbargo(otherOwner)) {
+        hasEmbargo = true;
+        break;
+      }
+
+      if (this.isFriendly(otherOwner) || otherOwner.isFriendly(this)) {
+        hasFriendly = true;
+      }
+    }
+    return { hasEmbargo, hasFriendly };
   }
 
   async actions(tile?: TileRef): Promise<PlayerActions> {
@@ -389,6 +503,10 @@ export class PlayerView {
 
   isMe(): boolean {
     return this.smallID() === this.game.myPlayer()?.smallID();
+  }
+
+  isLobbyCreator(): boolean {
+    return this.data.isLobbyCreator;
   }
 
   isAlliedWith(other: PlayerView): boolean {
@@ -766,6 +884,13 @@ export class GameView implements GameMap {
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
     return this._map.euclideanDistSquared(c1, c2);
+  }
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef> {
+    return this._map.circleSearch(tile, radius, filter);
   }
   bfs(
     tile: TileRef,

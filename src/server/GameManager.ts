@@ -66,7 +66,7 @@ export class GameManager {
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Medium,
         chatEnabled: false,
-        disableNPCs: false,
+        disableNations: false,
         infiniteGold: false,
         infiniteTroops: false,
         maxTimerValue: undefined,
@@ -93,6 +93,14 @@ export class GameManager {
       totalClients += game.activeClients.length;
     });
     return totalClients;
+  }
+
+  desyncCount(): number {
+    let totalDesyncs = 0;
+    this.games.forEach((game: GameServer) => {
+      totalDesyncs += game.desyncCount;
+    });
+    return totalDesyncs;
   }
 
   tick() {

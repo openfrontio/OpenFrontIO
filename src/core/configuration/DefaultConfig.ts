@@ -27,6 +27,7 @@ import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
@@ -70,6 +71,7 @@ const numPlayersConfig = {
   [GameMapType.Italia]: [50, 30, 20],
   [GameMapType.Japan]: [20, 15, 10],
   [GameMapType.Lisbon]: [50, 40, 30],
+  [GameMapType.Manicouagan]: [60, 40, 30],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
@@ -82,36 +84,28 @@ const numPlayersConfig = {
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
   [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
+  [GameMapType.Lemnos]: [20, 15, 10],
+  [GameMapType.TwoLakes]: [60, 50, 40],
+  [GameMapType.StraitOfHormuz]: [40, 36, 30],
+  [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
   turnstileSecretKey(): string {
-    return process.env.TURNSTILE_SECRET_KEY ?? "";
+    return Env.TURNSTILE_SECRET_KEY ?? "";
   }
   abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
   }
   stripePublishableKey(): string {
-    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+    return Env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
   domain(): string {
-    return process.env.DOMAIN ?? "";
+    return Env.DOMAIN ?? "";
   }
   subdomain(): string {
-    return process.env.SUBDOMAIN ?? "";
-  }
-  cloudflareAccountId(): string {
-    return process.env.CF_ACCOUNT_ID ?? "";
-  }
-  cloudflareApiToken(): string {
-    return process.env.CF_API_TOKEN ?? "";
-  }
-  cloudflareConfigPath(): string {
-    return process.env.CF_CONFIG_PATH ?? "";
-  }
-  cloudflareCredsPath(): string {
-    return process.env.CF_CREDS_PATH ?? "";
+    return Env.SUBDOMAIN ?? "";
   }
 
   private publicKey: JWK;
@@ -144,37 +138,28 @@ export abstract class DefaultServerConfig implements ServerConfig {
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
+    return Env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
   }
   otelAuthHeader(): string {
-    return process.env.OTEL_AUTH_HEADER ?? "";
+    return Env.OTEL_AUTH_HEADER ?? "";
   }
   gitCommit(): string {
-    return process.env.GIT_COMMIT ?? "";
-  }
-  r2Endpoint(): string {
-    return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  }
-  r2AccessKey(): string {
-    return process.env.R2_ACCESS_KEY ?? "";
-  }
-  r2SecretKey(): string {
-    return process.env.R2_SECRET_KEY ?? "";
-  }
-
-  r2Bucket(): string {
-    return process.env.R2_BUCKET ?? "";
+    return Env.GIT_COMMIT ?? "";
   }
 
   apiKey(): string {
-    return process.env.API_KEY ?? "";
+    return Env.API_KEY ?? "";
   }
 
   adminHeader(): string {
     return "x-admin-key";
   }
   adminToken(): string {
-    return process.env.ADMIN_TOKEN ?? "dummy-admin-token";
+    const token = Env.ADMIN_TOKEN;
+    if (!token) {
+      throw new Error("ADMIN_TOKEN not set");
+    }
+    return token;
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
@@ -206,7 +191,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
         p -= p % 4;
         break;
       case HumansVsNations:
-        // For HumansVsNations, return the base team player count
+        // Half the slots are for humans, the other half will get filled with nations
+        p = Math.floor(p / 2);
         break;
       default:
         p -= p % numPlayerTeams;
@@ -243,19 +229,11 @@ export class DefaultConfig implements Config {
   ) {}
 
   stripePublishableKey(): string {
-    return process.env.STRIPE_PUBLISHABLE_KEY ?? "";
+    return Env.STRIPE_PUBLISHABLE_KEY ?? "";
   }
 
   isReplay(): boolean {
     return this._isReplay;
-  }
-
-  samHittingChance(): number {
-    return 0.8;
-  }
-
-  samWarheadHittingChance(): number {
-    return 0.5;
   }
 
   traitorDefenseDebuff(): number {
@@ -268,7 +246,7 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return 5 * 10;
+    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
   }
 
   gameConfig(): GameConfig {
@@ -284,19 +262,6 @@ export class DefaultConfig implements Config {
       throw new Error("userSettings is null");
     }
     return this._userSettings;
-  }
-
-  difficultyModifier(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return 1;
-      case Difficulty.Medium:
-        return 3;
-      case Difficulty.Hard:
-        return 9;
-      case Difficulty.Impossible:
-        return 18;
-    }
   }
 
   cityTroopIncrease(): number {
@@ -331,8 +296,8 @@ export class DefaultConfig implements Config {
     return this._gameConfig.playerTeams ?? 0;
   }
 
-  spawnNPCs(): boolean {
-    return !this._gameConfig.disableNPCs;
+  spawnNations(): boolean {
+    return !this._gameConfig.disableNations;
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
@@ -369,7 +334,7 @@ export class DefaultConfig implements Config {
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
       case "ally":
-        return 50_000n;
+        return 35_000n;
       case "team":
       case "other":
         return 25_000n;
@@ -627,6 +592,9 @@ export class DefaultConfig implements Config {
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
   }
+  minDistanceBetweenPlayers(): number {
+    return 30;
+  }
 
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode === GameMode.Team) {
@@ -711,7 +679,7 @@ export class DefaultConfig implements Config {
         mag *= 0.8;
       }
       if (
-        attacker.type() === PlayerType.FakeHuman &&
+        attacker.type() === PlayerType.Nation &&
         defender.type() === PlayerType.Bot
       ) {
         mag *= 0.8;
@@ -814,31 +782,22 @@ export class DefaultConfig implements Config {
     }
   }
 
-  useNationStrengthForStartManpower(): boolean {
-    // Currently disabled: FakeHumans became harder to play against due to AI improvements
-    // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
-    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
-    return false;
-  }
-
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
-    if (playerInfo.playerType === PlayerType.FakeHuman) {
-      const strength = this.useNationStrengthForStartManpower()
-        ? (playerInfo.nationStrength ?? 1)
-        : 1;
-
+    if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750 * strength;
+          return 18_750;
         case Difficulty.Medium:
-          return 25_000 * strength; // Like humans
+          return 25_000; // Like humans
         case Difficulty.Hard:
-          return 31_250 * strength;
+          return 28_125;
         case Difficulty.Impossible:
-          return 37_500 * strength;
+          return 31_250;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -869,9 +828,11 @@ export class DefaultConfig implements Config {
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
-        return maxTroops * 1.25;
+        return maxTroops * 1.125;
       case Difficulty.Impossible:
-        return maxTroops * 1.5;
+        return maxTroops * 1.25;
+      default:
+        assertNever(this._gameConfig.difficulty);
     }
   }
 
@@ -887,7 +848,7 @@ export class DefaultConfig implements Config {
       toAdd *= 0.6;
     }
 
-    if (player.type() === PlayerType.FakeHuman) {
+    if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
           toAdd *= 0.95;
@@ -896,11 +857,13 @@ export class DefaultConfig implements Config {
           toAdd *= 1; // Like humans
           break;
         case Difficulty.Hard:
-          toAdd *= 1.05;
+          toAdd *= 1.025;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.1;
+          toAdd *= 1.05;
           break;
+        default:
+          assertNever(this._gameConfig.difficulty);
       }
     }
 

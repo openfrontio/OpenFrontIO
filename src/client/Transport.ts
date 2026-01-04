@@ -20,6 +20,7 @@ import {
   ClientPingMessage,
   ClientRejoinMessage,
   ClientSendWinnerMessage,
+  GameConfig,
   Intent,
   ServerMessage,
   ServerMessageSchema,
@@ -30,7 +31,7 @@ import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
-export class PauseGameEvent implements GameEvent {
+export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
 }
 
@@ -92,6 +93,7 @@ export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
     public readonly tile: TileRef,
+    public readonly rocketDirectionUp?: boolean,
   ) {}
 }
 
@@ -180,6 +182,10 @@ export class SendLobbyChatEvent implements GameEvent {
   constructor(public readonly text: string) {}
 }
 
+export class SendUpdateGameConfigIntentEvent implements GameEvent {
+  constructor(public readonly config: Partial<GameConfig>) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -192,6 +198,7 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -243,7 +250,7 @@ export class Transport {
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
+    this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
     this.eventBus.on(CancelAttackIntentEvent, (e) =>
@@ -265,6 +272,10 @@ export class Transport {
       this.onSendKickPlayerIntent(e),
     );
     this.eventBus.on(SendLobbyChatEvent, (e) => this.onSendLobbyChat(e));
+
+    this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
+      this.onSendUpdateGameConfigIntent(e),
+    );
   }
 
   private startPing() {
@@ -579,19 +590,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
       tile: event.tile,
+      rocketDirectionUp: event.rocketDirectionUp,
     });
   }
 
-  private onPauseGameEvent(event: PauseGameEvent) {
-    if (!this.isLocal) {
-      console.log(`cannot pause multiplayer games`);
-      return;
-    }
-    if (event.paused) {
-      this.localServer.pause();
-    } else {
-      this.localServer.resume();
-    }
+  private onPauseGameIntent(event: PauseGameIntentEvent) {
+    this.sendIntent({
+      type: "toggle_pause",
+      clientID: this.lobbyConfig.clientID,
+      paused: event.paused,
+    });
   }
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
@@ -673,6 +681,14 @@ export class Transport {
       text: event.text,
       clientID: this.lobbyConfig.clientID,
     } satisfies ClientLobbyChatMessage);
+  }
+
+  private onSendUpdateGameConfigIntent(event: SendUpdateGameConfigIntentEvent) {
+    this.sendIntent({
+      type: "update_game_config",
+      clientID: this.lobbyConfig.clientID,
+      config: event.config,
+    });
   }
 
   private sendIntent(intent: Intent) {

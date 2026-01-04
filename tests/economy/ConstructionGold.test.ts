@@ -8,10 +8,12 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
+import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
   let game: Game;
+  const gameID: GameID = "game_id";
   let player: Player;
   let other: Player;
   const builderInfo = new PlayerInfo(
@@ -33,8 +35,8 @@ describe("Construction economy", () => {
       [builderInfo, otherInfo],
     );
     const spawn = game.ref(0, 10);
-    game.addExecution(new SpawnExecution(builderInfo, spawn));
-    game.addExecution(new SpawnExecution(otherInfo, spawn));
+    game.addExecution(new SpawnExecution(gameID, builderInfo, spawn));
+    game.addExecution(new SpawnExecution(gameID, otherInfo, spawn));
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }

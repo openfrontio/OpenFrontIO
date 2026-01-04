@@ -25,6 +25,7 @@ export class UnitImpl implements Unit {
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
+  private _destroyer: Player | undefined = undefined;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _underConstruction: boolean = false;
   private _lastOwner: PlayerImpl | null = null;
@@ -258,18 +259,17 @@ export class UnitImpl implements Unit {
 
     // Record whether this unit was destroyed by an enemy (vs. arrived / retreated)
     this._wasDestroyedByEnemy = destroyer !== undefined;
+    this._destroyer = destroyer ?? undefined;
 
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
-    if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
-      this.mg.displayMessage(
-        `Your ${this._type} was destroyed`,
-        MessageType.UNIT_DESTROYED,
-        this.owner().id(),
-      );
+
+    if (displayMessage !== false) {
+      this.displayMessageOnDeleted();
     }
+
     if (destroyer !== undefined) {
       switch (this._type) {
         case UnitType.TransportShip:
@@ -294,12 +294,32 @@ export class UnitImpl implements Unit {
     }
   }
 
+  private displayMessageOnDeleted(): void {
+    if (this._type === UnitType.MIRVWarhead) {
+      return;
+    }
+
+    if (this._type === UnitType.Train && this._trainType !== TrainType.Engine) {
+      return;
+    }
+
+    this.mg.displayMessage(
+      `Your ${this._type} was destroyed`,
+      MessageType.UNIT_DESTROYED,
+      this.owner().id(),
+    );
+  }
+
   isActive(): boolean {
     return this._active;
   }
 
   wasDestroyedByEnemy(): boolean {
     return this._wasDestroyedByEnemy;
+  }
+
+  destroyer(): Player | undefined {
+    return this._destroyer;
   }
 
   retreating(): boolean {

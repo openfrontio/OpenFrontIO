@@ -143,10 +143,16 @@ export class StatsModal extends LitElement {
                 <th class="py-2 px-2 text-right">
                   ${translateText("stats_modal.games")}
                 </th>
-                <th class="py-2 px-2 text-right">
+                <th
+                  class="py-2 px-2 text-right"
+                  title=${translateText("stats_modal.win_score_tooltip")}
+                >
                   ${translateText("stats_modal.win_score")}
                 </th>
-                <th class="py-2 px-2 text-right">
+                <th
+                  class="py-2 px-2 text-right"
+                  title=${translateText("stats_modal.loss_score_tooltip")}
+                >
                   ${translateText("stats_modal.loss_score")}
                 </th>
                 <th class="py-2 pl-2 text-right">

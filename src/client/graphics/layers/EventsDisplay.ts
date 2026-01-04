@@ -2,11 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -49,6 +44,12 @@ import {
 } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { UIState } from "../UIState";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import nukeIcon from "/images/NukeIconWhite.svg?url";
+import swordIcon from "/images/SwordIconWhite.svg?url";
 
 interface GameEvent {
   description: string;
@@ -69,12 +70,14 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  allianceID?: number;
 }
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
+  public uiState: UIState;
 
   private active: boolean = false;
   private events: GameEvent[] = [];
@@ -334,6 +337,7 @@ export class EventsDisplay extends LitElement implements Layer {
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: other.smallID(),
+        allianceID: alliance.id,
       });
     }
   }
@@ -358,6 +362,16 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   renderLayer(): void {}
+
+  private removeAllianceRenewalEvents(allianceID: number) {
+    this.events = this.events.filter(
+      (event) =>
+        !(
+          event.type === MessageType.RENEW_ALLIANCE &&
+          event.allianceID === allianceID
+        ),
+    );
+  }
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     const myPlayer = this.game.myPlayer();
@@ -549,6 +563,9 @@ export class EventsDisplay extends LitElement implements Layer {
   onBrokeAllianceEvent(update: BrokeAllianceUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
+
+    this.removeAllianceRenewalEvents(update.allianceID);
+    this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
@@ -763,8 +780,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    // Launch counterattack with the same number of troops as the incoming attack
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
+    const counterTroops = Math.min(
+      attack.troops,
+      this.uiState.attackRatio * myPlayer.troops(),
+    );
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
   private renderIncomingAttacks() {

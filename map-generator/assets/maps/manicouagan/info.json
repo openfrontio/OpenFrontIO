@@ -1,0 +1,60 @@
+{
+  "name": "Manicouagan",
+  "nations": [
+    {
+      "coordinates": [784, 1034],
+      "flag": "Quebec",
+      "name": "Rene Levasseur Island"
+    },
+    {
+      "coordinates": [1240, 100],
+      "flag": "Quebec",
+      "name": "Caniapiscau"
+    },
+    {
+      "coordinates": [450, 160],
+      "flag": "Quebec",
+      "name": "Lelukuau Mountains"
+    },
+    {
+      "coordinates": [134, 172],
+      "flag": "Quebec",
+      "name": "Mount Roland"
+    },
+    {
+      "coordinates": [236, 1278],
+      "flag": "Quebec",
+      "name": "Kaupashkueiat"
+    },
+    {
+      "coordinates": [842, 1460],
+      "flag": "Quebec",
+      "name": "Manicouagan Island"
+    },
+    {
+      "coordinates": [1504, 882],
+      "flag": "Quebec",
+      "name": "Relais Gabriel"
+    },
+    {
+      "coordinates": [1500, 262],
+      "flag": "Quebec",
+      "name": "Tour Boissinot"
+    },
+    {
+      "coordinates": [826, 630],
+      "flag": "Quebec",
+      "name": "Mount Babel"
+    },
+    {
+      "coordinates": [70, 1074],
+      "flag": "Quebec",
+      "name": "Ushtishkukamiu River"
+    },
+    {
+      "coordinates": [728, 84],
+      "flag": "Quebec",
+      "name": "Lamontagne"
+    }
+  ]
+}

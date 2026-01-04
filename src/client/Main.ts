@@ -1,4 +1,4 @@
-import version from "../../resources/version.txt";
+import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -11,11 +11,13 @@ import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
+import { GameInfoModal } from "./GameInfoModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
@@ -34,7 +36,10 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
-import { SendKickPlayerIntentEvent } from "./Transport";
+import {
+  SendKickPlayerIntentEvent,
+  SendUpdateGameConfigIntentEvent,
+} from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -42,7 +47,16 @@ import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
-
+import "./styles/components/button.css";
+import "./styles/components/controls.css";
+import "./styles/components/modal.css";
+import "./styles/components/setting.css";
+import "./styles/core/flag-animation.css";
+import "./styles/core/typography.css";
+import "./styles/core/variables.css";
+import "./styles/layout/container.css";
+import "./styles/layout/header.css";
+import "./styles/modal/chat.css";
 declare global {
   interface Window {
     turnstile: any;
@@ -113,6 +127,7 @@ class Client {
   constructor() {}
 
   async initialize(): Promise<void> {
+    crazyGamesSDK.maybeInit();
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
@@ -159,10 +174,11 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
+        await crazyGamesSDK.gameplayStop();
       }
     });
 
@@ -174,6 +190,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener(
+      "update-game-config",
+      this.handleUpdateGameConfig.bind(this),
+    );
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -193,6 +213,10 @@ class Client {
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
       console.warn("Help modal element not found");
+    }
+    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
+    if (!giModal || !(giModal instanceof GameInfoModal)) {
+      console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
@@ -341,7 +365,7 @@ class Client {
     }
 
     // Attempt to join lobby
-    this.handleHash();
+    this.handleUrl();
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
@@ -351,7 +375,7 @@ class Client {
       }
 
       // Attempt to join lobby
-      this.handleHash();
+      this.handleUrl();
     };
 
     // Handle browser navigation & manual hash edits
@@ -378,7 +402,17 @@ class Client {
     this.initializeFuseTag();
   }
 
-  private handleHash() {
+  private handleUrl() {
+    // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      const lobbyId = crazyGamesSDK.getInviteGameId();
+      if (lobbyId && ID.safeParse(lobbyId).success) {
+        this.joinModal.open(lobbyId);
+        console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
+        return;
+      }
+    }
+
     const strip = () =>
       history.replaceState(
         null,
@@ -447,6 +481,7 @@ class Client {
       return;
     }
 
+    // Fallback to hash-based join for non-CrazyGames environments
     if (decodedHash.startsWith("#join=")) {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
@@ -541,6 +576,8 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        crazyGamesSDK.loadingStart();
+
         // show when the game loads
         const startingModal = document.querySelector(
           "game-starting-modal",
@@ -559,6 +596,9 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        crazyGamesSDK.loadingStop();
+        crazyGamesSDK.gameplayStart();
+
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
@@ -575,6 +615,9 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+
+    crazyGamesSDK.gameplayStop();
+
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
   }
@@ -585,6 +628,15 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private handleUpdateGameConfig(event: CustomEvent) {
+    const { config } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
   }
 

@@ -13,6 +13,7 @@ import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
+import { computeNukeBlastCounts } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -30,6 +31,7 @@ export class NukeExecution implements Execution {
     private src?: TileRef | null,
     private speed: number = -1,
     private waitTicks = 0,
+    private rocketDirectionUp: boolean = true,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -62,34 +64,45 @@ export class NukeExecution implements Execution {
     return this.tilesToDestroyCache;
   }
 
-  private maybeBreakAlliances(toDestroy: Set<TileRef>) {
+  /**
+   * Break alliances with players significantly affected by the nuke strike.
+   * Uses weighted tile counting (inner=1, outer=0.5).
+   */
+  private maybeBreakAlliances() {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
-    const attacked = new Map<Player, number>();
-    for (const tile of toDestroy) {
-      const owner = this.mg.owner(tile);
-      if (owner.isPlayer()) {
-        const prev = attacked.get(owner) ?? 0;
-        attacked.set(owner, prev + 1);
-      }
+    if (this.nuke.type() === UnitType.MIRVWarhead) {
+      // MIRV warheads shouldn't break alliances
+      return;
     }
 
+    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
-    for (const [attackedPlayer, tilesDestroyed] of attacked) {
-      if (
-        tilesDestroyed > threshold &&
-        this.nuke.type() !== UnitType.MIRVWarhead
-      ) {
+
+    // Use shared utility to compute weighted tile counts per player
+    const blastCounts = computeNukeBlastCounts({
+      gm: this.mg,
+      targetTile: this.dst,
+      magnitude,
+    });
+
+    for (const [playerSmallId, totalWeight] of blastCounts) {
+      if (totalWeight > threshold) {
+        const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
+        if (!attackedPlayer.isPlayer()) {
+          continue;
+        }
+
         // Resolves exploit of alliance breaking in which a pending alliance request
         // was accepted in the middle of a missile attack.
         const allianceRequest = attackedPlayer
           .incomingAllianceRequests()
           .find((ar) => ar.requestor() === this.player);
         if (allianceRequest) {
-          allianceRequest?.reject();
+          allianceRequest.reject();
         }
-        // Mirv warheads shouldn't break alliances
+
         const alliance = this.player.allianceWith(attackedPlayer);
         if (alliance !== null) {
           this.player.breakAlliance(alliance);
@@ -115,12 +128,15 @@ export class NukeExecution implements Execution {
         this.dst,
         this.speed,
         this.nukeType !== UnitType.MIRVWarhead,
+        this.rocketDirectionUp,
       );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
-      this.maybeBreakAlliances(this.tilesToDestroy());
+      if (this.nuke.type() !== UnitType.MIRVWarhead) {
+        this.maybeBreakAlliances();
+      }
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -233,7 +249,6 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
-    this.maybeBreakAlliances(toDestroy);
 
     const maxTroops = this.target().isPlayer()
       ? this.mg.config().maxTroops(this.target() as Player)

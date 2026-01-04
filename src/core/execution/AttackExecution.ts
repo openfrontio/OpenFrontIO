@@ -1,6 +1,7 @@
 import { renderTroops } from "../../client/Utils";
 import {
   Attack,
+  Difficulty,
   Execution,
   Game,
   MessageType,
@@ -12,6 +13,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
@@ -90,16 +92,9 @@ export class AttackExecution implements Execution {
       }
     }
 
-    if (this.target.isPlayer()) {
-      if (
-        this.mg.config().numSpawnPhaseTurns() +
-          this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
-      ) {
-        console.warn("cannot attack player during immunity phase");
-        this.active = false;
-        return;
-      }
+    if (this.target.isPlayer() && !this._owner.canAttackPlayer(this.target)) {
+      this.active = false;
+      return;
     }
 
     this.startTroops ??= this.mg
@@ -152,7 +147,25 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
-      this.target.updateRelation(this._owner, -80);
+      const difficulty = this.mg.config().gameConfig().difficulty;
+      let relationChange: number;
+      switch (difficulty) {
+        case Difficulty.Easy:
+          relationChange = -60;
+          break;
+        case Difficulty.Medium:
+          relationChange = -70;
+          break;
+        case Difficulty.Hard:
+          relationChange = -80;
+          break;
+        case Difficulty.Impossible:
+          relationChange = -100;
+          break;
+        default:
+          assertNever(difficulty);
+      }
+      this.target.updateRelation(this._owner, relationChange);
     }
   }
 

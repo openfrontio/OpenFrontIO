@@ -1,17 +1,17 @@
 import { Colord } from "colord";
-import atomBombSprite from "../../../resources/sprites/atombomb.png";
-import hydrogenBombSprite from "../../../resources/sprites/hydrogenbomb.png";
-import mirvSprite from "../../../resources/sprites/mirv2.png";
-import samMissileSprite from "../../../resources/sprites/samMissile.png";
-import tradeShipSprite from "../../../resources/sprites/tradeship.png";
-import trainCarriageSprite from "../../../resources/sprites/trainCarriage.png";
-import trainLoadedCarriageSprite from "../../../resources/sprites/trainCarriageLoaded.png";
-import trainEngineSprite from "../../../resources/sprites/trainEngine.png";
-import transportShipSprite from "../../../resources/sprites/transportship.png";
-import warshipSprite from "../../../resources/sprites/warship.png";
 import { Theme } from "../../core/configuration/Config";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
+import atomBombSprite from "/sprites/atombomb.png?url";
+import hydrogenBombSprite from "/sprites/hydrogenbomb.png?url";
+import mirvSprite from "/sprites/mirv2.png?url";
+import samMissileSprite from "/sprites/samMissile.png?url";
+import tradeShipSprite from "/sprites/tradeship.png?url";
+import trainCarriageSprite from "/sprites/trainCarriage.png?url";
+import trainLoadedCarriageSprite from "/sprites/trainCarriageLoaded.png?url";
+import trainEngineSprite from "/sprites/trainEngine.png?url";
+import transportShipSprite from "/sprites/transportship.png?url";
+import warshipSprite from "/sprites/warship.png?url";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {
@@ -80,11 +80,18 @@ export const loadAllSprites = async (): Promise<void> => {
  * The train sprites rely on the train attributes and not only on its type
  */
 function trainTypeToSpriteType(unit: UnitView): TrainTypeSprite {
-  return unit.trainType() === TrainType.Engine
-    ? TrainTypeSprite.Engine
-    : unit.isLoaded()
-      ? TrainTypeSprite.LoadedCarriage
-      : TrainTypeSprite.Carriage;
+  const trainType = unit.trainType();
+
+  switch (trainType) {
+    case TrainType.Engine:
+    case TrainType.TailEngine:
+      return TrainTypeSprite.Engine;
+    case TrainType.Carriage:
+    default:
+      return unit.isLoaded()
+        ? TrainTypeSprite.LoadedCarriage
+        : TrainTypeSprite.Carriage;
+  }
 }
 
 const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {

@@ -21,7 +21,7 @@ describe("AllianceRequestExecution", () => {
       [
         playerInfo("player1", PlayerType.Human),
         playerInfo("player2", PlayerType.Human),
-        playerInfo("player3", PlayerType.FakeHuman),
+        playerInfo("player3", PlayerType.Nation),
       ],
     );
 

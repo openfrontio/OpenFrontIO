@@ -17,7 +17,7 @@ import {
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
-import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
+import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -176,41 +176,6 @@ export async function startWorker() {
     res.status(200).json({ success: true });
   });
 
-  app.put("/api/game/:id", async (req, res) => {
-    const result = GameInputSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      return res.status(400).json({ error });
-    }
-    const config = result.data;
-    // TODO: only update public game if from local host
-    const lobbyID = req.params.id;
-    if (config.gameType === GameType.Public) {
-      log.info(`cannot update game ${lobbyID} to public`);
-      return res.status(400).json({ error: "Cannot update public game" });
-    }
-    const game = gm.game(lobbyID);
-    if (!game) {
-      return res.status(400).json({ error: "Game not found" });
-    }
-    if (game.isPublic()) {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-      log.warn(
-        `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
-      );
-      return res.status(400).json({ error: "Cannot update public game" });
-    }
-    if (game.hasStarted()) {
-      log.warn(`cannot update game ${game.id} after it has started`);
-      return res
-        .status(400)
-        .json({ error: "Cannot update game after it has started" });
-    }
-    game.updateGameConfig(config);
-    res.status(200).json({ success: true });
-  });
-
   app.get("/api/game/:id/exists", async (req, res) => {
     const lobbyId = req.params.id;
     res.json({
@@ -268,24 +233,6 @@ export async function startWorker() {
       log.error("Error processing archive request:", error);
       res.status(500).json({ error: "Internal server error" });
     }
-  });
-
-  app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
-    if (req.headers[config.adminHeader()] !== config.adminToken()) {
-      res.status(401).send("Unauthorized");
-      return;
-    }
-
-    const { gameID, clientID } = req.params;
-
-    const game = gm.game(gameID);
-    if (!game) {
-      res.status(404).send("Game not found");
-      return;
-    }
-
-    game.kickClient(clientID);
-    res.status(200).send("Player kicked successfully");
   });
 
   // WebSocket handling

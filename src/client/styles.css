@@ -1,16 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url("./styles/core/flag-animation.css");
-@import url("./styles/core/variables.css");
-@import url("./styles/core/typography.css");
-@import url("./styles/layout/header.css");
-@import url("./styles/layout/container.css");
-@import url("./styles/components/button.css");
-@import url("./styles/components/modal.css");
-@import url("./styles/modal/chat.css");
-@import url("./styles/components/setting.css");
-@import url("./styles/components/controls.css");
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -100,7 +91,7 @@
   transition: all 0.2s ease-in-out;
 }
 
-.option-card:hover {
+.option-card:hover:not(.disabled) {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.3);
   background: rgba(40, 40, 40, 0.95);
@@ -111,11 +102,18 @@
   background: rgba(74, 158, 255, 0.1);
 }
 
+.option-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .option-card-title {
   font-size: 14px;
   color: #aaa;
   text-align: center;
   margin: 0 0 4px 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .option-image {

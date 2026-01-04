@@ -9,7 +9,6 @@ import {
   Game,
   GameUpdates,
   NameViewData,
-  Nation,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -26,10 +25,11 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
+import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { sanitize, simpleHash } from "./Util";
+import { simpleHash } from "./Util";
 import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
@@ -48,30 +48,20 @@ export async function createGameRunner(
 
   const humans = gameStart.players.map((p) => {
     return new PlayerInfo(
-      p.clientID === clientID
-        ? sanitize(p.username)
-        : censorNameWithClanTag(p.username),
+      p.clientID === clientID ? p.username : censorNameWithClanTag(p.username),
       PlayerType.Human,
       p.clientID,
       random.nextID(),
+      p.isLobbyCreator ?? false,
     );
   });
 
-  const nations = gameStart.config.disableNPCs
-    ? []
-    : gameMap.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            new PlayerInfo(
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-              n.strength,
-            ),
-          ),
-      );
+  const nations = createNationsForGame(
+    gameStart,
+    gameMap.nations,
+    humans.length,
+    random,
+  );
 
   const game: Game = createGame(
     humans,
@@ -112,8 +102,8 @@ export class GameRunner {
         ...this.execManager.spawnBots(this.game.config().numBots()),
       );
     }
-    if (this.game.config().spawnNPCs()) {
-      this.game.addExecution(...this.execManager.fakeHumanExecutions());
+    if (this.game.config().spawnNations()) {
+      this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
   }
@@ -162,7 +152,7 @@ export class GameRunner {
         .players()
         .filter(
           (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
+            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
         )
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
