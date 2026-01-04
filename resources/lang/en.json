@@ -396,7 +396,7 @@
     "lobby_id_visibility_label": "Hidden Lobby IDs",
     "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
     "streamer_mode_label": "Streamer Mode",
-    "streamer_mode_desc": "Hide lobby identifiers in join modal to avoid leaking them on stream",
+    "streamer_mode_desc": "Hide the lobby code to avoid leaking them on stream",
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_menu": "Left Click Menu",
