@@ -92,9 +92,7 @@ export class HostLobbyModal extends LitElement {
     return html`
       <o-modal title=${translateText("host_modal.title")}>
         <div class="lobby-id-box">
-          <button
-            class="lobby-id-button"
-          >
+          <button class="lobby-id-button">
             <!-- Visibility toggle icon on the left -->
             ${
               this.lobbyIdVisible
