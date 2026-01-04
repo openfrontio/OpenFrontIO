@@ -103,9 +103,9 @@ export class SinglePlayerModal extends LitElement {
       : [];
 
     const completions =
-      achievements
-        .find((achievement) => achievement?.type === "singleplayer-map")
-        ?.data ?? [];
+      achievements.find(
+        (achievement) => achievement?.type === "singleplayer-map",
+      )?.data ?? [];
 
     const winsMap = new Map<GameMapType, Set<Difficulty>>();
     for (const entry of completions) {
