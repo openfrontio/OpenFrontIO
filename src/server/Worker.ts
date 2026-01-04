@@ -304,7 +304,7 @@ export async function startWorker() {
         } else {
           // In dev mode, use clientID as persistentId
           persistentId = clientMsg.clientID;
-          claims = {};
+          claims = null;
         }
 
         if (clientMsg.type === "rejoin") {
