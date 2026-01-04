@@ -33,7 +33,6 @@
     "generated/**/*",
     "tests/**/*",
     "src/scripts",
-    "__mocks__/**/*",
     "vite.config.ts"
   ],
   "exclude": ["node_modules"]
