@@ -87,7 +87,7 @@ const numPlayersConfig = {
   [GameMapType.Lemnos]: [20, 15, 10],
   [GameMapType.TwoLakes]: [60, 50, 40],
   [GameMapType.StraitOfHormuz]: [40, 36, 30],
-  [GameMapType.Surrounded]: [56, 28, 14], // 4, 2, 1 players per island
+  [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -246,7 +246,7 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return 5 * 10;
+    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
   }
 
   gameConfig(): GameConfig {
