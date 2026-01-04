@@ -9,6 +9,8 @@ import {
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { PersistentIdSchema } from "../core/Schemas";
 
+export type { TokenPayload };
+
 type TokenVerificationResult =
   | {
       type: "success";
