@@ -78,6 +78,10 @@ export class UserSettings {
     return this.get("settings.cursorCostLabel", legacy);
   }
 
+  streamerMode() {
+    return this.get("settings.streamerMode", true);
+  }
+
   focusLocked() {
     return false;
     // TODO: re-enable when performance issues are fixed.
@@ -126,6 +130,10 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
+  }
+
+  toggleStreamerMode() {
+    this.set("settings.streamerMode", !this.streamerMode());
   }
 
   toggleDarkMode() {
