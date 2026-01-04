@@ -282,19 +282,30 @@ export async function startWorker() {
           return;
         }
 
-        // Verify token signature
-        const result = await verifyClientToken(clientMsg.token, config);
-        if (result.type === "error") {
-          log.warn(`Invalid token: ${result.message}`, {
-            clientID: clientMsg.clientID,
-          });
-          ws.close(
-            1002,
-            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
-          );
-          return;
+        // Verify token signature (skip in dev mode)
+        const isDev = process.env.GAME_ENV === "dev";
+        let persistentId: string;
+        let claims: any;
+
+        if (!isDev) {
+          const result = await verifyClientToken(clientMsg.token, config);
+          if (result.type === "error") {
+            log.warn(`Invalid token: ${result.message}`, {
+              clientID: clientMsg.clientID,
+            });
+            ws.close(
+              1002,
+              `Unauthorized: invalid token for client ${clientMsg.clientID}`,
+            );
+            return;
+          }
+          persistentId = result.persistentId;
+          claims = result.claims;
+        } else {
+          // In dev mode, use clientID as persistentId
+          persistentId = clientMsg.clientID;
+          claims = {};
         }
-        const { persistentId, claims } = result;
 
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
@@ -323,8 +334,8 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized");
             return;
           }
-        } else {
-          // Verify token and get player permissions
+        } else if (!isDev) {
+          // Verify token and get player permissions (skip in dev mode)
           const result = await getUserMe(clientMsg.token, config);
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
