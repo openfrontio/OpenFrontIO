@@ -283,7 +283,7 @@ export async function startWorker() {
         }
 
         // Verify token signature (skip in dev mode)
-        const isDev = process.env.GAME_ENV === "dev";
+        const isDev = config.env() === GameEnv.Dev;
         let persistentId: string;
         let claims: any;
 
