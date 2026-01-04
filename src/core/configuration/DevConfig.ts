@@ -2,6 +2,7 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
+import { Env } from "./Env";
 
 export class DevServerConfig extends DefaultServerConfig {
   turnstileSiteKey(): string {
@@ -27,9 +28,14 @@ export class DevServerConfig extends DefaultServerConfig {
   gameCreationRate(): number {
     return 5 * 1000;
   }
-
   numWorkers(): number {
-    return this.envNumWorkers(2);
+    const raw = Env.NUM_WORKERS;
+    if (!raw) return 2;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new Error(`Invalid NUM_WORKERS value "${raw}"`);
+    }
+    return Math.floor(parsed);
   }
   jwtAudience(): string {
     return "localhost";

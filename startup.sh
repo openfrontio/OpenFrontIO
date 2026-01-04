@@ -8,6 +8,12 @@ if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ] || [ -z "$SUBDOMAIN" ] || [
     exit 1
 fi
 
+# Require NUM_WORKERS for non-dev environments; default to 2 for dev.
+if [ "${GAME_ENV:-dev}" != "dev" ] && [ -z "$NUM_WORKERS" ]; then
+    echo "Error: NUM_WORKERS must be set for non-dev environments"
+    exit 1
+fi
+
 # Generate a unique tunnel name using timestamp
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 TUNNEL_NAME="${SUBDOMAIN}-tunnel-${TIMESTAMP}"
