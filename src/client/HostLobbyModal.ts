@@ -63,7 +63,6 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
-
   @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
