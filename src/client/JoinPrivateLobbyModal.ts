@@ -21,7 +21,6 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private hasJoined = false;
   @state() private players: string[] = [];
   @state() private lobbyIdValue = "";
-  @state() private streamerMode = true;
   @state() private lobbyIdVisible = true;
   @state() private copySuccess = false;
 
@@ -200,8 +199,10 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   public open(id: string = "") {
-    this.streamerMode = this.userSettings.streamerMode();
-    this.lobbyIdVisible = !this.streamerMode;
+    this.lobbyIdVisible = this.userSettings.get(
+      "settings.lobbyIdVisibility",
+      true,
+    );
     this.copySuccess = false;
     this.modalEl?.open();
     if (id) {
@@ -268,9 +269,6 @@ export class JoinPrivateLobbyModal extends LitElement {
   private setLobbyId(id: string) {
     const value = this.extractLobbyIdFromUrl(id);
     this.lobbyIdValue = value;
-    if (this.streamerMode) {
-      this.lobbyIdVisible = false;
-    }
     this.copySuccess = false;
     this.lobbyIdInput.value = value;
   }
