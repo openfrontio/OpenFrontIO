@@ -212,7 +212,9 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   public close() {
-    this.lobbyIdInput.value = "";
+    if (this.lobbyIdInput) {
+      this.lobbyIdInput.value = "";
+    }
     this.lobbyIdValue = "";
     this.copySuccess = false;
     this.modalEl?.close();
@@ -228,7 +230,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.message = "";
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
-        detail: { lobby: this.lobbyIdInput.value },
+        detail: { lobby: this.lobbyIdInput?.value ?? "" },
         bubbles: true,
         composed: true,
       }),
@@ -270,7 +272,9 @@ export class JoinPrivateLobbyModal extends LitElement {
     const value = this.extractLobbyIdFromUrl(id);
     this.lobbyIdValue = value;
     this.copySuccess = false;
-    this.lobbyIdInput?.value = value;
+    if (this.lobbyIdInput) {
+      this.lobbyIdInput.value = value;
+    }
   }
 
   private handleChange(e: Event) {
@@ -299,7 +303,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async joinLobby(): Promise<void> {
-    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput?.value ?? "");
     if (!lobbyId) {
       this.message = translateText("private_lobby.not_found");
       return;
@@ -436,7 +440,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput?.value ?? "");
     if (!lobbyId) return;
     const config = await getServerConfigFromClient();
 
