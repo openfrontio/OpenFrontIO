@@ -200,8 +200,8 @@ export class TransportShipExecution implements Execution {
     }
 
     if (this.boat.retreating()) {
-      // Compute retreat destination once, based on the closest shore tile owned
-      // by the boat owner at the moment the retreat is ordered.
+      // calculate retreat destination once based on the closest shore tile owned
+      // by boat owner when retreat is ordered
       if (this.retreatDst === null) {
         const retreatOwner = this.boat.owner();
         this.attacker = retreatOwner;
