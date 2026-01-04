@@ -128,14 +128,14 @@ export class JoinPrivateLobbyModal extends LitElement {
                       </svg>`}
                   <span
                     class="lobby-id"
-                    @click=${this.copyLobbyId}
+                    @click=${this.copyToClipboard}
                     style="cursor: pointer;"
                   >
                     ${this.lobbyIdVisible ? this.lobbyIdValue : "••••••••"}
                   </span>
 
                   <div
-                    @click=${this.copyLobbyId}
+                    @click=${this.copyToClipboard}
                     style="margin-left: 8px; cursor: pointer;"
                   >
                     ${this.copySuccess
@@ -282,14 +282,17 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.setLobbyId(value);
   }
 
-  private async copyLobbyId() {
-    if (!this.lobbyIdValue) return;
+  private async copyToClipboard() {
     try {
-      await navigator.clipboard.writeText(this.lobbyIdValue);
+      await navigator.clipboard.writeText(
+        `${location.origin}/#join=${this.lobbyIdValue}`,
+      );
       this.copySuccess = true;
-      setTimeout(() => (this.copySuccess = false), 2000);
+      setTimeout(() => {
+        this.copySuccess = false;
+      }, 2000);
     } catch (err) {
-      console.error("Failed to copy lobby id: ", err);
+      console.error(`Failed to copy text: ${err}`);
     }
   }
 
