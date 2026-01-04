@@ -309,7 +309,9 @@ export class JoinPrivateLobbyModal extends LitElement {
       return;
     }
 
-    this.lobbyIdInput.value = lobbyId;
+    if (this.lobbyIdInput) {
+      this.lobbyIdInput.value = lobbyId;
+    }
     console.log(`Joining lobby with ID: ${this.sanitizeForLog(lobbyId)}`);
     this.message = `${translateText("private_lobby.checking")}`;
 
