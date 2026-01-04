@@ -1,15 +1,15 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
 import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
-import happyElf from "../../../resources/sprites/christmas/happy_elf.png";
-import sadElf from "../../../resources/sprites/christmas/sad_elf.png";
-import santa from "../../../resources/sprites/christmas/santa.png";
-import snowman from "../../../resources/sprites/christmas/snowman.png";
-import sparks from "../../../resources/sprites/christmas/sparks.png";
 import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import miniFire from "../../../resources/sprites/minifire.png";
 import nuke from "../../../resources/sprites/nukeExplosion.png";
+import conquestChampagne from "../../../resources/sprites/nyeve/conquest.png";
+import nukeEve from "../../../resources/sprites/nyeve/firework.png";
+import nukeEveCyan from "../../../resources/sprites/nyeve/firework_cyan.png";
+import nukeEveRed from "../../../resources/sprites/nyeve/firework_red.png";
+import nukeEveYellow from "../../../resources/sprites/nyeve/firework_yellow.png";
 import SAMExplosion from "../../../resources/sprites/samExplosion.png";
 import sinkingShip from "../../../resources/sprites/sinkingShip.png";
 import miniSmoke from "../../../resources/sprites/smoke.png";
@@ -140,50 +140,50 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 10,
     originY: 16,
   },
-  [FxType.Santa]: {
-    url: santa,
-    frameWidth: 34,
+  [FxType.ConquestChampagne]: {
+    url: conquestChampagne,
+    frameWidth: 28,
     frameCount: 8,
     frameDuration: 90,
-    looping: true,
-    originX: 16,
-    originY: 15,
-  },
-  [FxType.Snowman]: {
-    url: snowman,
-    frameWidth: 16,
-    frameCount: 19,
-    frameDuration: 200,
     looping: false,
-    originX: 8,
-    originY: 12,
+    originX: 14,
+    originY: 23,
   },
-  [FxType.HappyElf]: {
-    url: happyElf,
-    frameWidth: 7,
-    frameCount: 5,
+  [FxType.FireworkAll]: {
+    url: nukeEve,
+    frameWidth: 60,
+    frameCount: 15,
     frameDuration: 90,
-    looping: true,
-    originX: 3,
-    originY: 7,
+    looping: false,
+    originX: 30,
+    originY: 30,
   },
-  [FxType.SadElf]: {
-    url: sadElf,
-    frameWidth: 14,
-    frameCount: 10,
-    frameDuration: 90,
-    looping: true,
-    originX: 6,
-    originY: 10,
+  [FxType.FireworkRed]: {
+    url: nukeEveRed,
+    frameWidth: 30,
+    frameCount: 9,
+    frameDuration: 100,
+    looping: false,
+    originX: 15,
+    originY: 20,
   },
-  [FxType.Sparks]: {
-    url: sparks,
-    frameWidth: 13,
+  [FxType.FireworkCyan]: {
+    url: nukeEveCyan,
+    frameWidth: 30,
     frameCount: 13,
-    frameDuration: 60,
+    frameDuration: 100,
     looping: false,
-    originX: 6,
-    originY: 6,
+    originX: 15,
+    originY: 20,
+  },
+  [FxType.FireworkYellow]: {
+    url: nukeEveYellow,
+    frameWidth: 30,
+    frameCount: 15,
+    frameDuration: 100,
+    looping: false,
+    originX: 15,
+    originY: 20,
   },
 };
 

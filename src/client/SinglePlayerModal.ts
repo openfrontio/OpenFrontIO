@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
   Difficulty,
@@ -28,6 +27,7 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -147,10 +147,14 @@ export class SinglePlayerModal extends LitElement {
                     <div
                       class="option-card ${this.selectedDifficulty === value
                         ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
+                        : ""} ${this.disableNations ? "disabled" : ""}"
+                      aria-disabled="${this.disableNations}"
+                      @click=${() =>
+                        !this.disableNations &&
+                        this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
+                        class="${this.disableNations ? "disabled-parent" : ""}"
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">

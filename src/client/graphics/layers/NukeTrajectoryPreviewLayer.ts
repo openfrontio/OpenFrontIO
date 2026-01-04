@@ -3,8 +3,13 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
-import { GhostStructureChangedEvent, MouseMoveEvent } from "../../InputHandler";
+import {
+  GhostStructureChangedEvent,
+  MouseMoveEvent,
+  SwapRocketDirectionEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 /**
@@ -27,6 +32,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private uiState: UIState,
   ) {}
 
   shouldTransform(): boolean {
@@ -49,6 +55,11 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         this.lastTargetTile = null;
         this.cachedSpawnTile = null;
       }
+    });
+    this.eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      // Force trajectory recalculation
+      this.lastTargetTile = null;
     });
   }
 
@@ -210,6 +221,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       targetTile,
       speed,
       distanceBasedHeight,
+      this.uiState.rocketDirectionUp,
     );
 
     this.trajectoryPoints = pathFinder.allTiles();

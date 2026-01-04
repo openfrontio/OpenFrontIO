@@ -1,47 +1,48 @@
+import { vi, type Mocked } from "vitest";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
 import { Game, Player, Unit, UnitType } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
-jest.mock("../../../src/core/game/Game");
-jest.mock("../../../src/core/execution/TrainExecution");
-jest.mock("../../../src/core/PseudoRandom");
+vi.mock("../../../src/core/game/Game");
+vi.mock("../../../src/core/execution/TrainExecution");
+vi.mock("../../../src/core/PseudoRandom");
 
 describe("TrainStation", () => {
-  let game: jest.Mocked<Game>;
-  let unit: jest.Mocked<Unit>;
-  let player: jest.Mocked<Player>;
-  let trainExecution: jest.Mocked<TrainExecution>;
+  let game: Mocked<Game>;
+  let unit: Mocked<Unit>;
+  let player: Mocked<Player>;
+  let trainExecution: Mocked<TrainExecution>;
 
   beforeEach(() => {
     game = {
-      ticks: jest.fn().mockReturnValue(123),
-      config: jest.fn().mockReturnValue({
+      ticks: vi.fn().mockReturnValue(123),
+      config: vi.fn().mockReturnValue({
         trainGold: (isFriendly: boolean) =>
           isFriendly ? BigInt(1000) : BigInt(500),
       }),
-      addUpdate: jest.fn(),
-      addExecution: jest.fn(),
+      addUpdate: vi.fn(),
+      addExecution: vi.fn(),
     } as any;
 
     player = {
-      addGold: jest.fn(),
+      addGold: vi.fn(),
       id: 1,
-      canTrade: jest.fn().mockReturnValue(true),
-      isFriendly: jest.fn().mockReturnValue(false),
+      canTrade: vi.fn().mockReturnValue(true),
+      isFriendly: vi.fn().mockReturnValue(false),
     } as any;
 
     unit = {
-      owner: jest.fn().mockReturnValue(player),
-      level: jest.fn().mockReturnValue(1),
-      tile: jest.fn().mockReturnValue({ x: 0, y: 0 }),
-      type: jest.fn(),
-      isActive: jest.fn().mockReturnValue(true),
+      owner: vi.fn().mockReturnValue(player),
+      level: vi.fn().mockReturnValue(1),
+      tile: vi.fn().mockReturnValue({ x: 0, y: 0 }),
+      type: vi.fn(),
+      isActive: vi.fn().mockReturnValue(true),
     } as any;
 
     trainExecution = {
-      loadCargo: jest.fn(),
-      owner: jest.fn().mockReturnValue(player),
-      level: jest.fn(),
+      loadCargo: vi.fn(),
+      owner: vi.fn().mockReturnValue(player),
+      level: vi.fn(),
     } as any;
   });
 
@@ -70,7 +71,7 @@ describe("TrainStation", () => {
 
   it("checks trade availability (same owner)", () => {
     const otherUnit = {
-      owner: jest.fn().mockReturnValue(unit.owner()),
+      owner: vi.fn().mockReturnValue(unit.owner()),
     } as any;
 
     const station = new TrainStation(game, unit);

@@ -59,6 +59,10 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const desyncsGauge = meter.createObservableGauge("openfront.desyncs.gauge", {
+    description: "Number of detected desyncs on active games on this worker",
+  });
+
   const memoryUsageGauge = meter.createObservableGauge(
     "openfront.memory_usage.bytes",
     {
@@ -66,19 +70,21 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
-  // Register callback for active games metric
   activeGamesGauge.addCallback((result) => {
     const count = gameManager.activeGames();
     result.observe(count, getPromLabels());
   });
 
-  // Register callback for connected clients metric
   connectedClientsGauge.addCallback((result) => {
     const count = gameManager.activeClients();
     result.observe(count, getPromLabels());
   });
 
-  // Register callback for memory usage metric
+  desyncsGauge.addCallback((result) => {
+    const count = gameManager.desyncCount();
+    result.observe(count, getPromLabels());
+  });
+
   memoryUsageGauge.addCallback((result) => {
     const memoryUsage = process.memoryUsage();
     result.observe(memoryUsage.heapUsed, getPromLabels());

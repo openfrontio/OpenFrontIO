@@ -1,4 +1,5 @@
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import {
   AllianceRequest,
   Game,
@@ -44,7 +45,12 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
     // Use a fixed random seed for deterministic behavior
     const random = new PseudoRandom(46);
 
-    allianceBehavior = new NationAllianceBehavior(random, game, player);
+    allianceBehavior = new NationAllianceBehavior(
+      random,
+      game,
+      player,
+      new NationEmojiBehavior(random, game, player),
+    );
   });
 
   function setupAllianceRequest({
@@ -71,19 +77,17 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
       }
     });
 
-    jest.spyOn(player, "alliances").mockReturnValue(new Array(alliancesCount));
+    vi.spyOn(player, "alliances").mockReturnValue(new Array(alliancesCount));
 
     const mockRequest = {
       requestor: () => requestor,
       recipient: () => player,
       createdAt: () => 0 as unknown as Tick,
-      accept: jest.fn(),
-      reject: jest.fn(),
+      accept: vi.fn(),
+      reject: vi.fn(),
     } as unknown as AllianceRequest;
 
-    jest
-      .spyOn(player, "incomingAllianceRequests")
-      .mockReturnValue([mockRequest]);
+    vi.spyOn(player, "incomingAllianceRequests").mockReturnValue([mockRequest]);
 
     return mockRequest;
   }
@@ -145,25 +149,26 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
   let allianceBehavior: NationAllianceBehavior;
 
   beforeEach(() => {
-    mockGame = { addExecution: jest.fn() };
-    mockHuman = { id: jest.fn(() => "human_id") };
+    mockGame = { addExecution: vi.fn() };
+    mockHuman = { id: vi.fn(() => "human_id") };
     mockAlliance = {
-      onlyOneAgreedToExtend: jest.fn(() => true),
-      other: jest.fn(() => mockHuman),
+      onlyOneAgreedToExtend: vi.fn(() => true),
+      other: vi.fn(() => mockHuman),
     };
-    mockRandom = { chance: jest.fn() };
+    mockRandom = { chance: vi.fn() };
 
     mockPlayer = {
-      alliances: jest.fn(() => [mockAlliance]),
-      relation: jest.fn(),
-      id: jest.fn(() => "bot_id"),
-      type: jest.fn(() => PlayerType.Nation),
+      alliances: vi.fn(() => [mockAlliance]),
+      relation: vi.fn(),
+      id: vi.fn(() => "bot_id"),
+      type: vi.fn(() => PlayerType.Nation),
     };
 
     allianceBehavior = new NationAllianceBehavior(
       mockRandom,
       mockGame,
       mockPlayer,
+      new NationEmojiBehavior(mockRandom, mockGame, mockPlayer),
     );
   });
 

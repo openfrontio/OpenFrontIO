@@ -139,6 +139,10 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.action_alt_view")}</td>
               </tr>
               <tr>
+                <td><span class="key">U</span></td>
+                <td>${translateText("help_modal.bomb_direction")}</td>
+              </tr>
+              <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
                     ${this.renderKey(keybinds.shiftKey)}
@@ -430,6 +434,14 @@ export class HelpModal extends LitElement {
               <li class="mb-4">
                 <div class="inline-block icon betray-icon"></div>
                 <span>${translateText("help_modal.ally_betray")}</span>
+              </li>
+              <li class="mb-4">
+                <div class="inline-block icon donate-icon"></div>
+                <span>${translateText("help_modal.radial_donate_troops")}</span>
+              </li>
+              <li class="mb-4">
+                <div class="inline-block icon donate-gold-icon"></div>
+                <span>${translateText("help_modal.radial_donate_gold")}</span>
               </li>
             </ul>
           </div>

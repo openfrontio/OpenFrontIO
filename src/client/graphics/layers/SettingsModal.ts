@@ -1,24 +1,24 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import structureIcon from "../../../../resources/images/CityIconWhite.svg";
-import cursorPriceIcon from "../../../../resources/images/CursorPriceIconWhite.svg";
-import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
-import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
-import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
-import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
-import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
-import sirenIcon from "../../../../resources/images/SirenIconWhite.svg";
-import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
-import musicIcon from "../../../../resources/images/music.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
+import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
+import structureIcon from "/images/CityIconWhite.svg?url";
+import cursorPriceIcon from "/images/CursorPriceIconWhite.svg?url";
+import darkModeIcon from "/images/DarkModeIconWhite.svg?url";
+import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import exitIcon from "/images/ExitIconWhite.svg?url";
+import explosionIcon from "/images/ExplosionIconWhite.svg?url";
+import mouseIcon from "/images/MouseIconWhite.svg?url";
+import ninjaIcon from "/images/NinjaIconWhite.svg?url";
+import settingsIcon from "/images/SettingIconWhite.svg?url";
+import sirenIcon from "/images/SirenIconWhite.svg?url";
+import treeIcon from "/images/TreeIconWhite.svg?url";
+import musicIcon from "/images/music.svg?url";
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -108,7 +108,7 @@ export class SettingsModal extends LitElement implements Layer {
 
   private pauseGame(pause: boolean) {
     if (this.shouldPause && !this.wasPausedWhenOpened)
-      this.eventBus.emit(new PauseGameEvent(pause));
+      this.eventBus.emit(new PauseGameIntentEvent(pause));
   }
 
   private onTerrainButtonClick() {

@@ -84,6 +84,8 @@
     "radial_attack": "Open the Attack menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a Boat (transport ship) to attack at the selected location. Only available if you have access to water.",
+    "radial_donate_troops": "Donate troops equivalent to your attack ratio slider percentage to the ally you opened the radial menu on.",
+    "radial_donate_gold": "Opens the gold donation slider menu so you can quickly send allies gold.",
     "radial_close": "Close the menu.",
     "info_title": "Info menu",
     "info_enemy_desc": "Contains information such as the selected player's name, gold, troops, stopped trading with you, nukes sent to you, and if the player is a traitor. Stopped trading means you won't receive gold from them and they won't sent you gold via trade ships. Manually (if the player clicked \"Stop trading\", which lasts until you both click \"Start trading\") or automatically (if you betrayed your alliance, which lasts until you become allies again or after 5 minutes). Traitor displays Yes for 30 seconds when the player betrayed and attacked a player who was in an alliance with them. The icons below represent the following interactions:",
@@ -115,7 +117,7 @@
     "build_silo": "Missile Silo",
     "build_silo_desc": "Allows launching missiles.",
     "build_sam": "SAM Launcher",
-    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. With a 100% hit chance for Atom Bomb, 80% for Hydrogen Bomb and 50% for individual MIRV Warheads. The SAM has a 7.5 second cooldown.",
+    "build_sam_desc": "Can intercept enemy missiles in its 100 pixel range. The SAM has a 7.5 second cooldown.",
     "build_atom": "Atom Bomb",
     "build_atom_desc": "Small explosive bomb that destroys territory, buildings, ships and boats. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "build_hydrogen": "Hydrogen Bomb",
@@ -130,7 +132,8 @@
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "info_enemy_panel": "Enemy info panel",
-    "exit_confirmation": "Are you sure you want to exit the game?"
+    "exit_confirmation": "Are you sure you want to exit the game?",
+    "bomb_direction": "Atom / Hydrogen bomb arc direction"
   },
   "single_modal": {
     "title": "Single Player",
@@ -176,7 +179,9 @@
     "clan": "Clan",
     "games": "Games",
     "win_score": "Win Score",
+    "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "loss_score": "Loss Score",
+    "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
     "win_loss_ratio": "Win/Loss",
     "rank": "Rank"
   },
@@ -243,7 +248,11 @@
     "gulfofstlawrence": "Gulf of St. Lawrence",
     "lisbon": "Lisbon",
     "svalmel": "Svalmel",
-    "manicouagan": "Manicouagan"
+    "manicouagan": "Manicouagan",
+    "lemnos": "Lemnos",
+    "twolakes": "Two Lakes",
+    "straitofhormuz": "Strait of Hormuz",
+    "surrounded": "Surrounded"
   },
   "map_categories": {
     "continental": "Continental",
@@ -268,12 +277,13 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "teams_Duos": "{team_count} of 2 (Duos)",
+    "teams_Trios": "{team_count} of 3 (Trios)",
+    "teams_Quads": "{team_count} of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
     "starting_game": "Starting game…",
-    "teams_Duos": "of 2 (Duos)",
-    "teams_Trios": "of 3 (Trios)",
-    "teams_Quads": "of 4 (Quads)",
-    "teams_hvn": "Humans Vs Nations",
+    "teams_hvn": "Humans vs Nations",
+    "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}"
   },
@@ -297,6 +307,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "player_immunity_duration": "PVP immunity duration (minutes)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
@@ -339,7 +350,7 @@
     "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
-    "difficulty": "Difficulty",
+    "difficulty": "Nation difficulty",
     "easy": "Easy",
     "medium": "Medium",
     "hard": "Hard",
@@ -576,7 +587,7 @@
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
-    "discord_description": "Connect with other players, get updates, and share strategies",
+    "discord_description": "Connect with players, discover new features, and win prizes!",
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
@@ -693,7 +704,10 @@
     "send_alliance": "Send Alliance",
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
-    "emotes": "Emojis"
+    "emotes": "Emojis",
+    "arc_up": "Upward arc",
+    "arc_down": "Downward arc",
+    "flip_rocket_trajectory": "Flip rocket trajectory"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
@@ -742,7 +756,9 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
-    "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
+    "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
+    "singleplayer_game_paused": "Game paused",
+    "multiplayer_game_paused": "Game paused by Lobby Creator"
   },
   "territory_patterns": {
     "title": "Skins",

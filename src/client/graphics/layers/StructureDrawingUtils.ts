@@ -3,13 +3,12 @@ import { Theme } from "../../../core/configuration/Config";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
-
-import anchorIcon from "../../../../resources/images/AnchorIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
-import factoryIcon from "../../../../resources/images/FactoryUnit.png";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
-import shieldIcon from "../../../../resources/images/ShieldIcon.png";
+import anchorIcon from "/images/AnchorIcon.png?url";
+import cityIcon from "/images/CityIcon.png?url";
+import factoryIcon from "/images/FactoryUnit.png?url";
+import missileSiloIcon from "/images/MissileSiloUnit.png?url";
+import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
+import shieldIcon from "/images/ShieldIcon.png?url";
 
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.City]: "circle",
@@ -455,6 +454,7 @@ export class SpriteFactory {
     stage: PIXI.Container,
     pos: { x: number; y: number },
     level?: number,
+    targetingAlly: boolean = false,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -479,10 +479,18 @@ export class SpriteFactory {
       default:
         return null;
     }
+    // Add warning colors (red/orange) when targeting an ally to indicate alliance will break
+    const isNuke = type === UnitType.AtomBomb || type === UnitType.HydrogenBomb;
+    const fillColor = targetingAlly && isNuke ? 0xff6b35 : 0xffffff;
+    const fillAlpha = targetingAlly && isNuke ? 0.35 : 0.2;
+    const strokeColor = targetingAlly && isNuke ? 0xff4444 : 0xffffff;
+    const strokeAlpha = targetingAlly && isNuke ? 0.8 : 0.5;
+    const strokeWidth = targetingAlly && isNuke ? 2 : 1;
+
     circle
       .circle(0, 0, radius)
-      .fill({ color: 0xffffff, alpha: 0.2 })
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
+      .fill({ color: fillColor, alpha: fillAlpha })
+      .stroke({ width: strokeWidth, color: strokeColor, alpha: strokeAlpha });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);

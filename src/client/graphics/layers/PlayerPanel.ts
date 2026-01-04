@@ -1,15 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import stopTradingIcon from "../../../../resources/images/StopIconWhite.png";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import startTradingIcon from "../../../../resources/images/TradingIconWhite.png";
-import traitorIcon from "../../../../resources/images/TraitorIconLightRed.svg";
-import breakAllianceIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import Countries from "resources/countries.json" with { type: "json" };
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -23,8 +14,11 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import Countries from "../../data/countries.json";
-import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  MouseUpEvent,
+  SwapRocketDirectionEvent,
+} from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -44,6 +38,16 @@ import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import "./SendResourceModal";
+import allianceIcon from "/images/AllianceIconWhite.svg?url";
+import chatIcon from "/images/ChatIconWhite.svg?url";
+import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
+import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
+import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import stopTradingIcon from "/images/StopIconWhite.png?url";
+import targetIcon from "/images/TargetIconWhite.svg?url";
+import startTradingIcon from "/images/TradingIconWhite.png?url";
+import traitorIcon from "/images/TraitorIconLightRed.svg?url";
+import breakAllianceIcon from "/images/TraitorIconWhite.svg?url";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -62,6 +66,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
+  @state() private suppressNextHide: boolean = false;
 
   private ctModal: ChatModal;
 
@@ -76,9 +81,19 @@ export class PlayerPanel extends LitElement implements Layer {
         this.hide();
       }
     });
+    eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      this.requestUpdate();
+    });
   }
   init() {
-    this.eventBus.on(MouseUpEvent, () => this.hide());
+    this.eventBus.on(MouseUpEvent, () => {
+      if (this.suppressNextHide) {
+        this.suppressNextHide = false;
+        return;
+      }
+      this.hide();
+    });
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
     if (!this.ctModal) {
@@ -131,6 +146,20 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  public openSendGoldModal(
+    actions: PlayerActions,
+    tile: TileRef,
+    target: PlayerView,
+  ) {
+    this.suppressNextHide = true;
+    this.actions = actions;
+    this.tile = tile;
+    this.sendTarget = target;
+    this.sendMode = "gold";
+    this.isVisible = true;
+    this.requestUpdate();
+  }
+
   public hide() {
     this.isVisible = false;
     this.sendMode = "none";
@@ -164,11 +193,13 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private openSendTroops(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "troops";
   }
 
   private openSendGold(target: PlayerView) {
+    this.suppressNextHide = true;
     this.sendTarget = target;
     this.sendMode = "gold";
   }
@@ -272,6 +303,12 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
     this.hide();
+  }
+
+  private handleToggleRocketDirection(e: Event) {
+    e.stopPropagation();
+    const next = !this.uiState.rocketDirectionUp;
+    this.eventBus.emit(new SwapRocketDirectionEvent(next));
   }
 
   private identityChipProps(type: PlayerType) {
@@ -422,7 +459,7 @@ export class PlayerPanel extends LitElement implements Layer {
         ${country && typeof flagCode === "string"
           ? html`<img
               src="/flags/${encodeURIComponent(flagCode)}.svg"
-              alt=${country?.name || "Flag"}
+              alt=${country?.name ?? "Flag"}
               class="h-10 w-10 rounded-full object-cover"
               @error=${(e: Event) => {
                 (e.target as HTMLImageElement).style.display = "none";
@@ -465,7 +502,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -486,6 +523,28 @@ export class PlayerPanel extends LitElement implements Layer {
           >
         </div>
       </div>
+    `;
+  }
+
+  private renderRocketDirectionToggle() {
+    return html`
+      <ui-divider></ui-divider>
+      <button
+        class="flex w-full items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2 text-left text-white hover:bg-white/[0.08] active:scale-[0.995] transition"
+        @click=${(e: Event) => this.handleToggleRocketDirection(e)}
+      >
+        <div class="flex flex-col">
+          <span class="text-sm font-semibold tracking-tight">
+            ${translateText("player_panel.flip_rocket_trajectory")}
+          </span>
+          <span class="text-xs text-zinc-300" translate="no">
+            ${this.uiState.rocketDirectionUp
+              ? translateText("player_panel.arc_up")
+              : translateText("player_panel.arc_down")}
+          </span>
+        </div>
+        <span class="text-lg" aria-hidden="true">🔀</span>
+      </button>
     `;
   }
 
@@ -673,53 +732,53 @@ export class PlayerPanel extends LitElement implements Layer {
             : ""}
         </div>
         <ui-divider></ui-divider>
-
-        <div class="grid auto-cols-fr grid-flow-col gap-1">
-          ${other !== my
-            ? canEmbargo
-              ? actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleEmbargoClick(e, my, other),
-                  icon: stopTradingIcon,
-                  iconAlt: "Stop Trading",
-                  title: translateText("player_panel.stop_trade"),
-                  label: translateText("player_panel.stop_trade"),
-                  type: "yellow",
-                })
-              : actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleStopEmbargoClick(e, my, other),
-                  icon: startTradingIcon,
-                  iconAlt: "Start Trading",
-                  title: translateText("player_panel.start_trade"),
-                  label: translateText("player_panel.start_trade"),
-                  type: "green",
-                })
-            : ""}
-          ${canBreakAlliance
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleBreakAllianceClick(e, my, other),
-                icon: breakAllianceIcon,
-                iconAlt: "Break Alliance",
-                title: translateText("player_panel.break_alliance"),
-                label: translateText("player_panel.break_alliance"),
-                type: "red",
-              })
-            : ""}
-          ${canSendAllianceRequest
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleAllianceClick(e, my, other),
-                icon: allianceIcon,
-                iconAlt: "Alliance",
-                title: translateText("player_panel.send_alliance"),
-                label: translateText("player_panel.send_alliance"),
-                type: "indigo",
-              })
-            : ""}
-        </div>
-
+        ${other === my
+          ? html``
+          : html`
+              <div class="grid auto-cols-fr grid-flow-col gap-1">
+                ${canEmbargo
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleEmbargoClick(e, my, other),
+                      icon: stopTradingIcon,
+                      iconAlt: "Stop Trading",
+                      title: translateText("player_panel.stop_trade"),
+                      label: translateText("player_panel.stop_trade"),
+                      type: "yellow",
+                    })
+                  : actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleStopEmbargoClick(e, my, other),
+                      icon: startTradingIcon,
+                      iconAlt: "Start Trading",
+                      title: translateText("player_panel.start_trade"),
+                      label: translateText("player_panel.start_trade"),
+                      type: "green",
+                    })}
+                ${canBreakAlliance
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleBreakAllianceClick(e, my, other),
+                      icon: breakAllianceIcon,
+                      iconAlt: "Break Alliance",
+                      title: translateText("player_panel.break_alliance"),
+                      label: translateText("player_panel.break_alliance"),
+                      type: "red",
+                    })
+                  : ""}
+                ${canSendAllianceRequest
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleAllianceClick(e, my, other),
+                      icon: allianceIcon,
+                      iconAlt: "Alliance",
+                      title: translateText("player_panel.send_alliance"),
+                      label: translateText("player_panel.send_alliance"),
+                      type: "indigo",
+                    })
+                  : ""}
+              </div>
+            `}
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
@@ -822,16 +881,14 @@ export class PlayerPanel extends LitElement implements Layer {
                 <div
                   style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
                 >
-                  <div class="sticky top-0 z-20 flex justify-end p-2">
-                    <button
-                      @click=${this.handleClose}
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-                      aria-label=${translateText("common.close") || "Close"}
-                      title=${translateText("common.close") || "Close"}
-                    >
-                      ✕
-                    </button>
-                  </div>
+                  <button
+                    @click=${this.handleClose}
+                    class="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                    aria-label=${translateText("common.close") || "Close"}
+                    title=${translateText("common.close") || "Close"}
+                  >
+                    ✕
+                  </button>
 
                   <div
                     class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
@@ -866,6 +923,9 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Resources -->
                     ${this.renderResources(other)}
 
+                    <!-- Rocket direction toggle -->
+                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
@@ -879,7 +939,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
 
-                    <ui-divider class="mt-1"></ui-divider>
+                    <ui-divider></ui-divider>
 
                     <!-- Actions -->
                     ${this.renderActions(my, other)}

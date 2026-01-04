@@ -56,6 +56,10 @@ const frequency: Partial<Record<GameMapName, number>> = {
   StraitOfGibraltar: 5,
   Svalmel: 8,
   World: 8,
+  Lemnos: 3,
+  TwoLakes: 6,
+  StraitOfHormuz: 4,
+  Surrounded: 4,
 };
 
 interface MapWithMode {
@@ -73,6 +77,7 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
+  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
@@ -94,7 +99,8 @@ export class MapPlaylist {
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Normal,
-      difficulty: Difficulty.Easy,
+      difficulty:
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -104,6 +110,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
+      spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }

@@ -1,6 +1,5 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -28,14 +27,17 @@ import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
@@ -43,6 +45,8 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
+  @state() private spawnImmunity: boolean = false;
+  @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -242,10 +246,14 @@ export class HostLobbyModal extends LitElement {
                     <div
                       class="option-card ${this.selectedDifficulty === value
                         ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
+                        : ""} ${this.disableNations ? "disabled" : ""}"
+                      aria-disabled="${this.disableNations}"
+                      @click=${() =>
+                        !this.disableNations &&
+                        this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
+                        class="${this.disableNations ? "disabled-parent" : ""}"
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
@@ -508,7 +516,7 @@ export class HostLobbyModal extends LitElement {
                             id="end-timer-value"
                             min="0"
                             max="120"
-                            .value=${String(this.maxTimerValue ?? "")}
+                            .value=${String(this.maxTimerValue ?? 0)}
                             style="width: 60px; color: black; text-align: right; border-radius: 8px;"
                             @input=${this.handleMaxTimerValueChanges}
                             @keydown=${this.handleMaxTimerValueKeyDown}
@@ -518,6 +526,47 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.max_timer")}
                   </div>
                 </label>
+
+                <label
+                  for="spawn-immunity"
+                  class="option-card  ${this.spawnImmunity ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="spawn-immunity"
+                    @change=${(e: Event) => {
+                      const checked = (e.target as HTMLInputElement).checked;
+                      if (!checked) {
+                        this.spawnImmunityDurationMinutes = undefined;
+                      }
+                      this.spawnImmunity = checked;
+                      this.putGameConfig();
+                    }}
+                    .checked=${this.spawnImmunity}
+                  />
+                    ${
+                      this.spawnImmunity === false
+                        ? ""
+                        : html`<input
+                            type="number"
+                            id="spawn-immunity-duration"
+                            min="0"
+                            max="120"
+                            step="1"
+                            .value=${String(
+                              this.spawnImmunityDurationMinutes ?? 0,
+                            )}
+                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                            @input=${this.handleSpawnImmunityDurationInput}
+                            @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                          />`
+                    }
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.player_immunity_duration")}</span>
+                  </div>
+                </label>
+                
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
                 <!-- Individual disables for structures/weapons -->
@@ -549,9 +598,9 @@ export class HostLobbyModal extends LitElement {
                 : translateText("host_modal.players")
             }
             <span style="margin: 0 8px;">•</span>
-            ${this.disableNations ? 0 : this.nationCount}
+            ${this.getEffectiveNationCount()}
             ${
-              this.nationCount === 1
+              this.getEffectiveNationCount() === 1
                 ? translateText("host_modal.nation_player")
                 : translateText("host_modal.nation_players")
             }
@@ -562,7 +611,7 @@ export class HostLobbyModal extends LitElement {
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
-            .nationCount=${this.disableNations ? 0 : this.nationCount}
+            .nationCount=${this.getEffectiveNationCount()}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
         </div>
@@ -600,7 +649,7 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
-        // join lobby
+        crazyGamesSDK.showInviteButton(this.lobbyId);
       })
       .then(() => {
         this.dispatchEvent(
@@ -615,11 +664,16 @@ export class HostLobbyModal extends LitElement {
         );
       });
     this.modalEl?.open();
+    this.modalEl.onClose = () => {
+      this.close();
+    };
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
   public close() {
+    console.log("Closing host lobby modal");
+    crazyGamesSDK.hideInviteButton();
     this.modalEl?.close();
     this.copySuccess = false;
     if (this.playersInterval) {
@@ -677,6 +731,23 @@ export class HostLobbyModal extends LitElement {
 
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
+  private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleSpawnImmunityDurationInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value, 10);
+    if (Number.isNaN(value) || value < 0 || value > 120) {
+      return;
+    }
+    this.spawnImmunityDurationMinutes = value;
     this.putGameConfig();
   }
 
@@ -746,44 +817,47 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+    const spawnImmunityTicks = this.spawnImmunityDurationMinutes
+      ? this.spawnImmunityDurationMinutes * 60 * 10
+      : 0;
+    this.dispatchEvent(
+      new CustomEvent("update-game-config", {
+        detail: {
+          config: {
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            difficulty: this.selectedDifficulty,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.donateGold,
+            infiniteTroops: this.infiniteTroops,
+            donateTroops: this.donateTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            gameMode: this.gameMode,
+            disabledUnits: this.disabledUnits,
+            spawnImmunityDuration: this.spawnImmunity
+              ? spawnImmunityTicks
+              : undefined,
+            playerTeams: this.teamCount,
+            ...(this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations
+              ? {
+                  disableNations: false,
+                }
+              : {
+                  disableNations: this.disableNations,
+                }),
+            maxTimerValue:
+              this.maxTimer === true ? this.maxTimerValue : undefined,
+          } satisfies Partial<GameConfig>,
         },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          randomSpawn: this.randomSpawn,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
-            ? {
-                disableNations: false,
-              }
-            : {
-                disableNations: this.disableNations,
-              }),
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-        } satisfies Partial<GameConfig>),
-      },
+        bubbles: true,
+        composed: true,
+      }),
     );
-    return response;
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
@@ -822,7 +896,6 @@ export class HostLobbyModal extends LitElement {
 
   private async copyToClipboard() {
     try {
-      //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
         `${location.origin}/#join=${this.lobbyId}`,
       );
@@ -845,8 +918,6 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
-
         this.clients = data.clients ?? [];
       });
   }
@@ -871,6 +942,21 @@ export class HostLobbyModal extends LitElement {
       console.warn("Failed to load nation count", error);
       this.nationCount = 0;
     }
+  }
+
+  /**
+   * Returns the effective nation count for display purposes.
+   * In HumansVsNations mode, this equals the number of human players.
+   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
+   */
+  private getEffectiveNationCount(): number {
+    if (this.disableNations) {
+      return 0;
+    }
+    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
+      return this.clients.length;
+    }
+    return this.nationCount;
   }
 }
 

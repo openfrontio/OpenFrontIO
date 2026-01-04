@@ -11,6 +11,7 @@ import {
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -22,12 +23,13 @@ export class PublicLobby extends LitElement {
   @state() private mapImages: Map<GameID, string> = new Map();
   @state() private joiningDotIndex: number = 0;
 
-  private lobbiesInterval: number | null = null;
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
-  private lobbiesFetchInFlight: Promise<GameInfo[]> | null = null;
+  private lobbySocket = new PublicLobbySocket((lobbies) =>
+    this.handleLobbiesUpdate(lobbies),
+  );
 
   createRenderRoot() {
     return this;
@@ -35,38 +37,28 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.fetchAndUpdateLobbies();
-    this.lobbiesInterval = window.setInterval(
-      () => this.fetchAndUpdateLobbies(),
-      1000,
-    );
+    this.lobbySocket.start();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.lobbiesInterval !== null) {
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
-    }
+    this.lobbySocket.stop();
     this.stopJoiningAnimation();
   }
 
-  private async fetchAndUpdateLobbies(): Promise<void> {
-    try {
-      this.lobbies = await this.fetchLobbies();
-      this.lobbies.forEach((l) => {
-        if (!this.lobbyIDToStart.has(l.gameID)) {
-          const msUntilStart = l.msUntilStart ?? 0;
-          this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
-        }
+  private handleLobbiesUpdate(lobbies: GameInfo[]) {
+    this.lobbies = lobbies;
+    this.lobbies.forEach((l) => {
+      if (!this.lobbyIDToStart.has(l.gameID)) {
+        const msUntilStart = l.msUntilStart ?? 0;
+        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
+      }
 
-        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching lobbies:", error);
-    }
+      if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+        this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+      }
+    });
+    this.requestUpdate();
   }
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
@@ -77,38 +69,6 @@ export class PublicLobby extends LitElement {
       this.requestUpdate();
     } catch (error) {
       console.error("Failed to load map image:", error);
-    }
-  }
-
-  async fetchLobbies(): Promise<GameInfo[]> {
-    if (this.lobbiesFetchInFlight) {
-      return this.lobbiesFetchInFlight;
-    }
-
-    this.lobbiesFetchInFlight = (async () => {
-      try {
-        const response = await fetch(`/api/public_lobbies`);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        return data.lobbies as GameInfo[];
-      } catch (error) {
-        console.error("Error fetching lobbies:", error);
-        throw error;
-      } finally {
-        this.lobbiesFetchInFlight = null;
-      }
-    })();
-
-    return this.lobbiesFetchInFlight;
-  }
-
-  public stop() {
-    if (this.lobbiesInterval !== null) {
-      this.isLobbyHighlighted = false;
-      this.stopJoiningAnimation();
-      clearInterval(this.lobbiesInterval);
-      this.lobbiesInterval = null;
     }
   }
 
@@ -135,17 +95,23 @@ export class PublicLobby extends LitElement {
       lobby.gameConfig.gameMode,
       teamCount,
       teamTotal,
-    );
-    const teamDetailLabel = this.getTeamDetailLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
       teamSize,
     );
+    // True when the detail label already includes the full mode text.
+    const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
+      this.getTeamDetailLabel(
+        lobby.gameConfig.gameMode,
+        teamCount,
+        teamTotal,
+        teamSize,
+      );
 
-    const fullModeLabel = teamDetailLabel
-      ? `${modeLabel} ${teamDetailLabel}`
-      : modeLabel;
+    let fullModeLabel = modeLabel;
+    if (teamDetailLabel) {
+      fullModeLabel = isTeamDetailFullLabel
+        ? teamDetailLabel
+        : `${modeLabel} ${teamDetailLabel}`;
+    }
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
@@ -155,8 +121,8 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
-          : "bg-gradient-to-r from-red-800 to-red-700"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "bg-gradient-to-r from-green-600 to-green-500"
+          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -186,24 +152,27 @@ export class PublicLobby extends LitElement {
                 : translateText("public_lobby.join")}
             </div>
             <div class="text-md font-medium text-white-400">
-              <span class="text-sm text-red-800 bg-white rounded-sm px-1 mr-1">
-                ${fullModeLabel}
-              </span>
-              <span>
-                ${translateText(
-                  `map.${lobby.gameConfig.gameMap
-                    .toLowerCase()
-                    .replace(/[\s.]+/g, "")}`,
-                )}
-              </span>
+              ${fullModeLabel
+                ? html`<span
+                    class="text-sm ${this.isLobbyHighlighted
+                      ? "text-green-600"
+                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                    >${fullModeLabel}</span
+                  >`
+                : ""}
+              <span
+                >${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+                )}</span
+              >
             </div>
           </div>
 
           <div>
-            <div class="text-md font-medium text-white-400">
+            <div class="text-md font-medium text-blue-100">
               ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
-            <div class="text-md font-medium text-white-400">${timeDisplay}</div>
+            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
           </div>
         </div>
       </button>
@@ -211,6 +180,13 @@ export class PublicLobby extends LitElement {
   }
 
   leaveLobby() {
+    this.isLobbyHighlighted = false;
+    this.currLobby = null;
+    this.stopJoiningAnimation();
+  }
+
+  public stop() {
+    this.lobbySocket.stop();
     this.isLobbyHighlighted = false;
     this.currLobby = null;
     this.stopJoiningAnimation();
@@ -241,7 +217,7 @@ export class PublicLobby extends LitElement {
       if (teamCount === Duos) return 2;
       if (teamCount === Trios) return 3;
       if (teamCount === Quads) return 4;
-      if (teamCount === HumansVsNations) return Math.floor(maxPlayers / 2);
+      if (teamCount === HumansVsNations) return maxPlayers;
       return undefined;
     }
     if (typeof teamCount === "number" && teamCount > 0) {
@@ -265,10 +241,13 @@ export class PublicLobby extends LitElement {
     gameMode: GameMode,
     teamCount: number | string | null,
     teamTotal: number | undefined,
+    teamSize: number | undefined,
   ): string {
     if (gameMode !== GameMode.Team) return translateText("game_mode.ffa");
-    if (teamCount === HumansVsNations)
-      return translateText("public_lobby.teams_hvn");
+    if (teamCount === HumansVsNations && teamSize !== undefined)
+      return translateText("public_lobby.teams_hvn_detailed", {
+        num: teamSize,
+      });
     const totalTeams =
       teamTotal ?? (typeof teamCount === "number" ? teamCount : 0);
     return translateText("public_lobby.teams", { num: totalTeams });
@@ -279,20 +258,37 @@ export class PublicLobby extends LitElement {
     teamCount: number | string | null,
     teamTotal: number | undefined,
     teamSize: number | undefined,
-  ): string | null {
-    if (gameMode !== GameMode.Team) return null;
+  ): { label: string | null; isFullLabel: boolean } {
+    if (gameMode !== GameMode.Team) {
+      return { label: null, isFullLabel: false };
+    }
 
-    if (typeof teamCount === "string" && teamCount !== HumansVsNations) {
+    if (typeof teamCount === "string" && teamCount === HumansVsNations) {
+      return { label: null, isFullLabel: false };
+    }
+
+    if (typeof teamCount === "string") {
       const teamKey = `public_lobby.teams_${teamCount}`;
-      const maybeTranslated = translateText(teamKey);
-      if (maybeTranslated !== teamKey) return maybeTranslated;
+      // translateText returns the key when a translation is missing.
+      const maybeTranslated = translateText(teamKey, {
+        team_count: teamTotal ?? 0,
+      });
+      if (maybeTranslated !== teamKey) {
+        return { label: maybeTranslated, isFullLabel: true };
+      }
     }
 
     if (teamTotal !== undefined && teamSize !== undefined) {
-      return translateText("public_lobby.players_per_team", { num: teamSize });
+      // Fallback when there's no specific team label translation.
+      return {
+        label: translateText("public_lobby.players_per_team", {
+          num: teamSize,
+        }),
+        isFullLabel: false,
+      };
     }
 
-    return null;
+    return { label: null, isFullLabel: false };
   }
 
   private lobbyClicked(lobby: GameInfo) {

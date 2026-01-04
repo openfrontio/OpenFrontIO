@@ -1,6 +1,6 @@
+import countries from "resources/countries.json";
+import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
-import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import countries from "../client/data/countries.json" with { type: "json" };
 import {
   ColorPaletteSchema,
   PatternDataSchema,
@@ -47,7 +47,9 @@ export type Intent =
   | EmbargoAllIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
-  | KickPlayerIntent;
+  | KickPlayerIntent
+  | TogglePauseIntent
+  | UpdateGameConfigIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -79,6 +81,10 @@ export type AllianceExtensionIntent = z.infer<
 >;
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
+export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
+export type UpdateGameConfigIntent = z.infer<
+  typeof UpdateGameConfigIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -91,6 +97,7 @@ export type ClientMessage =
   | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage;
+
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
@@ -172,6 +179,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
+  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
@@ -308,6 +316,7 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
   tile: z.number(),
+  rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
@@ -354,6 +363,16 @@ export const KickPlayerIntentSchema = BaseIntentSchema.extend({
   target: ID,
 });
 
+export const TogglePauseIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("toggle_pause"),
+  paused: z.boolean().default(false),
+});
+
+export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("update_game_config"),
+  config: GameConfigSchema.partial(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -377,6 +396,8 @@ const IntentSchema = z.discriminatedUnion("type", [
   AllianceExtensionIntentSchema,
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
+  TogglePauseIntentSchema,
+  UpdateGameConfigIntentSchema,
 ]);
 
 //
@@ -430,6 +451,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
+  isLobbyCreator: z.boolean().optional(),
 });
 
 export const GameStartInfoSchema = z.object({

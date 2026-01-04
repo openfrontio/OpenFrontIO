@@ -89,6 +89,10 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: UnitType | null) {}
 }
 
+export class SwapRocketDirectionEvent implements GameEvent {
+  constructor(public readonly rocketDirectionUp: boolean) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -200,6 +204,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
+      swapDirection: "KeyU",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
@@ -290,11 +295,7 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+      const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && e.code !== "Escape") {
         return;
       }
@@ -340,11 +341,7 @@ export class InputHandler {
       }
     });
     window.addEventListener("keyup", (e) => {
-      const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+      const isTextInput = this.isTextInputTarget(e.target);
       if (isTextInput && !this.activeKeys.has(e.code)) {
         return;
       }
@@ -433,6 +430,12 @@ export class InputHandler {
       if (e.code === this.keybinds.buildMIRV) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MIRV);
+      }
+
+      if (e.code === this.keybinds.swapDirection) {
+        e.preventDefault();
+        const nextDirection = !this.uiState.rocketDirectionUp;
+        this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
       // Shift-D to toggle performance overlay
@@ -597,6 +600,22 @@ export class InputHandler {
       x: (pointerEvents[0].clientX + pointerEvents[1].clientX) / 2,
       y: (pointerEvents[0].clientY + pointerEvents[1].clientY) / 2,
     };
+  }
+
+  private isTextInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    if (!element) return false;
+    if (element.tagName === "TEXTAREA" || element.isContentEditable) {
+      return true;
+    }
+    if (element.tagName === "INPUT") {
+      const input = element as HTMLInputElement;
+      if (input.id === "attack-ratio" && input.type === "range") {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   destroy() {

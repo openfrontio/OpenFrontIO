@@ -2,9 +2,9 @@ import { extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
+import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
@@ -40,6 +40,7 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
+import bitmapFont from "/fonts/round_6x6_modified.xml?url";
 
 extend([a11yPlugin]);
 
@@ -65,6 +66,7 @@ export class StructureIconsLayer implements Layer {
     priceBox: { height: number; y: number; paddingX: number; minWidth: number };
     range: PIXI.Container | null;
     rangeLevel?: number;
+    targetingAlly?: boolean;
     buildableUnit: BuildableUnit;
   } | null = null;
   private pixicanvas: HTMLCanvasElement;
@@ -75,7 +77,8 @@ export class StructureIconsLayer implements Layer {
   public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
-  private renderer: PIXI.Renderer;
+  private renderer: PIXI.Renderer | null = null;
+  private rendererInitialized: boolean = false;
   private renders: StructureRenderInfo[] = [];
   private readonly seenUnits: Set<UnitView> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
@@ -113,7 +116,7 @@ export class StructureIconsLayer implements Layer {
     } catch (error) {
       console.error("Failed to load bitmap font:", error);
     }
-    this.renderer = new PIXI.WebGLRenderer();
+    const renderer = new PIXI.WebGLRenderer();
     this.pixicanvas = document.createElement("canvas");
     this.pixicanvas.width = window.innerWidth;
     this.pixicanvas.height = window.innerHeight;
@@ -143,7 +146,7 @@ export class StructureIconsLayer implements Layer {
     this.rootStage.position.set(0, 0);
     this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
-    await this.renderer.init({
+    await renderer.init({
       canvas: this.pixicanvas,
       resolution: 1,
       width: this.pixicanvas.width,
@@ -153,6 +156,9 @@ export class StructureIconsLayer implements Layer {
       backgroundAlpha: 0,
       backgroundColor: 0x00000000,
     });
+
+    this.renderer = renderer;
+    this.rendererInitialized = true;
   }
 
   shouldTransform(): boolean {
@@ -202,7 +208,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
+    if (!this.renderer || !this.rendererInitialized) {
       return;
     }
 
@@ -254,6 +260,29 @@ export class StructureIconsLayer implements Layer {
       tileRef = this.game.ref(tile.x, tile.y);
     }
 
+    // Check if targeting an ally (for nuke warning visual)
+    // Uses shared logic with NukeExecution.maybeBreakAlliances()
+    let targetingAlly = false;
+    const myPlayer = this.game.myPlayer();
+    const nukeType = this.ghostUnit.buildableUnit.type;
+    if (
+      tileRef &&
+      myPlayer &&
+      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
+    ) {
+      // Only check if player has allies
+      const allies = myPlayer.allies();
+      if (allies.length > 0) {
+        targetingAlly = wouldNukeBreakAlliance({
+          gm: this.game,
+          targetTile: tileRef,
+          magnitude: this.game.config().nukeMagnitudes(nukeType),
+          allySmallIds: new Set(allies.map((a) => a.smallID())),
+          threshold: this.game.config().nukeAllianceBreakThreshold(),
+        });
+      }
+    }
+
     this.game
       ?.myPlayer()
       ?.actions(tileRef)
@@ -288,7 +317,7 @@ export class StructureIconsLayer implements Layer {
         this.updateGhostPrice(unit.cost ?? 0, showPrice);
 
         const targetLevel = this.resolveGhostRangeLevel(unit);
-        this.updateGhostRange(targetLevel);
+        this.updateGhostRange(targetLevel, targetingAlly);
 
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
@@ -369,10 +398,16 @@ export class StructureIconsLayer implements Layer {
         ),
       );
     } else if (this.ghostUnit.buildableUnit.canBuild) {
+      const unitType = this.ghostUnit.buildableUnit.type;
+      const rocketDirectionUp =
+        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
       this.eventBus.emit(
         new BuildUnitIntentEvent(
-          this.ghostUnit.buildableUnit.type,
+          unitType,
           this.game.ref(tile.x, tile.y),
+          rocketDirectionUp,
         ),
       );
     }
@@ -460,18 +495,23 @@ export class StructureIconsLayer implements Layer {
     return 1;
   }
 
-  private updateGhostRange(level?: number) {
+  private updateGhostRange(level?: number, targetingAlly: boolean = false) {
     if (!this.ghostUnit) {
       return;
     }
 
-    if (this.ghostUnit.range && this.ghostUnit.rangeLevel === level) {
+    if (
+      this.ghostUnit.range &&
+      this.ghostUnit.rangeLevel === level &&
+      this.ghostUnit.targetingAlly === targetingAlly
+    ) {
       return;
     }
 
     this.ghostUnit.range?.destroy();
     this.ghostUnit.range = null;
     this.ghostUnit.rangeLevel = level;
+    this.ghostUnit.targetingAlly = targetingAlly;
 
     const position = this.ghostUnit.container.position;
     const range = this.factory.createRange(
@@ -479,6 +519,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostStage,
       { x: position.x, y: position.y },
       level,
+      targetingAlly,
     );
     if (range) {
       this.ghostUnit.range = range;

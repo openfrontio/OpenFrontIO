@@ -8,6 +8,7 @@ export class OModal extends LitElement {
   @property({ type: String }) title = "";
   @property({ type: String }) translationKey = "";
   @property({ type: Boolean }) alwaysMaximized = false;
+  @property({ type: Function }) onClose?: () => void;
 
   static styles = css`
     .c-modal {
@@ -70,15 +71,15 @@ export class OModal extends LitElement {
       backdrop-filter: blur(8px);
     }
   `;
-
   public open() {
     this.isModalOpen = true;
   }
+
   public close() {
-    this.isModalOpen = false;
-    this.dispatchEvent(
-      new CustomEvent("modal-close", { bubbles: true, composed: true }),
-    );
+    if (this.isModalOpen) {
+      this.isModalOpen = false;
+      this.onClose?.();
+    }
   }
 
   render() {

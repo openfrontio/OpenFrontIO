@@ -18,6 +18,7 @@ import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
+import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -50,7 +51,11 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20, ghostStructure: null } as UIState;
+  const uiState = {
+    attackRatio: 20,
+    ghostStructure: null,
+    rocketDirectionUp: true,
+  } as UIState;
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -73,6 +78,7 @@ export function createRenderer(
   }
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
+  buildMenu.uiState = uiState;
   buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
@@ -229,6 +235,14 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
+  const immunityTimer = document.querySelector(
+    "immunity-timer",
+  ) as ImmunityTimer;
+  if (!(immunityTimer instanceof ImmunityTimer)) {
+    console.error("immunity timer not found");
+  }
+  immunityTimer.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -241,7 +255,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
+    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
@@ -257,6 +271,7 @@ export function createRenderer(
       playerPanel,
     ),
     spawnTimer,
+    immunityTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,
@@ -298,7 +313,7 @@ export class GameRenderer {
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
   ) {
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }

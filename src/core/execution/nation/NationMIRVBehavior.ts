@@ -1,4 +1,5 @@
 import {
+  AllPlayers,
   Difficulty,
   Game,
   Gold,
@@ -11,7 +12,11 @@ import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { MirvExecution } from "../MIRVExecution";
 import { calculateTerritoryCenter } from "../Util";
-import { NationEmojiBehavior } from "./NationEmojiBehavior";
+import {
+  EMOJI_NUKE,
+  NationEmojiBehavior,
+  respondToMIRV,
+} from "./NationEmojiBehavior";
 
 export class NationMIRVBehavior {
   constructor(
@@ -251,11 +256,13 @@ export class NationMIRVBehavior {
   private maybeSendMIRV(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
-    this.emojiBehavior.maybeSendHeckleEmoji(enemy);
+    this.emojiBehavior.maybeSendAttackEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
     if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
       this.game.addExecution(new MirvExecution(this.player, centerTile));
+      this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_NUKE);
+      respondToMIRV(this.game, this.random, enemy);
     }
   }
 

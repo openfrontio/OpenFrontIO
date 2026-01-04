@@ -106,6 +106,10 @@ export enum GameMapType {
   GulfOfStLawrence = "Gulf of St. Lawrence",
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
+  Lemnos = "Lemnos",
+  TwoLakes = "Two Lakes",
+  StraitOfHormuz = "Strait of Hormuz",
+  Surrounded = "Surrounded",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -143,6 +147,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Lisbon,
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
+    GameMapType.Lemnos,
+    GameMapType.TwoLakes,
+    GameMapType.StraitOfHormuz,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -153,6 +160,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
     GameMapType.Svalmel,
+    GameMapType.Surrounded,
   ],
 };
 
@@ -209,6 +217,7 @@ export enum UnitType {
 
 export enum TrainType {
   Engine = "Engine",
+  TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
 
@@ -310,7 +319,7 @@ export enum Relation {
 
 export class Nation {
   constructor(
-    public readonly spawnCell: Cell,
+    public readonly spawnCell: Cell | undefined,
     public readonly playerInfo: PlayerInfo,
   ) {}
 }
@@ -418,6 +427,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
+    public readonly isLobbyCreator: boolean = false,
   ) {
     this.clan = getClanTag(name);
   }
@@ -456,6 +466,7 @@ export interface Unit {
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
   wasDestroyedByEnemy(): boolean;
+  destroyer(): Player | undefined;
 
   // Train
   trainType(): TrainType | undefined;
@@ -538,6 +549,7 @@ export interface Player {
   type(): PlayerType;
   isPlayer(): this is Player;
   toString(): string;
+  isLobbyCreator(): boolean;
 
   // State & Properties
   isAlive(): boolean;
@@ -647,6 +659,8 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+  canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;
+  isImmune(): boolean;
 
   createAttack(
     target: Player | TerraNullius,
@@ -701,12 +715,17 @@ export interface Game extends GameMap {
   alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
 
+  // Immunity timer
+  isSpawnImmunityActive(): boolean;
+
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
+  isPaused(): boolean;
+  setPaused(paused: boolean): void;
 
   // Units
   units(...types: UnitType[]): Unit[];
