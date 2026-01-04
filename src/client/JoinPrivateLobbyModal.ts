@@ -270,7 +270,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     const value = this.extractLobbyIdFromUrl(id);
     this.lobbyIdValue = value;
     this.copySuccess = false;
-    this.lobbyIdInput.value = value;
+    this.lobbyIdInput?.value = value;
   }
 
   private handleChange(e: Event) {
