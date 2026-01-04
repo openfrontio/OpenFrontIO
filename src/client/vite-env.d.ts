@@ -24,3 +24,10 @@ declare module "*.webp" {
   const webpContent: string;
   export default webpContent;
 }
+
+declare global {
+  interface Window {
+    __eventBus?: import("../core/EventBus").EventBus;
+    __username?: string;
+  }
+}

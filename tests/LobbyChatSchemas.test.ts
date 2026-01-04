@@ -14,7 +14,7 @@ describe("Lobby Chat Schemas", () => {
       gameType: "Private",
       gameMode: "Free For All",
       gameMapSize: "Normal",
-      disableNPCs: false,
+      disableNations: false,
       bots: 0,
       infiniteGold: false,
       infiniteTroops: false,

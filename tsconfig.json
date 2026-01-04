@@ -24,7 +24,6 @@
     "strictNullChecks": true,
     "useDefineForClassFields": false,
     "strictPropertyInitialization": false,
-    "skipLibCheck": true,
     "types": ["vitest/globals", "node"]
   },
   "include": [
