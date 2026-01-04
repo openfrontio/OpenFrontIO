@@ -18,6 +18,7 @@ import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
+import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -234,6 +235,14 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
+  const immunityTimer = document.querySelector(
+    "immunity-timer",
+  ) as ImmunityTimer;
+  if (!(immunityTimer instanceof ImmunityTimer)) {
+    console.error("immunity timer not found");
+  }
+  immunityTimer.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -262,6 +271,7 @@ export function createRenderer(
       playerPanel,
     ),
     spawnTimer,
+    immunityTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,
