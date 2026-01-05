@@ -286,7 +286,7 @@ export async function startWorker() {
         let persistentId: string;
         let claims: TokenPayload | null;
 
-        if (config.env() === GameEnv.Dev) {
+        if (config.env() !== GameEnv.Dev) {
           const result = await verifyClientToken(clientMsg.token, config);
           if (result.type === "error") {
             log.warn(`Invalid token: ${result.message}`, {
