@@ -283,11 +283,10 @@ export async function startWorker() {
         }
 
         // Verify token signature (skip in dev mode)
-        const isDev = config.env() === GameEnv.Dev;
         let persistentId: string;
         let claims: TokenPayload | null;
 
-        if (!isDev) {
+        if (config.env() === GameEnv.Dev) {
           const result = await verifyClientToken(clientMsg.token, config);
           if (result.type === "error") {
             log.warn(`Invalid token: ${result.message}`, {
