@@ -2,7 +2,6 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
-import { Env } from "./Env";
 
 export class DevServerConfig extends DefaultServerConfig {
   turnstileSiteKey(): string {
@@ -29,13 +28,7 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
   numWorkers(): number {
-    const raw = Env.NUM_WORKERS;
-    if (!raw) return 2;
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      throw new Error(`Invalid NUM_WORKERS value "${raw}"`);
-    }
-    return Math.floor(parsed);
+    return 2;
   }
   jwtAudience(): string {
     return "localhost";
