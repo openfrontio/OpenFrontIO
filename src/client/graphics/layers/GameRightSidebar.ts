@@ -146,12 +146,13 @@ export class GameRightSidebar extends LitElement implements Layer {
       >
         <!-- In-game time -->
         <div class="flex flex-1 justify-start gap-1 md:gap-4">
-          <button
-            id="territory-patterns-input-preview-button"
-            class="w-[25px] border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)] justify-center"
-            title="Pick a pattern!"
-          ></button>
-          ${this.game.myPlayer()?.displayName()}
+          ${this.game.myPlayer()?.cosmetics.flag
+            ? html`<img
+                class="w-6 h-6"
+                src="/flags/${this.game.myPlayer()?.cosmetics.flag}.svg"
+              />`
+            : ""}
+          ${this.game.myPlayer()?.name() ?? ""}
         </div>
         <div class="flex items-center gap-2 md:gap-4 justify-end">
           <!-- In-game time -->
