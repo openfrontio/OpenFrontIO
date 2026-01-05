@@ -130,7 +130,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="hidden 2xl:flex lg:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col lg:flex-col 2xl:gap-5 xl:gap-2 lg:gap-2 justify-center items-center"
+        class="hidden min-[1200px]:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col min-[1200px]:flex-col 2xl:gap-5 xl:gap-2 min-[1200px]:gap-2 justify-center items-center"
       >
         <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5">
           <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 w-fit">

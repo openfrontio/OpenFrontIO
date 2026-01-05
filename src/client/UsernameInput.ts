@@ -6,6 +6,7 @@ import {
   MAX_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 const usernameKey: string = "username";
 
@@ -28,7 +29,7 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.username = this.getStoredUsername();
+    this.username = this.getUsername();
   }
 
   render() {
@@ -66,7 +67,14 @@ export class UsernameInput extends LitElement {
     }
   }
 
-  private getStoredUsername(): string {
+  private getUsername(): string {
+    crazyGamesSDK.getUsername().then((username) => {
+      if (username) {
+        this.username = username;
+        this.requestUpdate();
+      }
+      return null;
+    });
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
       return storedUsername;

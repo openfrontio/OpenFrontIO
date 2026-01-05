@@ -302,6 +302,7 @@ export class WinModal extends LitElement implements Layer {
           this.isWin = false;
         }
         this.show();
+        crazyGamesSDK.gameplayStop();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
@@ -318,6 +319,7 @@ export class WinModal extends LitElement implements Layer {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
           crazyGamesSDK.happytime();
+          crazyGamesSDK.gameplayStop();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
@@ -325,6 +327,7 @@ export class WinModal extends LitElement implements Layer {
           this.isWin = false;
         }
         this.show();
+        crazyGamesSDK.gameplayStop();
       }
     });
   }

@@ -13,6 +13,7 @@ import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 import musicIcon from "../../../../resources/images/music.svg";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -106,8 +107,14 @@ export class SettingsModal extends LitElement implements Layer {
   }
 
   private pauseGame(pause: boolean) {
-    if (this.shouldPause && !this.wasPausedWhenOpened)
+    if (this.shouldPause && !this.wasPausedWhenOpened) {
+      if (pause) {
+        crazyGamesSDK.gameplayStop();
+      } else {
+        crazyGamesSDK.gameplayStart();
+      }
       this.eventBus.emit(new PauseGameEvent(pause));
+    }
   }
 
   private onTerrainButtonClick() {

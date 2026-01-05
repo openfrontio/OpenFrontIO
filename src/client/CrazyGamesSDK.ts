@@ -3,6 +3,22 @@ declare global {
     CrazyGames?: {
       SDK: {
         init: () => Promise<void>;
+        user: {
+          getUser(): Promise<{
+            username: string;
+            profilePictureUrl: string;
+          } | null>;
+        };
+        ad: {
+          requestAd: (
+            adType: string,
+            callbacks: {
+              adStarted: () => void;
+              adFinished: () => void;
+              adError: (error: any) => void;
+            },
+          ) => void;
+        };
         game: {
           gameplayStart: () => Promise<void>;
           gameplayStop: () => Promise<void>;
@@ -15,6 +31,7 @@ declare global {
           }) => string;
           hideInviteButton: () => void;
           getInviteParam: (paramName: string) => string | null;
+          isInstantMultiplayer?: boolean;
         };
       };
     };
@@ -24,6 +41,24 @@ declare global {
 export class CrazyGamesSDK {
   private initialized = false;
   private isGameplayActive = false;
+  private readyPromise: Promise<void>;
+  private resolveReady!: () => void;
+
+  constructor() {
+    this.readyPromise = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+  }
+
+  async ready(): Promise<boolean> {
+    const timeout = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(false), 3000);
+    });
+
+    const ready = this.readyPromise.then(() => true);
+
+    return Promise.race([ready, timeout]);
+  }
 
   isOnCrazyGames(): boolean {
     try {
@@ -70,10 +105,27 @@ export class CrazyGamesSDK {
     try {
       await window.CrazyGames.SDK.init();
       this.initialized = true;
+      this.resolveReady();
       console.log("CrazyGames SDK initialized");
     } catch (error) {
       console.error("Failed to initialize CrazyGames SDK:", error);
     }
+  }
+
+  async getUsername(): Promise<string | null> {
+    const isReady = await this.ready();
+    if (!isReady) {
+      return null;
+    }
+    return (await window.CrazyGames!.SDK.user.getUser())?.username ?? null;
+  }
+
+  async isInstantMultiplayer(): Promise<boolean> {
+    const isReady = await this.ready();
+    if (!isReady) {
+      return false;
+    }
+    return window.CrazyGames!.SDK.game.isInstantMultiplayer ?? false;
   }
 
   async gameplayStart(): Promise<void> {
@@ -199,6 +251,33 @@ export class CrazyGamesSDK {
       console.error(`Failed to get invite gameId:`, error);
       return null;
     }
+  }
+
+  requestMidgameAd(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.isReady()) {
+        resolve();
+        return;
+      }
+
+      try {
+        const callbacks = {
+          adFinished: () => {
+            console.log("End midgame ad");
+            resolve();
+          },
+          adError: (error: any) => {
+            console.log("Error midgame ad", error);
+            resolve();
+          },
+          adStarted: () => console.log("Start midgame ad"),
+        };
+        window.CrazyGames!.SDK.ad.requestAd("midgame", callbacks);
+      } catch (error) {
+        console.error("Failed to request midgame ad:", error);
+        resolve();
+      }
+    });
   }
 }
 

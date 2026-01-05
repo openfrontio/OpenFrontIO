@@ -103,6 +103,7 @@ class Client {
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private hostModal: HostPrivateLobbyModal;
 
   private gutterAds: GutterAds;
 
@@ -305,17 +306,17 @@ class Client {
         settingsModal.open();
       });
 
-    const hostModal = document.querySelector(
+    this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+    if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        hostModal.open();
+        this.hostModal.open();
         this.publicLobby.leaveLobby();
       }
     });
@@ -390,6 +391,14 @@ class Client {
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
+      crazyGamesSDK.isInstantMultiplayer().then((isInstant) => {
+        if (isInstant) {
+          console.log(
+            `CrazyGames: joining instant multiplayer lobby from CrazyGames`,
+          );
+          this.hostModal.open();
+        }
+      });
     }
 
     const strip = () =>

@@ -23,6 +23,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -546,6 +547,8 @@ export class SinglePlayerModal extends LitElement {
       : null;
 
     const selectedColor = this.userSettings.getSelectedColor();
+
+    await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
