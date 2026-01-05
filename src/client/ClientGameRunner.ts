@@ -152,11 +152,7 @@ export function joinLobby(
   };
   transport.connect(onconnect, onmessage);
   return (force: boolean = false) => {
-    if (
-      !force &&
-      currentGameRunner &&
-      currentGameRunner.shouldPreventWindowClose()
-    ) {
+    if (!force && currentGameRunner?.shouldPreventWindowClose()) {
       console.log("Player is active, prevent leaving game");
 
       return false;
@@ -268,7 +264,7 @@ export class ClientGameRunner {
    */
   public shouldPreventWindowClose(): boolean {
     // Show confirmation dialog if player is alive in the game
-    return !!(this.myPlayer && this.myPlayer.isAlive());
+    return !!this.myPlayer?.isAlive();
   }
 
   private async saveGame(update: WinUpdate) {
