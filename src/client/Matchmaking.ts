@@ -170,7 +170,7 @@ export class MatchmakingButton extends LitElement {
     }
 
     return html`
-      <div class="z-[9999]">
+      <div class="z-9999">
         <button
           @click="${this.open}"
           class="w-full h-20 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black uppercase tracking-widest rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col items-center justify-center border border-white/10 group overflow-hidden relative"

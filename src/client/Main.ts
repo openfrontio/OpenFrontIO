@@ -584,6 +584,7 @@ class Client {
           "stats-button",
           "token-login",
           "matchmaking-modal",
+          "lang-selector",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;

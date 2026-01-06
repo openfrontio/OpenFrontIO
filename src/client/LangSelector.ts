@@ -20,6 +20,7 @@ export class LangSelector extends LitElement {
   @state() private languageList: any[] = [];
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
+  @state() isVisible = true;
 
   private debugKeyPressed: boolean = false;
   private languageMetadata: LanguageMetadata[] = metadata;
@@ -253,7 +254,16 @@ export class LangSelector extends LitElement {
     await this.loadLanguageList();
   }
 
+  public close() {
+    this.showModal = false;
+    this.isVisible = false;
+    this.requestUpdate();
+  }
+
   render() {
+    if (!this.isVisible) {
+      return html``;
+    }
     const currentLang =
       this.languageList.find((l) => l.code === this.currentLang) ??
       (this.currentLang === "debug"

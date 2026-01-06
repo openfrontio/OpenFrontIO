@@ -37,8 +37,7 @@ export class GoogleAdElement extends LitElement {
         class="mt-4 rounded-lg p-2 w-full overflow-hidden transition-all duration-300"
       >
         <ins
-          class="adsbygoogle"
-          style="display:block"
+          class="adsbygoogle block"
           data-ad-client="${this.adClient}"
           data-ad-slot="${this.adSlot}"
           data-ad-format="${this.adFormat}"
