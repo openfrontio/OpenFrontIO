@@ -63,6 +63,7 @@ var maps = []struct {
 	{Name: "lemnos"},
 	{Name: "twolakes"},
 	{Name: "didier"},
+	{Name: "amazonriver"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},

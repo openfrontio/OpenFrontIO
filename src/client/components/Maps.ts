@@ -48,6 +48,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   StraitOfHormuz: "Strait of Hormuz",
   Surrounded: "Surrounded",
   Didier: "Didier",
+  AmazonRiver: "Amazon River",
 };
 
 @customElement("map-display")
@@ -108,6 +109,8 @@ export class MapDisplay extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+      object-fit: cover;
+      object-position: center;
     }
 
     .medal-row {
