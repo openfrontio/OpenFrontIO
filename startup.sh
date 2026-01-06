@@ -8,7 +8,7 @@ if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ] || [ -z "$SUBDOMAIN" ] || [
     exit 1
 fi
 
-# Require NUM_WORKERS for non-dev environments; default to 2 for dev.
+# Require NUM_WORKERS for non-dev environments.
 if [ "${GAME_ENV:-dev}" != "dev" ] && [ -z "$NUM_WORKERS" ]; then
     echo "Error: NUM_WORKERS must be set for non-dev environments"
     exit 1
