@@ -139,23 +139,35 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg transition-transform duration-300 ease-out transform text-white ${
+        class=${`w-full flex gap-2 md:gap-4 py-2 px-3 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg transition-transform duration-300 ease-out transform text-white ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <!-- In-game time -->
-        <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
-
-        <!-- Buttons -->
-        ${this.maybeRenderReplayButtons()}
-
-        <div class="cursor-pointer" @click=${this.onSettingsButtonClick}>
-          <img src=${settingsIcon} alt="settings" width="20" height="20" />
+        <div class="flex flex-1 justify-start gap-1 md:gap-4">
+          ${this.game.myPlayer()?.cosmetics.flag
+            ? html`<img
+                class="w-6 h-6"
+                src="/flags/${this.game.myPlayer()?.cosmetics.flag}.svg"
+              />`
+            : ""}
+          ${this.game.myPlayer()?.name() ?? ""}
         </div>
+        <div class="flex items-center gap-2 md:gap-4 justify-end">
+          <!-- In-game time -->
+          <div class=${timerColor}>${this.secondsToHms(this.timer)}</div>
 
-        <div class="cursor-pointer" @click=${this.onExitButtonClick}>
-          <img src=${exitIcon} alt="exit" width="20" height="20" />
+          <!-- Buttons -->
+          ${this.maybeRenderReplayButtons()}
+
+          <div class="cursor-pointer" @click=${this.onSettingsButtonClick}>
+            <img src=${settingsIcon} alt="settings" width="20" height="20" />
+          </div>
+
+          <div class="cursor-pointer" @click=${this.onExitButtonClick}>
+            <img src=${exitIcon} alt="exit" width="20" height="20" />
+          </div>
         </div>
       </aside>
     `;
