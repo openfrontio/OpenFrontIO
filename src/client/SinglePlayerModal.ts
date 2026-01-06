@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Difficulty,
   Duos,
@@ -49,6 +50,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
+  @state() private showAchievements: boolean = false;
+  @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -57,9 +60,17 @@ export class SinglePlayerModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
   }
 
   disconnectedCallback() {
+    document.removeEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
@@ -71,13 +82,76 @@ export class SinglePlayerModal extends LitElement {
     }
   };
 
+  private toggleAchievements = () => {
+    this.showAchievements = !this.showAchievements;
+  };
+
+  private handleUserMeResponse = (
+    event: CustomEvent<UserMeResponse | false>,
+  ) => {
+    this.applyAchievements(event.detail);
+  };
+
+  private applyAchievements(userMe: UserMeResponse | false) {
+    if (!userMe) {
+      this.mapWins = new Map();
+      return;
+    }
+
+    const achievements = Array.isArray(userMe.player.achievements)
+      ? userMe.player.achievements
+      : [];
+
+    const completions =
+      achievements.find(
+        (achievement) => achievement?.type === "singleplayer-map",
+      )?.data ?? [];
+
+    const winsMap = new Map<GameMapType, Set<Difficulty>>();
+    for (const entry of completions) {
+      const { mapName, difficulty } = entry ?? {};
+      const isValidMap =
+        typeof mapName === "string" &&
+        Object.values(GameMapType).includes(mapName as GameMapType);
+      const isValidDifficulty =
+        typeof difficulty === "string" &&
+        Object.values(Difficulty).includes(difficulty as Difficulty);
+      if (!isValidMap || !isValidDifficulty) continue;
+
+      const map = mapName as GameMapType;
+      const set = winsMap.get(map) ?? new Set<Difficulty>();
+      set.add(difficulty as Difficulty);
+      winsMap.set(map, set);
+    }
+
+    this.mapWins = winsMap;
+  }
+
   render() {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
           <!-- Map Selection -->
           <div class="options-section">
-            <div class="option-title">${translateText("map.map")}</div>
+            <div
+              class="option-title"
+              style="position:relative; display:flex; align-items:center; justify-content:center; width:100%;"
+            >
+              <span style="text-align:center; width:100%;">
+                ${translateText("map.map")}
+              </span>
+              <button
+                @click=${this.toggleAchievements}
+                title=${translateText("single_modal.toggle_achievements")}
+                style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.06); cursor:pointer; padding:4px; position:absolute; right:0; top:50%; transform:translateY(-50%);"
+              >
+                <img
+                  src="/images/MedalIconWhite.svg"
+                  alt="Toggle achievements"
+                  style=${`width:18px; height:18px; opacity:${this.showAchievements ? "1" : "0.5"};`}
+                />
+              </button>
+            </div>
             <div class="option-cards flex-col">
               <!-- Use the imported mapCategories -->
               ${Object.entries(mapCategories).map(
@@ -103,6 +177,8 @@ export class SinglePlayerModal extends LitElement {
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
+                              .showMedals=${this.showAchievements}
+                              .wins=${this.mapWins.get(mapValue) ?? new Set()}
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
