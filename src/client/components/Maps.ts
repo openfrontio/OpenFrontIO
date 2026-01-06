@@ -109,8 +109,6 @@ export class MapDisplay extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      object-fit: cover;
-      object-position: center;
     }
 
     .medal-row {
@@ -156,6 +154,11 @@ export class MapDisplay extends LitElement {
   }
 
   render() {
+    const isUnusualThumbnailSize = this.mapKey === "AmazonRiver";
+    const objectFitStyle = isUnusualThumbnailSize
+      ? "object-fit: cover; object-position: center;"
+      : "";
+
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
         ${this.isLoading
@@ -167,6 +170,7 @@ export class MapDisplay extends LitElement {
                 src="${this.mapWebpPath}"
                 alt="${this.mapKey}"
                 class="option-image"
+                style="${objectFitStyle}"
               />`
             : html`<div class="option-image">Error</div>`}
         ${this.showMedals

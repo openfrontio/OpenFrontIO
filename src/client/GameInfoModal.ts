@@ -107,6 +107,11 @@ export class GameInfoModal extends LitElement {
     if (!info) {
       return html``;
     }
+    const isUnusualThumbnailSize =
+      info.config.gameMap === GameMapType.AmazonRiver;
+    const objectFitStyle = isUnusualThumbnailSize
+      ? "object-fit: cover; object-position: center;"
+      : "";
     return html`
       <div
         class="h-[150px] flex relative justify-between rounded-xl bg-blue-600 items-center"
@@ -115,7 +120,7 @@ export class GameInfoModal extends LitElement {
           ? html`<img
               src="${this.mapImage}"
               class="absolute place-self-start col-span-full row-span-full h-full rounded-xl"
-              style="mask-image: linear-gradient(to left, transparent, #fff); object-fit: cover; object-position: center;"
+              style="mask-image: linear-gradient(to left, transparent, #fff); ${objectFitStyle}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full rounded-xl bg-gray-300"
