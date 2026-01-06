@@ -11,15 +11,7 @@
   border: 1px solid transparent;
   text-align: center;
   padding: 0.8rem 1rem;
-  border-radius: 0px;
-  clip-path: polygon(
-    10px 0,
-    100% 0,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    0 100%,
-    0 10px
-  );
+  border-radius: 0.75rem;
   transition: var(--transition);
 
   @media (min-width: 1024px) {

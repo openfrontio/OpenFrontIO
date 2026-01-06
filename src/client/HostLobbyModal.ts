@@ -1,5 +1,5 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { LitElement, TemplateResult, html } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -34,6 +34,7 @@ import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -71,6 +72,32 @@ export class HostLobbyModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
 
+  private renderOptionToggle(
+    labelKey: string,
+    checked: boolean,
+    onChange: (val: boolean) => void,
+    hidden: boolean = false,
+  ): TemplateResult {
+    if (hidden) return html``;
+
+    return html`
+      <button
+        class="relative p-4 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-2 h-full min-h-[100px] w-full cursor-pointer ${checked
+          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+        @click=${() => onChange(!checked)}
+      >
+        <div
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight ${checked
+            ? "text-white"
+            : "text-white/60"}"
+        >
+          ${translateText(labelKey)}
+        </div>
+      </button>
+    `;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
@@ -89,46 +116,67 @@ export class HostLobbyModal extends LitElement {
   };
 
   render() {
-    return html`
-      <o-modal title=${translateText("host_modal.title")}>
-        <div class="lobby-id-box">
-          <button class="lobby-id-button">
-            <!-- Visibility toggle icon on the left -->
-            ${
-              this.lobbyIdVisible
+    const content = html`
+      <div
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+      >
+        <!-- Header (Top Row) -->
+        <div
+          class="px-8 py-4 flex items-center justify-between border-b border-white/10 bg-black/20 shrink-0"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              @click=${() => this.close()}
+              class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+            <h2 class="text-2xl font-bold text-white uppercase tracking-widest">
+              ${translateText("host_modal.title")}
+            </h2>
+          </div>
+
+          <!-- Lobby ID Box -->
+          <div
+            class="flex items-center gap-3 bg-white/5 rounded-lg p-1.5 border border-white/10"
+          >
+            <button
+              @click=${() => {
+                this.lobbyIdVisible = !this.lobbyIdVisible;
+                this.requestUpdate();
+              }}
+              class="p-2 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              title="Toggle Visibility"
+            >
+              ${this.lobbyIdVisible
                 ? html`<svg
-                    class="visibility-icon"
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    style="margin-right: 8px; cursor: pointer;"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
                     viewBox="0 0 512 512"
                     height="18px"
                     width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
                   >
                     <path
                       d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
                     ></path>
                   </svg>`
                 : html`<svg
-                    class="visibility-icon"
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    style="margin-right: 8px; cursor: pointer;"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
                     viewBox="0 0 512 512"
                     height="18px"
                     width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
                   >
                     <path
                       d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
@@ -143,161 +191,262 @@ export class HostLobbyModal extends LitElement {
                       stroke-width="32"
                       stroke-linecap="round"
                     ></path>
-                  </svg>`
-            }
-            <!-- Lobby ID (conditionally shown) -->
-            <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
+                  </svg>`}
+            </button>
+            <div
+              @click=${this.copyToClipboard}
+              class="font-mono text-sm font-bold text-white px-2 cursor-pointer select-all min-w-[80px] text-center"
+            >
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
-            </span>
-
-            <!-- Copy icon/success indicator -->
-            <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
-              ${
-                this.copySuccess
-                  ? html`<span class="copy-success-icon">✓</span>`
-                  : html`
-                      <svg
-                        class="clipboard-icon"
-                        stroke="currentColor"
-                        fill="currentColor"
-                        stroke-width="0"
-                        viewBox="0 0 512 512"
-                        height="18px"
-                        width="18px"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
-                        ></path>
-                      </svg>
-                    `
-              }
             </div>
-          </button>
-        </div>
-        <div class="options-layout">
-          <!-- Map Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("map.map")}</div>
-            <div class="option-cards flex-col">
-              <!-- Use the imported mapCategories -->
-              ${Object.entries(mapCategories).map(
-                ([categoryKey, maps]) => html`
-                  <div class="w-full mb-4">
-                    <h3
-                      class="text-lg font-semibold mb-2 text-center text-gray-300"
-                    >
-                      ${translateText(`map_categories.${categoryKey}`)}
-                    </h3>
-                    <div class="flex flex-row flex-wrap justify-center gap-4">
-                      ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
-                        );
-                        return html`
-                          <div
-                            @click=${() => this.handleMapSelection(mapValue)}
-                          >
-                            <map-display
-                              .mapKey=${mapKey}
-                              .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
-                              .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
-                              )}
-                            ></map-display>
-                          </div>
-                        `;
-                      })}
-                    </div>
-                  </div>
-                `,
-              )}
-              <div
-                class="option-card random-map ${
-                  this.useRandomMap ? "selected" : ""
-                }"
-                @click=${this.handleRandomMapToggle}
-              >
-                <div class="option-image">
-                  <img
-                    src=${randomMap}
-                    alt="Random Map"
-                    style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
-                  />
-                </div>
-                <div class="option-card-title">
-                  ${translateText("map.random")}
-                </div>
-              </div>
-            </div>
+            <button
+              @click=${this.copyToClipboard}
+              class="p-2 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              title="Copy ID"
+            >
+              ${this.copySuccess
+                ? html`<span class="text-green-400 font-bold">✓</span>`
+                : html`<svg
+                    viewBox="0 0 512 512"
+                    height="18px"
+                    width="18px"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
+                    ></path>
+                  </svg>`}
+            </button>
           </div>
+        </div>
 
-          <!-- Difficulty Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("difficulty.difficulty")}</div>
-            <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""} ${this.disableNations ? "disabled" : ""}"
-                      aria-disabled="${this.disableNations}"
-                      @click=${() =>
-                        !this.disableNations &&
-                        this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        class="${this.disableNations ? "disabled-parent" : ""}"
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key.toLowerCase()}`)}
-                      </p>
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+          <div class="max-w-5xl mx-auto space-y-10">
+            <!-- Map Selection -->
+            <div class="space-y-6">
+              <div
+                class="flex items-center gap-4 pb-2 border-b border-white/10"
+              >
+                <div
+                  class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"
+                    />
+                  </svg>
+                </div>
+                <h3
+                  class="text-lg font-bold text-white uppercase tracking-wider"
+                >
+                  ${translateText("map.map")}
+                </h3>
+              </div>
+              <div class="space-y-8">
+                <!-- Use the imported mapCategories -->
+                ${Object.entries(mapCategories).map(
+                  ([categoryKey, maps]) => html`
+                    <div class="w-full">
+                      <h4
+                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+                      >
+                        ${translateText(`map_categories.${categoryKey}`)}
+                      </h4>
+                      <div
+                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                      >
+                        ${maps.map((mapValue) => {
+                          const mapKey = Object.keys(GameMapType).find(
+                            (key) =>
+                              GameMapType[key as keyof typeof GameMapType] ===
+                              mapValue,
+                          );
+                          return html`
+                            <div
+                              @click=${() => this.handleMapSelection(mapValue)}
+                              class="cursor-pointer transition-transform duration-200 active:scale-95"
+                            >
+                              <map-display
+                                .mapKey=${mapKey}
+                                .selected=${!this.useRandomMap &&
+                                this.selectedMap === mapValue}
+                                .translation=${translateText(
+                                  `map.${mapKey?.toLowerCase()}`,
+                                )}
+                              ></map-display>
+                            </div>
+                          `;
+                        })}
+                      </div>
                     </div>
                   `,
                 )}
-            </div>
-          </div>
-
-          <!-- Game Mode Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("host_modal.mode")}</div>
-            <div class="option-cards">
-              <div
-                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.ffa")}
+                <!-- Random Map Card -->
+                <div class="w-full pt-4 border-t border-white/5">
+                  <h4
+                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+                  >
+                    Special
+                  </h4>
+                  <div
+                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                  >
+                    <button
+                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
+                        .useRandomMap
+                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                      @click=${this.handleRandomMapToggle}
+                    >
+                      <div
+                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
+                      >
+                        <img
+                          src=${randomMap}
+                          alt="Random Map"
+                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                        />
+                      </div>
+                      <div class="p-3 text-center border-t border-white/5">
+                        <div
+                          class="text-xs font-bold text-white uppercase tracking-wider truncate"
+                        >
+                          ${translateText("map.random")}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Difficulty Selection -->
+            <div class="space-y-6">
               <div
-                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                class="flex items-center gap-4 pb-2 border-b border-white/10"
               >
-                <div class="option-card-title">
-                  ${translateText("game_mode.teams")}
+                <div
+                  class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M12.97 3.97a.75.75 0 011.06 0l7.5 7.5a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 11-1.06-1.06l6.22-6.22H3a.75.75 0 010-1.5h16.19l-6.22-6.22a.75.75 0 010-1.06z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
                 </div>
+                <h3
+                  class="text-lg font-bold text-white uppercase tracking-wider"
+                >
+                  ${translateText("difficulty.difficulty")}
+                </h3>
+              </div>
+
+              <div class="flex flex-wrap gap-4">
+                ${Object.entries(Difficulty)
+                  .filter(([key]) => isNaN(Number(key)))
+                  .map(([key, value]) => {
+                    const isSelected = this.selectedDifficulty === value;
+                    const isDisabled = this.disableNations;
+                    return html`
+                      <button
+                        ?disabled=${isDisabled}
+                        @click=${() =>
+                          !isDisabled && this.handleDifficultySelection(value)}
+                        class="relative group rounded-xl border transition-all duration-200 w-32 overflow-hidden flex flex-col items-center p-4 gap-3 ${isDisabled
+                          ? "opacity-30 grayscale cursor-not-allowed bg-white/5 border-white/5"
+                          : isSelected
+                            ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                      >
+                        <difficulty-display
+                          .difficultyKey=${key}
+                          class="transform scale-125 origin-center ${isDisabled
+                            ? "pointer-events-none"
+                            : ""}"
+                        ></difficulty-display>
+                        <div
+                          class="text-xs font-bold text-white uppercase tracking-wider text-center w-full mt-1"
+                        >
+                          ${translateText(`difficulty.${key.toLowerCase()}`)}
+                        </div>
+                      </button>
+                    `;
+                  })}
               </div>
             </div>
-          </div>
 
-          ${
-            this.gameMode === GameMode.FFA
+            <!-- Game Mode -->
+            <div class="space-y-6">
+              <div
+                class="flex items-center gap-4 pb-2 border-b border-white/10"
+              >
+                <div
+                  class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"
+                    />
+                  </svg>
+                </div>
+                <h3
+                  class="text-lg font-bold text-white uppercase tracking-wider"
+                >
+                  ${translateText("host_modal.mode")}
+                </h3>
+              </div>
+              <div class="flex flex-wrap gap-4">
+                ${[GameMode.FFA, GameMode.Team].map((mode) => {
+                  const isSelected = this.gameMode === mode;
+                  return html`
+                    <button
+                      class="w-40 py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
+                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                      @click=${() => this.handleGameModeSelection(mode)}
+                    >
+                      <span
+                        class="text-sm font-bold text-white uppercase tracking-widest"
+                      >
+                        ${mode === GameMode.FFA
+                          ? translateText("game_mode.ffa")
+                          : translateText("game_mode.teams")}
+                      </span>
+                    </button>
+                  `;
+                })}
+              </div>
+            </div>
+
+            ${this.gameMode === GameMode.FFA
               ? ""
               : html`
-                  <!-- Team Count Selection -->
-                  <div class="options-section">
-                    <div class="option-title">
+                  <!-- Team Count -->
+                  <div class="space-y-6">
+                    <div
+                      class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+                    >
                       ${translateText("host_modal.team_count")}
                     </div>
-                    <div class="option-cards">
+                    <div class="flex flex-wrap gap-3">
                       ${[
                         2,
                         3,
@@ -309,15 +458,18 @@ export class HostLobbyModal extends LitElement {
                         Trios,
                         Duos,
                         HumansVsNations,
-                      ].map(
-                        (o) => html`
-                          <div
-                            class="option-card ${this.teamCount === o
-                              ? "selected"
-                              : ""}"
+                      ].map((o) => {
+                        const isSelected = this.teamCount === o;
+                        return html`
+                          <button
                             @click=${() => this.handleTeamCountSelection(o)}
+                            class="min-w-[5rem] px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
+                              ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                           >
-                            <div class="option-card-title">
+                            <span
+                              class="text-xs font-bold uppercase tracking-wider text-center text-white"
+                            >
                               ${typeof o === "string"
                                 ? o === HumansVsNations
                                   ? translateText("public_lobby.teams_hvn")
@@ -325,288 +477,308 @@ export class HostLobbyModal extends LitElement {
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
-                            </div>
-                          </div>
-                        `,
-                      )}
+                            </span>
+                          </button>
+                        `;
+                      })}
                     </div>
                   </div>
-                `
-          }
+                `}
 
-          <!-- Game Options -->
-          <div class="options-section">
-            <div class="option-title">
-              ${translateText("host_modal.options_title")}
-            </div>
-            <div class="option-cards">
-                <div class="option-card">
-                <fluent-slider
+            <!-- Game Options -->
+            <div class="space-y-6">
+              <div
+                class="flex items-center gap-4 pb-2 border-b border-white/10"
+              >
+                <div
+                  class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.922-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <h3
+                  class="text-lg font-bold text-white uppercase tracking-wider"
+                >
+                  ${translateText("host_modal.options_title")}
+                </h3>
+              </div>
+              <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Bots Slider -->
+                <div
+                  class="col-span-2 bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-center min-h-[100px]"
+                >
+                  <fluent-slider
                     min="0"
                     max="400"
                     step="1"
                     .value=${this.bots}
-                  labelKey="host_modal.bots"
-                  disabledKey="host_modal.bots_disabled"
-                  @value-changed=${this.handleBotsChange}
-                ></fluent-slider>
-              </div>
-
-                ${
-                  !(
-                    this.gameMode === GameMode.Team &&
-                    this.teamCount === HumansVsNations
-                  )
-                    ? html`
-                        <label
-                          for="disable-nations"
-                          class="option-card ${this.disableNations
-                            ? "selected"
-                            : ""}"
-                        >
-                          <div class="checkbox-icon"></div>
-                          <input
-                            type="checkbox"
-                            id="disable-nations"
-                            @change=${this.handleDisableNationsChange}
-                            .checked=${this.disableNations}
-                          />
-                          <div class="option-card-title">
-                            ${translateText("host_modal.disable_nations")}
-                          </div>
-                        </label>
-                      `
-                    : ""
-                }
-
-                <label
-                  for="instant-build"
-                  class="option-card ${this.instantBuild ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="instant-build"
-                    @change=${this.handleInstantBuildChange}
-                    .checked=${this.instantBuild}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.instant_build")}
-                  </div>
-                </label>
-
-                <label
-                  for="random-spawn"
-                  class="option-card ${this.randomSpawn ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="random-spawn"
-                    @change=${this.handleRandomSpawnChange}
-                    .checked=${this.randomSpawn}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.random_spawn")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-gold"
-                  class="option-card ${this.donateGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-gold"
-                    @change=${this.handleDonateGoldChange}
-                    .checked=${this.donateGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-troops"
-                  class="option-card ${this.donateTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-troops"
-                    @change=${this.handleDonateTroopsChange}
-                    .checked=${this.donateTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_troops")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-gold"
-                  class="option-card ${this.infiniteGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-gold"
-                    @change=${this.handleInfiniteGoldChange}
-                    .checked=${this.infiniteGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-troops"
-                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-troops"
-                    @change=${this.handleInfiniteTroopsChange}
-                    .checked=${this.infiniteTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_troops")}
-                  </div>
-                </label>
-                <label
-                for="host-modal-compact-map"
-                class="option-card ${this.compactMap ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="host-modal-compact-map"
-                  @change=${this.handleCompactMapChange}
-                  .checked=${this.compactMap}
-                />
-                <div class="option-card-title">
-                  ${translateText("host_modal.compact_map")}
+                    labelKey="host_modal.bots"
+                    disabledKey="host_modal.bots_disabled"
+                    @value-changed=${this.handleBotsChange}
+                  ></fluent-slider>
                 </div>
-              </label>
 
-                <label
-                  for="max-timer"
-                class="option-card ${this.maxTimer ? "selected" : ""}"
+                ${!(
+                  this.gameMode === GameMode.Team &&
+                  this.teamCount === HumansVsNations
+                )
+                  ? this.renderOptionToggle(
+                      "host_modal.disable_nations",
+                      this.disableNations,
+                      this.handleDisableNationsChange,
+                    )
+                  : ""}
+                ${this.renderOptionToggle(
+                  "host_modal.instant_build",
+                  this.instantBuild,
+                  this.handleInstantBuildChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.random_spawn",
+                  this.randomSpawn,
+                  this.handleRandomSpawnChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.donate_gold",
+                  this.donateGold,
+                  this.handleDonateGoldChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.donate_troops",
+                  this.donateTroops,
+                  this.handleDonateTroopsChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.infinite_gold",
+                  this.infiniteGold,
+                  this.handleInfiniteGoldChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.infinite_troops",
+                  this.infiniteTroops,
+                  this.handleInfiniteTroopsChange,
+                )}
+                ${this.renderOptionToggle(
+                  "host_modal.compact_map",
+                  this.compactMap,
+                  this.handleCompactMapChange,
+                )}
+
+                <!-- Max Timer -->
+                <div
+                  @click=${(e: Event) => {
+                    if (
+                      (e.target as HTMLElement).tagName.toLowerCase() ===
+                      "input"
+                    )
+                      return;
+                    this.maxTimer = !this.maxTimer;
+                    if (!this.maxTimer) this.maxTimerValue = undefined;
+                    this.putGameConfig();
+                    this.requestUpdate();
+                  }}
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
+                    .maxTimer
+                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
                 >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="max-timer"
-                    @change=${(e: Event) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (!checked) {
-                        this.maxTimerValue = undefined;
-                      }
-                      this.maxTimer = checked;
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.maxTimer}
-                  />
-                    ${
-                      this.maxTimer === false
-                        ? ""
-                        : html`<input
-                            type="number"
-                            id="end-timer-value"
-                            min="0"
-                            max="120"
-                            .value=${String(this.maxTimerValue ?? 0)}
-                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                            @input=${this.handleMaxTimerValueChanges}
-                            @keydown=${this.handleMaxTimerValueKeyDown}
-                          />`
-                    }
-                  <div class="option-card-title">
+                  <div class="flex items-center justify-center w-full mt-1">
+                    <div
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
+                        .maxTimer
+                        ? "bg-blue-500 border-blue-500"
+                        : "border-white/20 bg-white/5"}"
+                    >
+                      ${this.maxTimer
+                        ? html`<svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 text-white"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>`
+                        : ""}
+                    </div>
+                  </div>
+
+                  ${this.maxTimer
+                    ? html`
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          .value=${String(this.maxTimerValue ?? 0)}
+                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          @click=${(e: Event) => e.stopPropagation()}
+                          @input=${this.handleMaxTimerValueChanges}
+                          @keydown=${this.handleMaxTimerValueKeyDown}
+                          placeholder="Mins"
+                        />
+                      `
+                    : html`<div
+                        class="h-[2px] w-4 bg-white/10 rounded my-3"
+                      ></div>`}
+
+                  <div
+                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
+                      .maxTimer
+                      ? "text-white"
+                      : "text-white/60"}"
+                  >
                     ${translateText("host_modal.max_timer")}
                   </div>
-                </label>
-
-                <label
-                  for="spawn-immunity"
-                  class="option-card  ${this.spawnImmunity ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="spawn-immunity"
-                    @change=${(e: Event) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (!checked) {
-                        this.spawnImmunityDurationMinutes = undefined;
-                      }
-                      this.spawnImmunity = checked;
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.spawnImmunity}
-                  />
-                    ${
-                      this.spawnImmunity === false
-                        ? ""
-                        : html`<input
-                            type="number"
-                            id="spawn-immunity-duration"
-                            min="0"
-                            max="120"
-                            step="1"
-                            .value=${String(
-                              this.spawnImmunityDurationMinutes ?? 0,
-                            )}
-                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                            @input=${this.handleSpawnImmunityDurationInput}
-                            @keydown=${this.handleSpawnImmunityDurationKeyDown}
-                          />`
-                    }
-                  <div class="option-card-title">
-                    <span>${translateText("host_modal.player_immunity_duration")}</span>
-                  </div>
-                </label>
-                
-                <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
-
-                <!-- Individual disables for structures/weapons -->
-                <div
-                  style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
-                >
-                  ${translateText("host_modal.enables_title")}
                 </div>
+
+                <!-- Spawn Immunity -->
                 <div
-                  style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+                  @click=${(e: Event) => {
+                    if (
+                      (e.target as HTMLElement).tagName.toLowerCase() ===
+                      "input"
+                    )
+                      return;
+                    this.spawnImmunity = !this.spawnImmunity;
+                    if (!this.spawnImmunity)
+                      this.spawnImmunityDurationMinutes = undefined;
+                    this.putGameConfig();
+                    this.requestUpdate();
+                  }}
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
+                    .spawnImmunity
+                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
                 >
-                   ${renderUnitTypeOptions({
-                     disabledUnits: this.disabledUnits,
-                     toggleUnit: this.toggleUnit.bind(this),
-                   })}
+                  <div class="flex items-center justify-center w-full mt-1">
+                    <div
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
+                        .spawnImmunity
+                        ? "bg-blue-500 border-blue-500"
+                        : "border-white/20 bg-white/5"}"
+                    >
+                      ${this.spawnImmunity
+                        ? html`<svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 text-white"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>`
+                        : ""}
+                    </div>
+                  </div>
+
+                  ${this.spawnImmunity
+                    ? html`
+                        <input
+                          type="number"
+                          min="0"
+                          max="120"
+                          step="1"
+                          .value=${String(
+                            this.spawnImmunityDurationMinutes ?? 0,
+                          )}
+                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          @click=${(e: Event) => e.stopPropagation()}
+                          @input=${this.handleSpawnImmunityDurationInput}
+                          @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                          placeholder="Mins"
+                        />
+                      `
+                    : html`<div
+                        class="h-[2px] w-4 bg-white/10 rounded my-3"
+                      ></div>`}
+
+                  <div
+                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
+                      .spawnImmunity
+                      ? "text-white"
+                      : "text-white/60"}"
+                  >
+                    ${translateText("host_modal.player_immunity_duration")}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-        <!-- Lobby Selection -->
-        <div class="options-section">
-          <div class="option-title">
-            ${this.clients.length}
-            ${
-              this.clients.length === 1
+            <!-- Enabled Items -->
+            <div class="space-y-6">
+              <div
+                class="flex items-center gap-4 pb-2 border-b border-white/10"
+              >
+                <div
+                  class="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm0 8.625a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM15.375 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zM7.5 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <h3
+                  class="text-lg font-bold text-white uppercase tracking-wider"
+                >
+                  ${translateText("host_modal.enables_title")}
+                </h3>
+              </div>
+              <div
+                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+              >
+                ${renderUnitTypeOptions({
+                  disabledUnits: this.disabledUnits,
+                  toggleUnit: this.toggleUnit.bind(this),
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player List / footer -->
+        <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
+          <div class="flex justify-between items-center mb-4">
+            <div
+              class="text-xs font-bold text-white/40 uppercase tracking-widest"
+            >
+              ${this.clients.length}
+              ${this.clients.length === 1
                 ? translateText("host_modal.player")
-                : translateText("host_modal.players")
-            }
-            <span style="margin: 0 8px;">•</span>
-            ${this.getEffectiveNationCount()}
-            ${
-              this.getEffectiveNationCount() === 1
+                : translateText("host_modal.players")}
+              <span style="margin: 0 8px;">•</span>
+              ${this.getEffectiveNationCount()}
+              ${this.getEffectiveNationCount() === 1
                 ? translateText("host_modal.nation_player")
-                : translateText("host_modal.nation_players")
-            }
+                : translateText("host_modal.nation_players")}
+            </div>
           </div>
 
           <lobby-team-view
+            class="mb-6 block max-h-48 overflow-y-auto custom-scrollbar rounded-lg border border-white/10 bg-white/5 p-2"
             .gameMode=${this.gameMode}
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
@@ -614,24 +786,33 @@ export class HostLobbyModal extends LitElement {
             .nationCount=${this.getEffectiveNationCount()}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
-        </div>
 
-        <div class="start-game-button-container">
           <button
+            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             @click=${this.startGame}
             ?disabled=${this.clients.length < 2}
-            class="start-game-button"
           >
-            ${
-              this.clients.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
-            }
+            ${this.clients.length === 1
+              ? translateText("host_modal.waiting")
+              : translateText("host_modal.start")}
           </button>
         </div>
-
       </div>
-    </o-modal>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        title=""
+        ?hideCloseButton=${true}
+        ?inline=${this.inline}
+        hideHeader
+      >
+        ${content}
+      </o-modal>
     `;
   }
 
@@ -664,15 +845,22 @@ export class HostLobbyModal extends LitElement {
         );
       });
     this.modalEl?.open();
-    this.modalEl.onClose = () => {
-      this.close();
-    };
+    if (this.modalEl) {
+      this.modalEl.onClose = () => {
+        this.close();
+      };
+    }
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
   public close() {
     console.log("Closing host lobby modal");
+    if (this.inline) {
+      if ((window as any).showPage) {
+        (window as any).showPage("page-play");
+      }
+    }
     crazyGamesSDK.hideInviteButton();
     this.modalEl?.close();
     this.copySuccess = false;
@@ -729,10 +917,10 @@ export class HostLobbyModal extends LitElement {
     }, 300);
   }
 
-  private handleInstantBuildChange(e: Event) {
-    this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
+  private handleInstantBuildChange = (val: boolean) => {
+    this.instantBuild = val;
     this.putGameConfig();
-  }
+  };
 
   private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e", "E"].includes(e.key)) {
@@ -751,35 +939,35 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handleRandomSpawnChange(e: Event) {
-    this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
+  private handleRandomSpawnChange = (val: boolean) => {
+    this.randomSpawn = val;
     this.putGameConfig();
-  }
+  };
 
-  private handleInfiniteGoldChange(e: Event) {
-    this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
+  private handleInfiniteGoldChange = (val: boolean) => {
+    this.infiniteGold = val;
     this.putGameConfig();
-  }
+  };
 
-  private handleDonateGoldChange(e: Event) {
-    this.donateGold = Boolean((e.target as HTMLInputElement).checked);
+  private handleDonateGoldChange = (val: boolean) => {
+    this.donateGold = val;
     this.putGameConfig();
-  }
+  };
 
-  private handleInfiniteTroopsChange(e: Event) {
-    this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
+  private handleInfiniteTroopsChange = (val: boolean) => {
+    this.infiniteTroops = val;
     this.putGameConfig();
-  }
+  };
 
-  private handleCompactMapChange(e: Event) {
-    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+  private handleCompactMapChange = (val: boolean) => {
+    this.compactMap = val;
     this.putGameConfig();
-  }
+  };
 
-  private handleDonateTroopsChange(e: Event) {
-    this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
+  private handleDonateTroopsChange = (val: boolean) => {
+    this.donateTroops = val;
     this.putGameConfig();
-  }
+  };
 
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
@@ -800,11 +988,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleDisableNationsChange(e: Event) {
-    this.disableNations = Boolean((e.target as HTMLInputElement).checked);
+  private handleDisableNationsChange = async (val: boolean) => {
+    this.disableNations = val;
     console.log(`updating disable nations to ${this.disableNations}`);
     this.putGameConfig();
-  }
+  };
 
   private async handleGameModeSelection(value: GameMode) {
     this.gameMode = value;

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import version from "resources/version.txt?raw";
@@ -27,22 +27,54 @@ export class NewsModal extends LitElement {
 
   private initialized: boolean = false;
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .news-content a:hover {
-      color: #6fb3ff !important;
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          : ""}"
+      >
+        <h1
+          class="text-white text-2xl font-bold uppercase tracking-widest mb-4 pb-2 border-b border-white/10 flex items-center gap-2"
+          ?hidden=${!this.inline}
+        >
+          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
+          ${translateText("news.title")}
+        </h1>
+        <div
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto pr-2
+            [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
+            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
+            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
+            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
+            [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
+            [&_li]:text-gray-300 [&_li]:leading-relaxed
+            [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
+            scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+        >
+          ${resolveMarkdown(this.markdown, {
+            includeImages: true,
+            includeCodeBlockClassNames: true,
+          })}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
-      <o-modal title=${translateText("news.title")} ?inline=${this.inline}>
-        ${resolveMarkdown(this.markdown, {
-          includeImages: true,
-          includeCodeBlockClassNames: true,
-        })}
+      <o-modal
+        title=${translateText("news.title")}
+        ?inline=${this.inline}
+        hideCloseButton
+      >
+        ${content}
       </o-modal>
     `;
   }
@@ -54,6 +86,9 @@ export class NewsModal extends LitElement {
         .then((response) => (response.ok ? response.text() : "Failed to load"))
         .then((markdown) =>
           markdown
+            // Convert bold header lines (e.g. "**Title**") into real Markdown headers
+            // Exclude lines starting with - or * to avoid converting bullet points
+            .replace(/^([^\-*\s].*?) \*\*(.+?)\*\*$/gm, "## $1 $2")
             .replace(
               /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
               (_match, prNumber) =>
@@ -68,7 +103,9 @@ export class NewsModal extends LitElement {
         .then((markdown) => (this.markdown = markdown));
     }
     this.requestUpdate();
-    this.modalEl?.open();
+    if (!this.inline) {
+      this.modalEl?.open();
+    }
   }
 
   private close() {

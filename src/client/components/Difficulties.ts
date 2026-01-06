@@ -1,50 +1,13 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("difficulty-display")
 export class DifficultyDisplay extends LitElement {
   @property({ type: String }) difficultyKey = "";
 
-  static styles = css`
-    .difficulty-indicator {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 40px;
-      gap: 6px;
-      margin: 4px 0 0 0;
-    }
-
-    .difficulty-skull {
-      width: 16px;
-      height: 16px;
-      opacity: 0.3;
-      transition: all 0.2s ease;
-    }
-
-    .difficulty-skull.big {
-      width: 40px;
-      height: 40px;
-    }
-
-    .difficulty-skull.active {
-      opacity: 1;
-      color: #ff3838;
-      filter: drop-shadow(0 0 4px rgba(255, 56, 56, 0.4));
-      transform: translateY(-1px);
-    }
-
-    :host(:hover) .difficulty-skull.active {
-      filter: drop-shadow(0 0 6px rgba(255, 56, 56, 0.6));
-      transform: translateY(-2px);
-    }
-
-    :host(.disabled-parent) .difficulty-skull.active,
-    :host(.disabled-parent:hover) .difficulty-skull.active {
-      filter: drop-shadow(0 0 4px rgba(255, 56, 56, 0.4));
-      transform: translateY(-1px);
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   private getDifficultyIcon(difficultyKey: string) {
     const skull = html`<svg
@@ -110,31 +73,37 @@ export class DifficultyDisplay extends LitElement {
       ></path>
     </svg>`;
 
+    const activeClass =
+      "opacity-100 text-[#ff3838] drop-shadow-[0_0_4px_rgba(255,56,56,0.4)] transform group-hover:drop-shadow-[0_0_6px_rgba(255,56,56,0.6)] group-hover:-translate-y-[2px] -translate-y-[1px] transition-all duration-200";
+    const inactiveClass = "opacity-30 w-4 h-4 transition-all duration-200";
+    const bigClass = "w-10 h-10";
+    const smallClass = "w-4 h-4";
+
     switch (difficultyKey) {
       case "Easy":
         return html`
-          <div class="difficulty-skull active">${skull}</div>
-          <div class="difficulty-skull">${skull}</div>
-          <div class="difficulty-skull">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
+          <div class="${smallClass} ${inactiveClass}">${skull}</div>
+          <div class="${smallClass} ${inactiveClass}">${skull}</div>
         `;
       case "Medium":
         return html`
-          <div class="difficulty-skull active">${skull}</div>
-          <div class="difficulty-skull active">${skull}</div>
-          <div class="difficulty-skull">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
+          <div class="${smallClass} ${inactiveClass}">${skull}</div>
         `;
       case "Hard":
         return html`
-          <div class="difficulty-skull active">${skull}</div>
-          <div class="difficulty-skull active">${skull}</div>
-          <div class="difficulty-skull active">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
+          <div class="${smallClass} ${activeClass}">${skull}</div>
         `;
       case "Impossible":
         return html`
-          <div class="difficulty-skull big active">${burningSkull}</div>
+          <div class="${bigClass} ${activeClass}">${burningSkull}</div>
         `;
       default:
-        return html`<div class="difficulty-skull big active">
+        return html`<div class="${bigClass} ${activeClass}">
           ${questionMark}
         </div>`;
     }
@@ -142,7 +111,7 @@ export class DifficultyDisplay extends LitElement {
 
   render() {
     return html`
-      <div class="difficulty-indicator">
+      <div class="flex justify-center items-center h-10 gap-[6px] mt-1 group">
         ${this.getDifficultyIcon(this.difficultyKey)}
       </div>
     `;

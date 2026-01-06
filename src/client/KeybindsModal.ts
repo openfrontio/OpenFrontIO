@@ -56,9 +56,25 @@ export class KeybindsModal extends LitElement {
       .map(([, v]) => v.value);
     if (values.includes(value) && value !== "Null") {
       const popup = document.createElement("div");
-      popup.className = "setting-popup";
-      popup.textContent = `The key "${value}" is already assigned to another action.`;
+      popup.className =
+        "fixed top-6 left-1/2 -translate-x-1/2 z-[11001] bg-red-500/10 backdrop-blur-xl border border-red-500/50 text-white px-6 py-4 rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.3)] flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-[-20px]";
+      popup.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span class="font-medium">The key <span class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10">${value}</span> is already bound to another action.</span>
+      `;
       document.body.appendChild(popup);
+
+      requestAnimationFrame(() => {
+        popup.classList.remove("opacity-0", "translate-y-[-20px]");
+      });
+
+      setTimeout(() => {
+        popup.classList.add("opacity-0", "-translate-y-4");
+        setTimeout(() => popup.remove(), 300);
+      }, 3000);
+
       const element = this.renderRoot.querySelector(
         `setting-keybind[action="${action}"]`,
       ) as SettingKeybind;
@@ -80,22 +96,49 @@ export class KeybindsModal extends LitElement {
   }
 
   render() {
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          : ""}"
+      >
+        <h1
+          class="text-white text-2xl font-bold uppercase tracking-widest mb-6 pb-2 border-b border-white/10 flex items-center gap-2"
+          ?hidden=${!this.inline}
+        >
+          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
+          ${translateText("user_setting.tab_keybinds")}
+        </h1>
+
+        <div
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-2"
+        >
+          <div class="flex flex-col gap-2">${this.renderKeybindSettings()}</div>
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         title="${translateText("user_setting.tab_keybinds")}"
         ?inline=${this.inline}
       >
-        <div class="settings-list">${this.renderKeybindSettings()}</div>
+        ${content}
       </o-modal>
     `;
   }
 
   private renderKeybindSettings() {
     return html`
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-4 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.view_options")}
-      </div>
-      <p class="settings-section-paragraph"></p>
+      </h2>
 
       <setting-keybind
         action="toggleView"
@@ -106,10 +149,11 @@ export class KeybindsModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.build_controls")}
-      </div>
-      <p class="settings-section-paragraph"></p>
+      </h2>
 
       <setting-keybind
         action="buildCity"
@@ -201,9 +245,11 @@ export class KeybindsModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.attack_ratio_controls")}
-      </div>
+      </h2>
 
       <setting-keybind
         action="attackRatioDown"
@@ -223,9 +269,11 @@ export class KeybindsModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.attack_keybinds")}
-      </div>
+      </h2>
 
       <setting-keybind
         action="boatAttack"
@@ -245,9 +293,11 @@ export class KeybindsModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.zoom_controls")}
-      </div>
+      </h2>
 
       <setting-keybind
         action="zoomOut"
@@ -267,9 +317,11 @@ export class KeybindsModal extends LitElement {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
-      <div class="settings-section-heading">
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.camera_movement")}
-      </div>
+      </h2>
 
       <setting-keybind
         action="centerCamera"

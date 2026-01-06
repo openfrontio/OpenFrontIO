@@ -119,60 +119,99 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl bg-gray-900 border border-white/10 transition-all duration-300 ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "ring-2 ring-green-500 scale-[1.01]"
+          : "hover:scale-[1.01] hover:border-white/30 hover:shadow-2xl"} ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
-            />`
-          : html`<div
-              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
-            ></div>`}
-        <div
-          class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
-        >
-          <div>
-            <div class="text-lg md:text-2xl font-semibold">
-              ${this.currLobby
-                ? isStarting
-                  ? html`${translateText("public_lobby.starting_game")}`
-                  : html`${translateText("public_lobby.waiting_for_players")}
-                    ${[0, 1, 2]
-                      .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
-                      .join("")}`
-                : translateText("public_lobby.join")}
-            </div>
-            <div class="text-md font-medium text-white-400">
-              ${fullModeLabel
-                ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
-                    >${fullModeLabel}</span
-                  >`
-                : ""}
-              <span
-                >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-                )}</span
-              >
-            </div>
-          </div>
+        <!-- Map Image Area -->
+        <div class="flex-1 w-full relative overflow-hidden bg-gray-900 p-8">
+          ${mapImageSrc
+            ? html`<img
+                src="${mapImageSrc}"
+                alt="${lobby.gameConfig.gameMap}"
+                class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 filter drop-shadow-2xl"
+              />`
+            : html`<div class="w-full h-full bg-gray-800 rounded-lg"></div>`}
+        </div>
 
-          <div>
-            <div class="text-md font-medium text-blue-100">
-              ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
+        <!-- Content Banner -->
+        <div
+          class="relative w-full p-5 flex flex-col gap-1 text-left z-10 bg-gray-900/95 backdrop-blur-xl border-t border-white/10"
+        >
+          <div class="flex justify-between items-end w-full">
+            <div class="flex flex-col gap-1">
+              <!-- Header: Status or Join -->
+              <div
+                class="text-sm font-bold uppercase tracking-widest text-blue-400 mb-1"
+              >
+                ${this.currLobby
+                  ? isStarting
+                    ? html`<span class="text-green-400 animate-pulse"
+                        >${translateText("public_lobby.starting_game")}</span
+                      >`
+                    : html`${translateText("public_lobby.waiting_for_players")}
+                      ${[0, 1, 2]
+                        .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
+                        .join("")}`
+                  : html`<span
+                      class="group-hover:text-blue-300 transition-colors"
+                      >${translateText("public_lobby.join")}</span
+                    >`}
+              </div>
+
+              <!-- Map Name & Mode -->
+              <div
+                class="text-3xl font-black text-white leading-none tracking-tight"
+              >
+                ${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+                )}
+              </div>
+              <div class="flex flex-wrap items-center gap-2 mt-2">
+                ${fullModeLabel
+                  ? html`<span
+                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider bg-white/10 text-white border border-white/10 backdrop-blur-sm"
+                    >
+                      ${fullModeLabel}
+                    </span>`
+                  : ""}
+              </div>
             </div>
-            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
+
+            <!-- Player Count & Time -->
+            <div class="flex flex-col items-end gap-1">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl font-bold text-white"
+                  >${lobby.numClients}/${lobby.gameConfig.maxPlayers}</span
+                >
+                <svg
+                  class="w-5 h-5 text-white/50"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                  ></path>
+                </svg>
+              </div>
+              ${timeRemaining > 0
+                ? html`
+                    <div
+                      class="text-sm font-mono font-medium text-blue-200 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30"
+                    >
+                      ${timeDisplay}
+                    </div>
+                  `
+                : html`<div
+                    class="text-sm font-bold text-green-200 bg-green-500/20 border border-green-500/30 px-2 py-0.5 rounded uppercase tracking-wider"
+                  >
+                    Started
+                  </div>`}
+            </div>
           </div>
         </div>
       </button>

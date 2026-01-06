@@ -28,8 +28,10 @@ import "./KeybindsModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { initLayout } from "./Layout";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
@@ -48,16 +50,17 @@ import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
-import "./styles/components/button.css";
-import "./styles/components/controls.css";
-import "./styles/components/modal.css";
-import "./styles/components/setting.css";
-import "./styles/core/flag-animation.css";
 import "./styles/core/typography.css";
 import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
+
+// Initialize layout handlers
+document.addEventListener("DOMContentLoaded", () => {
+  initLayout();
+  initNavigation();
+});
 declare global {
   interface Window {
     turnstile: any;
@@ -84,6 +87,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
+    showPage: (pageId: string) => void;
   }
 
   // Extend the global interfaces to include your custom events
@@ -210,7 +214,7 @@ class Client {
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        spModal.open();
+        window.showPage("page-single-player");
       }
     });
 
@@ -223,10 +227,11 @@ class Client {
       console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
-    if (helpButton === null) throw new Error("Missing help-button");
-    helpButton.addEventListener("click", () => {
-      hlpModal.open();
-    });
+    if (helpButton) {
+      helpButton.addEventListener("click", () => {
+        hlpModal.open();
+      });
+    }
 
     const flagInputModal = document.querySelector(
       "flag-input-modal",
@@ -354,7 +359,7 @@ class Client {
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        hostModal.open();
+        window.showPage("page-host-lobby");
         this.publicLobby.leaveLobby();
       }
     });

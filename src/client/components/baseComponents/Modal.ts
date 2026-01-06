@@ -1,109 +1,32 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import tailwindStyles from "../../styles.css?inline";
 
 @customElement("o-modal")
 export class OModal extends LitElement {
+  static styles = [unsafeCSS(tailwindStyles)];
+
   @state() public isModalOpen = false;
+
   static openCount = 0;
-  @property({ type: String }) title = "";
-  @property({ type: String }) translationKey = "";
-  @property({ type: Boolean }) alwaysMaximized = false;
-  @property({ type: Boolean }) inline = false;
-  @property({ type: Function }) onClose?: () => void;
 
-  static styles = css`
-    .c-modal {
-      position: fixed;
-      padding: 0;
-      z-index: 9999;
-      inset: 0;
-      background-color: rgba(0, 0, 0, 0.7);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  @property({ type: Boolean })
+  public inline = false;
 
-    .c-modal.inline {
-      position: relative;
-      background-color: transparent;
-      z-index: 10;
-      inset: auto;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      display: flex;
-      align-items: stretch;
-    }
+  @property({ type: Boolean })
+  public alwaysMaximized = false;
 
-    .c-modal__wrapper {
-      position: relative;
-      border-radius: 8px;
-      min-width: 400px;
-      max-width: 900px;
-      width: 90%;
-      margin: 2rem;
-      max-height: calc(100vh - 4rem);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-    }
+  @property({ type: Boolean })
+  public hideCloseButton = false;
 
-    .c-modal.inline .c-modal__wrapper {
-      max-width: 100%;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      max-height: none;
-      display: flex;
-      flex-direction: column;
-      box-shadow: none;
-    }
+  @property({ type: String })
+  public title = "";
 
-    .c-modal.inline .c-modal__content {
-      overflow-y: auto;
-    }
+  @property({ type: Boolean })
+  public hideHeader = false;
 
-    .c-modal__wrapper.always-maximized {
-      width: 90%;
-      min-width: 400px;
-      max-width: 900px;
-      height: auto;
-      max-height: calc(100vh - 4rem);
-    }
+  public onClose?: () => void;
 
-    .c-modal__header {
-      position: relative;
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
-      font-size: 18px;
-      background: #000000a1;
-      text-align: center;
-      color: #fff;
-      padding: 1rem 2.4rem 1rem 1.4rem;
-      flex-shrink: 0;
-    }
-
-    .c-modal__close {
-      cursor: pointer;
-      position: absolute;
-      right: 1rem;
-      top: 1rem;
-    }
-
-    .c-modal__content {
-      background: #23232382;
-      position: relative;
-      color: #fff;
-      padding: 1.4rem;
-      overflow-y: auto;
-      backdrop-filter: blur(8px);
-      border-radius: 8px;
-      flex: 1;
-      min-height: 0;
-    }
-  `;
   public open() {
     if (!this.isModalOpen) {
       if (!this.inline) {
@@ -135,25 +58,45 @@ export class OModal extends LitElement {
   }
 
   render() {
+    const backdropClass = this.inline
+      ? "relative z-10 w-full h-full flex items-stretch bg-transparent"
+      : "fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center overflow-hidden";
+
+    const wrapperClass = this.inline
+      ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
+      : `relative flex flex-col w-[90%] min-w-[400px] max-w-[900px] m-8 rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-h-[calc(100vh-4rem)] ${
+          this.alwaysMaximized ? "h-auto" : ""
+        }`;
+
     return html`
       ${this.isModalOpen
         ? html`
             <aside
-              class="c-modal ${this.inline ? "inline" : ""}"
+              class="${backdropClass}"
               @click=${this.inline ? null : this.close}
             >
               <div
                 @click=${(e: Event) => e.stopPropagation()}
-                class="c-modal__wrapper ${this.alwaysMaximized
-                  ? "always-maximized"
-                  : ""}"
+                class="${wrapperClass}"
               >
-                ${this.inline
+                ${this.inline || this.hideCloseButton
                   ? html``
-                  : html`<div class="c-modal__close" @click=${this.close}>
+                  : html`<div
+                      class="absolute top-4 right-4 z-10 text-white cursor-pointer"
+                      @click=${this.close}
+                    >
                       ✕
                     </div>`}
-                <section class="c-modal__content">
+                ${!this.hideHeader && this.title
+                  ? html`<div
+                      class="p-[1.4rem] pb-0 text-2xl font-bold text-white"
+                    >
+                      ${this.title}
+                    </div>`
+                  : html``}
+                <section
+                  class="relative flex-1 min-h-0 p-[1.4rem] text-white bg-[#23232382] backdrop-blur-md rounded-lg overflow-y-auto"
+                >
                   <slot></slot>
                 </section>
               </div>

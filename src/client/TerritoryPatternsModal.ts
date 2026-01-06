@@ -79,25 +79,35 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderTabNavigation(): TemplateResult {
     return html`
-      <div class="flex border-b border-gray-600 mb-4 justify-center">
-        <button
-          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
-            .activeTab === "patterns"
-            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
-            : "text-gray-400 hover:text-white"}"
-          @click=${() => (this.activeTab = "patterns")}
-        >
-          ${translateText("territory_patterns.title")}
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
-            .activeTab === "colors"
-            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
-            : "text-gray-400 hover:text-white"}"
-          @click=${() => (this.activeTab = "colors")}
-        >
-          ${translateText("territory_patterns.colors")}
-        </button>
+      <div
+        class="relative flex items-center justify-center mb-6 border-b border-white/10 pb-4 shrink-0"
+      >
+        <div class="flex items-center gap-2">
+          <button
+            class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
+              .activeTab === "patterns"
+              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+              : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
+            @click=${() => (this.activeTab = "patterns")}
+          >
+            ${translateText("territory_patterns.title")}
+          </button>
+          <button
+            class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
+              .activeTab === "colors"
+              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+              : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
+            @click=${() => (this.activeTab = "colors")}
+          >
+            ${translateText("territory_patterns.colors")}
+          </button>
+        </div>
+
+        ${!hasLinkedAccount(this.userMeResponse)
+          ? html`<div class="absolute right-0 top-0 h-full flex items-center">
+              ${this.renderNotLoggedInWarning()}
+            </div>`
+          : html``}
       </div>
     `;
   }
@@ -135,15 +145,14 @@ export class TerritoryPatternsModal extends LitElement {
     }
 
     return html`
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-4">
         <div class="flex justify-center">
           ${hasLinkedAccount(this.userMeResponse)
             ? this.renderMySkinsButton()
-            : this.renderNotLoggedInWarning()}
+            : html``}
         </div>
         <div
-          class="flex flex-wrap gap-4 p-2"
-          style="justify-content: center; align-items: flex-start;"
+          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
         >
           ${this.affiliateCode === null
             ? html`
@@ -161,10 +170,10 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderMySkinsButton(): TemplateResult {
     return html`<button
-      class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
+      class="px-4 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-wider border mb-4 ${this
         .showOnlyOwned
-        ? "bg-blue-500 text-white hover:bg-blue-600"
-        : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
+        ? "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+        : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white"}"
       @click=${() => {
         this.showOnlyOwned = !this.showOnlyOwned;
       }}
@@ -174,11 +183,11 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderNotLoggedInWarning(): TemplateResult {
-    return html`<label
-      class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg bg-red-500 text-white"
+    return html`<div
+      class="px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"
     >
       ${translateText("territory_patterns.not_logged_in")}
-    </label>`;
+    </div>`;
   }
 
   private renderColorSwatchGrid(): TemplateResult {
@@ -194,11 +203,15 @@ export class TerritoryPatternsModal extends LitElement {
         ${hexCodes.map(
           (hexCode) => html`
             <div
-              class="w-12 h-12 rounded-lg border-2 border-white/30 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
+              class="w-12 h-12 rounded-xl border-2 border-white/10 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:border-white relative group"
               style="background-color: ${hexCode};"
               title="${hexCode}"
               @click=${() => this.selectColor(hexCode)}
-            ></div>
+            >
+              <div
+                class="absolute inset-0 rounded-xl ring-2 ring-inset ring-black/20"
+              ></div>
+            </div>
           `,
         )}
       </div>
@@ -206,7 +219,25 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   render() {
-    if (!this.isActive) return html``;
+    if (!this.isActive && !this.inline) return html``;
+
+    const content = html`
+      <div
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl max-h-[80vh]"
+      >
+        ${this.renderTabNavigation()}
+        <div class="overflow-y-auto pr-2 custom-scrollbar">
+          ${this.activeTab === "patterns"
+            ? this.renderPatternGrid()
+            : this.renderColorSwatchGrid()}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         id="territoryPatternsModal"
@@ -215,10 +246,7 @@ export class TerritoryPatternsModal extends LitElement {
           : translateText("territory_patterns.colors")}"
         ?inline=${this.inline}
       >
-        ${this.renderTabNavigation()}
-        ${this.activeTab === "patterns"
-          ? this.renderPatternGrid()
-          : this.renderColorSwatchGrid()}
+        ${content}
       </o-modal>
     `;
   }
@@ -276,8 +304,8 @@ export class TerritoryPatternsModal extends LitElement {
   ): TemplateResult {
     return html`
       <div
-        class="rounded"
-        style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
+        class="w-full h-full rounded"
+        style="background-color: ${hexCode};"
       ></div>
     `;
   }
@@ -290,6 +318,7 @@ export class TerritoryPatternsModal extends LitElement {
 
     if (this.previewButton === null) return;
     render(preview, this.previewButton);
+    this.previewButton.style.padding = "4px"; // Ensure padding is corrected after render
     this.requestUpdate();
   }
 }

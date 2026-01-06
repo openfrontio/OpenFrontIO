@@ -34,7 +34,16 @@
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
-    "reddit": "Reddit"
+    "reddit": "Reddit",
+    "game_modes": "Game Modes",
+    "play_game": "Play Game",
+    "news": "News",
+    "skin_store": "Skin Store",
+    "options": "Options",
+    "keybinds": "Keybinds",
+    "stats": "Stats",
+    "account": "Account",
+    "help": "Help"
   },
   "news": {
     "github_link": "on GitHub",

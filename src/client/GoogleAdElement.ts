@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 declare global {
@@ -28,32 +28,14 @@ export class GoogleAdElement extends LitElement {
     return this;
   }
 
-  static styles = css`
-    .google-ad-container {
-      margin-top: 1rem;
-      border-radius: 0.5rem;
-      padding: 0.5rem;
-      width: 100%;
-      overflow: hidden;
-      transition:
-        opacity 0.3s ease,
-        height 0.3s ease;
-    }
-    .google-ad-container.hidden {
-      opacity: 0;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      overflow: hidden;
-    }
-  `;
-
   render() {
     if (isElectron()) {
       return html``;
     }
     return html`
-      <div class="google-ad-container">
+      <div
+        class="mt-4 rounded-lg p-2 w-full overflow-hidden transition-all duration-300"
+      >
         <ins
           class="adsbygoogle"
           style="display:block"

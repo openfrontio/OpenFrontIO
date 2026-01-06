@@ -173,10 +173,17 @@ export class MatchmakingButton extends LitElement {
       <div class="z-[9999]">
         <button
           @click="${this.open}"
-          class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-none shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500"
+          class="w-full h-20 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black uppercase tracking-widest rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col items-center justify-center border border-white/10 group overflow-hidden relative"
           title="${translateText("matchmaking_modal.title")}"
         >
-          Matchmaking
+          <div
+            class="absolute inset-0 bg-[url('/images/noise.png')] opacity-10 mix-blend-overlay"
+          ></div>
+          <span class="relative z-10 text-2xl drop-shadow-md">Play Ranked</span>
+          <span
+            class="relative z-10 text-xs font-medium text-blue-100 opacity-80 group-hover:opacity-100 transition-opacity"
+            >Skill Based Matchmaking</span
+          >
         </button>
       </div>
       <matchmaking-modal></matchmaking-modal>

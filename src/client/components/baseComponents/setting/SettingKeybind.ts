@@ -19,40 +19,49 @@ export class SettingKeybind extends LitElement {
 
   render() {
     const currentValue = this.value === "" ? "" : this.value || this.defaultKey;
+    const rainbowClass = this.easter
+      ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
+      : "";
 
     return html`
-      <div class="setting-item column${this.easter ? " easter-egg" : ""}">
-        <div class="setting-label-group">
-          <label class="setting-label block mb-1">${this.label}</label>
+      <div
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 ${rainbowClass}"
+      >
+        <div class="flex flex-col flex-1 min-w-0 mr-4">
+          <label class="text-white font-bold text-base block mb-1"
+            >${this.label}</label
+          >
+          <div class="text-white/50 text-sm leading-snug">
+            ${this.description}
+          </div>
+        </div>
 
-          <div class="setting-keybind-box">
-            <div class="setting-keybind-description">${this.description}</div>
+        <div class="flex items-center gap-3 shrink-0">
+          <div
+            class="relative h-12 min-w-[80px] px-4 flex items-center justify-center bg-black/40 border border-white/20 rounded-lg text-xl font-bold font-mono shadow-inner hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer select-none text-white
+            ${this.listening
+              ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
+              : ""}"
+            tabindex="0"
+            @keydown=${this.handleKeydown}
+            @click=${this.startListening}
+          >
+            ${this.listening ? "..." : this.displayKey(currentValue)}
+          </div>
 
-            <div
-              class="flex flex-wrap items-center gap-2 gap-y-1 basis-full sm:basis-auto min-w-0"
+          <div class="flex flex-col gap-1">
+            <button
+              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors"
+              @click=${this.resetToDefault}
             >
-              <span
-                class="setting-key shrink-0"
-                tabindex="0"
-                @keydown=${this.handleKeydown}
-                @click=${this.startListening}
-              >
-                ${this.displayKey(currentValue)}
-              </span>
-
-              <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition whitespace-normal break-words max-w-full"
-                @click=${this.resetToDefault}
-              >
-                ${translateText("user_setting.reset")}
-              </button>
-              <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition whitespace-normal break-words max-w-full"
-                @click=${this.unbindKey}
-              >
-                ${translateText("user_setting.unbind")}
-              </button>
-            </div>
+              ${translateText("user_setting.reset")}
+            </button>
+            <button
+              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 px-3 py-1 rounded text-white/60 hover:text-red-200 transition-colors"
+              @click=${this.unbindKey}
+            >
+              ${translateText("user_setting.unbind")}
+            </button>
           </div>
         </div>
       </div>

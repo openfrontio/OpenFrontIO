@@ -51,7 +51,8 @@ export class UserSettingModal extends LitElement {
     console.log("🪺 Setting~ unlocked by EVAN combo!");
     this.showEasterEggSettings = true;
     const popup = document.createElement("div");
-    popup.className = "easter-egg-popup";
+    popup.className =
+      "fixed top-10 left-1/2 p-4 px-6 bg-black/80 text-white text-xl rounded-xl animate-fadePop z-[9999]";
     popup.textContent = "🎉 You found a secret setting!";
     document.body.appendChild(popup);
 
@@ -186,12 +187,38 @@ export class UserSettingModal extends LitElement {
   }
 
   render() {
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          : ""}"
+      >
+        <h1
+          class="text-white text-2xl font-bold uppercase tracking-widest mb-6 pb-2 border-b border-white/10 flex items-center gap-2"
+          ?hidden=${!this.inline}
+        >
+          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
+          ${translateText("user_setting.title")}
+        </h1>
+
+        <div
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-2"
+        >
+          <div class="flex flex-col gap-2">${this.renderBasicSettings()}</div>
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         title="${translateText("user_setting.title")}"
         ?inline=${this.inline}
       >
-        <div class="settings-list">${this.renderBasicSettings()}</div>
+        ${content}
       </o-modal>
     `;
   }

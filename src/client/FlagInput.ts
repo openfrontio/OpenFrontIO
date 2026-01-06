@@ -10,24 +10,7 @@ const flagKey: string = "flag";
 export class FlagInput extends LitElement {
   @state() public flag: string = "";
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .flag-btn {
-      width: 100%;
-      height: 100%;
-    }
-    @media (max-width: 768px) {
-      .flag-modal {
-        width: 80vw;
-      }
-
-      .dropdown-item {
-        width: calc(100% / 3 - 15px);
-      }
-    }
-  `;
+  static styles = css``;
 
   public getCurrentFlag(): string {
     return this.flag;
@@ -79,12 +62,14 @@ export class FlagInput extends LitElement {
     return html`
       <button
         id="flag-input_"
-        class="flag-btn p-0 m-0 border-0 bg-transparent hover:bg-transparent rounded-none flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0"
+        class="flag-btn m-0 border-0 bg-transparent hover:bg-white/10 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-colors duration-200"
+        style="padding: 0 !important;"
         title=${translateText("flag_input.button_title")}
       >
         <span
           id="flag-preview"
-          style="display:inline-block; vertical-align:middle; overflow:hidden; width: 52px; height: 52px;"
+          class="w-full h-full overflow-hidden"
+          style="display:block;"
         ></span>
       </button>
     `;
@@ -103,9 +88,7 @@ export class FlagInput extends LitElement {
     } else {
       const img = document.createElement("img");
       img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.objectFit = "contain";
+      img.className = "w-full h-full object-cover drop-shadow";
       img.onerror = () => {
         if (!img.src.endsWith("/flags/xx.svg")) {
           img.src = "/flags/xx.svg";

@@ -196,6 +196,11 @@ export class LangSelector extends LitElement {
       "o-button",
       "territory-patterns-modal",
       "fluent-slider",
+      "news-modal",
+      "news-button",
+      "account-modal",
+      "keybinds-modal",
+      "stats-modal",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
@@ -269,11 +274,11 @@ export class LangSelector extends LitElement {
         id="lang-selector"
         title="Change Language"
         @click=${this.openModal}
-        class="fixed bottom-4 left-4 z-50 border-none bg-none cursor-pointer"
+        class="border-none bg-none cursor-pointer p-0"
       >
         <img
           id="lang-flag"
-          class="w-20 h-14"
+          class="w-14 h-10 hover:scale-110 transition-transform duration-200"
           src="/flags/${currentLang.svg}.svg"
           alt="flag"
         />

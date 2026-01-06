@@ -1,33 +1,11 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("player-stats-grid")
 export class PlayerStatsGrid extends LitElement {
-  static styles = css`
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-    @media (min-width: 640px) {
-      .grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    .stat {
-      text-align: center;
-      color: white;
-      font-size: 1rem;
-    }
-    .stat-title {
-      color: #bbb;
-      font-size: 0.9rem;
-    }
-    .stat-value {
-      font-size: 1.25rem;
-      font-weight: bold;
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   @property({ type: Array }) titles: string[] = [];
   @property({ type: Array }) values: Array<string | number> = [];
@@ -37,14 +15,14 @@ export class PlayerStatsGrid extends LitElement {
 
   render() {
     return html`
-      <div class="grid mb-2">
+      <div class="grid grid-cols-2 gap-4 mb-2">
         ${Array(this.VISIBLE_STATS_COUNT)
           .fill(0)
           .map(
             (_, i) => html`
-              <div class="stat">
-                <div class="stat-value">${this.values[i] ?? ""}</div>
-                <div class="stat-title">${this.titles[i] ?? ""}</div>
+              <div class="text-center text-white text-base">
+                <div class="text-xl font-bold">${this.values[i] ?? ""}</div>
+                <div class="text-[#bbb] text-sm">${this.titles[i] ?? ""}</div>
               </div>
             `,
           )}
