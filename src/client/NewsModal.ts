@@ -158,11 +158,11 @@ export class NewsButton extends LitElement {
     return html`
       <div class="flex relative">
         <button
-          class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
+          class="border p-1 rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
           @click=${this.openNewsModel}
         >
           <img
-            class="size-[48px] dark:invert"
+            class="size-12 dark:invert"
             src="${megaphone}"
             alt=${translateText("news.title")}
           />
