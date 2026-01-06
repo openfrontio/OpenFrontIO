@@ -126,8 +126,8 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "bg-linear-to-r via-none from-green-600 to-green-500"
+          : "bg-linear-to-r via-none from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -136,8 +136,7 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)]"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
@@ -159,20 +158,18 @@ export class PublicLobby extends LitElement {
             <div
               class="text-md font-medium text-white-400 flex flex-wrap justify-end items-center gap-1"
             >
-              ${fullModeLabel
-                ? html`<span
-                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1"
-                    >${fullModeLabel}</span
-                  >`
-                : ""}
+              <span
+                class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
+                  ? "text-green-600"
+                  : "text-blue-600"} bg-white rounded-xs px-1"
+                >${fullModeLabel}</span
+              >
               ${modifierLabel.map(
                 (label) =>
                   html`<span
                     class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
                       ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1"
+                      : "text-blue-600"} bg-white rounded-xs px-1"
                     >${label}</span
                   >`,
               )}

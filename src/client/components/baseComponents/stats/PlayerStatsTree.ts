@@ -122,8 +122,8 @@ export class PlayerStatsTreeView extends LitElement {
         ${types.map(
           (t) => html`
             <button
-              class="text-xs px-2 py-0.5 rounded border ${this.selectedType ===
-              t
+              class="text-xs px-2 py-0.5 rounded-sm border ${this
+                .selectedType === t
                 ? "border-white/60 text-white"
                 : "border-white/20 text-gray-300"}"
               @click=${() => this.setGameType(t)}
@@ -143,7 +143,7 @@ export class PlayerStatsTreeView extends LitElement {
             ${modes.map(
               (m) => html`
                 <button
-                  class="text-xs px-2 py-0.5 rounded border ${this
+                  class="text-xs px-2 py-0.5 rounded-sm border ${this
                     .selectedMode === m
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
@@ -162,7 +162,7 @@ export class PlayerStatsTreeView extends LitElement {
             ${diffs.map(
               (d) =>
                 html` <button
-                  class="text-xs px-2 py-0.5 rounded border ${this
+                  class="text-xs px-2 py-0.5 rounded-sm border ${this
                     .selectedDifficulty === d
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
