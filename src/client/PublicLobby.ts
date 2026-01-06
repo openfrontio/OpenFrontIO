@@ -116,9 +116,6 @@ export class PublicLobby extends LitElement {
     const mapImageSrc = this.mapImages.get(lobby.gameID);
     const isUnusualThumbnailSize =
       lobby.gameConfig.gameMap === GameMapType.AmazonRiver;
-    const objectFitStyle = isUnusualThumbnailSize
-      ? "object-fit: cover; object-position: center;"
-      : "";
 
     return html`
       <button
@@ -136,8 +133,9 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)]"
-              style="${objectFitStyle}"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
+                ? "object-cover object-center"
+                : ""}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
