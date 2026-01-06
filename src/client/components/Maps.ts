@@ -1,6 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../core/game/Game";
+import { Difficulty, GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
@@ -47,6 +47,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   TwoLakes: "Two Lakes",
   StraitOfHormuz: "Strait of Hormuz",
   Surrounded: "Surrounded",
+  Didier: "Didier",
 };
 
 @customElement("map-display")
@@ -54,6 +55,8 @@ export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
+  @property({ type: Boolean }) showMedals = false;
+  @property({ attribute: false }) wins: Set<Difficulty> = new Set();
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
@@ -63,7 +66,7 @@ export class MapDisplay extends LitElement {
       width: 100%;
       min-width: 100px;
       max-width: 120px;
-      padding: 4px 4px 0 4px;
+      padding: 6px 6px 10px 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -73,6 +76,7 @@ export class MapDisplay extends LitElement {
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
+      gap: 6px;
     }
 
     .option-card:hover {
@@ -90,7 +94,7 @@ export class MapDisplay extends LitElement {
       font-size: 14px;
       color: #aaa;
       text-align: center;
-      margin: 0 0 4px 0;
+      margin: 0;
     }
 
     .option-image {
@@ -104,6 +108,26 @@ export class MapDisplay extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .medal-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .medal-icon {
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.12);
+      mask: url("/images/MedalIconWhite.svg") no-repeat center / contain;
+      -webkit-mask: url("/images/MedalIconWhite.svg") no-repeat center / contain;
+      opacity: 0.25;
+    }
+
+    .medal-icon.earned {
+      opacity: 1;
     }
   `;
 
@@ -142,8 +166,39 @@ export class MapDisplay extends LitElement {
                 class="option-image"
               />`
             : html`<div class="option-image">Error</div>`}
+        ${this.showMedals
+          ? html`<div class="medal-row">${this.renderMedals()}</div>`
+          : null}
         <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;
+  }
+
+  private renderMedals() {
+    const medalOrder: Difficulty[] = [
+      Difficulty.Easy,
+      Difficulty.Medium,
+      Difficulty.Hard,
+      Difficulty.Impossible,
+    ];
+    const colors: Record<Difficulty, string> = {
+      [Difficulty.Easy]: "var(--medal-easy)",
+      [Difficulty.Medium]: "var(--medal-medium)",
+      [Difficulty.Hard]: "var(--medal-hard)",
+      [Difficulty.Impossible]: "var(--medal-impossible)",
+    };
+    const wins = this.readWins();
+    return medalOrder.map((medal) => {
+      const earned = wins.has(medal);
+      return html`<div
+        class="medal-icon ${earned ? "earned" : ""}"
+        style="background-color:${colors[medal]};"
+        title=${medal}
+      ></div>`;
+    });
+  }
+
+  private readWins(): Set<Difficulty> {
+    return this.wins ?? new Set();
   }
 }
