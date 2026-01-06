@@ -311,15 +311,14 @@ export class PublicLobby extends LitElement {
     if (!publicGameModifiers || publicGameModifiers.length === 0) {
       return [];
     }
-    const labels: string[] = [];
-    for (const modifier of publicGameModifiers) {
-      if (modifier === PublicGameModifier.RandomSpawn) {
-        labels.push(translateText("public_game_modifier.random_spawn"));
-      } else if (modifier === PublicGameModifier.CompactMap) {
-        labels.push(translateText("public_game_modifier.compact_map"));
-      }
-    }
-    return labels;
+    return publicGameModifiers.map((modifier) => {
+      // Convert PascalCase to snake_case for localization key
+      const key = modifier
+        .replace(/([A-Z])/g, "_$1")
+        .toLowerCase()
+        .slice(1);
+      return translateText(`public_game_modifier.${key}`);
+    });
   }
 
   private lobbyClicked(lobby: GameInfo) {
