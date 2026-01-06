@@ -93,7 +93,6 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    // 20% chance for a game modifier
     let publicGameModifiers = config.getRandomPublicGameModifiers();
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
