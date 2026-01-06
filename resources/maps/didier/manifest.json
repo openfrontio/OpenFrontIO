@@ -1,0 +1,226 @@
+{
+  "map": {
+    "height": 2248,
+    "num_land_tiles": 2303633,
+    "width": 2100
+  },
+  "map16x": {
+    "height": 562,
+    "num_land_tiles": 141151,
+    "width": 525
+  },
+  "map4x": {
+    "height": 1124,
+    "num_land_tiles": 571943,
+    "width": 1050
+  },
+  "name": "Didier",
+  "nations": [
+    {
+      "coordinates": [120, 680],
+      "name": "Brest",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [551, 748],
+      "name": "Rennes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [752, 500],
+      "name": "Caen",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [841, 773],
+      "name": "Le Mans",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [829, 424],
+      "name": "Le Havre",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [980, 437],
+      "name": "Rouen",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1168, 577],
+      "name": "Paris",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1165, 331],
+      "name": "Amiens",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1279, 155],
+      "name": "Lille",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1096, 81],
+      "name": "Calais",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1426, 480],
+      "name": "Reims",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1758, 517],
+      "name": "Metz",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1762, 613],
+      "name": "Nancy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1999, 642],
+      "name": "Strasbourg",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1939, 831],
+      "name": "Mulhouse",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1735, 948],
+      "name": "Besançon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1583, 928],
+      "name": "Dijon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1003, 799],
+      "name": "Orléans",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [916, 911],
+      "name": "Tours",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1001, 1259],
+      "name": "Limoges",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [861, 1095],
+      "name": "Poitiers",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [939, 1186],
+      "name": "La Rochelle",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [569, 949],
+      "name": "Nantes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [721, 1479],
+      "name": "Bordeaux",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1033, 1743],
+      "name": "Toulouse",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1258, 1929],
+      "name": "Perpignan",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1407, 1739],
+      "name": "Montpellier",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1480, 1690],
+      "name": "Nîmes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1555, 1669],
+      "name": "Avignon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1634, 1808],
+      "name": "Marseille",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1722, 1843],
+      "name": "Toulon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1829, 1817],
+      "name": "Saint-Tropez",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1887, 1749],
+      "name": "Cannes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1925, 1718],
+      "name": "Nice",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [565, 1784],
+      "name": "Biarritz",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1483, 1349],
+      "name": "Saint-Étienne",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1558, 1278],
+      "name": "Lyon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1692, 1402],
+      "name": "Grenoble",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1459, 1888],
+      "name": "Didier's Right Foot"
+    },
+    {
+      "coordinates": [482, 1196],
+      "name": "Didier's Left Hand"
+    },
+    {
+      "coordinates": [1237, 1147],
+      "name": "Napolidier"
+    },
+    {
+      "coordinates": [2012, 2198],
+      "name": "Arryn"
+    }
+  ]
+}

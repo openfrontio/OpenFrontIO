@@ -1010,6 +1010,9 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    if (this.mg.isSpawnImmunityActive()) {
+      return false;
+    }
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner)) {
@@ -1200,31 +1203,36 @@ export class PlayerImpl implements Player {
     return this._incomingAttacks;
   }
 
+  public isImmune(): boolean {
+    return this.type() === PlayerType.Human && this.mg.isSpawnImmunityActive();
+  }
+
+  public canAttackPlayer(
+    player: Player,
+    treatAFKFriendly: boolean = false,
+  ): boolean {
+    if (this.type() === PlayerType.Human) {
+      return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    }
+    // Only humans are affected by immunity, bots and nations should be able to attack freely
+    return !this.isFriendly(player, treatAFKFriendly);
+  }
+
   public canAttack(tile: TileRef): boolean {
-    if (
-      this.mg.hasOwner(tile) &&
-      this.mg.config().numSpawnPhaseTurns() +
-        this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
-    ) {
+    const owner = this.mg.owner(tile);
+    if (owner === this) {
       return false;
     }
 
-    if (this.mg.owner(tile) === this) {
+    if (owner.isPlayer() && !this.canAttackPlayer(owner)) {
       return false;
-    }
-    const other = this.mg.owner(tile);
-    if (other.isPlayer()) {
-      if (this.isFriendly(other)) {
-        return false;
-      }
     }
 
     if (!this.mg.isLand(tile)) {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(other);
+      return this.sharesBorderWith(owner);
     } else {
       for (const t of this.mg.bfs(
         tile,

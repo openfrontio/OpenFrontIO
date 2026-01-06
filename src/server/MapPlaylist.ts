@@ -60,6 +60,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   TwoLakes: 6,
   StraitOfHormuz: 4,
   Surrounded: 4,
+  Didier: 2,
 };
 
 interface MapWithMode {
@@ -110,6 +111,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
+      spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
