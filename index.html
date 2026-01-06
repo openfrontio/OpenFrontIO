@@ -71,13 +71,43 @@
         height: 100vh;
       }
 
-      .dark .bg-image {
-        filter: brightness(0.4) saturate(0.3) contrast(1.2);
+      .nav-menu-item {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: left;
+        display: block;
+        width: 100%;
+        padding: 0.5rem 0;
+        cursor: pointer;
       }
 
-      /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
-      .component-hideable:has(> .parent-hidden) {
-        display: none;
+      .nav-menu-item:hover {
+        color: #2563eb;
+        transform: translateX(10px);
+        text-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+      }
+
+      .nav-menu-item.active {
+        color: #2563eb;
+        transform: translateX(10px);
+        text-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+      }
+
+      .menu-logo svg {
+        fill: #2563eb;
+        filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.3));
+      }
+
+      /* Scrollbar refined for menu content */
+      #main-content-scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+      #main-content-scroll::-webkit-scrollbar-thumb {
+        background: #2563eb;
       }
 
       .snow {
@@ -113,11 +143,300 @@
           transform: translateY(105vh) rotate(360deg); /* Fall completely out of view */
         }
       }
+
+      /* Mobile hamburger & off-canvas sidebar styles */
+      #hamburger-btn {
+        display: none;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 11000;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border: 0;
+        padding: 8px;
+        border-radius: 6px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #mobile-menu-backdrop {
+        display: none;
+        pointer-events: none;
+      }
+
+      .no-scroll {
+        overflow: hidden !important;
+        height: 100% !important;
+      }
+
+      @media (max-width: 767px) {
+        /* hide the desktop sidebar, show hamburger */
+        #sidebar-menu {
+          display: none;
+        }
+        #hamburger-btn {
+          display: flex;
+        }
+        #right-icon-rail {
+          display: none;
+        }
+        #mobile-icon-rail {
+          display: flex !important;
+        }
+        /* reclaim the right gutter since the icon rail is hidden on mobile */
+        #main-content-scroll {
+          padding-right: clamp(1.25rem, min(3vw, 3.5vh), 4rem) !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        /* allow main to span full width on mobile */
+        main {
+          max-width: 100% !important;
+          width: 100% !important;
+        }
+        /* off-canvas sidebar when opened */
+        #sidebar-menu.open {
+          display: flex !important;
+          position: fixed;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 80%;
+          max-width: 340px;
+          z-index: 11001;
+          padding: 20px;
+          background: linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.95),
+            rgba(0, 0, 0, 0.85)
+          );
+          overflow-y: auto;
+        }
+        #mobile-menu-backdrop.open {
+          display: block;
+          pointer-events: auto;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 11000;
+        }
+        /* make main content take full width */
+        main {
+          margin-left: 0 !important;
+        }
+      }
+
+      /* Make sidebar size fluid across desktop/tablet sizes using clamp() so
+         it scales down gracefully on smaller monitors (not only mobile). */
+      #sidebar-menu {
+        width: clamp(220px, 18vw, 350px) !important;
+        min-width: 0 !important;
+        padding: clamp(0.75rem, min(1.8vw, 2vh), 2.5rem)
+          clamp(1rem, min(1.5vw, 1.8vh), 2rem) !important;
+        padding-top: clamp(1rem, min(3vw, 3.5vh), 4rem) !important;
+        gap: clamp(2rem, min(4vw, 4.5vh), 3rem) !important;
+      }
+
+      .menu-logo {
+        width: clamp(120px, 15vw, 192px) !important;
+        height: clamp(44px, min(8vw, 9vh), 64px) !important;
+        margin-bottom: clamp(1rem, min(2vw, 2.2vh), 2rem) !important;
+      }
+
+      .nav-menu-item {
+        font-size: clamp(20px, min(2.5vw, 3vh), 34px) !important;
+        padding: clamp(0.25rem, min(0.8vw, 1vh), 0.75rem) 0 !important;
+      }
+
+      @media (max-width: 480px) {
+        #sidebar-menu {
+          width: 80% !important;
+          padding: 1rem !important;
+        }
+      }
+
+      /* Make entire layout responsive on smaller screens */
+      #main-content-scroll {
+        padding: clamp(1.25rem, min(3vw, 3.5vh), 4rem) !important;
+        padding-right: clamp(1.25rem, min(3vw, 3.5vh), 4rem) !important;
+      }
+
+      main {
+        padding: clamp(1.5rem, min(3vw, 3.5vh), 3rem) !important;
+        gap: clamp(1.5rem, min(3vw, 3.5vh), 3rem) !important;
+      }
+
+      /* Desktop/tablet: add gutter for icon rail and width clamp */
+      @media (min-width: 768px) {
+        #main-content-scroll {
+          padding-right: calc(
+            clamp(1.25rem, min(3vw, 3.5vh), 4rem) + 120px
+          ) !important;
+        }
+        main {
+          max-width: clamp(900px, 94vw, 1400px) !important;
+        }
+      }
+
+      /* Right icon rail sizing */
+      #right-icon-rail {
+        width: clamp(80px, 7vw, 110px) !important;
+      }
+
+      /* Mobile placement for icon rail */
+      #mobile-icon-rail {
+        display: none;
+      }
+
+      /* Align flag and pattern controls neatly in the header row */
+      #flag-input-component,
+      #territory-patterns-input-preview-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Scale game UI elements */
+      .flex.flex-row.gap-4 {
+        gap: clamp(0.5rem, min(1vw, 1.2vh), 1rem) !important;
+      }
+
+      .container__row {
+        gap: clamp(0.5rem, min(1vw, 1.2vh), 1rem) !important;
+      }
+
+      @media (max-width: 1024px) {
+        main {
+          max-width: 95vw !important;
+        }
+      }
+
+      h1,
+      .text-4xl {
+        font-size: clamp(1.9rem, min(3.6vw, 4.2vh), 2.9rem) !important;
+      }
+
+      h2,
+      .text-3xl {
+        font-size: clamp(1.6rem, min(3vw, 3.6vh), 2.3rem) !important;
+      }
+
+      h3,
+      .text-2xl {
+        font-size: clamp(1.35rem, min(2.6vw, 3vh), 1.9rem) !important;
+      }
+
+      .text-xl {
+        font-size: clamp(1.2rem, min(2.2vw, 2.6vh), 1.6rem) !important;
+      }
+
+      .text-lg {
+        font-size: clamp(1.1rem, min(1.9vw, 2.2vh), 1.4rem) !important;
+      }
+
+      p,
+      .text-base,
+      button,
+      input,
+      select {
+        font-size: clamp(1.05rem, min(1.7vw, 1.9vh), 1.25rem) !important;
+      }
+
+      .text-sm {
+        font-size: clamp(0.9rem, min(1.3vw, 1.4vh), 1.05rem) !important;
+      }
+
+      .text-xs {
+        font-size: clamp(0.78rem, min(1.05vw, 1.15vh), 0.9rem) !important;
+      }
+
+      /* Hide chrome while in game */
+      body.in-game #sidebar-menu,
+      body.in-game #hamburger-btn,
+      body.in-game #mobile-menu-backdrop,
+      body.in-game #right-icon-rail,
+      body.in-game #mobile-icon-rail,
+      body.in-game #language-container,
+      body.in-game dark-mode-button,
+      body.in-game lang-selector,
+      body.in-game #main-content-scroll,
+      body.in-game main {
+        display: none !important;
+      }
+
+      /* Scale buttons and inputs */
+      button,
+      input,
+      select {
+        padding: clamp(0.5rem, min(1.1vw, 1.2vh), 0.75rem)
+          clamp(1rem, min(1.9vw, 2.2vh), 1.3rem) !important;
+      }
+
+      /* Scale game canvas and UI */
+      canvas {
+        max-width: 100% !important;
+        height: auto !important;
+      }
     </style>
 
     <!-- Immediate execution to prevent FOUC -->
     <script>
       document.documentElement.className = "preload";
+    </script>
+
+    <script>
+      // Mobile menu toggle
+      document.addEventListener("DOMContentLoaded", () => {
+        const hb = document.getElementById("hamburger-btn");
+        const sidebar = document.getElementById("sidebar-menu");
+        const backdrop = document.getElementById("mobile-menu-backdrop");
+
+        if (!hb || !sidebar || !backdrop) return;
+
+        const setMenuState = (open) => {
+          sidebar.classList.toggle("open", open);
+          backdrop.classList.toggle("open", open);
+          document.documentElement.classList.toggle("no-scroll", open);
+          hb.setAttribute("aria-expanded", open ? "true" : "false");
+        };
+
+        const closeMenu = () => setMenuState(false);
+        const openMenu = () => setMenuState(true);
+
+        hb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const opening = !sidebar.classList.contains("open");
+          opening ? openMenu() : closeMenu();
+        });
+
+        backdrop.addEventListener("click", closeMenu);
+
+        // Close menu when clicking a menu link
+        sidebar.addEventListener("click", (e) => {
+          const target = e.target;
+          if (
+            target instanceof HTMLElement &&
+            target.classList.contains("nav-menu-item")
+          ) {
+            closeMenu();
+          }
+        });
+
+        // Close on Escape
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && sidebar.classList.contains("open")) {
+            closeMenu();
+          }
+        });
+
+        // Ensure menu closes when resizing up to desktop
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 767 && sidebar.classList.contains("open")) {
+            closeMenu();
+          }
+        });
+      });
     </script>
 
     <!-- CrazyGames SDK -->
@@ -178,158 +497,337 @@
   </head>
 
   <body
-    class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
+    class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
-    <header class="l-header">
-      <div class="l-header__content">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 1364 259"
-          width="100%"
-          height="100%"
-          fill="currentColor"
-          class="l-header__logo"
-        >
-          <defs>
-            <linearGradient
-              id="logo-gradient"
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="0%"
+    <!-- LEFT SIDEBAR MENU -->
+    <button id="hamburger-btn" aria-label="Open menu" title="Menu">☰</button>
+    <div id="mobile-menu-backdrop"></div>
+    <div
+      id="sidebar-menu"
+      class="z-50 flex flex-col justify-between h-screen bg-gradient-to-r from-black/90 to-transparent"
+    >
+      <!-- Logo + Menu -->
+      <div class="flex flex-col">
+        <div class="menu-logo text-[#2563eb]">
+          <div class="flex flex-col items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 1364 259"
+              width="100%"
+              height="100%"
+              fill="currentColor"
             >
-              <stop offset="0%" style="stop-color: #2563eb" />
-              <stop offset="100%" style="stop-color: #3b82f6" />
-            </linearGradient>
-          </defs>
-          <g>
-            <path
-              d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
-            />
-            <path
-              d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
-            />
-            <path
-              d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
-            />
-            <path
-              d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
-            />
-            <path
-              d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
-            />
-            <path
-              d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
-            />
-            <path
-              d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
-            />
-            <path
-              d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
-            />
-            <path
-              d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
-            />
-            <path
-              d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
-            />
-            <path
-              d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
-            />
-          </g>
-        </svg>
-        <div id="game-version" class="l-header__highlightText text-center">
-          Loading version...
+              <!-- (Logo paths preserved) -->
+              <path
+                d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
+              />
+              <path
+                d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
+              />
+              <path
+                d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
+              />
+              <path
+                d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
+              />
+              <path
+                d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
+              />
+              <path
+                d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
+              />
+              <path
+                d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
+              />
+              <path
+                d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
+              />
+              <path
+                d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
+              />
+              <path
+                d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
+              />
+              <path
+                d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
+              />
+            </svg>
+            <div
+              id="game-version"
+              class="l-header__highlightText text-center"
+            ></div>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <a
+            class="nav-menu-item"
+            data-page="page-play"
+            onclick="showPage('page-play')"
+            >Play Game</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-news"
+            onclick="showPage('page-news')"
+            >News</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-item-store"
+            onclick="showPage('page-item-store')"
+            >Skin Store</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-options"
+            onclick="showPage('page-options')"
+            >Options</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-keybinds"
+            onclick="showPage('page-keybinds')"
+            >Keybinds</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-stats"
+            onclick="showPage('page-stats')"
+            >Stats</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-account"
+            onclick="showPage('page-account')"
+            >Account</a
+          >
+          <a
+            class="nav-menu-item"
+            data-page="page-help"
+            onclick="showPage('page-help')"
+            >Help</a
+          >
         </div>
       </div>
-    </header>
-    <div class="bg-image"></div>
+
+      <div class="flex flex-col gap-4 w-full">
+        <div
+          id="mobile-icon-rail"
+          class="hidden w-full items-center justify-start gap-6 pt-4 border-t border-white/10"
+        >
+          <a
+            href="https://github.com/openfrontio/OpenFrontIO"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+          >
+            <img
+              src="/icons/github-mark-white.svg"
+              alt="GitHub"
+              width="32"
+              height="32"
+            />
+          </a>
+          <a
+            href="https://discord.gg/jRpxXvG42t"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+              <path
+                d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-14.36a.074.074 0 0 0-.032-.027zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z"
+              />
+            </svg>
+          </a>
+          <a
+            href="https://openfront.wiki/Main_Page"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+          >
+            <img src="/icons/wiki-logo.svg" alt="Wiki" width="32" height="32" />
+          </a>
+        </div>
+
+        <div class="flex flex-col gap-1 text-white/50 text-xs">
+          <div>© OpenFront</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
     <div
-      id="turnstile-container"
-      class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"
-    ></div>
-    <gutter-ads></gutter-ads>
+      id="main-content-scroll"
+      class="flex-1 relative overflow-hidden h-full"
+    >
+      <div class="bg-image"></div>
+      <div
+        id="turnstile-container"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"
+      ></div>
+      <gutter-ads></gutter-ads>
 
-    <!-- Main container with responsive padding -->
-    <main class="flex justify-center flex-grow">
-      <div class="container pt-12">
-        <token-login class="w-[20%] md:w-[15%]"></token-login>
+      <!-- Main container with responsive padding -->
+      <main
+        class="flex flex-col gap-8 h-full bg-black/40 backdrop-blur-sm border-l-4 border-[#2563eb] overflow-hidden"
+      >
+        <div id="page-play" class="flex flex-col gap-8 w-full">
+          <token-login class="w-full hidden"></token-login>
 
-        <div class="container__row">
-          <flag-input class="w-[20%] md:w-[20%]"></flag-input>
-          <territory-patterns-modal class="w-[20%] md:w-[15%]">
+          <div class="flex flex-row gap-4 w-full h-[60px] items-center">
+            <flag-input id="flag-input-component" class="h-full"></flag-input>
+            <username-input class="relative flex-1 h-full"></username-input>
             <button
               id="territory-patterns-input-preview-button"
-              class="w-full border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)] justify-center"
+              class="p-0 m-0 border-0 bg-transparent hover:bg-transparent rounded-none flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 h-full"
               title="Pick a pattern!"
             ></button>
-          </territory-patterns-modal>
-          <username-input class="relative w-full"></username-input>
-          <news-button class="w-[20%] component-hideable"></news-button>
-        </div>
-        <div></div>
-        <div>
+            <news-button class="hidden component-hideable"></news-button>
+          </div>
+
           <public-lobby class="block"></public-lobby>
-        </div>
-        <div>
+
           <matchmaking-button class="w-[20%] md:w-[15%]"></matchmaking-button>
-        </div>
-        <div class="container__row container__row--equal">
+
+          <div class="container__row container__row--equal">
+            <o-button
+              id="host-lobby-button"
+              title="Create Lobby"
+              translationKey="main.create_lobby"
+              block
+              secondary
+            ></o-button>
+            <o-button
+              id="join-private-lobby-button"
+              title="Join Lobby"
+              translationKey="main.join_lobby"
+              block
+              secondary
+            ></o-button>
+          </div>
+
           <o-button
-            id="host-lobby-button"
-            title="Create Lobby"
-            translationKey="main.create_lobby"
+            id="single-player"
+            title="Single Player"
+            translationKey="main.single_player"
+            block
+          ></o-button>
+
+          <o-button
+            id="help-button"
+            class="hidden"
+            title="Instructions"
+            translationKey="main.instructions"
             block
             secondary
           ></o-button>
-          <o-button
-            id="join-private-lobby-button"
-            title="Join Lobby"
-            translationKey="main.join_lobby"
-            block
-            secondary
-          ></o-button>
-          <!-- <o-button
-            id="chat-button"
-            title="Chat Test"
-            block
-            secondary
-          ></o-button> -->
         </div>
 
-        <o-button
-          id="single-player"
-          title="Single Player"
-          translationKey="main.single_player"
-          block
-        ></o-button>
+        <news-modal
+          id="page-news"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></news-modal>
+        <territory-patterns-modal
+          id="page-item-store"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></territory-patterns-modal>
+        <user-setting
+          id="page-options"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></user-setting>
+        <keybinds-modal
+          id="page-keybinds"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></keybinds-modal>
+        <stats-modal
+          id="page-stats"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></stats-modal>
+        <account-modal
+          id="page-account"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></account-modal>
+        <help-modal
+          id="page-help"
+          inline
+          class="hidden w-full h-full block page-content"
+        ></help-modal>
+      </main>
 
-        <o-button
-          id="help-button"
-          title="Instructions"
-          translationKey="main.instructions"
-          block
-          secondary
-        ></o-button>
-        <div class="container__row">
-          <lang-selector class="w-full"></lang-selector>
-        </div>
+      <!-- Global Modals -->
+      <territory-patterns-modal
+        id="territory-patterns-modal"
+      ></territory-patterns-modal>
+
+      <!-- User Setting -->
+      <button
+        id="settings-button"
+        title="Settings"
+        class="hidden fixed bottom-4 right-4 z-50 rounded-none p-2 shadow-lg transition-colors duration-300 flex items-center justify-center border border-gray-500 bg-orange-700 hover:bg-orange-800"
+        style="width: 80px; height: 80px"
+      >
+        <img
+          src="/images/SettingIconWhite.svg"
+          alt="Settings"
+          style="width: 72px; height: 72px"
+        />
+      </button>
+
+      <account-button class="hidden"></account-button>
+
+      <!-- Language Selector (Bottom Right) -->
+      <div id="language-container" class="fixed bottom-4 right-4 z-40">
+        <lang-selector></lang-selector>
       </div>
-    </main>
 
-    <!-- User Setting -->
-    <button
-      id="settings-button"
-      title="Settings"
-      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: #0075ff"
-    >
-      <img
-        src="/images/SettingIconWhite.svg"
-        alt="Settings"
-        style="width: 72px; height: 72px"
-      />
-    </button>
+      <!-- RIGHT SIDEBAR (ICONS) -->
+      <div
+        id="right-icon-rail"
+        class="w-[80px] h-screen flex flex-col justify-center items-center gap-8 z-50 fixed right-0 top-0 pr-8"
+      >
+        <a
+          href="https://github.com/openfrontio/OpenFrontIO"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+        >
+          <img
+            src="/icons/github-mark-white.svg"
+            alt="GitHub"
+            width="32"
+            height="32"
+          />
+        </a>
+        <a
+          href="https://discord.gg/jRpxXvG42t"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+        >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+            <path
+              d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-14.36a.074.074 0 0 0-.032-.027zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://openfront.wiki/Main_Page"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+        >
+          <img src="/icons/wiki-logo.svg" alt="Wiki" width="32" height="32" />
+        </a>
+      </div>
+    </div>
 
     <!-- Game components -->
     <div id="customMenu" class="mt-4 sm:mt-6 lg:mt-8">
@@ -363,77 +861,7 @@
     </div>
 
     <!-- Footer section -->
-    <footer
-      class="flex justify-center px-3 py-3 md:px-6 md:py-3 bg-[var(--boxBackgroundColor)] backdrop-blur-sm"
-    >
-      <div
-        class="flex flex-col md:flex-row flex-nowrap justify-between items-center gap-4 md:gap-0 w-full max-w-[860px] flex-1"
-      >
-        <div
-          class="flex flex-col sm:flex-row gap-4 sm:gap-5 text-white/70 justify-center md:justify-start flex-shrink-0"
-        >
-          <a
-            href="https://openfront.wiki/Main_Page"
-            data-i18n="main.wiki"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
-            target="_blank"
-          >
-            Wiki
-          </a>
-          <a
-            target="_blank"
-            href="https://www.reddit.com/r/Openfront/"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
-          >
-            <span data-i18n="main.reddit"> Reddit </span>
-          </a>
-          <a
-            target="_blank"
-            href="https://discord.gg/jRpxXvG42t"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
-          >
-            <span data-i18n="main.join_discord"> Discord </span>
-          </a>
-        </div>
-        <div class="flex justify-center text-white/70 flex-shrink-0">
-          <a
-            href="https://github.com/openfrontio/OpenFrontIO"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out inline-flex items-center gap-2 whitespace-nowrap"
-            target="_blank"
-          >
-            © OpenFront™ and Contributors
-            <img
-              src="/icons/github-mark-white.svg"
-              alt="GitHub"
-              width="20"
-              height="20"
-              class="ml-2"
-            />
-          </a>
-        </div>
-        <div
-          class="flex flex-col sm:flex-row gap-4 sm:gap-4 text-white/70 justify-center md:justify-end flex-shrink-0"
-        >
-          <a
-            href="/privacy-policy.html"
-            data-i18n="main.privacy_policy"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
-            target="_blank"
-          >
-            Privacy Policy
-          </a>
-          <a
-            href="/terms-of-service.html"
-            data-i18n="main.terms_of_service"
-            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
-            target="_blank"
-          >
-            Terms of Service
-          </a>
-        </div>
-      </div>
-    </footer>
-    <account-button></account-button>
+    <!-- Removed footer, moved to sidebar -->
     <!-- Game modals and overlays -->
     <single-player-modal></single-player-modal>
     <host-lobby-modal></host-lobby-modal>
@@ -452,13 +880,10 @@
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
-    <help-modal></help-modal>
     <game-info-modal></game-info-modal>
     <dark-mode-button></dark-mode-button>
-    <stats-button></stats-button>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
-    <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
     <game-left-sidebar></game-left-sidebar>
     <flag-input-modal></flag-input-modal>
@@ -500,5 +925,42 @@
       data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
     ></script>
     <script type="module" src="/src/client/Main.ts"></script>
+    <script>
+      window.showPage = function (pageId) {
+        document
+          .querySelectorAll(".page-content, #page-play")
+          .forEach((el) => el.classList.add("hidden"));
+        const target = document.getElementById(pageId);
+        if (target) {
+          target.classList.remove("hidden");
+          // If the target itself is a modal component with inline attribute, open it
+          if (
+            target.hasAttribute("inline") &&
+            typeof target.open === "function"
+          ) {
+            target.open();
+          }
+        }
+
+        // Update active state on menu items
+        document.querySelectorAll(".nav-menu-item").forEach((item) => {
+          if (item.dataset.page === pageId) {
+            item.classList.add("active");
+          } else {
+            item.classList.remove("active");
+          }
+        });
+      };
+
+      // Set Play Game as active by default on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        const playGameItem = document.querySelector(
+          '.nav-menu-item[data-page="page-play"]',
+        );
+        if (playGameItem) {
+          playGameItem.classList.add("active");
+        }
+      });
+    </script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
@@ -18,6 +18,7 @@ import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -212,6 +213,7 @@ export class TerritoryPatternsModal extends LitElement {
         title="${this.activeTab === "patterns"
           ? translateText("territory_patterns.title")
           : translateText("territory_patterns.colors")}"
+        ?inline=${this.inline}
       >
         ${this.renderTabNavigation()}
         ${this.activeTab === "patterns"
@@ -224,6 +226,13 @@ export class TerritoryPatternsModal extends LitElement {
   public async open(affiliateCode?: string) {
     this.isActive = true;
     this.affiliateCode = affiliateCode ?? null;
+    // Wait for the DOM to be updated and the o-modal element to be available
+    this.requestUpdate();
+    await this.updateComplete;
+
+    if (this.modalEl) {
+      this.modalEl.open();
+    }
     await this.refresh();
   }
 
@@ -279,15 +288,6 @@ export class TerritoryPatternsModal extends LitElement {
       : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
     this.requestUpdate();
 
-    // Wait for the DOM to be updated and the o-modal element to be available
-    await this.updateComplete;
-
-    // Now modalEl should be available
-    if (this.modalEl) {
-      this.modalEl.open();
-    } else {
-      console.warn("modalEl is still null after updateComplete");
-    }
     if (this.previewButton === null) return;
     render(preview, this.previewButton);
     this.requestUpdate();

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure the main page never scrolls; modals handle internal scrolling */
+html,
+body {
+  height: 100%;
+  overflow: hidden !important;
+}
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;

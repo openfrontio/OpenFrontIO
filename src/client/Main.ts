@@ -24,6 +24,7 @@ import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
+import "./KeybindsModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
@@ -137,8 +138,11 @@ class Client {
     ) as HTMLDivElement;
     if (!gameVersion) {
       console.warn("Game version element not found");
+    } else {
+      const trimmed = version.trim();
+      const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+      gameVersion.innerHTML = `${displayVersion}<br>`;
     }
-    gameVersion.innerText = version;
 
     const langSelector = document.querySelector(
       "lang-selector",
@@ -229,15 +233,29 @@ class Client {
     ) as FlagInputModal;
     if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
       console.warn("Flag input modal element not found");
+      return;
     }
 
-    const flgInput = document.getElementById("flag-input_");
-    if (flgInput === null) throw new Error("Missing flag-input_");
-    flgInput.addEventListener("click", () => {
-      flagInputModal.open();
+    // Wait for the flag-input component to be fully ready
+    customElements.whenDefined("flag-input").then(() => {
+      // Use a small delay to ensure the component has rendered
+      setTimeout(() => {
+        const flagButton = document.querySelector(
+          "#flag-input-component #flag-input_",
+        );
+        if (!flagButton) {
+          console.warn("Flag button not found inside component");
+          return;
+        }
+        flagButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          flagInputModal.open();
+        });
+      }, 100);
     });
 
-    this.patternsModal = document.querySelector(
+    this.patternsModal = document.getElementById(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
     if (
@@ -507,6 +525,7 @@ class Client {
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop();
+      document.body.classList.remove("in-game");
     }
     const config = await getServerConfigFromClient();
 
@@ -598,6 +617,7 @@ class Client {
 
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
+        document.body.classList.add("in-game");
 
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
@@ -615,6 +635,8 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+
+    document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
 

@@ -18,18 +18,15 @@ export class SettingKeybind extends LitElement {
   private listening = false;
 
   render() {
+    const currentValue = this.value === "" ? "" : this.value || this.defaultKey;
+
     return html`
       <div class="setting-item column${this.easter ? " easter-egg" : ""}">
         <div class="setting-label-group">
           <label class="setting-label block mb-1">${this.label}</label>
 
-          <div class="setting-keybind-box flex flex-wrap items-start gap-2">
-            <div
-              class="setting-keybind-description flex-1 min-w-[240px] max-w-full whitespace-normal break-words text-sm text-gray-300"
-              style="word-break: break-word;"
-            >
-              ${this.description}
-            </div>
+          <div class="setting-keybind-box">
+            <div class="setting-keybind-description">${this.description}</div>
 
             <div
               class="flex flex-wrap items-center gap-2 gap-y-1 basis-full sm:basis-auto min-w-0"
@@ -40,7 +37,7 @@ export class SettingKeybind extends LitElement {
                 @keydown=${this.handleKeydown}
                 @click=${this.startListening}
               >
-                ${this.displayKey(this.value || this.defaultKey)}
+                ${this.displayKey(currentValue)}
               </span>
 
               <button
@@ -101,7 +98,11 @@ export class SettingKeybind extends LitElement {
     this.value = this.defaultKey;
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: this.defaultKey },
+        detail: {
+          action: this.action,
+          value: this.defaultKey,
+          key: this.defaultKey,
+        },
         bubbles: true,
         composed: true,
       }),
@@ -112,7 +113,11 @@ export class SettingKeybind extends LitElement {
     this.value = "";
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: "Null" },
+        detail: {
+          action: this.action,
+          value: "Null",
+          key: "",
+        },
         bubbles: true,
         composed: true,
       }),

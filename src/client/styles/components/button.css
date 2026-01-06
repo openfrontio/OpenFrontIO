@@ -5,10 +5,21 @@
   outline: none;
   display: inline-block;
   font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border: 1px solid transparent;
   text-align: center;
   padding: 0.8rem 1rem;
-  border-radius: 8px;
+  border-radius: 0px;
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
   transition: var(--transition);
 
   @media (min-width: 1024px) {
@@ -21,6 +32,7 @@
 .c-button:focus {
   background: var(--primaryColorHover);
   transition: var(--transition);
+  transform: translateY(-1px);
 }
 
 .c-button:disabled {

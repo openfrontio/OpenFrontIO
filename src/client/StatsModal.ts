@@ -1,5 +1,5 @@
 import { css, html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
@@ -9,6 +9,7 @@ import { translateText } from "./Utils";
 
 @customElement("stats-modal")
 export class StatsModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal")
   private modalEl!: HTMLElement & {
     open: () => void;
@@ -190,7 +191,11 @@ export class StatsModal extends LitElement {
 
   render() {
     return html`
-      <o-modal id="stats-modal" title="${translateText("stats_modal.title")}">
+      <o-modal
+        id="stats-modal"
+        title="${translateText("stats_modal.title")}"
+        ?inline=${this.inline}
+      >
         ${this.renderBody()}
       </o-modal>
     `;
@@ -222,7 +227,7 @@ export class StatsButton extends LitElement {
     }
 
     return html`
-      <div class="fixed top-20 right-4 z-[9998]">
+      <div class="fixed top-20 right-4 z-[9998] hidden">
         <button
           @click="${this.open}"
           class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
@@ -235,7 +240,7 @@ export class StatsButton extends LitElement {
     `;
   }
 
-  private open() {
+  public open() {
     this.isVisible = true;
     this.requestUpdate();
     this.statsModal?.open();

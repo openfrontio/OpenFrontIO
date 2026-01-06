@@ -1,5 +1,5 @@
 import { html, LitElement, TemplateResult } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import {
   PlayerGame,
   PlayerStatsTree,
@@ -17,6 +17,7 @@ import { isInIframe, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -57,6 +58,7 @@ export class AccountModal extends LitElement {
       <o-modal
         id="account-modal"
         title="${translateText("account_modal.title") || "Account"}"
+        ?inline=${this.inline}
       >
         ${this.isLoadingUser
           ? html`
@@ -201,42 +203,35 @@ export class AccountModal extends LitElement {
             <label
               for="email"
               class="block text-sm font-medium text-white mb-2"
-            >
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              .value="${this.email}"
-              @input="${this.handleEmailInput}"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-              placeholder="Enter your email address"
-              required
-            />
+            ></label>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                .value="${this.email}"
+                @input="${this.handleEmailInput}"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                placeholder="Enter your email address"
+                required
+              />
+              <button
+                @click="${this.handleSubmit}"
+                class="mt-3 sm:mt-0 w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-[#2563eb] border border-transparent rounded-md hover:bg-[#1e40af] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2563eb]"
+                style="box-shadow: none;"
+              >
+                Submit
+              </button>
+            </div>
           </div>
         </div>
-
-        <div class="flex justify-end space-x-3">
-          <button
-            @click="${this.close}"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Cancel
-          </button>
-          <button
-            @click="${this.handleSubmit}"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Submit
-          </button>
-        </div>
+        <button
+          @click="${this.handleLogout}"
+          class="px-3 py-1 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+        >
+          ${translateText("account_modal.clear_session")}
+        </button>
       </div>
-      <button
-        @click="${this.handleLogout}"
-        class="px-3 py-1 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-      >
-        ${translateText("account_modal.clear_session")}
-      </button>
     `;
   }
 
@@ -376,10 +371,10 @@ export class AccountButton extends LitElement {
     }
 
     return html`
-      <div class="fixed top-4 right-4 z-[9998]">
+      <div class="fixed top-4 right-4 z-[9998] hidden">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
+          class="w-12 h-12 bg-orange-700 hover:bg-orange-800 text-white rounded-none shadow-lg transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 border border-orange-500"
           title="${buttonTitle}"
         >
           ${this.renderIcon()}
@@ -389,7 +384,7 @@ export class AccountButton extends LitElement {
     `;
   }
 
-  private renderIcon() {
+  public renderIcon() {
     if (this.loggedInDiscord) {
       return html`<img
         src="/images/DiscordLogo.svg"
@@ -410,7 +405,7 @@ export class AccountButton extends LitElement {
     />`;
   }
 
-  private open() {
+  public open() {
     this.recoveryModal?.open();
   }
 

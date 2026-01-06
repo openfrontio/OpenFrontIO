@@ -176,13 +176,19 @@ export class InputHandler {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            if (v && typeof v === "object" && "value" in (v as any)) {
-              return [k, (v as any).value as string];
-            }
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
+            const val = (() => {
+              if (v && typeof v === "object" && "value" in (v as any)) {
+                return (v as any).value as string;
+              }
+              if (typeof v === "string") return v;
+              return undefined;
+            })();
+
+            if (val === undefined) return [k, undefined];
+            if (val === "Null") return [k, ""]; // preserve unbound
+            return [k, val];
           })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+          .filter(([, v]) => typeof v === "string"),
       ) as Record<string, string>;
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);

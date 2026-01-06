@@ -1,11 +1,12 @@
 import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
 @customElement("help-modal")
 export class HelpModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -18,11 +19,9 @@ export class HelpModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
   }
 
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
 
@@ -34,13 +33,6 @@ export class HelpModal extends LitElement {
       typeof (v as any).value === "string"
     );
   }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
 
   private getKeybinds(): Record<string, string> {
     let saved: Record<string, string> = {};
@@ -121,6 +113,7 @@ export class HelpModal extends LitElement {
         id="helpModal"
         title="Instructions"
         translationKey="main.instructions"
+        ?inline=${this.inline}
       >
         <div class="flex flex-col items-center">
           <div class="text-center text-2xl font-bold mb-4">

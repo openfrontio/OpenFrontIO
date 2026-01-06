@@ -11,6 +11,13 @@ export class FlagInput extends LitElement {
   @state() public flag: string = "";
 
   static styles = css`
+    :host {
+      display: block;
+    }
+    .flag-btn {
+      width: 100%;
+      height: 100%;
+    }
     @media (max-width: 768px) {
       .flag-modal {
         width: 80vw;
@@ -70,22 +77,16 @@ export class FlagInput extends LitElement {
 
   render() {
     return html`
-      <div class="flex relative">
-        <button
-          id="flag-input_"
-          class="border rounded-lg flex cursor-pointer border-black/30
-          dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]
-          "
-          title=${translateText("flag_input.button_title")}
-        >
-          <span
-            id="flag-preview"
-            style="display:inline-block;
-            vertical-align:middle; background:#333; border-radius:6px;
-            overflow:hidden;"
-          ></span>
-        </button>
-      </div>
+      <button
+        id="flag-input_"
+        class="flag-btn p-0 m-0 border-0 bg-transparent hover:bg-transparent rounded-none flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0"
+        title=${translateText("flag_input.button_title")}
+      >
+        <span
+          id="flag-preview"
+          style="display:inline-block; vertical-align:middle; overflow:hidden; width: 52px; height: 52px;"
+        ></span>
+      </button>
     `;
   }
 
