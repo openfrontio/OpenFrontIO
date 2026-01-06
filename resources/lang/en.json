@@ -139,6 +139,7 @@
     "title": "Single Player",
     "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
+    "toggle_achievements": "Toggle achievements",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -252,7 +253,8 @@
     "lemnos": "Lemnos",
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
-    "surrounded": "Surrounded"
+    "surrounded": "Surrounded",
+    "didier": "Didier"
   },
   "map_categories": {
     "continental": "Continental",
