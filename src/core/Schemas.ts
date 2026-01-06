@@ -49,7 +49,8 @@ export type Intent =
   | DeleteUnitIntent
   | KickPlayerIntent
   | TogglePauseIntent
-  | UpdateGameConfigIntent;
+  | UpdateGameConfigIntent
+  | JoinSpectatorIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -85,6 +86,7 @@ export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
 export type UpdateGameConfigIntent = z.infer<
   typeof UpdateGameConfigIntentSchema
 >;
+export type JoinSpectatorIntent = z.infer<typeof JoinSpectatorIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -372,6 +374,10 @@ export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
   config: GameConfigSchema.partial(),
 });
 
+export const JoinSpectatorIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("join_spectator"),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -397,6 +403,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
+  JoinSpectatorIntentSchema,
 ]);
 
 //
@@ -510,6 +517,20 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const LobbyClientInfoSchema = z.object({
+  clientID: z.string(),
+  username: z.string(),
+});
+
+export const ServerLobbyRosterMessageSchema = z.object({
+  type: z.literal("lobby_roster"),
+  players: z.array(LobbyClientInfoSchema),
+  spectators: z.array(LobbyClientInfoSchema),
+});
+export type ServerLobbyRosterMessage = z.infer<
+  typeof ServerLobbyRosterMessageSchema
+>;
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -517,6 +538,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyRosterMessageSchema,
 ]);
 
 //
@@ -559,6 +581,8 @@ export const ClientJoinMessageSchema = z.object({
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
+  // If true, client joins as spectator instead of player
+  isSpectator: z.boolean().optional(),
   turnstileToken: z.string().nullable(),
 });
 

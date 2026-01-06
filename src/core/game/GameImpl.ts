@@ -87,6 +87,8 @@ export class GameImpl implements Game {
 
   private _isPaused: boolean = false;
 
+  private _spectators: Set<ClientID> = new Set();
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -346,6 +348,27 @@ export class GameImpl implements Game {
   setPaused(paused: boolean): void {
     this._isPaused = paused;
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
+  }
+
+  // Spectator Management
+  isSpectator(clientID: ClientID): boolean {
+    return this._spectators.has(clientID);
+  }
+
+  spectatorCount(): number {
+    return this._spectators.size;
+  }
+
+  getSpectators(): ReadonlySet<ClientID> {
+    return this._spectators;
+  }
+
+  addSpectator(clientID: ClientID): void {
+    this._spectators.add(clientID);
+  }
+
+  removeSpectator(clientID: ClientID): void {
+    this._spectators.delete(clientID);
   }
 
   inSpawnPhase(): boolean {
@@ -984,6 +1007,12 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+
+    // Dead players become spectators
+    const conqueredClientID = conquered.clientID();
+    if (conqueredClientID) {
+      this.addSpectator(conqueredClientID);
+    }
   }
 }
 

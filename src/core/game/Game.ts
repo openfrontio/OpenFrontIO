@@ -774,6 +774,13 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+
+  // Spectator Management
+  isSpectator(clientID: ClientID): boolean;
+  spectatorCount(): number;
+  getSpectators(): ReadonlySet<ClientID>;
+  addSpectator(clientID: ClientID): void;
+  removeSpectator(clientID: ClientID): void;
 }
 
 export interface PlayerActions {
