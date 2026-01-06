@@ -34,7 +34,7 @@ export class FlagInputModal extends LitElement {
         </div>
 
         <div
-          class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
+          class="flex flex-wrap justify-evenly gap-4 overflow-y-auto overflow-x-hidden h-[90%]"
         >
           ${this.isModalOpen
             ? Countries.filter(

@@ -318,7 +318,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${player.cosmetics.flag
             ? player.cosmetics.flag!.startsWith("!")
               ? html`<div
-                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  class="h-8 mr-1 aspect-3/4 player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
@@ -328,7 +328,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   })}
                 ></div>`
               : html`<img
-                  class="h-8 mr-1 aspect-[3/4]"
+                  class="h-8 mr-1 aspect-3/4"
                   src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}

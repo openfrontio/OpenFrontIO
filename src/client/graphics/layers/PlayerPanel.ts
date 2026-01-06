@@ -493,8 +493,8 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 shrink-0
-                    text-white w-35 shrink-0"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5 shrink-0
+                    text-white w-35"
         >
           <span class="mr-0.5">💰</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
@@ -506,7 +506,7 @@ export class PlayerPanel extends LitElement implements Layer {
         </div>
 
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5
                     text-white w-35 shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
@@ -525,7 +525,7 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <ui-divider></ui-divider>
       <button
-        class="flex w-full items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2 text-left text-white hover:bg-white/[0.08] active:scale-[0.995] transition"
+        class="flex w-full items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-left text-white hover:bg-white/8 active:scale-[0.995] transition"
         @click=${(e: Event) => this.handleToggleRocketDirection(e)}
       >
         <div class="flex flex-col">
@@ -626,9 +626,9 @@ export class PlayerPanel extends LitElement implements Layer {
                   (p) =>
                     html`<li
                       class="max-w-full inline-flex items-center gap-1.5
-                             rounded-md border border-white/10 bg-white/[0.05]
+                             rounded-md border border-white/10 bg-white/5
                              px-2.5 py-1 text-[14px] text-zinc-100
-                             hover:bg-white/[0.08] active:scale-[0.99] transition"
+                             hover:bg-white/8 active:scale-[0.99] transition"
                       title=${p.name()}
                     >
                       <span class="truncate">${p.name()}</span>

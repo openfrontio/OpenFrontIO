@@ -43,13 +43,13 @@ export class SettingKeybind extends LitElement {
               </span>
 
               <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded-sm transition whitespace-normal break-words max-w-full"
+                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded-sm transition whitespace-normal wrap-break-words max-w-full"
                 @click=${this.resetToDefault}
               >
                 ${translateText("user_setting.reset")}
               </button>
               <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded-sm transition whitespace-normal break-words max-w-full"
+                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded-sm transition whitespace-normal wrap-break-words max-w-full"
                 @click=${this.unbindKey}
               >
                 ${translateText("user_setting.unbind")}

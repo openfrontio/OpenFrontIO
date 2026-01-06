@@ -22,9 +22,9 @@ export class PlayerRow extends LitElement {
     const visibleBorder = player.winner || this.currentPlayer;
     return html`
       <li
-        class="bg-gradient-to-r ${player.winner
-          ? "from-sky-400 to-blue-700"
-          : "bg-slate-700"} border-[2px]
+        class="${player.winner
+          ? "bg-linear-to-r via-none from-sky-400 to-blue-700"
+          : "bg-slate-700"} border-2
           ${player.winner
           ? "border-yellow-500"
           : visibleBorder
@@ -188,7 +188,7 @@ export class PlayerRow extends LitElement {
   private renderTag(tag: string) {
     return html`
       <div
-        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-[12px] sm:leading-[18px] text-blue-900 h-3.75 px-1 sm:h-5 sm:px-2 font-bold"
+        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-3 sm:leading-4.5 text-blue-900 h-3.75 px-1 sm:h-5 sm:px-2 font-bold"
       >
         ${tag}
       </div>
@@ -198,7 +198,7 @@ export class PlayerRow extends LitElement {
   private renderIcon() {
     if (this.player.killedAt) {
       return html` <div
-        class="size-7.5 leading-[5px] shrink-0 text-lg sm:size-10 pt-3 sm:leading-[15px] sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
+        class="size-7.5 leading-1.25 shrink-0 text-lg sm:size-10 pt-3 sm:leading-3.75 sm:rounded-[50%] sm:border sm:border-gray-200 text-center sm:bg-slate-500 sm:text-2xl"
       >
         💀
       </div>`;
@@ -211,7 +211,7 @@ export class PlayerRow extends LitElement {
 
     return html`
       <div
-        class="size-7.5 leading-[5px] shrink-0 rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-[14px] border border-gray-200 text-center bg-slate-500"
+        class="size-7.5 leading-1.25 shrink-0 rounded-[50%] sm:size-10 sm:pt-2.5 sm:leading-3.5 border border-gray-200 text-center bg-slate-500"
       >
         <img
           src="/images/ProfileIcon.svg"
