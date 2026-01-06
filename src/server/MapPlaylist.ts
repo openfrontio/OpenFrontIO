@@ -8,6 +8,7 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
+  PublicGameModifier,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -92,25 +93,53 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
+    // 20% chance for a game modifier
+    let publicGameModifiers = config.getRandomPublicGameModifiers();
+
+    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
+    const disallowRandomSpawn =
+      playerTeams === Duos || playerTeams === Trios || playerTeams === Quads;
+    if (disallowRandomSpawn) {
+      publicGameModifiers = publicGameModifiers.filter(
+        (m) => m !== PublicGameModifier.RandomSpawn,
+      );
+    }
+
+    // Small maps (3rd player count < 50) don't get compact map in team games
+    if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
+      publicGameModifiers = publicGameModifiers.filter(
+        (m) => m !== PublicGameModifier.CompactMap,
+      );
+    }
+
+    const isCompactMap = publicGameModifiers.includes(
+      PublicGameModifier.CompactMap,
+    );
+    const isRandomSpawn = publicGameModifiers.includes(
+      PublicGameModifier.RandomSpawn,
+    );
+
     // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompactMap),
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
+      gameMapSize: isCompactMap ? GameMapSize.Compact : GameMapSize.Normal,
+      publicGameModifiers:
+        publicGameModifiers.length > 0 ? publicGameModifiers : undefined,
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      randomSpawn: false,
+      randomSpawn: isRandomSpawn,
       disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
-      bots: 400,
+      bots: isCompactMap ? 100 : 400,
       spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;

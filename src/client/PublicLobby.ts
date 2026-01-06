@@ -6,6 +6,7 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
+  PublicGameModifier,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -113,6 +114,10 @@ export class PublicLobby extends LitElement {
         : `${modeLabel} ${teamDetailLabel}`;
     }
 
+    const modifierLabel = this.getModifierLabels(
+      lobby.gameConfig.publicGameModifiers,
+    );
+
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
@@ -160,6 +165,15 @@ export class PublicLobby extends LitElement {
                     >${fullModeLabel}</span
                   >`
                 : ""}
+              ${modifierLabel.map(
+                (label) =>
+                  html`<span
+                    class="text-sm ${this.isLobbyHighlighted
+                      ? "text-green-600"
+                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                    >${label}</span
+                  >`,
+              )}
               <span
                 >${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
@@ -289,6 +303,23 @@ export class PublicLobby extends LitElement {
     }
 
     return { label: null, isFullLabel: false };
+  }
+
+  private getModifierLabels(
+    publicGameModifiers: PublicGameModifier[] | undefined,
+  ): string[] {
+    if (!publicGameModifiers || publicGameModifiers.length === 0) {
+      return [];
+    }
+    const labels: string[] = [];
+    for (const modifier of publicGameModifiers) {
+      if (modifier === PublicGameModifier.RandomSpawn) {
+        labels.push(translateText("public_game_modifier.random_spawn"));
+      } else if (modifier === PublicGameModifier.CompactMap) {
+        labels.push(translateText("public_game_modifier.compact_map"));
+      }
+    }
+    return labels;
   }
 
   private lobbyClicked(lobby: GameInfo) {

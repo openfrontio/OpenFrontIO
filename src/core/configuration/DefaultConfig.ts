@@ -12,6 +12,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  PublicGameModifier,
   Quads,
   TerrainType,
   TerraNullius,
@@ -175,11 +176,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
     map: GameMapType,
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
   ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    // Apply compact map 75% player reduction
+    if (isCompactMap) {
+      p = Math.max(3, Math.floor(p * 0.25));
+    }
     if (numPlayerTeams === undefined) return p;
     switch (numPlayerTeams) {
       case Duos:
@@ -216,6 +222,25 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   enableMatchmaking(): boolean {
     return false;
+  }
+
+  getRandomPublicGameModifiers(): PublicGameModifier[] {
+    const modifiers: PublicGameModifier[] = [];
+    if (Math.random() < 0.1) {
+      // 10% chance
+      modifiers.push(PublicGameModifier.RandomSpawn);
+    }
+    if (Math.random() < 0.05) {
+      // 5% chance
+      modifiers.push(PublicGameModifier.CompactMap);
+    }
+    return modifiers;
+  }
+
+  supportsCompactMapForTeams(map: GameMapType): boolean {
+    // Maps with smallest player count < 50 don't support compact map in team games
+    const [, , smallest] = numPlayersConfig[map] ?? [50, 30, 20];
+    return smallest >= 50;
   }
 }
 

@@ -2,6 +2,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { GameStartInfo } from "../Schemas";
 import {
   Cell,
+  GameMapSize,
   GameMode,
   GameType,
   HumansVsNations,
@@ -14,6 +15,7 @@ import { Nation as ManifestNation } from "./TerrainMapLoader";
 /**
  * Creates the nations array for a game, handling HumansVsNations mode specially.
  * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
+ * For compact maps, only 25% of the nations are used.
  */
 export function createNationsForGame(
   gameStart: GameStartInfo,
@@ -31,13 +33,23 @@ export function createNationsForGame(
       new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
     );
 
+  const isCompactMap = gameStart.config.gameMapSize === GameMapSize.Compact;
+
   const isHumansVsNations =
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // For non-HumansVsNations modes, simply use the manifest nations
+  // For compact maps, use only 25% of nations (minimum 1)
+  let effectiveNations = manifestNations;
+  if (isCompactMap && !isHumansVsNations) {
+    const targetCount = getCompactMapNationCount(manifestNations.length, true);
+    const shuffled = random.shuffleArray(manifestNations);
+    effectiveNations = shuffled.slice(0, targetCount);
+  }
+
+  // For non-HumansVsNations modes, simply use the effective nations
   if (!isHumansVsNations) {
-    return manifestNations.map(toNation);
+    return effectiveNations.map(toNation);
   }
 
   // HumansVsNations mode: balance nation count to match human count
@@ -69,6 +81,20 @@ export function createNationsForGame(
   }
 
   return nations;
+}
+
+// For compact maps, only 25% of nations are used (minimum 1).
+export function getCompactMapNationCount(
+  manifestNationCount: number,
+  isCompactMap: boolean,
+): number {
+  if (manifestNationCount === 0) {
+    return 0;
+  }
+  if (isCompactMap) {
+    return Math.max(1, Math.floor(manifestNationCount * 0.25));
+  }
+  return manifestNationCount;
 }
 
 const PLURAL_NOUN = Symbol("plural!");

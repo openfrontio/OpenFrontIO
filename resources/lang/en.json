@@ -362,6 +362,10 @@
     "ffa": "Free for All",
     "teams": "Teams"
   },
+  "public_game_modifier": {
+    "random_spawn": "Random Spawn",
+    "compact_map": "Compact Map"
+  },
   "select_lang": {
     "title": "Select Language"
   },

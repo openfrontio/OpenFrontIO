@@ -7,6 +7,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
+  PublicGameModifier,
   Team,
   TerraNullius,
   Tick,
@@ -34,6 +35,7 @@ export interface ServerConfig {
     map: GameMapType,
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
   ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -57,6 +59,8 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
+  getRandomPublicGameModifiers(): PublicGameModifier[];
+  supportsCompactMapForTeams(map: GameMapType): boolean;
 }
 
 export interface NukeMagnitude {
