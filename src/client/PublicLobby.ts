@@ -1,10 +1,11 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import {
   Duos,
   GameMapType,
   GameMode,
+  hasUnusualThumbnailSize,
   HumansVsNations,
   Quads,
   Trios,
@@ -114,8 +115,9 @@ export class PublicLobby extends LitElement {
     }
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
-    const isUnusualThumbnailSize =
-      lobby.gameConfig.gameMap === GameMapType.AmazonRiver;
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(
+      lobby.gameConfig.gameMap,
+    );
 
     return html`
       <button

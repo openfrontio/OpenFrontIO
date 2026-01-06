@@ -1,6 +1,10 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType } from "../../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  hasUnusualThumbnailSize,
+} from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
@@ -154,7 +158,10 @@ export class MapDisplay extends LitElement {
   }
 
   render() {
-    const isUnusualThumbnailSize = this.mapKey === "AmazonRiver";
+    const mapType = GameMapType[this.mapKey as keyof typeof GameMapType];
+    const isUnusualThumbnailSize = mapType
+      ? hasUnusualThumbnailSize(mapType)
+      : false;
     const objectFitStyle = isUnusualThumbnailSize
       ? "object-fit: cover; object-position: center;"
       : "";

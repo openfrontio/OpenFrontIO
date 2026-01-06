@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { GameEndInfo } from "../core/Schemas";
-import { GameMapType } from "../core/game/Game";
+import { GameMapType, hasUnusualThumbnailSize } from "../core/game/Game";
 import { fetchGameById } from "./Api";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UsernameInput } from "./UsernameInput";
@@ -105,8 +105,7 @@ export class GameInfoModal extends LitElement {
     if (!info) {
       return html``;
     }
-    const isUnusualThumbnailSize =
-      info.config.gameMap === GameMapType.AmazonRiver;
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(info.config.gameMap);
     return html`
       <div
         class="h-37.5 flex relative justify-between rounded-xl bg-blue-600 items-center"
