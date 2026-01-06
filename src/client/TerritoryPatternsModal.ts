@@ -129,6 +129,14 @@ export class TerritoryPatternsModal extends LitElement {
         if (this.showOnlyOwned && rel !== "owned") {
           continue;
         }
+        // Determine if this pattern/color is selected
+        const isDefaultPattern = pattern === null;
+        const isSelected =
+          (isDefaultPattern && this.selectedPattern === null) ||
+          (this.selectedPattern &&
+            this.selectedPattern.name === pattern?.name &&
+            (this.selectedPattern.colorPalette?.name ?? null) ===
+              (colorPalette?.name ?? null));
         buttons.push(html`
           <pattern-button
             .pattern=${pattern}
@@ -136,6 +144,7 @@ export class TerritoryPatternsModal extends LitElement {
               colorPalette?.name ?? ""
             ] ?? null}
             .requiresPurchase=${rel === "purchasable"}
+            .selected=${isSelected}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
               handlePurchase(p, colorPalette)}
@@ -158,6 +167,7 @@ export class TerritoryPatternsModal extends LitElement {
             ? html`
                 <pattern-button
                   .pattern=${null}
+                  .selected=${this.selectedPattern === null}
                   .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
                 ></pattern-button>
               `
@@ -223,7 +233,7 @@ export class TerritoryPatternsModal extends LitElement {
 
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl max-h-[80vh]"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
       >
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar">
@@ -280,12 +290,28 @@ export class TerritoryPatternsModal extends LitElement {
         pattern.colorPalette?.name === undefined
           ? pattern.name
           : `${pattern.name}:${pattern.colorPalette.name}`;
-
       this.userSettings.setSelectedPatternName(`pattern:${name}`);
     }
     this.selectedPattern = pattern;
     this.refresh();
+    // Show popup/modal for skin selection
+    this.showSkinSelectedPopup();
+    // Close the skin store and show the play modal
     this.close();
+    window.showPage("page-play");
+  }
+
+  private showSkinSelectedPopup() {
+    // Use heads-up-message modal for feedback
+    const headsUp = document.querySelector("heads-up-message") as HTMLElement;
+    if (headsUp) {
+      headsUp.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: { message: "Skin selected", duration: 2000 },
+          bubbles: true,
+        }),
+      );
+    }
   }
 
   private selectColor(hexCode: string) {

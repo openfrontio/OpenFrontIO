@@ -15,6 +15,8 @@ export const BUTTON_WIDTH = 150;
 
 @customElement("pattern-button")
 export class PatternButton extends LitElement {
+  @property({ type: Boolean })
+  selected: boolean = false;
   @property({ type: Object })
   pattern: Pattern | null = null;
 
@@ -70,7 +72,10 @@ export class PatternButton extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center justify-between gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl w-48 h-full transition-all duration-200 hover:bg-white/10 hover:border-white/20 hover:shadow-xl"
+        class="flex flex-col items-center justify-between gap-2 p-3 bg-white/5 backdrop-blur-sm border rounded-xl w-48 h-full transition-all duration-200 ${this
+          .selected
+          ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
+          : "hover:bg-white/10 hover:border-white/20 hover:shadow-xl border-white/10"}"
       >
         <button
           class="group relative flex flex-col items-center w-full gap-2 rounded-lg cursor-pointer transition-all duration-200

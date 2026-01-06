@@ -287,7 +287,16 @@ class Client {
     this.patternsModal.previewButton = patternButton;
     this.patternsModal.refresh();
     patternButton.addEventListener("click", () => {
-      this.patternsModal.open();
+      window.showPage("page-item-store");
+      const skinStoreModal = document.getElementById(
+        "page-item-store",
+      ) as HTMLElement & { open?: () => void };
+      if (skinStoreModal) {
+        skinStoreModal.classList.remove("hidden");
+        if (typeof skinStoreModal.open === "function") {
+          skinStoreModal.open();
+        }
+      }
     });
 
     this.tokenLoginModal = document.querySelector(
