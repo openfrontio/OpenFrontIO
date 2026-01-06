@@ -156,25 +156,27 @@ export class PublicLobby extends LitElement {
                       .join("")}`
                 : translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-white-400">
+            <div
+              class="text-md font-medium text-white-400 flex flex-wrap justify-end items-center gap-1"
+            >
               ${fullModeLabel
                 ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
+                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
                       ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                      : "text-blue-600"} bg-white rounded-sm px-1"
                     >${fullModeLabel}</span
                   >`
                 : ""}
               ${modifierLabel.map(
                 (label) =>
                   html`<span
-                    class="text-sm ${this.isLobbyHighlighted
+                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
                       ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                      : "text-blue-600"} bg-white rounded-sm px-1"
                     >${label}</span
                   >`,
               )}
-              <span
+              <span class="whitespace-nowrap"
                 >${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
                 )}</span
