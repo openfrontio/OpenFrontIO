@@ -4,18 +4,15 @@
  * Benchmark pathfinding adapters on various scenarios
  *
  * Usage:
- *   npx tsx tests/pathfinding/benchmark.ts [<scenario> [<adapter>]]
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic <map-name> [<adapter>]
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic --all [<adapter>]
+ *   npx tsx tests/pathfinding/benchmark/run.ts [<scenario> [<adapter>]]
+ *   npx tsx tests/pathfinding/benchmark/run.ts --synthetic <map-name> [<adapter>]
+ *   npx tsx tests/pathfinding/benchmark/run.ts --synthetic --all [<adapter>]
  *
  * Examples:
- *   npx tsx tests/pathfinding/benchmark.ts
- *   npx tsx tests/pathfinding/benchmark.ts giantworldmap-lite
- *   npx tsx tests/pathfinding/benchmark.ts giantworldmap-lite NavSat
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic iceland
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic iceland NavSat
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic --all
- *   npx tsx tests/pathfinding/benchmark.ts --synthetic --all NavSat
+ *   npx tsx tests/pathfinding/benchmark/run.ts
+ *   npx tsx tests/pathfinding/benchmark/run.ts default legacy
+ *   npx tsx tests/pathfinding/benchmark/run.ts --synthetic --all
+ *   npx tsx tests/pathfinding/benchmark/run.ts --synthetic iceland legacy
  */
 
 import { readdirSync } from "fs";
@@ -185,27 +182,25 @@ async function runScenario(
 function printUsage() {
   console.log(`
 Usage:
-  npx tsx tests/pathfinding/benchmark.ts [<scenario> [<adapter>]]
-  npx tsx tests/pathfinding/benchmark.ts --synthetic <map-name> [<adapter>]
-  npx tsx tests/pathfinding/benchmark.ts --synthetic --all [<adapter>]
+  npx tsx tests/pathfinding/benchmark/run.ts [<scenario> [<adapter>]]
+  npx tsx tests/pathfinding/benchmark/run.ts --synthetic <map-name> [<adapter>]
+  npx tsx tests/pathfinding/benchmark/run.ts --synthetic --all [<adapter>]
 
 Arguments:
-  <scenario>    Name of the scenario to benchmark (default: giantworldmap-lite)
-  <adapter>     Name of the pathfinding adapter to use (default: NavSat)
+  <scenario>    Name of the scenario to benchmark (default: "default" -> giantworldmap with handpicked ports)
+  <adapter>     Name of the pathfinding adapter to use (default: "default" -> HPA*)
+  --silent      Minimize output, only print summary lines
   --synthetic   Run synthetic scenarios
   --all         Run all synthetic scenarios (requires --synthetic)
 
 Examples:
-  npx tsx tests/pathfinding/benchmark.ts
-  npx tsx tests/pathfinding/benchmark.ts giantworldmap-lite
-  npx tsx tests/pathfinding/benchmark.ts giantworldmap-lite NavSat
-  npx tsx tests/pathfinding/benchmark.ts --synthetic iceland
-  npx tsx tests/pathfinding/benchmark.ts --synthetic iceland NavSat
-  npx tsx tests/pathfinding/benchmark.ts --synthetic --all
-  npx tsx tests/pathfinding/benchmark.ts --synthetic --all NavSat
+  npx tsx tests/pathfinding/benchmark/run.ts
+  npx tsx tests/pathfinding/benchmark/run.ts default legacy
+  npx tsx tests/pathfinding/benchmark/run.ts --synthetic --all
+  npx tsx tests/pathfinding/benchmark/run.ts --synthetic iceland legacy
 
 Available synthetic scenarios:
-  Run 'ls tests/pathfinding/scenarios/synthetic' to see all available scenarios
+  Run 'ls tests/pathfinding/benchmark/scenarios/synthetic' to see all available scenarios
 `);
 }
 
