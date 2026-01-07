@@ -211,7 +211,7 @@ export class InputHandler {
       buildFactory: "Digit2",
       buildPort: "Digit3",
       buildDefensePost: "Digit4",
-      buildLandMine: "Minus",
+      buildLandMine: "KeyM",
       buildMissileSilo: "Digit5",
       buildSamLauncher: "Digit6",
       buildWarship: "Digit7",
