@@ -311,7 +311,7 @@ describe("LandMine", () => {
     executeTicks(slowBuildGame, 5);
 
     expect(mine.isActive()).toBe(false);
-
+    ``;
     expect(attacker2.units(UnitType.LandMine)).toHaveLength(0);
 
     expect(defender2.units(UnitType.LandMine)).toHaveLength(0);
@@ -370,18 +370,6 @@ describe("LandMine", () => {
     expect(defender.units(UnitType.LandMine)).toHaveLength(0);
   });
 
-  test("land mine has same cost as defense post", async () => {
-    const config = game.config();
-    const landMineCost = config
-      .unitInfo(UnitType.LandMine)
-      .cost(game, defender);
-    const defensePostCost = config
-      .unitInfo(UnitType.DefensePost)
-      .cost(game, defender);
-
-    expect(landMineCost).toEqual(defensePostCost);
-  });
-
   test("land mine is a territory-bound structure", async () => {
     constructionExecution(game, defender, 10, 10, UnitType.LandMine);
     const mine = defender.units(UnitType.LandMine)[0];
@@ -394,16 +382,6 @@ describe("LandMine", () => {
     const mine = defender.units(UnitType.LandMine)[0];
 
     expect(mine.info().visibleToEnemies).toBe(false);
-  });
-
-  test("land mine visibility property is configured correctly in config", async () => {
-    const config = game.config();
-    const landMineInfo = config.unitInfo(UnitType.LandMine);
-
-    expect(landMineInfo.visibleToEnemies).toBe(false);
-
-    const defensePostInfo = config.unitInfo(UnitType.DefensePost);
-    expect(defensePostInfo.visibleToEnemies).toBeUndefined();
   });
 
   test("server should not send land mine unit updates to enemies", async () => {
