@@ -280,11 +280,6 @@ export class AccountModal extends LitElement {
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
-          <div class="text-white text-lg font-medium">
-            ${translateText("account_modal.linked_account", {
-              account_name: me.discord.global_name ?? "",
-            })}
-          </div>
           ${this.renderLogoutButton()}
         </div>
       `;
