@@ -4,6 +4,31 @@ import { translateText } from "../client/Utils";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 
+const DefaultKeybinds: Record<string, string> = {
+  toggleView: "Space",
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildDefensePost: "Digit4",
+  buildMissileSilo: "Digit5",
+  buildSamLauncher: "Digit6",
+  buildWarship: "Digit7",
+  buildAtomBomb: "Digit8",
+  buildHydrogenBomb: "Digit9",
+  buildMIRV: "Digit0",
+  attackRatioDown: "KeyT",
+  attackRatioUp: "KeyY",
+  boatAttack: "KeyB",
+  groundAttack: "KeyG",
+  zoomOut: "KeyQ",
+  zoomIn: "KeyE",
+  centerCamera: "KeyC",
+  moveUp: "KeyW",
+  moveLeft: "KeyA",
+  moveDown: "KeyS",
+  moveRight: "KeyD",
+};
+
 @customElement("keybinds-modal")
 export class KeybindsModal extends LitElement {
   @property({ type: Boolean }) inline = false;
@@ -55,9 +80,19 @@ export class KeybindsModal extends LitElement {
     console.log("Keybind change event:", e);
     const { action, value, key, prevValue } = e.detail;
 
-    const values = Object.entries(this.keybinds)
+    const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
+    for (const [k, v] of Object.entries(this.keybinds)) {
+      if (v.value === "Null") {
+        delete activeKeybinds[k];
+      } else {
+        activeKeybinds[k] = v.value;
+      }
+    }
+
+    const values = Object.entries(activeKeybinds)
       .filter(([k]) => k !== action)
-      .map(([, v]) => v.value);
+      .map(([, v]) => v);
+
     if (values.includes(value) && value !== "Null") {
       // Format key for user-friendly display
       let displayKey = value;
