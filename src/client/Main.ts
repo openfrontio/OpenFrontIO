@@ -207,6 +207,16 @@ class Client {
     singlePlayer.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         window.showPage("page-single-player");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
@@ -374,6 +384,16 @@ class Client {
       if (this.usernameInput?.isValid()) {
         window.showPage("page-host-lobby");
         this.publicLobby.leaveLobby();
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
@@ -391,6 +411,16 @@ class Client {
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         window.showPage("page-join-private-lobby");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
