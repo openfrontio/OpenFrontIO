@@ -78,21 +78,19 @@ export class AiAttackBehavior {
     const assist = (): boolean => this.assistAllies();
 
     const traitor = (): boolean => {
-      const weakestTraitor = this.findWeakestTraitor(borderingEnemies);
-      if (weakestTraitor) {
-        this.sendAttack(weakestTraitor);
+      const traitor = this.findTraitor(borderingEnemies);
+      if (traitor) {
+        this.sendAttack(traitor);
         return true;
       }
       return false;
     };
 
     const afk = (): boolean => {
-      // borderingEnemies is already sorted by troops (ascending), so first match is weakest
-      const weakestAfk = borderingEnemies.find((enemy) =>
-        enemy.isDisconnected(),
-      );
-      if (weakestAfk) {
-        this.sendAttack(weakestAfk);
+      // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
+      const afk = borderingEnemies.find((enemy) => enemy.isDisconnected());
+      if (afk) {
+        this.sendAttack(afk);
         return true;
       }
       return false;
@@ -109,9 +107,9 @@ export class AiAttackBehavior {
     };
 
     const victim = (): boolean => {
-      const weakestVictim = this.findWeakestVictim(borderingEnemies);
-      if (weakestVictim) {
-        this.sendAttack(weakestVictim);
+      const victim = this.findVictim(borderingEnemies);
+      if (victim) {
+        this.sendAttack(victim);
         return true;
       }
       return false;
@@ -128,11 +126,24 @@ export class AiAttackBehavior {
       return false;
     };
 
+    const veryWeak = (): boolean => {
+      const veryWeak = this.findVeryWeakEnemy(borderingEnemies);
+      if (veryWeak) {
+        this.sendAttack(veryWeak);
+        return true;
+      }
+      return false;
+    };
+
     const weakest = (): boolean => {
       if (borderingEnemies.length > 0) {
         // borderingEnemies is already sorted by troops (ascending), so first match is weakest
-        this.sendAttack(borderingEnemies[0]);
-        return true;
+        const weakest = borderingEnemies[0];
+        // Don't attack if they have more troops than us
+        if (weakest.troops() < this.player.troops()) {
+          this.sendAttack(weakest);
+          return true;
+        }
       }
       return false;
     };
@@ -152,48 +163,17 @@ export class AiAttackBehavior {
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
       case Difficulty.Easy:
+        // prettier-ignore
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
-        return [
-          bots,
-          nuked,
-          retaliate,
-          assist,
-          betray,
-          hated,
-          afk,
-          traitor,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island];
       case Difficulty.Hard:
-        return [
-          bots,
-          retaliate,
-          assist,
-          betray,
-          nuked,
-          traitor,
-          afk,
-          hated,
-          victim,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island];
       case Difficulty.Impossible:
-        return [
-          retaliate,
-          bots,
-          assist,
-          traitor,
-          afk,
-          betray,
-          nuked,
-          victim,
-          hated,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island];
       default:
         assertNever(difficulty);
     }
@@ -309,13 +289,13 @@ export class AiAttackBehavior {
     return false;
   }
 
-  // Find a traitor who isn't much stronger than us (max 20% more troops)
-  private findWeakestTraitor(borderingEnemies: Player[]): Player | null {
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+  // Find a traitor who isn't significantly stronger than us
+  private findTraitor(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest traitor
     return (
       borderingEnemies.find(
         (enemy) =>
-          enemy.isTraitor() && enemy.troops() * 1.2 < this.player.troops(),
+          enemy.isTraitor() && enemy.troops() < this.player.troops() * 1.2,
       ) ?? null
     );
   }
@@ -349,12 +329,12 @@ export class AiAttackBehavior {
     return false;
   }
 
-  // Find someone who is weaker than us and is under big attack from others (50%+ of their troops incoming)
-  private findWeakestVictim(borderingEnemies: Player[]): Player | null {
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+  // Find someone who isn't significantly stronger than us and is under big attack from others (50%+ of their troops incoming)
+  private findVictim(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest victim
     return (
       borderingEnemies.find((enemy) => {
-        if (enemy.troops() >= this.player.troops()) return false;
+        if (enemy.troops() > this.player.troops() * 1.2) return false;
 
         const totalIncomingTroops = enemy
           .incomingAttacks()
@@ -363,6 +343,21 @@ export class AiAttackBehavior {
         return totalIncomingTroops > enemy.troops() * 0.5;
       }) ?? null
     );
+  }
+
+  // Find very weak (less than 10% of their maxTroops) enemies
+  // which also don't have significantly more troops than us (to target MIRVed players)
+  private findVeryWeakEnemy(borderingEnemies: Player[]): Player | null {
+    const veryWeakEnemies = borderingEnemies.filter((enemy) => {
+      const enemyMaxTroops = this.game.config().maxTroops(enemy);
+      return (
+        enemy.troops() < enemyMaxTroops * 0.1 &&
+        enemy.troops() < this.player.troops() * 1.2
+      );
+    });
+
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest very weak enemy
+    return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
   }
 
   private findNearestIslandEnemy(): Player | null {
@@ -374,8 +369,8 @@ export class AiAttackBehavior {
       if (!p.isAlive()) return false;
       if (p.borderTiles().size === 0) return false;
       if (this.player.isFriendly(p)) return false;
-      // Don't spam boats into players more than 2x our troops
-      return p.troops() <= this.player.troops() * 2;
+      // Don't spam boats into players with more troops
+      return p.troops() < this.player.troops();
     });
 
     if (filteredPlayers.length > 0) {
