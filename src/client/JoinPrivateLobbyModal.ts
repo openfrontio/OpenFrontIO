@@ -29,6 +29,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private lobbyCreatorClientID: string | null = null;
   @state() private lobbyIdVisible: boolean = true;
   @state() private copySuccess: boolean = false;
+  @state() private currentLobbyId: string = "";
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -145,7 +146,7 @@ export class JoinPrivateLobbyModal extends LitElement {
                   ${this.copySuccess
                     ? translateText("common.copied")
                     : this.lobbyIdVisible
-                      ? this.lobbyIdInput.value
+                      ? this.currentLobbyId
                       : "••••••••"}
                 </div>
               </div>`
@@ -323,7 +324,8 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   public close() {
-    this.lobbyIdInput.value = "";
+    if (this.lobbyIdInput) this.lobbyIdInput.value = "";
+    this.currentLobbyId = "";
     this.gameConfig = null;
     this.players = [];
     if (this.inline) {
@@ -345,7 +347,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.message = "";
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
-        detail: { lobby: this.lobbyIdInput.value },
+        detail: { lobby: this.currentLobbyId },
         bubbles: true,
         composed: true,
       }),
@@ -354,7 +356,7 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private async copyToClipboard() {
     await copyToClipboard(
-      `${location.origin}/#join=${this.lobbyIdInput.value}`,
+      `${location.origin}/#join=${this.currentLobbyId}`,
       () => (this.copySuccess = true),
       () => (this.copySuccess = false),
     );
@@ -417,6 +419,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
 
     this.lobbyIdInput.value = lobbyId;
+    this.currentLobbyId = lobbyId;
     console.log(`Joining lobby with ID: ${this.sanitizeForLog(lobbyId)}`);
     this.message = `${translateText("private_lobby.checking")}`;
 
@@ -564,7 +567,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async pollPlayers() {
-    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    const lobbyId = this.currentLobbyId;
     if (!lobbyId) return;
     const config = await getServerConfigFromClient();
 
