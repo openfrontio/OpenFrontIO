@@ -1,5 +1,5 @@
 import type { TemplateResult } from "lit";
-import { html, LitElement } from "lit";
+import { html, LitElement, render } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
@@ -8,7 +8,7 @@ import { PlayerPattern } from "../core/Schemas";
 import { hasLinkedAccount } from "./Api";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { generatePreviewDataUrl } from "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternButton";
 import {
   fetchCosmetics,
   handlePurchase,
@@ -357,18 +357,15 @@ export class TerritoryPatternsModal extends LitElement {
   public async refresh() {
     this.requestUpdate();
 
+    const preview = this.selectedColor
+      ? this.renderColorPreview(this.selectedColor, 48, 48)
+      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
+
     if (this.previewButton === null) return;
 
-    if (this.selectedColor) {
-      this.previewButton.innerHTML = `<div class="w-full h-full rounded" style="background-color: ${this.selectedColor};"></div>`;
-    } else {
-      const url = generatePreviewDataUrl(
-        this.selectedPattern ?? undefined,
-        48,
-        48,
-      );
-      this.previewButton.innerHTML = `<img src="${url}" alt="Pattern preview" class="w-full h-full object-contain [image-rendering:pixelated]" />`;
-    }
+    // Clear and re-render using Lit
+    this.previewButton.innerHTML = "";
+    render(preview, this.previewButton);
     this.previewButton.style.padding = "4px";
     this.requestUpdate();
   }
