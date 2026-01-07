@@ -68,6 +68,7 @@ var maps = []struct {
 	{Name: "ocean_and_land", IsTest: true},
 	{Name: "plains", IsTest: true},
 	{Name: "giantworldmap", IsTest: true},
+	{Name: "world", IsTest: true},
 }
 
 // outputMapDir returns the absolute path to the directory where generated map files should be written.
