@@ -164,7 +164,17 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     return token;
   }
-  abstract numWorkers(): number;
+  numWorkers(): number {
+    const raw = Env.NUM_WORKERS;
+    if (!raw) {
+      throw new Error("NUM_WORKERS not set");
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new Error(`Invalid NUM_WORKERS value "${raw}"`);
+    }
+    return Math.floor(parsed);
+  }
   abstract env(): GameEnv;
   turnIntervalMs(): number {
     return 100;
