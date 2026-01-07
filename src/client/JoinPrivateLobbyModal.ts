@@ -59,7 +59,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden select-none"
       >
         <div
           class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"

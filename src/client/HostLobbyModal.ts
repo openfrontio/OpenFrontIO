@@ -118,7 +118,7 @@ export class HostLobbyModal extends LitElement {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden select-none"
       >
         <!-- Header -->
         <div
