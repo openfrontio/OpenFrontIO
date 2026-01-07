@@ -258,7 +258,8 @@
     "atom_bomb": "Atombombe",
     "hydrogen_bomb": "Brintbombe",
     "mirv": "MIRV",
-    "factory": "Fabrik"
+    "factory": "Fabrik",
+    "land_mine": "Landmine"
   },
   "user_setting": {
     "title": "Brugerindstillinger",
@@ -427,7 +428,8 @@
       "port": "Sender handelsskibe for at generere guld",
       "defense_post": "Forstærker forsvaret af nærliggende grænser",
       "city": "Øger maksimal befolkning",
-      "factory": "Opretter jernbaner og sender tog afsted"
+      "factory": "Opretter jernbaner og sender tog afsted",
+      "land_mine": "Eksploderer når en fjende indtager denne felt"
     },
     "not_enough_money": "Ikke nok penge"
   },

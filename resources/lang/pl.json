@@ -304,7 +304,8 @@
     "atom_bomb": "Bomba atomowa",
     "hydrogen_bomb": "Bomba wodorowa",
     "mirv": "MIRV",
-    "factory": "Fabryka"
+    "factory": "Fabryka",
+    "land_mine": "Mina lądowa"
   },
   "user_setting": {
     "title": "Ustawienia użytkownika",
@@ -497,7 +498,8 @@
       "port": "Wysyła statki handlowe, aby wygenerować złoto",
       "defense_post": "Wzmacnia obronę pobliskich granic",
       "city": "Zwiększa maksymalną populację",
-      "factory": "Tworzy linie kolejowe i przywołuje pociągi"
+      "factory": "Tworzy linie kolejowe i przywołuje pociągi",
+      "land_mine": "Wybucha gdy wróg zajmie to pole"
     },
     "not_enough_money": "Za mało złota"
   },

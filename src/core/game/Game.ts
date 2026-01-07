@@ -208,6 +208,7 @@ export interface UnitInfo {
   upgradable?: boolean;
   canBuildTrainStation?: boolean;
   experimental?: boolean;
+  visibleToEnemies?: boolean;
 }
 
 export enum UnitType {
@@ -227,6 +228,7 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  LandMine = "Land Mine",
 }
 
 export enum TrainType {
@@ -242,6 +244,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.LandMine,
 ]);
 
 export function isStructureType(type: UnitType): boolean {
@@ -310,6 +313,8 @@ export interface UnitParamsMap {
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
+
+  [UnitType.LandMine]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -335,7 +340,7 @@ export class Nation {
   constructor(
     public readonly spawnCell: Cell | undefined,
     public readonly playerInfo: PlayerInfo,
-  ) {}
+  ) { }
 }
 
 export class Cell {

@@ -19,7 +19,7 @@ export class PlayerExecution implements Execution {
   private mg: Game;
   private active = true;
 
-  constructor(private player: Player) {}
+  constructor(private player: Player) { }
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -54,6 +54,9 @@ export class PlayerExecution implements Execution {
         if (u.isActive()) {
           captor.captureUnit(u);
         }
+      } else if (u.type() === UnitType.LandMine) {
+        // Land mines are handled by LandMineExecution - don't capture them
+        // The LandMineExecution will detect the ownership change and detonate
       } else {
         captor.captureUnit(u);
       }
@@ -98,7 +101,7 @@ export class PlayerExecution implements Execution {
       if (
         embargo.isTemporary &&
         this.mg.ticks() - embargo.createdAt >
-          this.mg.config().temporaryEmbargoDuration()
+        this.mg.config().temporaryEmbargoDuration()
       ) {
         this.player.stopEmbargo(embargo.target);
       }

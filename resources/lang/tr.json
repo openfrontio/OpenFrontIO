@@ -272,7 +272,8 @@
     "atom_bomb": "Atom Bombası",
     "hydrogen_bomb": "Hidrojen Bombası",
     "mirv": "MIRV",
-    "factory": "Fabrika"
+    "factory": "Fabrika",
+    "land_mine": "Kara Mayını"
   },
   "user_setting": {
     "title": "Kullanıcı Ayarları",
@@ -456,7 +457,8 @@
       "port": "Altın üretmek için ticaret gemileri gönderir",
       "defense_post": "Yakındaki sınırların savunmasını artırır",
       "city": "Maksimum nüfusu artırır",
-      "factory": "Demiryolları yapar ve trenler oluşturur"
+      "factory": "Demiryolları yapar ve trenler oluşturur",
+      "land_mine": "Düşman bu kareyi ele geçirdiğinde patlar"
     },
     "not_enough_money": "Yeterli para yok"
   },

@@ -258,7 +258,7 @@ export class DefaultConfig implements Config {
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
-  ) {}
+  ) { }
 
   stripePublishableKey(): string {
     return Env.STRIPE_PUBLISHABLE_KEY ?? "";
@@ -405,7 +405,7 @@ export class DefaultConfig implements Config {
     // Geometric mean of base spawn rate and port multiplier
     const combined = Math.sqrt(
       this.tradeShipBaseSpawn(numTradeShips, numPlayerTradeShips) *
-        this.tradeShipPortMultiplier(numPlayerPorts),
+      this.tradeShipPortMultiplier(numPlayerPorts),
     );
 
     return Math.floor(25 / combined);
@@ -560,6 +560,16 @@ export class DefaultConfig implements Config {
           cost: () => 0n,
           territoryBound: false,
           experimental: true,
+        };
+      case UnitType.LandMine:
+        return {
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
+            UnitType.LandMine,
+          ),
+          territoryBound: true,
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          visibleToEnemies: false,
         };
       default:
         assertNever(type);
@@ -840,11 +850,11 @@ export class DefaultConfig implements Config {
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+        player
+          .units(UnitType.City)
+          .map((city) => city.level())
+          .reduce((a, b) => a + b, 0) *
+        this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -917,6 +927,8 @@ export class DefaultConfig implements Config {
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };
+      case UnitType.LandMine:
+        return { inner: 6, outer: 15 };
     }
     throw new Error(`Unknown nuke type: ${unitType}`);
   }

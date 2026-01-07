@@ -247,7 +247,8 @@
     "atom_bomb": "Atombombe",
     "hydrogen_bomb": "Wasserstoffbombe",
     "mirv": "MIRV-Rakete",
-    "factory": "Fabrik"
+    "factory": "Fabrik",
+    "land_mine": "Landmine"
   },
   "user_setting": {
     "title": "Benutzer Einstellungen",
@@ -390,7 +391,8 @@
       "warship": "Erobert Handelsschiffe, zerstört Schiffe und Boote",
       "port": "Sendet Handelsschiffe, um Gold zu generieren",
       "defense_post": "Erhöht Verteidigung der Grenzen in der Nähe",
-      "city": "Erhöht maximale Bevölkerung"
+      "city": "Erhöht maximale Bevölkerung",
+      "land_mine": "Explodiert, wenn ein Feind dieses Feld erobert"
     },
     "not_enough_money": "Nicht genug Geld"
   },

@@ -75,6 +75,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    clientID,
   );
   gr.init();
   return gr;
@@ -84,6 +85,7 @@ export class GameRunner {
   private turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
+  private myPlayer: Player | null = null;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
 
@@ -91,7 +93,8 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-  ) {}
+    private clientID: ClientID,
+  ) { }
 
   init() {
     if (this.game.config().isRandomSpawn()) {
@@ -169,6 +172,9 @@ export class GameRunner {
     const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
     updates[GameUpdateType.Tile] = [];
 
+    // Filter out units that should be hidden from this player
+    this.filterHiddenUnits(updates);
+
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
@@ -177,6 +183,49 @@ export class GameRunner {
       tickExecutionDuration: tickExecutionDuration,
     });
     this.isExecuting = false;
+  }
+
+  /**
+   * Filters out unit updates for units that should be hidden from this client.
+   * Units with visibleToEnemies: false are only visible to their owner and allies.
+   */
+  private filterHiddenUnits(updates: GameUpdates): void {
+    // Lazy-load our player reference
+    if (this.myPlayer === null) {
+      this.myPlayer = this.game.playerByClientID(this.clientID) ?? null;
+    }
+
+    updates[GameUpdateType.Unit] = updates[GameUpdateType.Unit].filter(
+      (unitUpdate) => {
+        const unitInfo = this.game.config().unitInfo(unitUpdate.unitType);
+
+        // If unit is visible to enemies (default), keep it
+        if (unitInfo.visibleToEnemies !== false) {
+          return true;
+        }
+
+        // Unit is hidden from enemies - check if we should see it
+        if (this.myPlayer === null) {
+          // Spectator - can't see hidden enemy units
+          return false;
+        }
+
+        // Check if we own or are allied with the owner
+        const ownerSmallID = unitUpdate.ownerID;
+        if (this.myPlayer.smallID() === ownerSmallID) {
+          return true; // We own it
+        }
+
+        // Check if owner is our ally
+        const owner = this.game.playerBySmallID(ownerSmallID);
+        if (owner.isPlayer() && this.myPlayer.isAlliedWith(owner)) {
+          return true; // Allied with owner
+        }
+
+        // Enemy unit that should be hidden
+        return false;
+      },
+    );
   }
 
   public playerActions(

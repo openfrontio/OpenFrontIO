@@ -258,7 +258,8 @@
     "atom_bomb": "Atómová bomba",
     "hydrogen_bomb": "Vodíková bomba",
     "mirv": "MIRV",
-    "factory": "Továreň"
+    "factory": "Továreň",
+    "land_mine": "Pozemná mína"
   },
   "user_setting": {
     "title": "Užívateľské nastavenia",
@@ -427,7 +428,8 @@
       "port": "Posiela obchodné lode na tvorbu zlata",
       "defense_post": "Zvyšuje obranu okolitých hraníc",
       "city": "Zvyšuje maximálnu populáciu",
-      "factory": "Tvorí železnice a vlaky"
+      "factory": "Tvorí železnice a vlaky",
+      "land_mine": "Vybuchne, keď nepriateľ obsadí toto pole"
     },
     "not_enough_money": "Nedostatok zlata"
   },

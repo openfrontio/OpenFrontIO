@@ -54,7 +54,7 @@ class StructureRenderInfo {
     public dotContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
-  ) {}
+  ) { }
 }
 
 export class StructureIconsLayer implements Layer {
@@ -91,6 +91,7 @@ export class StructureIconsLayer implements Layer {
     [UnitType.Port, { visible: true }],
     [UnitType.MissileSilo, { visible: true }],
     [UnitType.SAMLauncher, { visible: true }],
+    [UnitType.LandMine, { visible: true }],
   ]);
   private lastGhostQueryAt: number;
   potentialUpgrade: StructureRenderInfo | undefined;
@@ -676,9 +677,9 @@ export class StructureIconsLayer implements Layer {
           Math.max(
             1,
             scale /
-              (target === render.levelContainer
-                ? LEVEL_SCALE_FACTOR
-                : ICON_SCALE_FACTOR_ZOOMED_IN),
+            (target === render.levelContainer
+              ? LEVEL_SCALE_FACTOR
+              : ICON_SCALE_FACTOR_ZOOMED_IN),
           ),
         );
       } else if (scale > DOTS_ZOOM_THRESHOLD) {

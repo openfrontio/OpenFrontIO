@@ -148,6 +148,47 @@ export function structureSpawnTileValue(
         return w;
       };
     }
+    case UnitType.LandMine: {
+      // Land mines should be placed near borders where enemies are likely to attack
+      return (tile) => {
+        let w = 0;
+
+        // Prefer to be close to the border (where enemies will attack)
+        const [closest, closestBorderDist] = closestTile(mg, borderTiles, tile);
+        if (closest !== null) {
+          // Prefer tiles close to the border but not right on it
+          w += Math.max(0, borderSpacing - closestBorderDist);
+
+          // Prefer adjacent players who are hostile
+          const neighbors: Set<Player> = new Set();
+          for (const neighborTile of mg.neighbors(closest)) {
+            if (!mg.isLand(neighborTile)) continue;
+            const id = mg.ownerID(neighborTile);
+            if (id === player.smallID()) continue;
+            const neighbor = mg.playerBySmallID(id);
+            if (!neighbor.isPlayer()) continue;
+            neighbors.add(neighbor);
+          }
+          for (const neighbor of neighbors) {
+            w +=
+              borderSpacing * (Relation.Friendly - player.relation(neighbor));
+          }
+        }
+
+        // Prefer to be away from other land mines
+        const otherTiles: Set<TileRef> = new Set(
+          otherUnits.map((u) => u.tile()),
+        );
+        otherTiles.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        if (closestOther !== null) {
+          const d = mg.manhattanDist(closestOther.x, tile);
+          w += Math.min(d, structureSpacing);
+        }
+
+        return w;
+      };
+    }
     default:
       throw new Error(`Value function not implemented for ${type}`);
   }

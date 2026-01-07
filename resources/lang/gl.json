@@ -258,7 +258,8 @@
     "atom_bomb": "Bomba atómica",
     "hydrogen_bomb": "Bomba de hidróxeno",
     "mirv": "MIRV",
-    "factory": "Fábrica"
+    "factory": "Fábrica",
+    "land_mine": "Mina terrestre"
   },
   "user_setting": {
     "title": "Axustes do usuario",
@@ -427,7 +428,8 @@
       "port": "Envía barcos comerciais para xerar ouro",
       "defense_post": "Reforza as defensas das fronteiras próximas",
       "city": "Aumenta a poboación máxima",
-      "factory": "Constrúe vías férreas e xera trens"
+      "factory": "Constrúe vías férreas e xera trens",
+      "land_mine": "Explota cando un inimigo captura esta cela"
     },
     "not_enough_money": "Non tes ouro dabondo"
   },

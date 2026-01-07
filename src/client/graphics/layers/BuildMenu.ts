@@ -28,6 +28,7 @@ import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
 import factoryIcon from "/images/FactoryIconWhite.svg?url";
 import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
+import landMineIcon from "/images/ExplosionIconWhite.svg?url";
 import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
@@ -101,6 +102,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: shieldIcon,
       description: "build_menu.desc.defense_post",
       key: "unit_type.defense_post",
+      countable: true,
+    },
+    {
+      unitType: UnitType.LandMine,
+      icon: landMineIcon,
+      description: "build_menu.desc.land_mine",
+      key: "unit_type.land_mine",
       countable: true,
     },
     {
@@ -399,7 +407,7 @@ export class BuildMenu extends LitElement implements Layer {
     } else if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
-        buildableUnit.type === UnitType.HydrogenBomb
+          buildableUnit.type === UnitType.HydrogenBomb
           ? this.uiState.rocketDirectionUp
           : undefined;
       this.eventBus.emit(
@@ -416,27 +424,27 @@ export class BuildMenu extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.filteredBuildTable.map(
-          (row) => html`
+      (row) => html`
             <div class="build-row">
               ${row.map((item) => {
-                const buildableUnit = this.playerActions?.buildableUnits.find(
-                  (bu) => bu.type === item.unitType,
-                );
-                if (buildableUnit === undefined) {
-                  return html``;
-                }
-                const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
-                return html`
+        const buildableUnit = this.playerActions?.buildableUnits.find(
+          (bu) => bu.type === item.unitType,
+        );
+        if (buildableUnit === undefined) {
+          return html``;
+        }
+        const enabled =
+          buildableUnit.canBuild !== false ||
+          buildableUnit.canUpgrade !== false;
+        return html`
                   <button
                     class="build-button"
                     @click=${() =>
-                      this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
+            this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
-                      : ""}
+            ? translateText("build_menu.not_enough_money")
+            : ""}
                   >
                     <img
                       src=${item.icon}
@@ -449,12 +457,12 @@ export class BuildMenu extends LitElement implements Layer {
                     >
                     <span class="build-description"
                       >${item.description &&
-                      translateText(item.description)}</span
+          translateText(item.description)}</span
                     >
                     <span class="build-cost" translate="no">
                       ${renderNumber(
-                        this.game && this.game.myPlayer() ? this.cost(item) : 0,
-                      )}
+            this.game && this.game.myPlayer() ? this.cost(item) : 0,
+          )}
                       <img
                         src=${goldCoinIcon}
                         alt="gold"
@@ -464,16 +472,16 @@ export class BuildMenu extends LitElement implements Layer {
                       />
                     </span>
                     ${item.countable
-                      ? html`<div class="build-count-chip">
+            ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>
                         </div>`
-                      : ""}
+            : ""}
                   </button>
                 `;
-              })}
+      })}
             </div>
           `,
-        )}
+    )}
       </div>
     `;
   }
