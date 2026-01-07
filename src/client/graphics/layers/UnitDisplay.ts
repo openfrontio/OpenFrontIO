@@ -171,7 +171,7 @@ export class UnitDisplay extends LitElement implements Layer {
               this._landMine,
               UnitType.LandMine,
               "land_mine",
-              this.keybinds["buildLandMine"]?.key ?? "-",
+              this.keybinds["buildLandMine"]?.key ?? "M",
             )}
             ${this.renderUnitItem(
               missileSiloIcon,
