@@ -5,6 +5,7 @@ import {
   Gold,
   Player,
   PlayerID,
+  PlayerType,
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever, toInt } from "../Util";
@@ -61,20 +62,23 @@ export class DonateGoldExecution implements Execution {
       }
 
       // Select emoji based on donation value
-      const emoji =
-        relationUpdate >= 50
-          ? EMOJI_LOVE
-          : relationUpdate > 0
-            ? EMOJI_DONATION_OK
-            : EMOJI_DONATION_TOO_SMALL;
+      // Only AI nations auto-respond with emojis, human players should not
+      if (this.recipient.type() === PlayerType.Nation) {
+        const emoji =
+          relationUpdate >= 50
+            ? EMOJI_LOVE
+            : relationUpdate > 0
+              ? EMOJI_DONATION_OK
+              : EMOJI_DONATION_TOO_SMALL;
 
-      this.mg.addExecution(
-        new EmojiExecution(
-          this.recipient,
-          this.sender.id(),
-          this.random.randElement(emoji),
-        ),
-      );
+        this.mg.addExecution(
+          new EmojiExecution(
+            this.recipient,
+            this.sender.id(),
+            this.random.randElement(emoji),
+          ),
+        );
+      }
     } else {
       console.warn(
         `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
