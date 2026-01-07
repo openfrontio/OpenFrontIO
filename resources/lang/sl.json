@@ -275,8 +275,7 @@
     "atom_bomb": "Atomska bomba",
     "hydrogen_bomb": "Vodikova bomba",
     "mirv": "MIRV",
-    "factory": "Tovarna",
-    "land_mine": "Mina"
+    "factory": "Tovarna"
   },
   "user_setting": {
     "title": "Uporabniške nastavitve",
@@ -462,8 +461,7 @@
       "port": "Pošilja trgovske ladje za pridobivanje zlata",
       "defense_post": "Poveča obrambo bližnjih meja",
       "city": "Poveča največjo populacijo",
-      "factory": "Ustvarja železnice in ustvarja vlake",
-      "land_mine": "Eksplodira, ko sovražnik zavzame to polje"
+      "factory": "Ustvarja železnice in ustvarja vlake"
     },
     "not_enough_money": "Ni dovolj denarja"
   },

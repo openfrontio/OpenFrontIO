@@ -324,8 +324,7 @@
     "atom_bomb": "原子弹",
     "hydrogen_bomb": "氢弹",
     "mirv": "MIRV",
-    "factory": "工厂",
-    "land_mine": "地雷"
+    "factory": "工厂"
   },
   "user_setting": {
     "title": "用户设置",
@@ -369,8 +368,6 @@
     "build_factory_desc": "在鼠标位置建造工厂。",
     "build_defense_post": "建造要塞",
     "build_defense_post_desc": "在鼠标位置建造要塞。",
-    "build_land_mine": "建造地雷",
-    "build_land_mine_desc": "在鼠标位置建造地雷。",
     "build_port": "建造港口",
     "build_port_desc": "在鼠标位置建造港口。",
     "build_warship": "部署军舰",
@@ -520,8 +517,7 @@
       "port": "发送商船来获得黄金",
       "defense_post": "增加附近边界的防御力",
       "city": "增加最大人口",
-      "factory": "创建铁轨并生成火车",
-      "land_mine": "当敌人占领此格时爆炸"
+      "factory": "创建铁轨并生成火车"
     },
     "not_enough_money": "金钱不足"
   },

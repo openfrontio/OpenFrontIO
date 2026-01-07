@@ -304,8 +304,7 @@
     "atom_bomb": "Bomba atomowa",
     "hydrogen_bomb": "Bomba wodorowa",
     "mirv": "MIRV",
-    "factory": "Fabryka",
-    "land_mine": "Mina lądowa"
+    "factory": "Fabryka"
   },
   "user_setting": {
     "title": "Ustawienia użytkownika",
@@ -349,8 +348,6 @@
     "build_factory_desc": "Zbuduj fabrykę pod twoim kursorem.",
     "build_defense_post": "Buduj posterunek obronny",
     "build_defense_post_desc": "Zbuduj posterunek obronny pod twoim kursorem.",
-    "build_land_mine": "Zbuduj minę lądową",
-    "build_land_mine_desc": "Zbuduj minę lądową pod twoim kursorem.",
     "build_port": "Zbuduj port",
     "build_port_desc": "Zbuduj port pod twoim kursorem.",
     "build_warship": "Zbuduj okręt wojenny",
@@ -500,8 +497,7 @@
       "port": "Wysyła statki handlowe, aby wygenerować złoto",
       "defense_post": "Wzmacnia obronę pobliskich granic",
       "city": "Zwiększa maksymalną populację",
-      "factory": "Tworzy linie kolejowe i przywołuje pociągi",
-      "land_mine": "Wybucha gdy wróg zajmie to pole"
+      "factory": "Tworzy linie kolejowe i przywołuje pociągi"
     },
     "not_enough_money": "Za mało złota"
   },

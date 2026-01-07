@@ -202,8 +202,7 @@
     "sam_launcher": "قاذف صواريخ مضادة",
     "atom_bomb": "قنبلة نووية",
     "hydrogen_bomb": "قنبلة هيدروجينية",
-    "mirv": "MIRV",
-    "land_mine": "لغم أرضي"
+    "mirv": "MIRV"
   },
   "user_setting": {
     "title": "إعدادات المستخدم",

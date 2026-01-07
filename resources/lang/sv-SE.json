@@ -253,8 +253,7 @@
     "atom_bomb": "Liten atombomb",
     "hydrogen_bomb": "Vätebomb",
     "mirv": "MIRV",
-    "factory": "Fabrik",
-    "land_mine": "Landmina"
+    "factory": "Fabrik"
   },
   "user_setting": {
     "title": "Användarinställningar",
@@ -416,8 +415,7 @@
       "port": "Skickar handelsfartyg för att generera guld",
       "defense_post": "Ökar försvaret mot närliggande gränser",
       "city": "Ökar max befolkning",
-      "factory": "Skapar järnvägar och producerar tåg",
-      "land_mine": "Exploderar när en fiende intar denna ruta"
+      "factory": "Skapar järnvägar och producerar tåg"
     },
     "not_enough_money": "Ej tillräckligt med guld"
   },

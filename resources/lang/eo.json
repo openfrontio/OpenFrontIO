@@ -275,8 +275,7 @@
     "atom_bomb": "Atombombo",
     "hydrogen_bomb": "Hidrogenbombo",
     "mirv": "MIRV",
-    "factory": "Fabriko",
-    "land_mine": "Termino"
+    "factory": "Fabriko"
   },
   "user_setting": {
     "title": "Uzantparametroj",
@@ -462,8 +461,7 @@
       "port": "Sendas komercŝipojn por produkti oron",
       "defense_post": "Pligrandigas defendojn de proksimumaj landlimoj",
       "city": "Pligrandigas maksiman loĝantaron",
-      "factory": "Kreas fervojojn kaj generas trajnojn",
-      "land_mine": "Eksplodas kiam malamiko kaptas ĉi tiun kahelon"
+      "factory": "Kreas fervojojn kaj generas trajnojn"
     },
     "not_enough_money": "Ne sufiĉe da mono"
   },

@@ -258,8 +258,7 @@
     "atom_bomb": "Bomba Atómica",
     "hydrogen_bomb": "Bomba de Hidrogénio",
     "mirv": "MIRV",
-    "factory": "Fábrica",
-    "land_mine": "Mina Terrestre"
+    "factory": "Fábrica"
   },
   "user_setting": {
     "title": "Configurações de Utilizador",
@@ -428,8 +427,7 @@
       "port": "Envia navios de comércio para gerar ouro",
       "defense_post": "Aumenta as defesas de fronteiras próximas",
       "city": "Aumenta a população máxima",
-      "factory": "Cria ferrovias e comboios",
-      "land_mine": "Explode quando um inimigo captura esta casa"
+      "factory": "Cria ferrovias e comboios"
     },
     "not_enough_money": "Dinheiro insuficiente"
   },

@@ -275,8 +275,7 @@
     "atom_bomb": "Atombomba",
     "hydrogen_bomb": "Hidrogénbomba",
     "mirv": "MIRV",
-    "factory": "Gyár",
-    "land_mine": "Akna"
+    "factory": "Gyár"
   },
   "user_setting": {
     "title": "Játékos beállítások",
@@ -462,8 +461,7 @@
       "port": "Kereskedőhajókat küld, hogy arany termeljen",
       "defense_post": "Növeli a közeli határok védelmét",
       "city": "Növeli a maximális népességet",
-      "factory": "Vasútvonalakat hoz létre és vonatokat indít",
-      "land_mine": "Felrobban, amikor egy ellenség elfoglalja ezt a mezőt"
+      "factory": "Vasútvonalakat hoz létre és vonatokat indít"
     },
     "not_enough_money": "Nincs elég pénz"
   },

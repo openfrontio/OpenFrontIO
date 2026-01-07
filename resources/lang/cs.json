@@ -216,8 +216,7 @@
     "sam_launcher": "Odpalovač SAM",
     "atom_bomb": "Atomová bomba",
     "hydrogen_bomb": "Vodíková bomba",
-    "mirv": "MIRV",
-    "land_mine": "Pozemní mina"
+    "mirv": "MIRV"
   },
   "user_setting": {
     "title": "Uživatelská nastavení",
@@ -346,8 +345,7 @@
       "warship": "Zachytává obchodní lodě, ničí lodě a čluny",
       "port": "Odešle obchodní lodě pro generování zlata",
       "defense_post": "Zvýšit ochranu blízkých hranic",
-      "city": "Zvýšit maximální počet obyvatel",
-      "land_mine": "Vybuchne, když nepřítel obsadí toto pole"
+      "city": "Zvýšit maximální počet obyvatel"
     },
     "not_enough_money": "Nedostatek peněz"
   },

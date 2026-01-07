@@ -272,8 +272,7 @@
     "atom_bomb": "Atomipommi",
     "hydrogen_bomb": "Vetypommi",
     "mirv": "MIRV",
-    "factory": "Tehdas",
-    "land_mine": "Maamiina"
+    "factory": "Tehdas"
   },
   "user_setting": {
     "title": "Käyttäjäasetukset",
@@ -457,8 +456,7 @@
       "port": "Lähettää kauppa-aluksia tuottaakseen kultaa",
       "defense_post": "Parantaa läheisten rajojen puolustusta",
       "city": "Lisää enimmäisväkilukuasi",
-      "factory": "Luo rautateitä ja lähettää junia",
-      "land_mine": "Räjähtää kun vihollinen valtaa tämän ruudun"
+      "factory": "Luo rautateitä ja lähettää junia"
     },
     "not_enough_money": "Ei tarpeeksi rahaa"
   },

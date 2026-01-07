@@ -324,8 +324,7 @@
     "atom_bomb": "Bombe atomique",
     "hydrogen_bomb": "Bombe à hydrogène",
     "mirv": "MIRV",
-    "factory": "Usine",
-    "land_mine": "Mine terrestre"
+    "factory": "Usine"
   },
   "user_setting": {
     "title": "Paramètres utilisateur",
@@ -369,8 +368,6 @@
     "build_factory_desc": "Construire une ville sous votre curseur.",
     "build_defense_post": "Construire un poste de défense",
     "build_defense_post_desc": "Construire un poste de défense sous votre curseur.",
-    "build_land_mine": "Construire une mine terrestre",
-    "build_land_mine_desc": "Construire une mine terrestre sous votre curseur.",
     "build_port": "Construire un port",
     "build_port_desc": "Construire un port sous votre curseur.",
     "build_warship": "Construire un navire de guerre",
@@ -520,8 +517,7 @@
       "port": "Envoie des navires commerciaux pour produire de l'or",
       "defense_post": "Augmente les défenses des frontières proches",
       "city": "Augmente la population maximale",
-      "factory": "Crée des chemins de fer et fait apparaître des trains",
-      "land_mine": "Explose quand un ennemi capture cette case"
+      "factory": "Crée des chemins de fer et fait apparaître des trains"
     },
     "not_enough_money": "Pas assez d'argent"
   },

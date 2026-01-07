@@ -251,8 +251,7 @@
     "atom_bomb": "원자 폭탄",
     "hydrogen_bomb": "수소 폭탄",
     "mirv": "다탄두 미사일",
-    "factory": "공장",
-    "land_mine": "지뢰"
+    "factory": "공장"
   },
   "user_setting": {
     "title": "사용자 설정",
@@ -414,8 +413,7 @@
       "port": "무역선을 보내 금을 생산합니다",
       "defense_post": "주변 경계의 방어력을 강화합니다",
       "city": "최대 인구 수를 증가시킵니다",
-      "factory": "철도를 만들고 기차를 생성합니다",
-      "land_mine": "적이 이 타일을 점령하면 폭발합니다"
+      "factory": "철도를 만들고 기차를 생성합니다"
     },
     "not_enough_money": "돈이 부족합니다"
   },
