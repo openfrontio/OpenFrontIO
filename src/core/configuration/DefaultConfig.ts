@@ -233,6 +233,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 
   supportsCompactMapForTeams(map: GameMapType): boolean {
     // Maps with smallest player count < 50 don't support compact map in team games
+    // The smallest player count is the 3rd number in numPlayersConfig
     const [, , smallest] = numPlayersConfig[map] ?? [50, 30, 20];
     return smallest >= 50;
   }

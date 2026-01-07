@@ -103,7 +103,8 @@ export class MapPlaylist {
       isRandomSpawn = false;
     }
 
-    // Small maps (3rd player count < 50) don't get compact map in team games
+    // Maps with smallest player count < 50 don't support compact map in team games
+    // The smallest player count is the 3rd number in numPlayersConfig
     if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
       isCompact = false;
     }
