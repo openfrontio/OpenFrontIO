@@ -5,6 +5,7 @@ import { translateText } from "../client/Utils";
 import { getClanTagOriginalCase, sanitizeClanTag } from "../core/Util";
 import {
   MAX_USERNAME_LENGTH,
+  MIN_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
 
@@ -105,6 +106,15 @@ export class UsernameInput extends LitElement {
   }
 
   private validateAndStore() {
+    // Prevent empty username even if clan tag is present
+    if (!this.baseUsername.trim()) {
+      this._isValid = false;
+      this.validationError = translateText("username.too_short", {
+        min: MIN_USERNAME_LENGTH,
+      });
+      return;
+    }
+
     const full = this.constructFullUsername();
     const trimmedFull = full.trim();
 
