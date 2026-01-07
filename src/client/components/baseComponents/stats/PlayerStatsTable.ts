@@ -26,7 +26,7 @@ export class PlayerStatsTable extends LitElement {
             ${translateText("player_stats_table.building_stats")}
           </div>
           <div
-            class="overflow-hidden rounded-lg border border-white/5 bg-black/20"
+            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
           >
             <table class="w-full text-sm text-gray-300">
               <thead>
@@ -86,7 +86,7 @@ export class PlayerStatsTable extends LitElement {
             ${translateText("player_stats_table.ship_arrivals")}
           </div>
           <div
-            class="overflow-hidden rounded-lg border border-white/5 bg-black/20"
+            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
           >
             <table class="w-full text-sm text-gray-300">
               <thead>
@@ -139,7 +139,7 @@ export class PlayerStatsTable extends LitElement {
             ${translateText("player_stats_table.nuke_stats")}
           </div>
           <div
-            class="overflow-hidden rounded-lg border border-white/5 bg-black/20"
+            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
           >
             <table class="w-full text-sm text-gray-300">
               <thead>
@@ -192,7 +192,7 @@ export class PlayerStatsTable extends LitElement {
             ${translateText("player_stats_table.player_metrics")}
           </div>
           <div
-            class="overflow-hidden rounded-lg border border-white/5 bg-black/20 mb-4"
+            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20 mb-4"
           >
             <table class="w-full text-sm text-gray-300">
               <thead>
@@ -231,7 +231,7 @@ export class PlayerStatsTable extends LitElement {
           </div>
 
           <div
-            class="overflow-hidden rounded-lg border border-white/5 bg-black/20"
+            class="overflow-x-auto rounded-lg border border-white/5 bg-black/20"
           >
             <table class="w-full text-sm text-gray-300">
               <thead>
