@@ -389,6 +389,15 @@ export class TerritoryPatternsModal extends LitElement {
       ? this.renderColorPreview(this.selectedColor, 48, 48)
       : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
 
+    if (
+      this.previewButton === null ||
+      !document.body.contains(this.previewButton)
+    ) {
+      this.previewButton = document.getElementById(
+        "territory-patterns-input-preview-button",
+      );
+    }
+
     if (this.previewButton === null) return;
 
     // Check if the element is still in the DOM to avoid lit-html errors
