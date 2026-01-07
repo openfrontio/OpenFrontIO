@@ -1,6 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { copyToClipboard, translateText } from "../client/Utils";
 import {
   ClientInfo,
   GameConfig,
@@ -27,6 +27,8 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private players: ClientInfo[] = [];
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
+  @state() private lobbyIdVisible: boolean = true;
+  @state() private copySuccess: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -89,35 +91,96 @@ export class JoinPrivateLobbyModal extends LitElement {
               ${translateText("private_lobby.title")}
             </span>
           </div>
+
+          <!-- Lobby ID Box -->
+          ${this.hasJoined
+            ? html`<div
+                class="hidden md:flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
+              >
+                <button
+                  @click=${() => {
+                    this.lobbyIdVisible = !this.lobbyIdVisible;
+                    this.requestUpdate();
+                  }}
+                  class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                  title="Toggle Visibility"
+                >
+                  ${this.lobbyIdVisible
+                    ? html`<svg
+                        viewBox="0 0 512 512"
+                        height="16px"
+                        width="16px"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                        ></path>
+                      </svg>`
+                    : html`<svg
+                        viewBox="0 0 512 512"
+                        height="16px"
+                        width="16px"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="32"
+                        ></path>
+                        <path
+                          d="M144 256l224 0"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="32"
+                          stroke-linecap="round"
+                        ></path>
+                      </svg>`}
+                </button>
+                <div
+                  @click=${this.copyToClipboard}
+                  class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-all min-w-[80px] text-center truncate tracking-wider"
+                  title="${translateText("common.click_to_copy")}"
+                >
+                  ${this.copySuccess
+                    ? translateText("common.copied")
+                    : this.lobbyIdVisible
+                      ? this.lobbyIdInput.value
+                      : "••••••••"}
+                </div>
+              </div>`
+            : ""}
         </div>
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-          <div class="lobby-id-box">
-            <input
-              type="text"
-              id="lobbyIdInput"
-              placeholder=${translateText("private_lobby.enter_id")}
-              @keyup=${this.handleChange}
-            />
-            <button
-              @click=${this.pasteFromClipboard}
-              class="lobby-id-paste-button"
-            >
-              <svg
-                class="lobby-id-paste-button-icon"
-                stroke="currentColor"
-                fill="currentColor"
-                stroke-width="0"
-                viewBox="0 0 32 32"
-                height="18px"
-                width="18px"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
-                ></path>
-              </svg>
-            </button>
-          </div>
+          ${!this.hasJoined
+            ? html`<div class="lobby-id-box">
+                <input
+                  type="text"
+                  id="lobbyIdInput"
+                  placeholder=${translateText("private_lobby.enter_id")}
+                  @keyup=${this.handleChange}
+                />
+                <button
+                  @click=${this.pasteFromClipboard}
+                  class="lobby-id-paste-button"
+                >
+                  <svg
+                    class="lobby-id-paste-button-icon"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 32 32"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>`
+            : ""}
           <div class="message-area ${this.message ? "show" : ""}">
             ${this.message}
           </div>
@@ -147,7 +210,6 @@ export class JoinPrivateLobbyModal extends LitElement {
                   .clients=${this.players}
                   .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                   .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  .nationCount=${this.gameConfig?.bots ?? 0}
                 ></lobby-team-view>
 
                 <button
@@ -287,6 +349,14 @@ export class JoinPrivateLobbyModal extends LitElement {
         bubbles: true,
         composed: true,
       }),
+    );
+  }
+
+  private async copyToClipboard() {
+    await copyToClipboard(
+      `${location.origin}/#join=${this.lobbyIdInput.value}`,
+      () => (this.copySuccess = true),
+      () => (this.copySuccess = false),
     );
   }
 
