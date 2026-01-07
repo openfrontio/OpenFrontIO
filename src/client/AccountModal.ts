@@ -220,7 +220,7 @@ export class AccountModal extends LitElement {
               class="text-lg font-bold text-white mb-4 flex items-center gap-2"
             >
               <span class="text-blue-400">📊</span>
-              Stats Overview
+              ${translateText("account_modal.stats_overview")}
             </h3>
             <player-stats-tree-view
               .statsTree=${this.statsTree}
@@ -269,10 +269,10 @@ export class AccountModal extends LitElement {
           </div>
           <div>
             <h3 class="text-lg font-bold text-white uppercase tracking-wider">
-              Save Your Progress
+              ${translateText("account_modal.save_progress_title")}
             </h3>
             <p class="text-sm text-white/60 mt-1">
-              Link your account to keep your stats, rank, and cosmetics safe.
+              ${translateText("account_modal.save_progress_desc")}
             </p>
           </div>
         </div>
@@ -289,7 +289,7 @@ export class AccountModal extends LitElement {
             />
             <span class="font-bold text-sm relative z-10 tracking-wide"
               >${translateText("main.login_discord") ||
-              "Link Discord Account"}</span
+              translateText("account_modal.link_discord")}</span
             >
           </button>
 
@@ -300,13 +300,15 @@ export class AccountModal extends LitElement {
                 .value="${this.email}"
                 @input="${this.handleEmailInput}"
                 class="flex-1 min-w-0 px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium"
-                placeholder="Link via Email"
+                placeholder="${translateText(
+                  "account_modal.link_via_email_placeholder",
+                )}"
               />
               <button
                 @click="${this.handleSubmit}"
                 class="px-5 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all border border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0"
               >
-                Link
+                ${translateText("account_modal.link_button")}
               </button>
             </div>
           </div>
@@ -350,7 +352,7 @@ export class AccountModal extends LitElement {
           />
           <span class="font-bold text-sm relative z-10 tracking-wide"
             >${translateText("main.login_discord") ||
-            "Link Discord Account"}</span
+            translateText("account_modal.link_discord")}</span
           >
         </button>
 
@@ -361,13 +363,15 @@ export class AccountModal extends LitElement {
               .value="${this.email}"
               @input="${this.handleEmailInput}"
               class="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium"
-              placeholder="Link via Email"
+              placeholder="${translateText(
+                "account_modal.link_via_email_placeholder",
+              )}"
             />
             <button
               @click="${this.handleSubmit}"
               class="px-4 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all"
             >
-              Link
+              ${translateText("account_modal.link_button")}
             </button>
           </div>
         </div>
@@ -392,7 +396,7 @@ export class AccountModal extends LitElement {
         @click="${this.handleLogout}"
         class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-red-600/80 hover:bg-red-600 border border-red-500/50 rounded-lg transition-all shadow-lg hover:shadow-red-900/40"
       >
-        Log Out
+        ${translateText("account_modal.log_out")}
       </button>
     `;
   }
@@ -425,10 +429,10 @@ export class AccountModal extends LitElement {
             <h3
               class="text-xl font-bold text-white uppercase tracking-widest mb-2"
             >
-              Welcome Back
+              ${translateText("account_modal.welcome_back")}
             </h3>
             <p class="text-white/50 text-sm font-medium">
-              Sign in to save your stats and progress
+              ${translateText("account_modal.sign_in_desc")}
             </p>
           </div>
 
@@ -448,7 +452,7 @@ export class AccountModal extends LitElement {
               />
               <span class="font-bold relative z-10 tracking-wide"
                 >${translateText("main.login_discord") ||
-                "Login with Discord"}</span
+                translateText("account_modal.link_discord")}</span
               >
             </button>
 
@@ -458,7 +462,7 @@ export class AccountModal extends LitElement {
               <span
                 class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
               >
-                OR
+                ${translateText("account_modal.or")}
               </span>
               <div class="h-px bg-white/10 flex-1"></div>
             </div>
@@ -473,7 +477,9 @@ export class AccountModal extends LitElement {
                   .value="${this.email}"
                   @input="${this.handleEmailInput}"
                   class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10"
-                  placeholder="Enter your email address"
+                  placeholder="${translateText(
+                    "account_modal.email_placeholder",
+                  )}"
                   required
                 />
                 <div
@@ -500,7 +506,7 @@ export class AccountModal extends LitElement {
                 @click="${this.handleSubmit}"
                 class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5"
               >
-                Get Magic Link
+                ${translateText("account_modal.get_magic_link")}
               </button>
             </div>
           </div>
