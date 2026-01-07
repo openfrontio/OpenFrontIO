@@ -88,7 +88,10 @@ export class AiAttackBehavior {
 
     const afk = (): boolean => {
       // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
-      const afk = borderingEnemies.find((enemy) => enemy.isDisconnected());
+      const afk = borderingEnemies.find(
+        (enemy) =>
+          enemy.isDisconnected() && enemy.troops() < this.player.troops() * 3,
+      );
       if (afk) {
         this.sendAttack(afk);
         return true;
@@ -120,6 +123,7 @@ export class AiAttackBehavior {
         if (relation.relation !== Relation.Hostile) continue;
         const other = relation.player;
         if (this.player.isFriendly(other)) continue;
+        if (other.troops() > this.player.troops() * 3) continue;
         this.sendAttack(other);
         return true;
       }
