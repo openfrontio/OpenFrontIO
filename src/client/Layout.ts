@@ -27,24 +27,21 @@ export function initLayout() {
 
   backdrop.addEventListener("click", closeMenu);
 
-  // Close menu when clicking a menu link
+  // Close menu when clicking a menu link (Mobile only)
   sidebar.addEventListener("click", (e) => {
+    // On desktop, we want the menu to stay open unless explicitly toggled
+    if (window.innerWidth >= 768) return;
+
     const target = e.target as HTMLElement;
     if (target && target.classList.contains("nav-menu-item")) {
       closeMenu();
     }
   });
 
-  // Close on Escape
+  // Close on Escape (Mobile only)
   document.addEventListener("keydown", (e) => {
+    if (window.innerWidth >= 768) return;
     if (e.key === "Escape" && sidebar.classList.contains("open")) {
-      closeMenu();
-    }
-  });
-
-  // Ensure menu closes when resizing up to desktop
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 767 && sidebar.classList.contains("open")) {
       closeMenu();
     }
   });

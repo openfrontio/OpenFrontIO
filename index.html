@@ -95,10 +95,17 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
+    <div
+      class="fixed inset-0 w-full h-full -z-50 bg-cover bg-center bg-fixed pointer-events-none"
+      style="
+        background-image: url(&quot;/images/EuropeBackgroundBlurred.webp&quot;);
+      "
+    ></div>
+
     <!-- LEFT SIDEBAR MENU -->
     <button
       id="hamburger-btn"
-      class="[.in-game_&]:hidden flex md:hidden fixed top-3 left-3 z-[11000] bg-black/60 text-white border-0 p-2 rounded-md items-center justify-center cursor-pointer hover:bg-black/80 transition-colors"
+      class="[.in-game_&]:hidden flex md:hidden fixed top-3 left-3 z-[11000] bg-black/60 text-white border-0 p-2 rounded-md items-center justify-center cursor-pointer hover:bg-black/80 transition-all duration-300"
       aria-label="Open menu"
       title="Menu"
     >
@@ -106,171 +113,207 @@
     </button>
     <div
       id="mobile-menu-backdrop"
-      class="[.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/50 [&.open]:z-[11000] transition-opacity"
+      class="md:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/50 [&.open]:z-[11000] transition-opacity"
     ></div>
     <div
       id="sidebar-menu"
-      class="[.in-game_&]:hidden z-75 hidden md:flex flex-col justify-start h-screen overflow-y-auto bg-gradient-to-r from-black/90 to-black/65 md:w-[clamp(220px,18vw,350px)] md:min-w-0 md:pt-[clamp(1rem,3vh,4rem)] md:pb-[clamp(0.5rem,2vh,2rem)] md:px-[clamp(1rem,1.5vw,2rem)] md:gap-[clamp(1rem,3vh,3rem)] [&.open]:flex [&.open]:fixed [&.open]:inset-0 [&.open]:w-full [&.open]:max-w-full [&.open]:z-[11001] [&.open]:p-5 [&.open]:overflow-y-auto"
+      class="peer [.in-game_&]:hidden z-[11001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full md:w-[clamp(220px,18vw,350px)] w-full [&.open]:translate-x-0"
     >
-      <!-- Logo + Menu -->
+      <!-- Border Segments (Custom right border with gap for button) -->
       <div
-        class="flex flex-col text-[#2563eb] mb-[clamp(1rem,2vh,2rem)] ml-[clamp(0.2rem,0.4vw,0.4vh)]"
+        class="absolute right-0 top-0 w-px bg-[#2563eb]"
+        style="height: calc(50% - 64px)"
+      ></div>
+      <div
+        class="absolute right-0 bottom-0 w-px bg-[#2563eb]"
+        style="height: calc(50% - 64px)"
+      ></div>
+
+      <!-- Collapse toggle button for desktop -->
+      <button
+        id="sidebar-collapse-btn"
+        class="hidden md:flex absolute left-full top-1/2 -translate-y-1/2 w-[50px] h-32 items-center justify-center rounded-r-2xl bg-black/60 backdrop-blur-md border-r border-y border-l-0 border-[#2563eb] cursor-pointer text-[#2563eb] hover:text-blue-400 transition-colors z-[11002] outline-none"
+        aria-label="Toggle menu"
       >
-        <div class="flex flex-col items-center gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 1364 259"
-            width="100%"
-            height="100%"
-            fill="currentColor"
-            class="w-[clamp(120px,15vw,192px)] h-[clamp(40px,6vh,64px)] drop-shadow-[0_0_10px_rgba(37,99,235,0.3)]"
-          >
-            <!-- (Logo paths preserved) -->
-            <path
-              d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
-            />
-            <path
-              d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
-            />
-            <path
-              d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
-            />
-            <path
-              d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
-            />
-            <path
-              d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
-            />
-            <path
-              d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
-            />
-            <path
-              d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
-            />
-            <path
-              d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
-            />
-            <path
-              d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
-            />
-            <path
-              d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
-            />
-            <path
-              d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
-            />
-          </svg>
-          <div
-            id="game-version"
-            class="l-header__highlightText text-center"
-          ></div>
-        </div>
-      </div>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] filter"
+        >
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
 
-      <div class="flex flex-col">
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-play"
-          data-i18n="main.play_game"
-          >Play Game</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-news"
-          data-i18n="main.news"
-          >News</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-item-store"
-          data-i18n="main.skin_store"
-          >Skin Store</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-options"
-          data-i18n="main.options"
-          >Options</a
-        >
-        <!-- Keybinds menu item removed for mobile users -->
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)] md:block hidden"
-          data-page="page-keybinds"
-          data-i18n="main.keybinds"
-          >Keybinds</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-stats"
-          data-i18n="main.stats"
-          >Stats</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-account"
-          data-i18n="main.account"
-          >Account</a
-        >
-        <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-          data-page="page-help"
-          data-i18n="main.help"
-          >Help</a
-        >
-      </div>
-
-      <div class="flex flex-col gap-4 w-full mt-auto">
+      <div
+        class="flex-1 w-full flex flex-col justify-start overflow-y-auto md:pt-[clamp(1rem,3vh,4rem)] md:pb-[clamp(0.5rem,2vh,2rem)] md:px-[clamp(1rem,1.5vw,2rem)] p-5 gap-[clamp(1rem,3vh,3rem)]"
+      >
+        <!-- Logo + Menu -->
         <div
-          id="sidebar-footer-rail"
-          class="[.in-game_&]:hidden flex w-full items-center justify-between gap-4 pt-4 border-t border-white/10"
+          class="flex flex-col text-[#2563eb] mb-[clamp(1rem,2vh,2rem)] ml-[clamp(0.2rem,0.4vw,0.4vh)]"
         >
-          <div class="flex items-center gap-4">
-            <a
-              href="https://github.com/openfrontio/OpenFrontIO"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+          <div class="flex flex-col items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 1364 259"
+              width="100%"
+              height="100%"
+              fill="currentColor"
+              class="w-[clamp(120px,15vw,192px)] h-[clamp(40px,6vh,64px)] drop-shadow-[0_0_10px_rgba(37,99,235,0.3)]"
             >
-              <img
-                src="/icons/github-mark-white.svg"
-                alt="GitHub"
-                width="28"
-                height="28"
+              <!-- (Logo paths preserved) -->
+              <path
+                d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
               />
-            </a>
-            <a
-              href="https://discord.gg/jRpxXvG42t"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                <path
-                  d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-14.36a.074.074 0 0 0-.032-.027zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z"
-                />
-              </svg>
-            </a>
-            <a
-              href="https://openfront.wiki/Main_Page"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-            >
-              <img
-                src="/icons/wiki-logo.svg"
-                alt="Wiki"
-                width="28"
-                height="28"
+              <path
+                d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
               />
-            </a>
-          </div>
-          <div class="flex-shrink-0">
-            <lang-selector></lang-selector>
+              <path
+                d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
+              />
+              <path
+                d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
+              />
+              <path
+                d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
+              />
+              <path
+                d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
+              />
+              <path
+                d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
+              />
+              <path
+                d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
+              />
+              <path
+                d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
+              />
+              <path
+                d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
+              />
+              <path
+                d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
+              />
+            </svg>
+            <div
+              id="game-version"
+              class="l-header__highlightText text-center"
+            ></div>
           </div>
         </div>
 
-        <div class="flex flex-col gap-1 text-white/50 text-xs">
-          <div>© OpenFront™ and Contributors</div>
+        <div class="flex flex-col">
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-play"
+            data-i18n="main.play_game"
+            >Play Game</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-news"
+            data-i18n="main.news"
+            >News</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-item-store"
+            data-i18n="main.skin_store"
+            >Skin Store</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-options"
+            data-i18n="main.options"
+            >Options</a
+          >
+          <!-- Keybinds menu item removed for mobile users -->
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)] md:block hidden"
+            data-page="page-keybinds"
+            data-i18n="main.keybinds"
+            >Keybinds</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-stats"
+            data-i18n="main.stats"
+            >Stats</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-account"
+            data-i18n="main.account"
+            >Account</a
+          >
+          <a
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            data-page="page-help"
+            data-i18n="main.help"
+            >Help</a
+          >
+        </div>
+
+        <div class="flex flex-col gap-4 w-full mt-auto">
+          <div
+            id="sidebar-footer-rail"
+            class="[.in-game_&]:hidden flex w-full items-center justify-between gap-4 pt-4 border-t border-white/10"
+          >
+            <div class="flex items-center gap-4">
+              <a
+                href="https://github.com/openfrontio/OpenFrontIO"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+              >
+                <img
+                  src="/icons/github-mark-white.svg"
+                  alt="GitHub"
+                  width="28"
+                  height="28"
+                />
+              </a>
+              <a
+                href="https://discord.gg/jRpxXvG42t"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                  <path
+                    d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-14.36a.074.074 0 0 0-.032-.027zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z"
+                  />
+                </svg>
+              </a>
+              <a
+                href="https://openfront.wiki/Main_Page"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
+              >
+                <img
+                  src="/icons/wiki-logo.svg"
+                  alt="Wiki"
+                  width="28"
+                  height="28"
+                />
+              </a>
+            </div>
+            <div class="flex-shrink-0">
+              <lang-selector></lang-selector>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1 text-white/50 text-xs">
+            <div>© OpenFront™ and Contributors</div>
+          </div>
         </div>
       </div>
     </div>
@@ -278,14 +321,8 @@
     <!-- MAIN CONTENT AREA -->
     <div
       id="main-content-scroll"
-      class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full"
+      class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] md:peer-[.open]:ml-[clamp(220px,18vw,350px)]"
     >
-      <div
-        class="fixed inset-0 w-full h-full -z-10 bg-cover bg-center bg-fixed"
-        style="
-          background-image: url(&quot;/images/EuropeBackgroundBlurred.webp&quot;);
-        "
-      ></div>
       <div
         id="turnstile-container"
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"

@@ -444,6 +444,40 @@ class Client {
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
 
+    const sidebar = document.getElementById("sidebar-menu");
+    const hamburgerBtn = document.getElementById("hamburger-btn");
+    const mobileBackdrop = document.getElementById("mobile-menu-backdrop");
+    const collapseBtn = document.getElementById("sidebar-collapse-btn");
+
+    const toggleSidebar = () => {
+      sidebar?.classList.toggle("open");
+      mobileBackdrop?.classList.toggle("open");
+
+      // Update collapse button icon if on desktop
+      if (collapseBtn) {
+        const isOpen = sidebar?.classList.contains("open");
+        // Closed (>) -> Open (<)
+        collapseBtn.innerHTML = isOpen
+          ? `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] filter"><polyline points="15 18 9 12 15 6"></polyline></svg>`
+          : `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] filter"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+
+        // Adjust hamburger button visibility
+        if (hamburgerBtn) {
+          hamburgerBtn.style.opacity = isOpen ? "0" : "1";
+          hamburgerBtn.style.pointerEvents = isOpen ? "none" : "auto";
+        }
+      }
+    };
+
+    hamburgerBtn?.addEventListener("click", toggleSidebar);
+    mobileBackdrop?.addEventListener("click", toggleSidebar);
+    collapseBtn?.addEventListener("click", toggleSidebar);
+
+    if (hamburgerBtn && !sidebar?.classList.contains("open")) {
+      hamburgerBtn.style.opacity = "1";
+      hamburgerBtn.style.pointerEvents = "auto";
+    }
+
     this.initializeFuseTag();
   }
 
