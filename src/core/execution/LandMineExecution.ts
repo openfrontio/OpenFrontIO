@@ -56,7 +56,7 @@ export class LandMineExecution implements Execution {
 
     // If captured by an ally of the original owner, transfer ownership
     if (currentOwner.isFriendly(this.originalOwner)) {
-      // Update owner without detonating
+      currentOwner.captureUnit(this.mine);
       this.originalOwner = currentOwner;
       return;
     }
