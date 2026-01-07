@@ -342,7 +342,7 @@ export class NationAllianceBehavior {
     const { difficulty } = this.game.config().gameConfig();
     const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
 
-    // Betray weaklings
+    // Betray very weak players (For example MIRVed ones)
     if (
       difficulty !== Difficulty.Easy &&
       difficulty !== Difficulty.Medium &&
