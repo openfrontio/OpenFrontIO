@@ -1,16 +1,16 @@
-import { Game } from "../../../src/core/game/Game";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { createGame } from "../../../src/core/game/GameImpl";
-import { TestConfig } from "../../util/TestConfig";
-import { TestServerConfig } from "../../util/TestServerConfig";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import {
   Difficulty,
+  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
 } from "../../../src/core/game/Game";
+import { createGame } from "../../../src/core/game/GameImpl";
+import { GameMapImpl } from "../../../src/core/game/GameMap";
+import { UserSettings } from "../../../src/core/game/UserSettings";
+import { TestConfig } from "../../util/TestConfig";
+import { TestServerConfig } from "../../util/TestServerConfig";
 
 const LAND_BIT = 7;
 const OCEAN_BIT = 5;
@@ -33,7 +33,9 @@ export async function mapFromString(mapRows: string[]): Promise<Game> {
 
   for (const row of mapRows) {
     if (row.length !== width) {
-      throw new Error(`All rows must have same width. Expected ${width}, got ${row.length}`);
+      throw new Error(
+        `All rows must have same width. Expected ${width}, got ${row.length}`,
+      );
     }
   }
 
@@ -45,13 +47,15 @@ export async function mapFromString(mapRows: string[]): Promise<Game> {
       const idx = y * width + x;
       const char = mapRows[y][x];
 
-      if (char === 'L') {
+      if (char === "L") {
         terrainData[idx] = 1 << LAND_BIT; // Set land bit
         numLandTiles++;
-      } else if (char === 'W') {
+      } else if (char === "W") {
         terrainData[idx] = 1 << OCEAN_BIT; // Set ocean bit (water)
       } else {
-        throw new Error(`Unknown char '${char}' at (${x},${y}). Use W=water, L=land`);
+        throw new Error(
+          `Unknown char '${char}' at (${x},${y}). Use W=water, L=land`,
+        );
       }
     }
   }
@@ -95,7 +99,12 @@ export async function mapFromString(mapRows: string[]): Promise<Game> {
     }
   }
 
-  const miniGameMap = new GameMapImpl(miniWidth, miniHeight, miniTerrainData, miniNumLandTiles);
+  const miniGameMap = new GameMapImpl(
+    miniWidth,
+    miniHeight,
+    miniTerrainData,
+    miniNumLandTiles,
+  );
 
   // Create game config
   const serverConfig = new TestServerConfig();
@@ -114,7 +123,12 @@ export async function mapFromString(mapRows: string[]): Promise<Game> {
     instantBuild: false,
     randomSpawn: false,
   };
-  const config = new TestConfig(serverConfig, gameConfig, new UserSettings(), false);
+  const config = new TestConfig(
+    serverConfig,
+    gameConfig,
+    new UserSettings(),
+    false,
+  );
 
   return createGame([], [], gameMap, miniGameMap, config);
 }

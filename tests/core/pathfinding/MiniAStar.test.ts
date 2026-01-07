@@ -1,12 +1,25 @@
-import { describe, test, expect } from "vitest";
-import { MiniAStar } from "../../../src/core/pathfinding/MiniAStar";
-import { PathFindResultType } from "../../../src/core/pathfinding/AStar";
-import { TileRef } from "../../../src/core/game/GameMap";
+import { describe, expect, test } from "vitest";
 import { Game } from "../../../src/core/game/Game";
+import { TileRef } from "../../../src/core/game/GameMap";
+import { PathFindResultType } from "../../../src/core/pathfinding/AStar";
+import { MiniAStar } from "../../../src/core/pathfinding/MiniAStar";
 import { mapFromString } from "./utils";
 
-function createAStar(game: Game, src: TileRef, dst: TileRef, waterPath = true): MiniAStar {
-  return new MiniAStar(game.map(), game.miniMap(), src, dst, 10000, 100, waterPath);
+function createAStar(
+  game: Game,
+  src: TileRef,
+  dst: TileRef,
+  waterPath = true,
+): MiniAStar {
+  return new MiniAStar(
+    game.map(),
+    game.miniMap(),
+    src,
+    dst,
+    10000,
+    100,
+    waterPath,
+  );
 }
 
 describe("MiniAStar", () => {
