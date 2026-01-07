@@ -2,7 +2,6 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
-import { Env } from "./Env";
 
 export class DevServerConfig extends DefaultServerConfig {
   turnstileSiteKey(): string {
@@ -29,7 +28,7 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
   numWorkers(): number {
-    return Env.NUM_WORKERS ? Number(Env.NUM_WORKERS) : 2;
+    return 2;
   }
   jwtAudience(): string {
     return "localhost";
