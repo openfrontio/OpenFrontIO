@@ -60,7 +60,7 @@ export class UsernameInput extends LitElement {
           type="text"
           .value=${this.clanTag}
           @input=${this.handleClanTagChange}
-          placeholder="TAG"
+          placeholder="${translateText("username.tag")}"
           maxlength="5"
           class="w-20 bg-transparent border-b border-white/20 text-white placeholder-white/30 text-xl font-bold text-center focus:outline-none focus:border-white/50 transition-colors uppercase"
         />
