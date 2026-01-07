@@ -30,6 +30,7 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
+    "shop": "Shop",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -729,6 +730,13 @@
     "pattern": {
       "default": "Default"
     }
+  },
+  "shop": {
+    "badge": "shop",
+    "skins": "Skins",
+    "colors": "Colors",
+    "no_items_available": "All skins owned! Check back later for new items.",
+    "no_colors_available": "No colors available for purchase at this time."
   },
   "flag_input": {
     "title": "Select Flag",
