@@ -1,5 +1,3 @@
-import { TileRef } from "src/core/game/GameMap";
-import { canBuildTransportShip } from "src/core/game/TransportShipUtils";
 import {
   Difficulty,
   Game,
@@ -9,6 +7,8 @@ import {
   Relation,
   TerraNullius,
 } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
+import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
   assertNever,
