@@ -193,6 +193,11 @@ export enum GameMapSize {
   Normal = "Normal",
 }
 
+export interface PublicGameModifiers {
+  isCompact: boolean;
+  isRandomSpawn: boolean;
+}
+
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
