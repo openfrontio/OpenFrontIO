@@ -429,7 +429,6 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.lobbyIdInput.value = lobbyId;
     this.currentLobbyId = lobbyId;
     console.log(`Joining lobby with ID: ${this.sanitizeForLog(lobbyId)}`);
-    this.message = `${translateText("private_lobby.checking")}`;
 
     try {
       // First, check if the game exists in active lobbies
