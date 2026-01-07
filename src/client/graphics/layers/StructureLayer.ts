@@ -10,7 +10,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import cityIcon from "/images/buildings/cityAlt1.png?url";
 import factoryIcon from "/images/buildings/factoryAlt1.png?url";
-import landMineIcon from "/images/buildings/fortAlt2.png?url";
+import landMineIcon from "/images/buildings/landMine1.png?url";
 import shieldIcon from "/images/buildings/fortAlt3.png?url";
 import anchorIcon from "/images/buildings/port1.png?url";
 import missileSiloIcon from "/images/buildings/silo1.png?url";

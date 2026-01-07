@@ -6,7 +6,7 @@ import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "/images/AnchorIcon.png?url";
 import cityIcon from "/images/CityIcon.png?url";
 import factoryIcon from "/images/FactoryUnit.png?url";
-import landMineIcon from "/images/buildings/fortAlt2.png?url";
+import landMineIcon from "/images/buildings/landMine1.png?url";
 import missileSiloIcon from "/images/MissileSiloUnit.png?url";
 import SAMMissileIcon from "/images/SamLauncherUnit.png?url";
 import shieldIcon from "/images/ShieldIcon.png?url";
