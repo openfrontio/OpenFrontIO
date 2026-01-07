@@ -1,7 +1,10 @@
+import { TileRef } from "src/core/game/GameMap";
+import { canBuildTransportShip } from "src/core/game/TransportShipUtils";
 import {
   Difficulty,
   Game,
   Player,
+  PlayerID,
   PlayerType,
   Relation,
   TerraNullius,
@@ -38,8 +41,156 @@ export class AiAttackBehavior {
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
 
+  maybeAttack() {
+    if (this.player === null || this.allianceBehavior === undefined) {
+      throw new Error("not initialized");
+    }
+
+    const border = Array.from(this.player.borderTiles())
+      .flatMap((t) => this.game.neighbors(t))
+      .filter(
+        (t) =>
+          this.game.isLand(t) &&
+          this.game.ownerID(t) !== this.player?.smallID(),
+      );
+    const borderingPlayers = [
+      ...new Set(
+        border
+          .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
+    const borderingFriends = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === true,
+    );
+    const borderingEnemies = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === false,
+    );
+
+    // Attack TerraNullius but not nuked territory
+    const hasNonNukedTerraNullius = border.some(
+      (t) => !this.game.hasOwner(t) && !this.game.hasFallout(t),
+    );
+    if (hasNonNukedTerraNullius) {
+      this.sendAttack(this.game.terraNullius());
+      return;
+    }
+
+    if (borderingEnemies.length === 0) {
+      if (this.random.chance(5)) {
+        this.attackWithRandomBoat();
+      }
+    } else {
+      if (this.random.chance(10)) {
+        this.attackWithRandomBoat(borderingEnemies);
+        return;
+      }
+
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
+    }
+
+    this.attackBestTarget(borderingFriends, borderingEnemies);
+  }
+
+  private attackWithRandomBoat(borderingEnemies: Player[] = []) {
+    if (this.player === null) throw new Error("not initialized");
+    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isOceanShore(t),
+    );
+    if (oceanShore.length === 0) {
+      return;
+    }
+
+    const src = this.random.randElement(oceanShore);
+
+    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
+    let dst = this.findRandomBoatTarget(src, borderingEnemies, true);
+    if (dst === null) {
+      // None found? Then look for players
+      dst = this.findRandomBoatTarget(src, borderingEnemies, false);
+      if (dst === null) {
+        return;
+      }
+    }
+
+    this.game.addExecution(
+      new TransportShipExecution(
+        this.player,
+        this.game.owner(dst).id(),
+        dst,
+        this.player.troops() / 5,
+        null,
+      ),
+    );
+    return;
+  }
+
+  private findRandomBoatTarget(
+    tile: TileRef,
+    borderingEnemies: Player[],
+    highInterestOnly: boolean = false,
+  ): TileRef | null {
+    if (this.player === null) throw new Error("not initialized");
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const unreachablePlayers = new Set<PlayerID>();
+    for (let i = 0; i < 500; i++) {
+      const randX = this.random.nextInt(x - 150, x + 150);
+      const randY = this.random.nextInt(y - 150, y + 150);
+      if (!this.game.isValidCoord(randX, randY)) {
+        continue;
+      }
+      const randTile = this.game.ref(randX, randY);
+      if (!this.game.isLand(randTile)) {
+        continue;
+      }
+      const owner = this.game.owner(randTile);
+      if (owner === this.player) {
+        continue;
+      }
+      // Skip players we already know are unreachable (Performance optimization)
+      if (owner.isPlayer() && unreachablePlayers.has(owner.id())) {
+        continue;
+      }
+      // Don't send boats to players with which we share a border, that usually looks stupid
+      if (owner.isPlayer() && borderingEnemies.includes(owner)) {
+        continue;
+      }
+      // Don't spam boats into players which are stronger than us
+      if (owner.isPlayer() && owner.troops() > this.player.troops()) {
+        continue;
+      }
+
+      let matchesCriteria = false;
+      if (highInterestOnly) {
+        // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
+      } else {
+        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
+        matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
+      }
+      if (!matchesCriteria) {
+        continue;
+      }
+
+      // Validate that we can actually build a transport ship to this target
+      if (canBuildTransportShip(this.game, this.player, randTile) === false) {
+        if (owner.isPlayer()) {
+          unreachablePlayers.add(owner.id());
+        }
+        continue;
+      }
+
+      return randTile;
+    }
+    return null;
+  }
+
   // attackBestTarget is called with borderingFriends and borderingEnemies sorted by troops (ascending)
-  attackBestTarget(borderingFriends: Player[], borderingEnemies: Player[]) {
+  private attackBestTarget(
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ) {
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
 
@@ -99,7 +250,8 @@ export class AiAttackBehavior {
       return false;
     };
 
-    const betray = (): boolean => this.maybeBetrayAndAttack(borderingFriends);
+    const betray = (): boolean =>
+      this.maybeBetrayAndAttack(borderingFriends, borderingEnemies);
 
     const nuked = (): boolean => {
       if (this.isBorderingNukedTerritory()) {
@@ -304,12 +456,20 @@ export class AiAttackBehavior {
     );
   }
 
-  private maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
+  private maybeBetrayAndAttack(
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
 
     if (borderingFriends.length > 0) {
       for (const friend of borderingFriends) {
-        if (this.allianceBehavior.maybeBetray(friend)) {
+        if (
+          this.allianceBehavior.maybeBetray(
+            friend,
+            borderingFriends.length + borderingEnemies.length,
+          )
+        ) {
           this.sendAttack(friend, true);
           return true;
         }

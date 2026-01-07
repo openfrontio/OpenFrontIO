@@ -336,20 +336,43 @@ export class NationAllianceBehavior {
     }
   }
 
-  // Betray friends if we have 10 times more troops than them
-  // TODO: Implement better and deeper strategies, for example:
-  // Check impact on relations with other players
-  // Check value of targets territory
-  // Check if target is distracted
-  // Check the targets territory size
-  maybeBetray(otherPlayer: Player): boolean {
+  maybeBetray(otherPlayer: Player, borderingPlayerCount: number): boolean {
+    if (!this.player.isAlliedWith(otherPlayer)) return false;
+
+    const { difficulty } = this.game.config().gameConfig();
+    const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
+
+    // Betray weaklings
     if (
-      this.player.isAlliedWith(otherPlayer) &&
-      this.player.troops() >= otherPlayer.troops() * 10
+      difficulty !== Difficulty.Easy &&
+      difficulty !== Difficulty.Medium &&
+      otherPlayer.troops() < otherPlayerMaxTroops * 0.1 &&
+      otherPlayer.troops() < this.player.troops()
     ) {
       this.betray(otherPlayer);
       return true;
     }
+
+    // Betray traitors who aren't significantly stronger than us
+    if (
+      difficulty !== Difficulty.Easy &&
+      otherPlayer.isTraitor() &&
+      otherPlayer.troops() < this.player.troops() * 1.2
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
+    // Betray our only bordering player if we are much stronger than them
+    if (
+      difficulty !== Difficulty.Easy &&
+      borderingPlayerCount === 1 &&
+      otherPlayer.troops() * 3 < this.player.troops()
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
     return false;
   }
 
