@@ -140,15 +140,17 @@ class Client {
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
 
-    const gameVersion = document.getElementById(
-      "game-version",
-    ) as HTMLDivElement;
-    if (!gameVersion) {
+    const versionElements = document.querySelectorAll(
+      "#game-version, .game-version-display",
+    );
+    if (versionElements.length === 0) {
       console.warn("Game version element not found");
     } else {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-      gameVersion.innerHTML = `${displayVersion}<br>`;
+      versionElements.forEach((el) => {
+        el.innerHTML = `${displayVersion}<br>`;
+      });
     }
 
     const langSelector = document.querySelector(
