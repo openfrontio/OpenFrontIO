@@ -31,6 +31,7 @@ var maps = []struct {
 	{Name: "betweentwoseas"},
 	{Name: "blacksea"},
 	{Name: "britannia"},
+	{Name: "britanniaclassic"},
 	{Name: "deglaciatedantarctica"},
 	{Name: "eastasia"},
 	{Name: "europe"},
