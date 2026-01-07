@@ -181,7 +181,7 @@ export class PlayerStatsTreeView extends LitElement {
                         @click=${() => this.setDifficulty(d)}
                         title=${translateText("difficulty.difficulty")}
                       >
-                        ${translateText(`difficulty.${d}`)}
+                        ${translateText(`difficulty.${d.toLowerCase()}`)}
                       </button>`,
                   )}
                 </div>`
