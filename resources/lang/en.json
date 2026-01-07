@@ -171,6 +171,7 @@
   },
   "account_modal": {
     "title": "Account",
+    "connected_as": "Connected as",
     "linked_account": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",

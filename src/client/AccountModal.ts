@@ -196,18 +196,16 @@ export class AccountModal extends LitElement {
 
     return html`
       <div class="p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <!-- Left Sidebar: Profile & Link -->
-          <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
-            <div
-              class="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4"
-            >
+        <div class="flex flex-col gap-6">
+          <!-- Top Row: Connected As -->
+          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            <div class="flex flex-col items-center gap-4">
               <div
-                class="text-xs text-white/40 uppercase tracking-widest font-bold text-center border-b border-white/5 pb-2"
+                class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
               >
-                Connected As
+                ${translateText("account_modal.connected_as")}
               </div>
-              <div class="flex flex-col items-center gap-4 py-2">
+              <div class="flex items-center gap-8 justify-center flex-wrap">
                 <discord-user-header
                   .data=${this.userMeResponse?.user?.discord ?? null}
                 ></discord-user-header>
@@ -216,34 +214,31 @@ export class AccountModal extends LitElement {
             </div>
           </div>
 
-          <!-- Right Content: Stats & Games -->
-          <div class="lg:col-span-8 flex flex-col gap-8">
-            <!-- Stats Section -->
-            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-              <h3
-                class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-              >
-                <span class="text-blue-400">📊</span>
-                Stats Overview
-              </h3>
-              <player-stats-tree-view
-                .statsTree=${this.statsTree}
-              ></player-stats-tree-view>
-            </div>
+          <!-- Middle Row: Stats Section -->
+          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            <h3
+              class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+            >
+              <span class="text-blue-400">📊</span>
+              Stats Overview
+            </h3>
+            <player-stats-tree-view
+              .statsTree=${this.statsTree}
+            ></player-stats-tree-view>
+          </div>
 
-            <!-- Recent Games Section -->
-            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-              <h3
-                class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-              >
-                <span class="text-blue-400">🎮</span>
-                ${translateText("game_list.recent_games")}
-              </h3>
-              <game-list
-                .games=${this.recentGames}
-                .onViewGame=${(id: string) => this.viewGame(id)}
-              ></game-list>
-            </div>
+          <!-- Bottom Row: Recent Games Section -->
+          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            <h3
+              class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+            >
+              <span class="text-blue-400">🎮</span>
+              ${translateText("game_list.recent_games")}
+            </h3>
+            <game-list
+              .games=${this.recentGames}
+              .onViewGame=${(id: string) => this.viewGame(id)}
+            ></game-list>
           </div>
         </div>
       </div>

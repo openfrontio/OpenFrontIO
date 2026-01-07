@@ -18,7 +18,7 @@ export class PlayerStatsTable extends LitElement {
 
   render() {
     return html`
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      <div class="grid grid-cols-1 gap-6 w-full">
         <div class="w-full">
           <div
             class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"
