@@ -112,6 +112,7 @@ export async function gameFromString(mapRows: string[]): Promise<Game> {
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
+    disableNavMesh: false,
     randomSpawn: false,
   };
   const config = new TestConfig(serverConfig, gameConfig, new UserSettings(), false);

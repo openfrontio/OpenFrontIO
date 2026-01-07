@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeAll, vi } from "vitest";
 import { MiniAStarAdapter } from "../../../src/core/pathfinding/adapters/MiniAStarAdapter";
+import { NavMeshAdapter } from "../../../src/core/pathfinding/adapters/NavMeshAdapter";
 import { PathFinder, PathStatus } from "../../../src/core/pathfinding/PathFinder";
 import { Game } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
@@ -16,13 +17,17 @@ const adapters: AdapterFactory[] = [
     name: "MiniAStarAdapter",
     create: (game) => new MiniAStarAdapter(game, { waterPath: true }),
   },
+  {
+    name: "NavMeshAdapter",
+    create: (game) => new NavMeshAdapter(game),
+  },
 ];
 
 // Shared world game instance
 let worldGame: Game;
 
 beforeAll(async () => {
-  worldGame = await setup("world");
+  worldGame = await setup("world", { disableNavMesh: false });
 });
 
 describe.each(adapters)("$name", ({ create }) => {

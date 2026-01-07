@@ -1,5 +1,6 @@
 import { Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { NavMeshAdapter } from "./adapters/NavMeshAdapter";
 import { MiniAStarAdapter } from "./adapters/MiniAStarAdapter";
 
 export enum PathStatus {
@@ -12,7 +13,7 @@ export enum PathStatus {
 export type PathResult =
   | { status: PathStatus.PENDING }
   | { status: PathStatus.NEXT; node: TileRef }
-  | { status: PathStatus.COMPLETE; node: TileRef }
+  | { status: PathStatus.COMPLETE, node: TileRef }
   | { status: PathStatus.NOT_FOUND };
 
 export interface PathFinder {
@@ -27,7 +28,16 @@ export interface MiniAStarOptions {
 }
 
 export class PathFinders {
-  static Water(game: Game, options?: MiniAStarOptions): PathFinder {
+  static Water(game: Game): PathFinder {
+    if (!game.navMesh()) {
+      // Fall back to old water pathfinder if navmesh is not available
+      return PathFinders.WaterLegacy(game);
+    }
+
+    return new NavMeshAdapter(game);
+  }
+
+  static WaterLegacy(game: Game, options?: MiniAStarOptions): PathFinder {
     return new MiniAStarAdapter(game, options);
   }
 }

@@ -27,7 +27,7 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinders.Water(mg, { iterations: 2500, maxTries: 20 });
+    this.pathFinder = PathFinders.Water(mg);
   }
 
   tick(ticks: number): void {
