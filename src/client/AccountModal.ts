@@ -153,13 +153,8 @@ export class AccountModal extends LitElement {
               ${title}
             </span>
           </div>
-        </div>
-
-        ${isLoggedIn
-          ? html`
-              <div
-                class="flex items-center justify-end px-6 pb-4 border-b border-white/10 -mt-2 mb-2"
-              >
+          ${isLoggedIn
+            ? html`
                 <div class="flex items-center gap-2">
                   <span
                     class="text-xs text-blue-400 font-bold uppercase tracking-wider"
@@ -176,9 +171,9 @@ export class AccountModal extends LitElement {
                         translateText("account_modal.not_found"))}
                   </button>
                 </div>
-              </div>
-            `
-          : ""}
+              `
+            : ""}
+        </div>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar">
           ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
