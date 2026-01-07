@@ -1,0 +1,35 @@
+{
+  "name": "Philippines",
+  "nations": [
+    {
+      "coordinates": [1006, 658],
+      "name": "Indonesia",
+      "flag": "id"
+    },
+    {
+      "coordinates": [1648, 247],
+      "name": "Philippines",
+      "flag": "ph"
+    },
+    {
+      "coordinates": [592, 100],
+      "name": "Vietnam",
+      "flag": "vn"
+    },
+    {
+      "coordinates": [401, 448],
+      "name": "Malaysia",
+      "flag": "my"
+    },
+    {
+      "coordinates": [238, 179],
+      "name": "Thailand",
+      "flag": "th"
+    },
+    {
+      "coordinates": [529, 49],
+      "name": "Cambodia",
+      "flag": "kh"
+    }
+  ]
+}
