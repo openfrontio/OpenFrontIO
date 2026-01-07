@@ -191,9 +191,7 @@ export class GameRunner {
    */
   private filterHiddenUnits(updates: GameUpdates): void {
     // Lazy-load our player reference
-    if (this.myPlayer === null) {
-      this.myPlayer = this.game.playerByClientID(this.clientID) ?? null;
-    }
+    this.myPlayer ??= this.game.playerByClientID(this.clientID) ?? null;
 
     updates[GameUpdateType.Unit] = updates[GameUpdateType.Unit].filter(
       (unitUpdate) => {

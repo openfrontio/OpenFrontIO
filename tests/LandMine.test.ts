@@ -113,8 +113,6 @@ describe("LandMine", () => {
     const mine = defender.units(UnitType.LandMine)[0];
     const mineTile = mine.tile();
 
-    const defenderInitialTiles = defender.numTilesOwned();
-
     game.addExecution(new AttackExecution(100, attacker, defender.id()));
 
     let ticks = 0;
@@ -311,7 +309,6 @@ describe("LandMine", () => {
     executeTicks(slowBuildGame, 5);
 
     expect(mine.isActive()).toBe(false);
-    ``;
     expect(attacker2.units(UnitType.LandMine)).toHaveLength(0);
 
     expect(defender2.units(UnitType.LandMine)).toHaveLength(0);
