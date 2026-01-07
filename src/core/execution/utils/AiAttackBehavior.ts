@@ -509,13 +509,13 @@ export class AiAttackBehavior {
     );
   }
 
-  // Find very weak (less than 10% of their maxTroops) enemies
+  // Find very weak (less than 15% of their maxTroops) enemies
   // which also don't have significantly more troops than us (to target MIRVed players)
   private findVeryWeakEnemy(borderingEnemies: Player[]): Player | null {
     const veryWeakEnemies = borderingEnemies.filter((enemy) => {
       const enemyMaxTroops = this.game.config().maxTroops(enemy);
       return (
-        enemy.troops() < enemyMaxTroops * 0.1 &&
+        enemy.troops() < enemyMaxTroops * 0.15 &&
         enemy.troops() < this.player.troops() * 1.2
       );
     });

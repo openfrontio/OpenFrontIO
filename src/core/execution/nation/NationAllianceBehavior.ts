@@ -346,7 +346,7 @@ export class NationAllianceBehavior {
     if (
       difficulty !== Difficulty.Easy &&
       difficulty !== Difficulty.Medium &&
-      otherPlayer.troops() < otherPlayerMaxTroops * 0.1 &&
+      otherPlayer.troops() < otherPlayerMaxTroops * 0.15 &&
       otherPlayer.troops() < this.player.troops()
     ) {
       this.betray(otherPlayer);
