@@ -55,8 +55,9 @@ export class PlayerExecution implements Execution {
           captor.captureUnit(u);
         }
       } else if (u.type() === UnitType.LandMine) {
-        // Land mines are handled by LandMineExecution - don't capture them
-        // The LandMineExecution will detect the ownership change and detonate
+        if (u.isUnderConstruction()) {
+          u.delete();
+        }
       } else {
         captor.captureUnit(u);
       }

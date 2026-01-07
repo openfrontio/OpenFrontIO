@@ -223,6 +223,100 @@ describe("LandMine", () => {
     expect(attacker2.numTilesOwned()).toBeGreaterThan(attackerTilesBefore - 20);
   });
 
+  test("land mine under construction should be destroyed when captured", async () => {
+    const slowBuildGame = await setup("plains", {
+      infiniteGold: true,
+      instantBuild: false,
+      infiniteTroops: true,
+    });
+
+    const defenderInfo2 = new PlayerInfo(
+      "defender2",
+      PlayerType.Human,
+      null,
+      "defender2_id",
+    );
+    slowBuildGame.addPlayer(defenderInfo2);
+
+    const attackerInfo2 = new PlayerInfo(
+      "attacker2",
+      PlayerType.Human,
+      null,
+      "attacker2_id",
+    );
+    slowBuildGame.addPlayer(attackerInfo2);
+
+    slowBuildGame.addExecution(
+      new SpawnExecution(
+        gameID,
+        slowBuildGame.player(defenderInfo2.id).info(),
+        slowBuildGame.ref(10, 10),
+      ),
+      new SpawnExecution(
+        gameID,
+        slowBuildGame.player(attackerInfo2.id).info(),
+        slowBuildGame.ref(20, 10),
+      ),
+    );
+
+    while (slowBuildGame.inSpawnPhase()) {
+      slowBuildGame.executeNextTick();
+    }
+
+    const defender2 = slowBuildGame.player(defenderInfo2.id);
+    const attacker2 = slowBuildGame.player(attackerInfo2.id);
+
+    slowBuildGame.addExecution(
+      new AttackExecution(50, defender2, slowBuildGame.terraNullius().id()),
+    );
+    slowBuildGame.addExecution(
+      new AttackExecution(50, attacker2, slowBuildGame.terraNullius().id()),
+    );
+
+    for (let i = 0; i < 30; i++) {
+      slowBuildGame.executeNextTick();
+    }
+
+    slowBuildGame.addExecution(
+      new ConstructionExecution(
+        defender2,
+        UnitType.LandMine,
+        slowBuildGame.ref(10, 10),
+      ),
+    );
+
+    slowBuildGame.executeNextTick();
+    slowBuildGame.executeNextTick();
+
+    const mines = defender2.units(UnitType.LandMine);
+    expect(mines).toHaveLength(1);
+    const mine = mines[0];
+    expect(mine.isUnderConstruction()).toBe(true);
+
+    const mineTile = mine.tile();
+
+    slowBuildGame.addExecution(
+      new AttackExecution(100, attacker2, defender2.id()),
+    );
+
+    let ticks = 0;
+    const maxTicks = 500;
+    while (slowBuildGame.owner(mineTile) !== attacker2 && ticks < maxTicks) {
+      slowBuildGame.executeNextTick();
+      ticks++;
+    }
+
+    expect(slowBuildGame.owner(mineTile)).toBe(attacker2);
+
+    executeTicks(slowBuildGame, 5);
+
+    expect(mine.isActive()).toBe(false);
+
+    expect(attacker2.units(UnitType.LandMine)).toHaveLength(0);
+
+    expect(defender2.units(UnitType.LandMine)).toHaveLength(0);
+  });
+
   test("land mine should NOT explode when captured by ally", async () => {
     const allyInfo = new PlayerInfo("ally", PlayerType.Human, null, "ally_id");
     game.addPlayer(allyInfo);
