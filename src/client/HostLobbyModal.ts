@@ -198,7 +198,13 @@ export class HostLobbyModal extends LitElement {
             </button>
             <div
               @click=${this.copyToClipboard}
-              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-all min-w-[80px] text-center truncate tracking-wider"
+              @dblclick=${(e: Event) => {
+                (e.currentTarget as HTMLElement).classList.add("select-all");
+              }}
+              @mouseleave=${(e: Event) => {
+                (e.currentTarget as HTMLElement).classList.remove("select-all");
+              }}
+              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
               title="${translateText("common.click_to_copy")}"
             >
               ${this.copySuccess
