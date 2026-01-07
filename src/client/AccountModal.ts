@@ -148,7 +148,7 @@ export class AccountModal extends LitElement {
         <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 mt-6">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <!-- Left Sidebar: Profile & Link -->
-            <div class="lg:col-span-4 space-y-6 sticky top-0">
+            <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
               ${isLinked
                 ? html`
                     <div
