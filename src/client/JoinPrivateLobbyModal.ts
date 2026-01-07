@@ -90,40 +90,42 @@ export class JoinPrivateLobbyModal extends LitElement {
             </span>
           </div>
         </div>
-        <div class="lobby-id-box">
-          <input
-            type="text"
-            id="lobbyIdInput"
-            placeholder=${translateText("private_lobby.enter_id")}
-            @keyup=${this.handleChange}
-          />
-          <button
-            @click=${this.pasteFromClipboard}
-            class="lobby-id-paste-button"
-          >
-            <svg
-              class="lobby-id-paste-button-icon"
-              stroke="currentColor"
-              fill="currentColor"
-              stroke-width="0"
-              viewBox="0 0 32 32"
-              height="18px"
-              width="18px"
-              xmlns="http://www.w3.org/2000/svg"
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+          <div class="lobby-id-box">
+            <input
+              type="text"
+              id="lobbyIdInput"
+              placeholder=${translateText("private_lobby.enter_id")}
+              @keyup=${this.handleChange}
+            />
+            <button
+              @click=${this.pasteFromClipboard}
+              class="lobby-id-paste-button"
             >
-              <path
-                d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
-              ></path>
-            </svg>
-          </button>
-        </div>
-        <div class="message-area ${this.message ? "show" : ""}">
-          ${this.message}
+              <svg
+                class="lobby-id-paste-button-icon"
+                stroke="currentColor"
+                fill="currentColor"
+                stroke-width="0"
+                viewBox="0 0 32 32"
+                height="18px"
+                width="18px"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                ></path>
+              </svg>
+            </button>
+          </div>
+          <div class="message-area ${this.message ? "show" : ""}">
+            ${this.message}
+          </div>
+
+          ${this.renderGameConfig()}
         </div>
 
-        ${this.renderGameConfig()}
-
-        <div class="options-layout">
+        <div class="options-layout shrink-0">
           ${this.hasJoined && this.players.length > 0
             ? html` <div
                 class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
@@ -136,9 +138,6 @@ export class JoinPrivateLobbyModal extends LitElement {
                     ${this.players.length === 1
                       ? translateText("private_lobby.player")
                       : translateText("private_lobby.players")}
-                    <span style="margin: 0 8px;">•</span>
-                    ${this.gameConfig?.bots ?? 0}
-                    ${translateText("host_modal.nations")}
                   </div>
                 </div>
 
@@ -160,7 +159,11 @@ export class JoinPrivateLobbyModal extends LitElement {
               </div>`
             : ""}
         </div>
-        <div class="flex justify-center">
+        <div
+          class="flex justify-center flex-shrink-0 ${!this.hasJoined
+            ? "pb-6"
+            : ""}"
+        >
           ${!this.hasJoined
             ? html` <o-button
                 title=${translateText("private_lobby.join_lobby")}
@@ -222,7 +225,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
 
     return html`
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 px-6 mb-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         ${this.renderConfigItem(translateText("map.map"), mapName)}
         ${this.renderConfigItem(translateText("host_modal.mode"), modeName)}
         ${this.renderConfigItem(
