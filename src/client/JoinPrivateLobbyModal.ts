@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -10,6 +10,7 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
+  @property({ type: Boolean }) inline = false;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -23,7 +24,14 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    if (this.hasAttribute("inline")) {
+      this.inline = true;
+    }
     window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  updated(changedProperties: Map<string | number | symbol, unknown>) {
+    super.updated(changedProperties);
   }
 
   disconnectedCallback() {
@@ -39,36 +47,39 @@ export class JoinPrivateLobbyModal extends LitElement {
   };
 
   render() {
-    return html`
-      <o-modal .hideHeader=${true}>
+    const content = html`
+      <div
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+      >
         <div
-          class="px-8 py-4 flex items-center justify-between border-b border-white/10 bg-black/20 shrink-0"
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-1">
             <button
               @click=${this.close}
-              class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="2.5"
                 stroke="currentColor"
-                class="w-5 h-5"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
             </button>
-            <h2
-              class="text-base sm:text-lg md:text-xl font-bold text-white uppercase tracking-widest"
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
             >
               ${translateText("private_lobby.title")}
-            </h2>
+            </span>
           </div>
         </div>
         <div class="lobby-id-box">
@@ -128,16 +139,32 @@ export class JoinPrivateLobbyModal extends LitElement {
               ></o-button>`
             : ""}
         </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        ?hideHeader=${true}
+        ?hideCloseButton=${true}
+        ?inline=${this.inline}
+      >
+        ${content}
       </o-modal>
     `;
   }
 
   createRenderRoot() {
-    return this; // light DOM
+    return this;
   }
 
   public open(id: string = "") {
-    this.modalEl?.open();
+    if (!this.inline) {
+      this.modalEl?.open();
+    }
     if (id) {
       this.setLobbyId(id);
       this.joinLobby();
@@ -146,7 +173,13 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   public close() {
     this.lobbyIdInput.value = "";
-    this.modalEl?.close();
+    if (this.inline) {
+      if ((window as any).showPage) {
+        (window as any).showPage("page-play");
+      }
+    } else {
+      this.modalEl?.close();
+    }
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;

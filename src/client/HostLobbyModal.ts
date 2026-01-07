@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { copyToClipboard, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
@@ -120,54 +120,55 @@ export class HostLobbyModal extends LitElement {
       <div
         class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
       >
-        <!-- Header (Top Row) -->
+        <!-- Header -->
         <div
-          class="px-8 py-4 flex items-center justify-between border-b border-white/10 bg-black/20 shrink-0"
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-1">
             <button
               @click=${() => this.close()}
-              class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="2.5"
                 stroke="currentColor"
-                class="w-5 h-5"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
             </button>
-            <h2
-              class="text-xl sm:text-2xl md:text-3xl font-bold text-white uppercase tracking-widest"
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
             >
               ${translateText("host_modal.title")}
-            </h2>
+            </span>
           </div>
 
           <!-- Lobby ID Box -->
           <div
-            class="flex items-center gap-0.5 bg-white/5 rounded-lg px-1 py-0 border border-white/10 max-w-[220px] flex-nowrap"
+            class="hidden md:flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
           >
             <button
               @click=${() => {
                 this.lobbyIdVisible = !this.lobbyIdVisible;
                 this.requestUpdate();
               }}
-              class="p-2 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
               title="Toggle Visibility"
             >
               ${this.lobbyIdVisible
                 ? html`<svg
                     viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
+                    height="16px"
+                    width="16px"
                     fill="currentColor"
                   >
                     <path
@@ -176,8 +177,8 @@ export class HostLobbyModal extends LitElement {
                   </svg>`
                 : html`<svg
                     viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
+                    height="16px"
+                    width="16px"
                     fill="currentColor"
                   >
                     <path
@@ -197,10 +198,14 @@ export class HostLobbyModal extends LitElement {
             </button>
             <div
               @click=${this.copyToClipboard}
-              class="font-mono text-xs font-bold text-white px-1 cursor-pointer select-all min-w-[60px] text-center truncate"
-              title="Click to copy"
+              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-all min-w-[80px] text-center truncate tracking-wider"
+              title="${translateText("common.click_to_copy")}"
             >
-              ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
+              ${this.copySuccess
+                ? translateText("common.copied")
+                : this.lobbyIdVisible
+                  ? this.lobbyId
+                  : "••••••••"}
             </div>
           </div>
         </div>
@@ -339,7 +344,7 @@ export class HostLobbyModal extends LitElement {
                 </h3>
               </div>
 
-              <div class="flex flex-wrap gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 ${Object.entries(Difficulty)
                   .filter(([key]) => isNaN(Number(key)))
                   .map(([key, value]) => {
@@ -350,7 +355,7 @@ export class HostLobbyModal extends LitElement {
                         ?disabled=${isDisabled}
                         @click=${() =>
                           !isDisabled && this.handleDifficultySelection(value)}
-                        class="relative group rounded-xl border transition-all duration-200 w-32 overflow-hidden flex flex-col items-center p-4 gap-3 ${isDisabled
+                        class="relative group rounded-xl border transition-all duration-200 w-full overflow-hidden flex flex-col items-center p-4 gap-3 ${isDisabled
                           ? "opacity-30 grayscale cursor-not-allowed bg-white/5 border-white/5"
                           : isSelected
                             ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
@@ -398,12 +403,12 @@ export class HostLobbyModal extends LitElement {
                   ${translateText("host_modal.mode")}
                 </h3>
               </div>
-              <div class="flex flex-wrap gap-4">
+              <div class="grid grid-cols-2 gap-4">
                 ${[GameMode.FFA, GameMode.Team].map((mode) => {
                   const isSelected = this.gameMode === mode;
                   return html`
                     <button
-                      class="w-40 py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
+                      class="w-full py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
                         ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                       @click=${() => this.handleGameModeSelection(mode)}
@@ -431,7 +436,7 @@ export class HostLobbyModal extends LitElement {
                     >
                       ${translateText("host_modal.team_count")}
                     </div>
-                    <div class="flex flex-wrap gap-3">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                       ${[
                         2,
                         3,
@@ -448,7 +453,7 @@ export class HostLobbyModal extends LitElement {
                         return html`
                           <button
                             @click=${() => this.handleTeamCountSelection(o)}
-                            class="min-w-[5rem] px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
+                            class="w-full px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
                               ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                               : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                           >
@@ -500,7 +505,10 @@ export class HostLobbyModal extends LitElement {
               <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Bots Slider -->
                 <div
-                  class="col-span-2 bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-center min-h-[100px]"
+                  class="col-span-2 rounded-xl p-4 flex flex-col justify-center min-h-[100px] border transition-all duration-200 ${this
+                    .bots > 0
+                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
                 >
                   <fluent-slider
                     min="0"
@@ -732,9 +740,7 @@ export class HostLobbyModal extends LitElement {
                   ${translateText("host_modal.enables_title")}
                 </h3>
               </div>
-              <div
-                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
-              >
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 ${renderUnitTypeOptions({
                   disabledUnits: this.disabledUnits,
                   toggleUnit: this.toggleUnit.bind(this),
@@ -829,11 +835,19 @@ export class HostLobbyModal extends LitElement {
           }),
         );
       });
-    this.modalEl?.open();
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.close();
-      };
+    if (this.inline) {
+      const needsShow =
+        this.classList.contains("hidden") || this.style.display === "none";
+      if (needsShow && (window as any).showPage) {
+        (window as any).showPage("page-host-lobby");
+      }
+    } else {
+      this.modalEl?.open();
+      if (this.modalEl) {
+        this.modalEl.onClose = () => {
+          this.close();
+        };
+      }
     }
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
@@ -845,9 +859,10 @@ export class HostLobbyModal extends LitElement {
       if ((window as any).showPage) {
         (window as any).showPage("page-play");
       }
+    } else {
+      this.modalEl?.close();
     }
     crazyGamesSDK.hideInviteButton();
-    this.modalEl?.close();
     this.copySuccess = false;
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
@@ -981,6 +996,10 @@ export class HostLobbyModal extends LitElement {
 
   private async handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
+    if (this.gameMode === GameMode.Team) {
+      this.donateGold = true;
+      this.donateTroops = true;
+    }
     this.putGameConfig();
   }
 
@@ -1068,17 +1087,11 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async copyToClipboard() {
-    try {
-      await navigator.clipboard.writeText(
-        `${location.origin}/#join=${this.lobbyId}`,
-      );
-      this.copySuccess = true;
-      setTimeout(() => {
-        this.copySuccess = false;
-      }, 2000);
-    } catch (err) {
-      console.error(`Failed to copy text: ${err}`);
-    }
+    await copyToClipboard(
+      `${location.origin}/#join=${this.lobbyId}`,
+      () => (this.copySuccess = true),
+      () => (this.copySuccess = false),
+    );
   }
 
   private async pollPlayers() {

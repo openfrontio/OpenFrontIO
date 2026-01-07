@@ -13,7 +13,7 @@ import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { isInIframe, translateText } from "./Utils";
+import { copyToClipboard, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
@@ -25,6 +25,7 @@ export class AccountModal extends LitElement {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  @state() private showCopied: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -48,6 +49,34 @@ export class AccountModal extends LitElement {
       }
     });
   }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private async copyIdToClipboard() {
+    const id = this.userMeResponse?.player?.publicId;
+    if (!id) return;
+
+    await copyToClipboard(
+      id,
+      () => (this.showCopied = true),
+      () => (this.showCopied = false),
+    );
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   createRenderRoot() {
     return this;
@@ -76,8 +105,10 @@ export class AccountModal extends LitElement {
     return html`
       <o-modal
         id="account-modal"
-        title="${translateText("account_modal.title") || "Account"}"
+        title=""
+        ?hideCloseButton=${true}
         ?inline=${this.inline}
+        hideHeader
       >
         ${content}
       </o-modal>
@@ -85,119 +116,133 @@ export class AccountModal extends LitElement {
   }
 
   private renderInner() {
-    if (this.userMeResponse?.user) {
-      return this.renderAccountInfo();
-    } else {
-      return this.renderLoginOptions();
-    }
+    const isLoggedIn = !!this.userMeResponse?.user;
+    const title = translateText("account_modal.title") || "Account";
+
+    return html`
+      <div
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+      >
+        <div
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+        >
+          <div class="flex items-center gap-4 flex-1">
+            <button
+              @click=${() => this.close()}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+            >
+              ${title}
+            </span>
+          </div>
+          ${isLoggedIn
+            ? html`
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-xs text-blue-400 font-bold uppercase tracking-wider"
+                    >ID:</span
+                  >
+                  <button
+                    @click=${this.copyIdToClipboard}
+                    class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                    title="${translateText("common.click_to_copy")}"
+                  >
+                    ${this.showCopied
+                      ? translateText("common.copied")
+                      : (this.userMeResponse?.player?.publicId ??
+                        translateText("account_modal.not_found"))}
+                  </button>
+                </div>
+              `
+            : ""}
+        </div>
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+          ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
+        </div>
+      </div>
+    `;
   }
 
   private renderAccountInfo() {
     const me = this.userMeResponse?.user;
     const isLinked = me?.discord ?? me?.email;
 
+    if (!isLinked) {
+      return html`
+        <div class="p-6 flex justify-center items-start min-h-full">
+          <div class="w-full max-w-2xl">${this.renderLinkAccountSection()}</div>
+        </div>
+      `;
+    }
+
     return html`
-      <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl overflow-hidden"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-center justify-between pb-6 border-b border-white/10 gap-4 mb-0 shrink-0"
-        >
-          <div class="flex items-center gap-4">
+      <div class="p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <!-- Left Sidebar: Profile & Link -->
+          <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
             <div
-              class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/20"
+              class="bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-6 h-6"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+              <div
+                class="text-xs text-white/40 uppercase tracking-widest font-bold text-center border-b border-white/5 pb-2"
               >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <div>
-              <h2
-                class="text-2xl font-bold text-white uppercase tracking-widest leading-none"
-              >
-                ${translateText("account_modal.title") || "Account"}
-              </h2>
-              <div class="flex items-center gap-2 mt-1.5">
-                <span
-                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                  >ID:</span
-                >
-                <span
-                  class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5"
-                >
-                  ${this.userMeResponse?.player?.publicId ??
-                  translateText("account_modal.not_found")}
-                </span>
+                Connected As
+              </div>
+              <div class="flex flex-col items-center gap-4 py-2">
+                <discord-user-header
+                  .data=${this.userMeResponse?.user?.discord ?? null}
+                ></discord-user-header>
+                ${this.renderLoggedInAs()}
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 mt-6">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <!-- Left Sidebar: Profile & Link -->
-            <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
-              ${isLinked
-                ? html`
-                    <div
-                      class="bg-black/20 rounded-xl border border-white/10 p-6 flex flex-col gap-4"
-                    >
-                      <div
-                        class="text-xs text-white/40 uppercase tracking-widest font-bold text-center border-b border-white/5 pb-2"
-                      >
-                        Connected As
-                      </div>
-                      <div class="flex flex-col items-center gap-4 py-2">
-                        <discord-user-header
-                          .data=${this.userMeResponse?.user?.discord ?? null}
-                        ></discord-user-header>
-                        ${this.renderLoggedInAs()}
-                      </div>
-                    </div>
-                  `
-                : this.renderLinkAccountSection()}
+          <!-- Right Content: Stats & Games -->
+          <div class="lg:col-span-8 flex flex-col gap-8">
+            <!-- Stats Section -->
+            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h3
+                class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+              >
+                <span class="text-blue-400">📊</span>
+                Stats Overview
+              </h3>
+              <player-stats-tree-view
+                .statsTree=${this.statsTree}
+              ></player-stats-tree-view>
             </div>
 
-            <!-- Right Content: Stats & Games -->
-            <div class="lg:col-span-8 flex flex-col gap-8">
-              <!-- Stats Section -->
-              <div class="bg-black/20 rounded-xl border border-white/10 p-6">
-                <h3
-                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-                >
-                  <span class="text-blue-400">📊</span>
-                  Stats Overview
-                </h3>
-                <player-stats-tree-view
-                  .statsTree=${this.statsTree}
-                ></player-stats-tree-view>
-              </div>
-
-              <!-- Recent Games Section -->
-              <div class="bg-black/20 rounded-xl border border-white/10 p-6">
-                <h3
-                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-                >
-                  <span class="text-blue-400">🎮</span>
-                  ${translateText("game_list.recent_games")}
-                </h3>
-                <game-list
-                  .games=${this.recentGames}
-                  .onViewGame=${(id: string) => this.viewGame(id)}
-                ></game-list>
-              </div>
+            <!-- Recent Games Section -->
+            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h3
+                class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+              >
+                <span class="text-blue-400">🎮</span>
+                ${translateText("game_list.recent_games")}
+              </h3>
+              <game-list
+                .games=${this.recentGames}
+                .onViewGame=${(id: string) => this.viewGame(id)}
+              ></game-list>
             </div>
           </div>
         </div>
@@ -237,10 +282,10 @@ export class AccountModal extends LitElement {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-3">
           <button
             @click="${this.handleDiscordLogin}"
-            class="px-4 py-3 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2 group relative overflow-hidden shadow-lg hover:shadow-xl"
+            class="w-full px-4 py-3 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2 group relative overflow-hidden shadow-lg hover:shadow-xl"
           >
             <img
               src="/images/DiscordLogo.svg"
@@ -253,18 +298,18 @@ export class AccountModal extends LitElement {
             >
           </button>
 
-          <div class="relative group h-full">
-            <div class="flex gap-2 h-full">
+          <div class="relative group w-full">
+            <div class="flex gap-2">
               <input
                 type="email"
                 .value="${this.email}"
                 @input="${this.handleEmailInput}"
-                class="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium h-full"
+                class="flex-1 min-w-0 px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium"
                 placeholder="Link via Email"
               />
               <button
                 @click="${this.handleSubmit}"
-                class="px-6 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all border border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.3)] h-full"
+                class="px-5 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all border border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0"
               >
                 Link
               </button>
@@ -359,98 +404,120 @@ export class AccountModal extends LitElement {
 
   private renderLoginOptions() {
     return html`
-      <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-8 shadow-xl max-w-md mx-auto"
-      >
-        <div class="text-center mb-10">
-          <div
-            class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-8 h-8 text-blue-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-              <polyline points="10 17 15 12 10 7"></polyline>
-              <line x1="15" y1="12" x2="3" y2="12"></line>
-            </svg>
-          </div>
-          <h2
-            class="text-3xl font-bold text-white uppercase tracking-widest mb-2"
-          >
-            ${translateText("account_modal.title") || "Login"}
-          </h2>
-          <p class="text-white/40 text-sm">
-            Sign in to save your stats and progress
-          </p>
-        </div>
-
-        <div class="space-y-8">
-          <!-- Discord Login Button -->
-          <button
-            @click="${this.handleDiscordLogin}"
-            class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden"
-          >
+      <div class="flex items-center justify-center p-6 min-h-full">
+        <div
+          class="w-full max-w-md bg-white/5 rounded-2xl border border-white/10 p-8 shadow-xl"
+        >
+          <div class="text-center mb-8">
             <div
-              class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
-            ></div>
-            <img
-              src="/images/DiscordLogo.svg"
-              alt="Discord"
-              class="w-6 h-6 relative z-10"
-            />
-            <span class="font-bold relative z-10 tracking-wide"
-              >${translateText("main.login_discord") ||
-              "Login with Discord"}</span
+              class="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/10 shadow-inner"
             >
-          </button>
-
-          <!-- Divider -->
-          <div class="flex items-center gap-4">
-            <div class="h-px bg-white/10 flex-1"></div>
-            <span class="text-xs uppercase tracking-widest text-white/40">
-              or continue with email
-            </span>
-            <div class="h-px bg-white/10 flex-1"></div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-8 h-8 text-blue-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold text-white uppercase tracking-widest mb-2"
+            >
+              Welcome Back
+            </h3>
+            <p class="text-white/50 text-sm font-medium">
+              Sign in to save your stats and progress
+            </p>
           </div>
 
-          <!-- Email Recovery -->
-          <div class="space-y-4">
-            <div class="relative group">
-              <input
-                type="email"
-                id="email"
-                name="email"
-                .value="${this.email}"
-                @input="${this.handleEmailInput}"
-                class="w-full pl-4 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-medium"
-                placeholder="Enter your email address"
-                required
-              />
-            </div>
+          <div class="space-y-6">
+            <!-- Discord Login Button -->
             <button
-              @click="${this.handleSubmit}"
-              class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-900/20"
-              style="box-shadow: none;"
+              @click="${this.handleDiscordLogin}"
+              class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
             >
-              Submit
+              <div
+                class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
+              ></div>
+              <img
+                src="/images/DiscordLogo.svg"
+                alt="Discord"
+                class="w-6 h-6 relative z-10"
+              />
+              <span class="font-bold relative z-10 tracking-wide"
+                >${translateText("main.login_discord") ||
+                "Login with Discord"}</span
+              >
+            </button>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-4 py-2">
+              <div class="h-px bg-white/10 flex-1"></div>
+              <span
+                class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
+              >
+                OR
+              </span>
+              <div class="h-px bg-white/10 flex-1"></div>
+            </div>
+
+            <!-- Email Recovery -->
+            <div class="space-y-3">
+              <div class="relative group">
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  .value="${this.email}"
+                  @input="${this.handleEmailInput}"
+                  class="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10"
+                  placeholder="Enter your email address"
+                  required
+                />
+                <div
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                    ></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <button
+                @click="${this.handleSubmit}"
+                class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5"
+              >
+                Get Magic Link
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-8 text-center border-t border-white/10 pt-6">
+            <button
+              @click="${this.handleLogout}"
+              class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+            >
+              ${translateText("account_modal.clear_session")}
             </button>
           </div>
-        </div>
-
-        <div class="mt-auto pt-10 text-center">
-          <button
-            @click="${this.handleLogout}"
-            class="text-xs font-medium text-red-400 hover:text-red-300 transition-colors uppercase tracking-widest border-b border-transparent hover:border-red-400/50 pb-0.5"
-          >
-            ${translateText("account_modal.clear_session")}
-          </button>
         </div>
       </div>
     `;
@@ -507,7 +574,16 @@ export class AccountModal extends LitElement {
   }
 
   public close() {
-    this.modalEl?.close();
+    if (this.inline) {
+      if ((window as any).showPage) {
+        (window as any).showPage("page-play");
+      }
+    } else {
+      this.modalEl?.close();
+    }
+    this.dispatchEvent(
+      new CustomEvent("close", { bubbles: true, composed: true }),
+    );
   }
 
   private async handleLogout() {
@@ -533,106 +609,5 @@ export class AccountModal extends LitElement {
       console.warn("Failed to load player data:", err);
       this.requestUpdate();
     }
-  }
-}
-
-@customElement("account-button")
-export class AccountButton extends LitElement {
-  @state() private loggedInEmail: string | null = null;
-  @state() private loggedInDiscord: string | null = null;
-
-  private isVisible = true;
-
-  @query("account-modal") private recoveryModal: AccountModal;
-
-  constructor() {
-    super();
-
-    document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
-
-      if (customEvent.detail) {
-        const userMeResponse = customEvent.detail as UserMeResponse;
-        if (userMeResponse.user.email) {
-          this.loggedInEmail = userMeResponse.user.email;
-          this.requestUpdate();
-        } else if (userMeResponse.user.discord) {
-          this.loggedInDiscord = userMeResponse.user.discord.id;
-          this.requestUpdate();
-        }
-      } else {
-        // Clear the logged in states when user logs out
-        this.loggedInEmail = null;
-        this.loggedInDiscord = null;
-        this.requestUpdate();
-      }
-    });
-  }
-
-  createRenderRoot() {
-    return this;
-  }
-
-  render() {
-    if (isInIframe()) {
-      return html``;
-    }
-
-    if (!this.isVisible) {
-      return html``;
-    }
-
-    let buttonTitle = "";
-    if (this.loggedInEmail) {
-      buttonTitle = translateText("account_modal.linked_account", {
-        account_name: this.loggedInEmail,
-      });
-    } else if (this.loggedInDiscord) {
-      buttonTitle = translateText("account_modal.linked_account");
-    }
-
-    return html`
-      <div class="fixed top-4 right-4 z-[9998] hidden">
-        <button
-          @click="${this.open}"
-          class="w-12 h-12 bg-orange-700 hover:bg-orange-800 text-white rounded-none shadow-lg transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 border border-orange-500"
-          title="${buttonTitle}"
-        >
-          ${this.renderIcon()}
-        </button>
-      </div>
-      <account-modal></account-modal>
-    `;
-  }
-
-  public renderIcon() {
-    if (this.loggedInDiscord) {
-      return html`<img
-        src="/images/DiscordLogo.svg"
-        alt="Discord"
-        class="w-6 h-6"
-      />`;
-    } else if (this.loggedInEmail) {
-      return html`<img
-        src="/images/EmailIcon.svg"
-        alt="Email"
-        class="w-6 h-6"
-      />`;
-    }
-    return html`<img
-      src="/images/LoggedOutIcon.svg"
-      alt="Logged Out"
-      class="w-6 h-6"
-    />`;
-  }
-
-  public open() {
-    this.recoveryModal?.open();
-  }
-
-  public close() {
-    this.isVisible = false;
-    this.recoveryModal?.close();
-    this.requestUpdate();
   }
 }

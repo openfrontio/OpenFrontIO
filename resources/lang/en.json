@@ -17,7 +17,9 @@
     "cap_tooltip": "Recipient’s remaining capacity",
     "target_dead": "Target eliminated",
     "target_dead_note": "You can't send resources to an eliminated player.",
-    "none": "None"
+    "none": "None",
+    "copied": "Copied!",
+    "click_to_copy": "Click to copy"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -26,21 +28,21 @@
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
     "log_out": "Log out",
-    "create_lobby": "Create Lobby",
-    "join_lobby": "Join Lobby",
-    "single_player": "Single Player",
+    "create": "Create",
+    "join": "Join",
+    "solo": "Solo",
+    "quickplay": "Quickplay",
     "instructions": "Instructions",
     "game_info": "Game info",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
     "reddit": "Reddit",
-    "game_modes": "Game Modes",
-    "play_game": "Play Game",
+    "play": "Play",
     "news": "News",
-    "skin_store": "Skin Store",
+    "store": "Store",
     "options": "Options",
-    "keybinds": "Keybinds",
+    "keys": "Keys",
     "stats": "Stats",
     "account": "Account",
     "help": "Help"
@@ -144,7 +146,7 @@
     "bomb_direction": "Atom / Hydrogen bomb arc direction"
   },
   "single_modal": {
-    "title": "Single Player",
+    "title": "Solo",
     "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
     "toggle_achievements": "Toggle achievements",
@@ -864,7 +866,7 @@
   "player_stats_tree": {
     "public": "Public",
     "private": "Private",
-    "singleplayer": "Single Player",
+    "singleplayer": "Solo",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",

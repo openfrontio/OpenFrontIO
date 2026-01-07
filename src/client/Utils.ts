@@ -16,6 +16,25 @@ export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
+export async function copyToClipboard(
+  text: string,
+  onSuccess?: () => void,
+  onReset?: () => void,
+  timeout = 2000,
+): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (onSuccess) onSuccess();
+    if (onReset) {
+      setTimeout(() => {
+        onReset();
+      }, timeout);
+    }
+  } catch (err) {
+    console.warn("Failed to copy to clipboard", err);
+  }
+}
+
 export function renderNumber(
   num: number | bigint,
   fixedPoints?: number,

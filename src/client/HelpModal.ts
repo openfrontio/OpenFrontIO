@@ -117,14 +117,34 @@ export class HelpModal extends LitElement {
           ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
           : ""}"
       >
-        <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2"
-          ?hidden=${!this.inline}
-        >
-          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
-          <span class="text-white text-2xl font-bold uppercase tracking-widest">
-            ${translateText("main.instructions")}
-          </span>
+        <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
+          <div class="flex items-center gap-4 flex-1">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+            >
+              ${translateText("main.instructions")}
+            </span>
+          </div>
         </div>
 
         <div
@@ -1112,6 +1132,8 @@ export class HelpModal extends LitElement {
         title="Instructions"
         translationKey="main.instructions"
         ?inline=${this.inline}
+        ?hideHeader=${true}
+        ?hideCloseButton=${true}
       >
         ${content}
       </o-modal>
@@ -1124,6 +1146,10 @@ export class HelpModal extends LitElement {
   }
 
   public close() {
-    this.modalEl?.close();
+    if (this.inline) {
+      if ((window as any).showPage) (window as any).showPage("page-play");
+    } else {
+      this.modalEl?.close();
+    }
   }
 }

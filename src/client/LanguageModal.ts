@@ -7,6 +7,7 @@ import "./components/baseComponents/Modal";
 export class LanguageModal extends LitElement {
   @property({ type: Array }) languageList: any[] = [];
   @property({ type: String }) currentLang = "en";
+  @property({ type: Boolean }) inline = false;
 
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
@@ -22,12 +23,25 @@ export class LanguageModal extends LitElement {
   }
 
   public open() {
-    this.modalEl?.open();
+    this.style.pointerEvents = "auto";
+    if (!this.inline) {
+      this.modalEl?.open();
+    }
   }
 
   public close() {
-    this.modalEl?.close();
+    if (this.inline) {
+      this.style.pointerEvents = "none";
+      // Return to main play page if we were inline (standard navigation behavior)
+      window.showPage("page-play");
+    } else {
+      this.modalEl?.close();
+    }
   }
+
+  private handleClose = () => {
+    this.style.pointerEvents = "none";
+  };
 
   private selectLanguage = (lang: string) => {
     this.dispatchEvent(
@@ -41,12 +55,53 @@ export class LanguageModal extends LitElement {
   };
 
   render() {
-    return html`
-      <o-modal
-        title=${translateText("select_lang.title")}
+    const content = html`
+      <div
+        class="h-full flex flex-col ${
+          this.inline
+            ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+            : "bg-[#232323] text-white"
+        }"
       >
-        <div class="max-w-3xl mx-auto space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Header -->
+        <div
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+            >
+              ${translateText("select_lang.title")}
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="flex-1 overflow-y-auto custom-scrollbar pr-2"
+        >
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
+          >
             ${this.languageList.map((lang) => {
               const isActive = this.currentLang === lang.code;
               const isDebug = lang.code === "debug";
@@ -72,25 +127,25 @@ export class LanguageModal extends LitElement {
                 >
                   <img
                     src="/flags/${lang.svg}.svg"
-                    class="w-8 h-6 object-contain shadow-sm rounded-sm"
+                    class="w-8 h-6 object-contain shadow-sm rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
-                  <div class="flex flex-col items-start">
+                  <div class="flex flex-col items-start min-w-0">
                     <span
-                      class="text-sm font-bold uppercase tracking-wider ${isActive
+                      class="text-sm font-bold uppercase tracking-wider truncate w-full text-left ${isActive
                         ? "text-white"
                         : "text-gray-200 group-hover:text-white"}"
                       >${lang.native}</span
                     >
                     <span
-                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors"
+                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors truncate w-full text-left"
                       >${lang.en}</span
                     >
                   </div>
 
                   ${isActive
                     ? html`
-                        <div class="ml-auto text-blue-400">
+                        <div class="ml-auto text-blue-400 shrink-0">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
@@ -109,8 +164,25 @@ export class LanguageModal extends LitElement {
                 </button>
               `;
             })}
+            </div>
           </div>
         </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        title=${translateText("select_lang.title")}
+        ?inline=${this.inline}
+        .onClose=${this.handleClose}
+        hideHeader
+        hideCloseButton
+      >
+        ${content}
       </o-modal>
     `;
   }

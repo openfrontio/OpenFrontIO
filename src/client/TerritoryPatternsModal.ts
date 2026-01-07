@@ -80,16 +80,43 @@ export class TerritoryPatternsModal extends LitElement {
   private renderTabNavigation(): TemplateResult {
     return html`
       <div
-        class="relative flex flex-col items-center justify-center mb-6 border-b border-white/10 pb-4 shrink-0"
+        class="relative flex flex-col mb-6 border-b border-white/10 pb-4 shrink-0"
       >
-        <div class="w-full flex items-center justify-center mb-2">
+        <div class="flex items-center gap-4 mb-4">
+          <button
+            @click=${this.close}
+            class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
+            aria-label="Back"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
           <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
           >
             ${translateText("territory_patterns.title")}
           </span>
+
+          ${!hasLinkedAccount(this.userMeResponse)
+            ? html`<div class="ml-auto flex items-center">
+                ${this.renderNotLoggedInWarning()}
+              </div>`
+            : html``}
         </div>
-        <div class="flex items-center gap-2">
+
+        <div class="flex items-center gap-2 justify-center">
           <button
             class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
               .activeTab === "patterns"
@@ -109,12 +136,6 @@ export class TerritoryPatternsModal extends LitElement {
             ${translateText("territory_patterns.colors")}
           </button>
         </div>
-
-        ${!hasLinkedAccount(this.userMeResponse)
-          ? html`<div class="absolute right-0 top-0 h-full flex items-center">
-              ${this.renderNotLoggedInWarning()}
-            </div>`
-          : html``}
       </div>
     `;
   }
@@ -262,6 +283,8 @@ export class TerritoryPatternsModal extends LitElement {
           ? translateText("territory_patterns.title")
           : translateText("territory_patterns.colors")}"
         ?inline=${this.inline}
+        ?hideHeader=${true}
+        ?hideCloseButton=${true}
       >
         ${content}
       </o-modal>
@@ -284,7 +307,12 @@ export class TerritoryPatternsModal extends LitElement {
   public close() {
     this.isActive = false;
     this.affiliateCode = null;
-    this.modalEl?.close();
+
+    if (this.inline) {
+      if ((window as any).showPage) (window as any).showPage("page-play");
+    } else {
+      this.modalEl?.close();
+    }
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
@@ -363,8 +391,15 @@ export class TerritoryPatternsModal extends LitElement {
 
     if (this.previewButton === null) return;
 
+    // Check if the element is still in the DOM to avoid lit-html errors
+    if (!document.body.contains(this.previewButton)) {
+      console.warn(
+        "TerritoryPatternsModal: previewButton is disconnected from DOM, skipping render",
+      );
+      return;
+    }
+
     // Clear and re-render using Lit
-    this.previewButton.innerHTML = "";
     render(preview, this.previewButton);
     this.previewButton.style.padding = "4px";
     this.requestUpdate();

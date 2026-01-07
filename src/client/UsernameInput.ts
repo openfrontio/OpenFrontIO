@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { v4 as uuidv4 } from "uuid";
 import { translateText } from "../client/Utils";
+import { getClanTagOriginalCase, sanitizeClanTag } from "../core/Util";
 import {
   MAX_USERNAME_LENGTH,
   validateUsername,
@@ -11,7 +12,9 @@ const usernameKey: string = "username";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
-  @state() private username: string = "";
+  @state() private baseUsername: string = "";
+  @state() private clanTag: string = "";
+
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
 
@@ -23,25 +26,53 @@ export class UsernameInput extends LitElement {
   }
 
   public getCurrentUsername(): string {
-    return this.username;
+    return this.constructFullUsername();
+  }
+
+  private constructFullUsername(): string {
+    if (this.clanTag.length >= 2) {
+      return `[${this.clanTag}] ${this.baseUsername}`;
+    }
+    return this.baseUsername;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this.username = this.getStoredUsername();
+    const stored = this.getStoredUsername();
+    this.parseAndSetUsername(stored);
+  }
+
+  private parseAndSetUsername(fullUsername: string) {
+    const tag = getClanTagOriginalCase(fullUsername);
+    if (tag) {
+      this.clanTag = tag;
+      this.baseUsername = fullUsername.replace(`[${tag}]`, "").trim();
+    } else {
+      this.clanTag = "";
+      this.baseUsername = fullUsername;
+    }
   }
 
   render() {
     return html`
-      <input
-        type="text"
-        .value=${this.username}
-        @input=${this.handleChange}
-        @change=${this.handleChange}
-        placeholder="${translateText("username.enter_username")}"
-        maxlength="${MAX_USERNAME_LENGTH}"
-        class="w-full h-full px-4 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-center focus:outline-none focus:ring-0 focus:bg-white/5 transition-colors"
-      />
+      <div class="flex items-center w-full h-full gap-2 px-4">
+        <input
+          type="text"
+          .value=${this.clanTag}
+          @input=${this.handleClanTagChange}
+          placeholder="TAG"
+          maxlength="5"
+          class="w-20 bg-transparent border-b border-white/20 text-white placeholder-white/30 text-xl font-bold text-center focus:outline-none focus:border-white/50 transition-colors uppercase"
+        />
+        <input
+          type="text"
+          .value=${this.baseUsername}
+          @input=${this.handleUsernameChange}
+          placeholder="${translateText("username.enter_username")}"
+          maxlength="${MAX_USERNAME_LENGTH}"
+          class="flex-1 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-left focus:outline-none focus:ring-0 focus:bg-white/5 transition-colors"
+        />
+      </div>
       ${this.validationError
         ? html`<div
             id="username-validation-error"
@@ -53,13 +84,31 @@ export class UsernameInput extends LitElement {
     `;
   }
 
-  private handleChange(e: Event) {
+  private handleClanTagChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.username = input.value.trim();
-    const result = validateUsername(this.username);
+    const val = sanitizeClanTag(input.value);
+    if (input.value !== val) {
+      input.value = val;
+    }
+    this.clanTag = val;
+    this.validateAndStore();
+  }
+
+  private handleUsernameChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    this.baseUsername = input.value;
+    this.baseUsername = input.value;
+    this.validateAndStore();
+  }
+
+  private validateAndStore() {
+    const full = this.constructFullUsername();
+    const trimmedFull = full.trim();
+
+    const result = validateUsername(trimmedFull);
     this._isValid = result.isValid;
     if (result.isValid) {
-      this.storeUsername(this.username);
+      this.storeUsername(trimmedFull);
       this.validationError = "";
     } else {
       this.validationError = result.error ?? "";

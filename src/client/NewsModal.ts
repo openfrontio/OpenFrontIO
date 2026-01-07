@@ -35,18 +35,42 @@ export class NewsModal extends LitElement {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl"
           : ""}"
       >
-        <h1
-          class="text-white text-2xl font-bold uppercase tracking-widest mb-4 pb-2 border-b border-white/10 flex items-center gap-2"
-          ?hidden=${!this.inline}
-        >
-          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
-          ${translateText("news.title")}
-        </h1>
         <div
-          class="prose prose-invert prose-sm max-w-none overflow-y-auto pr-2
+          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+        >
+          <div class="flex items-center gap-4 flex-1">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+            >
+              ${translateText("news.title")}
+            </span>
+          </div>
+        </div>
+        <div
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6
             [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
             [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
             [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
@@ -73,10 +97,21 @@ export class NewsModal extends LitElement {
         title=${translateText("news.title")}
         ?inline=${this.inline}
         hideCloseButton
+        hideHeader
       >
         ${content}
       </o-modal>
     `;
+  }
+
+  public close() {
+    if (this.inline) {
+      if ((window as any).showPage) {
+        (window as any).showPage("page-play");
+      }
+    } else {
+      this.modalEl?.close();
+    }
   }
 
   public open() {
@@ -106,10 +141,6 @@ export class NewsModal extends LitElement {
     if (!this.inline) {
       this.modalEl?.open();
     }
-  }
-
-  private close() {
-    this.modalEl?.close();
   }
 }
 

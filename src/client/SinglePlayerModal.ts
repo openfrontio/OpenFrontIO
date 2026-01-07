@@ -135,33 +135,34 @@ export class SinglePlayerModal extends LitElement {
       >
         <!-- Header -->
         <div
-          class="flex items-center justify-between p-6 border-b border-white/10 bg-black/20"
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-1">
             <button
               @click=${this.close}
-              class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="2.5"
                 stroke="currentColor"
-                class="w-5 h-5"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
             </button>
-            <h2
-              class="text-xl sm:text-2xl md:text-3xl font-bold text-white uppercase tracking-widest"
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
             >
-              ${translateText("main.single_player") || "Single Player"}
-            </h2>
+              ${translateText("main.solo") || "Solo"}
+            </span>
           </div>
 
           <button
@@ -319,13 +320,13 @@ export class SinglePlayerModal extends LitElement {
                 </h3>
               </div>
 
-              <div class="flex flex-wrap gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 ${Object.entries(Difficulty)
                   .filter(([key]) => isNaN(Number(key)))
                   .map(
                     ([key, value]) => html`
                       <button
-                        class="relative group rounded-xl border transition-all duration-200 w-32 overflow-hidden flex flex-col items-center p-4 gap-3 ${this
+                        class="relative group rounded-xl border transition-all duration-200 w-full overflow-hidden flex flex-col items-center p-4 gap-3 ${this
                           .selectedDifficulty === value
                           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                           : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"} ${this
@@ -379,7 +380,7 @@ export class SinglePlayerModal extends LitElement {
                 </h3>
               </div>
 
-              <div class="flex flex-wrap gap-4">
+              <div class="grid grid-cols-2 gap-4">
                 ${[GameMode.FFA, GameMode.Team].map((mode) => {
                   const isSelected = this.gameMode === mode;
                   const label =
@@ -389,7 +390,7 @@ export class SinglePlayerModal extends LitElement {
 
                   return html`
                     <button
-                      class="w-40 py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
+                      class="w-full py-6 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-3 ${isSelected
                         ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                       @click=${() => this.handleGameModeSelection(mode)}
@@ -415,7 +416,7 @@ export class SinglePlayerModal extends LitElement {
                     >
                       ${translateText("host_modal.team_count")}
                     </div>
-                    <div class="flex flex-wrap gap-3">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                       ${[
                         2,
                         3,
@@ -430,7 +431,7 @@ export class SinglePlayerModal extends LitElement {
                       ].map(
                         (o) => html`
                           <button
-                            class="min-w-[5rem] px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${this
+                            class="w-full px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${this
                               .teamCount === o
                               ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                               : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
@@ -485,7 +486,10 @@ export class SinglePlayerModal extends LitElement {
               <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Bot Slider Card -->
                 <div
-                  class="col-span-2 p-4 bg-white/5 border border-white/10 rounded-xl flex flex-col justify-center min-h-[100px]"
+                  class="col-span-2 rounded-xl p-4 flex flex-col justify-center min-h-[100px] border transition-all duration-200 ${this
+                    .bots > 0
+                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
                 >
                   <fluent-slider
                     min="0"
@@ -627,7 +631,7 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.enables_title")}
                 </h3>
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 ${renderUnitTypeOptions({
                   disabledUnits: this.disabledUnits,
                   toggleUnit: this.toggleUnit.bind(this),
@@ -656,9 +660,10 @@ export class SinglePlayerModal extends LitElement {
     return html`
       <o-modal
         id="singlePlayerModal"
-        title="${translateText("main.single_player") || "Single Player"}"
+        title="${translateText("main.solo") || "Solo"}"
         ?inline=${this.inline}
         hideHeader
+        hideCloseButton
       >
         ${content}
       </o-modal>
@@ -697,7 +702,15 @@ export class SinglePlayerModal extends LitElement {
   }
 
   public open() {
-    this.modalEl?.open();
+    if (this.inline) {
+      const needsShow =
+        this.classList.contains("hidden") || this.style.display === "none";
+      if (needsShow && (window as any).showPage) {
+        (window as any).showPage("page-single-player");
+      }
+    } else {
+      this.modalEl?.open();
+    }
     this.useRandomMap = false;
   }
 

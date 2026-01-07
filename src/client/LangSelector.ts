@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { LanguageModal } from "./LanguageModal";
 import "./LanguageModal";
+import { LanguageModal } from "./LanguageModal";
 
 import en from "../../resources/lang/en.json";
 import metadata from "../../resources/lang/metadata.json";
@@ -23,8 +23,6 @@ export class LangSelector extends LitElement {
   @state() isVisible = true;
 
   @query("language-modal") private modal!: LanguageModal;
-  // Manual reference for when we move it to body
-  private _detachedModal: LanguageModal | null = null;
 
   private debugKeyPressed: boolean = false;
   private languageMetadata: LanguageMetadata[] = metadata;
@@ -223,6 +221,7 @@ export class LangSelector extends LitElement {
       "account-modal",
       "keybinds-modal",
       "stats-modal",
+      "flag-input-modal",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
@@ -273,24 +272,15 @@ export class LangSelector extends LitElement {
     this.debugMode = this.debugKeyPressed;
     await this.loadLanguageList();
 
-    // If we haven't created our manual modal yet (because render() doesn't include it anymore)
-    if (!this._detachedModal) {
-      this._detachedModal = document.createElement("language-modal") as LanguageModal;
-      document.body.appendChild(this._detachedModal);
-      
-      // Listen for language selection on the detached modal
-      this._detachedModal.addEventListener("language-selected", (e: any) => {
-         // Propagate or handle directly
-         if (e.detail && e.detail.lang) {
-            this.changeLanguage(e.detail.lang);
-         }
-      });
-    }
+    const languageModal = document.getElementById(
+      "page-language",
+    ) as LanguageModal;
 
-    if (this._detachedModal) {
-      this._detachedModal.languageList = [...this.languageList];
-      this._detachedModal.currentLang = this.currentLang;
-      this._detachedModal.open();
+    if (languageModal) {
+      languageModal.languageList = [...this.languageList];
+      languageModal.currentLang = this.currentLang;
+      // Use the navigation system
+      window.showPage("page-language");
     }
   }
 

@@ -34,7 +34,13 @@ export class StatsModal extends LitElement {
   }
 
   public close() {
-    this.modalEl?.close();
+    if (this.inline) {
+      if ((window as any).showPage) {
+        (window as any).showPage("page-play");
+      }
+    } else {
+      this.modalEl?.close();
+    }
   }
 
   private async loadLeaderboard() {
@@ -311,22 +317,47 @@ export class StatsModal extends LitElement {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl"
           : ""}"
       >
         <div
-          class="w-full flex items-center justify-center mb-6 pb-2 border-b border-white/10 gap-2"
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
-          >
-            ${translateText("stats_modal.clan_stats")}
-          </span>
-          ${dateRange} ${summaryTags}
+          <div class="flex items-center gap-4 flex-1">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <div class="flex items-center gap-2">
+              <span
+                class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+              >
+                ${translateText("stats_modal.clan_stats")}
+              </span>
+              ${dateRange}
+            </div>
+          </div>
+          ${summaryTags}
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-2"
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6"
         >
           ${this.renderBody()}
         </div>
@@ -342,6 +373,8 @@ export class StatsModal extends LitElement {
         id="stats-modal"
         title="${translateText("stats_modal.clan_stats")}"
         ?inline=${this.inline}
+        hideCloseButton
+        hideHeader
       >
         ${content}
       </o-modal>

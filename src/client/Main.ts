@@ -12,10 +12,9 @@ import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameInfoModal } from "./GameInfoModal";
 import { GameStartingModal } from "./GameStartingModal";
@@ -27,7 +26,6 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./KeybindsModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
-import { LanguageModal } from "./LanguageModal";
 import { initLayout } from "./Layout";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
@@ -119,7 +117,6 @@ class Client {
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
-  private darkModeButton: DarkModeButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -164,13 +161,6 @@ class Client {
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       console.warn("Flag input element not found");
-    }
-
-    this.darkModeButton = document.querySelector(
-      "dark-mode-button",
-    ) as DarkModeButton;
-    if (!this.darkModeButton) {
-      console.warn("Dark mode button element not found");
     }
 
     this.usernameInput = document.querySelector(
@@ -238,7 +228,6 @@ class Client {
     ) as FlagInputModal;
     if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
       console.warn("Flag input modal element not found");
-      return;
     }
 
     // Wait for the flag-input component to be fully ready
@@ -399,7 +388,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        this.joinModal.open();
+        window.showPage("page-join-private-lobby");
       }
     });
 
@@ -452,6 +441,7 @@ class Client {
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
       if (lobbyId && ID.safeParse(lobbyId).success) {
+        window.showPage("page-join-private-lobby");
         this.joinModal.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -530,6 +520,7 @@ class Client {
     if (decodedHash.startsWith("#join=")) {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
+        window.showPage("page-join-private-lobby");
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
@@ -595,16 +586,15 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "game-top-bar",
           "help-modal",
           "user-setting",
+
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
           "flag-input-modal",
-          "account-button",
-          "stats-button",
           "token-login",
+
           "matchmaking-modal",
           "lang-selector",
         ].forEach((tag) => {
