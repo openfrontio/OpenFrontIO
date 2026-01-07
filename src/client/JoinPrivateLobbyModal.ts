@@ -339,7 +339,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async joinLobby(): Promise<void> {
     const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
     if (!lobbyId) {
-      this.message = translateText("private_lobby.not_found");
+      this.showMessage(translateText("private_lobby.not_found"), "red");
       return;
     }
 
@@ -357,19 +357,34 @@ export class JoinPrivateLobbyModal extends LitElement {
         case "success":
           return;
         case "not_found":
-          this.message = `${translateText("private_lobby.not_found")}`;
+          this.showMessage(translateText("private_lobby.not_found"), "red");
+          this.message = "";
           return;
         case "version_mismatch":
-          this.message = `${translateText("private_lobby.version_mismatch")}`;
+          this.showMessage(
+            translateText("private_lobby.version_mismatch"),
+            "red",
+          );
+          this.message = "";
           return;
         case "error":
-          this.message = `${translateText("private_lobby.error")}`;
+          this.showMessage(translateText("private_lobby.error"), "red");
+          this.message = "";
           return;
       }
     } catch (error) {
       console.error("Error checking lobby existence:", error);
-      this.message = `${translateText("private_lobby.error")}`;
+      this.showMessage(translateText("private_lobby.error"), "red");
+      this.message = "";
     }
+  }
+
+  private showMessage(message: string, color: "green" | "red" = "green") {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: { message, duration: 3000, color },
+      }),
+    );
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
@@ -384,7 +399,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     const gameInfo = await response.json();
 
     if (gameInfo.exists) {
-      this.message = translateText("private_lobby.joined_waiting");
+      this.showMessage(translateText("private_lobby.joined_waiting"));
+      this.message = "";
       this.hasJoined = true;
 
       this.dispatchEvent(
