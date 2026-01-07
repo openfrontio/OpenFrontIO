@@ -8,7 +8,6 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
-  PublicGameModifier,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -93,41 +92,31 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    let publicGameModifiers = config.getRandomPublicGameModifiers();
+    let { isCompact, isRandomSpawn } = config.getRandomPublicGameModifiers();
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
-    const disallowRandomSpawn =
-      playerTeams === Duos || playerTeams === Trios || playerTeams === Quads;
-    if (disallowRandomSpawn) {
-      publicGameModifiers = publicGameModifiers.filter(
-        (m) => m !== PublicGameModifier.RandomSpawn,
-      );
+    if (
+      playerTeams === Duos ||
+      playerTeams === Trios ||
+      playerTeams === Quads
+    ) {
+      isRandomSpawn = false;
     }
 
     // Small maps (3rd player count < 50) don't get compact map in team games
     if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
-      publicGameModifiers = publicGameModifiers.filter(
-        (m) => m !== PublicGameModifier.CompactMap,
-      );
+      isCompact = false;
     }
-
-    const isCompactMap = publicGameModifiers.includes(
-      PublicGameModifier.CompactMap,
-    );
-    const isRandomSpawn = publicGameModifiers.includes(
-      PublicGameModifier.RandomSpawn,
-    );
 
     // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompactMap),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
-      gameMapSize: isCompactMap ? GameMapSize.Compact : GameMapSize.Normal,
-      publicGameModifiers:
-        publicGameModifiers.length > 0 ? publicGameModifiers : undefined,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      publicGameModifiers: { isCompact, isRandomSpawn },
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
@@ -138,7 +127,7 @@ export class MapPlaylist {
       disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
-      bots: isCompactMap ? 100 : 400,
+      bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;

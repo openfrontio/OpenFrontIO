@@ -186,9 +186,9 @@ export enum GameMapSize {
   Normal = "Normal",
 }
 
-export enum PublicGameModifier {
-  RandomSpawn = "RandomSpawn",
-  CompactMap = "CompactMap",
+export interface PublicGameModifiers {
+  isCompact: boolean;
+  isRandomSpawn: boolean;
 }
 
 export interface UnitInfo {

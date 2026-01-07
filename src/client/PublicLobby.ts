@@ -6,7 +6,7 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
-  PublicGameModifier,
+  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -305,19 +305,19 @@ export class PublicLobby extends LitElement {
   }
 
   private getModifierLabels(
-    publicGameModifiers: PublicGameModifier[] | undefined,
+    publicGameModifiers: PublicGameModifiers | undefined,
   ): string[] {
-    if (!publicGameModifiers || publicGameModifiers.length === 0) {
+    if (!publicGameModifiers) {
       return [];
     }
-    return publicGameModifiers.map((modifier) => {
-      // Convert PascalCase to snake_case for localization key
-      const key = modifier
-        .replace(/([A-Z])/g, "_$1")
-        .toLowerCase()
-        .slice(1);
-      return translateText(`public_game_modifier.${key}`);
-    });
+    const labels: string[] = [];
+    if (publicGameModifiers.isRandomSpawn) {
+      labels.push(translateText("public_game_modifier.random_spawn"));
+    }
+    if (publicGameModifiers.isCompact) {
+      labels.push(translateText("public_game_modifier.compact_map"));
+    }
+    return labels;
   }
 
   private lobbyClicked(lobby: GameInfo) {

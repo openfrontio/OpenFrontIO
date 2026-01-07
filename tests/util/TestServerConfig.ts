@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType, PublicGameModifier } from "../../src/core/game/Game";
+import { GameMapType, PublicGameModifiers } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -82,8 +82,8 @@ export class TestServerConfig implements ServerConfig {
   gitCommit(): string {
     throw new Error("Method not implemented.");
   }
-  getRandomPublicGameModifiers(): PublicGameModifier[] {
-    throw new Error("Method not implemented.");
+  getRandomPublicGameModifiers(): PublicGameModifiers {
+    return { isCompact: false, isRandomSpawn: false };
   }
   supportsCompactMapForTeams(map: GameMapType): boolean {
     throw new Error("Method not implemented.");

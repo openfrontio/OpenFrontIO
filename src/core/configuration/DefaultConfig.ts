@@ -12,7 +12,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  PublicGameModifier,
+  PublicGameModifiers,
   Quads,
   TerrainType,
   TerraNullius,
@@ -224,17 +224,11 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return false;
   }
 
-  getRandomPublicGameModifiers(): PublicGameModifier[] {
-    const modifiers: PublicGameModifier[] = [];
-    if (Math.random() < 0.1) {
-      // 10% chance
-      modifiers.push(PublicGameModifier.RandomSpawn);
-    }
-    if (Math.random() < 0.05) {
-      // 5% chance
-      modifiers.push(PublicGameModifier.CompactMap);
-    }
-    return modifiers;
+  getRandomPublicGameModifiers(): PublicGameModifiers {
+    return {
+      isRandomSpawn: Math.random() < 0.1, // 10% chance
+      isCompact: Math.random() < 0.05, // 5% chance
+    };
   }
 
   supportsCompactMapForTeams(map: GameMapType): boolean {

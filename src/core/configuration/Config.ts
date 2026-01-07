@@ -7,7 +7,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
-  PublicGameModifier,
+  PublicGameModifiers,
   Team,
   TerraNullius,
   Tick,
@@ -59,7 +59,7 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   enableMatchmaking(): boolean;
-  getRandomPublicGameModifiers(): PublicGameModifier[];
+  getRandomPublicGameModifiers(): PublicGameModifiers;
   supportsCompactMapForTeams(map: GameMapType): boolean;
 }
 
