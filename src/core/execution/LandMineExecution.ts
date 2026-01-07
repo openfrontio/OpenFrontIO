@@ -95,14 +95,12 @@ export class LandMineExecution implements Execution {
     for (const t of toDestroy) {
       attacker.relinquish(t);
       attacker.removeTroops(
-        this.mg
-          .config()
-          .nukeDeathFactor(
-            UnitType.AtomBomb, // Use atom bomb death factor calculation
-            attacker.troops(),
-            attacker.numTilesOwned(),
-            maxTroops,
-          ),
+        this.mg.config().nukeDeathFactor(
+          UnitType.AtomBomb, // Use atom bomb death factor calculation
+          attacker.troops(),
+          attacker.numTilesOwned(),
+          maxTroops,
+        ),
       );
 
       if (this.mg.isLand(t)) {
@@ -181,4 +179,3 @@ export class LandMineExecution implements Execution {
     return this.active;
   }
 }
-

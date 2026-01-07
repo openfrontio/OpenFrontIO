@@ -321,9 +321,7 @@ describe("LandMine", () => {
     const allyInfo = new PlayerInfo("ally", PlayerType.Human, null, "ally_id");
     game.addPlayer(allyInfo);
 
-    game.addExecution(
-      new SpawnExecution(gameID, allyInfo, game.ref(10, 20)),
-    );
+    game.addExecution(new SpawnExecution(gameID, allyInfo, game.ref(10, 20)));
 
     for (let i = 0; i < 10; i++) {
       game.executeNextTick();
@@ -374,7 +372,9 @@ describe("LandMine", () => {
 
   test("land mine has same cost as defense post", async () => {
     const config = game.config();
-    const landMineCost = config.unitInfo(UnitType.LandMine).cost(game, defender);
+    const landMineCost = config
+      .unitInfo(UnitType.LandMine)
+      .cost(game, defender);
     const defensePostCost = config
       .unitInfo(UnitType.DefensePost)
       .cost(game, defender);

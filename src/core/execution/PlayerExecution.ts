@@ -19,7 +19,7 @@ export class PlayerExecution implements Execution {
   private mg: Game;
   private active = true;
 
-  constructor(private player: Player) { }
+  constructor(private player: Player) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -102,7 +102,7 @@ export class PlayerExecution implements Execution {
       if (
         embargo.isTemporary &&
         this.mg.ticks() - embargo.createdAt >
-        this.mg.config().temporaryEmbargoDuration()
+          this.mg.config().temporaryEmbargoDuration()
       ) {
         this.player.stopEmbargo(embargo.target);
       }
