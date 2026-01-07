@@ -74,6 +74,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
+  private isWilderness: boolean = false;
+
+  @state()
   private _isInfoVisible: boolean = false;
 
   private _isActive = false;
@@ -106,6 +109,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.setVisible(false);
     this.unit = null;
     this.player = null;
+    this.isWilderness = false;
   }
 
   public maybeShow(x: number, y: number) {
@@ -125,6 +129,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
+      this.setVisible(true);
+    } else if (owner && !owner.isPlayer() && this.game.isLand(tile)) {
+      this.isWilderness = true;
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
@@ -520,6 +527,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
+          ${this.isWilderness
+            ? html`<div class="p-2 font-bold">
+                ${translateText("ui_wilderness")}
+              </div>`
+            : ""}
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
