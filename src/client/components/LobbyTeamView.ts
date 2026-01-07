@@ -132,15 +132,17 @@ export class LobbyTeamView extends LitElement {
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
               >`
-            : html`<button
-                class="remove-player-btn"
-                @click=${() => this.onKickPlayer?.(client.clientID)}
-                aria-label=${translateText("host_modal.remove_player", {
-                  username: client.username,
-                })}
-              >
-                ×
-              </button>`}
+            : this.onKickPlayer
+              ? html`<button
+                  class="remove-player-btn"
+                  @click=${() => this.onKickPlayer?.(client.clientID)}
+                  aria-label=${translateText("host_modal.remove_player", {
+                    username: client.username,
+                  })}
+                >
+                  ×
+                </button>`
+              : html``}
         </span>`,
     )} `;
   }
@@ -187,18 +189,20 @@ export class LobbyTeamView extends LitElement {
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
                         >`
-                      : html`<button
-                          class="remove-player-btn ml-2"
-                          @click=${() => this.onKickPlayer?.(p.clientID)}
-                          aria-label=${translateText(
-                            "host_modal.remove_player",
-                            {
-                              username: p.username,
-                            },
-                          )}
-                        >
-                          ×
-                        </button>`}
+                      : this.onKickPlayer
+                        ? html`<button
+                            class="remove-player-btn ml-2"
+                            @click=${() => this.onKickPlayer?.(p.clientID)}
+                            aria-label=${translateText(
+                              "host_modal.remove_player",
+                              {
+                                username: p.username,
+                              },
+                            )}
+                          >
+                            ×
+                          </button>`
+                        : html``}
                   </div>`,
               )}
         </div>
