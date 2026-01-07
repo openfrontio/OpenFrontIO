@@ -10,8 +10,14 @@
 
 .container__row {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   align-items: center;
+}
+
+@media (min-width: 768px) {
+  .container__row {
+    gap: 1rem;
+  }
 }
 
 .container__row--equal > * {

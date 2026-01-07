@@ -75,7 +75,7 @@ export class PatternButton extends LitElement {
         <button
           class="bg-white/90 border-2 border-black/10 rounded-lg cursor-pointer transition-all duration-200 w-full
                  hover:bg-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20
-                 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
@@ -151,12 +151,8 @@ export function renderPatternPreview(
 function renderBlankPreview(width: number, height: number): TemplateResult {
   return html`
     <div
+      class="w-full h-full flex items-center justify-center"
       style="
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: ${height}px;
-        width: ${width}px;
         background-color: #ffffff;
         border-radius: 4px;
         box-sizing: border-box;

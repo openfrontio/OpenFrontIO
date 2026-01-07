@@ -29,7 +29,6 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private selectedColor: string | null = null;
 
   @state() private activeTab: "patterns" | "colors" = "patterns";
-  @state() private showOnlyOwned: boolean = false;
 
   private cosmetics: Cosmetics | null = null;
 
@@ -112,10 +111,8 @@ export class TerritoryPatternsModal extends LitElement {
           this.userMeResponse,
           this.affiliateCode,
         );
-        if (rel === "blocked") {
-          continue;
-        }
-        if (this.showOnlyOwned && rel !== "owned") {
+        // Only show owned patterns (skip blocked and purchasable)
+        if (rel !== "owned") {
           continue;
         }
         buttons.push(html`
@@ -124,7 +121,7 @@ export class TerritoryPatternsModal extends LitElement {
             .colorPalette=${this.cosmetics?.colorPalettes?.[
               colorPalette?.name ?? ""
             ] ?? null}
-            .requiresPurchase=${rel === "purchasable"}
+            .requiresPurchase=${false}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
               handlePurchase(p, colorPalette)}
@@ -135,11 +132,11 @@ export class TerritoryPatternsModal extends LitElement {
 
     return html`
       <div class="flex flex-col gap-2">
-        <div class="flex justify-center">
-          ${hasLinkedAccount(this.userMeResponse)
-            ? this.renderMySkinsButton()
-            : this.renderNotLoggedInWarning()}
-        </div>
+        ${!hasLinkedAccount(this.userMeResponse)
+          ? html`<div class="flex justify-center">
+              ${this.renderNotLoggedInWarning()}
+            </div>`
+          : html``}
         <div
           class="flex flex-wrap gap-4 p-2"
           style="justify-content: center; align-items: flex-start;"
@@ -156,20 +153,6 @@ export class TerritoryPatternsModal extends LitElement {
         </div>
       </div>
     `;
-  }
-
-  private renderMySkinsButton(): TemplateResult {
-    return html`<button
-      class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
-        .showOnlyOwned
-        ? "bg-blue-500 text-white hover:bg-blue-600"
-        : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
-      @click=${() => {
-        this.showOnlyOwned = !this.showOnlyOwned;
-      }}
-    >
-      ${translateText("territory_patterns.show_only_owned")}
-    </button>`;
   }
 
   private renderNotLoggedInWarning(): TemplateResult {

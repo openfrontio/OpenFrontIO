@@ -31,6 +31,7 @@ import { MatchmakingModal } from "./Matchmaking";
 import "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./ShopModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
@@ -532,6 +533,7 @@ class Client {
           "help-modal",
           "user-setting",
           "territory-patterns-modal",
+          "shop-modal",
           "language-modal",
           "news-modal",
           "flag-input-modal",
