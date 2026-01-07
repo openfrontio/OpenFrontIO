@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
+import { LanguageModal } from "./LanguageModal";
 import "./LanguageModal";
 
 import en from "../../resources/lang/en.json";
@@ -18,9 +19,12 @@ export class LangSelector extends LitElement {
   @state() public defaultTranslations: Record<string, string> | undefined;
   @state() public currentLang: string = "en";
   @state() private languageList: any[] = [];
-  @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
   @state() isVisible = true;
+
+  @query("language-modal") private modal!: LanguageModal;
+  // Manual reference for when we move it to body
+  private _detachedModal: LanguageModal | null = null;
 
   private debugKeyPressed: boolean = false;
   private languageMetadata: LanguageMetadata[] = metadata;
@@ -34,7 +38,25 @@ export class LangSelector extends LitElement {
     super.connectedCallback();
     this.setupDebugKey();
     this.initializeLanguage();
+    window.addEventListener(
+      "language-selected",
+      this.handleLanguageSelected as EventListener,
+    );
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener(
+      "language-selected",
+      this.handleLanguageSelected as EventListener,
+    );
+  }
+
+  private handleLanguageSelected = (e: CustomEvent) => {
+    if (e.detail && e.detail.lang) {
+      this.changeLanguage(e.detail.lang);
+    }
+  };
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
@@ -172,7 +194,6 @@ export class LangSelector extends LitElement {
     this.translations = await this.loadLanguage(lang);
     this.currentLang = lang;
     this.applyTranslation();
-    this.showModal = false;
   }
 
   private applyTranslation() {
@@ -250,12 +271,30 @@ export class LangSelector extends LitElement {
 
   private async openModal() {
     this.debugMode = this.debugKeyPressed;
-    this.showModal = true;
     await this.loadLanguageList();
+
+    // If we haven't created our manual modal yet (because render() doesn't include it anymore)
+    if (!this._detachedModal) {
+      this._detachedModal = document.createElement("language-modal") as LanguageModal;
+      document.body.appendChild(this._detachedModal);
+      
+      // Listen for language selection on the detached modal
+      this._detachedModal.addEventListener("language-selected", (e: any) => {
+         // Propagate or handle directly
+         if (e.detail && e.detail.lang) {
+            this.changeLanguage(e.detail.lang);
+         }
+      });
+    }
+
+    if (this._detachedModal) {
+      this._detachedModal.languageList = [...this.languageList];
+      this._detachedModal.currentLang = this.currentLang;
+      this._detachedModal.open();
+    }
   }
 
   public close() {
-    this.showModal = false;
     this.isVisible = false;
     this.requestUpdate();
   }
@@ -284,24 +323,17 @@ export class LangSelector extends LitElement {
         id="lang-selector"
         title="Change Language"
         @click=${this.openModal}
-        class="border-none bg-none cursor-pointer p-0"
+        class="border-none bg-none cursor-pointer p-0 flex items-center justify-center"
+        style="width: 28px; height: 28px;"
       >
         <img
           id="lang-flag"
-          class="w-14 h-10 hover:scale-110 transition-transform duration-200"
+          class="object-contain hover:scale-110 transition-transform duration-200"
+          style="width: 28px; height: 28px;"
           src="/flags/${currentLang.svg}.svg"
           alt="flag"
         />
       </button>
-
-      <language-modal
-        .visible=${this.showModal}
-        .languageList=${this.languageList}
-        .currentLang=${this.currentLang}
-        @language-selected=${(e: CustomEvent) =>
-          this.changeLanguage(e.detail.lang)}
-        @close-modal=${() => (this.showModal = false)}
-      ></language-modal>
     `;
   }
 }
