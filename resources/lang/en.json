@@ -789,6 +789,7 @@
     "colors": "Colors",
     "purchase": "Purchase",
     "show_only_owned": "My Skins",
+    "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
     "blocked": {
       "login": "You must be logged in to access this skin.",

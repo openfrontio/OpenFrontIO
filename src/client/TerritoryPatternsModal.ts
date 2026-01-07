@@ -154,8 +154,11 @@ export class TerritoryPatternsModal extends LitElement {
         if (rel === "blocked") {
           continue;
         }
-        if (this.showOnlyOwned && rel !== "owned") {
-          continue;
+        if (this.showOnlyOwned) {
+          if (rel !== "owned") continue;
+        } else {
+          // Store mode: hide owned items
+          if (rel === "owned") continue;
         }
         // Determine if this pattern/color is selected
         const isDefaultPattern = pattern === null;
@@ -188,20 +191,29 @@ export class TerritoryPatternsModal extends LitElement {
             ? this.renderMySkinsButton()
             : html``}
         </div>
-        <div
-          class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
-        >
-          ${this.affiliateCode === null
-            ? html`
-                <pattern-button
-                  .pattern=${null}
-                  .selected=${this.selectedPattern === null}
-                  .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
-                ></pattern-button>
-              `
-            : html``}
-          ${buttons}
-        </div>
+        ${!this.showOnlyOwned && buttons.length === 0
+          ? html`<div
+              class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
+            >
+              ${translateText("territory_patterns.all_owned")}
+            </div>`
+          : html`
+              <div
+                class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
+              >
+                ${this.affiliateCode === null && this.showOnlyOwned
+                  ? html`
+                      <pattern-button
+                        .pattern=${null}
+                        .selected=${this.selectedPattern === null}
+                        .onSelect=${(p: Pattern | null) =>
+                          this.selectPattern(null)}
+                      ></pattern-button>
+                    `
+                  : html``}
+                ${buttons}
+              </div>
+            `}
       </div>
     `;
   }
@@ -291,9 +303,21 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public async open(affiliateCode?: string) {
+  public async open(
+    options?: string | { affiliateCode?: string; showOnlyOwned?: boolean },
+  ) {
     this.isActive = true;
-    this.affiliateCode = affiliateCode ?? null;
+    if (typeof options === "string") {
+      this.affiliateCode = options;
+      this.showOnlyOwned = false;
+    } else if (typeof options === "object") {
+      this.affiliateCode = options.affiliateCode ?? null;
+      this.showOnlyOwned = options.showOnlyOwned ?? false;
+    } else {
+      this.affiliateCode = null;
+      this.showOnlyOwned = false;
+    }
+
     // Wait for the DOM to be updated and the o-modal element to be available
     this.requestUpdate();
     await this.updateComplete;

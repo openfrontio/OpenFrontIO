@@ -292,11 +292,11 @@ class Client {
       window.showPage("page-item-store");
       const skinStoreModal = document.getElementById(
         "page-item-store",
-      ) as HTMLElement & { open?: () => void };
+      ) as HTMLElement & { open?: (opts: any) => void };
       if (skinStoreModal) {
         skinStoreModal.classList.remove("hidden");
         if (typeof skinStoreModal.open === "function") {
-          skinStoreModal.open();
+          skinStoreModal.open({ showOnlyOwned: true });
         }
       }
     });
