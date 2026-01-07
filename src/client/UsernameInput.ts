@@ -45,7 +45,7 @@ export class UsernameInput extends LitElement {
   private parseAndSetUsername(fullUsername: string) {
     const tag = getClanTagOriginalCase(fullUsername);
     if (tag) {
-      this.clanTag = tag;
+      this.clanTag = tag.toUpperCase();
       this.baseUsername = fullUsername.replace(`[${tag}]`, "").trim();
     } else {
       this.clanTag = "";

@@ -355,7 +355,7 @@ const CLAN_TAG_INVALID_CHARS = new RegExp(`[^${CLAN_TAG_CHARS}]`, "g");
 const CLAN_TAG_REGEX = new RegExp(`\\[([${CLAN_TAG_CHARS}]{2,5})\\]`);
 
 export function sanitizeClanTag(tag: string): string {
-  return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5);
+  return tag.replace(CLAN_TAG_INVALID_CHARS, "").substring(0, 5).toUpperCase();
 }
 
 function clanMatch(name: string): RegExpMatchArray | null {
