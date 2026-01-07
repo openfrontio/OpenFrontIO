@@ -33,6 +33,9 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableDifficulties(): Difficulty[] {
+    // For Public games, don't show difficulty selector (we'll combine them)
+    if (this.selectedType === GameType.Public) return [];
+
     const typeNode = this.statsTree?.[this.selectedType];
     const modeNode = typeNode?.[this.selectedMode];
     if (!modeNode) return [];
@@ -49,11 +52,120 @@ export class PlayerStatsTreeView extends LitElement {
     return this;
   }
 
+  private addBigIntArrays(a?: bigint[], b?: bigint[]): bigint[] | undefined {
+    if (!a && !b) return undefined;
+    if (!a) return b;
+    if (!b) return a;
+
+    const maxLen = Math.max(a.length, b.length);
+    const result: bigint[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      result[i] = (a[i] ?? 0n) + (b[i] ?? 0n);
+    }
+    return result;
+  }
+
+  private combineDifficultyStats(
+    modeNode: Record<string, PlayerStatsLeaf>,
+  ): PlayerStatsLeaf | null {
+    const difficulties = Object.keys(modeNode).filter(isDifficulty);
+    if (difficulties.length === 0) return null;
+
+    // Start with zeros
+    let combinedWins = 0n;
+    let combinedLosses = 0n;
+    let combinedTotal = 0n;
+    const combinedStats: PlayerStats = {};
+
+    // Aggregate across all difficulties
+    for (const diff of difficulties) {
+      const leaf = modeNode[diff as Difficulty];
+      if (!leaf) continue;
+
+      combinedWins += leaf.wins;
+      combinedLosses += leaf.losses;
+      combinedTotal += leaf.total;
+
+      if (leaf.stats) {
+        // Combine array-based stats
+        combinedStats.attacks = this.addBigIntArrays(
+          combinedStats.attacks,
+          leaf.stats.attacks,
+        );
+        combinedStats.gold = this.addBigIntArrays(
+          combinedStats.gold,
+          leaf.stats.gold,
+        );
+
+        // Combine scalar stats
+        if (leaf.stats.betrayals !== undefined) {
+          combinedStats.betrayals =
+            (combinedStats.betrayals ?? 0n) + leaf.stats.betrayals;
+        }
+        if (leaf.stats.killedAt !== undefined) {
+          combinedStats.killedAt =
+            (combinedStats.killedAt ?? 0n) + leaf.stats.killedAt;
+        }
+        if (leaf.stats.conquests !== undefined) {
+          combinedStats.conquests =
+            (combinedStats.conquests ?? 0n) + leaf.stats.conquests;
+        }
+
+        // Combine boats stats (nested object)
+        if (leaf.stats.boats) {
+          combinedStats.boats ??= {};
+          for (const [boatType, values] of Object.entries(leaf.stats.boats)) {
+            combinedStats.boats[boatType] = this.addBigIntArrays(
+              combinedStats.boats[boatType],
+              values,
+            );
+          }
+        }
+
+        // Combine bombs stats (nested object)
+        if (leaf.stats.bombs) {
+          combinedStats.bombs ??= {};
+          for (const [bombType, values] of Object.entries(leaf.stats.bombs)) {
+            combinedStats.bombs[bombType] = this.addBigIntArrays(
+              combinedStats.bombs[bombType],
+              values,
+            );
+          }
+        }
+
+        // Combine units stats (nested object)
+        if (leaf.stats.units) {
+          combinedStats.units ??= {};
+          for (const [unitType, values] of Object.entries(leaf.stats.units)) {
+            combinedStats.units[unitType] = this.addBigIntArrays(
+              combinedStats.units[unitType],
+              values,
+            );
+          }
+        }
+      }
+    }
+
+    return {
+      wins: combinedWins,
+      losses: combinedLosses,
+      total: combinedTotal,
+      stats: combinedStats,
+    };
+  }
+
   private getSelectedLeaf(): PlayerStatsLeaf | null {
     const typeNode = this.statsTree?.[this.selectedType];
     if (!typeNode) return null;
     const modeNode = typeNode[this.selectedMode];
     if (!modeNode) return null;
+
+    // For Public games, combine all difficulties
+    if (this.selectedType === GameType.Public) {
+      return this.combineDifficultyStats(modeNode);
+    }
+
+    // For Private and Singleplayer, use the selected difficulty
     const diffNode = modeNode[this.selectedDifficulty];
     if (!diffNode) return null;
     return diffNode;

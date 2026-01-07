@@ -25,7 +25,7 @@ export function conquestFxFactory(
     animatedSpriteLoader,
     x,
     y,
-    FxType.ConquestChampagne,
+    FxType.Conquest,
     2500,
   );
   const fadeAnimation = new FadeFx(swordAnimation, 0.1, 0.6);
