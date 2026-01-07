@@ -96,7 +96,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           <!-- Lobby ID Box -->
           ${this.hasJoined
             ? html`<div
-                class="hidden md:flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
+                class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
               >
                 <button
                   @click=${() => {
