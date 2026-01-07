@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import {
@@ -6,6 +6,7 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
+  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -333,6 +334,22 @@ export class PublicLobby extends LitElement {
     }
 
     return { label: null, isFullLabel: false };
+  }
+
+  private getModifierLabels(
+    publicGameModifiers: PublicGameModifiers | undefined,
+  ): string[] {
+    if (!publicGameModifiers) {
+      return [];
+    }
+    const labels: string[] = [];
+    if (publicGameModifiers.isRandomSpawn) {
+      labels.push(translateText("public_game_modifier.random_spawn"));
+    }
+    if (publicGameModifiers.isCompact) {
+      labels.push(translateText("public_game_modifier.compact_map"));
+    }
+    return labels;
   }
 
   private lobbyClicked(lobby: GameInfo) {

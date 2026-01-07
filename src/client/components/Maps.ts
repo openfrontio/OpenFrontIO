@@ -48,6 +48,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   StraitOfHormuz: "Strait of Hormuz",
   Surrounded: "Surrounded",
   Didier: "Didier",
+  AmazonRiver: "Amazon River",
 };
 
 @customElement("map-display")

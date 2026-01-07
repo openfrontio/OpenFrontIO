@@ -171,6 +171,12 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
+  publicGameModifiers: z
+    .object({
+      isCompact: z.boolean(),
+      isRandomSpawn: z.boolean(),
+    })
+    .optional(),
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
