@@ -1,7 +1,7 @@
-import { LitElement, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo, GameRecordSchema } from "../core/Schemas";
+import { GameConfig, GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { getApiBase } from "./Api";
@@ -19,6 +19,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message: string = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private gameConfig: GameConfig | null = null;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -112,6 +113,9 @@ export class JoinPrivateLobbyModal extends LitElement {
         <div class="message-area ${this.message ? "show" : ""}">
           ${this.message}
         </div>
+
+        ${this.renderGameConfig()}
+
         <div class="options-layout">
           ${this.hasJoined && this.players.length > 0
             ? html` <div class="options-section">
@@ -157,6 +161,62 @@ export class JoinPrivateLobbyModal extends LitElement {
     `;
   }
 
+  private renderConfigItem(
+    label: string,
+    value: string | TemplateResult,
+  ): TemplateResult {
+    return html`
+      <div
+        class="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-center min-w-[100px]"
+      >
+        <span
+          class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
+          >${label}</span
+        >
+        <span class="text-white font-bold text-sm truncate w-full"
+          >${value}</span
+        >
+      </div>
+    `;
+  }
+
+  private renderGameConfig(): TemplateResult {
+    if (!this.gameConfig) return html``;
+
+    const c = this.gameConfig;
+    const mapName = translateText(
+      "map." + c.gameMap.toLowerCase().replace(/ /g, ""),
+    );
+    const modeName =
+      c.gameMode === "Free For All"
+        ? translateText("game_mode.ffa")
+        : translateText("game_mode.teams");
+    const diffName = translateText(
+      "difficulty." + c.difficulty.toLowerCase().replace(/ /g, ""),
+    );
+
+    return html`
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 px-6 mb-6">
+        ${this.renderConfigItem(translateText("map.map"), mapName)}
+        ${this.renderConfigItem(translateText("host_modal.mode"), modeName)}
+        ${this.renderConfigItem(
+          translateText("difficulty.difficulty"),
+          diffName,
+        )}
+        ${this.renderConfigItem(
+          translateText("host_modal.bots"),
+          c.bots.toString(),
+        )}
+        ${c.playerTeams
+          ? this.renderConfigItem(
+              translateText("host_modal.team_count"),
+              c.playerTeams.toString(),
+            )
+          : html``}
+      </div>
+    `;
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -173,6 +233,8 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   public close() {
     this.lobbyIdInput.value = "";
+    this.gameConfig = null;
+    this.players = [];
     if (this.inline) {
       if ((window as any).showPage) {
         (window as any).showPage("page-play");
@@ -310,6 +372,7 @@ export class JoinPrivateLobbyModal extends LitElement {
         }),
       );
 
+      this.pollPlayers();
       this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
       return true;
     }
@@ -399,6 +462,9 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        if (data.gameConfig) {
+          this.gameConfig = data.gameConfig;
+        }
       })
       .catch((error) => {
         console.error("Error polling players:", error);
