@@ -69,13 +69,17 @@ export class SettingKeybind extends LitElement {
   }
 
   private displayKey(key: string): string {
+    if (!key) return "Press a key";
     if (key === " ") return "Space";
-    if (key.startsWith("Key") && key.length === 4) {
-      return key.slice(3);
+    if (key === "Space") return "Space";
+    if (/^Digit\d$/.test(key)) {
+      return key.replace("Digit", "");
     }
-    return key.length
-      ? key.charAt(0).toUpperCase() + key.slice(1)
-      : "Press a key";
+    if (/^Key[A-Z]$/.test(key)) {
+      return key.replace("Key", "");
+    }
+    // Add more mappings as needed (e.g., Arrow keys, etc.)
+    return key.charAt(0).toUpperCase() + key.slice(1);
   }
 
   private startListening() {
@@ -88,17 +92,20 @@ export class SettingKeybind extends LitElement {
     e.preventDefault();
 
     const code = e.code;
+    const prevValue = this.value;
 
+    // Temporarily set the value to the new code for validation in parent
     this.value = code;
 
-    this.dispatchEvent(
-      new CustomEvent("change", {
-        detail: { action: this.action, value: code, key: e.key },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    const event = new CustomEvent("change", {
+      detail: { action: this.action, value: code, key: e.key, prevValue },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
 
+    // If parent rejects (restores value), this.value will be set back externally
+    // Otherwise, keep the new value
     this.listening = false;
     this.requestUpdate();
   }

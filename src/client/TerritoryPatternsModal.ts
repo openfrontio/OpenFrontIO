@@ -80,8 +80,15 @@ export class TerritoryPatternsModal extends LitElement {
   private renderTabNavigation(): TemplateResult {
     return html`
       <div
-        class="relative flex items-center justify-center mb-6 border-b border-white/10 pb-4 shrink-0"
+        class="relative flex flex-col items-center justify-center mb-6 border-b border-white/10 pb-4 shrink-0"
       >
+        <div class="w-full flex items-center justify-center mb-2">
+          <span
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
+          >
+            ${translateText("territory_patterns.title")}
+          </span>
+        </div>
         <div class="flex items-center gap-2">
           <button
             class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
@@ -302,16 +309,25 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private showSkinSelectedPopup() {
-    // Use heads-up-message modal for feedback
-    const headsUp = document.querySelector("heads-up-message") as HTMLElement;
-    if (headsUp) {
-      headsUp.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: { message: "Skin selected", duration: 2000 },
-          bubbles: true,
-        }),
-      );
+    // Use unified heads-up-message for feedback
+    let skinName = "Default";
+    if (this.selectedPattern && this.selectedPattern.name) {
+      skinName = this.selectedPattern.name
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      if (
+        this.selectedPattern.colorPalette &&
+        this.selectedPattern.colorPalette.name
+      ) {
+        skinName += ` (${this.selectedPattern.colorPalette.name})`;
+      }
     }
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: { message: `${skinName} selected`, duration: 2000 },
+      }),
+    );
   }
 
   private selectColor(hexCode: string) {

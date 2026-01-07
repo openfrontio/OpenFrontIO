@@ -157,7 +157,9 @@ export class SinglePlayerModal extends LitElement {
                 />
               </svg>
             </button>
-            <h2 class="text-2xl font-bold text-white uppercase tracking-widest">
+            <h2
+              class="text-xl sm:text-2xl md:text-3xl font-bold text-white uppercase tracking-widest"
+            >
               ${translateText("main.single_player") || "Single Player"}
             </h2>
           </div>

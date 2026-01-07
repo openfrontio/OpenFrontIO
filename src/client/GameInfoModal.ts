@@ -49,6 +49,15 @@ export class GameInfoModal extends LitElement {
         title="${translateText("game_info_modal.title")}"
         translationKey="main.game_info"
       >
+        <div
+          class="w-full flex items-center justify-center mb-6 border-b border-white/10 pb-4"
+        >
+          <span
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
+          >
+            ${translateText("game_info_modal.title")}
+          </span>
+        </div>
         <div class="flex flex-col items-center px-25 text-center mb-4">
           <div class="w-75 sm:w-125">
             ${this.isLoadingGame

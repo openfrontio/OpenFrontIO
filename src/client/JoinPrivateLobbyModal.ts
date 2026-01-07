@@ -40,7 +40,37 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title=${translateText("private_lobby.title")}>
+      <o-modal .hideHeader=${true}>
+        <div
+          class="px-8 py-4 flex items-center justify-between border-b border-white/10 bg-black/20 shrink-0"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              @click=${this.close}
+              class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+            <h2
+              class="text-base sm:text-lg md:text-xl font-bold text-white uppercase tracking-widest"
+            >
+              ${translateText("private_lobby.title")}
+            </h2>
+          </div>
+        </div>
         <div class="lobby-id-box">
           <input
             type="text"

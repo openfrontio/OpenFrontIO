@@ -45,40 +45,68 @@ export class KeybindsModal extends LitElement {
   };
 
   private handleKeybindChange(
-    e: CustomEvent<{ action: string; value: string; key: string }>,
+    e: CustomEvent<{
+      action: string;
+      value: string;
+      key: string;
+      prevValue?: string;
+    }>,
   ) {
     console.log("Keybind change event:", e);
-    const { action, value, key } = e.detail;
-    const prevValue = this.keybinds[action]?.value ?? "";
+    const { action, value, key, prevValue } = e.detail;
 
     const values = Object.entries(this.keybinds)
       .filter(([k]) => k !== action)
       .map(([, v]) => v.value);
     if (values.includes(value) && value !== "Null") {
-      const popup = document.createElement("div");
-      popup.className =
-        "fixed top-6 left-1/2 -translate-x-1/2 z-[11001] bg-red-500/10 backdrop-blur-xl border border-red-500/50 text-white px-6 py-4 rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.3)] flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-[-20px]";
-      popup.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <span class="font-medium">The key <span class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10">${value}</span> is already bound to another action.</span>
-      `;
-      document.body.appendChild(popup);
-
-      requestAnimationFrame(() => {
-        popup.classList.remove("opacity-0", "translate-y-[-20px]");
-      });
-
-      setTimeout(() => {
-        popup.classList.add("opacity-0", "-translate-y-4");
-        setTimeout(() => popup.remove(), 300);
-      }, 3000);
+      // Format key for user-friendly display
+      let displayKey = value;
+      if (/^Digit\d$/.test(value)) {
+        displayKey = value.replace("Digit", "");
+      } else if (/^Key[A-Z]$/.test(value)) {
+        displayKey = value.replace("Key", "");
+      } else if (value === "Space") {
+        displayKey = "Space";
+      }
+      // Use heads-up-message modal for error popup
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: html`
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-red-500 inline-block align-middle mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <span class="font-medium"
+                >The key
+                <span
+                  class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
+                  >${displayKey}</span
+                >
+                is already bound to another action.</span
+              >
+            `,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
 
       const element = this.renderRoot.querySelector(
         `setting-keybind[action="${action}"]`,
       ) as SettingKeybind;
-      if (element) {
+      if (element && prevValue !== undefined) {
+        // Restore the previous value instead of setting to Null
         element.value = prevValue;
         element.requestUpdate();
       }
@@ -103,7 +131,7 @@ export class KeybindsModal extends LitElement {
           : ""}"
       >
         <h1
-          class="text-white text-2xl font-bold uppercase tracking-widest mb-6 pb-2 border-b border-white/10 flex items-center gap-2"
+          class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest mb-6 pb-2 border-b border-white/10 flex items-center gap-2"
           ?hidden=${!this.inline}
         >
           <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>

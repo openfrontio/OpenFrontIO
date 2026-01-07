@@ -144,14 +144,16 @@ export class HostLobbyModal extends LitElement {
                 />
               </svg>
             </button>
-            <h2 class="text-2xl font-bold text-white uppercase tracking-widest">
+            <h2
+              class="text-xl sm:text-2xl md:text-3xl font-bold text-white uppercase tracking-widest"
+            >
               ${translateText("host_modal.title")}
             </h2>
           </div>
 
           <!-- Lobby ID Box -->
           <div
-            class="flex items-center gap-3 bg-white/5 rounded-lg p-1.5 border border-white/10"
+            class="flex items-center gap-0.5 bg-white/5 rounded-lg px-1 py-0 border border-white/10 max-w-[220px] flex-nowrap"
           >
             <button
               @click=${() => {
@@ -195,28 +197,11 @@ export class HostLobbyModal extends LitElement {
             </button>
             <div
               @click=${this.copyToClipboard}
-              class="font-mono text-sm font-bold text-white px-2 cursor-pointer select-all min-w-[80px] text-center"
+              class="font-mono text-xs font-bold text-white px-1 cursor-pointer select-all min-w-[60px] text-center truncate"
+              title="Click to copy"
             >
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
             </div>
-            <button
-              @click=${this.copyToClipboard}
-              class="p-2 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title="Copy ID"
-            >
-              ${this.copySuccess
-                ? html`<span class="text-green-400 font-bold">✓</span>`
-                : html`<svg
-                    viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
-                    ></path>
-                  </svg>`}
-            </button>
           </div>
         </div>
 

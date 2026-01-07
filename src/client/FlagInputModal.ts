@@ -20,6 +20,15 @@ export class FlagInputModal extends LitElement {
   render() {
     return html`
       <o-modal alwaysMaximized title=${translateText("flag_input.title")}>
+        <div
+          class="w-full flex items-center justify-center mb-6 border-b border-white/10 pb-4"
+        >
+          <span
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
+          >
+            ${translateText("flag_input.title")}
+          </span>
+        </div>
         <div class="flex justify-center w-full p-4">
           <input
             class="h-8 border-none border border-gray-300

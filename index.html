@@ -192,8 +192,9 @@
           data-i18n="main.options"
           >Options</a
         >
+        <!-- Keybinds menu item removed for mobile users -->
         <a
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)] md:block hidden"
           data-page="page-keybinds"
           data-i18n="main.keybinds"
           >Keybinds</a
@@ -454,11 +455,6 @@
       ></territory-patterns-modal>
 
       <account-button class="hidden"></account-button>
-
-      <div class="hidden">
-        <!-- Replaced content with hidden div to satisfy layout without breaking JS that might look for ids, though ids have been moved. Safest to remove if JS does not depend on them. -->
-      </div>
-      <!-- Removed language-container and right-icon-rail -->
     </div>
 
     <!-- Game components -->
@@ -482,10 +478,7 @@
       </div>
     </div>
 
-    <!-- Footer section -->
-    <!-- Removed footer, moved to sidebar -->
     <!-- Game modals and overlays -->
-
     <join-private-lobby-modal></join-private-lobby-modal>
     <emoji-table></emoji-table>
     <build-menu></build-menu>
@@ -513,26 +506,7 @@
     <leader-board></leader-board>
     <team-stats></team-stats>
     <heads-up-message></heads-up-message>
-    <div
-      id="language-modal"
-      class="fixed inset-0 bg-black/50 z-50 hidden flex justify-center items-center"
-    >
-      <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-full">
-        <h2 class="text-xl font-semibold mb-4">Select Language</h2>
-        <div
-          id="language-list"
-          class="flex flex-col gap-2 max-h-80 overflow-y-auto"
-        ></div>
-        <button
-          class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-sm"
-          onclick="
-            document.getElementById('language-modal').classList.add('hidden')
-          "
-        >
-          Close
-        </button>
-      </div>
-    </div>
+
     <!-- Scripts -->
     <script>
       // Remove preload styles after everything is loaded

@@ -314,9 +314,12 @@ export class StatsModal extends LitElement {
           ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
           : ""}"
       >
-        <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
-          <span class="w-2 h-2 rounded-full bg-blue-500 block"></span>
-          <span class="text-white text-2xl font-bold uppercase tracking-widest">
+        <div
+          class="w-full flex items-center justify-center mb-6 pb-2 border-b border-white/10 gap-2"
+        >
+          <span
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex items-center gap-2"
+          >
             ${translateText("stats_modal.clan_stats")}
           </span>
           ${dateRange} ${summaryTags}
