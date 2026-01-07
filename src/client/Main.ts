@@ -290,6 +290,15 @@ class Client {
     this.patternsModal.addEventListener("pattern-selected", () => {
       this.patternsModal.refresh();
     });
+
+    window.addEventListener("showPage", (e: any) => {
+      if (typeof e?.detail === "string" && e.detail === "page-play") {
+        setTimeout(() => {
+          this.patternsModal.refresh();
+        }, 50);
+      }
+    });
+
     patternButton.addEventListener("click", () => {
       window.showPage("page-item-store");
       const skinStoreModal = document.getElementById(
