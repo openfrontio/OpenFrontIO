@@ -14,6 +14,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { getCompactMapNationCount } from "../core/game/NationCreation";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -97,12 +98,11 @@ export class HostLobbyModal extends LitElement {
             ${
               this.lobbyIdVisible
                 ? html`<svg
-                    class="visibility-icon"
+                    class="visibility-icon mr-2 cursor-pointer"
                     @click=${() => {
                       this.lobbyIdVisible = !this.lobbyIdVisible;
                       this.requestUpdate();
                     }}
-                    style="margin-right: 8px; cursor: pointer;"
                     stroke="currentColor"
                     fill="currentColor"
                     stroke-width="0"
@@ -116,12 +116,11 @@ export class HostLobbyModal extends LitElement {
                     ></path>
                   </svg>`
                 : html`<svg
-                    class="visibility-icon"
+                    class="visibility-icon mr-2 cursor-pointer"
                     @click=${() => {
                       this.lobbyIdVisible = !this.lobbyIdVisible;
                       this.requestUpdate();
                     }}
-                    style="margin-right: 8px; cursor: pointer;"
                     stroke="currentColor"
                     fill="currentColor"
                     stroke-width="0"
@@ -146,12 +145,12 @@ export class HostLobbyModal extends LitElement {
                   </svg>`
             }
             <!-- Lobby ID (conditionally shown) -->
-            <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
+            <span class="lobby-id cursor-pointer" @click=${this.copyToClipboard}>
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
             </span>
 
             <!-- Copy icon/success indicator -->
-            <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
+            <div @click=${this.copyToClipboard} class="cursor-pointer ml-2">
               ${
                 this.copySuccess
                   ? html`<span class="copy-success-icon">✓</span>`
@@ -225,7 +224,7 @@ export class HostLobbyModal extends LitElement {
                   <img
                     src=${randomMap}
                     alt="Random Map"
-                    style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
+                    class="w-full aspect-2/1 object-cover rounded-lg"
                   />
                 </div>
                 <div class="option-card-title">
@@ -516,8 +515,8 @@ export class HostLobbyModal extends LitElement {
                             id="end-timer-value"
                             min="0"
                             max="120"
-                            .value=${String(this.maxTimerValue ?? 0)}
-                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                            .value=${String(this.maxTimerValue ?? "")}
+                            class="w-15 text-black text-right rounded-lg"
                             @input=${this.handleMaxTimerValueChanges}
                             @keydown=${this.handleMaxTimerValueKeyDown}
                           />`
@@ -526,7 +525,6 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.max_timer")}
                   </div>
                 </label>
-
                 <label
                   for="spawn-immunity"
                   class="option-card  ${this.spawnImmunity ? "selected" : ""}"
@@ -566,17 +564,17 @@ export class HostLobbyModal extends LitElement {
                     <span>${translateText("host_modal.player_immunity_duration")}</span>
                   </div>
                 </label>
-                
-                <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
+
+                <hr class="w-full border-t border-t-[#444] my-4" />
 
                 <!-- Individual disables for structures/weapons -->
                 <div
-                  style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
+                  class="mt-2 mb-3 font-bold text-[#ccc] text-center"
                 >
                   ${translateText("host_modal.enables_title")}
                 </div>
                 <div
-                  style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+                  class="flex flex-wrap justify-center gap-3"
                 >
                    ${renderUnitTypeOptions({
                      disabledUnits: this.disabledUnits,
@@ -597,7 +595,7 @@ export class HostLobbyModal extends LitElement {
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
-            <span style="margin: 0 8px;">•</span>
+            <span class="mx-2">•</span>
             ${this.getEffectiveNationCount()}
             ${
               this.getEffectiveNationCount() === 1
@@ -947,6 +945,7 @@ export class HostLobbyModal extends LitElement {
   /**
    * Returns the effective nation count for display purposes.
    * In HumansVsNations mode, this equals the number of human players.
+   * For compact maps, only 25% of nations are used.
    * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
    */
   private getEffectiveNationCount(): number {
@@ -956,7 +955,7 @@ export class HostLobbyModal extends LitElement {
     if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
       return this.clients.length;
     }
-    return this.nationCount;
+    return getCompactMapNationCount(this.nationCount, this.compactMap);
   }
 }
 
