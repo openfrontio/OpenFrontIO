@@ -1,7 +1,7 @@
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { UnitType, GameMode } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
@@ -9,6 +9,7 @@ import { UnitSelectionEvent } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { FogOfWarLayer } from "./FogOfWarLayer";
 
 const COLOR_PROGRESSION = [
   "rgb(232, 25, 25)",
@@ -48,10 +49,14 @@ export class UILayer implements Layer {
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
+  /**
+   * @param fogOfWarLayer Referência opcional à camada de Fog of War para controlar visibilidade de elementos de interface
+   */
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private fogOfWarLayer?: FogOfWarLayer,
   ) {
     this.theme = game.config().theme();
   }
@@ -270,6 +275,18 @@ export class UILayer implements Layer {
     if (maxHealth === undefined || this.context === null) {
       return;
     }
+    
+    // Check fog of war for Warship units
+    if (unit.type() === UnitType.Warship && this.fogOfWarLayer && this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const fogValue = this.fogOfWarLayer.getFogValueAt(unit.tile());
+      if (fogValue >= 0.8) {
+        // Don't draw health bar if unit is in fog 0.8 or higher
+        this.allHealthBars.get(unit.id())?.clear();
+        this.allHealthBars.delete(unit.id());
+        return;
+      }
+    }
+    
     if (
       this.allHealthBars.has(unit.id()) &&
       (unit.health() >= maxHealth || unit.health() <= 0 || !unit.isActive())
@@ -356,6 +373,27 @@ export class UILayer implements Layer {
     if (!this.context) {
       return;
     }
+    
+    // Check fog of war for fixed structures
+    const fixedStructures = [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+      UnitType.DefensePost,
+      UnitType.MissileSilo,
+      UnitType.SAMLauncher
+    ];
+    
+    if (fixedStructures.includes(unit.type()) && this.fogOfWarLayer && this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const fogValue = this.fogOfWarLayer.getFogValueAt(unit.tile());
+      if (fogValue >= 0.8) {
+        // Don't draw loading bar if fixed structure is in fog 0.8 or higher
+        this.allProgressBars.get(unit.id())?.progressBar.clear();
+        this.allProgressBars.delete(unit.id());
+        return;
+      }
+    }
+    
     if (!this.allProgressBars.has(unit.id())) {
       const progressBar = new ProgressBar(
         COLOR_PROGRESSION,

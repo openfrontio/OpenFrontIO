@@ -4,6 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
+  GameMode,
   PlayerProfile,
   PlayerType,
   Relation,
@@ -24,6 +25,7 @@ import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import { FogOfWarLayer } from "./FogOfWarLayer";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
@@ -81,6 +83,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private lastMouseUpdate = 0;
 
   private showDetails = true;
+  
+  // Track which players have been seen (visibility memory)
+  private seenPlayers: Set<string> = new Set();
+  
+  /**
+   * Referência à camada de Fog of War para verificação de visibilidade
+   */
+  @property({ type: Object })
+  public fogOfWarLayer: FogOfWarLayer | null = null; // Reference to FogOfWarLayer for visibility checking
+  
+  @property({ type: Object })
+  public nameLayer: any = null; // Reference to NameLayer for visibility checking
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -121,11 +135,19 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
-      this.player.profile().then((p) => {
-        this.playerProfile = p;
-      });
-      this.setVisible(true);
+      const player = owner as PlayerView;
+      
+      // Check if player info should be visible based on fog of war
+      if (this.shouldShowPlayerInfo(player)) {
+        this.player = player;
+        this.player.profile().then((p) => {
+          this.playerProfile = p;
+        });
+        this.setVisible(true);
+        
+        // Mark player as seen
+        this.seenPlayers.add(player.id());
+      }
     } else if (!this.game.isLand(tile)) {
       const units = this.game
         .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
@@ -139,6 +161,25 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  // Check if player info should be shown based on fog of war visibility
+  private shouldShowPlayerInfo(player: PlayerView): boolean {
+    // If not in fog of war mode, show info
+    if (this.game.config().gameConfig().gameMode !== GameMode.FogOfWar) {
+      return true;
+    }
+    
+    // In fog of war mode, only show info if player is visible (fog 0 at name location)
+    const nameLocation = player.nameLocation();
+    if (nameLocation && this.fogOfWarLayer) {
+      const idx = nameLocation.y * this.game.width() + nameLocation.x;
+      const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+      // Only show if fog is 0 (fully visible)
+      return fogValue === 0;
+    }
+    // If no fog layer available, default to showing info
+    return true;
+  }
+  
   tick() {
     this.requestUpdate();
   }

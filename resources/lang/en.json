@@ -361,7 +361,8 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "fog_of_war": "Fog of War"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
