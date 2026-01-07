@@ -80,7 +80,7 @@ export class GameList extends LitElement {
                     class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                     @click=${() => this.onViewGame?.(game.gameId)}
                   >
-                    ${translateText("game_list.view")}
+                    ${translateText("game_list.replay")}
                   </button>
                   <button
                     class="text-xs font-bold text-gray-300 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/5"
@@ -108,7 +108,7 @@ export class GameList extends LitElement {
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3">
                   <div>
                     <div
-                      class="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1"
+                      class="font-bold text-white uppercase tracking-wider text-[10px] mb-1"
                     >
                       ${translateText("game_list.game_id")}
                     </div>
@@ -116,7 +116,7 @@ export class GameList extends LitElement {
                   </div>
                   <div>
                     <div
-                      class="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1"
+                      class="font-bold text-white uppercase tracking-wider text-[10px] mb-1"
                     >
                       ${translateText("game_list.map")}
                     </div>
@@ -124,7 +124,7 @@ export class GameList extends LitElement {
                   </div>
                   <div>
                     <div
-                      class="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1"
+                      class="font-bold text-white uppercase tracking-wider text-[10px] mb-1"
                     >
                       ${translateText("game_list.difficulty")}
                     </div>
@@ -132,7 +132,7 @@ export class GameList extends LitElement {
                   </div>
                   <div>
                     <div
-                      class="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1"
+                      class="font-bold text-white uppercase tracking-wider text-[10px] mb-1"
                     >
                       ${translateText("game_list.type")}
                     </div>
