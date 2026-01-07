@@ -136,7 +136,7 @@ export class GameList extends LitElement {
                     >
                       ${translateText("game_list.type")}
                     </div>
-                    <div class="text-white uppercase">${game.type}</div>
+                    <div class="text-white">${game.type}</div>
                   </div>
                 </div>
               </div>
