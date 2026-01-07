@@ -192,10 +192,6 @@ export class JoinPrivateLobbyModal extends LitElement {
                 </button>
               </div>`
             : ""}
-          <div class="message-area ${this.message ? "show" : ""}">
-            ${this.message}
-          </div>
-
           ${this.renderGameConfig()}
         </div>
 
