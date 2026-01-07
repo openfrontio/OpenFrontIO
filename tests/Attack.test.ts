@@ -27,6 +27,13 @@ function sendBoat(target: TileRef, source: TileRef, troops: number) {
   );
 }
 
+const immunityPhaseTicks = 10;
+function waitForImmunityToEnd() {
+  for (let i = 0; i < immunityPhaseTicks + 1; i++) {
+    game.executeNextTick();
+  }
+}
+
 describe("Attack", () => {
   beforeEach(async () => {
     game = await setup("ocean_and_land", {
@@ -185,7 +192,7 @@ describe("Attack race condition with alliance requests", () => {
     }
   });
 
-  it("should not mark attacker as traitor when alliance is formed after attack starts", async () => {
+  it("Should not mark attacker as traitor when alliance is formed after attack starts", async () => {
     // Player A sends alliance request to Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     expect(allianceRequest).not.toBeNull();
@@ -229,7 +236,7 @@ describe("Attack race condition with alliance requests", () => {
     expect(playerB.outgoingAttacks()).toHaveLength(0);
   });
 
-  it("should prevent player from attacking allied player", async () => {
+  it("Should prevent player from attacking allied player", async () => {
     // Create an alliance between Player A and Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     if (allianceRequest) {
@@ -261,7 +268,7 @@ describe("Attack race condition with alliance requests", () => {
     expect(playerB.incomingAttacks()).toHaveLength(0);
   });
 
-  test("should cancel alliance requests if the recipient attacks", async () => {
+  test("Should cancel alliance requests if the recipient attacks", async () => {
     // Player A sends alliance request to Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     expect(allianceRequest).not.toBeNull();
@@ -285,7 +292,7 @@ describe("Attack race condition with alliance requests", () => {
     expect(playerB.incomingAllianceRequests()).toHaveLength(0);
   });
 
-  test("should cancel the proper alliance request among many", async () => {
+  test("Should cancel the proper alliance request among many", async () => {
     // Add a new player to have more alliance requests
     const playerCInfo = new PlayerInfo(
       "playerB",
@@ -322,5 +329,150 @@ describe("Attack race condition with alliance requests", () => {
     expect(playerA.outgoingAllianceRequests()).toHaveLength(0);
     // However C->B should remain
     expect(playerB.incomingAllianceRequests()).toHaveLength(1);
+  });
+});
+
+describe("Attack immunity", () => {
+  beforeEach(async () => {
+    game = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+      infiniteTroops: true,
+    });
+
+    (game.config() as TestConfig).setSpawnImmunityDuration(immunityPhaseTicks);
+
+    const playerAInfo = new PlayerInfo(
+      "playerA",
+      PlayerType.Human,
+      null,
+      "playerA_id",
+    );
+    // close to the water to send boats
+    playerA = addPlayerToGame(playerAInfo, game, game.ref(7, 0));
+
+    const playerBInfo = new PlayerInfo(
+      "playerB",
+      PlayerType.Human,
+      null,
+      "playerB_id",
+    );
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
+
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+  });
+
+  test("Should not be able to attack during immunity phase", async () => {
+    // Player A attacks Player B
+    const attackExecution = new AttackExecution(
+      null,
+      playerA,
+      playerB.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+  });
+
+  test("Should be able to attack after immunity phase", async () => {
+    waitForImmunityToEnd();
+    // Player A attacks Player B
+    const attackExecution = new AttackExecution(
+      null,
+      playerA,
+      playerB.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Ensure a player can't attack during all the immunity phase", async () => {
+    // Execute a few ticks but stop right before the immunity phase is over
+    for (let i = 0; i < immunityPhaseTicks - 1; i++) {
+      game.executeNextTick();
+    }
+    // Player A attacks Player B
+    game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
+    game.executeNextTick(); // ticks === immunityPhaseTicks here
+    // Attack is not possible during immunity
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+
+    // Retry after the immunity is over
+    game.executeNextTick(); // ticks === immunityPhaseTicks + 1
+    game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
+    game.executeNextTick();
+    // Attack is now possible right after
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Should not be able to send a boat during immunity phase", async () => {
+    // Player A sends a boat targeting Player B
+    game.addExecution(
+      new TransportShipExecution(
+        playerA,
+        playerB.id(),
+        game.ref(15, 8),
+        10,
+        game.ref(10, 5),
+      ),
+    );
+    game.executeNextTick();
+    expect(playerA.units(UnitType.TransportShip)).toHaveLength(0);
+  });
+
+  test("Should be able to send a boat after immunity phase", async () => {
+    waitForImmunityToEnd();
+    // Player A sends a boat targeting Player B
+    game.addExecution(
+      new TransportShipExecution(
+        playerA,
+        playerB.id(),
+        game.ref(15, 8),
+        10,
+        game.ref(7, 0),
+      ),
+    );
+    game.executeNextTick();
+    expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
+  });
+
+  test("Should be able to attack nations during immunity phase", async () => {
+    const nationId = "nation_id";
+    const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
+    game.addPlayer(nation);
+    // Player A attacks the nation
+    const attackExecution = new AttackExecution(null, playerA, nationId, null);
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Should be able to attack bots during immunity phase", async () => {
+    const botId = "bot_id";
+    const bot = new PlayerInfo("bot", PlayerType.Bot, null, botId);
+    game.addPlayer(bot);
+    // Player A attacks the bot
+    const attackExecution = new AttackExecution(null, playerA, botId, null);
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(1);
+  });
+
+  test("Can't send nuke during immunity phase", async () => {
+    constructionExecution(game, playerA, 7, 0, UnitType.MissileSilo);
+    expect(playerA.units(UnitType.MissileSilo)).toHaveLength(1);
+    // Player A sends a bomb to player B
+    constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
+    expect(playerA.units(UnitType.AtomBomb)).toHaveLength(0);
+    // Now wait for immunity to end
+    waitForImmunityToEnd();
+    // And send the exact same order
+    constructionExecution(game, playerA, 0, 11, UnitType.AtomBomb, 3);
+    expect(playerA.units(UnitType.AtomBomb)).toHaveLength(1);
   });
 });

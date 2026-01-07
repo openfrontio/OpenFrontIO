@@ -59,6 +59,9 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Lemnos: 3,
   TwoLakes: 6,
   StraitOfHormuz: 4,
+  Surrounded: 4,
+  Didier: 2,
+  AmazonRiver: 3,
 };
 
 interface MapWithMode {
@@ -90,25 +93,44 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
+    let { isCompact, isRandomSpawn } = config.getRandomPublicGameModifiers();
+
+    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
+    if (
+      playerTeams === Duos ||
+      playerTeams === Trios ||
+      playerTeams === Quads
+    ) {
+      isRandomSpawn = false;
+    }
+
+    // Maps with smallest player count < 50 don't support compact map in team games
+    // The smallest player count is the 3rd number in numPlayersConfig
+    if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
+      isCompact = false;
+    }
+
     // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      publicGameModifiers: { isCompact, isRandomSpawn },
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      randomSpawn: false,
+      randomSpawn: isRandomSpawn,
       disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
-      bots: 400,
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }

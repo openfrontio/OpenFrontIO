@@ -171,6 +171,12 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
+  publicGameModifiers: z
+    .object({
+      isCompact: z.boolean(),
+      isRandomSpawn: z.boolean(),
+    })
+    .optional(),
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
@@ -179,6 +185,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().int().min(2).max(1000).optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
+  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
