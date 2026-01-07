@@ -95,7 +95,7 @@ describe("MiniAStar", () => {
   });
 
   describe("Bugs", () => {
-    test.skip("path should not cross 1-tile land barrier", async () => {
+    test.fails("path should not cross 1-tile land barrier", async () => {
       // Map upscaling "water if ANY tile is water" causes thin land barriers
       // to be invisible to water pathfinding (each 2x2 chunk still has water)
 
@@ -107,7 +107,7 @@ describe("MiniAStar", () => {
       expect(astar.compute()).toBe(PathFindResultType.PathNotFound);
     });
 
-    test.skip("path should not cross diagonal land barrier", async () => {
+    test.fails("path should not cross diagonal land barrier", async () => {
       // Map upscaling "water if ANY tile is water" causes diagonal land barriers
       // to be invisible to water pathfinding (each 2x2 chunk still has water)
 

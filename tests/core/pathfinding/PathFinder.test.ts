@@ -177,7 +177,7 @@ describe("PathFinder state machine tests", () => {
   });
 
   describe("Bugs", () => {
-    test.skip("returns PathNotFound when no path exists", async () => {
+    test.fails("returns PathNotFound when no path exists", async () => {
       // Expected to fail until we implement pathing that
       // is aware of upscaling from miniMap to main map.
 
