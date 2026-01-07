@@ -305,8 +305,12 @@ export class JoinPrivateLobbyModal extends LitElement {
         )}
         ${c.playerTeams
           ? this.renderConfigItem(
-              translateText("host_modal.team_count"),
-              c.playerTeams.toString(),
+              typeof c.playerTeams === "string"
+                ? translateText("host_modal.team_type")
+                : translateText("host_modal.team_count"),
+              typeof c.playerTeams === "string"
+                ? translateText("host_modal.teams_" + c.playerTeams)
+                : c.playerTeams.toString(),
             )
           : html``}
       </div>
