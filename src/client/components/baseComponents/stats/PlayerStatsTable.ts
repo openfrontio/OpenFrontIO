@@ -117,16 +117,16 @@ export class PlayerStatsTable extends LitElement {
         <table>
           <thead>
             <tr>
-              <th class="text-left" style="width:40%">
+              <th class="text-left w-2/5">
                 ${translateText("player_stats_table.weapon")}
               </th>
-              <th class="text-center" style="width:20%">
+              <th class="text-center w-1/5">
                 ${translateText("player_stats_table.launched")}
               </th>
-              <th class="text-center" style="width:20%">
+              <th class="text-center w-1/5">
                 ${translateText("player_stats_table.landed")}
               </th>
-              <th class="text-center" style="width:20%">
+              <th class="text-center w-1/5">
                 ${translateText("player_stats_table.hits")}
               </th>
             </tr>
@@ -170,7 +170,7 @@ export class PlayerStatsTable extends LitElement {
             </tr>
           </tbody>
         </table>
-        <table style="margin-top: 0.75rem;">
+        <table class="mt-3">
           <thead>
             <tr>
               <th>${translateText("player_stats_table.gold")}</th>

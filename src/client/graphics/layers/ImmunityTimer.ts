@@ -82,7 +82,7 @@ export class ImmunityTimer extends LitElement implements Layer {
     const widthPercent = this.progressRatio * 100;
 
     return html`
-      <div class="w-full h-full flex z-[999]">
+      <div class="w-full h-full flex z-999">
         <div
           class="h-full transition-all duration-100 ease-in-out"
           style="width: ${widthPercent}%; background-color: rgba(255, 165, 0, 0.9);"
