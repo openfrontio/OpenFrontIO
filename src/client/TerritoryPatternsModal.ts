@@ -361,6 +361,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.requestUpdate();
 
     if (this.previewButton === null) return;
+    this.previewButton.innerHTML = "";
     render(preview, this.previewButton);
     this.previewButton.style.padding = "4px"; // Ensure padding is corrected after render
     this.requestUpdate();
