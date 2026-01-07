@@ -318,14 +318,14 @@ describe.each(adapters)("$name", ({ create }) => {
   describe("Known bugs", () => {
     test("path can cross 1-tile land barrier", async () => {
       const game = await gameFromString(["WLLWLWWLLW"]);
-      const adapter = new MiniAStarAdapter(game, { waterPath: true });
+      const adapter = create(game);
       const path = adapter.findPath(game.ref(0, 0), game.ref(9, 0));
       expect(path).not.toBeNull();
     });
 
     test("path can cross diagonal land barrier", async () => {
       const game = await gameFromString(["WL", "LW"]);
-      const adapter = new MiniAStarAdapter(game, { waterPath: true });
+      const adapter = create(game);
       const path = adapter.findPath(game.ref(0, 0), game.ref(1, 1));
       expect(path).not.toBeNull();
     });
