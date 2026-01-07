@@ -26,8 +26,6 @@ export default [
           allowDefaultProject: [
             "__mocks__/fileMock.js",
             "eslint.config.js",
-            "postcss.config.js",
-            "tailwind.config.js",
             "scripts/sync-assets.mjs",
           ],
         },

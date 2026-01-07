@@ -55,7 +55,7 @@ function addSpriteInCircle(
       game.isLand(game.ref(spawnX, spawnY))
     ) {
       const sprite = new FadeFx(
-        new SpriteFx(animatedSpriteLoader, spawnX, spawnY, type, 6000),
+        new SpriteFx(animatedSpriteLoader, spawnX, spawnY, type),
         0.1,
         0.8,
       );
@@ -79,19 +79,16 @@ export function nukeFxFactory(
 ): Fx[] {
   const nukeFx: Fx[] = [];
   // Explosion animation
-  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
-  // Shockwave animation
-  nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
+  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.FireworkAll));
   // Ruins and desolation sprites
   const debrisPlan: Array<{
     type: FxType;
     radiusFactor: number;
     density: number;
   }> = [
-    { type: FxType.HappyElf, radiusFactor: 1.0, density: 1 / 25 },
-    { type: FxType.SadElf, radiusFactor: 1.0, density: 1 / 28 },
-    { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
-    { type: FxType.Snowman, radiusFactor: 0.9, density: 1 / 70 },
+    { type: FxType.FireworkRed, radiusFactor: 1.0, density: 1 / 28 },
+    { type: FxType.FireworkCyan, radiusFactor: 0.9, density: 1 / 70 },
+    { type: FxType.FireworkYellow, radiusFactor: 0.9, density: 1 / 70 },
   ];
 
   for (const { type, radiusFactor, density } of debrisPlan) {

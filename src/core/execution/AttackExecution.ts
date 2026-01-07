@@ -92,16 +92,9 @@ export class AttackExecution implements Execution {
       }
     }
 
-    if (this.target.isPlayer()) {
-      if (
-        this.mg.config().numSpawnPhaseTurns() +
-          this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
-      ) {
-        console.warn("cannot attack player during immunity phase");
-        this.active = false;
-        return;
-      }
+    if (this.target.isPlayer() && !this._owner.canAttackPlayer(this.target)) {
+      this.active = false;
+      return;
     }
 
     this.startTroops ??= this.mg
