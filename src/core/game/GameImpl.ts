@@ -677,6 +677,14 @@ export class GameImpl implements Game {
     });
   }
 
+  public isSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().spawnImmunityDuration() >=
+      this.ticks()
+    );
+  }
+
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
       type: GameUpdateType.Emoji,

@@ -38,6 +38,12 @@ export class DifficultyDisplay extends LitElement {
       filter: drop-shadow(0 0 6px rgba(255, 56, 56, 0.6));
       transform: translateY(-2px);
     }
+
+    :host(.disabled-parent) .difficulty-skull.active,
+    :host(.disabled-parent:hover) .difficulty-skull.active {
+      filter: drop-shadow(0 0 4px rgba(255, 56, 56, 0.4));
+      transform: translateY(-1px);
+    }
   `;
 
   private getDifficultyIcon(difficultyKey: string) {

@@ -14,7 +14,6 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
-import { SantaFx } from "../fx/SantaFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
@@ -34,9 +33,6 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
-  private lastSantaTick = 0;
-  private santaIntervalTicks = 60 * 10; // one each minute
-
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
   }
@@ -47,7 +43,6 @@ export class FxLayer implements Layer {
 
   tick() {
     this.manageBoatTargetFx();
-    this.spawnSantaIfNeeded();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -74,24 +69,6 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onConquestEvent(update);
       });
-  }
-
-  private spawnSantaIfNeeded() {
-    const currentTick = this.game.ticks();
-    if (currentTick - this.lastSantaTick < this.santaIntervalTicks) {
-      return;
-    }
-    this.lastSantaTick = currentTick;
-    // Santa enters left side, exits right
-    const margin = 50;
-    const startX = -margin;
-    const endX = this.game.width() + margin;
-    const startY = Math.floor(
-      margin + Math.random() * (this.game.height() - 2 * margin),
-    );
-    const santa = new SantaFx(this.animatedSpriteLoader, startX, startY, endX);
-
-    this.allFx.push(santa);
   }
 
   private manageBoatTargetFx() {
@@ -191,9 +168,6 @@ export class FxLayer implements Layer {
         this.onNukeEvent(unit, 70);
         break;
       }
-      case UnitType.MIRV:
-        this.addSparks(unit);
-        break;
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
@@ -325,20 +299,6 @@ export class FxLayer implements Layer {
         FxType.BuildingExplosion,
       );
       this.allFx.push(explosion);
-    }
-  }
-
-  addSparks(unit: UnitView) {
-    if (unit.isActive()) {
-      const x = this.game.x(unit.lastTile());
-      const y = this.game.y(unit.lastTile());
-      const sparks = new SpriteFx(
-        this.animatedSpriteLoader,
-        x,
-        y,
-        FxType.Sparks,
-      );
-      this.allFx.push(sparks);
     }
   }
 

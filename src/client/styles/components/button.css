@@ -32,7 +32,7 @@
 
 .c-button--secondary {
   background: var(--secondaryColor);
-  color: var(--fontColorLight);
+  color: var(--fontColor);
 }
 
 .c-button--secondary:hover,

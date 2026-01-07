@@ -118,13 +118,11 @@ export class AiAttackBehavior {
     };
 
     const hated = (): boolean => {
-      const mostHated = this.player.allRelationsSorted()[0];
-      if (
-        mostHated !== undefined &&
-        mostHated.relation === Relation.Hostile &&
-        this.player.isFriendly(mostHated.player) === false
-      ) {
-        this.sendAttack(mostHated.player);
+      for (const relation of this.player.allRelationsSorted()) {
+        if (relation.relation !== Relation.Hostile) continue;
+        const other = relation.player;
+        if (this.player.isFriendly(other)) continue;
+        this.sendAttack(other);
         return true;
       }
       return false;
@@ -201,39 +199,6 @@ export class AiAttackBehavior {
     }
   }
 
-  findBestNukeTarget(borderingEnemies: Player[]): Player | null {
-    // Retaliate against incoming attacks (Most important!)
-    const incomingAttackPlayer = this.findIncomingAttackPlayer();
-    if (incomingAttackPlayer) {
-      return incomingAttackPlayer;
-    }
-
-    // Assist allies, check their targets (this is basically the same as in assistAllies, but without sending emojis)
-    for (const ally of this.player.allies()) {
-      if (ally.targets().length === 0) continue;
-      if (this.player.relation(ally) < Relation.Friendly) continue;
-
-      for (const target of ally.targets()) {
-        if (target === this.player) continue;
-        if (this.player.isFriendly(target)) continue;
-        // Found a valid ally target to nuke
-        return target;
-      }
-    }
-
-    // Find the most hated player with hostile relation
-    const mostHated = this.player.allRelationsSorted()[0];
-    if (
-      mostHated !== undefined &&
-      mostHated.relation === Relation.Hostile &&
-      this.player.isFriendly(mostHated.player) === false
-    ) {
-      return mostHated.player;
-    }
-
-    return null;
-  }
-
   private hasReserveRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
     const ratio = this.player.troops() / maxTroops;
@@ -246,7 +211,7 @@ export class AiAttackBehavior {
     return ratio >= this.triggerRatio;
   }
 
-  private findIncomingAttackPlayer(): Player | null {
+  findIncomingAttackPlayer(): Player | null {
     // Ignore bot attacks if we are not a bot.
     let incomingAttacks = this.player.incomingAttacks();
     if (this.player.type() !== PlayerType.Bot) {

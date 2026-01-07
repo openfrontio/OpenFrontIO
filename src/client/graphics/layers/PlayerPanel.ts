@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import Countries from "../../../assets/data/countries.json" with { type: "json" };
+import Countries from "resources/countries.json" with { type: "json" };
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -14,7 +14,11 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
-import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  MouseUpEvent,
+  SwapRocketDirectionEvent,
+} from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -76,6 +80,10 @@ export class PlayerPanel extends LitElement implements Layer {
       if (this.isVisible) {
         this.hide();
       }
+    });
+    eventBus.on(SwapRocketDirectionEvent, (event) => {
+      this.uiState.rocketDirectionUp = event.rocketDirectionUp;
+      this.requestUpdate();
     });
   }
   init() {
@@ -297,6 +305,12 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private handleToggleRocketDirection(e: Event) {
+    e.stopPropagation();
+    const next = !this.uiState.rocketDirectionUp;
+    this.eventBus.emit(new SwapRocketDirectionEvent(next));
+  }
+
   private identityChipProps(type: PlayerType) {
     switch (type) {
       case PlayerType.Nation:
@@ -377,7 +391,7 @@ export class PlayerPanel extends LitElement implements Layer {
     const label = secs !== null ? renderDuration(secs) : null;
     const dotCls =
       secs !== null
-        ? `mx-1 h-[4px] w-[4px] rounded-full bg-red-400/70 ${secs <= 10 ? "animate-pulse" : ""}`
+        ? `mx-1 size-1 rounded-full bg-red-400/70 ${secs <= 10 ? "animate-pulse" : ""}`
         : "";
 
     return html`
@@ -388,12 +402,7 @@ export class PlayerPanel extends LitElement implements Layer {
             shadow-[inset_0_0_8px_rgba(239,68,68,0.12)]"
           title=${translateText("player_panel.traitor")}
         >
-          <img
-            src=${traitorIcon}
-            alt=""
-            aria-hidden="true"
-            class="h-[18px] w-[18px]"
-          />
+          <img src=${traitorIcon} alt="" aria-hidden="true" class="size-4.5" />
           <span class="tracking-tight"
             >${translateText("player_panel.traitor")}</span
           >
@@ -484,11 +493,11 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white w-[140px] min-w-[140px] flex-shrink-0"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5 shrink-0
+                    text-white w-35"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -497,8 +506,8 @@ export class PlayerPanel extends LitElement implements Layer {
         </div>
 
         <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white w-[140px] min-w-[140px] flex-shrink-0"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5
+                    text-white w-35 shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
@@ -512,10 +521,32 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
+  private renderRocketDirectionToggle() {
+    return html`
+      <ui-divider></ui-divider>
+      <button
+        class="flex w-full items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-left text-white hover:bg-white/8 active:scale-[0.995] transition"
+        @click=${(e: Event) => this.handleToggleRocketDirection(e)}
+      >
+        <div class="flex flex-col">
+          <span class="text-sm font-semibold tracking-tight">
+            ${translateText("player_panel.flip_rocket_trajectory")}
+          </span>
+          <span class="text-xs text-zinc-300" translate="no">
+            ${this.uiState.rocketDirectionUp
+              ? translateText("player_panel.arc_up")
+              : translateText("player_panel.arc_down")}
+          </span>
+        </div>
+        <span class="text-lg" aria-hidden="true">🔀</span>
+      </button>
+    `;
+  }
+
   private renderStats(other: PlayerView, my: PlayerView) {
     return html`
       <!-- Betrayals -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
@@ -528,7 +559,7 @@ export class PlayerPanel extends LitElement implements Layer {
       </div>
 
       <!-- Trading / Embargo -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
@@ -569,7 +600,7 @@ export class PlayerPanel extends LitElement implements Layer {
           </div>
           <span
             aria-labelledby="alliances-title"
-            class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px]
+            class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-[10px]
                  text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
             ${allies.length}
@@ -580,7 +611,7 @@ export class PlayerPanel extends LitElement implements Layer {
           class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
         >
           <ul
-            class="max-h-[120px] overflow-y-auto p-2
+            class="max-h-30 overflow-y-auto p-2
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
@@ -595,9 +626,9 @@ export class PlayerPanel extends LitElement implements Layer {
                   (p) =>
                     html`<li
                       class="max-w-full inline-flex items-center gap-1.5
-                             rounded-md border border-white/10 bg-white/[0.05]
+                             rounded-md border border-white/10 bg-white/5
                              px-2.5 py-1 text-[14px] text-zinc-100
-                             hover:bg-white/[0.08] active:scale-[0.99] transition"
+                             hover:bg-white/8 active:scale-[0.99] transition"
                       title=${p.name()}
                     >
                       <span class="truncate">${p.name()}</span>
@@ -612,7 +643,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderAllianceExpiry() {
     if (this.allianceExpiryText === null) return html``;
     return html`
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
+      <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-base">
         <div class="font-semibold text-zinc-300">
           ${translateText("player_panel.alliance_time_remaining")}
         </div>
@@ -696,53 +727,53 @@ export class PlayerPanel extends LitElement implements Layer {
             : ""}
         </div>
         <ui-divider></ui-divider>
-
-        <div class="grid auto-cols-fr grid-flow-col gap-1">
-          ${other !== my
-            ? canEmbargo
-              ? actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleEmbargoClick(e, my, other),
-                  icon: stopTradingIcon,
-                  iconAlt: "Stop Trading",
-                  title: translateText("player_panel.stop_trade"),
-                  label: translateText("player_panel.stop_trade"),
-                  type: "yellow",
-                })
-              : actionButton({
-                  onClick: (e: MouseEvent) =>
-                    this.handleStopEmbargoClick(e, my, other),
-                  icon: startTradingIcon,
-                  iconAlt: "Start Trading",
-                  title: translateText("player_panel.start_trade"),
-                  label: translateText("player_panel.start_trade"),
-                  type: "green",
-                })
-            : ""}
-          ${canBreakAlliance
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleBreakAllianceClick(e, my, other),
-                icon: breakAllianceIcon,
-                iconAlt: "Break Alliance",
-                title: translateText("player_panel.break_alliance"),
-                label: translateText("player_panel.break_alliance"),
-                type: "red",
-              })
-            : ""}
-          ${canSendAllianceRequest
-            ? actionButton({
-                onClick: (e: MouseEvent) =>
-                  this.handleAllianceClick(e, my, other),
-                icon: allianceIcon,
-                iconAlt: "Alliance",
-                title: translateText("player_panel.send_alliance"),
-                label: translateText("player_panel.send_alliance"),
-                type: "indigo",
-              })
-            : ""}
-        </div>
-
+        ${other === my
+          ? html``
+          : html`
+              <div class="grid auto-cols-fr grid-flow-col gap-1">
+                ${canEmbargo
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleEmbargoClick(e, my, other),
+                      icon: stopTradingIcon,
+                      iconAlt: "Stop Trading",
+                      title: translateText("player_panel.stop_trade"),
+                      label: translateText("player_panel.stop_trade"),
+                      type: "yellow",
+                    })
+                  : actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleStopEmbargoClick(e, my, other),
+                      icon: startTradingIcon,
+                      iconAlt: "Start Trading",
+                      title: translateText("player_panel.start_trade"),
+                      label: translateText("player_panel.start_trade"),
+                      type: "green",
+                    })}
+                ${canBreakAlliance
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleBreakAllianceClick(e, my, other),
+                      icon: breakAllianceIcon,
+                      iconAlt: "Break Alliance",
+                      title: translateText("player_panel.break_alliance"),
+                      label: translateText("player_panel.break_alliance"),
+                      type: "red",
+                    })
+                  : ""}
+                ${canSendAllianceRequest
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleAllianceClick(e, my, other),
+                      icon: allianceIcon,
+                      iconAlt: "Alliance",
+                      title: translateText("player_panel.send_alliance"),
+                      label: translateText("player_panel.send_alliance"),
+                      type: "indigo",
+                    })
+                  : ""}
+              </div>
+            `}
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
@@ -823,14 +854,14 @@ export class PlayerPanel extends LitElement implements Layer {
       </style>
 
       <div
-        class="fixed inset-0 z-[10001] flex items-center justify-center overflow-auto
+        class="fixed inset-0 z-10001 flex items-center justify-center overflow-auto
                bg-black/15 backdrop-brightness-110 pointer-events-auto"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}
         @click=${() => this.hide()}
       >
         <div
-          class="pointer-events-auto max-h-[90vh] min-w-[300px] max-w-[400px] px-4 py-2"
+          class="pointer-events-auto max-h-[90vh] min-w-75 max-w-100 px-4 py-2"
           @click=${(e: MouseEvent) => e.stopPropagation()}
         >
           <div class="relative">
@@ -841,14 +872,14 @@ export class PlayerPanel extends LitElement implements Layer {
               class=${`relative w-full bg-zinc-900/95 rounded-2xl text-zinc-100 shadow-2xl shadow-black/50
                  ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
             >
-              <div style="overflow: visible;">
+              <div class="overflow-visible">
                 <div
-                  style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
+                  class="overflow-auto [-webkit-overflow-scrolling:touch] resize-y max-h-[calc(100vh-120px-env(safe-area-inset-bottom))]"
                 >
                   <div class="sticky top-0 z-20 flex justify-end p-2">
                     <button
                       @click=${this.handleClose}
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                      class="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors"
                       aria-label=${translateText("common.close") || "Close"}
                       title=${translateText("common.close") || "Close"}
                     >
@@ -889,6 +920,9 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Resources -->
                     ${this.renderResources(other)}
 
+                    <!-- Rocket direction toggle -->
+                    ${other === my ? this.renderRocketDirectionToggle() : ""}
+
                     <ui-divider></ui-divider>
 
                     <!-- Stats: betrayals / trading -->
@@ -902,7 +936,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Alliance time remaining -->
                     ${this.renderAllianceExpiry()}
 
-                    <ui-divider class="mt-1"></ui-divider>
+                    <ui-divider></ui-divider>
 
                     <!-- Actions -->
                     ${this.renderActions(my, other)}

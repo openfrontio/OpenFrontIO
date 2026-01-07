@@ -1,0 +1,120 @@
+{
+  "map": {
+    "height": 1202,
+    "num_land_tiles": 1258353,
+    "width": 1800
+  },
+  "map16x": {
+    "height": 300,
+    "num_land_tiles": 77228,
+    "width": 450
+  },
+  "map4x": {
+    "height": 601,
+    "num_land_tiles": 313011,
+    "width": 900
+  },
+  "name": "straitofhormuz",
+  "nations": [
+    {
+      "coordinates": [837, 356],
+      "flag": "",
+      "name": "Hormozgan"
+    },
+    {
+      "coordinates": [717, 162],
+      "flag": "",
+      "name": "Fars"
+    },
+    {
+      "coordinates": [97, 939],
+      "flag": "",
+      "name": "Ash Sharqiyah"
+    },
+    {
+      "coordinates": [1725, 360],
+      "flag": "",
+      "name": "Sistan and Baluchestan"
+    },
+    {
+      "coordinates": [745, 1003],
+      "flag": "",
+      "name": "Abu Dhabi"
+    },
+    {
+      "coordinates": [1513, 289],
+      "flag": "",
+      "name": "Kerman"
+    },
+    {
+      "coordinates": [311, 147],
+      "flag": "",
+      "name": "Bushehr"
+    },
+    {
+      "coordinates": [1165, 1092],
+      "flag": "",
+      "name": "Al Dhahira"
+    },
+    {
+      "coordinates": [1219, 959],
+      "flag": "",
+      "name": "Al Batnah North"
+    },
+    {
+      "coordinates": [1114, 956],
+      "flag": "",
+      "name": "Al Buraymi"
+    },
+    {
+      "coordinates": [1316, 1141],
+      "flag": "",
+      "name": "Ad Dakhliyah"
+    },
+    {
+      "coordinates": [1431, 1111],
+      "flag": "",
+      "name": "Al Batnah South"
+    },
+    {
+      "coordinates": [979, 807],
+      "flag": "",
+      "name": "Dubay"
+    },
+    {
+      "coordinates": [1615, 1134],
+      "flag": "",
+      "name": "Muscat"
+    },
+    {
+      "coordinates": [1070, 774],
+      "flag": "",
+      "name": "Sharjah"
+    },
+    {
+      "coordinates": [1166, 583],
+      "flag": "",
+      "name": "Musandam"
+    },
+    {
+      "coordinates": [159, 756],
+      "flag": "",
+      "name": "Ar Rayy\u0101n"
+    },
+    {
+      "coordinates": [1103, 647],
+      "flag": "",
+      "name": "Ras Al Khaymah"
+    },
+    {
+      "coordinates": [1155, 703],
+      "flag": "",
+      "name": "Fujayrah"
+    },
+    {
+      "coordinates": [216, 815],
+      "flag": "",
+      "name": "Al Wakrah"
+    }
+  ]
+}
