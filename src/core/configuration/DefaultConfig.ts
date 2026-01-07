@@ -564,7 +564,7 @@ export class DefaultConfig implements Config {
       case UnitType.LandMine:
         return {
           cost: this.costWrapper(
-            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
+            (numUnits: number) => Math.min(250_000, 75_000 + numUnits * 50_000),
             UnitType.LandMine,
           ),
           territoryBound: true,
