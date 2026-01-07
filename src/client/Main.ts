@@ -286,6 +286,10 @@ class Client {
       throw new Error("territory-patterns-input-preview-button");
     this.patternsModal.previewButton = patternButton;
     this.patternsModal.refresh();
+    // Listen for pattern selection to update preview button
+    this.patternsModal.addEventListener("pattern-selected", () => {
+      this.patternsModal.refresh();
+    });
     patternButton.addEventListener("click", () => {
       window.showPage("page-item-store");
       const skinStoreModal = document.getElementById(

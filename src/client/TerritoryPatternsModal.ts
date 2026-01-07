@@ -301,6 +301,8 @@ export class TerritoryPatternsModal extends LitElement {
     }
     this.selectedPattern = pattern;
     this.refresh();
+    // Dispatch event so Main.ts can refresh the preview button
+    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
     // Show popup/modal for skin selection
     this.showSkinSelectedPopup();
     // Close the skin store and show the play modal
