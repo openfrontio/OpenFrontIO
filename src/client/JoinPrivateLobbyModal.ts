@@ -57,7 +57,7 @@ export class JoinPrivateLobbyModal extends LitElement {
         >
           <div class="flex items-center gap-4 flex-1">
             <button
-              @click=${this.close}
+              @click=${this.closeAndLeave}
               class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
               aria-label="Back"
             >
