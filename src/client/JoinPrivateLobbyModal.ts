@@ -1,13 +1,19 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameConfig, GameInfo, GameRecordSchema } from "../core/Schemas";
+import {
+  ClientInfo,
+  GameConfig,
+  GameInfo,
+  GameRecordSchema,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
+import "./components/Difficulties";
+import "./components/LobbyTeamView";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @property({ type: Boolean }) inline = false;
@@ -18,8 +24,9 @@ export class JoinPrivateLobbyModal extends LitElement {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
   @state() private message: string = "";
   @state() private hasJoined = false;
-  @state() private players: string[] = [];
+  @state() private players: ClientInfo[] = [];
   @state() private gameConfig: GameConfig | null = null;
+  @state() private lobbyCreatorClientID: string | null = null;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -118,19 +125,38 @@ export class JoinPrivateLobbyModal extends LitElement {
 
         <div class="options-layout">
           ${this.hasJoined && this.players.length > 0
-            ? html` <div class="options-section">
-                <div class="option-title">
-                  ${this.players.length}
-                  ${this.players.length === 1
-                    ? translateText("private_lobby.player")
-                    : translateText("private_lobby.players")}
+            ? html` <div
+                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+              >
+                <div class="flex justify-between items-center mb-4">
+                  <div
+                    class="text-xs font-bold text-white/40 uppercase tracking-widest"
+                  >
+                    ${this.players.length}
+                    ${this.players.length === 1
+                      ? translateText("private_lobby.player")
+                      : translateText("private_lobby.players")}
+                    <span style="margin: 0 8px;">•</span>
+                    ${this.gameConfig?.bots ?? 0}
+                    ${translateText("host_modal.nations")}
+                  </div>
                 </div>
 
-                <div class="players-list">
-                  ${this.players.map(
-                    (player) => html`<span class="player-tag">${player}</span>`,
-                  )}
-                </div>
+                <lobby-team-view
+                  class="mb-6 block max-h-48 overflow-y-auto custom-scrollbar rounded-lg border border-white/10 bg-white/5 p-2"
+                  .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                  .clients=${this.players}
+                  .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                  .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                  .nationCount=${this.gameConfig?.bots ?? 0}
+                ></lobby-team-view>
+
+                <button
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  disabled
+                >
+                  ${translateText("private_lobby.joined_waiting")}
+                </button>
               </div>`
             : ""}
         </div>
@@ -461,7 +487,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        this.players = data.clients?.map((p) => p.username) ?? [];
+        this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
+        this.players = data.clients ?? [];
         if (data.gameConfig) {
           this.gameConfig = data.gameConfig;
         }

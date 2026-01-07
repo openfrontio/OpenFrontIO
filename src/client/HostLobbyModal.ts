@@ -853,7 +853,18 @@ export class HostLobbyModal extends LitElement {
     this.loadNationCount();
   }
 
+  private leaveLobby() {
+    this.dispatchEvent(
+      new CustomEvent("leave-lobby", {
+        detail: { lobby: this.lobbyId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   public close() {
+    this.leaveLobby();
     console.log("Closing host lobby modal");
     if (this.inline) {
       if ((window as any).showPage) {
