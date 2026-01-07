@@ -6,6 +6,8 @@ import { DevConfig, DevServerConfig } from "./DevConfig";
 import { Env } from "./Env";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
+// Import to ensure global type declaration is available
+import "../../client/ServerConfig";
 
 export let cachedSC: ServerConfig | null = null;
 
@@ -30,18 +32,18 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   if (cachedSC) {
     return cachedSC;
   }
-  const response = await fetch("/api/env");
 
-  if (!response.ok) {
+  // Get config from window.SERVER_CONFIG (injected at build time)
+  if (!window.SERVER_CONFIG) {
     throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
+      "SERVER_CONFIG not found on window. Ensure the HTML template is configured correctly.",
     );
   }
-  const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
 
-  cachedSC = getServerConfig(config.game_env);
+  const { gameEnv } = window.SERVER_CONFIG;
+  console.log("Server config loaded:", { gameEnv });
+
+  cachedSC = getServerConfig(gameEnv);
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {

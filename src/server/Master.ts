@@ -203,14 +203,6 @@ export async function startMaster() {
   });
 }
 
-app.get("/api/env", async (req, res) => {
-  const envConfig = {
-    game_env: process.env.GAME_ENV,
-  };
-  if (!envConfig.game_env) return res.sendStatus(500);
-  res.json(envConfig);
-});
-
 // Add lobbies endpoint to list public games for this worker
 app.get("/api/public_lobbies", async (req, res) => {
   res.json(publicLobbiesData);

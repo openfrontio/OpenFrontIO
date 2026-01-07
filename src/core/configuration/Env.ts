@@ -11,6 +11,12 @@ declare global {
   interface ImportMeta {
     readonly env: ImportMetaEnv;
   }
+  interface Window {
+    SERVER_CONFIG?: {
+      gameEnv: string;
+      numWorkers: number;
+    };
+  }
 }
 
 function getEnv(key: string, viteKey?: string): string | undefined {
@@ -46,6 +52,15 @@ function getEnv(key: string, viteKey?: string): string | undefined {
 
 export const Env = {
   get GAME_ENV(): string {
+    // Check window.SERVER_CONFIG first (injected at build time)
+    try {
+      if (typeof window !== "undefined" && window.SERVER_CONFIG) {
+        return window.SERVER_CONFIG.gameEnv;
+      }
+    } catch {
+      // Ignore errors accessing window
+    }
+
     // Check MODE for Vite, GAME_ENV for Node
     try {
       if (
@@ -90,6 +105,15 @@ export const Env = {
     return getEnv("ADMIN_TOKEN");
   },
   get NUM_WORKERS() {
+    // Check window.SERVER_CONFIG first (injected at build time)
+    try {
+      if (typeof window !== "undefined" && window.SERVER_CONFIG) {
+        return String(window.SERVER_CONFIG.numWorkers);
+      }
+    } catch {
+      // Ignore errors accessing window
+    }
+
     return getEnv("NUM_WORKERS");
   },
 };

@@ -56,7 +56,10 @@ export default defineConfig(({ mode }) => {
         template: "index.html",
         inject: {
           data: {
-            // In case we need to inject variables into HTML
+            serverConfig: JSON.stringify({
+              gameEnv: env.GAME_ENV || (isProduction ? "prod" : "dev"),
+              numWorkers: parseInt(env.NUM_WORKERS || "2", 10),
+            }),
           },
         },
       }),
