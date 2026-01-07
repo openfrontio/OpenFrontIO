@@ -98,69 +98,108 @@ export class AccountModal extends LitElement {
 
     return html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl overflow-hidden"
       >
         <!-- Header -->
-        <div class="flex items-center pb-6 border-b border-white/10 gap-4 mb-6">
-          <div
-            class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-6 h-6"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+        <div
+          class="flex items-center justify-between pb-6 border-b border-white/10 gap-4 mb-0 shrink-0"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/20"
             >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <div>
-            <h2
-              class="text-2xl font-bold text-white uppercase tracking-widest leading-none"
-            >
-              ${translateText("account_modal.title") || "Account"}
-            </h2>
-            <div class="flex items-center gap-2 mt-1.5">
-              <span
-                class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                >ID:</span
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-6 h-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-              <span
-                class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5"
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div>
+              <h2
+                class="text-2xl font-bold text-white uppercase tracking-widest leading-none"
               >
-                ${this.userMeResponse?.player?.publicId ??
-                translateText("account_modal.not_found")}
-              </span>
+                ${translateText("account_modal.title") || "Account"}
+              </h2>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span
+                  class="text-xs text-blue-400 font-bold uppercase tracking-wider"
+                  >ID:</span
+                >
+                <span
+                  class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5"
+                >
+                  ${this.userMeResponse?.player?.publicId ??
+                  translateText("account_modal.not_found")}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="space-y-6">
-          ${isLinked
-            ? html`
-                <div class="bg-black/20 rounded-xl border border-white/10 p-4">
-                  <div
-                    class="text-xs text-white/40 uppercase tracking-widest font-bold mb-3 text-center"
-                  >
-                    Connected As
-                  </div>
-                  <div class="flex flex-col items-center gap-4">
-                    ${this.renderLoggedInAs()}
-                    <discord-user-header
-                      .data=${this.userMeResponse?.user?.discord ?? null}
-                    ></discord-user-header>
-                  </div>
-                </div>
-              `
-            : this.renderLinkAccountSection()}
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 mt-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- Left Sidebar: Profile & Link -->
+            <div class="lg:col-span-4 space-y-6 sticky top-0">
+              ${isLinked
+                ? html`
+                    <div
+                      class="bg-black/20 rounded-xl border border-white/10 p-6 flex flex-col gap-4"
+                    >
+                      <div
+                        class="text-xs text-white/40 uppercase tracking-widest font-bold text-center border-b border-white/5 pb-2"
+                      >
+                        Connected As
+                      </div>
+                      <div class="flex flex-col items-center gap-4 py-2">
+                        <discord-user-header
+                          .data=${this.userMeResponse?.user?.discord ?? null}
+                        ></discord-user-header>
+                        ${this.renderLoggedInAs()}
+                      </div>
+                    </div>
+                  `
+                : this.renderLinkAccountSection()}
+            </div>
 
-          <!-- Stats -->
-          ${this.renderPlayerStats()}
+            <!-- Right Content: Stats & Games -->
+            <div class="lg:col-span-8 flex flex-col gap-8">
+              <!-- Stats Section -->
+              <div class="bg-black/20 rounded-xl border border-white/10 p-6">
+                <h3
+                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+                >
+                  <span class="text-blue-400">📊</span>
+                  Stats Overview
+                </h3>
+                <player-stats-tree-view
+                  .statsTree=${this.statsTree}
+                ></player-stats-tree-view>
+              </div>
+
+              <!-- Recent Games Section -->
+              <div class="bg-black/20 rounded-xl border border-white/10 p-6">
+                <h3
+                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+                >
+                  <span class="text-blue-400">🎮</span>
+                  ${translateText("game_list.recent_games")}
+                </h3>
+                <game-list
+                  .games=${this.recentGames}
+                  .onViewGame=${(id: string) => this.viewGame(id)}
+                ></game-list>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -298,19 +337,6 @@ export class AccountModal extends LitElement {
           </div>
         </div>
       </div>
-    `;
-  }
-
-  private renderPlayerStats(): TemplateResult {
-    return html`
-      <player-stats-tree-view
-        .statsTree=${this.statsTree}
-      ></player-stats-tree-view>
-      <hr class="w-2/3 border-gray-600 my-2" />
-      <game-list
-        .games=${this.recentGames}
-        .onViewGame=${(id: string) => this.viewGame(id)}
-      ></game-list>
     `;
   }
 
