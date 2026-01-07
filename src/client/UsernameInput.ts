@@ -96,8 +96,11 @@ export class UsernameInput extends LitElement {
 
   private handleUsernameChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    this.baseUsername = input.value;
-    this.baseUsername = input.value;
+    const val = input.value.replace(/[[\]]/g, "");
+    if (input.value !== val) {
+      input.value = val;
+    }
+    this.baseUsername = val;
     this.validateAndStore();
   }
 
