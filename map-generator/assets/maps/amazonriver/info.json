@@ -1,0 +1,110 @@
+{
+  "name": "Amazon River",
+  "nations": [
+    {
+      "coordinates": [524, 60],
+      "name": "Boa Esperança",
+      "flag": "br"
+    },
+    {
+      "coordinates": [298, 242],
+      "name": "Santa Rosa",
+      "flag": "br"
+    },
+    {
+      "coordinates": [1056, 8],
+      "name": "Paraíso",
+      "flag": "br"
+    },
+    {
+      "coordinates": [1161, 8],
+      "name": "Bom Futuro",
+      "flag": "br"
+    },
+    {
+      "coordinates": [1662, 254],
+      "name": "São Paulo de Olivença",
+      "flag": "br"
+    },
+    {
+      "coordinates": [1807, 8],
+      "name": "São João",
+      "flag": "br"
+    },
+    {
+      "coordinates": [1977, 7],
+      "name": "Castro Alves",
+      "flag": "br"
+    },
+    {
+      "coordinates": [2487, 70],
+      "name": "Flora",
+      "flag": "br"
+    },
+    {
+      "coordinates": [2458, 217],
+      "name": "Esperito Santo",
+      "flag": "br"
+    },
+    {
+      "coordinates": [2590, 149],
+      "name": "Recreio",
+      "flag": "br"
+    },
+    {
+      "coordinates": [2937, 199],
+      "name": "Caturiá",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3101, 222],
+      "name": "Correnteza",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3354, 75],
+      "name": "Botafogo",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3405, 237],
+      "name": "São João",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3744, 228],
+      "name": "Cajual",
+      "flag": "br"
+    },
+    {
+      "coordinates": [3861, 244],
+      "name": "União",
+      "flag": "br"
+    },
+    {
+      "coordinates": [4409, 211],
+      "name": "Amaturá",
+      "flag": "br"
+    },
+    {
+      "coordinates": [4361, 55],
+      "name": "Monte Cristo",
+      "flag": "br"
+    },
+    {
+      "coordinates": [4649, 54],
+      "name": "Floresta",
+      "flag": "br"
+    },
+    {
+      "coordinates": [5399, 128],
+      "name": "Vargem Grande",
+      "flag": "br"
+    },
+    {
+      "coordinates": [5373, 7],
+      "name": "Baia",
+      "flag": "br"
+    }
+  ]
+}

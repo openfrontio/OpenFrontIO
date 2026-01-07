@@ -1,10 +1,11 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import {
   Duos,
   GameMapType,
   GameMode,
+  hasUnusualThumbnailSize,
   HumansVsNations,
   Quads,
   Trios,
@@ -114,6 +115,9 @@ export class PublicLobby extends LitElement {
     }
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(
+      lobby.gameConfig.gameMap,
+    );
 
     return html`
       <button
@@ -131,7 +135,9 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)]"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
+                ? "object-cover object-center"
+                : ""}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
