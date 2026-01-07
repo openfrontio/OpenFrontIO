@@ -526,8 +526,8 @@ export class NationExecution implements Execution {
       if (owner.isPlayer() && borderingEnemies.includes(owner)) {
         continue;
       }
-      // Don't spam boats into players that are more than twice as large as us
-      if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
+      // Don't spam boats into players which are stronger than us
+      if (owner.isPlayer() && owner.troops() > this.player.troops()) {
         continue;
       }
 
