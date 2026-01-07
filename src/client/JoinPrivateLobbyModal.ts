@@ -43,7 +43,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
-      this.close();
+      this.closeAndLeave();
     }
   };
 
