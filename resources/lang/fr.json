@@ -369,6 +369,8 @@
     "build_factory_desc": "Construire une ville sous votre curseur.",
     "build_defense_post": "Construire un poste de défense",
     "build_defense_post_desc": "Construire un poste de défense sous votre curseur.",
+    "build_land_mine": "Construire une mine terrestre",
+    "build_land_mine_desc": "Construire une mine terrestre sous votre curseur.",
     "build_port": "Construire un port",
     "build_port_desc": "Construire un port sous votre curseur.",
     "build_warship": "Construire un navire de guerre",

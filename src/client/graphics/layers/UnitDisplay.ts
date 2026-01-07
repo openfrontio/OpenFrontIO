@@ -12,6 +12,7 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
+import landMineIcon from "/images/ExplosionIconWhite.svg?url";
 import factoryIcon from "/images/FactoryIconWhite.svg?url";
 import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
@@ -34,6 +35,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
+  private _landMine = 0;
   private _samLauncher = 0;
   private allDisabled = false;
   private _hoveredUnit: UnitType | null = null;
@@ -59,6 +61,7 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Factory) &&
       config.isUnitDisabled(UnitType.Port) &&
       config.isUnitDisabled(UnitType.DefensePost) &&
+      config.isUnitDisabled(UnitType.LandMine) &&
       config.isUnitDisabled(UnitType.MissileSilo) &&
       config.isUnitDisabled(UnitType.SAMLauncher) &&
       config.isUnitDisabled(UnitType.Warship) &&
@@ -108,6 +111,7 @@ export class UnitDisplay extends LitElement implements Layer {
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
+    this._landMine = player.totalUnitLevels(UnitType.LandMine);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
     this._warships = player.totalUnitLevels(UnitType.Warship);
@@ -161,6 +165,13 @@ export class UnitDisplay extends LitElement implements Layer {
               UnitType.DefensePost,
               "defense_post",
               this.keybinds["buildDefensePost"]?.key ?? "4",
+            )}
+            ${this.renderUnitItem(
+              landMineIcon,
+              this._landMine,
+              UnitType.LandMine,
+              "land_mine",
+              this.keybinds["buildLandMine"]?.key ?? "-",
             )}
             ${this.renderUnitItem(
               missileSiloIcon,

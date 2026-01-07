@@ -369,6 +369,8 @@
     "build_factory_desc": "کارخانه ای در زیر مکان‌نما بسازید.",
     "build_defense_post": "ساخت پست دفاعی",
     "build_defense_post_desc": "یک پست دفاعی در زیر مکان‌نما بسازید.",
+    "build_land_mine": "ساخت مین زمینی",
+    "build_land_mine_desc": "یک مین زمینی در زیر مکان‌نما بسازید.",
     "build_port": "ساخت بندر",
     "build_port_desc": "یک بندر در زیر مکان‌نما بسازید.",
     "build_warship": "کشتی‌های جنگی بساز",

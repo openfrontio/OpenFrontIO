@@ -369,6 +369,8 @@
     "build_factory_desc": "在鼠标位置建造工厂。",
     "build_defense_post": "建造要塞",
     "build_defense_post_desc": "在鼠标位置建造要塞。",
+    "build_land_mine": "建造地雷",
+    "build_land_mine_desc": "在鼠标位置建造地雷。",
     "build_port": "建造港口",
     "build_port_desc": "在鼠标位置建造港口。",
     "build_warship": "部署军舰",

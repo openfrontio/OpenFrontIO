@@ -369,6 +369,8 @@
     "build_factory_desc": "選択した位置に工場を建設します。",
     "build_defense_post": "防衛ポストを建設",
     "build_defense_post_desc": "選択した位置に防衛ポストを建設します。",
+    "build_land_mine": "地雷を建設",
+    "build_land_mine_desc": "選択した位置に地雷を建設します。",
     "build_port": "港を建設",
     "build_port_desc": "選択した位置に港を建設します。",
     "build_warship": "戦艦を建造",

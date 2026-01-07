@@ -369,6 +369,8 @@
     "build_factory_desc": "Bouw een Fabriek onder je cursor.",
     "build_defense_post": "Bouw Verdedigingspost",
     "build_defense_post_desc": "Bouw een Verdedigingspost onder je cursor.",
+    "build_land_mine": "Bouw Landmijn",
+    "build_land_mine_desc": "Bouw een Landmijn onder je cursor.",
     "build_port": "Bouw Haven",
     "build_port_desc": "Bouw een Haven onder je cursor.",
     "build_warship": "Bouw Oorlogsschip",

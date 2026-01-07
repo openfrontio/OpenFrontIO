@@ -426,6 +426,8 @@
     "build_factory_desc": "Build a Factory under your cursor.",
     "build_defense_post": "Build Defense Post",
     "build_defense_post_desc": "Build a Defense Post under your cursor.",
+    "build_land_mine": "Build Land Mine",
+    "build_land_mine_desc": "Build a Land Mine under your cursor.",
     "build_port": "Build Port",
     "build_port_desc": "Build a Port under your cursor.",
     "build_warship": "Build Warship",

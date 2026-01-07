@@ -211,6 +211,7 @@ export class InputHandler {
       buildFactory: "Digit2",
       buildPort: "Digit3",
       buildDefensePost: "Digit4",
+      buildLandMine: "Minus",
       buildMissileSilo: "Digit5",
       buildSamLauncher: "Digit6",
       buildWarship: "Digit7",
@@ -400,6 +401,11 @@ export class InputHandler {
       if (e.code === this.keybinds.buildDefensePost) {
         e.preventDefault();
         this.setGhostStructure(UnitType.DefensePost);
+      }
+
+      if (e.code === this.keybinds.buildLandMine) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.LandMine);
       }
 
       if (e.code === this.keybinds.buildMissileSilo) {

@@ -349,6 +349,8 @@
     "build_factory_desc": "Zbuduj fabrykę pod twoim kursorem.",
     "build_defense_post": "Buduj posterunek obronny",
     "build_defense_post_desc": "Zbuduj posterunek obronny pod twoim kursorem.",
+    "build_land_mine": "Zbuduj minę lądową",
+    "build_land_mine_desc": "Zbuduj minę lądową pod twoim kursorem.",
     "build_port": "Zbuduj port",
     "build_port_desc": "Zbuduj port pod twoim kursorem.",
     "build_warship": "Zbuduj okręt wojenny",
