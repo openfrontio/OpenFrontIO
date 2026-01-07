@@ -1,11 +1,14 @@
-import { describe, test, expect, beforeAll, vi } from "vitest";
-import { MiniAStarAdapter } from "../../../src/core/pathfinding/adapters/MiniAStarAdapter";
-import { NavMeshAdapter } from "../../../src/core/pathfinding/adapters/NavMeshAdapter";
-import { PathFinder, PathStatus } from "../../../src/core/pathfinding/PathFinder";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 import { Game } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
-import { gameFromString } from "./utils";
+import { MiniAStarAdapter } from "../../../src/core/pathfinding/adapters/MiniAStarAdapter";
+import { NavMeshAdapter } from "../../../src/core/pathfinding/adapters/NavMeshAdapter";
+import {
+  PathFinder,
+  PathStatus,
+} from "../../../src/core/pathfinding/PathFinder";
 import { setup } from "../../util/Setup";
+import { gameFromString } from "./utils";
 
 type AdapterFactory = {
   name: string;
@@ -104,7 +107,12 @@ describe.each(adapters)("$name", ({ create }) => {
       const path = adapter.findPath(src, dst);
 
       expect(path).not.toBeNull();
-      expect(path).toEqual([game.ref(0, 0), game.ref(1, 0), game.ref(2, 0), game.ref(3, 0)]);
+      expect(path).toEqual([
+        game.ref(0, 0),
+        game.ref(1, 0),
+        game.ref(2, 0),
+        game.ref(3, 0),
+      ]);
     });
   });
 
@@ -211,7 +219,9 @@ describe.each(adapters)("$name", ({ create }) => {
       const adapter = create(game);
       const dst = game.ref(0, 0);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const result = adapter.next(null as unknown as TileRef, dst);
       expect(result.status).toBe(PathStatus.NOT_FOUND);
       consoleSpy.mockRestore();
@@ -222,7 +232,9 @@ describe.each(adapters)("$name", ({ create }) => {
       const adapter = create(game);
       const src = game.ref(0, 0);
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const result = adapter.next(src, null as unknown as TileRef);
       expect(result.status).toBe(PathStatus.NOT_FOUND);
       consoleSpy.mockRestore();
@@ -258,32 +270,47 @@ describe.each(adapters)("$name", ({ create }) => {
   describe("World map routes", () => {
     test("Spain to France (Mediterranean)", () => {
       const adapter = create(worldGame);
-      const path = adapter.findPath(worldGame.ref(926, 283), worldGame.ref(950, 257));
+      const path = adapter.findPath(
+        worldGame.ref(926, 283),
+        worldGame.ref(950, 257),
+      );
       expect(path).not.toBeNull();
     });
 
     test("Miami to Rio (Atlantic)", () => {
       const adapter = create(worldGame);
-      const path = adapter.findPath(worldGame.ref(488, 355), worldGame.ref(680, 658));
+      const path = adapter.findPath(
+        worldGame.ref(488, 355),
+        worldGame.ref(680, 658),
+      );
       expect(path).not.toBeNull();
       expect(path!.length).toBeGreaterThan(100);
     });
 
     test("France to Poland (around Europe)", () => {
       const adapter = create(worldGame);
-      const path = adapter.findPath(worldGame.ref(950, 257), worldGame.ref(1033, 175));
+      const path = adapter.findPath(
+        worldGame.ref(950, 257),
+        worldGame.ref(1033, 175),
+      );
       expect(path).not.toBeNull();
     });
 
     test("Miami to Spain (transatlantic)", () => {
       const adapter = create(worldGame);
-      const path = adapter.findPath(worldGame.ref(488, 355), worldGame.ref(926, 283));
+      const path = adapter.findPath(
+        worldGame.ref(488, 355),
+        worldGame.ref(926, 283),
+      );
       expect(path).not.toBeNull();
     });
 
     test("Rio to Poland (South Atlantic to Baltic)", () => {
       const adapter = create(worldGame);
-      const path = adapter.findPath(worldGame.ref(680, 658), worldGame.ref(1033, 175));
+      const path = adapter.findPath(
+        worldGame.ref(680, 658),
+        worldGame.ref(1033, 175),
+      );
       expect(path).not.toBeNull();
     });
   });

@@ -13,9 +13,9 @@
  *   npx tsx tests/pathfinding/benchmark/generate.ts --all
  */
 
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { writeFileSync, readdirSync, existsSync, mkdirSync } from "fs";
 import { setupFromPath } from "../utils";
 
 const currentFile = fileURLToPath(import.meta.url);
@@ -35,17 +35,19 @@ interface GenerationOptions {
 
 async function generateScenarioForMap(
   mapName: string,
-  options: GenerationOptions
-): Promise<'created' | 'skipped' | 'error'> {
+  options: GenerationOptions,
+): Promise<"created" | "skipped" | "error"> {
   const outputPath = join(scenariosDir, `${mapName}.ts`);
 
   // Check if file exists and --force not provided
   if (existsSync(outputPath) && !options.force) {
     if (!options.silent) {
-      console.log(`⚠️  ${mapName}: File already exists (use --force to overwrite)`);
+      console.log(
+        `⚠️  ${mapName}: File already exists (use --force to overwrite)`,
+      );
     }
 
-    return 'skipped';
+    return "skipped";
   }
 
   try {
@@ -62,8 +64,10 @@ async function generateScenarioForMap(
     });
 
     if (shorelinePorts.length < 10) {
-      console.log(`❌ ${mapName}: Not enough water shoreline tiles (minimum 10 required)`);
-      return 'error';
+      console.log(
+        `❌ ${mapName}: Not enough water shoreline tiles (minimum 10 required)`,
+      );
+      return "error";
     }
 
     // Select random ports
@@ -85,7 +89,11 @@ async function generateScenarioForMap(
 
     // Generate routes: each port connects to next N ports
     for (let i = 0; i < selectedPorts.length; i++) {
-      for (let j = 1; j <= ROUTES_PER_PORT && i + j < selectedPorts.length; j++) {
+      for (
+        let j = 1;
+        j <= ROUTES_PER_PORT && i + j < selectedPorts.length;
+        j++
+      ) {
         routes.push({
           from: `Port${String(i + 1).padStart(3, "0")}`,
           to: `Port${String(i + j + 1).padStart(3, "0")}`,
@@ -98,8 +106,18 @@ async function generateScenarioForMap(
     const additionalRoutesNeeded = targetRoutes - routes.length;
     if (additionalRoutesNeeded > 0) {
       let added = 0;
-      for (let i = 0; i < selectedPorts.length && added < additionalRoutesNeeded; i++) {
-        for (let j = ROUTES_PER_PORT + 1; j <= ROUTES_PER_PORT + 3 && i + j < selectedPorts.length && added < additionalRoutesNeeded; j++) {
+      for (
+        let i = 0;
+        i < selectedPorts.length && added < additionalRoutesNeeded;
+        i++
+      ) {
+        for (
+          let j = ROUTES_PER_PORT + 1;
+          j <= ROUTES_PER_PORT + 3 &&
+          i + j < selectedPorts.length &&
+          added < additionalRoutesNeeded;
+          j++
+        ) {
           routes.push({
             from: `Port${String(i + 1).padStart(3, "0")}`,
             to: `Port${String(i + j + 1).padStart(3, "0")}`,
@@ -124,12 +142,14 @@ async function generateScenarioForMap(
     // Write to file
     writeFileSync(outputPath, content);
 
-    console.log(`✅ ${mapName} generated with ${numPortsToSelect} ports and ${routeCount} routes`);
+    console.log(
+      `✅ ${mapName} generated with ${numPortsToSelect} ports and ${routeCount} routes`,
+    );
 
-    return 'created';
+    return "created";
   } catch (error) {
     console.error(`❌ ${mapName}:`, error);
-    return 'error';
+    return "error";
   }
 }
 
@@ -189,11 +209,11 @@ async function main() {
     for (const mapName of maps) {
       const result = await generateScenarioForMap(mapName, options);
 
-      if (result === 'created') {
+      if (result === "created") {
         createdCount++;
-      } else if (result === 'skipped') {
+      } else if (result === "skipped") {
         skippedCount++;
-      } else if (result === 'error') {
+      } else if (result === "error") {
         errorCount++;
       }
     }
@@ -201,8 +221,10 @@ async function main() {
     if (createdCount + errorCount > 0) {
       console.log(``);
     }
-    
-    console.log(`Created: ${createdCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+
+    console.log(
+      `Created: ${createdCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`,
+    );
   } else if (nonFlagArgs.length === 1) {
     // Generate for single map
     const mapName = nonFlagArgs[0];
@@ -220,10 +242,12 @@ async function main() {
 
     const result = await generateScenarioForMap(mapName, options);
 
-    if (result === 'created') {
+    if (result === "created") {
       console.log(``);
       console.log(`Scenario generated successfully!`);
-      console.log(`You can now run: npx tsx tests/pathfinding/benchmark/run.ts --synthetic ${mapName}`);
+      console.log(
+        `You can now run: npx tsx tests/pathfinding/benchmark/run.ts --synthetic ${mapName}`,
+      );
     } else {
       process.exit(1);
     }
@@ -271,7 +295,7 @@ function generateScenarioContent(params: TemplateParams): string {
   // Generate PORTS object
   content += `export const PORTS: { [k: string]: [number, number] } = {\n`;
   ports.forEach((port) => {
-    content += `  "${port.name}": [${port.coords[0]}, ${port.coords[1]}],\n`;
+    content += `  ${port.name}: [${port.coords[0]}, ${port.coords[1]}],\n`;
   });
   content += `};\n\n`;
 

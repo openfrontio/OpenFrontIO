@@ -1,17 +1,17 @@
-import express, { Request, Response } from "express";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 import compression from "compression";
+import express, { Request, Response } from "express";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import {
-  listMaps,
-  getMapMetadata,
   clearCache as clearMapCache,
+  getMapMetadata,
+  listMaps,
   setConfig,
 } from "./api/maps.js";
 import {
+  clearAdapterCaches,
   computePath,
   computePfMiniPath,
-  clearAdapterCaches,
 } from "./api/pathfinding.js";
 
 // Parse command-line arguments
@@ -91,7 +91,7 @@ app.get("/api/maps/:name/thumbnail", (req: Request, res: Response) => {
       dirname(fileURLToPath(import.meta.url)),
       "../../../resources/maps",
       name,
-      "thumbnail.webp"
+      "thumbnail.webp",
     );
     res.sendFile(thumbnailPath);
   } catch (error) {
@@ -127,7 +127,12 @@ app.post("/api/pathfind", async (req: Request, res: Response) => {
       });
     }
 
-    if (!Array.isArray(from) || from.length !== 2 || !Array.isArray(to) || to.length !== 2) {
+    if (
+      !Array.isArray(from) ||
+      from.length !== 2 ||
+      !Array.isArray(to) ||
+      to.length !== 2
+    ) {
       return res.status(400).json({
         error: "Invalid coordinates",
         message: "from and to must be [x, y] coordinate arrays",
@@ -139,7 +144,7 @@ app.post("/api/pathfind", async (req: Request, res: Response) => {
       map,
       from as [number, number],
       to as [number, number],
-      { includePfMini: !!includePfMini }
+      { includePfMini: !!includePfMini },
     );
 
     res.json(result);
@@ -183,7 +188,12 @@ app.post("/api/pathfind-pfmini", async (req: Request, res: Response) => {
       });
     }
 
-    if (!Array.isArray(from) || from.length !== 2 || !Array.isArray(to) || to.length !== 2) {
+    if (
+      !Array.isArray(from) ||
+      from.length !== 2 ||
+      !Array.isArray(to) ||
+      to.length !== 2
+    ) {
       return res.status(400).json({
         error: "Invalid coordinates",
         message: "from and to must be [x, y] coordinate arrays",
@@ -194,7 +204,7 @@ app.post("/api/pathfind-pfmini", async (req: Request, res: Response) => {
     const result = await computePfMiniPath(
       map,
       from as [number, number],
-      to as [number, number]
+      to as [number, number],
     );
 
     res.json(result);
@@ -252,7 +262,7 @@ app.listen(PORT, () => {
 Server running at: http://localhost:${PORT}
 
 Configuration:
-  - Path caching: ${noCache ? 'disabled' : 'enabled'}
+  - Path caching: ${noCache ? "disabled" : "enabled"}
 
 Press Ctrl+C to stop
   `);

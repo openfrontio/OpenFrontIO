@@ -1,27 +1,37 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { Game, Difficulty, GameMapSize, GameMapType, GameMode, GameType, PlayerInfo } from '../../src/core/game/Game';
-import { TileRef } from '../../src/core/game/GameMap';
-import { PathFinder, PathFinders } from '../../src/core/pathfinding/PathFinder';
-import { createGame } from '../../src/core/game/GameImpl';
-import { genTerrainFromBin, MapManifest } from '../../src/core/game/TerrainMapLoader';
-import { UserSettings } from '../../src/core/game/UserSettings';
-import { GameConfig } from '../../src/core/Schemas';
-import { TestConfig } from '../util/TestConfig';
+import fs from "fs";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+import {
+  Difficulty,
+  Game,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+  PlayerInfo,
+} from "../../src/core/game/Game";
+import { createGame } from "../../src/core/game/GameImpl";
+import { TileRef } from "../../src/core/game/GameMap";
+import {
+  genTerrainFromBin,
+  MapManifest,
+} from "../../src/core/game/TerrainMapLoader";
+import { UserSettings } from "../../src/core/game/UserSettings";
+import { PathFinder, PathFinders } from "../../src/core/pathfinding/PathFinder";
+import { GameConfig } from "../../src/core/Schemas";
+import { TestConfig } from "../util/TestConfig";
 
 export type BenchmarkRoute = {
-  name: string,
-  from: TileRef,
-  to: TileRef,
-}
+  name: string;
+  from: TileRef;
+  to: TileRef;
+};
 
 export type BenchmarkResult = {
   route: string;
   executionTime: number | null;
   pathLength: number | null;
-}
+};
 
 export type BenchmarkSummary = {
   totalRoutes: number;
@@ -30,15 +40,15 @@ export type BenchmarkSummary = {
   totalDistance: number;
   totalTime: number;
   avgTime: number;
-}
+};
 
-export function getAdapter(
-  game: Game,
-  name: string,
-): PathFinder {
+export function getAdapter(game: Game, name: string): PathFinder {
   switch (name) {
     case "legacy":
-      return PathFinders.WaterLegacy(game, { iterations: 500_000, maxTries: 50 });
+      return PathFinders.WaterLegacy(game, {
+        iterations: 500_000,
+        maxTries: 50,
+      });
     case "default":
       return PathFinders.Water(game);
     default:
@@ -58,21 +68,21 @@ export async function getScenario(
   const currentDir = dirname(fileURLToPath(import.meta.url));
   const projectRoot = path.join(currentDir, "../..");
   const mapsDirectory = path.join(projectRoot, "resources/maps");
-  const game = await setupFromPath(mapsDirectory, scenario.MAP_NAME, { disableNavMesh: !enableNavMesh });
+  const game = await setupFromPath(mapsDirectory, scenario.MAP_NAME, {
+    disableNavMesh: !enableNavMesh,
+  });
   const initTime = performance.now() - start;
 
-  const routes = scenario.ROUTES.map(
-    ([fromName, toName]: [string, string]) => {
-      const fromCoord: [number, number] = scenario.PORTS[fromName];
-      const toCoord: [number, number] = scenario.PORTS[toName];
+  const routes = scenario.ROUTES.map(([fromName, toName]: [string, string]) => {
+    const fromCoord: [number, number] = scenario.PORTS[fromName];
+    const toCoord: [number, number] = scenario.PORTS[toName];
 
-      return {
-        name: `${fromName} → ${toName}`,
-        from: game.ref(fromCoord[0], fromCoord[1]),
-        to: game.ref(toCoord[0], toCoord[1]),
-      };
-    }
-  );
+    return {
+      name: `${fromName} → ${toName}`,
+      from: game.ref(fromCoord[0], fromCoord[1]),
+      to: game.ref(toCoord[0], toCoord[1]),
+    };
+  });
 
   return {
     game,
@@ -105,14 +115,12 @@ export function measureExecutionTime(
     for (let i = 0; i < executions; i++) {
       adapter.findPath(route.from, route.to);
     }
-  })
+  });
 
   return time / executions;
 }
 
-export function calculateStats(
-  results: BenchmarkResult[]
-): BenchmarkSummary {
+export function calculateStats(results: BenchmarkResult[]): BenchmarkSummary {
   const successful = results.filter((r) => r.pathLength !== null);
   const timed = results.filter((r) => r.executionTime !== null);
 
@@ -130,32 +138,24 @@ export function calculateStats(
   };
 }
 
-export function printRow(
-  columns: (string | number)[], 
-  widths: number[]
-): void {
+export function printRow(columns: (string | number)[], widths: number[]): void {
   const formatted = columns.map((col, i) => {
-    const str = typeof col === 'number' ? col.toString() : col;
+    const str = typeof col === "number" ? col.toString() : col;
     return str.padEnd(widths[i]);
   });
 
-  console.log(formatted.join(' '));
+  console.log(formatted.join(" "));
 }
 
-export function printSeparator(
-  width: number = 80
-): void {
-  console.log('-'.repeat(width));
+export function printSeparator(width: number = 80): void {
+  console.log("-".repeat(width));
 }
 
-export function printHeader(
-  title: string,
-  width: number = 80
-): void {
+export function printHeader(title: string, width: number = 80): void {
   printSeparator(width);
   console.log(title);
   printSeparator(width);
-  console.log('');
+  console.log("");
 }
 
 export async function setupFromPath(
@@ -168,15 +168,15 @@ export async function setupFromPath(
   console.debug = () => {};
 
   // Load map files from specified directory
-  const mapBinPath = path.join(mapDirectory, mapName, 'map.bin');
-  const miniMapBinPath = path.join(mapDirectory, mapName, 'map4x.bin');
-  const manifestPath = path.join(mapDirectory, mapName, 'manifest.json');
+  const mapBinPath = path.join(mapDirectory, mapName, "map.bin");
+  const miniMapBinPath = path.join(mapDirectory, mapName, "map4x.bin");
+  const manifestPath = path.join(mapDirectory, mapName, "manifest.json");
 
   // Check if files exist
   if (!fs.existsSync(mapBinPath)) {
     throw new Error(`Map not found: ${mapBinPath}`);
   }
-  
+
   if (!fs.existsSync(miniMapBinPath)) {
     throw new Error(`Mini map not found: ${miniMapBinPath}`);
   }
@@ -187,14 +187,16 @@ export async function setupFromPath(
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) satisfies MapManifest;
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, "utf8"),
+  ) satisfies MapManifest;
 
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
   // Configure the game
   const config = new TestConfig(
-    new (await import('../util/TestServerConfig')).TestServerConfig(),
+    new (await import("../util/TestServerConfig")).TestServerConfig(),
     {
       gameMap: GameMapType.Asia,
       gameMapSize: GameMapSize.Normal,

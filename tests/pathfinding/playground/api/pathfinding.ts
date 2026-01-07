@@ -1,6 +1,6 @@
-import { loadMap } from "./maps.js";
 import { TileRef } from "../../../../src/core/game/GameMap.js";
 import { MiniAStarAdapter } from "../../../../src/core/pathfinding/adapters/MiniAStarAdapter.js";
+import { loadMap } from "./maps.js";
 
 interface PathfindingOptions {
   includePfMini?: boolean;
@@ -39,7 +39,10 @@ function getPfMiniAdapter(mapName: string, game: any): MiniAStarAdapter {
 /**
  * Convert TileRef array to coordinate array
  */
-function pathToCoords(path: TileRef[] | null, game: any): Array<[number, number]> | null {
+function pathToCoords(
+  path: TileRef[] | null,
+  game: any,
+): Array<[number, number]> | null {
   if (!path) return null;
   return path.map((tile) => [game.x(tile), game.y(tile)]);
 }
@@ -51,7 +54,7 @@ export async function computePath(
   mapName: string,
   from: [number, number],
   to: [number, number],
-  options: PathfindingOptions = {}
+  options: PathfindingOptions = {},
 ): Promise<NavMeshResult> {
   const { game, navMesh: navMeshAdapter } = await loadMap(mapName);
 
@@ -90,8 +93,8 @@ export async function computePath(
 
     // Convert initial path
     if (navMeshAdapter.debugInfo.initialPath) {
-      initialPath = navMeshAdapter.debugInfo.initialPath.map((tile: TileRef) =>
-        [game.x(tile), game.y(tile)] as [number, number]
+      initialPath = navMeshAdapter.debugInfo.initialPath.map(
+        (tile: TileRef) => [game.x(tile), game.y(tile)] as [number, number],
       );
     }
 
@@ -114,7 +117,7 @@ export async function computePath(
 export async function computePfMiniPath(
   mapName: string,
   from: [number, number],
-  to: [number, number]
+  to: [number, number],
 ): Promise<PfMiniResult> {
   const { game } = await loadMap(mapName);
 

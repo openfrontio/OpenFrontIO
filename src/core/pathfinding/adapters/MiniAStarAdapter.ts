@@ -1,7 +1,12 @@
 import { Game } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PathFindResultType } from "../AStar";
-import { PathFinder, MiniAStarOptions, PathResult, PathStatus } from "../PathFinder";
+import {
+  MiniAStarOptions,
+  PathFinder,
+  PathResult,
+  PathStatus,
+} from "../PathFinder";
 import { MiniPathFinder } from "../PathFinding";
 
 const DEFAULT_ITERATIONS = 10_000;
@@ -15,7 +20,7 @@ export class MiniAStarAdapter implements PathFinder {
       game,
       options?.iterations ?? DEFAULT_ITERATIONS,
       options?.waterPath ?? true,
-      options?.maxTries ?? DEFAULT_MAX_TRIES
+      options?.maxTries ?? DEFAULT_MAX_TRIES,
     );
   }
 

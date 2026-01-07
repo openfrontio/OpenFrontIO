@@ -48,11 +48,17 @@ class MinHeap {
       const right = left + 1;
       let smallest = i;
 
-      if (left < this.size && this.scores[this.heap[left]] < this.scores[this.heap[smallest]]) {
+      if (
+        left < this.size &&
+        this.scores[this.heap[left]] < this.scores[this.heap[smallest]]
+      ) {
         smallest = left;
       }
 
-      if (right < this.size && this.scores[this.heap[right]] < this.scores[this.heap[smallest]]) {
+      if (
+        right < this.size &&
+        this.scores[this.heap[right]] < this.scores[this.heap[smallest]]
+      ) {
         smallest = right;
       }
 
@@ -81,8 +87,8 @@ class MinHeap {
 
 export class FastAStar {
   private stamp = 1;
-  private readonly closedStamp: Uint32Array;  // Tracks fully processed nodes
-  private readonly gScoreStamp: Uint32Array;  // Tracks valid gScores
+  private readonly closedStamp: Uint32Array; // Tracks fully processed nodes
+  private readonly gScoreStamp: Uint32Array; // Tracks valid gScores
   private readonly gScore: Float32Array;
   private readonly fScore: Float32Array;
   private readonly cameFrom: Int32Array;
@@ -114,7 +120,7 @@ export class FastAStar {
     start: number,
     goal: number,
     adapter: FastAStarAdapter,
-    maxIterations: number = 100000
+    maxIterations: number = 100000,
   ): number[] | null {
     const stamp = this.nextStamp();
 
@@ -154,7 +160,8 @@ export class FastAStar {
           continue;
         }
 
-        const tentativeGScore = currentGScore + adapter.getCost(current, neighbor);
+        const tentativeGScore =
+          currentGScore + adapter.getCost(current, neighbor);
 
         // If we haven't visited this neighbor yet, or found a better path
         const hasValidGScore = this.gScoreStamp[neighbor] === stamp;
@@ -162,7 +169,8 @@ export class FastAStar {
           this.cameFrom[neighbor] = current;
           this.gScore[neighbor] = tentativeGScore;
           this.gScoreStamp[neighbor] = stamp;
-          this.fScore[neighbor] = tentativeGScore + adapter.heuristic(neighbor, goal);
+          this.fScore[neighbor] =
+            tentativeGScore + adapter.heuristic(neighbor, goal);
 
           // Add to heap (allow duplicates for better paths)
           this.openHeap.push(neighbor);

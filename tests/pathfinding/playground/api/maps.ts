@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "fs";
-import { join, dirname } from "path";
+import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Game } from "../../../../src/core/game/Game.js";
 import { TileRef } from "../../../../src/core/game/GameMap.js";
@@ -38,7 +38,7 @@ export function setConfig(options: { cachePaths?: boolean }) {
 function getMapsDirectory(): string {
   return join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../../resources/maps"
+    "../../../../resources/maps",
   );
 }
 
@@ -47,17 +47,19 @@ function getMapsDirectory(): string {
  * Handles: underscores, camelCase, existing spaces, and parentheses
  */
 function formatMapName(name: string): string {
-  return name
-    // Replace underscores with spaces
-    .replace(/_/g, ' ')
-    // Add space before capital letters (for camelCase)
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    // Convert to lowercase first
-    .toLowerCase()
-    // Capitalize first letter of string
-    .replace(/^\w/, char => char.toUpperCase())
-    // Capitalize after spaces and opening parentheses
-    .replace(/(\s+|[(])\w/g, match => match.toUpperCase());
+  return (
+    name
+      // Replace underscores with spaces
+      .replace(/_/g, " ")
+      // Add space before capital letters (for camelCase)
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      // Convert to lowercase first
+      .toLowerCase()
+      // Capitalize first letter of string
+      .replace(/^\w/, (char) => char.toUpperCase())
+      // Capitalize after spaces and opening parentheses
+      .replace(/(\s+|[(])\w/g, (match) => match.toUpperCase())
+  );
 }
 
 /**
@@ -78,15 +80,16 @@ export function listMaps(): MapInfo[] {
         // Try to read displayName from manifest.json
         try {
           const manifestPath = join(mapsDir, name, "manifest.json");
-          const manifestData = JSON.parse(
-            readFileSync(manifestPath, "utf-8")
-          );
+          const manifestData = JSON.parse(readFileSync(manifestPath, "utf-8"));
           if (manifestData.name) {
             displayName = formatMapName(manifestData.name);
           }
         } catch (e) {
           // If manifest doesn't exist or doesn't have name, use formatted folder name
-          console.warn(`Could not read manifest for ${name}:`, e instanceof Error ? e.message : e);
+          console.warn(
+            `Could not read manifest for ${name}:`,
+            e instanceof Error ? e.message : e,
+          );
         }
 
         maps.push({ name, displayName });
@@ -166,9 +169,10 @@ export async function getMapMetadata(mapName: string) {
   const seenEdges = new Set<string>();
   const edges = allEdges
     .filter((edge: any) => {
-      const edgeKey = edge.from < edge.to
-        ? `${edge.from}-${edge.to}`
-        : `${edge.to}-${edge.from}`;
+      const edgeKey =
+        edge.from < edge.to
+          ? `${edge.from}-${edge.to}`
+          : `${edge.to}-${edge.from}`;
       if (seenEdges.has(edgeKey)) return false;
       seenEdges.add(edgeKey);
       return true;
@@ -180,8 +184,12 @@ export async function getMapMetadata(mapName: string) {
       return {
         fromId: edge.from,
         toId: edge.to,
-        from: fromGateway ? [miniMap.x(fromGateway.tile) * 2, miniMap.y(fromGateway.tile) * 2] : [0, 0],
-        to: toGateway ? [miniMap.x(toGateway.tile) * 2, miniMap.y(toGateway.tile) * 2] : [0, 0],
+        from: fromGateway
+          ? [miniMap.x(fromGateway.tile) * 2, miniMap.y(fromGateway.tile) * 2]
+          : [0, 0],
+        to: toGateway
+          ? [miniMap.x(toGateway.tile) * 2, miniMap.y(toGateway.tile) * 2]
+          : [0, 0],
         cost: edge.cost,
         path: edge.path
           ? edge.path.map((tile: TileRef) => [game.x(tile), game.y(tile)])
@@ -189,7 +197,9 @@ export async function getMapMetadata(mapName: string) {
       };
     });
 
-  console.log(`Map ${mapName}: ${allGateways.length} gateways, ${edges.length} edges`);
+  console.log(
+    `Map ${mapName}: ${allGateways.length} gateways, ${edges.length} edges`,
+  );
 
   const sectorSize = navMeshGraph.sectorSize;
 

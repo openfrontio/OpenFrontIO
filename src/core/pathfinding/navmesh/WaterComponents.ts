@@ -1,6 +1,6 @@
-import { GameMap, TileRef } from '../../game/GameMap';
+import { GameMap, TileRef } from "../../game/GameMap";
 
-const LAND_MARKER = 0xFF; // Must fit in Uint8Array
+const LAND_MARKER = 0xff; // Must fit in Uint8Array
 
 /**
  * Manages water component identification using flood-fill.
@@ -81,7 +81,7 @@ export class WaterComponents {
   /**
    * Pre-mark all land tiles in the ids array.
    * Land tiles are marked with 0xFF, water tiles remain 0.
-   * 
+   *
    * This implementation accesses the terrain data **directly** without GameMap abstraction.
    * In tests it is 30% to 50% faster than using isWater() method calls.
    * As of 2026-01-05 it reduces avg. time for GWM from 15ms to 10ms.
@@ -91,7 +91,11 @@ export class WaterComponents {
 
     // Write 4 bytes at once using Uint32Array view for better performance
     const numChunks = Math.floor(this.numTiles / 4);
-    const terrain32 = new Uint32Array(terrain.buffer, terrain.byteOffset, numChunks);
+    const terrain32 = new Uint32Array(
+      terrain.buffer,
+      terrain.byteOffset,
+      numChunks,
+    );
     const ids32 = new Uint32Array(ids.buffer, ids.byteOffset, numChunks);
 
     for (let i = 0; i < numChunks; i++) {
@@ -100,10 +104,10 @@ export class WaterComponents {
       // Extract bit 7 from each byte, negate, and combine into single 32-bit write
       // bit 7 = 0 (water) → -(0) = 0x00
       // bit 7 = 1 (land)  → -(1) = 0xFF (truncated to 8 bits)
-      const b0 = -((chunk >> 7) & 1) & 0xFF;
-      const b1 = -((chunk >> 15) & 1) & 0xFF;
-      const b2 = -((chunk >> 23) & 1) & 0xFF;
-      const b3 = -((chunk >> 31) & 1);  // Upper byte, no mask needed
+      const b0 = -((chunk >> 7) & 1) & 0xff;
+      const b1 = -((chunk >> 15) & 1) & 0xff;
+      const b2 = -((chunk >> 23) & 1) & 0xff;
+      const b3 = -((chunk >> 31) & 1); // Upper byte, no mask needed
 
       ids32[i] = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
     }
@@ -132,7 +136,11 @@ export class WaterComponents {
    *
    * Note: Land tiles are pre-marked, so ids[x] === 0 guarantees water tile.
    */
-  private floodFillComponent(ids: Uint8Array | Uint16Array, start: number, componentId: number): void {
+  private floodFillComponent(
+    ids: Uint8Array | Uint16Array,
+    start: number,
+    componentId: number,
+  ): void {
     let head = 0;
     let tail = 0;
     this.queue[tail++] = start;
@@ -190,4 +198,3 @@ export class WaterComponents {
     return this.componentIds[tile] ?? 0;
   }
 }
-

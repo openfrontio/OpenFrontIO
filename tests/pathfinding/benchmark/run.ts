@@ -18,19 +18,19 @@
  *   npx tsx tests/pathfinding/benchmark.ts --synthetic --all NavSat
  */
 
+import { readdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { readdirSync } from "fs";
 import {
   type BenchmarkResult,
+  calculateStats,
   getAdapter,
+  getScenario,
   measureExecutionTime,
   measurePathLength,
-  calculateStats,
   printHeader,
-  getScenario,
   printRow,
-} from '../utils';
+} from "../utils";
 
 const currentFile = fileURLToPath(import.meta.url);
 const pathfindingDir = dirname(currentFile);
@@ -45,8 +45,15 @@ const DEFAULT_ADAPTER = "default";
 const DEFAULT_SCENARIO = "default";
 const DEFAULT_ITERATIONS = 10;
 
-async function runScenario(adapterName: string, scenarioName: string, options: RunOptions = {}) {
-  const { game, routes, initTime } = await getScenario(scenarioName, adapterName);
+async function runScenario(
+  adapterName: string,
+  scenarioName: string,
+  options: RunOptions = {},
+) {
+  const { game, routes, initTime } = await getScenario(
+    scenarioName,
+    adapterName,
+  );
   const adapter = getAdapter(game, adapterName);
   const { silent = false } = options;
 
@@ -84,11 +91,15 @@ async function runScenario(adapterName: string, scenarioName: string, options: R
     const pathLength = measurePathLength(adapter, route);
     results.push({ route: route.name, pathLength, executionTime: null });
     if (!silent) {
-      printRow([route.name, pathLength !== null ? `${pathLength} tiles` : "FAILED"], [40, 12]);
+      printRow(
+        [route.name, pathLength !== null ? `${pathLength} tiles` : "FAILED"],
+        [40, 12],
+      );
     }
   }
 
-  const { totalDistance, successfulRoutes, totalRoutes } = calculateStats(results);
+  const { totalDistance, successfulRoutes, totalRoutes } =
+    calculateStats(results);
 
   if (!silent) {
     console.log(``);
@@ -105,10 +116,14 @@ async function runScenario(adapterName: string, scenarioName: string, options: R
   }
 
   for (const route of routes) {
-    const result = results.find(r => r.route === route.name);
+    const result = results.find((r) => r.route === route.name);
 
     if (result && result.pathLength !== null) {
-      const execTime = measureExecutionTime(adapter, route, options.iterations ?? DEFAULT_ITERATIONS);
+      const execTime = measureExecutionTime(
+        adapter,
+        route,
+        options.iterations ?? DEFAULT_ITERATIONS,
+      );
       result.executionTime = execTime;
 
       if (!silent) {
@@ -127,7 +142,9 @@ async function runScenario(adapterName: string, scenarioName: string, options: R
     console.log(``);
     console.log(`Total time: ${stats.totalTime.toFixed(2)}ms`);
     console.log(`Average time: ${stats.avgTime.toFixed(2)}ms`);
-    console.log(`Routes benchmarked: ${stats.timedRoutes} / ${stats.totalRoutes}`);
+    console.log(
+      `Routes benchmarked: ${stats.timedRoutes} / ${stats.totalRoutes}`,
+    );
     console.log(``);
 
     // =============================================================================
@@ -139,7 +156,9 @@ async function runScenario(adapterName: string, scenarioName: string, options: R
     console.log(``);
 
     if (stats.successfulRoutes < stats.totalRoutes) {
-      console.log(`Warning: Only ${stats.successfulRoutes} out of ${stats.totalRoutes} routes were completed successfully!`);
+      console.log(
+        `Warning: Only ${stats.successfulRoutes} out of ${stats.totalRoutes} routes were completed successfully!`,
+      );
       console.log(``);
     }
 
@@ -151,10 +170,16 @@ async function runScenario(adapterName: string, scenarioName: string, options: R
   } else {
     // Silent mode - just print a summary line
     const status = stats.successfulRoutes < stats.totalRoutes ? "⚠️ " : "✅";
-    console.log(`${status} ${scenarioName.padEnd(35)} | Init: ${initializationTime.toFixed(2).padStart(8)}ms | Path: ${stats.totalTime.toFixed(2).padStart(9)}ms | Dist: ${totalDistance.toString().padStart(7)} tiles | Routes: ${stats.successfulRoutes}/${stats.totalRoutes}`);
+    console.log(
+      `${status} ${scenarioName.padEnd(35)} | Init: ${initializationTime.toFixed(2).padStart(8)}ms | Path: ${stats.totalTime.toFixed(2).padStart(9)}ms | Dist: ${totalDistance.toString().padStart(7)} tiles | Routes: ${stats.successfulRoutes}/${stats.totalRoutes}`,
+    );
   }
 
-  return { initializationTime, totalTime: stats.totalTime, totalDistance: totalDistance };
+  return {
+    initializationTime,
+    totalTime: stats.totalTime,
+    totalDistance: totalDistance,
+  };
 }
 
 function printUsage() {
@@ -208,23 +233,38 @@ async function main() {
         .map((file) => file.replace(".ts", ""))
         .sort();
 
-      console.log(`Running ${scenarioFiles.length} synthetic scenarios with ${adapterName} adapter...`);
+      console.log(
+        `Running ${scenarioFiles.length} synthetic scenarios with ${adapterName} adapter...`,
+      );
       console.log(``);
 
-      const results: { initializationTime: number; totalTime: number; totalDistance: number }[] = [];
+      const results: {
+        initializationTime: number;
+        totalTime: number;
+        totalDistance: number;
+      }[] = [];
 
       for (let i = 0; i < scenarioFiles.length; i++) {
         const mapName = scenarioFiles[i];
         const scenarioName = `synthetic/${mapName}`;
-        const result = await runScenario(adapterName, scenarioName, { silent: true, iterations: 1 });
+        const result = await runScenario(adapterName, scenarioName, {
+          silent: true,
+          iterations: 1,
+        });
         results.push(result);
       }
 
       console.log(``);
       console.log(`Completed ${scenarioFiles.length} scenarios`);
-      console.log(`Total Initialization Time: ${results.reduce((sum, r) => sum + r.initializationTime, 0).toFixed(2)}ms`);
-      console.log(`Total Pathfinding Time: ${results.reduce((sum, r) => sum + r.totalTime, 0).toFixed(2)}ms`);
-      console.log(`Total Distance: ${results.reduce((sum, r) => sum + r.totalDistance, 0)} tiles`);
+      console.log(
+        `Total Initialization Time: ${results.reduce((sum, r) => sum + r.initializationTime, 0).toFixed(2)}ms`,
+      );
+      console.log(
+        `Total Pathfinding Time: ${results.reduce((sum, r) => sum + r.totalTime, 0).toFixed(2)}ms`,
+      );
+      console.log(
+        `Total Distance: ${results.reduce((sum, r) => sum + r.totalDistance, 0)} tiles`,
+      );
     } else if (nonFlagArgs.length >= 1) {
       // Run single synthetic scenario
       const mapName = nonFlagArgs[0];

@@ -1,20 +1,18 @@
-import { GameMap, TileRef } from '../../game/GameMap';
-import { FastAStarAdapter } from './FastAStar';
-import { GatewayGraph } from './GatewayGraph';
+import { GameMap, TileRef } from "../../game/GameMap";
+import { FastAStarAdapter } from "./FastAStar";
+import { GatewayGraph } from "./GatewayGraph";
 
 export class GatewayGraphAdapter implements FastAStarAdapter {
-  constructor(
-    private graph: GatewayGraph
-  ) {}
+  constructor(private graph: GatewayGraph) {}
 
   getNeighbors(node: number): number[] {
     const edges = this.graph.getEdges(node);
-    return edges.map(edge => edge.to);
+    return edges.map((edge) => edge.to);
   }
 
   getCost(from: number, to: number): number {
     const edges = this.graph.getEdges(from);
-    const edge = edges.find(edge => edge.to === to);
+    const edge = edges.find((edge) => edge.to === to);
     return edge?.cost ?? 1;
   }
 
@@ -44,7 +42,7 @@ export class BoundedGameMapAdapter implements FastAStarAdapter {
     private map: GameMap,
     startTile: TileRef,
     goalTile: TileRef,
-    bounds: { minX: number; maxX: number; minY: number; maxY: number }
+    bounds: { minX: number; maxX: number; minY: number; maxY: number },
   ) {
     this.startTile = startTile;
     this.goalTile = goalTile;
@@ -63,8 +61,9 @@ export class BoundedGameMapAdapter implements FastAStarAdapter {
     const y = this.map.y(tile) - this.minY;
 
     // Allow start and goal tiles to be outside bounds (matching graph building behavior)
+    const isOutsideBounds = x < 0 || x >= this.width || y < 0 || y >= this.height;
     const isStartOrGoal = tile === this.startTile || tile === this.goalTile;
-    if (!isStartOrGoal && (x < 0 || x >= this.width || y < 0 || y >= this.height)) {
+    if (isOutsideBounds && !isStartOrGoal) {
       return -1; // Outside bounds
     }
 

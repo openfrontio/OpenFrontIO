@@ -1,7 +1,7 @@
-import { Game } from '../../game/Game';
-import { GameMap, TileRef } from '../../game/GameMap';
-import { WaterComponents } from './WaterComponents';
-import { FastBFS } from './FastBFS';
+import { Game } from "../../game/Game";
+import { GameMap, TileRef } from "../../game/GameMap";
+import { FastBFS } from "./FastBFS";
+import { WaterComponents } from "./WaterComponents";
 
 export interface Gateway {
   id: number;
@@ -35,7 +35,7 @@ export type BuildDebugInfo = {
   potentialBFSCalls: number | null;
   skippedByComponentFilter: number | null;
   timings: { [key: string]: number };
-}
+};
 
 export class GatewayGraph {
   constructor(
@@ -116,10 +116,12 @@ export class GatewayGraphBuilder {
   }
 
   build(debug: boolean): GatewayGraph {
-    performance.mark('navsat:build:start');
+    performance.mark("navsat:build:start");
 
     if (debug) {
-      console.log(`[DEBUG] Building gateway graph with sector size ${this.sectorSize} (${this.sectorsX}x${this.sectorsY} sectors)`);
+      console.log(
+        `[DEBUG] Building gateway graph with sector size ${this.sectorSize} (${this.sectorsX}x${this.sectorsY} sectors)`,
+      );
 
       this.debugInfo = {
         sectors: null,
@@ -129,51 +131,56 @@ export class GatewayGraphBuilder {
         potentialBFSCalls: null,
         skippedByComponentFilter: null,
         timings: {},
-      }
+      };
     }
 
     // Initialize water components before building gateway graph
-    performance.mark('navsat:build:water-component:start');
+    performance.mark("navsat:build:water-component:start");
     this.waterComponents.initialize();
-    performance.mark('navsat:build:water-component:end');
+    performance.mark("navsat:build:water-component:end");
     const measure = performance.measure(
-      'navsat:build:water-component',
-      'navsat:build:water-component:start',
-      'navsat:build:water-component:end'
+      "navsat:build:water-component",
+      "navsat:build:water-component:start",
+      "navsat:build:water-component:end",
     );
 
     if (debug) {
-      console.log(`[DEBUG] Water Component Identification: ${measure.duration.toFixed(2)}ms`);
+      console.log(
+        `[DEBUG] Water Component Identification: ${measure.duration.toFixed(2)}ms`,
+      );
     }
 
-    performance.mark('navsat:build:gateways:start');
+    performance.mark("navsat:build:gateways:start");
     for (let sy = 0; sy < this.sectorsY; sy++) {
       for (let sx = 0; sx < this.sectorsX; sx++) {
         this.processSector(sx, sy);
       }
     }
-    performance.mark('navsat:build:gateways:end');
+    performance.mark("navsat:build:gateways:end");
     const gatewaysMeasure = performance.measure(
-      'navsat:build:gateways',
-      'navsat:build:gateways:start',
-      'navsat:build:gateways:end'
+      "navsat:build:gateways",
+      "navsat:build:gateways:start",
+      "navsat:build:gateways:end",
     );
 
     if (debug) {
-      console.log(`[DEBUG] Gateway identification: ${gatewaysMeasure.duration.toFixed(2)}ms`);
+      console.log(
+        `[DEBUG] Gateway identification: ${gatewaysMeasure.duration.toFixed(2)}ms`,
+      );
 
       this.debugInfo!.edges = 0;
       this.debugInfo!.potentialBFSCalls = 0;
       this.debugInfo!.skippedByComponentFilter = 0;
     }
 
-    performance.mark('navsat:build:edges:start');
+    performance.mark("navsat:build:edges:start");
     for (const sector of this.sectors.values()) {
       const gws = sector.gateways;
       const numGateways = gws.length;
 
       if (debug) {
-        this.debugInfo!.potentialBFSCalls! += (numGateways * (numGateways - 1)) / 2;
+        this.debugInfo!.potentialBFSCalls! +=
+          (numGateways * (numGateways - 1)) / 2;
 
         for (let i = 0; i < gws.length; i++) {
           for (let j = i + 1; j < gws.length; j++) {
@@ -193,33 +200,47 @@ export class GatewayGraphBuilder {
     }
 
     if (debug) {
-      this.debugInfo!.actualBFSCalls = this.debugInfo!.potentialBFSCalls! - this.debugInfo!.skippedByComponentFilter!;
+      this.debugInfo!.actualBFSCalls =
+        this.debugInfo!.potentialBFSCalls! -
+        this.debugInfo!.skippedByComponentFilter!;
     }
 
-    performance.mark('navsat:build:edges:end');
+    performance.mark("navsat:build:edges:end");
     const edgesMeasure = performance.measure(
-      'navsat:build:edges',
-      'navsat:build:edges:start',
-      'navsat:build:edges:end'
+      "navsat:build:edges",
+      "navsat:build:edges:start",
+      "navsat:build:edges:end",
     );
 
     if (debug) {
-      console.log(`[DEBUG] Edges Identification: ${edgesMeasure.duration.toFixed(2)}ms`);
-      console.log(`[DEBUG]   Potential BFS calls: ${this.debugInfo!.potentialBFSCalls}`);
-      console.log(`[DEBUG]   Skipped by component filter: ${this.debugInfo!.skippedByComponentFilter} (${((this.debugInfo!.skippedByComponentFilter! / this.debugInfo!.potentialBFSCalls!) * 100).toFixed(1)}%)`);
-      console.log(`[DEBUG]   Actual BFS calls: ${this.debugInfo!.actualBFSCalls}`);
-      console.log(`[DEBUG]   Edges Found: ${this.debugInfo!.edges} (${((this.debugInfo!.edges! / this.debugInfo!.actualBFSCalls!) * 100).toFixed(1)}% success rate)`);
+      console.log(
+        `[DEBUG] Edges Identification: ${edgesMeasure.duration.toFixed(2)}ms`,
+      );
+      console.log(
+        `[DEBUG]   Potential BFS calls: ${this.debugInfo!.potentialBFSCalls}`,
+      );
+      console.log(
+        `[DEBUG]   Skipped by component filter: ${this.debugInfo!.skippedByComponentFilter} (${((this.debugInfo!.skippedByComponentFilter! / this.debugInfo!.potentialBFSCalls!) * 100).toFixed(1)}%)`,
+      );
+      console.log(
+        `[DEBUG]   Actual BFS calls: ${this.debugInfo!.actualBFSCalls}`,
+      );
+      console.log(
+        `[DEBUG]   Edges Found: ${this.debugInfo!.edges} (${((this.debugInfo!.edges! / this.debugInfo!.actualBFSCalls!) * 100).toFixed(1)}% success rate)`,
+      );
     }
 
-    performance.mark('navsat:build:end');
+    performance.mark("navsat:build:end");
     const totalMeasure = performance.measure(
-      'navsat:build:total',
-      'navsat:build:start',
-      'navsat:build:end'
+      "navsat:build:total",
+      "navsat:build:start",
+      "navsat:build:end",
     );
 
     if (debug) {
-      console.log(`[DEBUG] Gateway graph built in ${totalMeasure.duration.toFixed(2)}ms`);
+      console.log(
+        `[DEBUG] Gateway graph built in ${totalMeasure.duration.toFixed(2)}ms`,
+      );
       console.log(`[DEBUG] Gateways: ${this.gateways.size}`);
       console.log(`[DEBUG] Sectors: ${this.sectors.size}`);
     }
@@ -229,7 +250,7 @@ export class GatewayGraphBuilder {
       this.gateways,
       this.edges,
       this.sectorSize,
-      this.sectorsX
+      this.sectorsX,
     );
   }
 
@@ -251,7 +272,7 @@ export class GatewayGraphBuilder {
       x: x,
       y: y,
       tile: tile,
-      componentId: this.waterComponents.getComponentId(tile)
+      componentId: this.waterComponents.getComponentId(tile),
     };
 
     this.gateways.set(gateway.id, gateway);
@@ -323,16 +344,14 @@ export class GatewayGraphBuilder {
     }
   }
 
-  private findGatewaysOnVerticalEdge(
-    x: number, baseY: number
-  ): Gateway[] {
+  private findGatewaysOnVerticalEdge(x: number, baseY: number): Gateway[] {
     const gateways: Gateway[] = [];
     const maxY = Math.min(baseY + this.sectorSize, this.height);
 
     let gatewayStart = -1;
 
     const tryAddGateway = (y: number) => {
-      if (gatewayStart === -1) return
+      if (gatewayStart === -1) return;
 
       const gatewayLength = y - gatewayStart;
       const midY = gatewayStart + Math.floor(gatewayLength / 2);
@@ -341,19 +360,23 @@ export class GatewayGraphBuilder {
 
       const gateway = this.getOrCreateGateway(x, midY);
       gateways.push(gateway);
-    }
+    };
 
     for (let y = baseY; y < maxY; y++) {
       const tile = this.miniMap.ref(x, y);
-      const nextTile = x + 1 < this.miniMap.width() ? this.miniMap.ref(x + 1, y) : -1;
-      const isGateway = this.miniMap.isWater(tile) && nextTile !== -1 && this.miniMap.isWater(nextTile);
+      const nextTile =
+        x + 1 < this.miniMap.width() ? this.miniMap.ref(x + 1, y) : -1;
+      const isGateway =
+        this.miniMap.isWater(tile) &&
+        nextTile !== -1 &&
+        this.miniMap.isWater(nextTile);
 
       if (isGateway) {
         if (gatewayStart === -1) {
           gatewayStart = y;
         }
       } else {
-        tryAddGateway(y)
+        tryAddGateway(y);
       }
     }
 
@@ -362,16 +385,14 @@ export class GatewayGraphBuilder {
     return gateways;
   }
 
-  private findGatewaysOnHorizontalEdge(
-    y: number, baseX: number
-  ): Gateway[] {
+  private findGatewaysOnHorizontalEdge(y: number, baseX: number): Gateway[] {
     const gateways: Gateway[] = [];
     const maxX = Math.min(baseX + this.sectorSize, this.width);
 
     let gatewayStart = -1;
 
     const tryAddGateway = (x: number) => {
-      if (gatewayStart === -1) return
+      if (gatewayStart === -1) return;
 
       const gatewayLength = x - gatewayStart;
       const midX = gatewayStart + Math.floor(gatewayLength / 2);
@@ -380,12 +401,16 @@ export class GatewayGraphBuilder {
 
       const gateway = this.getOrCreateGateway(midX, y);
       gateways.push(gateway);
-    }
+    };
 
     for (let x = baseX; x < maxX; x++) {
       const tile = this.miniMap.ref(x, y);
-      const nextTile = y + 1 < this.miniMap.height() ? this.miniMap.ref(x, y + 1) : -1;
-      const isGateway = this.miniMap.isWater(tile) && nextTile !== -1 && this.miniMap.isWater(nextTile);
+      const nextTile =
+        y + 1 < this.miniMap.height() ? this.miniMap.ref(x, y + 1) : -1;
+      const isGateway =
+        this.miniMap.isWater(tile) &&
+        nextTile !== -1 &&
+        this.miniMap.isWater(nextTile);
 
       if (isGateway) {
         if (gatewayStart === -1) {
@@ -407,8 +432,14 @@ export class GatewayGraphBuilder {
     // Calculate bounding box once for this sector
     const sectorMinX = sector.x * this.sectorSize;
     const sectorMinY = sector.y * this.sectorSize;
-    const sectorMaxX = Math.min(this.width - 1, sectorMinX + this.sectorSize - 1);
-    const sectorMaxY = Math.min(this.height - 1, sectorMinY + this.sectorSize - 1);
+    const sectorMaxX = Math.min(
+      this.width - 1,
+      sectorMinX + this.sectorSize - 1,
+    );
+    const sectorMaxY = Math.min(
+      this.height - 1,
+      sectorMinY + this.sectorSize - 1,
+    );
 
     for (let i = 0; i < gateways.length; i++) {
       const fromGateway = gateways[i];
@@ -435,7 +466,7 @@ export class GatewayGraphBuilder {
         sectorMinX,
         sectorMaxX,
         sectorMinY,
-        sectorMaxY
+        sectorMaxY,
       );
 
       // Create edges for all reachable gateways
@@ -449,8 +480,12 @@ export class GatewayGraphBuilder {
         }
 
         // Check for existing edges - gateways may live in 2 sectors, keep only cheaper connection
-        const existingEdgeFromI = this.edges.get(fromGateway.id)!.find(e => e.to === targetId);
-        const existingEdgeFromJ = this.edges.get(targetId)!.find(e => e.to === fromGateway.id);
+        const existingEdgeFromI = this.edges
+          .get(fromGateway.id)!
+          .find((e) => e.to === targetId);
+        const existingEdgeFromJ = this.edges
+          .get(targetId)!
+          .find((e) => e.to === fromGateway.id);
 
         // If edge doesn't exist or new cost is cheaper, update it
         if (!existingEdgeFromI || cost < existingEdgeFromI.cost) {
@@ -459,7 +494,7 @@ export class GatewayGraphBuilder {
             to: targetId,
             cost: cost,
             sectorX: sector.x,
-            sectorY: sector.y
+            sectorY: sector.y,
           };
 
           const edge2: Edge = {
@@ -467,14 +502,16 @@ export class GatewayGraphBuilder {
             to: fromGateway.id,
             cost: cost,
             sectorX: sector.x,
-            sectorY: sector.y
+            sectorY: sector.y,
           };
 
           // Add to sector edges for tracking
           sector.edges.push(edge1, edge2);
 
           if (existingEdgeFromI) {
-            const idx1 = this.edges.get(fromGateway.id)!.indexOf(existingEdgeFromI);
+            const idx1 = this.edges
+              .get(fromGateway.id)!
+              .indexOf(existingEdgeFromI);
             this.edges.get(fromGateway.id)![idx1] = edge1;
 
             const idx2 = this.edges.get(targetId)!.indexOf(existingEdgeFromJ!);
@@ -494,7 +531,7 @@ export class GatewayGraphBuilder {
     minX: number,
     maxX: number,
     minY: number,
-    maxY: number
+    maxY: number,
   ): Map<number, number> {
     const fromX = this.miniMap.x(from);
     const fromY = this.miniMap.y(from);
@@ -515,7 +552,10 @@ export class GatewayGraphBuilder {
     let foundCount = 0;
 
     this.fastBFS.search(
-      this.miniMap.width(), this.miniMap.height(), from, maxDistance,
+      this.miniMap.width(),
+      this.miniMap.height(),
+      from,
+      maxDistance,
       (tile: number) => this.miniMap.isWater(tile),
       (tile: number, dist: number) => {
         const x = this.miniMap.x(tile);

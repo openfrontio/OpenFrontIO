@@ -1,9 +1,9 @@
-import { Game } from '../../game/Game';
-import { TileRef } from '../../game/GameMap';
-import { FastBFS } from './FastBFS';
-import { FastAStar } from './FastAStar';
-import { GatewayGraph, GatewayGraphBuilder, Gateway } from './GatewayGraph';
-import { GatewayGraphAdapter, BoundedGameMapAdapter } from './FastAStarAdapter';
+import { Game } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
+import { FastAStar } from "./FastAStar";
+import { BoundedGameMapAdapter, GatewayGraphAdapter } from "./FastAStarAdapter";
+import { FastBFS } from "./FastBFS";
+import { Gateway, GatewayGraph, GatewayGraphBuilder } from "./GatewayGraph";
 
 type PathDebugInfo = {
   gatewayPath: TileRef[] | null;
@@ -22,7 +22,7 @@ type PathDebugInfo = {
     }>;
   };
   timings: { [key: string]: number };
-}
+};
 
 export class NavMesh {
   private graph!: GatewayGraph;
@@ -37,12 +37,15 @@ export class NavMesh {
   constructor(
     private game: Game,
     private options: {
-      cachePaths?: boolean,
-    } = {}
+      cachePaths?: boolean;
+    } = {},
   ) {}
 
   initialize(debug: boolean = false) {
-    const gatewayGraphBuilder = new GatewayGraphBuilder(this.game, GatewayGraphBuilder.SECTOR_SIZE);
+    const gatewayGraphBuilder = new GatewayGraphBuilder(
+      this.game,
+      GatewayGraphBuilder.SECTOR_SIZE,
+    );
     this.graph = gatewayGraphBuilder.build(debug);
 
     const miniMap = this.game.miniMap();
@@ -69,10 +72,12 @@ export class NavMesh {
   findPath(
     from: TileRef,
     to: TileRef,
-    debug: boolean = false
+    debug: boolean = false,
   ): TileRef[] | null {
     if (!this.initialized) {
-      throw new Error('NavigationSatellite not initialized. Call initialize() before using findPath().');
+      throw new Error(
+        "NavMesh not initialized. Call initialize() before using findPath().",
+      );
     }
 
     if (debug) {
@@ -103,7 +108,7 @@ export class NavMesh {
               from: fromGw.tile,
               to: toGw.tile,
               cost: edge.cost,
-              path: edge.path ?? null
+              path: edge.path ?? null,
             });
           }
         }
@@ -115,8 +120,10 @@ export class NavMesh {
         smoothPath: null,
         graph: {
           sectorSize: this.graph.sectorSize,
-          gateways: this.graph.getAllGateways().map(gw => ({ id: gw.id, tile: gw.tile })),
-          edges: allEdges
+          gateways: this.graph
+            .getAllGateways()
+            .map((gw) => ({ id: gw.id, tile: gw.tile })),
+          edges: allEdges,
         },
         timings: {
           total: 0,
@@ -128,46 +135,57 @@ export class NavMesh {
 
     // Early exit for very short distances that fit within multi-sector range
     if (dist <= this.graph.sectorSize) {
-      performance.mark('navsat:findPath:earlyExitLocalPath:start');
+      performance.mark("navsat:findPath:earlyExitLocalPath:start");
       const map = this.game.map();
       const startMiniX = Math.floor(map.x(from) / 2);
       const startMiniY = Math.floor(map.y(from) / 2);
       const sectorX = Math.floor(startMiniX / this.graph.sectorSize);
       const sectorY = Math.floor(startMiniY / this.graph.sectorSize);
-      const localPath = this.findLocalPath(from, to, sectorX, sectorY, 2000, true);
-      performance.mark('navsat:findPath:earlyExitLocalPath:end');
+      const localPath = this.findLocalPath(
+        from,
+        to,
+        sectorX,
+        sectorY,
+        2000,
+        true,
+      );
+      performance.mark("navsat:findPath:earlyExitLocalPath:end");
       const measure = performance.measure(
-        'navsat:findPath:earlyExitLocalPath',
-        'navsat:findPath:earlyExitLocalPath:start',
-        'navsat:findPath:earlyExitLocalPath:end'
+        "navsat:findPath:earlyExitLocalPath",
+        "navsat:findPath:earlyExitLocalPath:start",
+        "navsat:findPath:earlyExitLocalPath:end",
       );
 
       if (debug) {
         this.debugInfo!.timings.earlyExitLocalPath = measure.duration;
-        this.debugInfo!.timings.total+= measure.duration;
+        this.debugInfo!.timings.total += measure.duration;
       }
 
       if (localPath) {
         if (debug) {
-          console.log(`[DEBUG] Direct local path found for dist=${dist}, length=${localPath.length}`);
+          console.log(
+            `[DEBUG] Direct local path found for dist=${dist}, length=${localPath.length}`,
+          );
         }
 
         return localPath;
       }
 
       if (debug) {
-        console.log(`[DEBUG] Direct path failed for dist=${dist}, falling back to gateway graph`);
+        console.log(
+          `[DEBUG] Direct path failed for dist=${dist}, falling back to gateway graph`,
+        );
       }
     }
 
-    performance.mark('navsat:findPath:findGateways:start');
+    performance.mark("navsat:findPath:findGateways:start");
     const startGateway = this.findNearestGateway(from);
     const endGateway = this.findNearestGateway(to);
-    performance.mark('navsat:findPath:findGateways:end');
+    performance.mark("navsat:findPath:findGateways:end");
     const findGatewaysMeasure = performance.measure(
-      'navsat:findPath:findGateways',
-      'navsat:findPath:findGateways:start',
-      'navsat:findPath:findGateways:end'
+      "navsat:findPath:findGateways",
+      "navsat:findPath:findGateways:start",
+      "navsat:findPath:findGateways:end",
     );
 
     if (debug) {
@@ -177,7 +195,9 @@ export class NavMesh {
 
     if (!startGateway) {
       if (debug) {
-        console.log(`[DEBUG] Cannot find start gateway for (${this.game.x(from)}, ${this.game.y(from)})`);
+        console.log(
+          `[DEBUG] Cannot find start gateway for (${this.game.x(from)}, ${this.game.y(from)})`,
+        );
       }
 
       return null;
@@ -185,7 +205,9 @@ export class NavMesh {
 
     if (!endGateway) {
       if (debug) {
-        console.log(`[DEBUG] Cannot find end gateway for (${this.game.x(to)}, ${this.game.y(to)})`);
+        console.log(
+          `[DEBUG] Cannot find end gateway for (${this.game.x(to)}, ${this.game.y(to)})`,
+        );
       }
 
       return null;
@@ -193,75 +215,94 @@ export class NavMesh {
 
     if (startGateway.id === endGateway.id) {
       if (debug) {
-        console.log(`[DEBUG] Start and end gateways are the same (ID=${startGateway.id}), finding local path with multi-sector search`);
+        console.log(
+          `[DEBUG] Start and end gateways are the same (ID=${startGateway.id}), finding local path with multi-sector search`,
+        );
       }
 
-      performance.mark('navsat:findPath:sameGatewayLocalPath:start');
+      performance.mark("navsat:findPath:sameGatewayLocalPath:start");
       const sectorX = Math.floor(startGateway.x / this.graph.sectorSize);
       const sectorY = Math.floor(startGateway.y / this.graph.sectorSize);
       const path = this.findLocalPath(from, to, sectorX, sectorY, 10000, true);
-      performance.mark('navsat:findPath:sameGatewayLocalPath:end');
+      performance.mark("navsat:findPath:sameGatewayLocalPath:end");
       const sameGatewayMeasure = performance.measure(
-        'navsat:findPath:sameGatewayLocalPath',
-        'navsat:findPath:sameGatewayLocalPath:start',
-        'navsat:findPath:sameGatewayLocalPath:end'
+        "navsat:findPath:sameGatewayLocalPath",
+        "navsat:findPath:sameGatewayLocalPath:start",
+        "navsat:findPath:sameGatewayLocalPath:end",
       );
 
       if (debug) {
-        this.debugInfo!.timings.sameGatewayLocalPath = sameGatewayMeasure.duration;
+        this.debugInfo!.timings.sameGatewayLocalPath =
+          sameGatewayMeasure.duration;
         this.debugInfo!.timings.total += sameGatewayMeasure.duration;
       }
 
       return path;
     }
 
-    performance.mark('navsat:findPath:findGatewayPath:start');
+    performance.mark("navsat:findPath:findGatewayPath:start");
     const gatewayPath = this.findGatewayPath(startGateway.id, endGateway.id);
-    performance.mark('navsat:findPath:findGatewayPath:end');
+    performance.mark("navsat:findPath:findGatewayPath:end");
     const findGatewayPathMeasure = performance.measure(
-      'navsat:findPath:findGatewayPath',
-      'navsat:findPath:findGatewayPath:start',
-      'navsat:findPath:findGatewayPath:end'
+      "navsat:findPath:findGatewayPath",
+      "navsat:findPath:findGatewayPath:start",
+      "navsat:findPath:findGatewayPath:end",
     );
 
     if (debug) {
       this.debugInfo!.timings.findGatewayPath = findGatewayPathMeasure.duration;
       this.debugInfo!.timings.total += findGatewayPathMeasure.duration;
 
-      this.debugInfo!.gatewayPath = gatewayPath ? gatewayPath.map(gwId => {
-        const gw = this.graph.getGateway(gwId);
-        return gw ? gw.tile : -1;
-      }).filter(tile => tile !== -1) : null;
+      this.debugInfo!.gatewayPath = gatewayPath
+        ? gatewayPath
+            .map((gwId) => {
+              const gw = this.graph.getGateway(gwId);
+              return gw ? gw.tile : -1;
+            })
+            .filter((tile) => tile !== -1)
+        : null;
     }
 
     if (!gatewayPath) {
       if (debug) {
-        console.log(`[DEBUG] No gateway path between gateways ${startGateway.id} and ${endGateway.id}`);
+        console.log(
+          `[DEBUG] No gateway path between gateways ${startGateway.id} and ${endGateway.id}`,
+        );
       }
 
       return null;
     }
 
     if (debug) {
-      console.log(`[DEBUG] Gateway path found: ${gatewayPath.length} waypoints`);
+      console.log(
+        `[DEBUG] Gateway path found: ${gatewayPath.length} waypoints`,
+      );
     }
 
     const initialPath: TileRef[] = [];
     const map = this.game.map();
     const miniMap = this.game.miniMap();
 
-    performance.mark('navsat:findPath:buildInitialPath:start');
+    performance.mark("navsat:findPath:buildInitialPath:start");
 
     // 1. Find path from start to first gateway
     const firstGateway = this.graph.getGateway(gatewayPath[0])!;
-    const firstGatewayTile = map.ref(miniMap.x(firstGateway.tile) * 2, miniMap.y(firstGateway.tile) * 2);
+    const firstGatewayTile = map.ref(
+      miniMap.x(firstGateway.tile) * 2,
+      miniMap.y(firstGateway.tile) * 2,
+    );
 
     // Use start position's sector with multi-sector search (gateway may be on border)
     const startMiniX = Math.floor(map.x(from) / 2);
     const startMiniY = Math.floor(map.y(from) / 2);
     const startSectorX = Math.floor(startMiniX / this.graph.sectorSize);
     const startSectorY = Math.floor(startMiniY / this.graph.sectorSize);
-    const startSegment = this.findLocalPath(from, firstGatewayTile, startSectorX, startSectorY);
+    const startSegment = this.findLocalPath(
+      from,
+      firstGatewayTile,
+      startSectorX,
+      startSectorY,
+    );
 
     if (!startSegment) {
       return null;
@@ -275,7 +316,7 @@ export class NavMesh {
       const toGwId = gatewayPath[i + 1];
 
       const edges = this.graph.getEdges(fromGwId);
-      const edge = edges.find(edge => edge.to === toGwId);
+      const edge = edges.find((edge) => edge.to === toGwId);
 
       if (!edge) {
         return null;
@@ -289,10 +330,21 @@ export class NavMesh {
 
       const fromGw = this.graph.getGateway(fromGwId)!;
       const toGw = this.graph.getGateway(toGwId)!;
-      const fromTile = map.ref(miniMap.x(fromGw.tile) * 2, miniMap.y(fromGw.tile) * 2);
-      const toTile = map.ref(miniMap.x(toGw.tile) * 2, miniMap.y(toGw.tile) * 2);
+      const fromTile = map.ref(
+        miniMap.x(fromGw.tile) * 2,
+        miniMap.y(fromGw.tile) * 2,
+      );
+      const toTile = map.ref(
+        miniMap.x(toGw.tile) * 2,
+        miniMap.y(toGw.tile) * 2,
+      );
 
-      const segmentPath = this.findLocalPath(fromTile, toTile, edge.sectorX, edge.sectorY);
+      const segmentPath = this.findLocalPath(
+        fromTile,
+        toTile,
+        edge.sectorX,
+        edge.sectorY,
+      );
 
       if (!segmentPath) {
         return null;
@@ -307,7 +359,7 @@ export class NavMesh {
 
         // Also cache the reversed path on the opposite direction edge
         const reverseEdges = this.graph.getEdges(toGwId);
-        const reverseEdge = reverseEdges.find(e => e.to === fromGwId);
+        const reverseEdge = reverseEdges.find((e) => e.to === fromGwId);
         if (reverseEdge) {
           reverseEdge.path = segmentPath.slice().reverse();
         }
@@ -315,15 +367,25 @@ export class NavMesh {
     }
 
     // 3. Find path from last gateway to end
-    const lastGateway = this.graph.getGateway(gatewayPath[gatewayPath.length - 1])!;
-    const lastGatewayTile = map.ref(miniMap.x(lastGateway.tile) * 2, miniMap.y(lastGateway.tile) * 2);
+    const lastGateway = this.graph.getGateway(
+      gatewayPath[gatewayPath.length - 1],
+    )!;
+    const lastGatewayTile = map.ref(
+      miniMap.x(lastGateway.tile) * 2,
+      miniMap.y(lastGateway.tile) * 2,
+    );
 
     // Use end position's sector with multi-sector search (gateway may be on border)
     const endMiniX = Math.floor(map.x(to) / 2);
     const endMiniY = Math.floor(map.y(to) / 2);
     const endSectorX = Math.floor(endMiniX / this.graph.sectorSize);
     const endSectorY = Math.floor(endMiniY / this.graph.sectorSize);
-    const endSegment = this.findLocalPath(lastGatewayTile, to, endSectorX, endSectorY);
+    const endSegment = this.findLocalPath(
+      lastGatewayTile,
+      to,
+      endSectorX,
+      endSectorY,
+    );
 
     if (!endSegment) {
       return null;
@@ -332,34 +394,37 @@ export class NavMesh {
     // Skip first tile to avoid duplication
     initialPath.push(...endSegment.slice(1));
 
-    performance.mark('navsat:findPath:buildInitialPath:end');
+    performance.mark("navsat:findPath:buildInitialPath:end");
     const buildInitialPathMeasure = performance.measure(
-      'navsat:findPath:buildInitialPath',
-      'navsat:findPath:buildInitialPath:start',
-      'navsat:findPath:buildInitialPath:end'
+      "navsat:findPath:buildInitialPath",
+      "navsat:findPath:buildInitialPath:start",
+      "navsat:findPath:buildInitialPath:end",
     );
 
     if (debug) {
-      this.debugInfo!.timings.buildInitialPath = buildInitialPathMeasure.duration;
+      this.debugInfo!.timings.buildInitialPath =
+        buildInitialPathMeasure.duration;
       this.debugInfo!.timings.total += buildInitialPathMeasure.duration;
       this.debugInfo!.initialPath = initialPath;
       console.log(`[DEBUG] Initial path: ${initialPath.length} tiles`);
     }
 
-    performance.mark('navsat:findPath:smoothPath:start');
+    performance.mark("navsat:findPath:smoothPath:start");
     const smoothedPath = this.smoothPath(initialPath);
-    performance.mark('navsat:findPath:smoothPath:end');
+    performance.mark("navsat:findPath:smoothPath:end");
     const smoothPathMeasure = performance.measure(
-      'navsat:findPath:smoothPath',
-      'navsat:findPath:smoothPath:start',
-      'navsat:findPath:smoothPath:end'
+      "navsat:findPath:smoothPath",
+      "navsat:findPath:smoothPath:start",
+      "navsat:findPath:smoothPath:end",
     );
 
     if (debug) {
       this.debugInfo!.timings.buildSmoothPath = smoothPathMeasure.duration;
       this.debugInfo!.timings.total += smoothPathMeasure.duration;
       this.debugInfo!.smoothPath = smoothedPath;
-      console.log(`[DEBUG] Smoothed path: ${initialPath.length} → ${smoothedPath.length} tiles`);
+      console.log(
+        `[DEBUG] Smoothed path: ${initialPath.length} → ${smoothedPath.length} tiles`,
+      );
     }
 
     return smoothedPath;
@@ -404,7 +469,10 @@ export class NavMesh {
     const maxDistance = sectorSize * sectorSize;
 
     return this.fastBFS.search(
-      miniMap.width(), miniMap.height(), miniFrom, maxDistance, 
+      miniMap.width(),
+      miniMap.height(),
+      miniFrom,
+      maxDistance,
       (tile: TileRef) => miniMap.isWater(tile),
       (tile: TileRef, _dist: number) => {
         const tileX = miniMap.x(tile);
@@ -427,10 +495,15 @@ export class NavMesh {
 
   private findGatewayPath(
     fromGatewayId: number,
-    toGatewayId: number
+    toGatewayId: number,
   ): number[] | null {
     const adapter = new GatewayGraphAdapter(this.graph);
-    return this.gatewayAStar.search(fromGatewayId, toGatewayId, adapter, 100000);
+    return this.gatewayAStar.search(
+      fromGatewayId,
+      toGatewayId,
+      adapter,
+      100000,
+    );
   }
 
   private findLocalPath(
@@ -439,7 +512,7 @@ export class NavMesh {
     sectorX: number,
     sectorY: number,
     maxIterations: number = 10000,
-    multiSector: boolean = false
+    multiSector: boolean = false,
   ): TileRef[] | null {
     const map = this.game.map();
     const miniMap = this.game.miniMap();
@@ -447,12 +520,12 @@ export class NavMesh {
     // Convert full map coordinates to miniMap coordinates
     const miniFrom = miniMap.ref(
       Math.floor(map.x(from) / 2),
-      Math.floor(map.y(from) / 2)
+      Math.floor(map.y(from) / 2),
     );
 
     const miniTo = miniMap.ref(
       Math.floor(map.x(to) / 2),
-      Math.floor(map.y(to) / 2)
+      Math.floor(map.y(to) / 2),
     );
 
     // Calculate sector bounds
@@ -477,7 +550,12 @@ export class NavMesh {
       maxY = Math.min(miniMap.height() - 1, minY + sectorSize - 1);
     }
 
-    const adapter = new BoundedGameMapAdapter(miniMap, miniFrom, miniTo, { minX, maxX, minY, maxY });
+    const adapter = new BoundedGameMapAdapter(miniMap, miniFrom, miniTo, {
+      minX,
+      maxX,
+      minY,
+      maxY,
+    });
 
     // Convert to local node IDs
     const startNode = adapter.tileToNode(miniFrom);
@@ -488,10 +566,17 @@ export class NavMesh {
     }
 
     // Choose the appropriate FastAStar buffer based on search area
-    const selectedAStar = multiSector ? this.localAStarMultiSector : this.localAStar;
+    const selectedAStar = multiSector
+      ? this.localAStarMultiSector
+      : this.localAStar;
 
     // Run FastAStar on bounded region
-    const path = selectedAStar.search(startNode, goalNode, adapter, maxIterations);
+    const path = selectedAStar.search(
+      startNode,
+      goalNode,
+      adapter,
+      maxIterations,
+    );
 
     if (!path) {
       return null;
@@ -506,20 +591,24 @@ export class NavMesh {
     return result;
   }
 
-  private upscalePathToFullMap(miniPath: TileRef[], from: TileRef, to: TileRef): TileRef[] {
+  private upscalePathToFullMap(
+    miniPath: TileRef[],
+    from: TileRef,
+    to: TileRef,
+  ): TileRef[] {
     const map = this.game.map();
     const miniMap = this.game.miniMap();
 
     // Convert miniMap path to cells
-    const miniCells = miniPath.map(tile => ({
+    const miniCells = miniPath.map((tile) => ({
       x: miniMap.x(tile),
-      y: miniMap.y(tile)
+      y: miniMap.y(tile),
     }));
 
     // FIRST: Scale all points (2x)
-    const scaledPath = miniCells.map(point => ({
+    const scaledPath = miniCells.map((point) => ({
       x: point.x * 2,
-      y: point.y * 2
+      y: point.y * 2,
     }));
 
     // SECOND: Interpolate between scaled points
@@ -541,7 +630,7 @@ export class NavMesh {
       for (let step = 1; step < steps; step++) {
         smoothPath.push({
           x: Math.round(current.x + (dx * step) / steps),
-          y: Math.round(current.y + (dy * step) / steps)
+          y: Math.round(current.y + (dy * step) / steps),
         });
       }
     }
@@ -558,7 +647,9 @@ export class NavMesh {
     const toCell = { x: map.x(to), y: map.y(to) };
 
     // Ensure start is correct
-    const startIdx = scaledCells.findIndex(c => c.x === fromCell.x && c.y === fromCell.y);
+    const startIdx = scaledCells.findIndex(
+      (c) => c.x === fromCell.x && c.y === fromCell.y,
+    );
     if (startIdx === -1) {
       scaledCells.unshift(fromCell);
     } else if (startIdx !== 0) {
@@ -566,7 +657,9 @@ export class NavMesh {
     }
 
     // Ensure end is correct
-    const endIdx = scaledCells.findIndex(c => c.x === toCell.x && c.y === toCell.y);
+    const endIdx = scaledCells.findIndex(
+      (c) => c.x === toCell.x && c.y === toCell.y,
+    );
     if (endIdx === -1) {
       scaledCells.push(toCell);
     } else if (endIdx !== scaledCells.length - 1) {
@@ -574,7 +667,7 @@ export class NavMesh {
     }
 
     // Convert back to TileRefs
-    return scaledCells.map(cell => map.ref(cell.x, cell.y));
+    return scaledCells.map((cell) => map.ref(cell.x, cell.y));
   }
 
   private tracePath(from: TileRef, to: TileRef): TileRef[] | null {
@@ -679,7 +772,11 @@ export class NavMesh {
       let farthest = current + 1;
       let bestTrace: TileRef[] | null = null;
 
-      for (let i = current + 2; i < path.length; i += Math.max(1, Math.floor((path.length / 20)))) {
+      for (
+        let i = current + 2;
+        i < path.length;
+        i += Math.max(1, Math.floor(path.length / 20))
+      ) {
         const trace = this.tracePath(path[current], path[i]);
 
         if (trace !== null) {
@@ -691,7 +788,10 @@ export class NavMesh {
       }
 
       // Also try the final tile if we haven't already
-      if (farthest < path.length - 1 && (path.length - 1 - current) % 10 !== 0) {
+      if (
+        farthest < path.length - 1 &&
+        (path.length - 1 - current) % 10 !== 0
+      ) {
         const trace = this.tracePath(path[current], path[path.length - 1]);
         if (trace !== null) {
           farthest = path.length - 1;

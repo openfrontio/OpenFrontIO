@@ -1,7 +1,7 @@
 import { Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { NavMeshAdapter } from "./adapters/NavMeshAdapter";
 import { MiniAStarAdapter } from "./adapters/MiniAStarAdapter";
+import { NavMeshAdapter } from "./adapters/NavMeshAdapter";
 
 export enum PathStatus {
   NEXT,
@@ -13,7 +13,7 @@ export enum PathStatus {
 export type PathResult =
   | { status: PathStatus.PENDING }
   | { status: PathStatus.NEXT; node: TileRef }
-  | { status: PathStatus.COMPLETE, node: TileRef }
+  | { status: PathStatus.COMPLETE; node: TileRef }
   | { status: PathStatus.NOT_FOUND };
 
 export interface PathFinder {

@@ -10,9 +10,7 @@ export class FastBFS {
   private readonly queue: Int32Array;
   private readonly dist: Uint16Array;
 
-  constructor(
-    numNodes: number,
-  ) {
+  constructor(numNodes: number) {
     this.visitedStamp = new Uint32Array(numNodes);
     this.queue = new Int32Array(numNodes);
     this.dist = new Uint16Array(numNodes);
@@ -23,8 +21,8 @@ export class FastBFS {
     height: number,
     start: number,
     maxDistance: number,
-    isValidNode: FastBFSAdapter<T>['isValidNode'],
-    visitor: FastBFSAdapter<T>['visitor'],
+    isValidNode: FastBFSAdapter<T>["isValidNode"],
+    visitor: FastBFSAdapter<T>["visitor"],
   ): T | null {
     const stamp = this.nextStamp();
     const lastRowStart = (height - 1) * width;
