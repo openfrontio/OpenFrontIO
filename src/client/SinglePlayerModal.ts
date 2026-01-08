@@ -18,6 +18,7 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -49,6 +50,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private teamCount: TeamCountConfig = 2;
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
+  @state() private userMeResponse: UserMeResponse | false = false;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -77,8 +79,17 @@ export class SinglePlayerModal extends BaseModal {
   private handleUserMeResponse = (
     event: CustomEvent<UserMeResponse | false>,
   ) => {
+    this.userMeResponse = event.detail;
     this.applyAchievements(event.detail);
   };
+
+  private renderNotLoggedInBanner(): TemplateResult {
+    return html`<div
+      class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0"
+    >
+      ${translateText("single_modal.sign_in_for_achievements")}
+    </div>`;
+  }
 
   private applyAchievements(userMe: UserMeResponse | false) {
     if (!userMe) {
@@ -122,57 +133,63 @@ export class SinglePlayerModal extends BaseModal {
       >
         <!-- Header -->
         <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+          class="flex items-center pb-2 border-b border-white/10 gap-4 shrink-0 px-6 pt-6"
         >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="Back"
+          <button
+            @click=${this.close}
+            class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
+            aria-label="Back"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
-            >
-              ${translateText("main.solo") || "Solo"}
-            </span>
-          </div>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+          <span
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex-1"
+          >
+            ${translateText("main.solo") || "Solo"}
+          </span>
 
           <button
             @click=${this.toggleAchievements}
-            class="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all ${this
+            class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
               .showAchievements
               ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
               : "text-white/60"}"
           >
             <img
               src="/images/MedalIconWhite.svg"
-              class="w-5 h-5 opacity-80"
+              class="w-4 h-4 opacity-80 shrink-0"
               style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
             />
-            <span class="text-xs font-bold uppercase tracking-wider"
+            <span
+              class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
               >${translateText("single_modal.toggle_achievements")}</span
             >
           </button>
         </div>
 
         <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
-          <div class="max-w-5xl mx-auto space-y-10">
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 mr-1">
+          <div class="max-w-5xl mx-auto space-y-6">
+            ${!hasLinkedAccount(this.userMeResponse)
+              ? html`<!-- Sign In Banner -->
+                  <div class="flex justify-end pt-4">
+                    ${this.renderNotLoggedInBanner()}
+                  </div>`
+              : html``}
+
             <!-- Map Selection -->
             <div class="space-y-6">
               <div
