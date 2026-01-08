@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 
@@ -21,8 +21,6 @@ export class LangSelector extends LitElement {
   @state() private languageList: any[] = [];
   @state() private debugMode: boolean = false;
   @state() isVisible = true;
-
-  @query("language-modal") private modal!: LanguageModal;
 
   private debugKeyPressed: boolean = false;
   private languageMetadata: LanguageMetadata[] = metadata;
