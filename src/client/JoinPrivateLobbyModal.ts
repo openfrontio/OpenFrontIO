@@ -193,31 +193,36 @@ export class JoinPrivateLobbyModal extends LitElement {
               </div>`
             : ""}
           ${this.renderGameConfig()}
+          ${this.hasJoined && this.players.length > 0
+            ? html`
+                <div class="mt-6 border-t border-white/10 pt-6">
+                  <div class="flex justify-between items-center mb-4">
+                    <div
+                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
+                    >
+                      ${this.players.length}
+                      ${this.players.length === 1
+                        ? translateText("private_lobby.player")
+                        : translateText("private_lobby.players")}
+                    </div>
+                  </div>
+
+                  <lobby-team-view
+                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
+                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                    .clients=${this.players}
+                    .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                  ></lobby-team-view>
+                </div>
+              `
+            : ""}
         </div>
 
         ${this.hasJoined && this.players.length > 0
           ? html` <div
               class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
             >
-              <div class="flex justify-between items-center mb-4">
-                <div
-                  class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                >
-                  ${this.players.length}
-                  ${this.players.length === 1
-                    ? translateText("private_lobby.player")
-                    : translateText("private_lobby.players")}
-                </div>
-              </div>
-
-              <lobby-team-view
-                class="mb-6 block max-h-48 overflow-y-auto custom-scrollbar rounded-lg border border-white/10 bg-white/5 p-2"
-                .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                .clients=${this.players}
-                .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                .teamCount=${this.gameConfig?.playerTeams ?? 2}
-              ></lobby-team-view>
-
               <button
                 class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
                 disabled
