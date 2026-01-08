@@ -142,15 +142,24 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const pattern of Object.values(this.cosmetics?.patterns ?? {})) {
-      const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+    const patterns: (Pattern | null)[] = [
+      null,
+      ...Object.values(this.cosmetics?.patterns ?? {}),
+    ];
+    for (const pattern of patterns) {
+      const colorPalettes = pattern
+        ? [...(pattern.colorPalettes ?? []), null]
+        : [null];
       for (const colorPalette of colorPalettes) {
-        const rel = patternRelationship(
-          pattern,
-          colorPalette,
-          this.userMeResponse,
-          this.affiliateCode,
-        );
+        let rel = "owned";
+        if (pattern) {
+          rel = patternRelationship(
+            pattern,
+            colorPalette,
+            this.userMeResponse,
+            this.affiliateCode,
+          );
+        }
         if (rel === "blocked") {
           continue;
         }
@@ -164,7 +173,8 @@ export class TerritoryPatternsModal extends LitElement {
         const isDefaultPattern = pattern === null;
         const isSelected =
           (isDefaultPattern && this.selectedPattern === null) ||
-          (this.selectedPattern &&
+          (!isDefaultPattern &&
+            this.selectedPattern &&
             this.selectedPattern.name === pattern?.name &&
             (this.selectedPattern.colorPalette?.name ?? null) ===
               (colorPalette?.name ?? null));
