@@ -303,6 +303,12 @@ export class WinModal extends LitElement implements Layer {
           this.isWin = false;
         }
         this.show();
+      } else if (wu.winner[0] === "nation") {
+        this._title = translateText("win_modal.nation_won", {
+          nation: wu.winner[1],
+        });
+        this.isWin = false;
+        this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
