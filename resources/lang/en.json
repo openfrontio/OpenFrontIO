@@ -328,7 +328,9 @@
     "too_short": "Username must be at least {min} characters long.",
     "too_long": "Username must not exceed {max} characters.",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, and [square brackets].",
-    "tag": "TAG"
+    "tag": "TAG",
+    "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
+    "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
     "title": "Private Lobby",

@@ -279,7 +279,7 @@ export class LangSelector extends LitElement {
       languageModal.languageList = [...this.languageList];
       languageModal.currentLang = this.currentLang;
       // Use the navigation system
-      window.showPage("page-language");
+      window.showPage?.("page-language");
     }
   }
 

@@ -1,5 +1,5 @@
 import { TemplateResult, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -36,7 +36,6 @@ import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
-  @property({ type: Boolean }) inline = false;
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNations = false;
@@ -878,7 +877,7 @@ export class HostLobbyModal extends BaseModal {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
       if (needsShow && window.showPage) {
-        window.showPage("page-host-lobby");
+        window.showPage?.("page-host-lobby");
       }
       this.style.pointerEvents = "auto";
     } else {

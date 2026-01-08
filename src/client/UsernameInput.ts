@@ -115,6 +115,13 @@ export class UsernameInput extends LitElement {
       return;
     }
 
+    // Validate clan tag if present
+    if (this.clanTag.length > 0 && this.clanTag.length < 2) {
+      this._isValid = false;
+      this.validationError = translateText("username.tag_too_short");
+      return;
+    }
+
     const full = this.constructFullUsername();
     const trimmedFull = full.trim();
 

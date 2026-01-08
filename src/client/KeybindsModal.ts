@@ -430,20 +430,7 @@ export class KeybindsModal extends BaseModal {
     `;
   }
 
-  public open() {
-    this.registerEscapeHandler();
-
+  protected onOpen(): void {
     this.requestUpdate();
-    this.modalEl?.open();
-  }
-
-  public close() {
-    this.unregisterEscapeHandler();
-
-    if (this.inline) {
-      if (window.showPage) window.showPage("page-play");
-    } else {
-      this.modalEl?.close();
-    }
   }
 }

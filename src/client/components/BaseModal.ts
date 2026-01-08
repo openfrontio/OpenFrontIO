@@ -86,7 +86,7 @@ export abstract class BaseModal extends LitElement {
         this.classList.contains("hidden") || this.style.display === "none";
       if (needsShow && window.showPage) {
         const pageId = this.id || this.tagName.toLowerCase();
-        window.showPage(pageId);
+        window.showPage?.(pageId);
       }
       this.style.pointerEvents = "auto";
     } else {
@@ -105,7 +105,7 @@ export abstract class BaseModal extends LitElement {
     if (this.inline) {
       this.style.pointerEvents = "none";
       if (window.showPage) {
-        window.showPage("page-play");
+        window.showPage?.("page-play");
       }
     } else {
       this.modalEl?.close();

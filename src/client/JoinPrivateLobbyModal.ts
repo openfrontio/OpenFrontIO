@@ -350,31 +350,18 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   public open(id: string = "") {
-    this.registerEscapeHandler();
-
-    if (!this.inline) {
-      this.modalEl?.open();
-    }
+    super.open();
     if (id) {
       this.setLobbyId(id);
       this.joinLobby();
     }
   }
 
-  public close() {
-    this.unregisterEscapeHandler();
-
+  protected onClose(): void {
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
     this.currentLobbyId = "";
     this.gameConfig = null;
     this.players = [];
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;

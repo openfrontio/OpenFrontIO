@@ -297,7 +297,6 @@ export class TerritoryPatternsModal extends BaseModal {
   public async open(
     options?: string | { affiliateCode?: string; showOnlyOwned?: boolean },
   ) {
-    this.registerEscapeHandler();
     this.isActive = true;
     if (typeof options === "string") {
       this.affiliateCode = options;
@@ -310,26 +309,14 @@ export class TerritoryPatternsModal extends BaseModal {
       this.showOnlyOwned = false;
     }
 
-    // Wait for the DOM to be updated and the o-modal element to be available
-    this.requestUpdate();
-    await this.updateComplete;
-
-    if (this.modalEl) {
-      this.modalEl.open();
-    }
     await this.refresh();
+    super.open();
   }
 
   public close() {
     this.isActive = false;
-    this.unregisterEscapeHandler();
     this.affiliateCode = null;
-
-    if (this.inline) {
-      if (window.showPage) window.showPage("page-play");
-    } else {
-      this.modalEl?.close();
-    }
+    super.close();
   }
 
   private selectPattern(pattern: PlayerPattern | null) {

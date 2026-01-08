@@ -256,17 +256,8 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
-  public close() {
-    this.unregisterEscapeHandler();
+  protected onClose(): void {
     window.removeEventListener("keydown", this.handleEasterEggKey);
-
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
   }
 
   private renderBasicSettings() {
@@ -449,20 +440,11 @@ export class UserSettingModal extends BaseModal {
     `;
   }
 
-  public open() {
-    this.registerEscapeHandler();
+  protected onOpen(): void {
     window.addEventListener("keydown", this.handleEasterEggKey);
+  }
 
-    if (this.inline) {
-      const needsShow =
-        this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && window.showPage) {
-        window.showPage(this.id || "page-options");
-      }
-      this.requestUpdate();
-    } else {
-      this.requestUpdate();
-      this.modalEl?.open();
-    }
+  public open() {
+    super.open();
   }
 }

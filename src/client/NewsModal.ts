@@ -87,25 +87,7 @@ export class NewsModal extends BaseModal {
     `;
   }
 
-  public close() {
-    this.unregisterEscapeHandler();
-
-    if (this.inline) {
-      const windowWithShowPage = window as any;
-      if (
-        windowWithShowPage.showPage &&
-        typeof windowWithShowPage.showPage === "function"
-      ) {
-        windowWithShowPage.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
-  }
-
-  public open() {
-    this.registerEscapeHandler();
-
+  protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
       fetch(changelog)
@@ -127,10 +109,6 @@ export class NewsModal extends BaseModal {
             ),
         )
         .then((markdown) => (this.markdown = markdown));
-    }
-    this.requestUpdate();
-    if (!this.inline) {
-      this.modalEl?.open();
     }
   }
 }

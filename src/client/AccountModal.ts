@@ -1,5 +1,5 @@
 import { html, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import {
   PlayerGame,
   PlayerStatsTree,
@@ -18,8 +18,6 @@ import { copyToClipboard, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
-  @property({ type: Boolean }) inline = false;
-
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
   @state() private showCopied: boolean = false;
@@ -527,10 +525,7 @@ export class AccountModal extends BaseModal {
     discordLogin();
   }
 
-  public open() {
-    this.registerEscapeHandler();
-
-    this.modalEl?.open();
+  protected onOpen(): void {
     this.isLoadingUser = true;
 
     void getUserMe()
@@ -552,16 +547,7 @@ export class AccountModal extends BaseModal {
     this.requestUpdate();
   }
 
-  public close() {
-    this.unregisterEscapeHandler();
-
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
+  protected onClose(): void {
     this.dispatchEvent(
       new CustomEvent("close", { bubbles: true, composed: true }),
     );
