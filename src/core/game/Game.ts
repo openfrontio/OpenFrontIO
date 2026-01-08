@@ -174,10 +174,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
   ],
-  arcade: [
-    GameMapType.Didier,
-    GameMapType.Sierpinski,
-  ],
+  arcade: [GameMapType.Didier, GameMapType.Sierpinski],
 };
 
 export enum GameType {
