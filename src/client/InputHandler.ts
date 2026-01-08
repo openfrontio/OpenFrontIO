@@ -176,16 +176,18 @@ export class InputHandler {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            const val = (() => {
-              if (v && typeof v === "object" && "value" in (v as any)) {
-                return (v as any).value as string;
-              }
-              if (typeof v === "string") return v;
-              return undefined;
-            })();
+            // Extract value from nested object or plain string
+            let val: unknown;
+            if (v && typeof v === "object" && "value" in v) {
+              val = (v as { value: unknown }).value;
+            } else {
+              val = v;
+            }
 
-            if (val === undefined) return [k, undefined];
-            if (val === "Null") return [k, undefined]; // use default
+            // Map invalid values to undefined (filtered later)
+            if (typeof val !== "string" || val === "Null") {
+              return [k, undefined];
+            }
             return [k, val];
           })
           .filter(([, v]) => typeof v === "string"),
