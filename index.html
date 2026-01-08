@@ -11,7 +11,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>OpenFront (ALPHA)</title>
+    <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/x-icon" href="/images/Favicon.svg" />
 
@@ -360,8 +360,9 @@
                 <button
                   id="hamburger-btn"
                   class="lg:hidden flex w-full h-full bg-white/5 text-white/90 border border-white/20 hover:bg-white/10 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
-                  aria-label="Open menu"
-                  title="Menu"
+                  data-i18n-aria-label="main.menu"
+                  aria-expanded="false"
+                  data-i18n-title="main.menu"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -403,7 +404,7 @@
                   id="territory-patterns-input-preview-button"
                   class="aspect-square h-full border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg flex cursor-pointer justify-center items-center focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden"
                   style="padding: 4px !important"
-                  title="Pick a pattern!"
+                  data-i18n-title="main.pick_pattern"
                 ></button>
               </div>
             </div>
@@ -435,7 +436,7 @@
                 >
                   <o-button
                     id="single-player"
-                    title="Single Player"
+                    data-i18n-title="main.solo"
                     translationKey="main.solo"
                     fill
                     class="transition-transform hover:-translate-y-0.5 h-full"
@@ -451,7 +452,7 @@
                     <div class="flex-1 p-2 flex flex-col gap-2">
                       <o-button
                         id="host-lobby-button"
-                        title="Create"
+                        data-i18n-title="main.create"
                         translationKey="main.create"
                         fill
                         secondary
@@ -460,7 +461,7 @@
 
                       <o-button
                         id="join-private-lobby-button"
-                        title="Join"
+                        data-i18n-title="main.join"
                         translationKey="main.join"
                         fill
                         secondary
@@ -549,7 +550,7 @@
           >
             <img
               src="/icons/github-mark-white.svg"
-              alt="GitHub"
+              data-i18n-alt="news.github_link"
               class="h-7 w-7 object-contain"
             />
           </a>
@@ -594,7 +595,7 @@
           >
             <img
               src="/icons/wiki-logo.svg"
-              alt="Wiki"
+              data-i18n-alt="main.wiki"
               class="h-7 w-7 object-contain"
             />
           </a>
@@ -605,16 +606,14 @@
             data-i18n="main.terms_of_service"
             target="_blank"
             class="hover:text-white transition-colors"
-            >Terms of Service</a
-          >
+          ></a>
           <span>© OpenFront™ and Contributors</span>
           <a
             href="/privacy-policy.html"
             data-i18n="main.privacy_policy"
             target="_blank"
             class="hover:text-white transition-colors"
-            >Privacy Policy</a
-          >
+          ></a>
         </div>
       </footer>
       <!-- Global Modals -->

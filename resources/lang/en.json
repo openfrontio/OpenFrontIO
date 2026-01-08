@@ -44,7 +44,9 @@
     "keys": "Keys",
     "stats": "Stats",
     "account": "Account",
-    "help": "Help"
+    "help": "Help",
+    "menu": "Menu",
+    "pick_pattern": "Pick a pattern!"
   },
   "news": {
     "github_link": "on GitHub",
