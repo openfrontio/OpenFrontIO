@@ -108,14 +108,19 @@ export class KeybindsModal extends BaseModal {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <span class="font-medium"
-                >${translateText("user_setting.keybind_conflict_title")}
-                <span
-                  class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
-                  >${displayKey}</span
-                >
-                ${translateText("user_setting.keybind_conflict_message")}</span
-              >
+              <span class="font-medium">
+                ${(() => {
+                  const message = translateText(
+                    "user_setting.keybind_conflict_error",
+                    { key: displayKey },
+                  );
+                  const parts = message.split(displayKey);
+                  return html`${parts[0]}<span
+                      class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
+                      >${displayKey}</span
+                    >${parts[1] || ""}`;
+                })()}
+              </span>
             `,
             color: "red",
             duration: 3000,
