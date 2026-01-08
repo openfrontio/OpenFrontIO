@@ -103,16 +103,6 @@
     ></div>
 
     <!-- LEFT SIDEBAR MENU -->
-    <button
-      id="hamburger-btn"
-      class="[.in-game_&]:hidden flex md:hidden fixed top-3 left-3 z-[50000] bg-black/60 text-white border-0 p-2 rounded-md items-center justify-center cursor-pointer hover:bg-black/80 transition-all duration-300 pointer-events-auto"
-      style="z-index: 50000 !important"
-      onclick="typeof __toggleSidebar === 'function' && __toggleSidebar(event)"
-      aria-label="Open menu"
-      title="Menu"
-    >
-      ☰
-    </button>
 
     <div
       id="mobile-menu-backdrop"
@@ -368,11 +358,36 @@
             >
               <!-- Flag -->
               <div
-                class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center"
+                class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center"
               >
+                <!-- Hamburger (Mobile) -->
+                <button
+                  id="hamburger-btn"
+                  class="md:hidden flex w-full h-full bg-white/5 text-white/90 border border-white/20 hover:bg-white/10 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200 shadow-inner"
+                  onclick="typeof __toggleSidebar === 'function' && __toggleSidebar(event)"
+                  aria-label="Open menu"
+                  title="Menu"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="w-8 h-8"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Flag (Desktop) -->
                 <flag-input
                   id="flag-input-component"
-                  class="w-full h-full flex items-center justify-center drop-shadow-md rounded-md overflow-hidden"
+                  class="hidden md:flex w-full h-full items-center justify-center drop-shadow-md rounded-md overflow-hidden"
                 ></flag-input>
               </div>
 
