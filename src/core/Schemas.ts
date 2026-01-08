@@ -309,13 +309,13 @@ export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.number().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nullable(),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
