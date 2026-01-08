@@ -127,11 +127,19 @@ export function joinLobby(
           console.error("error creating client game", e);
           const startingModal = document.querySelector(
             "game-starting-modal",
-          ) as HTMLElement & { hide?: () => void };
-          if (startingModal?.hide) {
-            startingModal.hide();
+          ) as HTMLElement;
+          if (startingModal) {
+            startingModal.classList.add("hidden");
           }
-          alert("Error starting game: " + e.message);
+          showErrorModal(
+            e.message,
+            e.stack,
+            lobbyConfig.gameID,
+            lobbyConfig.clientID,
+            true,
+            false,
+            "error_modal.connection_error",
+          );
         });
     }
     if (message.type === "error") {
