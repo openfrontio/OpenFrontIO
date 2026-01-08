@@ -108,7 +108,7 @@ export class MapDisplay extends LitElement {
               >
                 <img
                   src="${this.mapWebpPath}"
-                  alt="${this.translation}"
+                  alt="${this.translation || this.mapName}"
                   class="w-full h-full object-cover ${this.selected
                     ? "opacity-100"
                     : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
