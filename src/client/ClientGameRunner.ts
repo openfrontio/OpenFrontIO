@@ -121,7 +121,18 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      ).then((r) => r.start());
+      )
+        .then((r) => r.start())
+        .catch((e) => {
+          console.error("error creating client game", e);
+          const startingModal = document.querySelector(
+            "game-starting-modal",
+          ) as HTMLElement & { hide?: () => void };
+          if (startingModal?.hide) {
+            startingModal.hide();
+          }
+          alert("Error starting game: " + e.message);
+        });
     }
     if (message.type === "error") {
       if (message.error === "full-lobby") {
