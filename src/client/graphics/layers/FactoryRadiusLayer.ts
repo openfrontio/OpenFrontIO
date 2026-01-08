@@ -15,7 +15,7 @@ interface FactoryRadius {
 
 /**
  * Layer responsible for rendering factory train range radii when placing a city.
- * Uses circle union algorithm to merge overlapping circles into a single blob shape.
+ * uses the shared circleUnion algorithm to merge overlapping circles into a single blob shape.
  */
 export class FactoryRadiusLayer implements Layer {
   private readonly factories: Set<number> = new Set(); // Track factory IDs
@@ -29,16 +29,14 @@ export class FactoryRadiusLayer implements Layer {
     private readonly uiState: UIState,
   ) {}
 
-  init() {
-    // No special initialization needed
-  }
+  init() {}
 
   shouldTransform(): boolean {
     return true;
   }
 
   tick() {
-    // Check for updates to factories
+    // check for updates to factories
     const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
     if (unitUpdates) {
       for (const update of unitUpdates) {
@@ -52,11 +50,11 @@ export class FactoryRadiusLayer implements Layer {
       }
     }
 
-    // Only show when placing a city
+    // only show when placing a city
     const wasVisible = this.visible;
     this.visible = this.uiState.ghostStructure === UnitType.City;
 
-    // Force redraw when visibility changes
+    // force redraw when visibility changes
     if (this.visible && !wasVisible) {
       this.needsRedraw = true;
     }
@@ -76,7 +74,7 @@ export class FactoryRadiusLayer implements Layer {
   private hasChanged(unit: UnitView): boolean {
     const known = this.factories.has(unit.id());
     const active = unit.isActive();
-    // Factory was added or removed
+    // factory was added or removed
     return known !== active;
   }
 
@@ -84,18 +82,17 @@ export class FactoryRadiusLayer implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return [];
 
-    // Get all active factories owned by the current player
+    // get all active factories owned by the current player
     const factories = this.game
       .units(UnitType.Factory)
       .filter((unit) => unit.isActive() && unit.owner().id() === myPlayer.id());
 
-    // Update tracking set
     this.factories.clear();
     factories.forEach((f) => this.factories.add(f.id()));
 
     const radius = this.game.config().trainStationMaxRange();
 
-    // Collect radius data
+    // collect radius data
     return factories.map((factory) => {
       const tile = factory.tile();
       return {
@@ -119,14 +116,12 @@ export class FactoryRadiusLayer implements Layer {
     for (const [s, e] of a.arcs) {
       if (e - s < 1e-3) continue;
 
-      // Draw outline
       ctx.beginPath();
       ctx.arc(a.x + offsetX, a.y + offsetY, a.r, s, e);
       ctx.strokeStyle = outlineColor;
       ctx.lineWidth = lineWidth + outlineWidth * 2;
       ctx.stroke();
 
-      // Draw colored stroke
       ctx.beginPath();
       ctx.arc(a.x + offsetX, a.y + offsetY, a.r, s, e);
       ctx.strokeStyle = strokeColor;
@@ -147,7 +142,7 @@ export class FactoryRadiusLayer implements Layer {
 
     context.save();
 
-    // Draw only the outer arc segments for the stroke
+    // draw only the outer arc segments for the stroke
     for (const circle of this.factoryRanges) {
       this.drawArcSegments(context, circle);
     }
