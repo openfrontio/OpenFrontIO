@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -27,7 +26,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathfinder = PathFinders.Water(mg);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -177,24 +176,24 @@ export class WarshipExecution implements Execution {
   private huntDownTradeShip() {
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
-      const result = this.pathfinder.nextTile(
+      const result = this.pathfinder.next(
         this.warship.tile(),
         this.warship.targetUnit()!.tile(),
         5,
       );
-      switch (result.type) {
-        case PathFindResultType.Completed:
+      switch (result.status) {
+        case PathStatus.COMPLETE:
           this.warship.owner().captureUnit(this.warship.targetUnit()!);
           this.warship.setTargetUnit(undefined);
           this.warship.move(this.warship.tile());
           return;
-        case PathFindResultType.NextTile:
+        case PathStatus.NEXT:
           this.warship.move(result.node);
           break;
-        case PathFindResultType.Pending:
+        case PathStatus.PENDING:
           this.warship.touch();
           break;
-        case PathFindResultType.PathNotFound:
+        case PathStatus.NOT_FOUND:
           console.log(`path not found to target`);
           break;
       }
@@ -209,22 +208,22 @@ export class WarshipExecution implements Execution {
       }
     }
 
-    const result = this.pathfinder.nextTile(
+    const result = this.pathfinder.next(
       this.warship.tile(),
       this.warship.targetTile()!,
     );
-    switch (result.type) {
-      case PathFindResultType.Completed:
+    switch (result.status) {
+      case PathStatus.COMPLETE:
         this.warship.setTargetTile(undefined);
         this.warship.move(result.node);
         break;
-      case PathFindResultType.NextTile:
+      case PathStatus.NEXT:
         this.warship.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case PathStatus.PENDING:
         this.warship.touch();
         return;
-      case PathFindResultType.PathNotFound:
+      case PathStatus.NOT_FOUND:
         console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
         break;
