@@ -31,6 +31,8 @@ import {
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
+  LobbyClientInfo,
+  LobbyRosterUpdate,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
@@ -598,6 +600,11 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
+  private _lobbySpectators: LobbyClientInfo[] = [];
+  private _lobbyPlayers: LobbyClientInfo[] = [];
+  private _lobbyMaxPlayers: number = 0;
+  private _lobbyMatchStarted: boolean = false;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -689,10 +696,44 @@ export class GameView implements GameMap {
         this.toDelete.add(unit.id());
       }
     });
+
+    // Handle lobby roster updates
+    gu.updates[GameUpdateType.LobbyRoster]?.forEach(
+      (update: LobbyRosterUpdate) => {
+        if (update.players !== undefined) {
+          this._lobbyPlayers = update.players;
+        }
+        if (update.spectators !== undefined) {
+          this._lobbySpectators = update.spectators;
+        }
+        if (update.maxPlayers !== undefined) {
+          this._lobbyMaxPlayers = update.maxPlayers;
+        }
+        if (update.matchStarted !== undefined) {
+          this._lobbyMatchStarted = update.matchStarted;
+        }
+      },
+    );
   }
 
   recentlyUpdatedTiles(): TileRef[] {
     return this.updatedTiles;
+  }
+
+  lobbySpectators(): LobbyClientInfo[] {
+    return this._lobbySpectators;
+  }
+
+  lobbyPlayers(): LobbyClientInfo[] {
+    return this._lobbyPlayers;
+  }
+
+  lobbyMaxPlayers(): number {
+    return this._lobbyMaxPlayers;
+  }
+
+  lobbyMatchStarted(): boolean {
+    return this._lobbyMatchStarted;
   }
 
   nearbyUnits(

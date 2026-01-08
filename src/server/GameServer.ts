@@ -153,7 +153,9 @@ export class GameServer {
       return;
     }
 
+    // Spectators bypass maxPlayers check
     if (
+      !client.isSpectator &&
       this.gameConfig.maxPlayers &&
       this.activeClients.length >= this.gameConfig.maxPlayers
     ) {
@@ -227,6 +229,38 @@ export class GameServer {
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, 0);
+    }
+
+    // Send updated lobby roster to all clients
+    this.sendLobbyRoster();
+  }
+
+  // Sends current lobby roster (players + spectators) to all connected clients.
+  private sendLobbyRoster() {
+    if (this._hasStarted) {
+      return; // Don't send lobby roster updates after game has started
+    }
+
+    const players: { clientID: ClientID; username: string }[] = [];
+    const spectators: { clientID: ClientID; username: string }[] = [];
+
+    for (const client of this.activeClients) {
+      const info = { clientID: client.clientID, username: client.username };
+      if (client.isSpectator) {
+        spectators.push(info);
+      } else {
+        players.push(info);
+      }
+    }
+
+    const rosterMsg = JSON.stringify({
+      type: "lobby_roster",
+      players,
+      spectators,
+    });
+
+    for (const client of this.activeClients) {
+      client.ws.send(rosterMsg);
     }
   }
 
@@ -478,6 +512,8 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+      // Send updated lobby roster after client disconnects
+      this.sendLobbyRoster();
     });
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
@@ -792,6 +828,8 @@ export class GameServer {
         (c) => c.clientID !== clientID,
       );
       this.kickedClients.add(clientID);
+      // Send updated lobby roster after client is removed
+      this.sendLobbyRoster();
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,

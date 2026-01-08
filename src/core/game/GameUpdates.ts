@@ -48,6 +48,7 @@ export enum GameUpdateType {
   ConquestEvent,
   EmbargoEvent,
   GamePaused,
+  LobbyRoster,
 }
 
 export type GameUpdate =
@@ -70,7 +71,8 @@ export type GameUpdate =
   | RailroadUpdate
   | ConquestUpdate
   | EmbargoUpdate
-  | GamePausedUpdate;
+  | GamePausedUpdate
+  | LobbyRosterUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -277,4 +279,20 @@ export interface EmbargoUpdate {
 export interface GamePausedUpdate {
   type: GameUpdateType.GamePaused;
   paused: boolean;
+}
+
+// Represents a client in the lobby roster (player or spectator)
+export interface LobbyClientInfo {
+  clientID: string;
+  username: string;
+}
+
+// Update sent to clients with the current lobby roster state.
+// Used to sync players and spectators between server and client.
+export interface LobbyRosterUpdate {
+  type: GameUpdateType.LobbyRoster;
+  players?: LobbyClientInfo[];
+  spectators?: LobbyClientInfo[];
+  maxPlayers?: number;
+  matchStarted?: boolean;
 }

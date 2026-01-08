@@ -16,6 +16,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { JoinSpectatorExecution } from "./JoinSpectatorExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
@@ -47,6 +48,17 @@ export class Executor {
   }
 
   createExec(intent: Intent): Execution {
+    // Handle join_spectator intent before player check (spectators don't have Player objects)
+    if (intent.type === "join_spectator") {
+      return new JoinSpectatorExecution(intent.clientID);
+    }
+
+    // Block spectators from sending game intents
+    if (this.mg.isSpectator(intent.clientID)) {
+      console.warn(`spectator ${intent.clientID} cannot send game intents`);
+      return new NoOpExecution();
+    }
+
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
@@ -131,6 +143,8 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "update_game_config":
+        return new NoOpExecution();
       default:
         throw new Error(`intent type ${intent} not found`);
     }
