@@ -247,9 +247,9 @@ export class HostLobbyModal extends BaseModal {
                         class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                       >
                         ${maps.map((mapValue) => {
-                          const mapKey = GameMapType[
-                            mapValue as unknown as keyof typeof GameMapType
-                          ] as string | undefined;
+                          const mapKey = Object.entries(GameMapType).find(
+                            ([, v]) => v === mapValue,
+                          )?.[0];
                           return html`
                             <div
                               @click=${() => this.handleMapSelection(mapValue)}
