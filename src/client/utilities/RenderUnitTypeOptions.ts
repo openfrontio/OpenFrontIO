@@ -34,7 +34,7 @@ export function renderUnitTypeOptions({
         @click=${() => toggleUnit(type, isEnabled)}
       >
         <div
-          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight ${isEnabled
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight break-words hyphens-auto ${isEnabled
             ? "text-white"
             : "text-white/60"}"
         >

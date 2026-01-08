@@ -124,7 +124,7 @@ export class MapDisplay extends LitElement {
             </div>`
           : null}
         <div
-          class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight"
+          class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight break-words hyphens-auto"
         >
           ${this.translation || this.mapName}
         </div>

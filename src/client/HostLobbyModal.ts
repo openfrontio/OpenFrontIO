@@ -89,7 +89,7 @@ export class HostLobbyModal extends LitElement {
         @click=${() => onChange(!checked)}
       >
         <div
-          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight ${checked
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight break-words hyphens-auto ${checked
             ? "text-white"
             : "text-white/60"}"
         >
@@ -312,7 +312,7 @@ export class HostLobbyModal extends LitElement {
                       </div>
                       <div class="p-3 text-center border-t border-white/5">
                         <div
-                          class="text-xs font-bold text-white uppercase tracking-wider truncate"
+                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
                         >
                           ${translateText("map.random")}
                         </div>
@@ -375,7 +375,7 @@ export class HostLobbyModal extends LitElement {
                             : ""}"
                         ></difficulty-display>
                         <div
-                          class="text-xs font-bold text-white uppercase tracking-wider text-center w-full mt-1"
+                          class="text-xs font-bold text-white uppercase tracking-wider text-center w-full mt-1 break-words hyphens-auto"
                         >
                           ${translateText(`difficulty.${key.toLowerCase()}`)}
                         </div>
@@ -421,7 +421,7 @@ export class HostLobbyModal extends LitElement {
                       @click=${() => this.handleGameModeSelection(mode)}
                     >
                       <span
-                        class="text-sm font-bold text-white uppercase tracking-widest"
+                        class="text-sm font-bold text-white uppercase tracking-widest break-words hyphens-auto"
                       >
                         ${mode === GameMode.FFA
                           ? translateText("game_mode.ffa")
@@ -465,7 +465,7 @@ export class HostLobbyModal extends LitElement {
                               : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                           >
                             <span
-                              class="text-xs font-bold uppercase tracking-wider text-center text-white"
+                              class="text-xs font-bold uppercase tracking-wider text-center text-white break-words hyphens-auto"
                             >
                               ${typeof o === "string"
                                 ? o === HumansVsNations

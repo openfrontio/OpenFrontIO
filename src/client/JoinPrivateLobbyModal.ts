@@ -274,7 +274,8 @@ export class JoinPrivateLobbyModal extends LitElement {
           class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
           >${label}</span
         >
-        <span class="text-white font-bold text-sm truncate w-full"
+        <span
+          class="text-white font-bold text-sm w-full break-words hyphens-auto"
           >${value}</span
         >
       </div>
