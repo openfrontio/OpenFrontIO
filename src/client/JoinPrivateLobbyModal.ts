@@ -303,7 +303,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           translateText("host_modal.bots"),
           c.bots.toString(),
         )}
-        ${c.playerTeams
+        ${c.gameMode !== "Free For All" && c.playerTeams
           ? this.renderConfigItem(
               typeof c.playerTeams === "string"
                 ? translateText("host_modal.team_type")
@@ -313,6 +313,56 @@ export class JoinPrivateLobbyModal extends LitElement {
                 : c.playerTeams.toString(),
             )
           : html``}
+      </div>
+      ${this.renderDisabledUnits()}
+    `;
+  }
+
+  private renderDisabledUnits(): TemplateResult {
+    if (
+      !this.gameConfig ||
+      !this.gameConfig.disabledUnits ||
+      this.gameConfig.disabledUnits.length === 0
+    ) {
+      return html``;
+    }
+
+    const unitKeys: Record<string, string> = {
+      City: "unit_type.city",
+      Port: "unit_type.port",
+      "Defense Post": "unit_type.defense_post",
+      "SAM Launcher": "unit_type.sam_launcher",
+      "Missile Silo": "unit_type.missile_silo",
+      Warship: "unit_type.warship",
+      Factory: "unit_type.factory",
+      "Atom Bomb": "unit_type.atom_bomb",
+      "Hydrogen Bomb": "unit_type.hydrogen_bomb",
+      MIRV: "unit_type.mirv",
+      "Trade Ship": "stats_modal.unit.trade",
+      Transport: "stats_modal.unit.trans",
+      "MIRV Warhead": "stats_modal.unit.mirvw",
+    };
+
+    return html`
+      <div class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+        <div
+          class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
+        >
+          Disabled Units
+        </div>
+        <div class="flex flex-wrap gap-2">
+          ${this.gameConfig.disabledUnits.map((unit) => {
+            const key = unitKeys[unit];
+            const name = key ? translateText(key) : unit;
+            return html`
+              <span
+                class="px-2 py-1 bg-red-500/20 text-red-200 text-xs rounded font-bold border border-red-500/30"
+              >
+                ${name}
+              </span>
+            `;
+          })}
+        </div>
       </div>
     `;
   }
