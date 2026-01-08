@@ -192,10 +192,15 @@
             data-i18n="main.news"
           ></a>
           <a
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)] relative"
             data-page="page-item-store"
             data-i18n="main.store"
-          ></a>
+          >
+            <span
+              class="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[10px] font-black px-2 py-0.5 rotate-12 shadow-lg whitespace-nowrap"
+              >NEW ITEMS</span
+            >
+          </a>
           <a
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-options"
@@ -297,10 +302,15 @@
           data-i18n="main.news"
         ></a>
         <a
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
           data-page="page-item-store"
           data-i18n="main.store"
-        ></a>
+        >
+          <span
+            class="absolute -top-1 -right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[9px] font-black px-1.5 py-0.5 rotate-12 shadow-lg whitespace-nowrap"
+            >NEW</span
+          >
+        </a>
         <a
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-options"
@@ -432,7 +442,7 @@
               <!-- Right Column: Custom Games & Modes -->
               <div class="lg:col-span-3">
                 <div
-                  class="grid grid-cols-1 grid-rows-3 gap-3 h-80 lg:h-96 relative z-10"
+                  class="grid grid-cols-1 grid-rows-2 lg:grid-rows-3 gap-3 h-80 lg:h-96 relative z-10"
                 >
                   <o-button
                     id="single-player"
@@ -443,13 +453,13 @@
                   ></o-button>
 
                   <div
-                    class="row-span-2 flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
+                    class="lg:row-span-2 flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
                   >
                     <div
                       class="py-2 bg-blue-900/20 border-b border-blue-400/10 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
                       data-i18n="host_modal.title"
                     ></div>
-                    <div class="flex-1 p-2 flex flex-col gap-2">
+                    <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
                       <o-button
                         id="host-lobby-button"
                         data-i18n-title="main.create"
