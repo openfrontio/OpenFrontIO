@@ -193,7 +193,7 @@ function renderBlankPreview(width: number, height: number): TemplateResult {
 const patternCache = new Map<string, string>();
 const DEFAULT_PRIMARY = new Colord("#ffffff").toRgb(); // White
 const DEFAULT_SECONDARY = new Colord("#000000").toRgb(); // Black
-export function generatePreviewDataUrl(
+function generatePreviewDataUrl(
   pattern?: PlayerPattern,
   width?: number,
   height?: number,
