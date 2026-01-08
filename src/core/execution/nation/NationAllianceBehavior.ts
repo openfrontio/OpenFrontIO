@@ -340,14 +340,29 @@ export class NationAllianceBehavior {
     if (!this.player.isAlliedWith(otherPlayer)) return false;
 
     const { difficulty } = this.game.config().gameConfig();
-    const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
 
     // Betray very weak players (For example MIRVed ones)
+    if (difficulty !== Difficulty.Easy && difficulty !== Difficulty.Medium) {
+      const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
+      const otherPlayerOutgoingTroops = otherPlayer
+        .outgoingAttacks()
+        .reduce((sum, attack) => sum + attack.troops(), 0);
+      if (
+        otherPlayer.troops() + otherPlayerOutgoingTroops <
+          otherPlayerMaxTroops * 0.2 &&
+        otherPlayer.troops() < this.player.troops()
+      ) {
+        this.betray(otherPlayer);
+        return true;
+      }
+    }
+
+    // Betray very weak players (similar check as above but for the easier difficulties)
+    // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
     if (
-      difficulty !== Difficulty.Easy &&
-      difficulty !== Difficulty.Medium &&
-      otherPlayer.troops() < otherPlayerMaxTroops * 0.15 &&
-      otherPlayer.troops() < this.player.troops()
+      (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
+      this.player.isAlliedWith(otherPlayer) &&
+      this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
       return true;
