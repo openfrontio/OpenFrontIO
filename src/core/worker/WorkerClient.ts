@@ -67,11 +67,6 @@ export class WorkerClient {
         }
       });
 
-      console.log(
-        "WorkerClient: sending init message to worker",
-        this.gameStartInfo,
-      );
-
       this.worker.postMessage({
         type: "init",
         id: messageId,
