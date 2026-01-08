@@ -161,35 +161,32 @@ export class SinglePlayerModal extends BaseModal {
             ${translateText("main.solo") || "Solo"}
           </span>
 
-          <button
-            @click=${this.toggleAchievements}
-            class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-              .showAchievements
-              ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-              : "text-white/60"}"
-          >
-            <img
-              src="/images/MedalIconWhite.svg"
-              class="w-4 h-4 opacity-80 shrink-0"
-              style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
-            />
-            <span
-              class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
-              >${translateText("single_modal.toggle_achievements")}</span
-            >
-          </button>
+          ${hasLinkedAccount(this.userMeResponse)
+            ? html`<button
+                @click=${this.toggleAchievements}
+                class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
+                  .showAchievements
+                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                  : "text-white/60"}"
+              >
+                <img
+                  src="/images/MedalIconWhite.svg"
+                  class="w-4 h-4 opacity-80 shrink-0"
+                  style="${this.showAchievements
+                    ? ""
+                    : "filter: grayscale(1);"}"
+                />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                  >${translateText("single_modal.toggle_achievements")}</span
+                >
+              </button>`
+            : this.renderNotLoggedInBanner()}
         </div>
 
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 mr-1">
           <div class="max-w-5xl mx-auto space-y-6">
-            ${!hasLinkedAccount(this.userMeResponse)
-              ? html`<!-- Sign In Banner -->
-                  <div class="flex justify-end pt-4">
-                    ${this.renderNotLoggedInBanner()}
-                  </div>`
-              : html``}
-
             <!-- Map Selection -->
             <div class="space-y-6">
               <div
