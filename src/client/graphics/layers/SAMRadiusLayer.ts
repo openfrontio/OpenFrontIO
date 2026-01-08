@@ -9,10 +9,7 @@ import type {
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import {
-  computeUncoveredArcIntervals,
-  Interval,
-} from "./utils/circleUnion";
+import { computeUncoveredArcIntervals, Interval } from "./utils/circleUnion";
 
 interface SAMRadius {
   x: number;

@@ -4,10 +4,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import {
-  computeUncoveredArcIntervals,
-  Interval,
-} from "./utils/circleUnion";
+import { computeUncoveredArcIntervals, Interval } from "./utils/circleUnion";
 
 interface FactoryRadius {
   x: number;
