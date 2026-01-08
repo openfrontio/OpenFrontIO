@@ -53,7 +53,7 @@ describe("FluentSlider", () => {
 
   describe("Value Updates from Range Slider", () => {
     it("should update value when slider input changes", async () => {
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
       expect(rangeInput).toBeTruthy();
@@ -67,7 +67,7 @@ describe("FluentSlider", () => {
     });
 
     it("should update value when slider change event fires", async () => {
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
 
@@ -84,7 +84,7 @@ describe("FluentSlider", () => {
       const eventSpy = vi.fn();
       slider.addEventListener("value-changed", eventSpy);
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
       rangeInput.valueAsNumber = 200;
@@ -107,7 +107,7 @@ describe("FluentSlider", () => {
       const eventSpy = vi.fn();
       slider.addEventListener("value-changed", eventSpy);
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
 
@@ -138,7 +138,7 @@ describe("FluentSlider", () => {
 
       slider.addEventListener("value-changed", mockHandler);
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
       rangeInput.valueAsNumber = 250;
@@ -163,7 +163,7 @@ describe("FluentSlider", () => {
 
       slider.addEventListener("value-changed", mockHandler);
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
       rangeInput.valueAsNumber = 350;
@@ -221,7 +221,7 @@ describe("FluentSlider", () => {
 
   describe("Component Structure", () => {
     it("should render a range input", () => {
-      const rangeInput = slider.renderRoot.querySelector('input[type="range"]');
+      const rangeInput = slider.querySelector('input[type="range"]');
       expect(rangeInput).toBeTruthy();
     });
 
@@ -231,7 +231,7 @@ describe("FluentSlider", () => {
       slider.max = 400;
       slider.step = 1;
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
 
@@ -240,11 +240,11 @@ describe("FluentSlider", () => {
       expect(rangeInput.step).toBe("1");
     });
 
-    it("should render an editable span for the value display", () => {
-      const editableSpan = slider.renderRoot.querySelector("span.editable");
-      expect(editableSpan).toBeTruthy();
-      expect(editableSpan?.getAttribute("role")).toBe("button");
-      expect(editableSpan?.getAttribute("tabindex")).toBe("0");
+    it("should render a span for the value display with role button", () => {
+      const valueSpan = slider.querySelector('span[role="button"]');
+      expect(valueSpan).toBeTruthy();
+      expect(valueSpan?.getAttribute("role")).toBe("button");
+      expect(valueSpan?.getAttribute("tabindex")).toBe("0");
     });
   });
 
@@ -260,7 +260,7 @@ describe("FluentSlider", () => {
       slider.value = 0;
       await slider.updateComplete;
 
-      const rangeInput = slider.renderRoot.querySelector(
+      const rangeInput = slider.querySelector(
         'input[type="range"]',
       ) as HTMLInputElement;
 

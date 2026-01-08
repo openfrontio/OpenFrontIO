@@ -70,7 +70,10 @@ export class FluentSlider extends LitElement {
   }
 
   render() {
-    const percentage = ((this.value - this.min) / (this.max - this.min)) * 100;
+    const percentage =
+      this.max === this.min
+        ? 0
+        : ((this.value - this.min) / (this.max - this.min)) * 100;
     return html`
       <div
         class="flex flex-col items-center justify-center gap-1 w-full text-center"
