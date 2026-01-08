@@ -1092,10 +1092,10 @@ export class HostLobbyModal extends LitElement {
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
-    this.close();
+    // this.close();
     const config = await getServerConfigFromClient();
     const response = await fetch(
-      `/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
+      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
         method: "POST",
         headers: {
