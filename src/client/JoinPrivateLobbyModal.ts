@@ -10,6 +10,7 @@ import {
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMode } from "../core/game/Game";
+import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
 import { BaseModal } from "./components/BaseModal";
@@ -28,6 +29,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private currentLobbyId: string = "";
 
   private playersInterval: NodeJS.Timeout | null = null;
+  private userSettings: UserSettings = new UserSettings();
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -351,6 +353,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
 
   public open(id: string = "") {
     super.open();
+    this.lobbyIdVisible = this.userSettings.get(
+      "settings.lobbyIdVisibility",
+      true,
+    );
     if (id) {
       this.setLobbyId(id);
       this.joinLobby();
