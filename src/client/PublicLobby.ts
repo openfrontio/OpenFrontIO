@@ -367,30 +367,31 @@ export class PublicLobby extends LitElement {
   private lobbyClicked(lobby: GameInfo) {
     if (this.isButtonDebounced) return;
 
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
-
     this.isButtonDebounced = true;
     setTimeout(() => {
       this.isButtonDebounced = false;
     }, this.debounceDelay);
 
     if (this.currLobby === null) {
+      // Validate username only when joining a new lobby
+      const usernameInput = document.querySelector("username-input") as any;
+      if (
+        usernameInput &&
+        typeof usernameInput.isValid === "function" &&
+        !usernameInput.isValid()
+      ) {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: usernameInput.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+        return;
+      }
+
       this.isLobbyHighlighted = true;
       this.currLobby = lobby;
       this.startJoiningAnimation();
