@@ -32,7 +32,7 @@ export abstract class BaseModal extends LitElement {
 
   /**
    * Handle Escape key press to close the modal.
-   * Only closes if the modal is open and the event originated within this component.
+   * Only closes if the modal is open.
    */
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isModalOpen) {
