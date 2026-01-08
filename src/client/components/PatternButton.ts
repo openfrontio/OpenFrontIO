@@ -138,7 +138,7 @@ export class PatternButton extends LitElement {
         </button>
 
         <div class="w-full mt-2">
-          ${this.requiresPurchase
+          ${this.requiresPurchase && this.pattern?.product
             ? html`
                 <button
                   class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
@@ -147,7 +147,7 @@ export class PatternButton extends LitElement {
                 >
                   ${translateText("territory_patterns.purchase")}
                   <span class="ml-1 text-white/60"
-                    >(${this.pattern!.product!.price})</span
+                    >(${this.pattern.product.price})</span
                   >
                 </button>
               `
