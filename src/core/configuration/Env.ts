@@ -89,7 +89,4 @@ export const Env = {
   get ADMIN_TOKEN() {
     return getEnv("ADMIN_TOKEN");
   },
-  get NUM_WORKERS() {
-    return getEnv("NUM_WORKERS");
-  },
 };

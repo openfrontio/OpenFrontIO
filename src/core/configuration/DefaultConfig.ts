@@ -57,6 +57,7 @@ const numPlayersConfig = {
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
+  [GameMapType.BritanniaClassic]: [50, 30, 20],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EastAsia]: [50, 30, 20],
   [GameMapType.Europe]: [100, 70, 50],
@@ -164,17 +165,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     return token;
   }
-  numWorkers(): number {
-    const raw = Env.NUM_WORKERS;
-    if (!raw) {
-      throw new Error("NUM_WORKERS not set");
-    }
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      throw new Error(`Invalid NUM_WORKERS value "${raw}"`);
-    }
-    return Math.floor(parsed);
-  }
+  abstract numWorkers(): number;
   abstract env(): GameEnv;
   turnIntervalMs(): number {
     return 100;

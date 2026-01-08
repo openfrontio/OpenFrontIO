@@ -70,7 +70,6 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
@@ -122,7 +121,6 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
@@ -174,7 +172,6 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
@@ -226,7 +223,6 @@ jobs:
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           DOMAIN: ${{ vars.DOMAIN }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
-          NUM_WORKERS: ${{ vars.NUM_WORKERS }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
