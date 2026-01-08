@@ -38,7 +38,6 @@ export class KeybindsModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
 
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
@@ -61,13 +60,8 @@ export class KeybindsModal extends LitElement {
   }
 
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (!this.modalEl?.isModalOpen) return;
-  };
 
   private handleKeybindChange(
     e: CustomEvent<{
@@ -77,7 +71,6 @@ export class KeybindsModal extends LitElement {
       prevValue?: string;
     }>,
   ) {
-    console.log("Keybind change event:", e);
     const { action, value, key, prevValue } = e.detail;
 
     const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
@@ -155,7 +148,7 @@ export class KeybindsModal extends LitElement {
     const entry = this.keybinds[action];
     if (!entry) return undefined;
     if (entry.value === "Null") return "";
-    return entry.key ?? entry.value ?? undefined;
+    return entry.key || entry.value || undefined;
   }
 
   render() {
