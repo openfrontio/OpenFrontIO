@@ -61,9 +61,9 @@ export class DonateGoldExecution implements Execution {
         this.recipient.updateRelation(this.sender, relationUpdate);
       }
 
-      // Select emoji based on donation value
       // Only AI nations auto-respond with emojis, human players should not
       if (this.recipient.type() === PlayerType.Nation) {
+        // Select emoji based on donation value
         const emoji =
           relationUpdate >= 50
             ? EMOJI_LOVE
