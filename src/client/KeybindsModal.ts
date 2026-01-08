@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { formatKeyForDisplay, translateText } from "../client/Utils";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 
@@ -88,14 +88,7 @@ export class KeybindsModal extends LitElement {
 
     if (values.includes(value) && value !== "Null") {
       // Format key for user-friendly display
-      let displayKey = value;
-      if (/^Digit\d$/.test(value)) {
-        displayKey = value.replace("Digit", "");
-      } else if (/^Key[A-Z]$/.test(value)) {
-        displayKey = value.replace("Key", "");
-      } else if (value === "Space") {
-        displayKey = "Space";
-      }
+      const displayKey = formatKeyForDisplay(value);
       // Use heads-up-message modal for error popup
       window.dispatchEvent(
         new CustomEvent("show-message", {

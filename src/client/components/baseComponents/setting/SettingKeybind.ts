@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { translateText } from "../../../../client/Utils";
+import { formatKeyForDisplay, translateText } from "../../../../client/Utils";
 
 @customElement("setting-keybind")
 export class SettingKeybind extends LitElement {
@@ -70,16 +70,7 @@ export class SettingKeybind extends LitElement {
 
   private displayKey(key: string): string {
     if (!key) return "Press a key";
-    if (key === " ") return "Space";
-    if (key === "Space") return "Space";
-    if (/^Digit\d$/.test(key)) {
-      return key.replace("Digit", "");
-    }
-    if (/^Key[A-Z]$/.test(key)) {
-      return key.replace("Key", "");
-    }
-    // Add more mappings as needed (e.g., Arrow keys, etc.)
-    return key.charAt(0).toUpperCase() + key.slice(1);
+    return formatKeyForDisplay(key);
   }
 
   private startListening() {

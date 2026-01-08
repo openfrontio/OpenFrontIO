@@ -61,6 +61,42 @@ export function renderNumber(
   }
 }
 
+/**
+ * Formats a keyboard key code for user-friendly display.
+ * Handles empty values, spaces, and normalizes key codes like "Digit1" and "KeyA".
+ *
+ * @param value - The key code to format (e.g., "Digit1", "KeyA", "Space")
+ * @returns The formatted key for display (e.g., "1", "A", "Space")
+ *
+ * @example
+ * formatKeyForDisplay("Digit5") // returns "5"
+ * formatKeyForDisplay("KeyA") // returns "A"
+ * formatKeyForDisplay("Space") // returns "Space"
+ * formatKeyForDisplay(" ") // returns "Space"
+ * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
+ * formatKeyForDisplay("") // returns ""
+ */
+export function formatKeyForDisplay(value: string): string {
+  // Handle empty string
+  if (!value) return "";
+
+  // Handle space character or "Space" key
+  if (value === " " || value === "Space") return "Space";
+
+  // Handle DigitN pattern (e.g., "Digit1" -> "1")
+  if (/^Digit\d$/.test(value)) {
+    return value.replace("Digit", "");
+  }
+
+  // Handle KeyX pattern (e.g., "KeyA" -> "A")
+  if (/^Key[A-Z]$/.test(value)) {
+    return value.replace("Key", "");
+  }
+
+  // Fallback: capitalize first letter
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export function createCanvas(): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
 
