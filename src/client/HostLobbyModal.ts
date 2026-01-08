@@ -1116,7 +1116,6 @@ export class HostLobbyModal extends BaseModal {
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
-    // this.close();
     const config = await getServerConfigFromClient();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
