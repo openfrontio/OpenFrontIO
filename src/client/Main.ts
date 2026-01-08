@@ -91,7 +91,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
-    showPage: (pageId: string) => void;
+    showPage?: (pageId: string) => void;
   }
 
   // Extend the global interfaces to include your custom events
@@ -149,7 +149,8 @@ class Client {
       const trimmed = version.trim();
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
       versionElements.forEach((el) => {
-        el.innerHTML = `${displayVersion}<br>`;
+        el.textContent = displayVersion;
+        el.appendChild(document.createElement("br"));
       });
     }
 
