@@ -684,51 +684,24 @@
           const backdrop = document.getElementById("mobile-menu-backdrop");
           if (!sidebar || !backdrop) return;
 
-          // robust check: visually shown?
-          const isCurrentlyOpen =
-            sidebar.classList.contains("translate-x-0") ||
-            sidebar.classList.contains("open");
-          const shouldOpen = !isCurrentlyOpen;
+          const isOpen = sidebar.classList.contains("open");
 
-          // Use Tailwind utility classes to force visible state (no raw CSS)
-          if (shouldOpen) {
-            sidebar.classList.add("open");
-            sidebar.classList.remove("-translate-x-full");
-            sidebar.classList.add("translate-x-0", "z-[40001]");
-            backdrop.classList.remove("hidden", "pointer-events-none");
-            backdrop.classList.add(
-              "block",
-              "pointer-events-auto",
-              "fixed",
-              "inset-0",
-              "bg-black/50",
-              "z-[40000]",
-            );
-            document.documentElement.classList.add("overflow-hidden");
-          } else {
+          if (isOpen) {
             sidebar.classList.remove("open");
-            sidebar.classList.add("-translate-x-full");
-            sidebar.classList.remove("translate-x-0", "z-[40001]");
-            backdrop.classList.add("hidden", "pointer-events-none");
-            backdrop.classList.remove(
-              "block",
-              "pointer-events-auto",
-              "fixed",
-              "inset-0",
-              "bg-black/50",
-              "z-[40000]",
-            );
+            backdrop.classList.remove("open");
             document.documentElement.classList.remove("overflow-hidden");
+            sidebar.setAttribute("aria-hidden", "true");
+          } else {
+            sidebar.classList.add("open");
+            backdrop.classList.add("open");
+            document.documentElement.classList.add("overflow-hidden");
+            sidebar.setAttribute("aria-hidden", "false");
           }
 
           const hb = document.getElementById("hamburger-btn");
-          if (hb) {
-            hb.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-            hb.style.opacity = "1";
-            hb.style.pointerEvents = "auto";
-          }
+          if (hb) hb.setAttribute("aria-expanded", (!isOpen).toString());
         } catch (err) {
-          console.error("fallback toggle failed", err);
+          console.error("Toggle failed", err);
         }
       };
 
