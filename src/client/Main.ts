@@ -808,9 +808,13 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    new Client().initialize();
+  });
+} else {
   new Client().initialize();
-});
+}
 
 async function getTurnstileToken(): Promise<{
   token: string;
