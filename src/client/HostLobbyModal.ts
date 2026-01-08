@@ -112,6 +112,7 @@ export class HostLobbyModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
+      this.leaveLobby();
       this.close();
     }
   };
@@ -127,7 +128,10 @@ export class HostLobbyModal extends LitElement {
         >
           <div class="flex items-center gap-4 flex-1">
             <button
-              @click=${() => this.close()}
+              @click=${() => {
+                this.leaveLobby();
+                this.close();
+              }}
               class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
               aria-label="Back"
             >
@@ -874,7 +878,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   public close() {
-    this.leaveLobby();
     console.log("Closing host lobby modal");
     if (this.inline) {
       if ((window as any).showPage) {
