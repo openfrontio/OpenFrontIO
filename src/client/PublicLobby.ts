@@ -128,7 +128,7 @@ export class PublicLobby extends LitElement {
           : ""}"
       >
         <!-- Map Image Area -->
-        <div class="flex-1 w-full relative overflow-hidden bg-[#4684b4] p-8">
+        <div class="flex-1 w-full relative overflow-hidden bg-blue-500/85 p-8">
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
@@ -140,7 +140,7 @@ export class PublicLobby extends LitElement {
 
         <!-- Content Banner -->
         <div
-          class="relative w-full p-5 flex flex-col gap-1 text-left z-10 bg-gray-900/95 backdrop-blur-xl border-t border-white/10"
+          class="relative w-full p-5 flex flex-col gap-1 text-left z-10 bg-slate-900/95 backdrop-blur-xl border-t border-white/10"
         >
           <div class="flex justify-between items-end w-full">
             <div class="flex flex-col gap-1">
