@@ -269,14 +269,14 @@ export class SinglePlayerModal extends BaseModal {
                         .useRandomMap
                         ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleRandomMapToggle}
+                      @click=${this.handleSelectRandomMap}
                     >
                       <div
                         class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
                       >
                         <img
                           src=${randomMap}
-                          alt="Random Map"
+                          alt=${translateText("map.random")}
                           class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
                         />
                       </div>
@@ -718,7 +718,7 @@ export class SinglePlayerModal extends BaseModal {
     this.useRandomMap = false;
   }
 
-  private handleRandomMapToggle() {
+  private handleSelectRandomMap() {
     this.useRandomMap = true;
   }
 

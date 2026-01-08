@@ -183,7 +183,7 @@ export class HostLobbyModal extends BaseModal {
                     ></path>
                   </svg>`}
             </button>
-            <div
+            <button
               @click=${this.copyToClipboard}
               @dblclick=${(e: Event) => {
                 (e.currentTarget as HTMLElement).classList.add("select-all");
@@ -191,15 +191,17 @@ export class HostLobbyModal extends BaseModal {
               @mouseleave=${(e: Event) => {
                 (e.currentTarget as HTMLElement).classList.remove("select-all");
               }}
-              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
+              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
               title="${translateText("common.click_to_copy")}"
+              aria-label="${translateText("common.click_to_copy")}"
+              type="button"
             >
               ${this.copySuccess
                 ? translateText("common.copied")
                 : this.lobbyIdVisible
                   ? this.lobbyId
                   : "••••••••"}
-            </div>
+            </button>
           </div>
         </div>
 
@@ -285,14 +287,14 @@ export class HostLobbyModal extends BaseModal {
                         .useRandomMap
                         ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleRandomMapToggle}
+                      @click=${this.handleSelectRandomMap}
                     >
                       <div
                         class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
                       >
                         <img
                           src=${randomMap}
-                          alt="Random Map"
+                          alt=${translateText("map.random")}
                           class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
                         />
                       </div>
@@ -917,7 +919,7 @@ export class HostLobbyModal extends BaseModal {
     }
   }
 
-  private async handleRandomMapToggle() {
+  private async handleSelectRandomMap() {
     this.useRandomMap = true;
     this.selectedMap = this.getRandomMap();
     await this.loadNationCount();
