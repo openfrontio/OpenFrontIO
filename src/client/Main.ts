@@ -291,6 +291,8 @@ class Client {
           ) {
             patternButton.className =
               "w-full h-[60px] border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
+            patternButton.style.backgroundSize = "auto 100%";
+            patternButton.style.backgroundRepeat = "repeat-x";
             desktopWrapper.appendChild(patternButton);
           }
         } else {
@@ -303,6 +305,8 @@ class Client {
           ) {
             patternButton.className =
               "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
+            patternButton.style.backgroundSize = "";
+            patternButton.style.backgroundRepeat = "";
             mobileParent.appendChild(patternButton);
           }
         }
