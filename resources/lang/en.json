@@ -588,6 +588,7 @@
     "other_team": "{team} team has won!",
     "you_won": "You Won!",
     "other_won": "{player} has won!",
+    "nation_won": "Nation {nation} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
     "spectate": "Spectate",

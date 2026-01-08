@@ -334,6 +334,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  disableNavMesh(): boolean {
+    return this._gameConfig.disableNavMesh ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
