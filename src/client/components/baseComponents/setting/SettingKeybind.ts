@@ -42,9 +42,12 @@ export class SettingKeybind extends LitElement {
             ${this.listening
               ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
               : ""}"
+            role="button"
+            aria-label="${translateText("user_setting.press_a_key")}"
             tabindex="0"
             @keydown=${this.handleKeydown}
             @click=${this.startListening}
+            @blur=${this.handleBlur}
           >
             ${this.listening ? "..." : this.displayKey(currentValue)}
           </div>
@@ -80,6 +83,18 @@ export class SettingKeybind extends LitElement {
 
   private handleKeydown(e: KeyboardEvent) {
     if (!this.listening) return;
+
+    // Allow Tab and Escape to work normally (don't trap focus)
+    if (e.key === "Tab" || e.key === "Escape") {
+      if (e.key === "Escape") {
+        // Cancel listening on Escape
+        this.listening = false;
+        this.requestUpdate();
+      }
+      return;
+    }
+
+    // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
     const code = e.code;
@@ -97,6 +112,11 @@ export class SettingKeybind extends LitElement {
 
     // If parent rejects (restores value), this.value will be set back externally
     // Otherwise, keep the new value
+    this.listening = false;
+    this.requestUpdate();
+  }
+
+  private handleBlur() {
     this.listening = false;
     this.requestUpdate();
   }
