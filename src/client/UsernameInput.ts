@@ -56,7 +56,7 @@ export class UsernameInput extends LitElement {
 
   render() {
     return html`
-      <div class="flex items-center w-full h-full gap-2 px-4">
+      <div class="flex items-center w-full h-full gap-2">
         <input
           type="text"
           .value=${this.clanTag}
