@@ -59,7 +59,7 @@ export function renderPlayerFlag(
       const now = performance.now();
       const offset = now % duration;
       if (!duration) console.warn(`No animation duration for: ${colorValue}`);
-      layer.classList.add(`animate-${colorValue}`);
+      layer.classList.add(`flag-color-${colorValue}`);
       layer.style.animationDelay = `-${offset}ms`;
     } else {
       layer.style.backgroundColor = colorValue;
