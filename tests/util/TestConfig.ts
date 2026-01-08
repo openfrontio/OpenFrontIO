@@ -14,6 +14,10 @@ export class TestConfig extends DefaultConfig {
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
 
+  disableNavMesh(): boolean {
+    return this.gameConfig().disableNavMesh ?? true;
+  }
+
   radiusPortSpawn(): number {
     return 1;
   }
