@@ -245,7 +245,7 @@ export type TrajectoryTile = {
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
-    destination?: TileRef;
+    targetTile?: TileRef;
   };
 
   [UnitType.Warship]: {
