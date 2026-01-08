@@ -40,10 +40,7 @@ export class SAMRadiusLayer implements Layer {
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
-    this.hoveredShow =
-      !!types &&
-      (types.indexOf(UnitType.SAMLauncher) !== -1 ||
-        types.indexOf(UnitType.City) !== -1);
+    this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
     this.updateVisibility();
   }
 
@@ -86,7 +83,6 @@ export class SAMRadiusLayer implements Layer {
     this.ghostShow =
       this.uiState.ghostStructure === UnitType.MissileSilo ||
       this.uiState.ghostStructure === UnitType.SAMLauncher ||
-      this.uiState.ghostStructure === UnitType.City ||
       this.uiState.ghostStructure === UnitType.AtomBomb ||
       this.uiState.ghostStructure === UnitType.HydrogenBomb;
     this.updateVisibility();
