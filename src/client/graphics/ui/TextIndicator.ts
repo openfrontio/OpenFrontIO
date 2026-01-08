@@ -4,16 +4,17 @@ import { UIElement } from "./UIElement";
 
 const MIN_TEXT_ZOOM = 1.1;
 
-export class TextIndicator extends UIElement {
+export class TextIndicator implements UIElement {
   private fontSize: number = 8;
   private font: string = "Overpass, sans-serif";
   private cell: Cell;
+  private lifeTime: number = 0;
 
   constructor(
     private transformHandler: TransformHandler,
     private text: string,
-    x: number,
-    y: number,
+    public x: number,
+    public y: number,
     private duration: number,
     private riseDistance: number = 15,
     private color: { r: number; g: number; b: number } = {
@@ -22,10 +23,8 @@ export class TextIndicator extends UIElement {
       b: 255,
     },
   ) {
-    super(x, y);
     this.cell = new Cell(this.x + 0.5, this.y + 0.5);
   }
-
   render(ctx: CanvasRenderingContext2D, delta: number): boolean {
     this.lifeTime += delta;
     if (this.lifeTime >= this.duration) {

@@ -9,28 +9,28 @@ const FILL_ALPHA_OFFSET = 0.6;
 /**
  * Draw an area with two disks
  */
-export class CircleArea extends UIElement {
+export class CircleArea implements UIElement {
   private offset = 0;
   private readonly dashSize: number;
   private readonly rotationSpeed = 20;
   private readonly baseAlpha = 0.9;
   private readonly cell: Cell;
   private readonly animationDuration = 150;
+  protected ended: boolean = false;
+  protected lifeTime: number = 0;
 
   constructor(
     private transformHandler: TransformHandler,
-    protected x: number,
-    protected y: number,
+    public x: number,
+    public y: number,
     private innerDiameter: number,
     private outerDiameter: number,
   ) {
-    super(x, y);
-    this.cell = new Cell(this.x, this.y);
+    this.cell = new Cell(this.x + 0.5, this.y + 0.5);
     // Compute a dash length that produces N dashes around the circle
     const numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
     this.dashSize = (Math.PI / numDash) * this.outerDiameter;
   }
-
   render(ctx: CanvasRenderingContext2D, delta: number): boolean {
     this.lifeTime += delta;
 
@@ -105,7 +105,7 @@ export class NukeTelegraph extends CircleArea {
 
   render(ctx: CanvasRenderingContext2D, delta: number): boolean {
     if (!this.ended && !this.nuke.isActive()) {
-      this.end();
+      this.ended = true;
       this.lifeTime = 0; // reset lifetime to reuse animation logic
     }
     return super.render(ctx, delta);

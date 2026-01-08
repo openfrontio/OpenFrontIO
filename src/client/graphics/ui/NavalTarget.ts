@@ -9,7 +9,7 @@ const SHADOW_OFFSET_Y = 2;
 /**
  * Draw a simple zoom-aware target
  */
-export class Target extends UIElement {
+export class Target implements UIElement {
   private offset = 0;
   private readonly rotationSpeed = 20;
   private readonly dashSize: number;
@@ -17,20 +17,20 @@ export class Target extends UIElement {
   private readonly cell: Cell;
   private readonly animationDuration = 150;
   private animationElapsedTime = 0;
+  protected ended: boolean = false;
+  protected lifeTime: number = 0;
 
   constructor(
     private transformHandler: TransformHandler,
-    protected x: number,
-    protected y: number,
+    public x: number,
+    public y: number,
     private radius: number,
   ) {
-    super(x, y);
     this.outerRadius = radius * 2 - 4;
     // 2 dashes per circle, with a 10 pixel gap
     this.dashSize = Math.PI * this.outerRadius - 10;
     this.cell = new Cell(this.x + 0.5, this.y + 0.5);
   }
-
   render(ctx: CanvasRenderingContext2D, delta: number): boolean {
     this.lifeTime += delta;
 
@@ -124,7 +124,7 @@ export class NavalTarget extends Target {
       (!this.unit.isActive() ||
         (this.unit.type() === UnitType.TransportShip && this.unit.retreating()))
     ) {
-      this.end();
+      this.ended = true;
     }
     return super.render(ctx, delta);
   }
