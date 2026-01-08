@@ -1,6 +1,10 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType } from "../../core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  hasUnusualThumbnailSize,
+} from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
@@ -19,6 +23,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Asia: "Asia",
   Mars: "Mars",
   SouthAmerica: "South America",
+  BritanniaClassic: "Britannia Classic",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
@@ -48,6 +53,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   StraitOfHormuz: "Strait of Hormuz",
   Surrounded: "Surrounded",
   Didier: "Didier",
+  AmazonRiver: "Amazon River",
 };
 
 @customElement("map-display")
@@ -153,6 +159,14 @@ export class MapDisplay extends LitElement {
   }
 
   render() {
+    const mapType = GameMapType[this.mapKey as keyof typeof GameMapType];
+    const isUnusualThumbnailSize = mapType
+      ? hasUnusualThumbnailSize(mapType)
+      : false;
+    const objectFitStyle = isUnusualThumbnailSize
+      ? "object-fit: cover; object-position: center;"
+      : "";
+
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
         ${this.isLoading
@@ -164,6 +178,7 @@ export class MapDisplay extends LitElement {
                 src="${this.mapWebpPath}"
                 alt="${this.mapKey}"
                 class="option-image"
+                style="${objectFitStyle}"
               />`
             : html`<div class="option-image">Error</div>`}
         ${this.showMedals

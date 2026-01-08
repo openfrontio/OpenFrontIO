@@ -200,7 +200,7 @@ export class SinglePlayerModal extends LitElement {
                   <img
                     src=${randomMap}
                     alt="Random Map"
-                    style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
+                    class="w-full aspect-2/1 object-cover rounded-lg"
                   />
                 </div>
                 <div class="option-card-title">
@@ -457,7 +457,7 @@ export class SinglePlayerModal extends LitElement {
                       min="0"
                       max="120"
                       .value=${String(this.maxTimerValue ?? "")}
-                      style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                      class="w-15 text-black text-right rounded-lg"
                       @input=${this.handleMaxTimerValueChanges}
                       @keydown=${this.handleMaxTimerValueKeyDown}
                     />`}
@@ -467,17 +467,11 @@ export class SinglePlayerModal extends LitElement {
               </label>
             </div>
 
-            <hr
-              style="width: 100%; border-top: 1px solid #444; margin: 16px 0;"
-            />
-            <div
-              style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
-            >
+            <hr class="w-full border-t border-t-[#444] my-4" />
+            <div class="mt-2 mb-3 font-bold text-[#ccc] text-center">
               ${translateText("single_modal.enables_title")}
             </div>
-            <div
-              style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
-            >
+            <div class="flex flex-wrap justify-center gap-3">
               ${renderUnitTypeOptions({
                 disabledUnits: this.disabledUnits,
                 toggleUnit: this.toggleUnit.bind(this),

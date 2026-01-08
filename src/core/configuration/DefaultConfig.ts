@@ -12,6 +12,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  PublicGameModifiers,
   Quads,
   TerrainType,
   TerraNullius,
@@ -56,6 +57,7 @@ const numPlayersConfig = {
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
+  [GameMapType.BritanniaClassic]: [50, 30, 20],
   [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
   [GameMapType.EastAsia]: [50, 30, 20],
   [GameMapType.Europe]: [100, 70, 50],
@@ -89,6 +91,7 @@ const numPlayersConfig = {
   [GameMapType.StraitOfHormuz]: [40, 36, 30],
   [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
   [GameMapType.Didier]: [100, 70, 50],
+  [GameMapType.AmazonRiver]: [50, 40, 30],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -175,11 +178,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
     map: GameMapType,
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
   ): number {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    // Apply compact map 75% player reduction
+    if (isCompactMap) {
+      p = Math.max(3, Math.floor(p * 0.25));
+    }
     if (numPlayerTeams === undefined) return p;
     switch (numPlayerTeams) {
       case Duos:
@@ -216,6 +224,20 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   enableMatchmaking(): boolean {
     return false;
+  }
+
+  getRandomPublicGameModifiers(): PublicGameModifiers {
+    return {
+      isRandomSpawn: Math.random() < 0.1, // 10% chance
+      isCompact: Math.random() < 0.05, // 5% chance
+    };
+  }
+
+  supportsCompactMapForTeams(map: GameMapType): boolean {
+    // Maps with smallest player count < 50 don't support compact map in team games
+    // The smallest player count is the 3rd number in numPlayersConfig
+    const [, , smallest] = numPlayersConfig[map] ?? [50, 30, 20];
+    return smallest >= 50;
   }
 }
 
