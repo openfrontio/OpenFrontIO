@@ -218,16 +218,6 @@
 }
 
 .setting-input.slider {
-  -webkit-appearance: none;
-  width: 180px;
-  height: 10px;
-  background: linear-gradient(to right, #2196f3 50%, #444 50%);
-  border-radius: 5px;
-  outline: none;
-  transition: background 0.3s;
-}
-
-.setting-input.slider {
   width: 100%;
   height: 12px;
   background: transparent;
