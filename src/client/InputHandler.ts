@@ -185,7 +185,7 @@ export class InputHandler {
             })();
 
             if (val === undefined) return [k, undefined];
-            if (val === "Null") return [k, ""]; // preserve unbound
+            if (val === "Null") return [k, undefined]; // use default
             return [k, val];
           })
           .filter(([, v]) => typeof v === "string"),
