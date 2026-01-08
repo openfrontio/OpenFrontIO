@@ -472,6 +472,7 @@ export const WinnerSchema = z
   .union([
     z.tuple([z.literal("player"), ID]).rest(ID),
     z.tuple([z.literal("team"), SafeString]).rest(ID),
+    z.tuple([z.literal("nation"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;

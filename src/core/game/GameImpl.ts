@@ -718,7 +718,9 @@ export class GameImpl implements Game {
       ];
     } else {
       const clientId = winner.clientID();
-      if (clientId === null) return;
+      if (clientId === null) {
+        return ["nation", winner.name()];
+      }
       return [
         "player",
         clientId,
