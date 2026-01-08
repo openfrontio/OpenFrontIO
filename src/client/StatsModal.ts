@@ -198,7 +198,7 @@ export class StatsModal extends BaseModal {
                       ? "🥈"
                       : index === 2
                         ? "🥉"
-                        : "#" + (index + 1);
+                        : String(index + 1);
 
                 return html`
                   <tr
