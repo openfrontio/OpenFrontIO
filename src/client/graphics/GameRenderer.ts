@@ -30,6 +30,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { FactoryRadiusLayer } from "./layers/FactoryRadiusLayer";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
@@ -212,6 +213,7 @@ export function createRenderer(
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
+  const factoryRadiusLayer = new FactoryRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -252,6 +254,7 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
+    factoryRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),

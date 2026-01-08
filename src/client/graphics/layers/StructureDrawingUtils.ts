@@ -455,6 +455,13 @@ export class SpriteFactory {
     pos: { x: number; y: number },
     level?: number,
     targetingAlly: boolean = false,
+    rangeStyle?: {
+      fillColor?: number;
+      fillAlpha?: number;
+      strokeColor?: number;
+      strokeAlpha?: number;
+      strokeWidth?: number;
+    },
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -481,11 +488,18 @@ export class SpriteFactory {
     }
     // Add warning colors (red/orange) when targeting an ally to indicate alliance will break
     const isNuke = type === UnitType.AtomBomb || type === UnitType.HydrogenBomb;
-    const fillColor = targetingAlly && isNuke ? 0xff6b35 : 0xffffff;
-    const fillAlpha = targetingAlly && isNuke ? 0.35 : 0.2;
-    const strokeColor = targetingAlly && isNuke ? 0xff4444 : 0xffffff;
-    const strokeAlpha = targetingAlly && isNuke ? 0.8 : 0.5;
-    const strokeWidth = targetingAlly && isNuke ? 2 : 1;
+    let fillColor = targetingAlly && isNuke ? 0xff6b35 : 0xffffff;
+    let fillAlpha = targetingAlly && isNuke ? 0.35 : 0.2;
+    let strokeColor = targetingAlly && isNuke ? 0xff4444 : 0xffffff;
+    let strokeAlpha = targetingAlly && isNuke ? 0.8 : 0.5;
+    let strokeWidth = targetingAlly && isNuke ? 2 : 1;
+    if (rangeStyle) {
+      fillColor = rangeStyle.fillColor ?? fillColor;
+      fillAlpha = rangeStyle.fillAlpha ?? fillAlpha;
+      strokeColor = rangeStyle.strokeColor ?? strokeColor;
+      strokeAlpha = rangeStyle.strokeAlpha ?? strokeAlpha;
+      strokeWidth = rangeStyle.strokeWidth ?? strokeWidth;
+    }
 
     circle
       .circle(0, 0, radius)
