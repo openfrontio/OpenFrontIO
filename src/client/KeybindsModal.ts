@@ -41,7 +41,22 @@ export class KeybindsModal extends BaseModal {
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
       try {
-        this.keybinds = JSON.parse(savedKeybinds);
+        const parsed = JSON.parse(savedKeybinds);
+        // Validate shape: ensure all values have 'value' and 'key' properties
+        if (typeof parsed === "object" && parsed !== null) {
+          const isValid = Object.values(parsed).every(
+            (entry) =>
+              typeof entry === "object" &&
+              entry !== null &&
+              "value" in entry &&
+              "key" in entry,
+          );
+          if (isValid) {
+            this.keybinds = parsed;
+          } else {
+            console.warn("Invalid keybinds structure, ignoring saved data");
+          }
+        }
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
       }
@@ -94,12 +109,12 @@ export class KeybindsModal extends BaseModal {
                 />
               </svg>
               <span class="font-medium"
-                >The key
+                >${translateText("user_setting.keybind_conflict_title")}
                 <span
                   class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
                   >${displayKey}</span
                 >
-                is already bound to another action.</span
+                ${translateText("user_setting.keybind_conflict_message")}</span
               >
             `,
             color: "red",
@@ -112,8 +127,8 @@ export class KeybindsModal extends BaseModal {
         `setting-keybind[action="${action}"]`,
       ) as SettingKeybind;
       if (element) {
-        // Restore the previous value, or "Null" if this was the first time binding
-        element.value = prevValue ?? "Null";
+        // Restore the previous value, or use default keybind if no previous override
+        element.value = prevValue ?? DefaultKeybinds[action] ?? "";
         element.requestUpdate();
       }
       return;

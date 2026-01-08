@@ -512,7 +512,9 @@
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
     "background_music_volume": "Background Music Volume",
-    "sound_effects_volume": "Sound Effects Volume"
+    "sound_effects_volume": "Sound Effects Volume",
+    "keybind_conflict_title": "The key",
+    "keybind_conflict_message": "is already bound to another action."
   },
   "chat": {
     "title": "Quick Chat",
