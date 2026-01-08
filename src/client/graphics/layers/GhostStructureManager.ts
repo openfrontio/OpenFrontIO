@@ -59,6 +59,10 @@ export class GhostStructureManager {
   private readonly mousePos = { x: 0, y: 0 };
   private onHighlightUpgrade: (unitId: number | null) => void;
 
+  private _onMouseMove: ((e: MouseMoveEvent) => void) | undefined;
+  private _onMouseUp: ((e: MouseUpEvent) => void) | undefined;
+  private _onContextMenu: ((e: ContextMenuEvent) => void) | undefined;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -72,12 +76,26 @@ export class GhostStructureManager {
   }
 
   init() {
-    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
-    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
-    this.eventBus.on(ContextMenuEvent, (e) => this.updateLockedBombTarget(e));
+    this._onMouseMove = (e: MouseMoveEvent) => this.moveGhost(e);
+    this._onMouseUp = (e: MouseUpEvent) => this.createStructure(e);
+    this._onContextMenu = (e: ContextMenuEvent) =>
+      this.updateLockedBombTarget(e);
+
+    this.eventBus.on(MouseMoveEvent, this._onMouseMove);
+    this.eventBus.on(MouseUpEvent, this._onMouseUp);
+    this.eventBus.on(ContextMenuEvent, this._onContextMenu);
   }
 
   destroy() {
+    if (this._onMouseMove) {
+      this.eventBus.off(MouseMoveEvent, this._onMouseMove);
+    }
+    if (this._onMouseUp) {
+      this.eventBus.off(MouseUpEvent, this._onMouseUp);
+    }
+    if (this._onContextMenu) {
+      this.eventBus.off(ContextMenuEvent, this._onContextMenu);
+    }
     this.removeGhostStructure();
   }
 
