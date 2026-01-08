@@ -340,6 +340,7 @@
   },
   "host_modal": {
     "title": "Create Private Lobby",
+    "label": "Private",
     "mode": "Mode",
     "team_count": "Number of Teams",
     "team_type": "Team Type",
