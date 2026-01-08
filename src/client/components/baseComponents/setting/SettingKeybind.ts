@@ -126,7 +126,7 @@ export class SettingKeybind extends LitElement {
   }
 
   private unbindKey() {
-    this.value = "";
+    this.value = "Null";
     this.dispatchEvent(
       new CustomEvent("change", {
         detail: {
