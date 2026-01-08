@@ -5,6 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import "./FlagInput";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -186,6 +187,13 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
+  private openFlagSelector() {
+    const flagInputModal = document.querySelector("flag-input-modal") as any;
+    if (flagInputModal?.open) {
+      flagInputModal.open();
+    }
+  }
+
   render() {
     const content = html`
       <div
@@ -261,6 +269,27 @@ export class UserSettingModal extends LitElement {
 
   private renderBasicSettings() {
     return html`
+      <!-- 🚩 Flag Selector -->
+      <div
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer"
+        @click=${this.openFlagSelector}
+      >
+        <div class="flex flex-col flex-1 min-w-0 mr-4">
+          <div class="text-white font-bold text-base block mb-1">
+            ${translateText("flag_input.title")}
+          </div>
+          <div class="text-white/50 text-sm leading-snug">
+            ${translateText("flag_input.button_title")}
+          </div>
+        </div>
+
+        <div
+          class="relative inline-block w-12 h-8 shrink-0 rounded overflow-hidden border border-white/20"
+        >
+          <flag-input class="w-full h-full pointer-events-none"></flag-input>
+        </div>
+      </div>
+
       <!-- 🌙 Dark Mode -->
       <setting-toggle
         label="${translateText("user_setting.dark_mode_label")}"
