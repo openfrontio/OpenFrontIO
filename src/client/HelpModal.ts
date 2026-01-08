@@ -17,14 +17,6 @@ export class HelpModal extends LitElement {
     return this;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-  }
-
   private isKeybindObject(v: unknown): v is { value: string } {
     return (
       typeof v === "object" &&
