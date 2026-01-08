@@ -106,7 +106,7 @@ export class StatsModal extends BaseModal {
             class="px-8 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 text-red-200 rounded-xl text-sm font-bold uppercase tracking-wider transition-all cursor-pointer hover:shadow-lg hover:shadow-red-500/10 active:scale-95"
             @click=${() => this.loadLeaderboard()}
           >
-            Try Again
+            ${translateText("stats_modal.try_again")}
           </button>
         </div>
       `;
