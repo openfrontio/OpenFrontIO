@@ -156,7 +156,7 @@ export class MapDisplay extends LitElement {
         style="background-color:${colors[
           medal
         ]}; mask: ${mask}; -webkit-mask: ${mask};"
-        title=${medal}
+        title=${translateText(`difficulty.${medal.toLowerCase()}`)}
       ></div>`;
     });
   }
