@@ -174,10 +174,14 @@ export class GhostStructureManager {
       }
     }
 
+    const currentGhost = this.ghostUnit;
     this.game
       .myPlayer()
       ?.actions(tileRef)
       .then((actions) => {
+        // Check if ghost is still valid and hasn't changed
+        if (!this.ghostUnit || this.ghostUnit !== currentGhost) return;
+
         // Clear previous highlights/filters
         this.onHighlightUpgrade(null);
         if (this.ghostUnit?.container) {
