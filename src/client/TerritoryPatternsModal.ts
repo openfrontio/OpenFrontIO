@@ -273,10 +273,10 @@ export class TerritoryPatternsModal extends LitElement {
 
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
       >
         ${this.renderTabNavigation()}
-        <div class="overflow-y-auto pr-2 custom-scrollbar">
+        <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"
             ? this.renderPatternGrid()
             : this.renderColorSwatchGrid()}

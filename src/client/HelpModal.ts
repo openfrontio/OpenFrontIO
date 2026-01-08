@@ -106,7 +106,7 @@ export class HelpModal extends LitElement {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
           : ""}"
       >
         <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
@@ -140,7 +140,7 @@ export class HelpModal extends LitElement {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-4 space-y-8"
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-4 space-y-8 mr-1"
         >
           <!-- Hotkeys Section -->
           <section

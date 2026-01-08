@@ -155,7 +155,7 @@ export class KeybindsModal extends LitElement {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl"
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
         <div
@@ -191,7 +191,7 @@ export class KeybindsModal extends LitElement {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6"
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
         >
           <div class="flex flex-col gap-2">${this.renderKeybindSettings()}</div>
         </div>

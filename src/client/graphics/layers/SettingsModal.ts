@@ -191,7 +191,7 @@ export class SettingsModal extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto"
         >
           <div
             class="flex items-center justify-between p-4 border-b border-slate-600"

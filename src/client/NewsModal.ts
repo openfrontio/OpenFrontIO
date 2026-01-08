@@ -35,7 +35,7 @@ export class NewsModal extends LitElement {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl"
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
         <div
@@ -70,7 +70,7 @@ export class NewsModal extends LitElement {
           </div>
         </div>
         <div
-          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
             [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
             [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
             [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200

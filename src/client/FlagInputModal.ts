@@ -56,7 +56,7 @@ export class FlagInputModal extends LitElement {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
           class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
@@ -103,7 +103,7 @@ export class FlagInputModal extends LitElement {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+          class="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
         >
           <div class="flex flex-wrap justify-center gap-4 min-h-min">
             ${Countries.filter(

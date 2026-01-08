@@ -119,7 +119,7 @@ export class HostLobbyModal extends LitElement {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         <!-- Header -->
         <div
@@ -218,7 +218,7 @@ export class HostLobbyModal extends LitElement {
         </div>
 
         <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
           <div class="max-w-5xl mx-auto space-y-10">
             <!-- Map Selection -->
             <div class="space-y-6">

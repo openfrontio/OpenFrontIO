@@ -59,7 +59,7 @@ export class LanguageModal extends LitElement {
       <div
         class="h-full flex flex-col ${
           this.inline
-            ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl"
+            ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
             : "bg-[#232323] text-white"
         }"
       >
@@ -97,7 +97,7 @@ export class LanguageModal extends LitElement {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto custom-scrollbar pr-2"
+          class="flex-1 overflow-y-auto custom-scrollbar pr-2 mr-1"
         >
           <div
             class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"

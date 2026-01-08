@@ -121,7 +121,7 @@ export class AccountModal extends LitElement {
 
     return html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
           class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
@@ -175,7 +175,7 @@ export class AccountModal extends LitElement {
             : ""}
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar">
+        <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
           ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
         </div>
       </div>
@@ -405,7 +405,7 @@ export class AccountModal extends LitElement {
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
-          class="w-full max-w-md bg-white/5 rounded-2xl border border-white/10 p-8 shadow-xl"
+          class="w-full max-w-md bg-white/5 rounded-2xl border border-white/10 p-8"
         >
           <div class="text-center mb-8">
             <div
