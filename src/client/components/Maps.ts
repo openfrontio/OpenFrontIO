@@ -117,7 +117,7 @@ export class MapDisplay extends LitElement {
             : html`<div
                 class="w-full aspect-[2/1] text-red-400 transition-transform duration-200 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
               >
-                Error
+                ${translateText("map_component.error")}
               </div>`}
         ${this.showMedals
           ? html`<div class="flex gap-1 justify-center w-full">

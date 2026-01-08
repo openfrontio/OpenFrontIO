@@ -285,7 +285,8 @@
     "special": "Special"
   },
   "map_component": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "error": "Error"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
