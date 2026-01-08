@@ -111,22 +111,27 @@ export class TerritoryPatternsModal extends LitElement {
           this.userMeResponse,
           this.affiliateCode,
         );
-        // Only show owned patterns (skip blocked and purchasable)
-        if (rel !== "owned") {
+        if (rel === "blocked") {
           continue;
         }
-        buttons.push(html`
-          <pattern-button
-            .pattern=${pattern}
-            .colorPalette=${this.cosmetics?.colorPalettes?.[
-              colorPalette?.name ?? ""
-            ] ?? null}
-            .requiresPurchase=${false}
-            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
-            .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
-              handlePurchase(p, colorPalette)}
-          ></pattern-button>
-        `);
+
+        // If in affiliate shop, show only purchaseable skins.
+        // Otherwise, show only owned skins.
+        const isAffiliateShop = this.affiliateCode !== null;
+        if ((isAffiliateShop && rel === "purchasable") || rel === "owned") {
+          buttons.push(html`
+            <pattern-button
+              .pattern=${pattern}
+              .colorPalette=${this.cosmetics?.colorPalettes?.[
+                colorPalette?.name ?? ""
+              ] ?? null}
+              .requiresPurchase=${rel === "purchasable"}
+              .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
+              .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+                handlePurchase(p, colorPalette)}
+            ></pattern-button>
+          `);
+        }
       }
     }
 
