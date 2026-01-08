@@ -277,4 +277,19 @@ describe("FluentSlider", () => {
       expect(slider.value).toBe(400);
     });
   });
+
+  describe("Edge Cases", () => {
+    it("should handle min equal to max without NaN in style", async () => {
+      slider.min = 100;
+      slider.max = 100;
+      slider.value = 100;
+      await slider.updateComplete;
+
+      const rangeInput = slider.querySelector('input[type="range"]');
+      const style = rangeInput?.getAttribute("style");
+
+      expect(style).not.toContain("NaN");
+      expect(style).toContain("0%");
+    });
+  });
 });
