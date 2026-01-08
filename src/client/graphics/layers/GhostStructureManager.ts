@@ -2,11 +2,7 @@ import { OutlineFilter } from "pixi-filters";
 import { BitmapText, Container, Graphics } from "pixi.js";
 import { EventBus } from "../../../core/EventBus";
 import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
-import {
-  BuildableUnit,
-  Cell,
-  UnitType,
-} from "../../../core/game/Game";
+import { BuildableUnit, Cell, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import {
