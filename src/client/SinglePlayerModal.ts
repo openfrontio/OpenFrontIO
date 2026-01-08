@@ -586,6 +586,7 @@ export class SinglePlayerModal extends LitElement {
                         max="120"
                         .value=${String(this.maxTimerValue ?? "")}
                         class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                        aria-label=${translateText("single_modal.max_timer")}
                         @input=${this.handleMaxTimerValueChanges}
                         @keydown=${this.handleMaxTimerValueKeyDown}
                         placeholder="Mins"
