@@ -277,6 +277,40 @@ class Client {
       patternButton.style.display = "none";
     }
 
+    // Move button to desktop wrapper on large screens
+    const desktopWrapper = document.getElementById(
+      "territory-patterns-preview-desktop-wrapper",
+    );
+    if (desktopWrapper && patternButton) {
+      const moveButtonBasedOnScreenSize = () => {
+        if (window.innerWidth >= 1024) {
+          // Desktop: move to wrapper
+          if (
+            patternButton.parentElement?.id !==
+            "territory-patterns-preview-desktop-wrapper"
+          ) {
+            patternButton.className =
+              "w-full h-[60px] border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
+            desktopWrapper.appendChild(patternButton);
+          }
+        } else {
+          // Mobile: move back to bar
+          const mobileParent = document.querySelector(".lg\\:col-span-9.flex");
+          if (
+            mobileParent &&
+            patternButton.parentElement?.id ===
+              "territory-patterns-preview-desktop-wrapper"
+          ) {
+            patternButton.className =
+              "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
+            mobileParent.appendChild(patternButton);
+          }
+        }
+      };
+      moveButtonBasedOnScreenSize();
+      window.addEventListener("resize", moveButtonBasedOnScreenSize);
+    }
+
     if (
       !this.patternsModal ||
       !(this.patternsModal instanceof TerritoryPatternsModal)

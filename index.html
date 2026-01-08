@@ -359,63 +359,69 @@
             <token-login class="w-full hidden"></token-login>
 
             <!-- Header / Identity Section -->
-            <div
-              class="flex flex-row flex-nowrap gap-x-2 gap-y-1 w-full h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-blue-500/20 relative z-20 text-sm sm:text-base shrink-0"
-            >
-              <!-- Flag -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
               <div
-                class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center"
+                class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-blue-500/20 relative z-20 text-sm sm:text-base shrink-0"
               >
-                <!-- Hamburger (Mobile) -->
-                <button
-                  id="hamburger-btn"
-                  class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 border border-blue-400/20 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
-                  data-i18n-aria-label="main.menu"
-                  aria-expanded="false"
-                  data-i18n-title="main.menu"
+                <!-- Flag -->
+                <div
+                  class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="w-8 h-8"
+                  <!-- Hamburger (Mobile) -->
+                  <button
+                    id="hamburger-btn"
+                    class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 border border-blue-400/20 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
+                    data-i18n-aria-label="main.menu"
+                    aria-expanded="false"
+                    data-i18n-title="main.menu"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="w-8 h-8"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                      />
+                    </svg>
+                  </button>
 
-                <!-- Flag (Desktop) -->
-                <flag-input
-                  id="flag-input-component"
-                  class="hidden lg:flex w-full h-full items-center justify-center rounded-md overflow-hidden"
-                ></flag-input>
-              </div>
+                  <!-- Flag (Desktop) -->
+                  <flag-input
+                    id="flag-input-component"
+                    class="hidden lg:flex w-full h-full items-center justify-center rounded-md overflow-hidden"
+                  ></flag-input>
+                </div>
 
-              <!-- Username -->
-              <div
-                class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center"
-              >
-                <username-input
-                  class="relative w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
-                ></username-input>
-              </div>
+                <!-- Username -->
+                <div
+                  class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center"
+                >
+                  <username-input
+                    class="relative w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
+                  ></username-input>
+                </div>
 
-              <!-- Pattern & Extras -->
-              <div
-                class="flex flex-row gap-2 h-[40px] sm:h-[50px] shrink-0 items-center"
-              >
+                <!-- Pattern button (Mobile - inside bar, Desktop - hidden here) -->
                 <button
                   id="territory-patterns-input-preview-button"
-                  class="aspect-square h-full border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg flex cursor-pointer justify-center items-center focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden"
+                  class="aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0"
                   style="padding: 4px !important"
                   data-i18n-title="main.pick_pattern"
                 ></button>
+              </div>
+
+              <!-- Pattern button (Desktop only - separate column) -->
+              <div class="hidden lg:flex lg:col-span-3">
+                <div
+                  id="territory-patterns-preview-desktop-wrapper"
+                  class="w-full h-[60px]"
+                ></div>
               </div>
             </div>
 
@@ -441,25 +447,23 @@
 
               <!-- Right Column: Custom Games & Modes -->
               <div class="lg:col-span-3">
-                <div
-                  class="grid grid-cols-1 grid-rows-2 lg:grid-rows-3 gap-3 h-80 lg:h-96 relative z-10"
-                >
-                  <o-button
-                    id="single-player"
-                    data-i18n-title="main.solo"
-                    translationKey="main.solo"
-                    fill
-                    class="transition-transform hover:-translate-y-0.5 h-full"
-                  ></o-button>
-
+                <div class="h-40 lg:h-96 relative z-10">
                   <div
-                    class="lg:row-span-2 flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
+                    class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
                   >
                     <div
                       class="py-2 bg-blue-900/20 border-b border-blue-400/10 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
                       data-i18n="host_modal.title"
                     ></div>
                     <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
+                      <o-button
+                        id="single-player"
+                        data-i18n-title="main.solo"
+                        translationKey="main.solo"
+                        fill
+                        class="flex-1 transition-transform hover:-translate-y-0.5"
+                      ></o-button>
+
                       <o-button
                         id="host-lobby-button"
                         data-i18n-title="main.create"
