@@ -111,9 +111,9 @@ export class KeybindsModal extends BaseModal {
       const element = this.renderRoot.querySelector(
         `setting-keybind[action="${action}"]`,
       ) as SettingKeybind;
-      if (element && prevValue !== undefined) {
-        // Restore the previous value instead of setting to Null
-        element.value = prevValue;
+      if (element) {
+        // Restore the previous value, or "Null" if this was the first time binding
+        element.value = prevValue ?? "Null";
         element.requestUpdate();
       }
       return;
