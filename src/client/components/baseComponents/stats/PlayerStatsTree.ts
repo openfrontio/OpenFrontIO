@@ -218,7 +218,7 @@ export class PlayerStatsTreeView extends LitElement {
               <div
                 class="py-12 text-center text-white/30 italic border border-white/5 rounded-xl bg-white/5"
               >
-                No stats recorded for this selection.
+                ${translateText("player_stats_tree.no_stats")}
               </div>
             `}
       </div>

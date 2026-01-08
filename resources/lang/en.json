@@ -905,7 +905,8 @@
     "stats_wlr": "Win:Loss Ratio",
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
-    "mode_team": "Team"
+    "mode_team": "Team",
+    "no_stats": "No stats recorded for this selection."
   },
   "matchmaking_button": {
     "play_ranked": "Play Ranked",
