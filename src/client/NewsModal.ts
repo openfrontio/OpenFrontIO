@@ -106,8 +106,12 @@ export class NewsModal extends LitElement {
 
   public close() {
     if (this.inline) {
-      if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      const windowWithShowPage = window as any;
+      if (
+        windowWithShowPage.showPage &&
+        typeof windowWithShowPage.showPage === "function"
+      ) {
+        windowWithShowPage.showPage("page-play");
       }
     } else {
       this.modalEl?.close();
