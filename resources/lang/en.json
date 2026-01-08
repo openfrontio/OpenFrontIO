@@ -262,7 +262,8 @@
   "map_categories": {
     "continental": "Continental",
     "regional": "Regional",
-    "fantasy": "Other"
+    "fantasy": "Other",
+    "arcade": "Arcade"
   },
   "map_component": {
     "loading": "Loading..."

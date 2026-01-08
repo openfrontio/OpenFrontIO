@@ -173,6 +173,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+  ],
+  arcade: [
     GameMapType.Didier,
     GameMapType.Sierpinski,
   ],
