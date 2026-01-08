@@ -15,21 +15,6 @@ export class FlagInputModal extends BaseModal {
     super.updated(changedProperties);
   }
 
-  firstUpdated() {
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.unregisterEscapeHandler();
-        if (this.returnTo) {
-          const returnEl = document.querySelector(this.returnTo) as any;
-          if (returnEl?.open) {
-            returnEl.open();
-          }
-          this.returnTo = "";
-        }
-      };
-    }
-  }
-
   render() {
     const content = html`
       <div
