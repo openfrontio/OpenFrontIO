@@ -187,6 +187,7 @@ export const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
@@ -476,6 +477,7 @@ export const WinnerSchema = z
   .union([
     z.tuple([z.literal("player"), ID]).rest(ID),
     z.tuple([z.literal("team"), SafeString]).rest(ID),
+    z.tuple([z.literal("nation"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;
