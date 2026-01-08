@@ -1,11 +1,13 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import {
   Duos,
   GameMapType,
   GameMode,
+  hasUnusualThumbnailSize,
   HumansVsNations,
+  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -113,7 +115,14 @@ export class PublicLobby extends LitElement {
         : `${modeLabel} ${teamDetailLabel}`;
     }
 
+    const modifierLabel = this.getModifierLabels(
+      lobby.gameConfig.publicGameModifiers,
+    );
+
     const mapImageSrc = this.mapImages.get(lobby.gameID);
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(
+      lobby.gameConfig.gameMap,
+    );
 
     return html`
       <button
@@ -131,7 +140,9 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)]"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
+                ? "object-cover object-center"
+                : ""}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
@@ -150,17 +161,29 @@ export class PublicLobby extends LitElement {
                       .join("")}`
                 : translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-white-400">
-              <span class="text-sm text-blue-600 bg-white rounded-xs px-1 mr-1">
-                ${fullModeLabel}
-              </span>
-              <span>
-                ${translateText(
-                  `map.${lobby.gameConfig.gameMap
-                    .toLowerCase()
-                    .replace(/[\s.]+/g, "")}`,
-                )}
-              </span>
+            <div
+              class="text-md font-medium text-white-400 flex flex-wrap justify-end items-center gap-1"
+            >
+              <span
+                class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
+                  ? "text-green-600"
+                  : "text-blue-600"} bg-white rounded-xs px-1"
+                >${fullModeLabel}</span
+              >
+              ${modifierLabel.map(
+                (label) =>
+                  html`<span
+                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
+                      ? "text-green-600"
+                      : "text-blue-600"} bg-white rounded-xs px-1"
+                    >${label}</span
+                  >`,
+              )}
+              <span class="whitespace-nowrap"
+                >${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+                )}</span
+              >
             </div>
           </div>
 
@@ -285,6 +308,22 @@ export class PublicLobby extends LitElement {
     }
 
     return { label: null, isFullLabel: false };
+  }
+
+  private getModifierLabels(
+    publicGameModifiers: PublicGameModifiers | undefined,
+  ): string[] {
+    if (!publicGameModifiers) {
+      return [];
+    }
+    const labels: string[] = [];
+    if (publicGameModifiers.isRandomSpawn) {
+      labels.push(translateText("public_game_modifier.random_spawn"));
+    }
+    if (publicGameModifiers.isCompact) {
+      labels.push(translateText("public_game_modifier.compact_map"));
+    }
+    return labels;
   }
 
   private lobbyClicked(lobby: GameInfo) {

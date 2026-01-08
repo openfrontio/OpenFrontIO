@@ -254,7 +254,8 @@
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
     "surrounded": "Surrounded",
-    "didier": "Didier"
+    "didier": "Didier",
+    "amazonriver": "Amazon River"
   },
   "map_categories": {
     "continental": "Continental",
@@ -361,6 +362,10 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "public_game_modifier": {
+    "random_spawn": "Random Spawn",
+    "compact_map": "Compact Map"
   },
   "select_lang": {
     "title": "Select Language"

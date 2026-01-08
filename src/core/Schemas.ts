@@ -174,6 +174,12 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
+  publicGameModifiers: z
+    .object({
+      isCompact: z.boolean(),
+      isRandomSpawn: z.boolean(),
+    })
+    .optional(),
   disableNations: z.boolean(),
   // New: Enable in-lobby chat for private games
   chatEnabled: z.boolean().default(false),

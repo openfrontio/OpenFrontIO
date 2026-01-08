@@ -27,8 +27,6 @@ export default [
             "__mocks__/fileMock.js",
             "__mocks__/jose.js",
             "eslint.config.js",
-            "postcss.config.js",
-            "tailwind.config.js",
             "scripts/sync-assets.mjs",
           ],
         },

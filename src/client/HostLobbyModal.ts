@@ -14,6 +14,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { getCompactMapNationCount } from "../core/game/NationCreation";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -982,6 +983,7 @@ export class HostLobbyModal extends LitElement {
   /**
    * Returns the effective nation count for display purposes.
    * In HumansVsNations mode, this equals the number of human players.
+   * For compact maps, only 25% of nations are used.
    * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
    */
   private getEffectiveNationCount(): number {
@@ -991,7 +993,7 @@ export class HostLobbyModal extends LitElement {
     if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
       return this.clients.length;
     }
-    return this.nationCount;
+    return getCompactMapNationCount(this.nationCount, this.compactMap);
   }
 }
 

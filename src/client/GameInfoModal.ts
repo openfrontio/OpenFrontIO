@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { GameEndInfo } from "../core/Schemas";
-import { GameMapType } from "../core/game/Game";
+import { GameMapType, hasUnusualThumbnailSize } from "../core/game/Game";
 import { fetchGameById } from "./Api";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UsernameInput } from "./UsernameInput";
@@ -105,6 +105,7 @@ export class GameInfoModal extends LitElement {
     if (!info) {
       return html``;
     }
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(info.config.gameMap);
     return html`
       <div
         class="h-37.5 flex relative justify-between rounded-xl bg-blue-600 items-center"
@@ -112,7 +113,9 @@ export class GameInfoModal extends LitElement {
         ${this.mapImage
           ? html`<img
               src="${this.mapImage}"
-              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl mask-[linear-gradient(to_left,transparent,#fff)]"
+              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
+                ? "object-cover object-center"
+                : ""}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full rounded-xl bg-gray-300"
