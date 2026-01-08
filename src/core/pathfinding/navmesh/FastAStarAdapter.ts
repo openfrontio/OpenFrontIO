@@ -19,7 +19,12 @@ export class GatewayGraphAdapter implements FastAStarAdapter {
   heuristic(node: number, goal: number): number {
     const nodeGw = this.graph.getGateway(node);
     const goalGw = this.graph.getGateway(goal);
-    if (!nodeGw || !goalGw) return 0;
+
+    if (!nodeGw || !goalGw) {
+      throw new Error(
+        `Invalid gateway ID in heuristic: node=${node} (${nodeGw ? "exists" : "missing"}), goal=${goal} (${goalGw ? "exists" : "missing"})`,
+      );
+    }
 
     // Manhattan distance heuristic
     const dx = Math.abs(nodeGw.x - goalGw.x);
