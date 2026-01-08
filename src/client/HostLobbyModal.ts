@@ -580,6 +580,8 @@ export class HostLobbyModal extends LitElement {
 
                 <!-- Max Timer -->
                 <div
+                  role="button"
+                  tabindex="0"
                   @click=${(e: Event) => {
                     if (
                       (e.target as HTMLElement).tagName.toLowerCase() ===
@@ -590,6 +592,20 @@ export class HostLobbyModal extends LitElement {
                     if (!this.maxTimer) this.maxTimerValue = undefined;
                     this.putGameConfig();
                     this.requestUpdate();
+                  }}
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (
+                      (e.target as HTMLElement).tagName.toLowerCase() ===
+                      "input"
+                    )
+                      return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      this.maxTimer = !this.maxTimer;
+                      if (!this.maxTimer) this.maxTimerValue = undefined;
+                      this.putGameConfig();
+                      this.requestUpdate();
+                    }
                   }}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .maxTimer
@@ -652,6 +668,8 @@ export class HostLobbyModal extends LitElement {
 
                 <!-- Spawn Immunity -->
                 <div
+                  role="button"
+                  tabindex="0"
                   @click=${(e: Event) => {
                     if (
                       (e.target as HTMLElement).tagName.toLowerCase() ===
@@ -663,6 +681,21 @@ export class HostLobbyModal extends LitElement {
                       this.spawnImmunityDurationMinutes = undefined;
                     this.putGameConfig();
                     this.requestUpdate();
+                  }}
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (
+                      (e.target as HTMLElement).tagName.toLowerCase() ===
+                      "input"
+                    )
+                      return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      this.spawnImmunity = !this.spawnImmunity;
+                      if (!this.spawnImmunity)
+                        this.spawnImmunityDurationMinutes = undefined;
+                      this.putGameConfig();
+                      this.requestUpdate();
+                    }
                   }}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .spawnImmunity
