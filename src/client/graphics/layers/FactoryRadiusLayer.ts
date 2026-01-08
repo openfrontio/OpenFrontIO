@@ -4,8 +4,11 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import {
+  computeUncoveredArcIntervals,
+  Interval,
+} from "./utils/circleUnion";
 
-type Interval = [number, number];
 interface FactoryRadius {
   x: number;
   y: number;
@@ -243,7 +246,7 @@ export class FactoryRadiusLayer implements Layer {
   private computeCircleUnions() {
     this.factoryRanges = this.getMyFactoryRanges();
     for (const circle of this.factoryRanges) {
-      this.computeUncoveredArcIntervals(circle, this.factoryRanges);
+      computeUncoveredArcIntervals(circle, this.factoryRanges);
     }
   }
 

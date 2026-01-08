@@ -9,8 +9,11 @@ import type {
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import {
+  computeUncoveredArcIntervals,
+  Interval,
+} from "./utils/circleUnion";
 
-type Interval = [number, number];
 interface SAMRadius {
   x: number;
   y: number;
@@ -159,111 +162,6 @@ export class SAMRadiusLayer implements Layer {
     return radiuses;
   }
 
-  private computeUncoveredArcIntervals(a: SAMRadius, circles: SAMRadius[]) {
-    a.arcs = [];
-    const TWO_PI = Math.PI * 2;
-    const EPS = 1e-9;
-    // helper functions
-    const normalize = (a: number) => {
-      while (a < 0) a += TWO_PI;
-      while (a >= TWO_PI) a -= TWO_PI;
-      return a;
-    };
-    // merge a list of intervals [s,e] (both between 0..2pi), taking wraparound into account
-    const mergeIntervals = (
-      intervals: Array<[number, number]>,
-    ): Array<[number, number]> => {
-      if (intervals.length === 0) return [];
-      // normalize to non-wrap intervals
-      const flat: Array<[number, number]> = [];
-      for (const [s, e] of intervals) {
-        const ns = normalize(s);
-        const ne = normalize(e);
-        if (ne < ns) {
-          // wraps, split
-          flat.push([ns, TWO_PI]);
-          flat.push([0, ne]);
-        } else {
-          flat.push([ns, ne]);
-        }
-      }
-      flat.sort((a, b) => a[0] - b[0]);
-      const merged: Array<[number, number]> = [];
-      let cur = flat[0].slice() as [number, number];
-      for (let i = 1; i < flat.length; i++) {
-        const it = flat[i];
-        if (it[0] <= cur[1] + EPS) {
-          cur[1] = Math.max(cur[1], it[1]);
-        } else {
-          merged.push([cur[0], cur[1]]);
-          cur = it.slice() as [number, number];
-        }
-      }
-      merged.push([cur[0], cur[1]]);
-      return merged;
-    };
-    const covered: Interval[] = [];
-    let fullyCovered = false;
-
-    for (const b of circles) {
-      if (a === b) continue;
-
-      // Only same-owner coverage
-      if (a.owner.smallID() !== b.owner.smallID()) continue;
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-
-      // a fully inside b
-      if (d + a.r <= b.r + EPS) {
-        fullyCovered = true;
-        break;
-      }
-
-      // no overlap
-      if (d >= a.r + b.r - EPS) continue;
-
-      // coincident centers
-      if (d <= EPS) {
-        if (b.r >= a.r) {
-          fullyCovered = true;
-          break;
-        }
-        continue;
-      }
-
-      // angular span on a covered by b
-      const theta = Math.atan2(dy, dx);
-      const cosPhi = (a.r * a.r + d * d - b.r * b.r) / (2 * a.r * d);
-      const phi = Math.acos(Math.max(-1, Math.min(1, cosPhi)));
-
-      covered.push([theta - phi, theta + phi]);
-    }
-
-    if (fullyCovered) return;
-
-    const merged = mergeIntervals(covered);
-
-    // subtract from [0, 2π)
-    const uncovered: Interval[] = [];
-    if (merged.length === 0) {
-      uncovered.push([0, TWO_PI]);
-    } else {
-      let cursor = 0;
-      for (const [s, e] of merged) {
-        if (s > cursor + EPS) {
-          uncovered.push([cursor, s]);
-        }
-        cursor = Math.max(cursor, e);
-      }
-      if (cursor < TWO_PI - EPS) {
-        uncovered.push([cursor, TWO_PI]);
-      }
-    }
-    a.arcs = uncovered;
-  }
-
   private drawArcSegments(ctx: CanvasRenderingContext2D, a: SAMRadius) {
     const outlineColor = "rgba(0, 0, 0, 1)";
     const lineColorSelf = "rgba(0, 255, 0, 1)";
@@ -314,7 +212,11 @@ export class SAMRadiusLayer implements Layer {
     this.samRanges = this.getAllSamRanges();
     for (let i = 0; i < this.samRanges.length; i++) {
       const a = this.samRanges[i];
-      this.computeUncoveredArcIntervals(a, this.samRanges);
+      computeUncoveredArcIntervals(
+        a,
+        this.samRanges,
+        (circle, other) => circle.owner.smallID() === other.owner.smallID(),
+      );
     }
   }
 
