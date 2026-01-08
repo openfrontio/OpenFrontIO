@@ -61,7 +61,8 @@ export class BoundedGameMapAdapter implements FastAStarAdapter {
     const y = this.map.y(tile) - this.minY;
 
     // Allow start and goal tiles to be outside bounds (matching graph building behavior)
-    const isOutsideBounds = x < 0 || x >= this.width || y < 0 || y >= this.height;
+    const isOutsideBounds =
+      x < 0 || x >= this.width || y < 0 || y >= this.height;
     const isStartOrGoal = tile === this.startTile || tile === this.goalTile;
     if (isOutsideBounds && !isStartOrGoal) {
       return -1; // Outside bounds

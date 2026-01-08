@@ -38,7 +38,7 @@ interface RunOptions {
   iterations?: number;
 }
 
-const DEFAULT_ADAPTER = "default";
+const DEFAULT_ADAPTER = "hpa";
 const DEFAULT_SCENARIO = "default";
 const DEFAULT_ITERATIONS = 10;
 
@@ -188,7 +188,7 @@ Usage:
 
 Arguments:
   <scenario>    Name of the scenario to benchmark (default: "default" -> giantworldmap with handpicked ports)
-  <adapter>     Name of the pathfinding adapter to use (default: "default" -> HPA*)
+  <adapter>     Pathfinding adapter: "hpa" (default), "hpa.cached", "legacy"
   --silent      Minimize output, only print summary lines
   --synthetic   Run synthetic scenarios
   --all         Run all synthetic scenarios (requires --synthetic)

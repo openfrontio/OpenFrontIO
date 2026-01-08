@@ -17,10 +17,10 @@ import {
   MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
+import { NavMesh } from "../../src/core/pathfinding/navmesh/NavMesh";
 import { PathFinder, PathFinders } from "../../src/core/pathfinding/PathFinder";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "../util/TestConfig";
-
 export type BenchmarkRoute = {
   name: string;
   from: TileRef;
@@ -49,7 +49,17 @@ export function getAdapter(game: Game, name: string): PathFinder {
         iterations: 500_000,
         maxTries: 50,
       });
-    case "default":
+    case "hpa": {
+      // Recreate NavMesh without cache, this approach was chosen
+      // over adding cache toggles to the existing game instance
+      // to avoid adding side effect from benchmark to the game
+      const navMesh = new NavMesh(game, { cachePaths: false });
+      navMesh.initialize();
+      (game as any)._navMesh = navMesh;
+
+      return PathFinders.Water(game);
+    }
+    case "hpa.cached":
       return PathFinders.Water(game);
     default:
       throw new Error(`Unknown pathfinding adapter: ${name}`);
@@ -58,10 +68,10 @@ export function getAdapter(game: Game, name: string): PathFinder {
 
 export async function getScenario(
   scenarioName: string,
-  adapterName: string = "default",
+  adapterName: string = "hpa",
 ) {
   const scenario = await import(`./benchmark/scenarios/${scenarioName}.js`);
-  const enableNavMesh = adapterName === "default";
+  const enableNavMesh = adapterName.startsWith("hpa");
 
   // Time game creation (includes NavMesh initialization for default adapter)
   const start = performance.now();
