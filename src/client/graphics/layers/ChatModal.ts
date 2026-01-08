@@ -142,7 +142,7 @@ export class ChatModal extends LitElement {
                           player
                             ? "selected"
                             : ""}"
-                            style="border: 2px solid ${player
+                          style="border: 2px solid ${player
                             .territoryColor()
                             .toHex()};"
                           @click=${() => this.selectPlayer(player)}
