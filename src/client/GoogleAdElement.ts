@@ -32,9 +32,7 @@ export class GoogleAdElement extends LitElement {
       return html``;
     }
     return html`
-      <div
-        class="mt-4 rounded-lg p-2 w-full overflow-hidden transition-all duration-300"
-      >
+      <div class="mt-4 rounded-lg p-2 w-full overflow-hidden">
         <ins
           class="adsbygoogle block"
           data-ad-client="${this.adClient}"
