@@ -89,7 +89,7 @@ export class GameList extends LitElement {
                     ${translateText("game_list.details")}
                   </button>
                   <button
-                    class="text-sm text-gray-300 bg-gray-600 px-3 py-1 rounded cursor-pointer"
+                    class="text-xs font-bold text-gray-300 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/5"
                     @click=${() => this.showRanking(game.gameId)}
                   >
                     ${translateText("game_list.ranking")}
