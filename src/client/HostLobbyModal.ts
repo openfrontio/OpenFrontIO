@@ -886,6 +886,9 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private leaveLobby() {
+    if (!this.lobbyId) {
+      return;
+    }
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
         detail: { lobby: this.lobbyId },
