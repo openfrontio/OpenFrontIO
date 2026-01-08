@@ -354,7 +354,7 @@
 
             <!-- Header / Identity Section -->
             <div
-              class="flex flex-row flex-nowrap gap-x-2 gap-y-1 w-full min-h-[50px] max-h-[70px] items-center bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/10 shadow-2xl relative z-20 text-sm sm:text-base"
+              class="flex flex-row flex-nowrap gap-x-2 gap-y-1 w-full min-h-[50px] max-h-[70px] items-center bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/10 relative z-20 text-sm sm:text-base"
             >
               <!-- Flag -->
               <div
@@ -363,7 +363,7 @@
                 <!-- Hamburger (Mobile) -->
                 <button
                   id="hamburger-btn"
-                  class="md:hidden flex w-full h-full bg-white/5 text-white/90 border border-white/20 hover:bg-white/10 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200 shadow-inner"
+                  class="md:hidden flex w-full h-full bg-white/5 text-white/90 border border-white/20 hover:bg-white/10 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
                   onclick="typeof __toggleSidebar === 'function' && __toggleSidebar(event)"
                   aria-label="Open menu"
                   title="Menu"
@@ -387,7 +387,7 @@
                 <!-- Flag (Desktop) -->
                 <flag-input
                   id="flag-input-component"
-                  class="hidden md:flex w-full h-full items-center justify-center drop-shadow-md rounded-md overflow-hidden"
+                  class="hidden md:flex w-full h-full items-center justify-center rounded-md overflow-hidden"
                 ></flag-input>
               </div>
 
@@ -396,7 +396,7 @@
                 class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center"
               >
                 <username-input
-                  class="relative w-full h-full block drop-shadow-md text-ellipsis overflow-hidden whitespace-nowrap"
+                  class="relative w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
                 ></username-input>
               </div>
 
@@ -406,7 +406,7 @@
               >
                 <button
                   id="territory-patterns-input-preview-button"
-                  class="aspect-square h-full border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg flex cursor-pointer justify-center items-center focus:outline-none transition-all duration-200 hover:scale-105 shadow-inner overflow-hidden"
+                  class="aspect-square h-full border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg flex cursor-pointer justify-center items-center focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden"
                   style="padding: 4px !important"
                   title="Pick a pattern!"
                 ></button>
@@ -419,7 +419,7 @@
               <div class="lg:col-span-9 flex flex-col gap-6 min-w-0">
                 <!-- Public Lobby Card -->
                 <public-lobby
-                  class="block w-full shadow-lg hover:shadow-xl transition-all duration-300"
+                  class="block w-full transition-all duration-300"
                 ></public-lobby>
 
                 <!-- Matchmaking Banner (Full Width within column) -->
@@ -428,7 +428,7 @@
                     class="absolute inset-0 bg-blue-600/20 blur-xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none"
                   ></div>
                   <matchmaking-button
-                    class="w-full block relative z-10 shadow-blue-900/50 shadow-lg"
+                    class="w-full block relative z-10"
                   ></matchmaking-button>
                 </div>
               </div>
@@ -443,11 +443,11 @@
                     title="Single Player"
                     translationKey="main.solo"
                     fill
-                    class="shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5 h-full"
+                    class="transition-transform hover:-translate-y-0.5 h-full"
                   ></o-button>
 
                   <div
-                    class="row-span-2 flex flex-col bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden shadow-xl"
+                    class="row-span-2 flex flex-col bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden"
                   >
                     <div
                       class="py-2 bg-white/5 border-b border-white/10 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"

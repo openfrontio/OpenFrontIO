@@ -120,21 +120,20 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl bg-gray-900 border border-white/10 transition-all duration-300 ${this
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-300 ${this
           .isLobbyHighlighted
           ? "ring-2 ring-green-500 scale-[1.01] opacity-70"
-          : "hover:scale-[1.01] hover:border-white/30 hover:shadow-2xl"} ${this
-          .isButtonDebounced
+          : "hover:scale-[1.01] hover:border-white/30"} ${this.isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
         <div
-          class="absolute top-4 left-4 z-20 px-3 py-1 bg-blue-600/90 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-lg border border-blue-400/30 backdrop-blur-md"
+          class="absolute top-4 left-4 z-20 px-3 py-1 bg-blue-600/90 text-white text-xs font-bold uppercase tracking-wider rounded-lg border border-blue-400/30 backdrop-blur-md"
         >
           ${translateText("main.quickplay")}
         </div>
         <!-- Map Image Area -->
-        <div class="flex-1 w-full relative overflow-hidden bg-gray-900 p-8">
+        <div class="flex-1 w-full relative overflow-hidden bg-[#4684b4] p-8">
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
