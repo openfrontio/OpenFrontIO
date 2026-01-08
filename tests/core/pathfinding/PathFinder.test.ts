@@ -162,7 +162,7 @@ describe.each(adapters)("$name", ({ create }) => {
       // 3 NEXT calls to reach destination
       for (let i = 1; i <= 4; i++) {
         const result = adapter.next(current, dst);
-        expect(result.status).toBeOneOf([PathStatus.NEXT, PathStatus.COMPLETE]);
+        expect([PathStatus.NEXT, PathStatus.COMPLETE]).toContain(result.status);
 
         current = (result as { node: TileRef }).node;
         steps.push(`${PathStatus[result.status]}(${current})`);
@@ -212,7 +212,7 @@ describe.each(adapters)("$name", ({ create }) => {
   });
 
   describe("Error handling", () => {
-    // MiniAStar logs conosle error when nulls passed, muted in test
+    // MiniAStar logs console error when nulls passed, muted in test
 
     test("returns NOT_FOUND for null source", async () => {
       const game = await gameFromString(["WWWW"]);

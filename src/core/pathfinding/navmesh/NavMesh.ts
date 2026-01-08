@@ -51,7 +51,7 @@ export class NavMesh {
     const miniMap = this.game.miniMap();
     this.fastBFS = new FastBFS(miniMap.width() * miniMap.height());
 
-    const gatewayCount = Math.max(this.graph.getAllGateways().length);
+    const gatewayCount = this.graph.getAllGateways().length;
     this.gatewayAStar = new FastAStar(gatewayCount);
 
     // Fixed-size FastAStar for sector-bounded local pathfinding
