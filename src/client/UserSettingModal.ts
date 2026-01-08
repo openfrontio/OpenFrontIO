@@ -7,6 +7,11 @@ import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import "./FlagInput";
 
+interface FlagInputModalElement extends HTMLElement {
+  open(): void;
+  returnTo?: string;
+}
+
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   @property({ type: Boolean }) inline = false;
@@ -188,7 +193,8 @@ export class UserSettingModal extends LitElement {
   }
 
   private openFlagSelector = () => {
-    const flagInputModal = document.querySelector("#flag-input-modal") as any;
+    const flagInputModal =
+      document.querySelector<FlagInputModalElement>("#flag-input-modal");
     if (flagInputModal?.open) {
       this.close();
       flagInputModal.returnTo = "#" + (this.id || "page-options");
