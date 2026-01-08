@@ -128,12 +128,12 @@ export class PublicLobby extends LitElement {
           : ""}"
       >
         <!-- Map Image Area -->
-        <div class="flex-1 w-full relative overflow-hidden bg-blue-500/85 p-8">
+        <div class="flex-1 w-full relative overflow-hidden bg-blue-500/85">
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
                 alt="${lobby.gameConfig.gameMap}"
-                class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 filter drop-shadow-2xl"
+                class="w-full h-full object-cover filter drop-shadow-2xl"
               />`
             : html`<div class="w-full h-full bg-gray-800 rounded-lg"></div>`}
         </div>
