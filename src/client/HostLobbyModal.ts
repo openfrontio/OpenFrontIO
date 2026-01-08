@@ -1034,6 +1034,9 @@ export class HostLobbyModal extends BaseModal {
     if (this.gameMode === GameMode.Team) {
       this.donateGold = true;
       this.donateTroops = true;
+    } else {
+      this.donateGold = false;
+      this.donateTroops = false;
     }
     this.putGameConfig();
   }
