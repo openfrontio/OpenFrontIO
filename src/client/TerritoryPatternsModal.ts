@@ -211,16 +211,6 @@ export class TerritoryPatternsModal extends LitElement {
               <div
                 class="flex flex-wrap gap-4 p-2 justify-center items-stretch content-start"
               >
-                ${this.affiliateCode === null && this.showOnlyOwned
-                  ? html`
-                      <pattern-button
-                        .pattern=${null}
-                        .selected=${this.selectedPattern === null}
-                        .onSelect=${(p: Pattern | null) =>
-                          this.selectPattern(null)}
-                      ></pattern-button>
-                    `
-                  : html``}
                 ${buttons}
               </div>
             `}
@@ -369,7 +359,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.showSkinSelectedPopup();
     // Close the skin store and show the play modal
     this.close();
-    window.showPage("page-play");
+    (window as any).showPage("page-play");
   }
 
   private showSkinSelectedPopup() {
