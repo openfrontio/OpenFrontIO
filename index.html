@@ -313,7 +313,7 @@
 
             <!-- Desktop Logo -->
             <div
-              class="hidden md:flex flex-col items-center justify-center w-full mb-2 gap-2"
+              class="hidden md:flex flex-col items-center justify-center w-full gap-2"
             >
               <div class="w-1/2 text-[#2563eb]">
                 <svg
@@ -364,11 +364,11 @@
 
             <!-- Header / Identity Section -->
             <div
-              class="grid grid-cols-2 sm:flex sm:flex-row gap-4 w-full h-auto sm:h-[70px] items-stretch sm:items-center bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/10 shadow-2xl relative z-20"
+              class="flex flex-row flex-nowrap gap-x-2 gap-y-1 w-full min-h-[50px] max-h-[70px] items-center bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/10 shadow-2xl relative z-20 text-sm sm:text-base"
             >
               <!-- Flag -->
               <div
-                class="row-start-2 col-start-1 sm:row-auto sm:col-auto h-[50px] sm:h-full shrink-0 aspect-[4/3]"
+                class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center"
               >
                 <flag-input
                   id="flag-input-component"
@@ -378,16 +378,16 @@
 
               <!-- Username -->
               <div
-                class="row-start-1 col-span-2 sm:row-auto sm:col-auto flex-1 h-[50px] sm:h-full"
+                class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center"
               >
                 <username-input
-                  class="relative w-full h-full block drop-shadow-md"
+                  class="relative w-full h-full block drop-shadow-md text-ellipsis overflow-hidden whitespace-nowrap"
                 ></username-input>
               </div>
 
               <!-- Pattern & Extras -->
               <div
-                class="row-start-2 col-start-2 justify-self-end sm:row-auto sm:col-auto sm:justify-self-auto flex flex-row gap-2 h-[50px] sm:h-full shrink-0"
+                class="flex flex-row gap-2 h-[40px] sm:h-[50px] shrink-0 items-center"
               >
                 <button
                   id="territory-patterns-input-preview-button"
