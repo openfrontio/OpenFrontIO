@@ -906,5 +906,9 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "matchmaking_button": {
+    "play_ranked": "Play Ranked",
+    "description": "Skill Based Matchmaking"
   }
 }

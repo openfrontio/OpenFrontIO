@@ -179,10 +179,12 @@ export class MatchmakingButton extends LitElement {
           <div
             class="absolute inset-0 bg-[url('/images/noise.png')] opacity-10 mix-blend-overlay"
           ></div>
-          <span class="relative z-10 text-2xl drop-shadow-md">Play Ranked</span>
+          <span class="relative z-10 text-2xl drop-shadow-md"
+            >${translateText("matchmaking_button.play_ranked")}</span
+          >
           <span
             class="relative z-10 text-xs font-medium text-blue-100 opacity-80 group-hover:opacity-100 transition-opacity"
-            >Skill Based Matchmaking</span
+            >${translateText("matchmaking_button.description")}</span
           >
         </button>
       </div>
