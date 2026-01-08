@@ -41,6 +41,11 @@ export class HostLobbyModal extends BaseModal {
   @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
+
+  constructor() {
+    super();
+    this.id = "page-host-lobby";
+  }
   @state() private bots: number = 400;
   @state() private spawnImmunity: boolean = false;
   @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
@@ -566,7 +571,11 @@ export class HostLobbyModal extends BaseModal {
                     )
                       return;
                     this.maxTimer = !this.maxTimer;
-                    if (!this.maxTimer) this.maxTimerValue = undefined;
+                    if (this.maxTimer) {
+                      this.maxTimerValue = this.maxTimerValue ?? 0;
+                    } else {
+                      this.maxTimerValue = undefined;
+                    }
                     this.putGameConfig();
                     this.requestUpdate();
                   }}
@@ -579,7 +588,11 @@ export class HostLobbyModal extends BaseModal {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       this.maxTimer = !this.maxTimer;
-                      if (!this.maxTimer) this.maxTimerValue = undefined;
+                      if (this.maxTimer) {
+                        this.maxTimerValue = this.maxTimerValue ?? 0;
+                      } else {
+                        this.maxTimerValue = undefined;
+                      }
                       this.putGameConfig();
                       this.requestUpdate();
                     }
@@ -654,8 +667,12 @@ export class HostLobbyModal extends BaseModal {
                     )
                       return;
                     this.spawnImmunity = !this.spawnImmunity;
-                    if (!this.spawnImmunity)
+                    if (this.spawnImmunity) {
+                      this.spawnImmunityDurationMinutes =
+                        this.spawnImmunityDurationMinutes ?? 0;
+                    } else {
                       this.spawnImmunityDurationMinutes = undefined;
+                    }
                     this.putGameConfig();
                     this.requestUpdate();
                   }}
@@ -668,8 +685,12 @@ export class HostLobbyModal extends BaseModal {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       this.spawnImmunity = !this.spawnImmunity;
-                      if (!this.spawnImmunity)
+                      if (this.spawnImmunity) {
+                        this.spawnImmunityDurationMinutes =
+                          this.spawnImmunityDurationMinutes ?? 0;
+                      } else {
                         this.spawnImmunityDurationMinutes = undefined;
+                      }
                       this.putGameConfig();
                       this.requestUpdate();
                     }
@@ -866,23 +887,6 @@ export class HostLobbyModal extends BaseModal {
     }
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
-  }
-
-  public open(): void {
-    this.registerEscapeHandler();
-    this.onOpen();
-
-    // Special handling for inline mode with custom page name
-    if (this.inline) {
-      const needsShow =
-        this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && window.showPage) {
-        window.showPage?.("page-host-lobby");
-      }
-      this.style.pointerEvents = "auto";
-    } else {
-      this.modalEl?.open();
-    }
   }
 
   private leaveLobby() {
