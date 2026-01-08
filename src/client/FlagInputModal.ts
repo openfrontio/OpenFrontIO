@@ -9,9 +9,11 @@ export class FlagInputModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
   };
 
   @state() private search = "";
+  public returnTo = "";
 
   connectedCallback() {
     super.connectedCallback();
@@ -23,6 +25,20 @@ export class FlagInputModal extends LitElement {
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
+  }
+
+  firstUpdated() {
+    if (this.modalEl) {
+      this.modalEl.onClose = () => {
+        if (this.returnTo) {
+          const returnEl = document.querySelector(this.returnTo) as any;
+          if (returnEl?.open) {
+            returnEl.open();
+          }
+          this.returnTo = "";
+        }
+      };
+    }
   }
 
   disconnectedCallback() {
@@ -183,7 +199,13 @@ export class FlagInputModal extends LitElement {
   }
   public close() {
     if (this.inline) {
-      if ((window as any).showPage) {
+      if (this.returnTo) {
+        const returnEl = document.querySelector(this.returnTo) as any;
+        if (returnEl?.open) {
+          returnEl.open();
+        }
+        this.returnTo = "";
+      } else if ((window as any).showPage) {
         (window as any).showPage("page-play");
       }
     } else {

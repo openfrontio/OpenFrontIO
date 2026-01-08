@@ -187,12 +187,14 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
-  private openFlagSelector() {
-    const flagInputModal = document.querySelector("flag-input-modal") as any;
+  private openFlagSelector = () => {
+    const flagInputModal = document.querySelector("#flag-input-modal") as any;
     if (flagInputModal?.open) {
+      this.close();
+      flagInputModal.returnTo = "#" + (this.id || "page-options");
       flagInputModal.open();
     }
-  }
+  };
 
   render() {
     const content = html`
@@ -448,7 +450,16 @@ export class UserSettingModal extends LitElement {
   }
 
   public open() {
-    this.requestUpdate();
-    this.modalEl?.open();
+    if (this.inline) {
+      const needsShow =
+        this.classList.contains("hidden") || this.style.display === "none";
+      if (needsShow && (window as any).showPage) {
+        (window as any).showPage(this.id || "page-options");
+      }
+      this.requestUpdate();
+    } else {
+      this.requestUpdate();
+      this.modalEl?.open();
+    }
   }
 }
