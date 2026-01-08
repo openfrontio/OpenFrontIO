@@ -552,6 +552,21 @@ export class SinglePlayerModal extends BaseModal {
                     this.maxTimer = !this.maxTimer;
                     if (!this.maxTimer) {
                       this.maxTimerValue = undefined;
+                    } else {
+                      // Set default value when enabling if not already set or invalid
+                      if (!this.maxTimerValue || this.maxTimerValue <= 0) {
+                        this.maxTimerValue = 1;
+                      }
+                      // Focus the input after render
+                      setTimeout(() => {
+                        const input = this.shadowRoot?.querySelector(
+                          "#end-timer-value",
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 0);
                     }
                   }}
                 >
@@ -583,7 +598,7 @@ export class SinglePlayerModal extends BaseModal {
                     ? html`<input
                         type="number"
                         id="end-timer-value"
-                        min="0"
+                        min="1"
                         max="120"
                         .value=${String(this.maxTimerValue ?? "")}
                         class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
@@ -737,7 +752,8 @@ export class SinglePlayerModal extends BaseModal {
     ).value.replace(/[e+-]/gi, "");
     const value = parseInt((e.target as HTMLInputElement).value);
 
-    if (isNaN(value) || value < 0 || value > 120) {
+    if (isNaN(value) || value < 1 || value > 120) {
+      // Reject invalid values (including 0)
       return;
     }
     this.maxTimerValue = value;
@@ -764,6 +780,24 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private async startGame() {
+    // Validate maxTimer setting before starting
+    if (this.maxTimer && (!this.maxTimerValue || this.maxTimerValue <= 0)) {
+      console.error("Max timer is enabled but no valid value is set");
+      alert(
+        translateText("single_modal.max_timer_invalid") ||
+          "Please enter a valid max timer value (1-120 minutes)",
+      );
+      // Focus the input
+      const input = this.shadowRoot?.querySelector(
+        "#end-timer-value",
+      ) as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      return;
+    }
+
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
@@ -824,7 +858,10 @@ export class SinglePlayerModal extends BaseModal {
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
-              maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
+              maxTimerValue:
+                this.maxTimer && this.maxTimerValue && this.maxTimerValue > 0
+                  ? this.maxTimerValue
+                  : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: this.gameMode === GameMode.Team,
