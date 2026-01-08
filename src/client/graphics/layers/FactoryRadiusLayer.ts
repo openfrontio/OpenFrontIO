@@ -240,20 +240,6 @@ export class FactoryRadiusLayer implements Layer {
     }
   }
 
-  private drawFill(ctx: CanvasRenderingContext2D) {
-    const fillColor = "rgba(0, 255, 0, 0.12)";
-    const offsetX = -this.game.width() / 2;
-    const offsetY = -this.game.height() / 2;
-
-    // Draw filled circles (the fill naturally unions due to transparency)
-    ctx.fillStyle = fillColor;
-    for (const circle of this.factoryRanges) {
-      ctx.beginPath();
-      ctx.arc(circle.x + offsetX, circle.y + offsetY, circle.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
   private computeCircleUnions() {
     this.factoryRanges = this.getMyFactoryRanges();
     for (const circle of this.factoryRanges) {
@@ -265,9 +251,6 @@ export class FactoryRadiusLayer implements Layer {
     if (this.factoryRanges.length === 0) return;
 
     context.save();
-
-    // Draw the fill first (uses natural transparency blending)
-    this.drawFill(context);
 
     // Draw only the outer arc segments for the stroke
     for (const circle of this.factoryRanges) {
