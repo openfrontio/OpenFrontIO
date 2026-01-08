@@ -293,7 +293,7 @@ export class HostLobbyModal extends LitElement {
                   <h4
                     class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
                   >
-                    Special
+                    ${translateText("map_categories.special")}
                   </h4>
                   <div
                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
@@ -631,7 +631,9 @@ export class HostLobbyModal extends LitElement {
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleMaxTimerValueChanges}
                           @keydown=${this.handleMaxTimerValueKeyDown}
-                          placeholder="Mins"
+                          placeholder=${translateText(
+                            "host_modal.mins_placeholder",
+                          )}
                         />
                       `
                     : html`<div
@@ -705,7 +707,9 @@ export class HostLobbyModal extends LitElement {
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleSpawnImmunityDurationInput}
                           @keydown=${this.handleSpawnImmunityDurationKeyDown}
-                          placeholder="Mins"
+                          placeholder=${translateText(
+                            "host_modal.mins_placeholder",
+                          )}
                         />
                       `
                     : html`<div

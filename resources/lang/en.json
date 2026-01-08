@@ -281,7 +281,8 @@
   "map_categories": {
     "continental": "Continental",
     "regional": "Regional",
-    "fantasy": "Other"
+    "fantasy": "Other",
+    "special": "Special"
   },
   "map_component": {
     "loading": "Loading..."
@@ -337,6 +338,7 @@
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
+    "mins_placeholder": "Mins",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "donate_gold": "Donate gold",
