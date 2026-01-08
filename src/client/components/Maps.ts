@@ -49,6 +49,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Lisbon: "Lisbon",
   Manicouagan: "Manicouagan",
   Lemnos: "Lemnos",
+  Sierpinski: "Sierpinski",
   TwoLakes: "Two Lakes",
   StraitOfHormuz: "Strait of Hormuz",
   Surrounded: "Surrounded",
