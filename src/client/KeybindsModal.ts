@@ -148,7 +148,7 @@ export class KeybindsModal extends LitElement {
     const entry = this.keybinds[action];
     if (!entry) return undefined;
     if (entry.value === "Null") return "";
-    return entry.key || entry.value || undefined;
+    return entry.value || undefined;
   }
 
   render() {
