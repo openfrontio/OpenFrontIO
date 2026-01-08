@@ -171,6 +171,12 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
+  publicGameModifiers: z
+    .object({
+      isCompact: z.boolean(),
+      isRandomSpawn: z.boolean(),
+    })
+    .optional(),
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
@@ -179,6 +185,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
+  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
@@ -302,13 +309,13 @@ export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.number().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nullable(),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({

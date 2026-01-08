@@ -139,6 +139,7 @@
     "title": "Single Player",
     "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
+    "toggle_achievements": "Toggle achievements",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -221,6 +222,7 @@
     "asia": "Asia",
     "mars": "Mars",
     "southamerica": "South America",
+    "britanniaclassic": "Britannia (Classic)",
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "australia": "Australia",
@@ -252,7 +254,9 @@
     "lemnos": "Lemnos",
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
-    "surrounded": "Surrounded"
+    "surrounded": "Surrounded",
+    "didier": "Didier",
+    "amazonriver": "Amazon River"
   },
   "map_categories": {
     "continental": "Continental",
@@ -307,6 +311,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "player_immunity_duration": "PVP immunity duration (minutes)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
@@ -358,6 +363,10 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "public_game_modifier": {
+    "random_spawn": "Random Spawn",
+    "compact_map": "Compact Map"
   },
   "select_lang": {
     "title": "Select Language"
@@ -625,7 +634,9 @@
     "warships": "Warships",
     "health": "Health",
     "attitude": "Attitude",
-    "levels": "Levels"
+    "levels": "Levels",
+    "wilderness_title": "Wilderness",
+    "irradiated_wilderness_title": "Irradiated Wilderness"
   },
   "events_display": {
     "retreating": "retreating",

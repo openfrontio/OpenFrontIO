@@ -82,6 +82,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
+  BritanniaClassic = "Britannia Classic",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
@@ -110,9 +111,16 @@ export enum GameMapType {
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
+  Didier = "Didier",
+  AmazonRiver = "Amazon River",
 }
 
 export type GameMapName = keyof typeof GameMapType;
+
+/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
+export function hasUnusualThumbnailSize(map: GameMapType): boolean {
+  return map === GameMapType.AmazonRiver;
+}
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -127,8 +135,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Oceania,
   ],
   regional: [
-    GameMapType.BlackSea,
+    GameMapType.BritanniaClassic,
     GameMapType.Britannia,
+    GameMapType.BlackSea,
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
@@ -150,6 +159,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Lemnos,
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
+    GameMapType.AmazonRiver,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -161,6 +171,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+    GameMapType.Didier,
   ],
 };
 
@@ -182,6 +193,11 @@ export const isGameMode = (value: unknown): value is GameMode =>
 export enum GameMapSize {
   Compact = "Compact",
   Normal = "Normal",
+}
+
+export interface PublicGameModifiers {
+  isCompact: boolean;
+  isRandomSpawn: boolean;
 }
 
 export interface UnitInfo {
@@ -659,6 +675,8 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+  canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;
+  isImmune(): boolean;
 
   createAttack(
     target: Player | TerraNullius,
@@ -712,6 +730,9 @@ export interface Game extends GameMap {
   // Alliances
   alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
+
+  // Immunity timer
+  isSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
