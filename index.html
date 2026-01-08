@@ -694,7 +694,7 @@
           if (shouldOpen) {
             sidebar.classList.add("open");
             sidebar.classList.remove("-translate-x-full");
-            sidebar.classList.add("translate-x-0", "z-[99999]");
+            sidebar.classList.add("translate-x-0", "z-[40001]");
             backdrop.classList.remove("hidden", "pointer-events-none");
             backdrop.classList.add(
               "block",
@@ -702,13 +702,13 @@
               "fixed",
               "inset-0",
               "bg-black/50",
-              "z-[99998]",
+              "z-[40000]",
             );
             document.documentElement.classList.add("overflow-hidden");
           } else {
             sidebar.classList.remove("open");
             sidebar.classList.add("-translate-x-full");
-            sidebar.classList.remove("translate-x-0", "z-[99999]");
+            sidebar.classList.remove("translate-x-0", "z-[40001]");
             backdrop.classList.add("hidden", "pointer-events-none");
             backdrop.classList.remove(
               "block",
@@ -716,7 +716,7 @@
               "fixed",
               "inset-0",
               "bg-black/50",
-              "z-[99998]",
+              "z-[40000]",
             );
             document.documentElement.classList.remove("overflow-hidden");
           }
