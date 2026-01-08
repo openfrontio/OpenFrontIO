@@ -1051,85 +1051,85 @@ export class HelpModal extends LitElement {
               <div
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-blue-300 text-center"
-                >
-                  ${translateText("help_modal.icon_crown")}
-                </span>
                 <img
                   src="/images/helpModal/crown.webp"
                   alt="Rank 1"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
                 />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-white text-center"
+                >
+                  ${translateText("help_modal.icon_crown")}
+                </span>
               </div>
 
               <!-- Traitor -->
               <div
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-blue-300 text-center"
-                >
-                  ${translateText("help_modal.icon_traitor")}
-                </span>
                 <img
                   src="/images/helpModal/traitor2.webp"
                   alt="Traitor"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
                 />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-white text-center"
+                >
+                  ${translateText("help_modal.icon_traitor")}
+                </span>
               </div>
 
               <!-- Ally -->
               <div
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-blue-300 text-center"
-                >
-                  ${translateText("help_modal.icon_ally")}
-                </span>
                 <img
                   src="/images/helpModal/ally2.webp"
                   alt="Ally"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
                 />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-white text-center"
+                >
+                  ${translateText("help_modal.icon_ally")}
+                </span>
               </div>
 
               <!-- Embargo -->
               <div
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-blue-300 text-center"
-                >
-                  ${translateText("help_modal.icon_embargo")}
-                </span>
                 <img
                   src="/images/helpModal/embargo.webp"
                   alt="Embargo"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
                 />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-white text-center"
+                >
+                  ${translateText("help_modal.icon_embargo")}
+                </span>
               </div>
 
               <!-- Alliance Request -->
               <div
                 class="bg-black/20 rounded-xl border border-white/10 p-4 flex flex-col items-center gap-3 hover:bg-white/5 transition-colors"
               >
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-blue-300 text-center"
-                >
-                  ${translateText("help_modal.icon_request")}
-                </span>
                 <img
                   src="/images/helpModal/allianceRequest.webp"
                   alt="Request"
                   class="rounded shadow-lg border border-white/10 h-24 w-auto object-contain"
                   loading="lazy"
                 />
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-white text-center"
+                >
+                  ${translateText("help_modal.icon_request")}
+                </span>
               </div>
             </div>
           </section>
