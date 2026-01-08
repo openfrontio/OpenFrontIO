@@ -15,14 +15,6 @@ export class NewsModal extends LitElement {
     close: () => void;
   };
 
-  connectedCallback() {
-    super.connectedCallback();
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-  }
-
   @property({ type: String }) markdown = "Loading...";
 
   private initialized: boolean = false;
