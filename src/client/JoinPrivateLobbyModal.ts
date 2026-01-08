@@ -330,7 +330,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         <div
           class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
         >
-          Disabled Units
+          ${translateText("lobby.disabled_units")}
         </div>
         <div class="flex flex-wrap gap-2">
           ${this.gameConfig.disabledUnits.map((unit) => {
