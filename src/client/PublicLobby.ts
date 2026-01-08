@@ -118,16 +118,6 @@ export class PublicLobby extends LitElement {
       lobby.gameConfig.publicGameModifiers,
     );
 
-    // Debug logging
-    if (lobby.gameConfig.publicGameModifiers) {
-      console.log(
-        "Modifiers:",
-        lobby.gameConfig.publicGameModifiers,
-        "Labels:",
-        modifierLabel,
-      );
-    }
-
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
