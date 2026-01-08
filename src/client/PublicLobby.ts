@@ -114,6 +114,20 @@ export class PublicLobby extends LitElement {
         : `${modeLabel} ${teamDetailLabel}`;
     }
 
+    const modifierLabel = this.getModifierLabels(
+      lobby.gameConfig.publicGameModifiers,
+    );
+
+    // Debug logging
+    if (lobby.gameConfig.publicGameModifiers) {
+      console.log(
+        "Modifiers:",
+        lobby.gameConfig.publicGameModifiers,
+        "Labels:",
+        modifierLabel,
+      );
+    }
+
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
@@ -174,11 +188,25 @@ export class PublicLobby extends LitElement {
               <div class="flex flex-wrap items-center gap-2 mt-2">
                 ${fullModeLabel
                   ? html`<span
-                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider bg-white/10 text-white border border-white/10 backdrop-blur-sm"
+                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${this
+                        .isLobbyHighlighted
+                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                        : "bg-white/10 text-white border border-white/10"} backdrop-blur-sm"
                     >
                       ${fullModeLabel}
                     </span>`
                   : ""}
+                ${modifierLabel.map(
+                  (label) =>
+                    html`<span
+                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${this
+                        .isLobbyHighlighted
+                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                        : "bg-white/10 text-white border border-white/10"} backdrop-blur-sm"
+                    >
+                      ${label}
+                    </span>`,
+                )}
               </div>
             </div>
 
