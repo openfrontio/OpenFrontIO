@@ -259,7 +259,7 @@ export class SinglePlayerModal extends BaseModal {
                   <h4
                     class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
                   >
-                    Special
+                    ${translateText("map_categories.special")}
                   </h4>
                   <div
                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
