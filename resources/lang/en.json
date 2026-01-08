@@ -311,7 +311,8 @@
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
-    "players_per_team": "of {num}"
+    "players_per_team": "of {num}",
+    "started": "Started"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",

@@ -209,7 +209,7 @@ export class PublicLobby extends LitElement {
                 : html`<div
                     class="text-sm font-bold text-green-200 bg-green-500/20 border border-green-500/30 px-2 py-0.5 rounded uppercase tracking-wider"
                   >
-                    Started
+                    ${translateText("public_lobby.started")}
                   </div>`}
             </div>
           </div>
