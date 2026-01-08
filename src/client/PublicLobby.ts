@@ -127,11 +127,6 @@ export class PublicLobby extends LitElement {
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        <div
-          class="absolute top-4 left-4 z-20 px-3 py-1 bg-blue-600/90 text-white text-xs font-bold uppercase tracking-wider rounded-lg border border-blue-400/30 backdrop-blur-md"
-        >
-          ${translateText("main.quickplay")}
-        </div>
         <!-- Map Image Area -->
         <div class="flex-1 w-full relative overflow-hidden bg-[#4684b4] p-8">
           ${mapImageSrc
