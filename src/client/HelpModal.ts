@@ -1162,7 +1162,7 @@ export class HelpModal extends LitElement {
 
   public close() {
     if (this.inline) {
-      if ((window as any).showPage) (window as any).showPage("page-play");
+      if (window.showPage) window.showPage("page-play");
     } else {
       this.modalEl?.close();
     }

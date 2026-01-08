@@ -190,8 +190,8 @@ export class FlagInputModal extends LitElement {
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && (window as any).showPage) {
-        (window as any).showPage(this.id || "flag-input-modal");
+      if (needsShow && window.showPage) {
+        window.showPage(this.id || "flag-input-modal");
       }
     } else {
       this.modalEl?.open();
@@ -205,8 +205,8 @@ export class FlagInputModal extends LitElement {
           returnEl.open();
         }
         this.returnTo = "";
-      } else if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      } else if (window.showPage) {
+        window.showPage("page-play");
       }
     } else {
       this.modalEl?.close();

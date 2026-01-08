@@ -267,8 +267,8 @@ export class UserSettingModal extends LitElement {
 
   public close() {
     if (this.inline) {
-      if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      if (window.showPage) {
+        window.showPage("page-play");
       }
     } else {
       this.modalEl?.close();
@@ -459,8 +459,8 @@ export class UserSettingModal extends LitElement {
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && (window as any).showPage) {
-        (window as any).showPage(this.id || "page-options");
+      if (needsShow && window.showPage) {
+        window.showPage(this.id || "page-options");
       }
       this.requestUpdate();
     } else {

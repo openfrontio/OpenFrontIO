@@ -393,8 +393,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.gameConfig = null;
     this.players = [];
     if (this.inline) {
-      if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      if (window.showPage) {
+        window.showPage("page-play");
       }
     } else {
       this.modalEl?.close();

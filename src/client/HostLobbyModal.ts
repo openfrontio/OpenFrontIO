@@ -889,8 +889,8 @@ export class HostLobbyModal extends LitElement {
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && (window as any).showPage) {
-        (window as any).showPage("page-host-lobby");
+      if (needsShow && window.showPage) {
+        window.showPage("page-host-lobby");
       }
     } else {
       this.modalEl?.open();
@@ -917,8 +917,8 @@ export class HostLobbyModal extends LitElement {
   public close() {
     console.log("Closing host lobby modal");
     if (this.inline) {
-      if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      if (window.showPage) {
+        window.showPage("page-play");
       }
     } else {
       this.modalEl?.close();

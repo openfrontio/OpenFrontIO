@@ -706,8 +706,8 @@ export class SinglePlayerModal extends LitElement {
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && (window as any).showPage) {
-        (window as any).showPage("page-single-player");
+      if (needsShow && window.showPage) {
+        window.showPage("page-single-player");
       }
     } else {
       this.modalEl?.open();
@@ -717,8 +717,8 @@ export class SinglePlayerModal extends LitElement {
 
   public close() {
     if (this.inline) {
-      if ((window as any).showPage) {
-        (window as any).showPage("page-play");
+      if (window.showPage) {
+        window.showPage("page-play");
       }
     } else {
       this.modalEl?.close();

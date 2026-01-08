@@ -333,7 +333,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.affiliateCode = null;
 
     if (this.inline) {
-      if ((window as any).showPage) (window as any).showPage("page-play");
+      if (window.showPage) window.showPage("page-play");
     } else {
       this.modalEl?.close();
     }
@@ -359,7 +359,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.showSkinSelectedPopup();
     // Close the skin store and show the play modal
     this.close();
-    (window as any).showPage("page-play");
+    window.showPage("page-play");
   }
 
   private showSkinSelectedPopup() {
