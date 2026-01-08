@@ -1,45 +1,24 @@
-import { html, LitElement } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
 import { getApiBase } from "./Api";
 import { translateText } from "./Utils";
+import { BaseModal } from "./components/BaseModal";
 
 @customElement("stats-modal")
-export class StatsModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal")
-  private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
-
+export class StatsModal extends BaseModal {
   @state() private isLoading: boolean = false;
   @state() private error: string | null = null;
   @state() private data: ClanLeaderboardResponse | null = null;
 
   private hasLoaded = false;
 
-  createRenderRoot() {
-    return this;
-  }
-
-  public open() {
-    this.modalEl?.open();
+  protected onOpen(): void {
     if (!this.hasLoaded && !this.isLoading) {
       void this.loadLeaderboard();
-    }
-  }
-
-  public close() {
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
     }
   }
 

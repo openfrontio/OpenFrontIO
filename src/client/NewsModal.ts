@@ -1,27 +1,18 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
+import { BaseModal } from "./components/BaseModal";
 import changelog from "/changelog.md?url";
 import megaphone from "/images/Megaphone.svg?url";
 
 @customElement("news-modal")
-export class NewsModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
-
+export class NewsModal extends BaseModal {
   @property({ type: String }) markdown = "Loading...";
 
   private initialized: boolean = false;
-
-  createRenderRoot() {
-    return this;
-  }
 
   render() {
     const content = html`
@@ -97,6 +88,8 @@ export class NewsModal extends LitElement {
   }
 
   public close() {
+    this.unregisterEscapeHandler();
+
     if (this.inline) {
       const windowWithShowPage = window as any;
       if (
@@ -111,6 +104,8 @@ export class NewsModal extends LitElement {
   }
 
   public open() {
+    this.registerEscapeHandler();
+
     if (!this.initialized) {
       this.initialized = true;
       fetch(changelog)
@@ -177,9 +172,5 @@ export class NewsButton extends LitElement {
       </button>
       <news-modal></news-modal>
     `;
-  }
-
-  createRenderRoot() {
-    return this;
   }
 }

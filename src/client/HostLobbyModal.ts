@@ -1,5 +1,5 @@
-import { LitElement, TemplateResult, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { TemplateResult, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -24,6 +24,7 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyTeamView";
@@ -34,13 +35,8 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
-export class HostLobbyModal extends LitElement {
+export class HostLobbyModal extends BaseModal {
   @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-    onClose?: () => void;
-  };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNations = false;
@@ -98,24 +94,6 @@ export class HostLobbyModal extends LitElement {
       </button>
     `;
   }
-
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.leaveLobby();
-      this.close();
-    }
-  };
 
   render() {
     const content = html`
@@ -858,11 +836,7 @@ export class HostLobbyModal extends LitElement {
     `;
   }
 
-  createRenderRoot() {
-    return this;
-  }
-
-  public open() {
+  protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
     this.lobbyIdVisible = this.userSettings.get(
       "settings.lobbyIdVisibility",
@@ -886,22 +860,30 @@ export class HostLobbyModal extends LitElement {
           }),
         );
       });
+    if (this.modalEl) {
+      this.modalEl.onClose = () => {
+        this.close();
+      };
+    }
+    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+    this.loadNationCount();
+  }
+
+  public open(): void {
+    this.registerEscapeHandler();
+    this.onOpen();
+
+    // Special handling for inline mode with custom page name
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
       if (needsShow && window.showPage) {
         window.showPage("page-host-lobby");
       }
+      this.style.pointerEvents = "auto";
     } else {
       this.modalEl?.open();
-      if (this.modalEl) {
-        this.modalEl.onClose = () => {
-          this.close();
-        };
-      }
     }
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
-    this.loadNationCount();
   }
 
   private leaveLobby() {
@@ -914,15 +896,8 @@ export class HostLobbyModal extends LitElement {
     );
   }
 
-  public close() {
+  protected onClose(): void {
     console.log("Closing host lobby modal");
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
     crazyGamesSDK.hideInviteButton();
     this.copySuccess = false;
     if (this.playersInterval) {

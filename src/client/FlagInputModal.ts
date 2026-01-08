@@ -1,27 +1,15 @@
-import { LitElement, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { translateText } from "./Utils";
+import { BaseModal } from "./components/BaseModal";
 
 @customElement("flag-input-modal")
-export class FlagInputModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-    onClose?: () => void;
-  };
+export class FlagInputModal extends BaseModal {
+  @query("#flag-input-modal") private modalRef!: HTMLElement;
 
   @state() private search = "";
   public returnTo = "";
-
-  connectedCallback() {
-    super.connectedCallback();
-    if (this.hasAttribute("inline")) {
-      this.inline = true;
-    }
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -30,6 +18,7 @@ export class FlagInputModal extends LitElement {
   firstUpdated() {
     if (this.modalEl) {
       this.modalEl.onClose = () => {
+        this.unregisterEscapeHandler();
         if (this.returnTo) {
           const returnEl = document.querySelector(this.returnTo) as any;
           if (returnEl?.open) {
@@ -40,18 +29,6 @@ export class FlagInputModal extends LitElement {
       };
     }
   }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
 
   render() {
     const content = html`
@@ -160,10 +137,6 @@ export class FlagInputModal extends LitElement {
     `;
   }
 
-  createRenderRoot() {
-    return this;
-  }
-
   private includedInSearch(country: { name: string; code: string }): boolean {
     return (
       country.name.toLowerCase().includes(this.search.toLowerCase()) ||
@@ -186,30 +159,17 @@ export class FlagInputModal extends LitElement {
     );
   }
 
-  public open() {
-    if (this.inline) {
-      const needsShow =
-        this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && window.showPage) {
-        window.showPage(this.id || "flag-input-modal");
-      }
-    } else {
-      this.modalEl?.open();
-    }
+  protected onOpen(): void {
+    // No custom logic needed
   }
-  public close() {
-    if (this.inline) {
-      if (this.returnTo) {
-        const returnEl = document.querySelector(this.returnTo) as any;
-        if (returnEl?.open) {
-          returnEl.open();
-        }
-        this.returnTo = "";
-      } else if (window.showPage) {
-        window.showPage("page-play");
+
+  protected onClose(): void {
+    if (this.returnTo) {
+      const returnEl = document.querySelector(this.returnTo) as any;
+      if (returnEl?.open) {
+        returnEl.open();
       }
-    } else {
-      this.modalEl?.close();
+      this.returnTo = "";
     }
   }
 }

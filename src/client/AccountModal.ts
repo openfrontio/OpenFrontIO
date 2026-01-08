@@ -1,5 +1,5 @@
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   PlayerGame,
   PlayerStatsTree,
@@ -11,17 +11,14 @@ import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { copyToClipboard, translateText } from "./Utils";
 
 @customElement("account-modal")
-export class AccountModal extends LitElement {
+export class AccountModal extends BaseModal {
   @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
@@ -50,16 +47,6 @@ export class AccountModal extends LitElement {
     });
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
-  }
-
   private async copyIdToClipboard() {
     const id = this.userMeResponse?.player?.publicId;
     if (!id) return;
@@ -69,17 +56,6 @@ export class AccountModal extends LitElement {
       () => (this.showCopied = true),
       () => (this.showCopied = false),
     );
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
-
-  createRenderRoot() {
-    return this;
   }
 
   render() {
@@ -552,6 +528,8 @@ export class AccountModal extends LitElement {
   }
 
   public open() {
+    this.registerEscapeHandler();
+
     this.modalEl?.open();
     this.isLoadingUser = true;
 
@@ -575,6 +553,8 @@ export class AccountModal extends LitElement {
   }
 
   public close() {
+    this.unregisterEscapeHandler();
+
     if (this.inline) {
       if (window.showPage) {
         window.showPage("page-play");

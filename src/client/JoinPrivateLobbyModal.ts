@@ -1,5 +1,5 @@
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html, TemplateResult } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import {
   ClientInfo,
@@ -12,15 +12,11 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/LobbyTeamView";
 @customElement("join-private-lobby-modal")
-export class JoinPrivateLobbyModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+export class JoinPrivateLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
   @state() private message: string = "";
   @state() private hasJoined = false;
@@ -33,29 +29,9 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private playersInterval: NodeJS.Timeout | null = null;
 
-  connectedCallback() {
-    super.connectedCallback();
-    if (this.hasAttribute("inline")) {
-      this.inline = true;
-    }
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
   }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.closeAndLeave();
-    }
-  };
 
   render() {
     const content = html`
@@ -373,11 +349,9 @@ export class JoinPrivateLobbyModal extends LitElement {
     `;
   }
 
-  createRenderRoot() {
-    return this;
-  }
-
   public open(id: string = "") {
+    this.registerEscapeHandler();
+
     if (!this.inline) {
       this.modalEl?.open();
     }
@@ -388,6 +362,8 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   public close() {
+    this.unregisterEscapeHandler();
+
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
     this.currentLobbyId = "";
     this.gameConfig = null;

@@ -1,43 +1,13 @@
-import { LitElement, html } from "lit";
-import { customElement, property, query } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
+import { BaseModal } from "./components/BaseModal";
 
 @customElement("language-modal")
-export class LanguageModal extends LitElement {
+export class LanguageModal extends BaseModal {
   @property({ type: Array }) languageList: any[] = [];
   @property({ type: String }) currentLang = "en";
-  @property({ type: Boolean }) inline = false;
-
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
-
-  createRenderRoot() {
-    return this;
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-  }
-
-  public open() {
-    this.style.pointerEvents = "auto";
-    if (!this.inline) {
-      this.modalEl?.open();
-    }
-  }
-
-  public close() {
-    if (this.inline) {
-      this.style.pointerEvents = "none";
-      // Return to main play page if we were inline (standard navigation behavior)
-      window.showPage("page-play");
-    } else {
-      this.modalEl?.close();
-    }
-  }
 
   private handleClose = () => {
     this.style.pointerEvents = "none";

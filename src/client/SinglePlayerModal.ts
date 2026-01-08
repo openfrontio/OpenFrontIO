@@ -1,5 +1,5 @@
-import { LitElement, TemplateResult, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { TemplateResult, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import {
@@ -20,6 +20,7 @@ import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/Maps";
@@ -31,12 +32,7 @@ import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
-export class SinglePlayerModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+export class SinglePlayerModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNations: boolean = false;
@@ -60,7 +56,6 @@ export class SinglePlayerModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
@@ -72,16 +67,8 @@ export class SinglePlayerModal extends LitElement {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
-    window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
 
   private toggleAchievements = () => {
     this.showAchievements = !this.showAchievements;
@@ -698,31 +685,8 @@ export class SinglePlayerModal extends LitElement {
     `;
   }
 
-  public createRenderRoot() {
-    return this; // light DOM
-  }
-
-  public open() {
-    if (this.inline) {
-      const needsShow =
-        this.classList.contains("hidden") || this.style.display === "none";
-      if (needsShow && window.showPage) {
-        window.showPage("page-single-player");
-      }
-    } else {
-      this.modalEl?.open();
-    }
+  protected onOpen(): void {
     this.useRandomMap = false;
-  }
-
-  public close() {
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
   }
 
   private handleRandomMapToggle() {

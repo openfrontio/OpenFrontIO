@@ -1,11 +1,12 @@
 import type { TemplateResult } from "lit";
-import { html, LitElement, render } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html, render } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { hasLinkedAccount } from "./Api";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { renderPatternPreview } from "./components/PatternButton";
@@ -17,13 +18,7 @@ import {
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
-export class TerritoryPatternsModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
-
+export class TerritoryPatternsModal extends BaseModal {
   public previewButton: HTMLElement | null = null;
 
   @state() private selectedPattern: PlayerPattern | null;
@@ -71,10 +66,6 @@ export class TerritoryPatternsModal extends LitElement {
         : null;
     this.selectedColor = this.userSettings.getSelectedColor() ?? null;
     this.refresh();
-  }
-
-  createRenderRoot() {
-    return this;
   }
 
   private renderTabNavigation(): TemplateResult {
@@ -306,6 +297,7 @@ export class TerritoryPatternsModal extends LitElement {
   public async open(
     options?: string | { affiliateCode?: string; showOnlyOwned?: boolean },
   ) {
+    this.registerEscapeHandler();
     this.isActive = true;
     if (typeof options === "string") {
       this.affiliateCode = options;
@@ -330,6 +322,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public close() {
     this.isActive = false;
+    this.unregisterEscapeHandler();
     this.affiliateCode = null;
 
     if (this.inline) {

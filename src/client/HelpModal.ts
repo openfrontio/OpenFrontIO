@@ -1,21 +1,13 @@
-import { LitElement, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/Maps";
 
 @customElement("help-modal")
-export class HelpModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
-
-  createRenderRoot() {
-    return this;
-  }
 
   private isKeybindObject(v: unknown): v is { value: string } {
     return (
@@ -1155,16 +1147,7 @@ export class HelpModal extends LitElement {
     `;
   }
 
-  public open() {
+  protected onOpen(): void {
     this.keybinds = this.getKeybinds();
-    this.modalEl?.open();
-  }
-
-  public close() {
-    if (this.inline) {
-      if (window.showPage) window.showPage("page-play");
-    } else {
-      this.modalEl?.close();
-    }
   }
 }

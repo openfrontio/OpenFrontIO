@@ -1,8 +1,9 @@
-import { LitElement, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import { BaseModal } from "./components/BaseModal";
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
@@ -30,9 +31,7 @@ const DefaultKeybinds: Record<string, string> = {
 };
 
 @customElement("keybinds-modal")
-export class KeybindsModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
-
+export class KeybindsModal extends BaseModal {
   @state() private keybinds: Record<string, { value: string; key: string }> =
     {};
 
@@ -47,20 +46,6 @@ export class KeybindsModal extends LitElement {
         console.warn("Invalid keybinds JSON:", e);
       }
     }
-  }
-
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-    isModalOpen: boolean;
-  };
-
-  createRenderRoot() {
-    return this;
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
   }
 
   private handleKeybindChange(
@@ -205,16 +190,6 @@ export class KeybindsModal extends LitElement {
         ${content}
       </o-modal>
     `;
-  }
-
-  public close() {
-    if (this.inline) {
-      if (window.showPage) {
-        window.showPage("page-play");
-      }
-    } else {
-      this.modalEl?.close();
-    }
   }
 
   private renderKeybindSettings() {
@@ -456,7 +431,19 @@ export class KeybindsModal extends LitElement {
   }
 
   public open() {
+    this.registerEscapeHandler();
+
     this.requestUpdate();
     this.modalEl?.open();
+  }
+
+  public close() {
+    this.unregisterEscapeHandler();
+
+    if (this.inline) {
+      if (window.showPage) window.showPage("page-play");
+    } else {
+      this.modalEl?.close();
+    }
   }
 }

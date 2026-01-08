@@ -1,10 +1,11 @@
-import { LitElement, html } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { BaseModal } from "./components/BaseModal";
 import "./FlagInput";
 
 interface FlagInputModalElement extends HTMLElement {
@@ -13,35 +14,25 @@ interface FlagInputModalElement extends HTMLElement {
 }
 
 @customElement("user-setting")
-export class UserSettingModal extends LitElement {
-  @property({ type: Boolean }) inline = false;
+export class UserSettingModal extends BaseModal {
   private userSettings: UserSettings = new UserSettings();
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-    isModalOpen: boolean;
-  };
-
-  createRenderRoot() {
-    return this;
-  }
-
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener("keydown", this.handleEasterEggKey);
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
+  private handleEasterEggKey = (e: KeyboardEvent) => {
+    if (!this.isModalOpen || this.showEasterEggSettings) return;
+
+    // Validate that the event target is inside this component
+    const target = e.target as Node;
+    if (!this.contains(target)) {
+      return;
+    }
 
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-4);
@@ -266,6 +257,9 @@ export class UserSettingModal extends LitElement {
   }
 
   public close() {
+    this.unregisterEscapeHandler();
+    window.removeEventListener("keydown", this.handleEasterEggKey);
+
     if (this.inline) {
       if (window.showPage) {
         window.showPage("page-play");
@@ -456,6 +450,9 @@ export class UserSettingModal extends LitElement {
   }
 
   public open() {
+    this.registerEscapeHandler();
+    window.addEventListener("keydown", this.handleEasterEggKey);
+
     if (this.inline) {
       const needsShow =
         this.classList.contains("hidden") || this.style.display === "none";
