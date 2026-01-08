@@ -69,7 +69,7 @@ export class SettingKeybind extends LitElement {
   }
 
   private displayKey(key: string): string {
-    if (!key) return "Press a key";
+    if (!key) return translateText("user_setting.press_a_key");
     return formatKeyForDisplay(key);
   }
 

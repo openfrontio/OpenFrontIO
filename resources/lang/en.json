@@ -452,6 +452,7 @@
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
     "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
+    "press_a_key": "Press a key",
     "view_options": "View Options",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
