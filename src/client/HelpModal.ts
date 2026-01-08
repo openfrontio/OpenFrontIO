@@ -589,9 +589,10 @@ export class HelpModal extends LitElement {
                 </p>
                 <ul class="space-y-3">
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon build-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/BuildIconWhite.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span>${translateText("help_modal.radial_build")}</span>
                   </li>
                   <li class="flex items-center gap-3">
@@ -603,35 +604,40 @@ export class HelpModal extends LitElement {
                     <span>${translateText("help_modal.radial_info")}</span>
                   </li>
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon boat-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/BoatIcon.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span>${translateText("help_modal.radial_boat")}</span>
                   </li>
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon alliance-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/AllianceIconWhite.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span>${translateText("help_modal.info_alliance")}</span>
                   </li>
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon betray-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/TraitorIconWhite.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span>${translateText("help_modal.ally_betray")}</span>
                   </li>
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon donate-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/DonateTroopIconWhite.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span
                       >${translateText("help_modal.radial_donate_troops")}</span
                     >
                   </li>
                   <li class="flex items-center gap-3">
-                    <div
-                      class="icon donate-gold-icon scale-75 filter grayscale brightness-200"
-                    ></div>
+                    <img
+                      src="/images/DonateGoldIconWhite.svg"
+                      class="w-8 h-8 scale-75 origin-left"
+                    />
                     <span
                       >${translateText("help_modal.radial_donate_gold")}</span
                     >
@@ -694,32 +700,36 @@ export class HelpModal extends LitElement {
                   </p>
                   <ul class="space-y-3">
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon chat-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/ChatIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.info_chat")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon target-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/TargetIcon.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.info_target")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon alliance-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/AllianceIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.info_alliance")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon emoji-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/EmojiIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.info_emoji")}</span>
                     </li>
                     <li class="flex items-center gap-3">
                       <div
-                        class="icon flex items-center justify-center w-8 h-8 opacity-80"
+                        class="flex items-center justify-center w-8 h-8 opacity-80"
                       >
                         <img
                           src="/images/helpModal/stopTrading.webp"
@@ -754,21 +764,24 @@ export class HelpModal extends LitElement {
                   </p>
                   <ul class="space-y-3">
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon betray-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/TraitorIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.ally_betray")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon donate-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/DonateTroopIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span>${translateText("help_modal.ally_donate")}</span>
                     </li>
                     <li class="flex items-center gap-3">
-                      <div
-                        class="icon donate-gold-icon scale-75 filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/DonateGoldIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                       <span
                         >${translateText("help_modal.ally_donate_gold")}</span
                       >
@@ -840,9 +853,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_city")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon city-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/CityIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -855,9 +869,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_defense")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon defense-post-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/ShieldIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -870,9 +885,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_port")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon port-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/PortIcon.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -885,9 +901,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_factory")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon factory-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/FactoryIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -900,9 +917,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_warship")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon warship-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/BattleshipIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -915,9 +933,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_silo")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon missile-silo-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/MissileSiloIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -930,9 +949,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_sam")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon sam-launcher-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/SamLauncherIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -945,9 +965,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_atom")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon atom-bomb-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/NukeIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -960,9 +981,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_hydrogen")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon hydrogen-bomb-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/MushroomCloudIconWhite.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -975,9 +997,10 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_mirv")}
                     </td>
                     <td class="py-3 border-b border-white/5">
-                      <div
-                        class="icon mirv-icon scale-75 transform-origin-left filter grayscale brightness-200"
-                      ></div>
+                      <img
+                        src="/images/MIRVIcon.svg"
+                        class="w-8 h-8 scale-75 origin-left"
+                      />
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
