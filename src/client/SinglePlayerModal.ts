@@ -186,7 +186,7 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 mr-1">
-          <div class="max-w-5xl mx-auto space-y-6">
+          <div class="max-w-5xl mx-auto space-y-6 pt-4">
             <!-- Map Selection -->
             <div class="space-y-6">
               <div
