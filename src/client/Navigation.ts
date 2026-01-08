@@ -1,9 +1,3 @@
-declare global {
-  interface Window {
-    showPage: (pageId: string) => void;
-  }
-}
-
 export function initNavigation() {
   const showPage = (pageId: string) => {
     // Hide all pages
