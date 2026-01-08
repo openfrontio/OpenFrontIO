@@ -194,9 +194,9 @@ export class NationExecution implements Execution {
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
+    this.mirvBehavior.considerMIRV();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
-    this.mirvBehavior.considerMIRV();
     this.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
   }
@@ -350,7 +350,6 @@ export class NationExecution implements Execution {
       }
       const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
       if (canBuild === false) {
-        console.warn("cannot spawn destroyer");
         return false;
       }
       this.mg.addExecution(
@@ -460,7 +459,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-    this.nukeBehavior.maybeSendNuke(this.attackBehavior.findBestNukeTarget());
+    this.nukeBehavior.maybeSendNuke();
   }
 
   private sendBoatRandomly(borderingEnemies: Player[] = []) {

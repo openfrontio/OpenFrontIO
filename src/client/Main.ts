@@ -36,7 +36,10 @@ import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
-import { SendKickPlayerIntentEvent } from "./Transport";
+import {
+  SendKickPlayerIntentEvent,
+  SendUpdateGameConfigIntentEvent,
+} from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -187,6 +190,10 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener(
+      "update-game-config",
+      this.handleUpdateGameConfig.bind(this),
+    );
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -553,6 +560,7 @@ class Client {
           "stats-button",
           "token-login",
           "matchmaking-modal",
+          "lang-selector",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -621,6 +629,15 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private handleUpdateGameConfig(event: CustomEvent) {
+    const { config } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
   }
 

@@ -1,11 +1,13 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import {
   Duos,
   GameMapType,
   GameMode,
+  hasUnusualThumbnailSize,
   HumansVsNations,
+  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -97,18 +99,30 @@ export class PublicLobby extends LitElement {
       teamTotal,
       teamSize,
     );
-    const teamDetailLabel = this.getTeamDetailLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
-      teamSize,
+    // True when the detail label already includes the full mode text.
+    const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
+      this.getTeamDetailLabel(
+        lobby.gameConfig.gameMode,
+        teamCount,
+        teamTotal,
+        teamSize,
+      );
+
+    let fullModeLabel = modeLabel;
+    if (teamDetailLabel) {
+      fullModeLabel = isTeamDetailFullLabel
+        ? teamDetailLabel
+        : `${modeLabel} ${teamDetailLabel}`;
+    }
+
+    const modifierLabel = this.getModifierLabels(
+      lobby.gameConfig.publicGameModifiers,
     );
 
-    const fullModeLabel = teamDetailLabel
-      ? `${modeLabel} ${teamDetailLabel}`
-      : modeLabel;
-
     const mapImageSrc = this.mapImages.get(lobby.gameID);
+    const isUnusualThumbnailSize = hasUnusualThumbnailSize(
+      lobby.gameConfig.gameMap,
+    );
 
     return html`
       <button
@@ -116,8 +130,8 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          ? "bg-linear-to-r via-none from-green-600 to-green-500"
+          : "bg-linear-to-r via-none from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -126,8 +140,9 @@ export class PublicLobby extends LitElement {
           ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
+              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
+                ? "object-cover object-center"
+                : ""}"
             />`
           : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
@@ -146,16 +161,25 @@ export class PublicLobby extends LitElement {
                       .join("")}`
                 : translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-white-400">
-              ${fullModeLabel
-                ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
-                    >${fullModeLabel}</span
-                  >`
-                : ""}
+            <div
+              class="text-md font-medium text-white-400 flex flex-wrap justify-end items-center gap-1"
+            >
               <span
+                class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
+                  ? "text-green-600"
+                  : "text-blue-600"} bg-white rounded-xs px-1"
+                >${fullModeLabel}</span
+              >
+              ${modifierLabel.map(
+                (label) =>
+                  html`<span
+                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
+                      ? "text-green-600"
+                      : "text-blue-600"} bg-white rounded-xs px-1"
+                    >${label}</span
+                  >`,
+              )}
+              <span class="whitespace-nowrap"
                 >${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
                 )}</span
@@ -253,24 +277,53 @@ export class PublicLobby extends LitElement {
     teamCount: number | string | null,
     teamTotal: number | undefined,
     teamSize: number | undefined,
-  ): string | null {
-    if (gameMode !== GameMode.Team) return null;
+  ): { label: string | null; isFullLabel: boolean } {
+    if (gameMode !== GameMode.Team) {
+      return { label: null, isFullLabel: false };
+    }
 
     if (typeof teamCount === "string" && teamCount === HumansVsNations) {
-      return null;
+      return { label: null, isFullLabel: false };
     }
 
     if (typeof teamCount === "string") {
       const teamKey = `public_lobby.teams_${teamCount}`;
-      const maybeTranslated = translateText(teamKey);
-      if (maybeTranslated !== teamKey) return maybeTranslated;
+      // translateText returns the key when a translation is missing.
+      const maybeTranslated = translateText(teamKey, {
+        team_count: teamTotal ?? 0,
+      });
+      if (maybeTranslated !== teamKey) {
+        return { label: maybeTranslated, isFullLabel: true };
+      }
     }
 
     if (teamTotal !== undefined && teamSize !== undefined) {
-      return translateText("public_lobby.players_per_team", { num: teamSize });
+      // Fallback when there's no specific team label translation.
+      return {
+        label: translateText("public_lobby.players_per_team", {
+          num: teamSize,
+        }),
+        isFullLabel: false,
+      };
     }
 
-    return null;
+    return { label: null, isFullLabel: false };
+  }
+
+  private getModifierLabels(
+    publicGameModifiers: PublicGameModifiers | undefined,
+  ): string[] {
+    if (!publicGameModifiers) {
+      return [];
+    }
+    const labels: string[] = [];
+    if (publicGameModifiers.isRandomSpawn) {
+      labels.push(translateText("public_game_modifier.random_spawn"));
+    }
+    if (publicGameModifiers.isCompact) {
+      labels.push(translateText("public_game_modifier.compact_map"));
+    }
+    return labels;
   }
 
   private lobbyClicked(lobby: GameInfo) {

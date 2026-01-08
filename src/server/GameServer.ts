@@ -121,6 +121,9 @@ export class GameServer {
     if (gameConfig.randomSpawn !== undefined) {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
+    if (gameConfig.spawnImmunityDuration !== undefined) {
+      this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
+    }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
@@ -348,6 +351,55 @@ export class GameServer {
                 });
 
                 this.kickClient(clientMsg.intent.target);
+                return;
+              }
+              case "update_game_config": {
+                // Only lobby creator can update config
+                if (client.clientID !== this.lobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can update game config`, {
+                    clientID: client.clientID,
+                    creatorID: this.lobbyCreatorID,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                if (this.isPublic()) {
+                  this.log.warn(`Cannot update public game via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                if (this.hasStarted()) {
+                  this.log.warn(
+                    `Cannot update game config after it has started`,
+                    {
+                      gameID: this.id,
+                      clientID: client.clientID,
+                    },
+                  );
+                  return;
+                }
+
+                if (clientMsg.intent.config.gameType === GameType.Public) {
+                  this.log.warn(`Cannot update game to public via WebSocket`, {
+                    gameID: this.id,
+                    clientID: client.clientID,
+                  });
+                  return;
+                }
+
+                this.log.info(
+                  `Lobby creator updated game config via WebSocket`,
+                  {
+                    creatorID: client.clientID,
+                    gameID: this.id,
+                  },
+                );
+
+                this.updateGameConfig(clientMsg.intent.config);
                 return;
               }
               case "toggle_pause": {
