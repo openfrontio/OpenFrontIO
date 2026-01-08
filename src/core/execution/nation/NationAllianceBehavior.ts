@@ -361,7 +361,6 @@ export class NationAllianceBehavior {
     // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
     if (
       (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
-      this.player.isAlliedWith(otherPlayer) &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
