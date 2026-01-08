@@ -175,7 +175,7 @@ export class GhostStructureManager {
     }
 
     this.game
-      ?.myPlayer()
+      .myPlayer()
       ?.actions(tileRef)
       .then((actions) => {
         // Clear previous highlights/filters
