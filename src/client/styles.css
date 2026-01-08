@@ -16,6 +16,13 @@
     border-color: var(--color-gray-200, currentColor);
   }
 
+  input,
+  textarea,
+  select {
+    background-color: #fff;
+    color: #000;
+  }
+
   input::placeholder,
   textarea::placeholder {
     color: var(--color-gray-400);

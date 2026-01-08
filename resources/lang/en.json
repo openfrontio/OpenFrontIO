@@ -222,6 +222,7 @@
     "asia": "Asia",
     "mars": "Mars",
     "southamerica": "South America",
+    "britanniaclassic": "Britannia (Classic)",
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Gateway to the Atlantic",
     "australia": "Australia",
@@ -633,7 +634,9 @@
     "warships": "Warships",
     "health": "Health",
     "attitude": "Attitude",
-    "levels": "Levels"
+    "levels": "Levels",
+    "wilderness_title": "Wilderness",
+    "irradiated_wilderness_title": "Irradiated Wilderness"
   },
   "events_display": {
     "retreating": "retreating",
