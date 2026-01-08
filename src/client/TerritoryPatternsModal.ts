@@ -343,7 +343,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private showSkinSelectedPopup() {
     // Use unified heads-up-message for feedback
-    let skinName = "Default";
+    let skinName = translateText("territory_patterns.pattern.default");
     if (this.selectedPattern && this.selectedPattern.name) {
       skinName = this.selectedPattern.name
         .split("_")
@@ -358,7 +358,10 @@ export class TerritoryPatternsModal extends BaseModal {
     }
     window.dispatchEvent(
       new CustomEvent("show-message", {
-        detail: { message: `${skinName} selected`, duration: 2000 },
+        detail: {
+          message: `${skinName} ${translateText("territory_patterns.selected")}`,
+          duration: 2000,
+        },
       }),
     );
   }

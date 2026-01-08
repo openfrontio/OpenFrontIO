@@ -822,7 +822,8 @@
     },
     "pattern": {
       "default": "Default"
-    }
+    },
+    "selected": "selected"
   },
   "flag_input": {
     "title": "Select Flag",
