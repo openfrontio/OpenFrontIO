@@ -569,12 +569,14 @@ export class HostLobbyModal extends BaseModal {
                     (val) => (this.maxTimer = val),
                     () => this.maxTimerValue,
                     (val) => (this.maxTimerValue = val),
+                    30,
                   ).click}
                   @keydown=${this.createToggleHandlers(
                     () => this.maxTimer,
                     (val) => (this.maxTimer = val),
                     () => this.maxTimerValue,
                     (val) => (this.maxTimerValue = val),
+                    30,
                   ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .maxTimer
@@ -644,12 +646,14 @@ export class HostLobbyModal extends BaseModal {
                     (val) => (this.spawnImmunity = val),
                     () => this.spawnImmunityDurationMinutes,
                     (val) => (this.spawnImmunityDurationMinutes = val),
+                    5,
                   ).click}
                   @keydown=${this.createToggleHandlers(
                     () => this.spawnImmunity,
                     (val) => (this.spawnImmunity = val),
                     () => this.spawnImmunityDurationMinutes,
                     (val) => (this.spawnImmunityDurationMinutes = val),
+                    5,
                   ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .spawnImmunity
@@ -850,12 +854,13 @@ export class HostLobbyModal extends BaseModal {
     toggleStateSetter: (val: boolean) => void,
     valueGetter: () => number | undefined,
     valueSetter: (val: number | undefined) => void,
+    defaultValue: number = 0,
   ) {
     const toggleLogic = () => {
       const newState = !toggleStateGetter();
       toggleStateSetter(newState);
       if (newState) {
-        valueSetter(valueGetter() ?? 0);
+        valueSetter(valueGetter() ?? defaultValue);
       } else {
         valueSetter(undefined);
       }

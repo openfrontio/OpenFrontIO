@@ -339,7 +339,7 @@
     "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
-    "title": "Private",
+    "title": "Create Private Lobby",
     "mode": "Mode",
     "team_count": "Number of Teams",
     "team_type": "Team Type",

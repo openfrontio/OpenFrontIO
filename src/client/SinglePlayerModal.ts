@@ -555,7 +555,7 @@ export class SinglePlayerModal extends BaseModal {
                     } else {
                       // Set default value when enabling if not already set or invalid
                       if (!this.maxTimerValue || this.maxTimerValue <= 0) {
-                        this.maxTimerValue = 1;
+                        this.maxTimerValue = 30;
                       }
                       // Focus the input after render
                       setTimeout(() => {
