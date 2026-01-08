@@ -21,7 +21,6 @@ export class GoogleAdElement extends LitElement {
   @property({ type: String }) adFormat = "auto";
   @property({ type: Boolean }) fullWidthResponsive = true;
   @property({ type: String }) adTest = "off"; // "on" for testing, remove or set to "off" for production
-  @property({ type: String }) darkBackgroundColor = "rgba(0, 0, 0, 0.2)";
 
   // Disable shadow DOM so AdSense can access the elements
   createRenderRoot() {
