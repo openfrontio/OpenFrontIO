@@ -122,7 +122,7 @@ export class PublicLobby extends LitElement {
         ?disabled=${this.isButtonDebounced}
         class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl bg-gray-900 border border-white/10 transition-all duration-300 ${this
           .isLobbyHighlighted
-          ? "ring-2 ring-green-500 scale-[1.01]"
+          ? "ring-2 ring-green-500 scale-[1.01] opacity-70"
           : "hover:scale-[1.01] hover:border-white/30 hover:shadow-2xl"} ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
