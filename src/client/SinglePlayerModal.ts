@@ -746,26 +746,6 @@ export class SinglePlayerModal extends LitElement {
     this.bots = value;
   }
 
-  private handleInstantBuildChange(e: Event) {
-    this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
-  }
-
-  private handleRandomSpawnChange(e: Event) {
-    this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
-  }
-
-  private handleInfiniteGoldChange(e: Event) {
-    this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
-  }
-
-  private handleInfiniteTroopsChange(e: Event) {
-    this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
-  }
-
-  private handleCompactMapChange(e: Event) {
-    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
-  }
-
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
       e.preventDefault();
@@ -782,10 +762,6 @@ export class SinglePlayerModal extends LitElement {
       return;
     }
     this.maxTimerValue = value;
-  }
-
-  private handleDisableNationsChange(e: Event) {
-    this.disableNations = Boolean((e.target as HTMLInputElement).checked);
   }
 
   private handleGameModeSelection(value: GameMode) {
