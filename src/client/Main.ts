@@ -91,7 +91,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
-    showPage?: (pageId: string) => void;
+    showPage: (pageId: string) => void;
   }
 
   // Extend the global interfaces to include your custom events
