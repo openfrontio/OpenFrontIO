@@ -350,9 +350,8 @@ export class TerritoryPatternsModal extends BaseModal {
     this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
     // Show popup/modal for skin selection
     this.showSkinSelectedPopup();
-    // Close the skin store and show the play modal
+    // Close the skin store
     this.close();
-    window.showPage("page-play");
   }
 
   private showSkinSelectedPopup() {

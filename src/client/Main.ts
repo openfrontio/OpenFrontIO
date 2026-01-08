@@ -91,7 +91,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
-    showPage: (pageId: string) => void;
+    showPage?: (pageId: string) => void;
   }
 
   // Extend the global interfaces to include your custom events
@@ -206,7 +206,7 @@ class Client {
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        window.showPage("page-single-player");
+        window.showPage?.("page-single-player");
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -301,7 +301,7 @@ class Client {
     });
 
     patternButton.addEventListener("click", () => {
-      window.showPage("page-item-store");
+      window.showPage?.("page-item-store");
       const skinStoreModal = document.getElementById(
         "page-item-store",
       ) as HTMLElement & { open?: (opts: any) => void };
@@ -382,7 +382,7 @@ class Client {
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        window.showPage("page-host-lobby");
+        window.showPage?.("page-host-lobby");
         this.publicLobby.leaveLobby();
       } else {
         window.dispatchEvent(
@@ -410,7 +410,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        window.showPage("page-join-private-lobby");
+        window.showPage?.("page-join-private-lobby");
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -473,7 +473,7 @@ class Client {
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
       if (lobbyId && ID.safeParse(lobbyId).success) {
-        window.showPage("page-join-private-lobby");
+        window.showPage?.("page-join-private-lobby");
         this.joinModal.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -552,7 +552,7 @@ class Client {
     if (decodedHash.startsWith("#join=")) {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
-        window.showPage("page-join-private-lobby");
+        window.showPage?.("page-join-private-lobby");
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
