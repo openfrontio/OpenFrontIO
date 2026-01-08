@@ -108,7 +108,6 @@ export class FactoryRadiusLayer implements Layer {
   }
 
   private drawArcSegments(ctx: CanvasRenderingContext2D, a: FactoryRadius) {
-    const fillColor = "rgba(0, 255, 0, 0.15)";
     const strokeColor = "rgba(0, 255, 0, 0.8)";
     const outlineColor = "rgba(0, 0, 0, 0.6)";
     const lineWidth = 2;
