@@ -13,7 +13,11 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import {
+  ContextMenuEvent,
+  GhostStructureChangedEvent,
+  MouseMoveEvent,
+} from "../../InputHandler";
 import {
   renderDuration,
   renderNumber,
@@ -82,6 +86,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @state()
   private _isInfoVisible: boolean = false;
 
+  @state()
+  private isBombSelected: boolean = false;
+
   private _isActive = false;
 
   private lastMouseUpdate = 0;
@@ -94,6 +101,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     );
     this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(
+      GhostStructureChangedEvent,
+      (e: GhostStructureChangedEvent) => {
+        this.isBombSelected =
+          e.ghostStructure === UnitType.AtomBomb ||
+          e.ghostStructure === UnitType.HydrogenBomb;
+      },
     );
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
@@ -519,7 +534,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   render() {
-    if (!this._isActive) {
+    if (!this._isActive || this.isBombSelected) {
       return html``;
     }
 
