@@ -32,10 +32,17 @@
 }
 
 /* Ensure the main page never scrolls; modals handle internal scrolling */
-html,
+html {
+  height: 100%; /* Fallback */
+  height: 100dvh;
+}
+
 body {
   height: 100%;
   overflow: hidden !important;
+  /* Safe area padding for notched devices */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 * {
