@@ -564,39 +564,18 @@ export class HostLobbyModal extends BaseModal {
                 <div
                   role="button"
                   tabindex="0"
-                  @click=${(e: Event) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    this.maxTimer = !this.maxTimer;
-                    if (this.maxTimer) {
-                      this.maxTimerValue = this.maxTimerValue ?? 0;
-                    } else {
-                      this.maxTimerValue = undefined;
-                    }
-                    this.putGameConfig();
-                    this.requestUpdate();
-                  }}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      this.maxTimer = !this.maxTimer;
-                      if (this.maxTimer) {
-                        this.maxTimerValue = this.maxTimerValue ?? 0;
-                      } else {
-                        this.maxTimerValue = undefined;
-                      }
-                      this.putGameConfig();
-                      this.requestUpdate();
-                    }
-                  }}
+                  @click=${this.createToggleHandlers(
+                    () => this.maxTimer,
+                    (val) => (this.maxTimer = val),
+                    () => this.maxTimerValue,
+                    (val) => (this.maxTimerValue = val),
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.maxTimer,
+                    (val) => (this.maxTimer = val),
+                    () => this.maxTimerValue,
+                    (val) => (this.maxTimerValue = val),
+                  ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .maxTimer
                     ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
@@ -660,41 +639,18 @@ export class HostLobbyModal extends BaseModal {
                 <div
                   role="button"
                   tabindex="0"
-                  @click=${(e: Event) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    this.spawnImmunity = !this.spawnImmunity;
-                    if (this.spawnImmunity) {
-                      this.spawnImmunityDurationMinutes =
-                        this.spawnImmunityDurationMinutes ?? 0;
-                    } else {
-                      this.spawnImmunityDurationMinutes = undefined;
-                    }
-                    this.putGameConfig();
-                    this.requestUpdate();
-                  }}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      this.spawnImmunity = !this.spawnImmunity;
-                      if (this.spawnImmunity) {
-                        this.spawnImmunityDurationMinutes =
-                          this.spawnImmunityDurationMinutes ?? 0;
-                      } else {
-                        this.spawnImmunityDurationMinutes = undefined;
-                      }
-                      this.putGameConfig();
-                      this.requestUpdate();
-                    }
-                  }}
+                  @click=${this.createToggleHandlers(
+                    () => this.spawnImmunity,
+                    (val) => (this.spawnImmunity = val),
+                    () => this.spawnImmunityDurationMinutes,
+                    (val) => (this.spawnImmunityDurationMinutes = val),
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.spawnImmunity,
+                    (val) => (this.spawnImmunity = val),
+                    () => this.spawnImmunityDurationMinutes,
+                    (val) => (this.spawnImmunityDurationMinutes = val),
+                  ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .spawnImmunity
                     ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
@@ -887,6 +843,39 @@ export class HostLobbyModal extends BaseModal {
     }
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
+  }
+
+  private createToggleHandlers(
+    toggleStateGetter: () => boolean,
+    toggleStateSetter: (val: boolean) => void,
+    valueGetter: () => number | undefined,
+    valueSetter: (val: number | undefined) => void,
+  ) {
+    const toggleLogic = () => {
+      const newState = !toggleStateGetter();
+      toggleStateSetter(newState);
+      if (newState) {
+        valueSetter(valueGetter() ?? 0);
+      } else {
+        valueSetter(undefined);
+      }
+      this.putGameConfig();
+      this.requestUpdate();
+    };
+
+    return {
+      click: (e: Event) => {
+        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
+        toggleLogic();
+      },
+      keydown: (e: KeyboardEvent) => {
+        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleLogic();
+        }
+      },
+    };
   }
 
   private leaveLobby() {
