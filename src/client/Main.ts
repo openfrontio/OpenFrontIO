@@ -540,7 +540,7 @@ class Client {
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
-      this.gameStop();
+      this.gameStop(true);
     }
     const config = await getServerConfigFromClient();
 
