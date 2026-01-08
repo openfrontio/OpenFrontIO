@@ -133,7 +133,9 @@ export class StatsModal extends BaseModal {
               />
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-white/60 mb-2">No Data Yet</h3>
+          <h3 class="text-xl font-bold text-white/60 mb-2">
+            ${translateText("stats_modal.no_data_yet")}
+          </h3>
           <p class="text-white/30 text-sm max-w-[200px]">
             ${translateText("stats_modal.no_stats")}
           </p>
@@ -258,7 +260,7 @@ export class StatsModal extends BaseModal {
                         </span>
                         <span
                           class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
-                          >Ratio</span
+                          >${translateText("stats_modal.ratio")}</span
                         >
                       </div>
                     </td>
@@ -284,7 +286,7 @@ export class StatsModal extends BaseModal {
       summaryTags = html`
         <div class="flex flex-row gap-6 items-center ml-auto">
           <span class="text-xs text-white/40 uppercase tracking-wider font-bold"
-            >Total Clans</span
+            >${translateText("stats_modal.total_clans")}</span
           >
           <span class="text-xl font-bold text-white font-mono"
             >${this.data.clans.length}</span

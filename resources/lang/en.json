@@ -200,6 +200,7 @@
     "loading": "Loading...",
     "error": "Error loading clan stats",
     "no_stats": "No clan stats available",
+    "no_data_yet": "No Data Yet",
     "clan": "Clan",
     "games": "Games",
     "win_score": "Win Score",
@@ -207,7 +208,9 @@
     "loss_score": "Loss Score",
     "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
     "win_loss_ratio": "Win/Loss",
+    "ratio": "Ratio",
     "rank": "Rank",
+    "total_clans": "Total Clans",
     "try_again": "Try Again"
   },
   "game_info_modal": {
