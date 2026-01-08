@@ -836,7 +836,7 @@ export class HelpModal extends LitElement {
                       ${translateText("help_modal.build_name")}
                     </th>
                     <th
-                      class="py-3 text-left text-xs font-bold uppercase tracking-wider text-blue-300 w-[15%]"
+                      class="py-3 text-left text-xs font-bold uppercase tracking-wider text-blue-300 w-[8%]"
                     >
                       ${translateText("help_modal.build_icon")}
                     </th>
