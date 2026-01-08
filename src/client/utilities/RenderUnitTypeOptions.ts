@@ -31,6 +31,7 @@ export function renderUnitTypeOptions({
         class="relative p-4 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[100px] w-full cursor-pointer ${isEnabled
           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
           : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+        aria-pressed="${isEnabled}"
         @click=${() => toggleUnit(type, isEnabled)}
       >
         <div
