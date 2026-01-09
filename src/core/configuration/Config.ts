@@ -58,7 +58,6 @@ export interface ServerConfig {
   subdomain(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
-  enableMatchmaking(): boolean;
   getRandomPublicGameModifiers(): PublicGameModifiers;
   supportsCompactMapForTeams(map: GameMapType): boolean;
 }
