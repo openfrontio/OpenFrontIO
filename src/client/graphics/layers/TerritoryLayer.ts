@@ -65,6 +65,7 @@ export class TerritoryLayer implements Layer {
 
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
+  private lastPaletteSignature: string | null = null;
 
   constructor(
     private game: GameView,
@@ -100,6 +101,7 @@ export class TerritoryLayer implements Layer {
       this.cachedTerritoryPatternsEnabled = patternsEnabled;
       this.redraw();
     }
+    this.refreshPaletteIfNeeded();
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
@@ -458,6 +460,7 @@ export class TerritoryLayer implements Layer {
       strategy.setHoverHighlightOptions(this.hoverHighlightOptions());
       strategy.setHover(this.highlightedTerritory?.smallID() ?? null);
       this.territoryRenderer = strategy;
+      this.lastPaletteSignature = this.computePaletteSignature();
       return;
     }
 
@@ -466,6 +469,7 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer.setHoverHighlightOptions(
       this.hoverHighlightOptions(),
     );
+    this.lastPaletteSignature = null;
   }
 
   private hoverHighlightOptions() {
@@ -674,5 +678,25 @@ export class TerritoryLayer implements Layer {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fillStyle = radGrad2;
     ctx.fill();
+  }
+
+  private computePaletteSignature(): string {
+    let maxSmallId = 0;
+    for (const player of this.game.playerViews()) {
+      maxSmallId = Math.max(maxSmallId, player.smallID());
+    }
+    const patternsEnabled = this.userSettings.territoryPatterns();
+    return `${this.game.playerViews().length}:${maxSmallId}:${patternsEnabled ? 1 : 0}`;
+  }
+
+  private refreshPaletteIfNeeded() {
+    if (!this.territoryRenderer?.isWebGL()) {
+      return;
+    }
+    const signature = this.computePaletteSignature();
+    if (signature !== this.lastPaletteSignature) {
+      this.lastPaletteSignature = signature;
+      this.territoryRenderer.refreshPalette();
+    }
   }
 }
