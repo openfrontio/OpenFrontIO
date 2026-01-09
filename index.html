@@ -457,9 +457,7 @@
                   id="matchmaking-button-logged-out"
                   class="w-full h-20 bg-purple-600/50 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 overflow-hidden relative opacity-60 cursor-not-allowed"
                 >
-                  <span class="relative z-10 text-2xl"
-                    >Login to play ranked!</span
-                  >
+                  <span class="relative z-10 text-2xl" data-i18n="matchmaking_button.login_required"></span>
                 </button>
 
                 <!-- Logged In Button -->
@@ -468,13 +466,11 @@
                   class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 group overflow-hidden relative"
                   data-i18n-title="matchmaking_modal.title"
                 >
-                  <span class="relative z-10 text-2xl"
-                    >1v1 Ranked Matchmaking</span
-                  >
+                  <span class="relative z-10 text-2xl" data-i18n="matchmaking_button.play_ranked"></span>
                   <span
                     class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-                    >(ALPHA)</span
-                  >
+                    data-i18n="matchmaking_button.description"
+                  ></span>
                 </button>
               </div>
 
@@ -659,7 +655,7 @@
             target="_blank"
             class="hover:text-white transition-colors"
           ></a>
-          <span>© OpenFront™ and Contributors</span>
+          <span data-i18n="main.copyright"></span>
           <a
             href="/privacy-policy.html"
             data-i18n="main.privacy_policy"
