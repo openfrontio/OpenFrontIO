@@ -74,6 +74,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
+  private isWilderness: boolean = false;
+
+  @state()
+  private isIrradiatedWilderness: boolean = false;
+
+  @state()
   private _isInfoVisible: boolean = false;
 
   private _isActive = false;
@@ -106,6 +112,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.setVisible(false);
     this.unit = null;
     this.player = null;
+    this.isWilderness = false;
+    this.isIrradiatedWilderness = false;
   }
 
   public maybeShow(x: number, y: number) {
@@ -125,6 +133,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
+      this.setVisible(true);
+    } else if (owner && !owner.isPlayer() && this.game.isLand(tile)) {
+      if (this.game.hasFallout(tile)) {
+        this.isIrradiatedWilderness = true;
+      } else {
+        this.isWilderness = true;
+      }
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
@@ -520,6 +535,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-gray-800/70 backdrop-blur-xs shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
+          ${this.isWilderness || this.isIrradiatedWilderness
+            ? html`<div class="p-2 font-bold">
+                ${translateText(
+                  this.isIrradiatedWilderness
+                    ? "player_info_overlay.irradiated_wilderness_title"
+                    : "player_info_overlay.wilderness_title",
+                )}
+              </div>`
+            : ""}
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
