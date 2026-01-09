@@ -42,20 +42,48 @@ export class KeybindsModal extends BaseModal {
     if (savedKeybinds) {
       try {
         const parsed = JSON.parse(savedKeybinds);
-        // Validate shape: ensure all values have 'value' and 'key' properties
-        if (typeof parsed === "object" && parsed !== null) {
-          const isValid = Object.values(parsed).every(
-            (entry) =>
-              typeof entry === "object" &&
-              entry !== null &&
-              "value" in entry &&
-              "key" in entry,
-          );
+        // Validate shape: ensure all values have 'value' and 'key' properties with correct types
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
+          const isValid = Object.values(parsed).every((entry) => {
+            // Ensure entry is an object (not null, not array, not primitive)
+            if (
+              typeof entry !== "object" ||
+              entry === null ||
+              Array.isArray(entry)
+            ) {
+              return false;
+            }
+            // Ensure 'key' property exists and is a string
+            if (!("key" in entry) || typeof entry.key !== "string") {
+              return false;
+            }
+            // Ensure 'value' property exists and is either a string or an array of strings
+            if (!("value" in entry)) {
+              return false;
+            }
+            if (typeof entry.value === "string") {
+              return true;
+            }
+            if (Array.isArray(entry.value)) {
+              return entry.value.every((v) => typeof v === "string");
+            }
+            return false;
+          });
           if (isValid) {
             this.keybinds = parsed;
           } else {
-            console.warn("Invalid keybinds structure, ignoring saved data");
+            console.warn(
+              "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
+            );
           }
+        } else {
+          console.warn(
+            "Invalid keybinds data: expected non-array object. Ignoring saved data.",
+          );
         }
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
