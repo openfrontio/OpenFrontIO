@@ -182,7 +182,7 @@ export class LobbyTeamView extends LitElement {
                   html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
-                    <span class="truncate">${p.username}</span>
+                    <span class="truncate text-white">${p.username}</span>
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
