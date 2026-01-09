@@ -17,6 +17,23 @@
         opacity: 0;
         transition: opacity 0.5s ease-out;
       }
+
+      /* iOS safe area support */
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+      }
+
+      /* Ensure full viewport height on iOS */
+      html,
+      body {
+        height: 100%;
+        height: -webkit-fill-available;
+        min-height: 100%;
+        min-height: -webkit-fill-available;
+      }
     </style>
 
     <!-- SEO -->
