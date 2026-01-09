@@ -665,13 +665,13 @@ export class NationNukeBehavior {
     this.recentlySentNukes.push([tick, tile, nukeType]);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
-      // Increase perceived cost by 25% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
-      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 125n) / 100n;
+      // Increase perceived cost by 35% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
+      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 135n) / 100n;
     } else if (nukeType === UnitType.HydrogenBomb) {
       this.hydrogenBombsLaunched++;
-      // Increase perceived cost by 15% each time to simulate saving up for a MIRV
+      // Increase perceived cost by 25% each time to simulate saving up for a MIRV
       this.hydrogenBombPerceivedCost =
-        (this.hydrogenBombPerceivedCost * 115n) / 100n;
+        (this.hydrogenBombPerceivedCost * 125n) / 100n;
     }
     this.game.addExecution(new NukeExecution(nukeType, this.player, tile));
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
