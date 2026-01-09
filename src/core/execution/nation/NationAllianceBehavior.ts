@@ -258,10 +258,10 @@ export class NationAllianceBehavior {
       case Difficulty.Easy:
         return false; // On easy we never think we have enough alliances
       case Difficulty.Medium:
-        return this.player.alliances().length >= this.random.nextInt(5, 8);
+        return this.player.alliances().length >= this.random.nextInt(4, 6);
       case Difficulty.Hard:
       case Difficulty.Impossible: {
-        // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
+        // On hard and impossible we try to not ally with all our neighbors (If we have 2+ neighbors)
         const borderingPlayers = this.player
           .neighbors()
           .filter(
@@ -271,15 +271,15 @@ export class NationAllianceBehavior {
           (o) => this.player?.isFriendly(o) === true,
         );
         if (
-          borderingPlayers.length >= 3 &&
+          borderingPlayers.length >= 2 &&
           borderingPlayers.includes(otherPlayer)
         ) {
           return borderingPlayers.length <= borderingFriends.length + 1;
         }
         if (difficulty === Difficulty.Hard) {
-          return this.player.alliances().length >= this.random.nextInt(3, 6);
+          return this.player.alliances().length >= this.random.nextInt(3, 5);
         }
-        return this.player.alliances().length >= this.random.nextInt(2, 5);
+        return this.player.alliances().length >= this.random.nextInt(2, 4);
       }
       default:
         assertNever(difficulty);
@@ -314,22 +314,35 @@ export class NationAllianceBehavior {
       case Difficulty.Easy:
         return (
           otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(60, 70) / 100)
+            this.player.troops() * (this.random.nextInt(60, 70) / 100) ||
+          (otherPlayer.numTilesOwned() >
+            this.player.numTilesOwned() * (this.random.nextInt(70, 80) / 100) &&
+            otherPlayer.troops() > this.player.troops() * 0.5)
         );
       case Difficulty.Medium:
         return (
           otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(70, 80) / 100)
+            this.player.troops() * (this.random.nextInt(70, 80) / 100) ||
+          (otherPlayer.numTilesOwned() >
+            this.player.numTilesOwned() * (this.random.nextInt(80, 90) / 100) &&
+            otherPlayer.troops() > this.player.troops() * 0.5)
         );
       case Difficulty.Hard:
         return (
           otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(75, 85) / 100)
+            this.player.troops() * (this.random.nextInt(75, 85) / 100) ||
+          (otherPlayer.numTilesOwned() >
+            this.player.numTilesOwned() * (this.random.nextInt(85, 95) / 100) &&
+            otherPlayer.troops() > this.player.troops() * 0.5)
         );
       case Difficulty.Impossible:
         return (
           otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(80, 90) / 100)
+            this.player.troops() * (this.random.nextInt(80, 90) / 100) ||
+          (otherPlayer.numTilesOwned() >
+            this.player.numTilesOwned() *
+              (this.random.nextInt(90, 100) / 100) &&
+            otherPlayer.troops() > this.player.troops() * 0.5)
         );
       default:
         assertNever(difficulty);
