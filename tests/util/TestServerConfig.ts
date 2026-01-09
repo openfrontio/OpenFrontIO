@@ -10,9 +10,6 @@ export class TestServerConfig implements ServerConfig {
   turnstileSecretKey(): string {
     throw new Error("Method not implemented.");
   }
-  enableMatchmaking(): boolean {
-    throw new Error("Method not implemented.");
-  }
   apiKey(): string {
     throw new Error("Method not implemented.");
   }

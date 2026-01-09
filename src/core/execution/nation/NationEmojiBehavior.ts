@@ -263,6 +263,7 @@ export class NationEmojiBehavior {
 
   sendEmoji(otherPlayer: Player | typeof AllPlayers, emojisList: number[]) {
     if (!this.shouldSendEmoji(otherPlayer, false)) return;
+    if (!this.player.canSendEmoji(otherPlayer)) return;
 
     this.game.addExecution(
       new EmojiExecution(
@@ -301,6 +302,7 @@ export function respondToEmoji(
   if (recipient === AllPlayers || recipient.type() !== PlayerType.Nation) {
     return;
   }
+  if (!recipient.canSendEmoji(sender)) return;
 
   if (emojiString === "🖕") {
     recipient.updateRelation(sender, -100);
@@ -346,6 +348,7 @@ export function respondToMIRV(
   mirvTarget: Player,
 ) {
   if (!random.chance(8)) return;
+  if (!mirvTarget.canSendEmoji(AllPlayers)) return;
 
   game.addExecution(
     new EmojiExecution(

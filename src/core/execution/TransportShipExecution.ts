@@ -150,6 +150,7 @@ export class TransportShipExecution implements Execution {
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
+      targetTile: this.dst ?? undefined,
     });
 
     // Move boat from shore to adjacent water for pathfinding
