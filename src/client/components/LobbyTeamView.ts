@@ -83,7 +83,7 @@ export class LobbyTeamView extends LitElement {
           this.clients,
           (c) => c.clientID ?? c.username,
           (client) =>
-            html`<div class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs">
+            html`<div class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white">
               ${client.username}
             </div>`,
         )}
@@ -125,7 +125,7 @@ export class LobbyTeamView extends LitElement {
       (c) => c.clientID ?? c.username,
       (client) =>
         html`<span class="player-tag">
-          ${client.username}
+          <span class="text-white">${client.username}</span>
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
