@@ -416,7 +416,10 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("accepts legacy string values", () => {
-      localStorage.setItem("settings.keybinds", JSON.stringify({ moveUp: "KeyX" }));
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({ moveUp: "KeyX" }),
+      );
 
       inputHandler.initialize();
 
