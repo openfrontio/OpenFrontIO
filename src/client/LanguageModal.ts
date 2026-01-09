@@ -4,9 +4,16 @@ import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 
+interface LanguageOption {
+  code: string;
+  svg: string;
+  native: string;
+  en: string;
+}
+
 @customElement("language-modal")
 export class LanguageModal extends BaseModal {
-  @property({ type: Array }) languageList: any[] = [];
+  @property({ type: Array }) languageList: LanguageOption[] = [];
   @property({ type: String }) currentLang = "en";
 
   private selectLanguage = (lang: string) => {
