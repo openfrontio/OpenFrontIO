@@ -35,6 +35,9 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _gold: Gold;
 
+  @state()
+  private _troopsPercentageMode: boolean = false;
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
@@ -44,6 +47,8 @@ export class ControlPanel extends LitElement implements Layer {
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
     this.uiState.attackRatio = this.attackRatio;
+    this._troopsPercentageMode =
+      localStorage.getItem("settings.troopsDisplayMode") === "percentage";
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio =
         (parseInt(
@@ -170,8 +175,27 @@ export class ControlPanel extends LitElement implements Layer {
             <span class="font-bold"
               >${translateText("control_panel.troops")}:</span
             >
-            <span translate="no"
-              >${renderTroops(this._troops)} / ${renderTroops(this._maxTroops)}
+            <span translate="no">
+              <span
+                class="cursor-pointer"
+                @click=${() => {
+                  this._troopsPercentageMode = !this._troopsPercentageMode;
+                  localStorage.setItem(
+                    "settings.troopsDisplayMode",
+                    this._troopsPercentageMode ? "percentage" : "absolute",
+                  );
+                }}
+                >${this._troopsPercentageMode
+                  ? (() => {
+                      const troopsFillPercent =
+                        (this._troops / this._maxTroops) * 100;
+                      return troopsFillPercent <= 5 || troopsFillPercent >= 95
+                        ? `${troopsFillPercent.toFixed(1)}%`
+                        : `${Math.round(troopsFillPercent)}%`;
+                    })()
+                  : renderTroops(this._troops)}
+                / ${renderTroops(this._maxTroops)}</span
+              >
               <span
                 class="${this._troopRateIsIncreasing
                   ? "text-green-500"
