@@ -64,6 +64,15 @@ export const UserMeResponseSchema = z.object({
         }),
       )
       .optional(),
+    leaderboard: z
+      .object({
+        oneVone: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;

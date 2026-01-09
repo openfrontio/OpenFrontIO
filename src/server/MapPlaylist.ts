@@ -123,6 +123,9 @@ export class MapPlaylist {
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       chatEnabled: false,
+        playerTeams === HumansVsNations
+          ? Difficulty.Impossible
+          : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,

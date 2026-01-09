@@ -194,6 +194,7 @@ export const GameConfigSchema = z.object({
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  isOneVOne: z.boolean().optional(),
 });
 
 export const TeamSchema = z.string();
