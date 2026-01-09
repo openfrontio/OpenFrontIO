@@ -899,16 +899,43 @@ export class HostLobbyModal extends BaseModal {
   protected onClose(): void {
     console.log("Closing host lobby modal");
     crazyGamesSDK.hideInviteButton();
-    this.copySuccess = false;
+
+    // Clean up timers and resources
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
     }
-    // Clear any pending bot updates
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
     }
+
+    // Reset all transient form state to ensure clean slate
+    this.selectedMap = GameMapType.World;
+    this.selectedDifficulty = Difficulty.Medium;
+    this.disableNations = false;
+    this.gameMode = GameMode.FFA;
+    this.teamCount = 2;
+    this.bots = 400;
+    this.spawnImmunity = false;
+    this.spawnImmunityDurationMinutes = undefined;
+    this.infiniteGold = false;
+    this.donateGold = false;
+    this.infiniteTroops = false;
+    this.donateTroops = false;
+    this.maxTimer = false;
+    this.maxTimerValue = undefined;
+    this.instantBuild = false;
+    this.randomSpawn = false;
+    this.compactMap = false;
+    this.useRandomMap = false;
+    this.disabledUnits = [];
+    this.lobbyId = "";
+    this.copySuccess = false;
+    this.clients = [];
+    this.lobbyCreatorClientID = "";
+    this.lobbyIdVisible = true;
+    this.nationCount = 0;
   }
 
   private async handleSelectRandomMap() {
