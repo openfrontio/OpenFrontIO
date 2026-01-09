@@ -140,34 +140,43 @@ export class JoinPrivateLobbyModal extends BaseModal {
               </div>`
             : ""}
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 mr-1">
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${!this.hasJoined
-            ? html`<div class="lobby-id-box">
-                <input
-                  type="text"
-                  id="lobbyIdInput"
-                  placeholder=${translateText("private_lobby.enter_id")}
-                  @keyup=${this.handleChange}
-                />
-                <button
-                  @click=${this.pasteFromClipboard}
-                  class="lobby-id-paste-button"
-                >
-                  <svg
-                    class="lobby-id-paste-button-icon"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
-                    viewBox="0 0 32 32"
-                    height="18px"
-                    width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
+            ? html`<div class="flex flex-col gap-3">
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    id="lobbyIdInput"
+                    placeholder=${translateText("private_lobby.enter_id")}
+                    @keyup=${this.handleChange}
+                    class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
+                  />
+                  <button
+                    @click=${this.pasteFromClipboard}
+                    class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
+                    title=${translateText("common.paste")}
                   >
-                    <path
-                      d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
-                    ></path>
-                  </svg>
-                </button>
+                    <svg
+                      class="text-white/60 group-hover:text-white transition-colors"
+                      stroke="currentColor"
+                      fill="currentColor"
+                      stroke-width="0"
+                      viewBox="0 0 32 32"
+                      height="18px"
+                      width="18px"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                      ></path>
+                    </svg>
+                  </button>
+                </div>
+                <o-button
+                  title=${translateText("private_lobby.join_lobby")}
+                  block
+                  @click=${this.joinLobby}
+                ></o-button>
               </div>`
             : ""}
           ${this.renderGameConfig()}
@@ -209,19 +218,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
               </button>
             </div>`
           : ""}
-        <div
-          class="flex justify-center flex-shrink-0 ${!this.hasJoined
-            ? "pb-6"
-            : ""}"
-        >
-          ${!this.hasJoined
-            ? html` <o-button
-                title=${translateText("private_lobby.join_lobby")}
-                block
-                @click=${this.joinLobby}
-              ></o-button>`
-            : ""}
-        </div>
       </div>
     `;
 
