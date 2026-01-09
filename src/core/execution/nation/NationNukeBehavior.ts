@@ -60,9 +60,16 @@ export class NationNukeBehavior {
     const hydroCost = this.getPerceivedNukeCost(UnitType.HydrogenBomb);
     const atomCost = this.getPerceivedNukeCost(UnitType.AtomBomb);
     let nukeType: UnitType;
-    if (this.player.gold() >= hydroCost) {
+    if (
+      !this.game.config().isUnitDisabled(UnitType.HydrogenBomb) &&
+      this.player.gold() >= hydroCost
+    ) {
       nukeType = UnitType.HydrogenBomb;
-    } else if (!this.isHydroNation && this.player.gold() >= atomCost) {
+    } else if (
+      !this.game.config().isUnitDisabled(UnitType.AtomBomb) &&
+      (!this.isHydroNation || this.isUnderHeavyAttack()) &&
+      this.player.gold() >= atomCost
+    ) {
       nukeType = UnitType.AtomBomb;
     } else {
       return;
@@ -342,6 +349,11 @@ export class NationNukeBehavior {
 
   // Simulate saving up for a MIRV
   private getPerceivedNukeCost(type: UnitType): Gold {
+    // If MIRVs are disabled, return the actual cost
+    if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
+      return this.cost(type);
+    }
+
     // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
     // or if we already have enough gold to buy both a MIRV and a hydro
     if (
@@ -352,7 +364,7 @@ export class NationNukeBehavior {
       return this.cost(type);
     }
 
-    // On Hard & Impossible, ignore perceived cost when under heavy attack (2x troops)
+    // On Hard & Impossible, ignore perceived cost when under heavy attack
     // The nation is probably going to get destroyed soon, so go all-in on nukes
     const difficulty = this.game.config().gameConfig().difficulty;
     if (
@@ -380,8 +392,7 @@ export class NationNukeBehavior {
 
     const myTroops = this.player.troops();
 
-    // Consider it a heavy attack if total incoming attacks have 2x our troops
-    return totalIncomingTroops >= myTroops * 2;
+    return totalIncomingTroops >= myTroops;
   }
 
   private removeOldNukeEvents() {
