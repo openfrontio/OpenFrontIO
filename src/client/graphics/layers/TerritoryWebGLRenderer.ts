@@ -35,12 +35,14 @@ export class TerritoryWebGLRenderer {
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
   private readonly patternTexture: WebGLTexture | null;
+  private readonly transitionTexture: WebGLTexture | null;
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
+    transitions: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
@@ -60,8 +62,11 @@ export class TerritoryWebGLRenderer {
   };
 
   private readonly state: Uint16Array;
+  private readonly transitionState: Uint8Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
+  private readonly transitionDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
+  private needsTransitionFullUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
   private hoverHighlightStrength = 0.7;
@@ -83,6 +88,8 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = state;
+    this.transitionState = new Uint8Array(state.length);
+    this.transitionState.fill(255);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -98,12 +105,14 @@ export class TerritoryWebGLRenderer {
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
+      this.transitionTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
         patterns: null,
+        transitions: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -133,12 +142,14 @@ export class TerritoryWebGLRenderer {
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
+      this.transitionTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
         patterns: null,
+        transitions: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -165,6 +176,7 @@ export class TerritoryWebGLRenderer {
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
+      transitions: gl.getUniformLocation(this.program, "u_transitions"),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
@@ -223,6 +235,7 @@ export class TerritoryWebGLRenderer {
     this.paletteTexture = gl.createTexture();
     this.relationTexture = gl.createTexture();
     this.patternTexture = gl.createTexture();
+    this.transitionTexture = gl.createTexture();
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
@@ -245,11 +258,31 @@ export class TerritoryWebGLRenderer {
 
     this.uploadPalette();
 
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.transitionTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R8UI,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      this.transitionState,
+    );
+
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
     gl.uniform1i(this.uniforms.patterns, 3);
+    gl.uniform1i(this.uniforms.transitions, 4);
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -411,6 +444,27 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  setTransitionProgress(tile: TileRef, progress: number) {
+    const clamped = Math.max(0, Math.min(1, progress));
+    const value = Math.round(clamped * 255);
+    if (this.transitionState[tile] === value) {
+      return;
+    }
+    this.transitionState[tile] = value;
+    if (this.needsTransitionFullUpload) {
+      return;
+    }
+    const x = tile % this.canvas.width;
+    const y = Math.floor(tile / this.canvas.width);
+    const span = this.transitionDirtyRows.get(y);
+    if (span === undefined) {
+      this.transitionDirtyRows.set(y, { minX: x, maxX: x });
+    } else {
+      span.minX = Math.min(span.minX, x);
+      span.maxX = Math.max(span.maxX, x);
+    }
+  }
+
   markAllDirty() {
     this.needsFullUpload = true;
     this.dirtyRows.clear();
@@ -432,6 +486,13 @@ export class TerritoryWebGLRenderer {
     const uploadStateSpan = FrameProfiler.start();
     this.uploadStateTexture();
     FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadStateSpan);
+
+    const uploadTransitionSpan = FrameProfiler.start();
+    this.uploadTransitionTexture();
+    FrameProfiler.end(
+      "TerritoryWebGLRenderer:uploadTransitions",
+      uploadTransitionSpan,
+    );
 
     const renderSpan = FrameProfiler.start();
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -527,6 +588,61 @@ export class TerritoryWebGLRenderer {
       bytesUploaded += width * bytesPerPixel;
     }
     this.dirtyRows.clear();
+    return { rows: rowsUploaded, bytes: bytesUploaded };
+  }
+
+  private uploadTransitionTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.transitionTexture) return { rows: 0, bytes: 0 };
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.transitionTexture);
+
+    const bytesPerPixel = Uint8Array.BYTES_PER_ELEMENT;
+    let rowsUploaded = 0;
+    let bytesUploaded = 0;
+
+    if (this.needsTransitionFullUpload) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.R8UI,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        this.transitionState,
+      );
+      this.needsTransitionFullUpload = false;
+      this.transitionDirtyRows.clear();
+      rowsUploaded = this.canvas.height;
+      bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      return { rows: rowsUploaded, bytes: bytesUploaded };
+    }
+
+    if (this.transitionDirtyRows.size === 0) {
+      return { rows: 0, bytes: 0 };
+    }
+
+    for (const [y, span] of this.transitionDirtyRows) {
+      const width = span.maxX - span.minX + 1;
+      const offset = y * this.canvas.width + span.minX;
+      const rowSlice = this.transitionState.subarray(offset, offset + width);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        rowSlice,
+      );
+      rowsUploaded++;
+      bytesUploaded += width * bytesPerPixel;
+    }
+    this.transitionDirtyRows.clear();
     return { rows: rowsUploaded, bytes: bytesUploaded };
   }
 
@@ -717,6 +833,7 @@ export class TerritoryWebGLRenderer {
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
       uniform usampler2D u_patterns;
+      uniform usampler2D u_transitions;
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
@@ -801,6 +918,7 @@ export class TerritoryWebGLRenderer {
         ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
+        float transition = float(texelFetch(u_transitions, texCoord, 0).r) / 255.0;
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
@@ -808,7 +926,7 @@ export class TerritoryWebGLRenderer {
         if (owner == 0u) {
           if (hasFallout) {
             vec3 color = u_fallout.rgb;
-            float a = u_alpha;
+            float a = u_alpha * transition;
             outColor = vec4(color * a, a);
           } else {
             outColor = vec4(0.0);
@@ -858,7 +976,7 @@ export class TerritoryWebGLRenderer {
           } else if (isEmbargo(relationAlt)) {
             altColor = u_altEnemy;
           }
-          float a = isBorder ? 1.0 : 0.0;
+          float a = (isBorder ? 1.0 : 0.0) * transition;
           vec3 color = altColor.rgb;
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
@@ -915,6 +1033,7 @@ export class TerritoryWebGLRenderer {
           color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
         }
 
+        a *= transition;
         outColor = vec4(color * a, a);
       }
     `;
