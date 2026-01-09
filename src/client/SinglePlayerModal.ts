@@ -745,10 +745,8 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private getEndTimerInput(): HTMLInputElement | null {
-    // Use renderRoot which points to shadowRoot or this depending on component config
-    return (this.renderRoot as Element).querySelector(
-      "#end-timer-value",
-    ) as HTMLInputElement;
+    // Use this.querySelector to find slotted input in light DOM
+    return this.querySelector("#end-timer-value") as HTMLInputElement | null;
   }
 
   private handleMaxTimerValueChanges(e: Event) {
