@@ -744,62 +744,6 @@
           hamburger.setAttribute("aria-expanded", "false");
         }
       })();
-
-      // Fallback: ensure clicking menu items closes the sidebar even if other handlers run
-      if (!window.__toggleSidebarMenuListenerAttached) {
-        document.addEventListener(
-          "click",
-          function (e) {
-            try {
-              const sidebar = document.getElementById("sidebar-menu");
-              const backdrop = document.getElementById("mobile-menu-backdrop");
-              if (!sidebar) return;
-
-              const isVisuallyOpen =
-                sidebar.classList.contains("translate-x-0") ||
-                sidebar.classList.contains("open");
-              if (!isVisuallyOpen) return;
-
-              const tgt = e.target;
-              // Ignore hamburger clicks here
-              if (tgt && tgt.closest && tgt.closest("#hamburger-btn")) return;
-
-              if (
-                tgt &&
-                tgt.closest &&
-                tgt.closest(".nav-menu-item, a[data-page], button")
-              ) {
-                // Force-close and reset UI state
-                sidebar.classList.remove("open");
-                sidebar.classList.add("-translate-x-full");
-                sidebar.classList.remove("translate-x-0", "z-[99999]");
-                if (backdrop) {
-                  backdrop.classList.add("hidden", "pointer-events-none");
-                  backdrop.classList.remove(
-                    "block",
-                    "pointer-events-auto",
-                    "fixed",
-                    "inset-0",
-                    "bg-black/50",
-                    "z-[99998]",
-                  );
-                }
-                document.documentElement.classList.remove("overflow-hidden");
-                const hb = document.getElementById("hamburger-btn");
-                if (hb) {
-                  hb.setAttribute("aria-expanded", "false");
-                  hb.style.opacity = "1";
-                  hb.style.pointerEvents = "auto";
-                }
-              }
-            } catch (err) {
-              console.error("Fallback menu listener error", err);
-            }
-          },
-          true,
-        );
-        window.__toggleSidebarMenuListenerAttached = true;
-      }
     </script>
 
     <!-- Analytics -->
