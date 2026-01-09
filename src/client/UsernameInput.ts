@@ -87,8 +87,23 @@ export class UsernameInput extends LitElement {
 
   private handleClanTagChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    const val = sanitizeClanTag(input.value);
-    if (input.value !== val) {
+    const originalValue = input.value;
+    const val = sanitizeClanTag(originalValue);
+    // Only show toast if characters were actually removed (not just uppercased)
+    if (originalValue.toUpperCase() !== val) {
+      input.value = val;
+      // Show toast when invalid characters are removed
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("username.tag_invalid_chars"),
+            color: "red",
+            duration: 2000,
+          },
+        }),
+      );
+    } else if (originalValue !== val) {
+      // Just update the input without toast if only case changed
       input.value = val;
     }
     this.clanTag = val;
@@ -97,9 +112,20 @@ export class UsernameInput extends LitElement {
 
   private handleUsernameChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    const val = input.value.replace(/[[\]]/g, "");
-    if (input.value !== val) {
+    const originalValue = input.value;
+    const val = originalValue.replace(/[[\]]/g, "");
+    if (originalValue !== val) {
       input.value = val;
+      // Show toast when brackets are removed
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("username.invalid_chars"),
+            color: "red",
+            duration: 2000,
+          },
+        }),
+      );
     }
     this.baseUsername = val;
     this.validateAndStore();
