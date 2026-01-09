@@ -144,7 +144,7 @@ export class LanguageModal extends BaseModal {
       <o-modal
         title=${translateText("select_lang.title")}
         ?inline=${this.inline}
-        .onClose=${this.close}
+        .onClose=${this.close.bind(this)}
         hideHeader
         hideCloseButton
       >
