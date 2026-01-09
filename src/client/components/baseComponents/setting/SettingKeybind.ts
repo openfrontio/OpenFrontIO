@@ -30,14 +30,22 @@ export class SettingKeybind extends LitElement {
               ${this.description}
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 gap-y-1 basis-full sm:basis-auto min-w-0">
+            <div
+              class="flex flex-wrap items-center gap-2 gap-y-1 basis-full sm:basis-auto min-w-0"
+            >
               <span
-                class="setting-key shrink-0${this.value === "Null" ? " unbound" : ""}"
+                class="setting-key shrink-0${this.value === "Null"
+                  ? " unbound"
+                  : ""}"
                 tabindex="0"
                 @keydown=${this.handleKeydown}
                 @click=${this.startListening}
               >
-                ${this.displayKey(this.value === "Null" ? "Null" : this.value || this.defaultKey)}
+                ${this.displayKey(
+                  this.value === "Null"
+                    ? "Null"
+                    : this.value || this.defaultKey,
+                )}
               </span>
 
               <button
@@ -60,12 +68,14 @@ export class SettingKeybind extends LitElement {
   }
 
   private displayKey(key: string): string {
-    if (key === "Null" || key === "") return translateText("common.none");
+    if (key === "Null") return translateText("common.none");
     if (key === " ") return "Space";
     if (key.startsWith("Key") && key.length === 4) {
       return key.slice(3);
     }
-    return key.length ? key.charAt(0).toUpperCase() + key.slice(1) : "Press a key";
+    return key.length
+      ? key.charAt(0).toUpperCase() + key.slice(1)
+      : "Press a key";
   }
 
   private startListening() {
