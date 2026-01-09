@@ -49,12 +49,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Lisbon: "Lisbon",
   Manicouagan: "Manicouagan",
   Lemnos: "Lemnos",
-  TwoLakes: "Two Lakes",
-  Sierpinski: "Sierpinski",
-  StraitOfHormuz: "Strait of Hormuz",
-  Surrounded: "Surrounded",
-  Didier: "Didier",
-  AmazonRiver: "Amazon River",
+  Cyprus: "Cyprus",
 };
 
 @customElement("map-display")

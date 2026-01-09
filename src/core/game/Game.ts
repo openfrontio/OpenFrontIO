@@ -109,12 +109,7 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
-  Sierpinski = "Sierpinski",
-  TwoLakes = "Two Lakes",
-  StraitOfHormuz = "Strait of Hormuz",
-  Surrounded = "Surrounded",
-  Didier = "Didier",
-  AmazonRiver = "Amazon River",
+  Cyprus = "Cyprus",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -159,9 +154,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.NewYorkCity,
     GameMapType.Manicouagan,
     GameMapType.Lemnos,
-    GameMapType.TwoLakes,
-    GameMapType.StraitOfHormuz,
-    GameMapType.AmazonRiver,
+    GameMapType.Cyprus,
   ],
   fantasy: [
     GameMapType.Pangaea,
