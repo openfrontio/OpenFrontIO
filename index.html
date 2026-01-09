@@ -130,7 +130,6 @@
       class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/50 [&.open]:z-[40000] transition-opacity"
       role="presentation"
       aria-hidden="true"
-      aria-controls="sidebar-menu"
     ></div>
     <div
       id="sidebar-menu"
@@ -390,6 +389,8 @@
                     class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 border border-blue-400/20 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
                     data-i18n-aria-label="main.menu"
                     aria-expanded="false"
+                    aria-controls="sidebar-menu"
+                    aria-haspopup="dialog"
                     data-i18n-title="main.menu"
                   >
                     <svg
