@@ -496,11 +496,9 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      // TODO: Only allow specified players to join the game.
-      console.log(`Creating game ${gameId}`);
-      const config = playlist.gameConfig();
-      config.gameMapSize = GameMapSize.Compact;
-      const game = gm.createGame(gameId, config);
+      const gameConfig = playlist.gameConfig();
+      gameConfig.gameMapSize = GameMapSize.Compact;
+      const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.
         console.log(`Starting game ${gameId}`);
