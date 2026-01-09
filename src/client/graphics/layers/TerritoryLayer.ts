@@ -1,40 +1,20 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import {
-  ColoredTeams,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../../../core/game/Game";
+import { ColoredTeams, PlayerType, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
   ContextMenuEvent,
-  DragEvent,
   MouseOverEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import {
-  CanvasTerritoryRenderer,
-  TerritoryRendererStrategy,
-  WebglTerritoryRenderer,
-} from "./TerritoryRenderers";
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
-
-type TileTransition = {
-  startTime: number;
-  durationMs: number;
-  highlight: boolean;
-  lastProgressByte: number;
-};
 
 export class TerritoryLayer implements Layer {
   profileName(): string {
@@ -46,13 +26,6 @@ export class TerritoryLayer implements Layer {
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
 
-  private tileToRenderQueue: PriorityQueue<{
-    tile: TileRef;
-    lastUpdate: number;
-  }> = new PriorityQueue((a, b) => {
-    return a.lastUpdate - b.lastUpdate;
-  });
-  private random = new PseudoRandom(123);
   private theme: Theme;
 
   // Used for spawn highlighting
@@ -60,22 +33,19 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private highlightedTerritory: PlayerView | null = null;
-  private territoryRenderer: TerritoryRendererStrategy | null = null;
+  private territoryRenderer: TerritoryWebGLRenderer | null = null;
 
   private alternativeView = false;
-  private lastDragTime = 0;
-  private nodrawDragDuration = 200;
   private lastMousePosition: { x: number; y: number } | null = null;
-
-  private refreshRate = 10; //refresh every 10ms
-  private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
-  private tileTransitions: Map<TileRef, TileTransition> = new Map();
-  private transitionHighlightTiles: TileRef[] = [];
-  private transitionHighlightAlphas: number[] = [];
+  private transitionActive = false;
+  private transitionEpoch = 1;
+  private transitionProgress = 1;
+  private transitionStartTime = 0;
+  private transitionDurationMs = 100;
   private lastGameTick = 0;
   private lastTickTime = 0;
   private lastTickDurationMs = 100;
@@ -90,23 +60,16 @@ export class TerritoryLayer implements Layer {
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
     this.lastMyPlayerSmallId = game.myPlayer()?.smallID() ?? null;
-    this.lastTickTime = Date.now();
+    this.lastTickTime = this.nowMs();
   }
 
   shouldTransform(): boolean {
     return true;
   }
 
-  async paintPlayerBorder(player: PlayerView) {
-    const tiles = await player.borderTiles();
-    tiles.borderTiles.forEach((tile: TileRef) => {
-      this.paintTerritory(tile, true); // Immediately paint the tile instead of enqueueing
-    });
-  }
-
   tick() {
     const tickProfile = FrameProfiler.start();
-    const now = Date.now();
+    const now = this.nowMs();
     this.updateTickTiming(now);
     if (this.game.inSpawnPhase()) {
       this.spawnHighlight();
@@ -119,31 +82,9 @@ export class TerritoryLayer implements Layer {
     }
     this.refreshPaletteIfNeeded();
 
-    this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
+    this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
     this.beginTileTransitions(this.game.recentlyUpdatedOwnerTiles(), now);
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    unitUpdates.forEach((update) => {
-      if (update.unitType === UnitType.DefensePost) {
-        // Only update borders if the defense post is not under construction
-        if (update.underConstruction) {
-          return; // Skip barrier creation while under construction
-        }
-
-        const tile = update.pos;
-        this.game
-          .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))
-          .forEach((t) => {
-            if (
-              this.game.isBorder(t) &&
-              (this.game.ownerID(t) === update.ownerID ||
-                this.game.ownerID(t) === update.lastOwnerID)
-            ) {
-              this.enqueueTile(t);
-            }
-          });
-      }
-    });
 
     // Detect alliance mutations
     const myPlayer = this.game.myPlayer();
@@ -151,7 +92,7 @@ export class TerritoryLayer implements Layer {
       updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
         const territory = this.game.playerBySmallID(update.betrayedID);
         if (territory && territory instanceof PlayerView) {
-          this.redrawBorder(territory);
+          this.territoryRenderer?.refreshPalette();
         }
       });
 
@@ -167,7 +108,7 @@ export class TerritoryLayer implements Layer {
               : update.request.requestorID;
           const territory = this.game.playerBySmallID(territoryId);
           if (territory && territory instanceof PlayerView) {
-            this.redrawBorder(territory);
+            this.territoryRenderer?.refreshPalette();
           }
         }
       });
@@ -181,23 +122,14 @@ export class TerritoryLayer implements Layer {
           player.id() === myPlayer?.id() ||
           embargoed.id() === myPlayer?.id()
         ) {
-          this.redrawBorder(player, embargoed);
+          this.territoryRenderer?.refreshPalette();
         }
       });
     }
 
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
-      if (this.territoryRenderer?.isWebGL()) {
-        this.redraw();
-      } else {
-        if (this.lastFocusedPlayer) {
-          this.paintPlayerBorder(this.lastFocusedPlayer);
-        }
-        if (focusedPlayer) {
-          this.paintPlayerBorder(focusedPlayer);
-        }
-      }
+      this.redraw();
       this.lastFocusedPlayer = focusedPlayer;
     }
 
@@ -373,10 +305,6 @@ export class TerritoryLayer implements Layer {
         this.hoverHighlightOptions(),
       );
     });
-    this.eventBus.on(DragEvent, () => {
-      // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
-      // this.lastDragTime = Date.now();
-    });
     this.redraw();
   }
 
@@ -386,13 +314,7 @@ export class TerritoryLayer implements Layer {
   }
 
   private updateHighlightedTerritory() {
-    const supportsHover =
-      this.alternativeView || this.territoryRenderer?.isWebGL() === true;
-    if (!supportsHover) {
-      return;
-    }
-
-    if (!this.lastMousePosition) {
+    if (!this.lastMousePosition || !this.territoryRenderer) {
       return;
     }
 
@@ -414,20 +336,9 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
-      if (this.territoryRenderer?.isWebGL()) {
-        this.territoryRenderer.setHover(
-          this.highlightedTerritory?.smallID() ?? null,
-        );
-      } else {
-        const territories: PlayerView[] = [];
-        if (previousTerritory) {
-          territories.push(previousTerritory);
-        }
-        if (this.highlightedTerritory) {
-          territories.push(this.highlightedTerritory);
-        }
-        this.redrawBorder(...territories);
-      }
+      this.territoryRenderer.setHoveredPlayerId(
+        this.highlightedTerritory?.smallID() ?? null,
+      );
     }
   }
 
@@ -444,14 +355,10 @@ export class TerritoryLayer implements Layer {
   }
 
   redraw() {
-    console.log("redrew territory layer");
     this.lastMyPlayerSmallId = this.game.myPlayer()?.smallID() ?? null;
     this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
     this.configureRenderers();
-    this.tileTransitions.clear();
-    this.transitionHighlightTiles.length = 0;
-    this.transitionHighlightAlphas.length = 0;
-    this.territoryRenderer?.redraw();
+    this.transitionActive = false;
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -462,34 +369,28 @@ export class TerritoryLayer implements Layer {
     this.highlightContext = highlightContext;
     this.highlightCanvas.width = this.game.width();
     this.highlightCanvas.height = this.game.height();
-
-    this.game.forEachTile((t) => {
-      this.paintTerritory(t);
-    });
   }
 
   private configureRenderers() {
-    this.territoryRenderer = null;
-
-    const { renderer } = TerritoryWebGLRenderer.create(this.game, this.theme);
-    if (renderer) {
-      const strategy = new WebglTerritoryRenderer(renderer, this.game);
-      strategy.setAlternativeView(this.alternativeView);
-      strategy.markAllDirty();
-      strategy.refreshPalette();
-      strategy.setHoverHighlightOptions(this.hoverHighlightOptions());
-      strategy.setHover(this.highlightedTerritory?.smallID() ?? null);
-      this.territoryRenderer = strategy;
-      this.lastPaletteSignature = this.computePaletteSignature();
-      return;
+    const { renderer, reason } = TerritoryWebGLRenderer.create(
+      this.game,
+      this.theme,
+    );
+    if (!renderer) {
+      throw new Error(reason ?? "WebGL2 is required for territory rendering.");
     }
 
-    this.territoryRenderer = new CanvasTerritoryRenderer(this.game, this.theme);
+    this.territoryRenderer = renderer;
     this.territoryRenderer.setAlternativeView(this.alternativeView);
+    this.territoryRenderer.markAllDirty();
+    this.territoryRenderer.refreshPalette();
     this.territoryRenderer.setHoverHighlightOptions(
       this.hoverHighlightOptions(),
     );
-    this.lastPaletteSignature = null;
+    this.territoryRenderer.setHoveredPlayerId(
+      this.highlightedTerritory?.smallID() ?? null,
+    );
+    this.lastPaletteSignature = this.computePaletteSignature();
   }
 
   private hoverHighlightOptions() {
@@ -513,58 +414,26 @@ export class TerritoryLayer implements Layer {
     };
   }
 
-  redrawBorder(...players: PlayerView[]) {
-    const shouldRefreshPalette = this.territoryRenderer?.isWebGL() ?? false;
-    return Promise.all(
-      players.map(async (player) => {
-        const tiles = await player.borderTiles();
-        tiles.borderTiles.forEach((tile: TileRef) => {
-          this.paintTerritory(tile, true);
-        });
-      }),
-    ).then(() => {
-      if (shouldRefreshPalette) {
-        this.territoryRenderer?.refreshPalette();
-      }
-    });
-  }
-
   renderLayer(context: CanvasRenderingContext2D) {
-    const now = Date.now();
-    const canRefresh =
-      now > this.lastDragTime + this.nodrawDragDuration &&
-      now > this.lastRefresh + this.refreshRate;
-    if (canRefresh) {
-      this.lastRefresh = now;
-      const renderTerritoryStart = FrameProfiler.start();
-      this.renderTerritory();
-      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
+    if (!this.territoryRenderer) {
+      return;
     }
-
+    const now = this.nowMs();
     this.updateTransitionProgress(now);
 
-    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-    const vx0 = Math.max(0, topLeft.x);
-    const vy0 = Math.max(0, topLeft.y);
-    const vx1 = Math.min(this.game.width() - 1, bottomRight.x);
-    const vy1 = Math.min(this.game.height() - 1, bottomRight.y);
+    const renderTerritoryStart = FrameProfiler.start();
+    this.territoryRenderer.render();
+    FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
-    const w = vx1 - vx0 + 1;
-    const h = vy1 - vy0 + 1;
-    if (this.territoryRenderer) {
-      this.territoryRenderer.render(
-        context,
-        {
-          x: vx0,
-          y: vy0,
-          width: w,
-          height: h,
-        },
-        canRefresh,
-      );
-    }
-
-    this.drawTransitionHighlights(context, now);
+    const drawTerritoryStart = FrameProfiler.start();
+    context.drawImage(
+      this.territoryRenderer.canvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    FrameProfiler.end("TerritoryLayer:drawTerritoryCanvas", drawTerritoryStart);
 
     if (this.game.inSpawnPhase()) {
       const highlightDrawStart = FrameProfiler.start();
@@ -582,73 +451,11 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  renderTerritory() {
-    if (!this.territoryRenderer) {
-      return;
-    }
-    let numToRender = this.tileToRenderQueue.size();
-    if (numToRender === 0) {
-      return;
-    }
-
-    const useNeighborPaint = !(this.territoryRenderer?.isWebGL() ?? false);
-    const neighborsToPaint: TileRef[] = [];
-    const mainSpan = FrameProfiler.start();
-    while (numToRender > 0) {
-      numToRender--;
-
-      const entry = this.tileToRenderQueue.pop();
-      if (!entry) {
-        break;
-      }
-
-      const tile = entry.tile;
-      this.paintTerritory(tile);
-
-      if (useNeighborPaint) {
-        for (const neighbor of this.game.neighbors(tile)) {
-          neighborsToPaint.push(neighbor);
-        }
-      }
-    }
-    FrameProfiler.end("TerritoryLayer:renderTerritory.mainPaint", mainSpan);
-
-    if (useNeighborPaint && neighborsToPaint.length > 0) {
-      const neighborSpan = FrameProfiler.start();
-      for (const neighbor of neighborsToPaint) {
-        this.paintTerritory(neighbor, true);
-      }
-      FrameProfiler.end(
-        "TerritoryLayer:renderTerritory.neighborPaint",
-        neighborSpan,
-      );
-    }
-  }
-
-  paintTerritory(tile: TileRef, _maybeStaleBorder: boolean = false) {
-    this.territoryRenderer?.paintTile(tile);
-  }
-
-  clearTile(tile: TileRef) {
-    this.territoryRenderer?.clearTile(tile);
-  }
-
-  enqueueTile(tile: TileRef) {
-    this.tileToRenderQueue.push({
-      tile: tile,
-      lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
-    });
-  }
-
-  async enqueuePlayerBorder(player: PlayerView) {
-    const playerBorderTiles = await player.borderTiles();
-    playerBorderTiles.borderTiles.forEach((tile: TileRef) => {
-      this.enqueueTile(tile);
-    });
+  private markTile(tile: TileRef) {
+    this.territoryRenderer?.markTile(tile);
   }
 
   paintHighlightTile(tile: TileRef, color: Colord, alpha: number) {
-    this.clearTile(tile);
     const x = this.game.x(tile);
     const y = this.game.y(tile);
     this.highlightContext.fillStyle = color.alpha(alpha / 255).toRgbString();
@@ -700,6 +507,10 @@ export class TerritoryLayer implements Layer {
     ctx.fill();
   }
 
+  private nowMs(): number {
+    return typeof performance !== "undefined" ? performance.now() : Date.now();
+  }
+
   private updateTickTiming(now: number) {
     const currentTick = this.game.ticks();
     if (currentTick === this.lastGameTick) {
@@ -722,87 +533,46 @@ export class TerritoryLayer implements Layer {
     if (changes.length === 0) {
       return;
     }
-    const durationMs = this.lastTickDurationMs;
+    this.transitionEpoch = (this.transitionEpoch + 1) & 0xff;
+    if (this.transitionEpoch === 0) {
+      this.transitionEpoch = 1;
+    }
+    this.transitionStartTime = now;
+    this.transitionDurationMs = this.lastTickDurationMs;
+    this.transitionProgress = 0;
+    this.transitionActive = false;
+
     for (const change of changes) {
       if (change.newOwner === change.previousOwner) {
         continue;
       }
-      if (change.newOwner === 0) {
-        this.tileTransitions.delete(change.tile);
-        this.territoryRenderer?.setTransitionProgress(change.tile, 1);
-        continue;
+      if (this.territoryRenderer) {
+        this.territoryRenderer.setTransitionEpoch(
+          change.tile,
+          this.transitionEpoch,
+        );
+        this.transitionActive = true;
       }
-      this.tileTransitions.set(change.tile, {
-        startTime: now,
-        durationMs,
-        highlight: change.newOwner !== 0,
-        lastProgressByte: -1,
-      });
-      this.territoryRenderer?.setTransitionProgress(change.tile, 0);
     }
   }
 
   private updateTransitionProgress(now: number) {
-    this.transitionHighlightTiles.length = 0;
-    this.transitionHighlightAlphas.length = 0;
-    if (!this.territoryRenderer || this.tileTransitions.size === 0) {
+    if (!this.territoryRenderer || !this.transitionActive) {
       return;
     }
-
-    const toDelete: TileRef[] = [];
-    for (const [tile, transition] of this.tileTransitions) {
-      const elapsed = now - transition.startTime;
-      const duration = transition.durationMs > 0 ? transition.durationMs : 1;
-      const progress = Math.max(0, Math.min(1, elapsed / duration));
-      const progressByte = Math.round(progress * 255);
-      if (progressByte !== transition.lastProgressByte) {
-        transition.lastProgressByte = progressByte;
-        this.territoryRenderer.setTransitionProgress(tile, progress);
-      }
-      if (transition.highlight && progress < 1) {
-        const alpha = (1 - progress) * 0.35;
-        if (alpha > 0.01) {
-          this.transitionHighlightTiles.push(tile);
-          this.transitionHighlightAlphas.push(alpha);
-        }
-      }
-      if (progress >= 1) {
-        toDelete.push(tile);
-      }
+    const elapsed = now - this.transitionStartTime;
+    const duration =
+      this.transitionDurationMs > 0 ? this.transitionDurationMs : 1;
+    const progress = Math.max(0, Math.min(1, elapsed / duration));
+    const eased = progress * progress * (3 - 2 * progress);
+    this.transitionProgress = eased;
+    this.territoryRenderer.setTransitionProgress(
+      this.transitionProgress,
+      this.transitionEpoch,
+    );
+    if (progress >= 1) {
+      this.transitionActive = false;
     }
-    for (const tile of toDelete) {
-      this.tileTransitions.delete(tile);
-    }
-  }
-
-  private drawTransitionHighlights(
-    context: CanvasRenderingContext2D,
-    now: number,
-  ) {
-    if (this.transitionHighlightTiles.length === 0) {
-      return;
-    }
-    const pulse = 0.75 + 0.25 * Math.sin((now - this.lastTickTime) * 0.015);
-    const highlight = this.theme.spawnHighlightColor();
-    const offsetX = -this.game.width() / 2;
-    const offsetY = -this.game.height() / 2;
-    context.save();
-    context.fillStyle = highlight.toRgbString();
-    for (let i = 0; i < this.transitionHighlightTiles.length; i++) {
-      const alpha = this.transitionHighlightAlphas[i] * pulse;
-      if (alpha <= 0) {
-        continue;
-      }
-      const tile = this.transitionHighlightTiles[i];
-      context.globalAlpha = alpha;
-      context.fillRect(
-        this.game.x(tile) + offsetX,
-        this.game.y(tile) + offsetY,
-        1,
-        1,
-      );
-    }
-    context.restore();
   }
 
   private computePaletteSignature(): string {
@@ -815,7 +585,7 @@ export class TerritoryLayer implements Layer {
   }
 
   private refreshPaletteIfNeeded() {
-    if (!this.territoryRenderer?.isWebGL()) {
+    if (!this.territoryRenderer) {
       return;
     }
     const signature = this.computePaletteSignature();

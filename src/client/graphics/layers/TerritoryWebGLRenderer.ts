@@ -43,6 +43,10 @@ export class TerritoryWebGLRenderer {
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
     transitions: WebGLUniformLocation | null;
+    transitionEpoch: WebGLUniformLocation | null;
+    transitionProgress: WebGLUniformLocation | null;
+    transitionHintColor: WebGLUniformLocation | null;
+    transitionHintStrength: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
@@ -62,7 +66,7 @@ export class TerritoryWebGLRenderer {
   };
 
   private readonly state: Uint16Array;
-  private readonly transitionState: Uint8Array;
+  private readonly transitionEpochState: Uint8Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
   private readonly transitionDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
@@ -75,6 +79,10 @@ export class TerritoryWebGLRenderer {
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
+  private transitionEpoch = 1;
+  private transitionProgress = 1;
+  private transitionHintColor: [number, number, number] = [1, 1, 1];
+  private transitionHintStrength = 0.25;
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -88,8 +96,7 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = state;
-    this.transitionState = new Uint8Array(state.length);
-    this.transitionState.fill(255);
+    this.transitionEpochState = new Uint8Array(state.length);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -113,6 +120,10 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         transitions: null,
+        transitionEpoch: null,
+        transitionProgress: null,
+        transitionHintColor: null,
+        transitionHintStrength: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -150,6 +161,10 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         transitions: null,
+        transitionEpoch: null,
+        transitionProgress: null,
+        transitionHintColor: null,
+        transitionHintStrength: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -177,6 +192,19 @@ export class TerritoryWebGLRenderer {
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
       transitions: gl.getUniformLocation(this.program, "u_transitions"),
+      transitionEpoch: gl.getUniformLocation(this.program, "u_transitionEpoch"),
+      transitionProgress: gl.getUniformLocation(
+        this.program,
+        "u_transitionProgress",
+      ),
+      transitionHintColor: gl.getUniformLocation(
+        this.program,
+        "u_transitionHintColor",
+      ),
+      transitionHintStrength: gl.getUniformLocation(
+        this.program,
+        "u_transitionHintStrength",
+      ),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
@@ -274,7 +302,7 @@ export class TerritoryWebGLRenderer {
       0,
       gl.RED_INTEGER,
       gl.UNSIGNED_BYTE,
-      this.transitionState,
+      this.transitionEpochState,
     );
 
     gl.useProgram(this.program);
@@ -370,6 +398,27 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.hoverPulseSpeed) {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
+    if (this.uniforms.transitionEpoch) {
+      gl.uniform1i(this.uniforms.transitionEpoch, this.transitionEpoch);
+    }
+    if (this.uniforms.transitionProgress) {
+      gl.uniform1f(this.uniforms.transitionProgress, this.transitionProgress);
+    }
+    if (this.uniforms.transitionHintColor) {
+      this.transitionHintColor = [1, 1, 1];
+      gl.uniform3f(
+        this.uniforms.transitionHintColor,
+        this.transitionHintColor[0],
+        this.transitionHintColor[1],
+        this.transitionHintColor[2],
+      );
+    }
+    if (this.uniforms.transitionHintStrength) {
+      gl.uniform1f(
+        this.uniforms.transitionHintStrength,
+        this.transitionHintStrength,
+      );
+    }
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -382,8 +431,7 @@ export class TerritoryWebGLRenderer {
     if (state.length !== expected) {
       return {
         renderer: null,
-        reason:
-          "Tile state buffer size mismatch; falling back to canvas territory draw.",
+        reason: "Tile state buffer size mismatch; WebGL renderer disabled.",
       };
     }
 
@@ -391,7 +439,7 @@ export class TerritoryWebGLRenderer {
     if (!renderer.isValid()) {
       return {
         renderer: null,
-        reason: "WebGL2 not available; falling back to canvas territory draw.",
+        reason: "WebGL2 not available; WebGL renderer disabled.",
       };
     }
     return { renderer };
@@ -444,13 +492,12 @@ export class TerritoryWebGLRenderer {
     }
   }
 
-  setTransitionProgress(tile: TileRef, progress: number) {
-    const clamped = Math.max(0, Math.min(1, progress));
-    const value = Math.round(clamped * 255);
-    if (this.transitionState[tile] === value) {
+  setTransitionEpoch(tile: TileRef, epoch: number) {
+    const value = epoch & 0xff;
+    if (this.transitionEpochState[tile] === value) {
       return;
     }
-    this.transitionState[tile] = value;
+    this.transitionEpochState[tile] = value;
     if (this.needsTransitionFullUpload) {
       return;
     }
@@ -465,9 +512,16 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  setTransitionProgress(progress: number, epoch: number) {
+    this.transitionEpoch = epoch & 0xff;
+    this.transitionProgress = Math.max(0, Math.min(1, progress));
+  }
+
   markAllDirty() {
     this.needsFullUpload = true;
     this.dirtyRows.clear();
+    this.needsTransitionFullUpload = true;
+    this.transitionDirtyRows.clear();
   }
 
   refreshPalette() {
@@ -527,6 +581,12 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.viewerId) {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
+    }
+    if (this.uniforms.transitionEpoch) {
+      gl.uniform1i(this.uniforms.transitionEpoch, this.transitionEpoch);
+    }
+    if (this.uniforms.transitionProgress) {
+      gl.uniform1f(this.uniforms.transitionProgress, this.transitionProgress);
     }
 
     gl.clearColor(0, 0, 0, 0);
@@ -611,7 +671,7 @@ export class TerritoryWebGLRenderer {
         0,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
-        this.transitionState,
+        this.transitionEpochState,
       );
       this.needsTransitionFullUpload = false;
       this.transitionDirtyRows.clear();
@@ -627,7 +687,10 @@ export class TerritoryWebGLRenderer {
     for (const [y, span] of this.transitionDirtyRows) {
       const width = span.maxX - span.minX + 1;
       const offset = y * this.canvas.width + span.minX;
-      const rowSlice = this.transitionState.subarray(offset, offset + width);
+      const rowSlice = this.transitionEpochState.subarray(
+        offset,
+        offset + width,
+      );
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
@@ -834,6 +897,10 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_relations;
       uniform usampler2D u_patterns;
       uniform usampler2D u_transitions;
+      uniform int u_transitionEpoch;
+      uniform float u_transitionProgress;
+      uniform vec3 u_transitionHintColor;
+      uniform float u_transitionHintStrength;
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
@@ -918,7 +985,11 @@ export class TerritoryWebGLRenderer {
         ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
-        float transition = float(texelFetch(u_transitions, texCoord, 0).r) / 255.0;
+        uint transitionEpoch = texelFetch(u_transitions, texCoord, 0).r;
+        bool inTransition =
+          (u_transitionEpoch != 0) && (transitionEpoch == uint(u_transitionEpoch));
+        float transition = inTransition ? u_transitionProgress : 1.0;
+        float hintMix = inTransition ? u_transitionHintStrength * (1.0 - transition) : 0.0;
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
@@ -926,7 +997,7 @@ export class TerritoryWebGLRenderer {
         if (owner == 0u) {
           if (hasFallout) {
             vec3 color = u_fallout.rgb;
-            float a = u_alpha * transition;
+            float a = u_alpha;
             outColor = vec4(color * a, a);
           } else {
             outColor = vec4(0.0);
@@ -982,7 +1053,7 @@ export class TerritoryWebGLRenderer {
             float pulse = u_hoverPulseStrength > 0.0
               ? (1.0 - u_hoverPulseStrength) +
                 u_hoverPulseStrength * (0.5 + 0.5 * sin(u_time * u_hoverPulseSpeed))
-              : 1.0;
+            : 1.0;
             color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
           }
           outColor = vec4(color * a, a);
@@ -1018,11 +1089,15 @@ export class TerritoryWebGLRenderer {
           }
 
           color = borderColor;
-          a = baseBorder.a;
+          a = baseBorder.a * transition;
         } else {
           bool isPrimary = patternIsPrimary(owner, texCoord);
           color = isPrimary ? base.rgb : baseBorder.rgb;
           a = u_alpha;
+        }
+
+        if (hintMix > 0.0) {
+          color = mix(color, u_transitionHintColor, hintMix);
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
@@ -1033,7 +1108,6 @@ export class TerritoryWebGLRenderer {
           color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
         }
 
-        a *= transition;
         outColor = vec4(color * a, a);
       }
     `;
