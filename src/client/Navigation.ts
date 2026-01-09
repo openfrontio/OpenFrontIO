@@ -32,6 +32,9 @@ export function initNavigation() {
         item.classList.remove("active");
       }
     });
+
+    // Dispatch CustomEvent to notify listeners of page change
+    window.dispatchEvent(new CustomEvent("showPage", { detail: pageId }));
   };
 
   window.showPage = showPage;
