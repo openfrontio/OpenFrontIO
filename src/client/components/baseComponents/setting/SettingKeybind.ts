@@ -20,6 +20,7 @@ export class SettingKeybind extends LitElement {
 
   render() {
     const currentValue = this.value === "" ? "" : this.value || this.defaultKey;
+    const canReset = this.value !== undefined && this.value !== this.defaultKey;
     const displayValue = this.display || currentValue;
     const rainbowClass = this.easter
       ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
@@ -56,8 +57,11 @@ export class SettingKeybind extends LitElement {
 
           <div class="flex flex-col gap-1">
             <button
-              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors"
+              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors ${canReset
+                ? ""
+                : "opacity-50 cursor-not-allowed pointer-events-none"}"
               @click=${this.resetToDefault}
+              ?disabled=${!canReset}
             >
               ${translateText("user_setting.reset")}
             </button>
@@ -130,7 +134,6 @@ export class SettingKeybind extends LitElement {
         detail: {
           action: this.action,
           value: this.defaultKey,
-          key: this.defaultKey,
         },
         bubbles: true,
         composed: true,
