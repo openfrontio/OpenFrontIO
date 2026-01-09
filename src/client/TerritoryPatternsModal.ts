@@ -37,6 +37,11 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | false = false;
 
+  private _onPatternSelected = () => {
+    this.updateFromSettings();
+    this.refresh();
+  };
+
   constructor() {
     super();
   }
@@ -49,10 +54,12 @@ export class TerritoryPatternsModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
-    window.addEventListener("pattern-selected", () => {
-      this.updateFromSettings();
-      this.refresh();
-    });
+    window.addEventListener("pattern-selected", this._onPatternSelected);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("pattern-selected", this._onPatternSelected);
   }
 
   private updateFromSettings() {
