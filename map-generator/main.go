@@ -233,8 +233,9 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
-			var MapLogTag = slog.String("map", mapItem.Name)
-			var TestLogTag = slog.Bool("isTest", mapItem.IsTest)
+			mapLogTag := slog.String("map", mapItem.Name)
+			testLogTag := slog.Bool("isTest", mapItem.IsTest)
+			logger := slog.Default().With(mapLogTag).With(testLogTag)
 			logger := slog.Default().With(MapLogTag).With(TestLogTag)
 			ctx := ContextWithLogger(context.Background(), logger)
 			if err := processMap(ctx, mapItem.Name, mapItem.IsTest); err != nil {
