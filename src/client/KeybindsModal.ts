@@ -122,7 +122,7 @@ export class KeybindsModal extends BaseModal {
 
     if (values.includes(value) && value !== "Null") {
       // Format key for user-friendly display
-      const displayKey = formatKeyForDisplay(value);
+      const displayKey = formatKeyForDisplay(key || value);
       // Use heads-up-message modal for error popup
       window.dispatchEvent(
         new CustomEvent("show-message", {
@@ -185,6 +185,12 @@ export class KeybindsModal extends BaseModal {
       : entry.value;
     if (normalizedValue === "Null") return "";
     return normalizedValue || undefined;
+  }
+
+  private getKeyChar(action: string): string {
+    const entry = this.keybinds[action];
+    if (!entry) return "";
+    return entry.key || "";
   }
 
   render() {
@@ -264,6 +270,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.toggle_view_desc")}
         defaultKey="Space"
         .value=${this.getKeyValue("toggleView")}
+        .display=${this.getKeyChar("toggleView")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -279,6 +286,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_city_desc")}
         defaultKey="Digit1"
         .value=${this.getKeyValue("buildCity")}
+        .display=${this.getKeyChar("buildCity")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -288,6 +296,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_factory_desc")}
         defaultKey="Digit2"
         .value=${this.getKeyValue("buildFactory")}
+        .display=${this.getKeyChar("buildFactory")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -297,6 +306,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_port_desc")}
         defaultKey="Digit3"
         .value=${this.getKeyValue("buildPort")}
+        .display=${this.getKeyChar("buildPort")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -306,6 +316,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_defense_post_desc")}
         defaultKey="Digit4"
         .value=${this.getKeyValue("buildDefensePost")}
+        .display=${this.getKeyChar("buildDefensePost")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -315,6 +326,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_missile_silo_desc")}
         defaultKey="Digit5"
         .value=${this.getKeyValue("buildMissileSilo")}
+        .display=${this.getKeyChar("buildMissileSilo")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -324,6 +336,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_sam_launcher_desc")}
         defaultKey="Digit6"
         .value=${this.getKeyValue("buildSamLauncher")}
+        .display=${this.getKeyChar("buildSamLauncher")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -333,6 +346,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_warship_desc")}
         defaultKey="Digit7"
         .value=${this.getKeyValue("buildWarship")}
+        .display=${this.getKeyChar("buildWarship")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -342,6 +356,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_atom_bomb_desc")}
         defaultKey="Digit8"
         .value=${this.getKeyValue("buildAtomBomb")}
+        .display=${this.getKeyChar("buildAtomBomb")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -351,6 +366,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_hydrogen_bomb_desc")}
         defaultKey="Digit9"
         .value=${this.getKeyValue("buildHydrogenBomb")}
+        .display=${this.getKeyChar("buildHydrogenBomb")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -360,6 +376,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.build_mirv_desc")}
         defaultKey="Digit0"
         .value=${this.getKeyValue("buildMIRV")}
+        .display=${this.getKeyChar("buildMIRV")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -375,6 +392,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_down_desc")}
         defaultKey="KeyT"
         .value=${this.getKeyValue("attackRatioDown")}
+        .display=${this.getKeyChar("attackRatioDown")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -384,6 +402,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.attack_ratio_up_desc")}
         defaultKey="KeyY"
         .value=${this.getKeyValue("attackRatioUp")}
+        .display=${this.getKeyChar("attackRatioUp")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -399,6 +418,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.boat_attack_desc")}
         defaultKey="KeyB"
         .value=${this.getKeyValue("boatAttack")}
+        .display=${this.getKeyChar("boatAttack")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -408,6 +428,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.ground_attack_desc")}
         defaultKey="KeyG"
         .value=${this.getKeyValue("groundAttack")}
+        .display=${this.getKeyChar("groundAttack")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -423,6 +444,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.zoom_out_desc")}
         defaultKey="KeyQ"
         .value=${this.getKeyValue("zoomOut")}
+        .display=${this.getKeyChar("zoomOut")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -432,6 +454,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.zoom_in_desc")}
         defaultKey="KeyE"
         .value=${this.getKeyValue("zoomIn")}
+        .display=${this.getKeyChar("zoomIn")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -447,6 +470,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.center_camera_desc")}
         defaultKey="KeyC"
         .value=${this.getKeyValue("centerCamera")}
+        .display=${this.getKeyChar("centerCamera")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -456,6 +480,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.move_up_desc")}
         defaultKey="KeyW"
         .value=${this.getKeyValue("moveUp")}
+        .display=${this.getKeyChar("moveUp")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -465,6 +490,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.move_left_desc")}
         defaultKey="KeyA"
         .value=${this.getKeyValue("moveLeft")}
+        .display=${this.getKeyChar("moveLeft")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -474,6 +500,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.move_down_desc")}
         defaultKey="KeyS"
         .value=${this.getKeyValue("moveDown")}
+        .display=${this.getKeyChar("moveDown")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -483,6 +510,7 @@ export class KeybindsModal extends BaseModal {
         description=${translateText("user_setting.move_right_desc")}
         defaultKey="KeyD"
         .value=${this.getKeyValue("moveRight")}
+        .display=${this.getKeyChar("moveRight")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
     `;

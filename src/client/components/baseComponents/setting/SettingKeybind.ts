@@ -9,6 +9,7 @@ export class SettingKeybind extends LitElement {
   @property({ type: String, reflect: true }) action = "";
   @property({ type: String }) defaultKey = "";
   @property({ type: String }) value = "";
+  @property({ type: String }) display = "";
   @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
@@ -19,6 +20,7 @@ export class SettingKeybind extends LitElement {
 
   render() {
     const currentValue = this.value === "" ? "" : this.value || this.defaultKey;
+    const displayValue = this.display || currentValue;
     const rainbowClass = this.easter
       ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
       : "";
@@ -49,7 +51,7 @@ export class SettingKeybind extends LitElement {
             @click=${this.startListening}
             @blur=${this.handleBlur}
           >
-            ${this.listening ? "..." : this.displayKey(currentValue)}
+            ${this.listening ? "..." : this.displayKey(displayValue)}
           </div>
 
           <div class="flex flex-col gap-1">
