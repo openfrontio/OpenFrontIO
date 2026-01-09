@@ -7,13 +7,11 @@ import {
   Nation,
   Player,
   PlayerID,
-  PlayerType,
   Relation,
   TerrainType,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { canBuildTransportShip } from "../game/TransportShipUtils";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { assertNever, simpleHash } from "../Util";
@@ -26,7 +24,6 @@ import { randTerritoryTileArray } from "./nation/NationUtils";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { SpawnExecution } from "./SpawnExecution";
-import { TransportShipExecution } from "./TransportShipExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class NationExecution implements Execution {
@@ -144,7 +141,6 @@ export class NationExecution implements Execution {
       this.warshipBehavior === null ||
       this.nukeBehavior === null
     ) {
-      // Player is unavailable during init()
       this.emojiBehavior = new NationEmojiBehavior(
         this.random,
         this.mg,
@@ -198,8 +194,9 @@ export class NationExecution implements Execution {
     this.mirvBehavior.considerMIRV();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
-    this.maybeAttack();
+    this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
+    this.nukeBehavior.maybeSendNuke();
   }
 
   private randomSpawnLand(): TileRef | null {
@@ -253,12 +250,13 @@ export class NationExecution implements Execution {
   }
 
   private handleUnits() {
+    if (this.warshipBehavior === null) throw new Error("not initialized");
     const hasCoastalTiles = this.hasCoastalTiles();
     const isTeamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
     return (
       this.maybeSpawnStructure(UnitType.City, (num) => num) ||
       this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
-      this.maybeSpawnWarship() ||
+      this.warshipBehavior.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory, (num) =>
         hasCoastalTiles ? num * 3 : num,
       ) ||
@@ -271,7 +269,7 @@ export class NationExecution implements Execution {
   }
 
   private hasCoastalTiles(): boolean {
-    if (this.player === null) return false;
+    if (this.player === null) throw new Error("not initialized");
     for (const tile of this.player.borderTiles()) {
       if (this.mg.isOceanShore(tile)) return true;
     }
@@ -347,59 +345,6 @@ export class NationExecution implements Execution {
     }
   }
 
-  private maybeSpawnWarship(): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    if (!this.random.chance(50)) {
-      return false;
-    }
-    const ports = this.player.units(UnitType.Port);
-    const ships = this.player.units(UnitType.Warship);
-    if (
-      ports.length > 0 &&
-      ships.length === 0 &&
-      this.player.gold() > this.cost(UnitType.Warship)
-    ) {
-      const port = this.random.randElement(ports);
-      const targetTile = this.warshipSpawnTile(port.tile());
-      if (targetTile === null) {
-        return false;
-      }
-      const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
-      if (canBuild === false) {
-        return false;
-      }
-      this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, targetTile),
-      );
-      return true;
-    }
-    return false;
-  }
-
-  private warshipSpawnTile(portTile: TileRef): TileRef | null {
-    const radius = 250;
-    for (let attempts = 0; attempts < 50; attempts++) {
-      const randX = this.random.nextInt(
-        this.mg.x(portTile) - radius,
-        this.mg.x(portTile) + radius,
-      );
-      const randY = this.random.nextInt(
-        this.mg.y(portTile) - radius,
-        this.mg.y(portTile) + radius,
-      );
-      if (!this.mg.isValidCoord(randX, randY)) {
-        continue;
-      }
-      const tile = this.mg.ref(randX, randY);
-      // Sanity check
-      if (!this.mg.isOcean(tile)) {
-        continue;
-      }
-      return tile;
-    }
-    return null;
-  }
-
   private handleEmbargoesToHostileNations() {
     const player = this.player;
     if (player === null) return;
@@ -420,156 +365,6 @@ export class NationExecution implements Execution {
         player.stopEmbargo(other);
       }
     });
-  }
-
-  private maybeAttack() {
-    if (
-      this.player === null ||
-      this.attackBehavior === null ||
-      this.allianceBehavior === null ||
-      this.nukeBehavior === null
-    ) {
-      throw new Error("not initialized");
-    }
-
-    const border = Array.from(this.player.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
-      .filter(
-        (t) =>
-          this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
-      );
-    const borderingPlayers = [
-      ...new Set(
-        border
-          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
-          .filter((o): o is Player => o.isPlayer()),
-      ),
-    ].sort((a, b) => a.troops() - b.troops());
-    const borderingFriends = borderingPlayers.filter(
-      (o) => this.player?.isFriendly(o) === true,
-    );
-    const borderingEnemies = borderingPlayers.filter(
-      (o) => this.player?.isFriendly(o) === false,
-    );
-
-    // Attack TerraNullius but not nuked territory
-    const hasNonNukedTerraNullius = border.some(
-      (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
-    );
-    if (hasNonNukedTerraNullius) {
-      this.attackBehavior.sendAttack(this.mg.terraNullius());
-      return;
-    }
-
-    if (borderingEnemies.length === 0) {
-      if (this.random.chance(5)) {
-        this.sendBoatRandomly();
-      }
-    } else {
-      if (this.random.chance(10)) {
-        this.sendBoatRandomly(borderingEnemies);
-        return;
-      }
-
-      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
-    }
-
-    this.attackBehavior.attackBestTarget(borderingFriends, borderingEnemies);
-    this.nukeBehavior.maybeSendNuke();
-  }
-
-  private sendBoatRandomly(borderingEnemies: Player[] = []) {
-    if (this.player === null) throw new Error("not initialized");
-    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
-      this.mg.isOceanShore(t),
-    );
-    if (oceanShore.length === 0) {
-      return;
-    }
-
-    const src = this.random.randElement(oceanShore);
-
-    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
-    let dst = this.randomBoatTarget(src, borderingEnemies, true);
-    if (dst === null) {
-      // None found? Then look for players
-      dst = this.randomBoatTarget(src, borderingEnemies, false);
-      if (dst === null) {
-        return;
-      }
-    }
-
-    this.mg.addExecution(
-      new TransportShipExecution(
-        this.player,
-        this.mg.owner(dst).id(),
-        dst,
-        this.player.troops() / 5,
-        null,
-      ),
-    );
-    return;
-  }
-
-  private randomBoatTarget(
-    tile: TileRef,
-    borderingEnemies: Player[],
-    highInterestOnly: boolean = false,
-  ): TileRef | null {
-    if (this.player === null) throw new Error("not initialized");
-    const x = this.mg.x(tile);
-    const y = this.mg.y(tile);
-    const unreachablePlayers = new Set<PlayerID>();
-    for (let i = 0; i < 500; i++) {
-      const randX = this.random.nextInt(x - 150, x + 150);
-      const randY = this.random.nextInt(y - 150, y + 150);
-      if (!this.mg.isValidCoord(randX, randY)) {
-        continue;
-      }
-      const randTile = this.mg.ref(randX, randY);
-      if (!this.mg.isLand(randTile)) {
-        continue;
-      }
-      const owner = this.mg.owner(randTile);
-      if (owner === this.player) {
-        continue;
-      }
-      // Skip players we already know are unreachable (Performance optimization)
-      if (owner.isPlayer() && unreachablePlayers.has(owner.id())) {
-        continue;
-      }
-      // Don't send boats to players with which we share a border, that usually looks stupid
-      if (owner.isPlayer() && borderingEnemies.includes(owner)) {
-        continue;
-      }
-      // Don't spam boats into players that are more than twice as large as us
-      if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
-        continue;
-      }
-
-      let matchesCriteria = false;
-      if (highInterestOnly) {
-        // High-interest targeting: prioritize unowned tiles or tiles owned by bots
-        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
-      } else {
-        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
-        matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
-      }
-      if (!matchesCriteria) {
-        continue;
-      }
-
-      // Validate that we can actually build a transport ship to this target
-      if (canBuildTransportShip(this.mg, this.player, randTile) === false) {
-        if (owner.isPlayer()) {
-          unreachablePlayers.add(owner.id());
-        }
-        continue;
-      }
-
-      return randTile;
-    }
-    return null;
   }
 
   private cost(type: UnitType): Gold {

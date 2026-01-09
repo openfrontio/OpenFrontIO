@@ -58,7 +58,6 @@ export interface ServerConfig {
   subdomain(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
-  enableMatchmaking(): boolean;
   getRandomPublicGameModifiers(): PublicGameModifiers;
   supportsCompactMapForTeams(map: GameMapType): boolean;
 }
@@ -83,6 +82,7 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
+  disableNavMesh(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;

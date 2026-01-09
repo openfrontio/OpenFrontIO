@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { UserMeResponse } from "src/core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
 import { getPlayToken } from "./Auth";
@@ -12,16 +13,29 @@ import { translateText } from "./Utils";
 export class MatchmakingModal extends LitElement {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
   private connected = false;
+  private elo = "unknown";
   @state() private socket: WebSocket | null = null;
 
   @state() private gameID: string | null = null;
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
+    onClose?: () => void;
+    isModalOpen: boolean;
   };
 
   constructor() {
     super();
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        const userMeResponse = customEvent.detail as UserMeResponse;
+        this.elo =
+          userMeResponse.player?.leaderboard?.oneVone?.elo?.toString() ??
+          "unknown";
+        this.requestUpdate();
+      }
+    });
   }
 
   createRenderRoot() {
@@ -34,6 +48,9 @@ export class MatchmakingModal extends LitElement {
         id="matchmaking-modal"
         title="${translateText("matchmaking_modal.title")}"
       >
+        <p class="text-center mt-4 mb-8">
+          ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+        </p>
         ${this.renderInner()}
       </o-modal>
     `;
@@ -41,12 +58,18 @@ export class MatchmakingModal extends LitElement {
 
   private renderInner() {
     if (!this.connected) {
-      return html`${translateText("matchmaking_modal.connecting")}`;
+      return html`<p class="text-center">
+        ${translateText("matchmaking_modal.connecting")}
+      </p>`;
     }
     if (this.gameID === null) {
-      return html`${translateText("matchmaking_modal.searching")}`;
+      return html`<p class="text-center">
+        ${translateText("matchmaking_modal.searching")}
+      </p>`;
     } else {
-      return html`${translateText("matchmaking_modal.waiting_for_game")}`;
+      return html`<p class="text-center">
+        ${translateText("matchmaking_modal.waiting_for_game")}
+      </p>`;
     }
   }
 
@@ -64,8 +87,8 @@ export class MatchmakingModal extends LitElement {
       }, 1000);
       this.socket?.send(
         JSON.stringify({
-          type: "auth",
-          playToken: await getPlayToken(),
+          type: "join",
+          jwt: await getPlayToken(),
         }),
       );
     };
@@ -97,6 +120,7 @@ export class MatchmakingModal extends LitElement {
   }
 
   public async open() {
+    this.modalEl!.onClose = () => this.close();
     this.modalEl?.open();
     this.requestUpdate();
     this.connect();
@@ -148,7 +172,6 @@ export class MatchmakingModal extends LitElement {
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
   @query("matchmaking-modal") private matchmakingModal: MatchmakingModal;
-  @state() private matchmakingEnabled = false;
 
   constructor() {
     super();
@@ -156,8 +179,6 @@ export class MatchmakingButton extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    const config = await getServerConfigFromClient();
-    this.matchmakingEnabled = config.enableMatchmaking();
   }
 
   createRenderRoot() {
@@ -165,19 +186,14 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
-    if (!this.matchmakingEnabled) {
-      return html``;
-    }
-
     return html`
       <div class="z-9999">
-        <button
+        <o-button
           @click="${this.open}"
-          class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-hidden focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
-          title="${translateText("matchmaking_modal.title")}"
-        >
-          Matchmaking
-        </button>
+          translationKey="matchmaking_modal.title"
+          block
+          secondary
+        ></o-button>
       </div>
       <matchmaking-modal></matchmaking-modal>
     `;

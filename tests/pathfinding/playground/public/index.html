@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pathfinding Playground - Interactive Visualization</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Fullscreen map container -->
+    <div class="canvas-container">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="mapCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+      </div>
+      <!-- Interactive canvas added dynamically outside wrapper -->
+    </div>
+
+    <!-- Welcome screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-content">
+        <h1>Pathfinding Playground</h1>
+        <p>Interactive visualization for naval pathfinding algorithms</p>
+
+        <!-- Map grid -->
+        <div class="map-grid" id="mapGrid">
+          <div class="map-card" data-map-index="0">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 1</div>
+          </div>
+          <div class="map-card" data-map-index="1">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 2</div>
+          </div>
+          <div class="map-card" data-map-index="2">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 3</div>
+          </div>
+          <div class="map-card" data-map-index="3">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 4</div>
+          </div>
+          <div class="map-card" data-map-index="4">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 5</div>
+          </div>
+          <div class="map-card" data-map-index="5">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 6</div>
+          </div>
+          <div class="map-card" data-map-index="6">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 7</div>
+          </div>
+          <div class="map-card" data-map-index="7">
+            <img
+              width="360"
+              height="180"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180'%3E%3Crect fill='%23333' width='360' height='180'/%3E%3C/svg%3E"
+              alt="Loading..."
+            />
+            <div class="map-card-name" style="opacity: 0">Map 8</div>
+          </div>
+        </div>
+
+        <!-- Dropdown for other maps -->
+        <div class="welcome-selector">
+          <label for="welcomeMapSelect">Or select from all maps:</label>
+          <select id="welcomeMapSelect">
+            <option value="">Loading maps...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top overlay panel -->
+    <div class="top-panel">
+      <h1>Pathfinding Playground</h1>
+
+      <div class="scenario-selector">
+        <select id="scenarioSelect">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+
+      <div class="status-section">
+        <span id="status">Select a scenario to begin</span>
+      </div>
+    </div>
+
+    <!-- Debug controls panel (left) -->
+    <div class="debug-panel">
+      <div class="debug-panel-row">
+        <button class="toggle-button" id="showInitialPath" data-active="false">
+          Initial Path
+        </button>
+        <button class="toggle-button" id="showUsedGateways" data-active="false">
+          Used Gateways
+        </button>
+      </div>
+      <div class="debug-panel-row">
+        <button class="toggle-button" id="showGateways" data-active="false">
+          Gateways
+        </button>
+        <button class="toggle-button" id="showSectorGrid" data-active="false">
+          Sectors
+        </button>
+        <button class="toggle-button" id="showEdges" data-active="false">
+          Edges
+        </button>
+      </div>
+    </div>
+
+    <!-- View controls panel (right) -->
+    <div class="view-panel">
+      <div class="zoom-control">
+        <input type="range" id="zoom" min="0.1" max="5" step="0.1" value="1" />
+        <span id="zoomValue">1.0x</span>
+      </div>
+      <button class="toggle-button" id="showColoredMap" data-active="false">
+        Colored Map
+      </button>
+      <button id="clearPoints" class="clear-button">Clear Points</button>
+    </div>
+
+    <!-- Timings panel (left side) -->
+    <div class="timings-panel" id="timingsPanel">
+      <div class="timings-header">Performance</div>
+
+      <div class="timing-section">
+        <div class="timing-label">
+          <button
+            class="refresh-icon"
+            id="refreshNavMesh"
+            title="Recompute NavMesh path"
+          >
+            <span>↻</span>
+          </button>
+          NavMesh <span class="timing-label-detail" id="navMeshTiles"></span>
+        </div>
+        <div class="timing-value-large" id="navMeshTime">—</div>
+
+        <div class="timing-breakdown" id="timingBreakdown">
+          <div class="timing-item" id="timingEarlyExit" style="display: none">
+            <span class="timing-name">Early Exit:</span>
+            <span class="timing-value" id="timingEarlyExitValue">—</span>
+          </div>
+          <div
+            class="timing-item"
+            id="timingFindGateways"
+            style="display: none"
+          >
+            <span class="timing-name">Find Gateways:</span>
+            <span class="timing-value" id="timingFindGatewaysValue">—</span>
+          </div>
+          <div class="timing-item" id="timingGatewayPath" style="display: none">
+            <span class="timing-name">Gateway Path:</span>
+            <span class="timing-value" id="timingGatewayPathValue">—</span>
+          </div>
+          <div class="timing-item" id="timingInitialPath" style="display: none">
+            <span class="timing-name">Initial Path:</span>
+            <span class="timing-value" id="timingInitialPathValue">—</span>
+          </div>
+          <div class="timing-item" id="timingSmoothPath" style="display: none">
+            <span class="timing-name">Smooth Path:</span>
+            <span class="timing-value" id="timingSmoothPathValue">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="timing-section" id="pfMiniRequestSection">
+        <button
+          id="requestPfMini"
+          class="timing-button"
+          title="PathFinder.Mini is slow (50-1800ms per path). Click to compare."
+          disabled
+        >
+          Request PathFinder.Mini
+        </button>
+      </div>
+
+      <div
+        class="timing-section"
+        id="pfMiniTimingSection"
+        style="display: none"
+      >
+        <div class="timing-label">
+          <button
+            class="refresh-icon"
+            id="refreshPfMini"
+            title="Recompute PF.Mini path"
+          >
+            <span>↻</span>
+          </button>
+          PF.Mini <span class="timing-label-detail" id="pfMiniTiles"></span>
+        </div>
+        <div class="timing-value-large" id="pfMiniTime">—</div>
+      </div>
+
+      <div class="timing-section" id="speedupSection" style="display: none">
+        <div class="timing-label">Speedup</div>
+        <div class="timing-value-speedup" id="speedupValue">—</div>
+      </div>
+    </div>
+
+    <!-- Legend panel -->
+    <div class="legend-panel">
+      <div class="legend-header">Legend</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="background: #ff4444; height: 8px"
+          ></div>
+          <span>Start Point</span>
+        </div>
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="background: #44ff44; height: 8px"
+          ></div>
+          <span>End Point</span>
+        </div>
+        <div class="legend-item" id="pfMiniLegend" style="display: none">
+          <div class="legend-color" style="background: #ffaa00"></div>
+          <span>PathFinder.Mini</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #00ffff"></div>
+          <span>NavMesh</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ff00ff"></div>
+          <span>Initial Path</span>
+        </div>
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="background: #ffff00; height: 8px"
+          ></div>
+          <span>Used Gateways</span>
+        </div>
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="
+              background: #aaaaaa;
+              height: 6px;
+              width: 6px;
+              border-radius: 50%;
+            "
+          ></div>
+          <span>Gateways</span>
+        </div>
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="background: #777777; height: 2px"
+          ></div>
+          <span>Sectors</span>
+        </div>
+        <div class="legend-item">
+          <div
+            class="legend-color"
+            style="background: #00ffaa; height: 2px"
+          ></div>
+          <span>Edges</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error notification (toast) -->
+    <div id="error" class="error-toast"></div>
+
+    <!-- Tooltip -->
+    <div id="tooltip"></div>
+
+    <script src="client.js"></script>
+  </body>
+</html>
