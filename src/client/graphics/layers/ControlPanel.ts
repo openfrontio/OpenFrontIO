@@ -176,8 +176,10 @@ export class ControlPanel extends LitElement implements Layer {
               >${translateText("control_panel.troops")}:</span
             >
             <span translate="no">
-              <span
-                class="cursor-pointer"
+              <button
+                type="button"
+                class="cursor-pointer bg-transparent border-none p-0 text-inherit font-inherit text-left"
+                aria-pressed="${this._troopsPercentageMode}"
                 @click=${() => {
                   this._troopsPercentageMode = !this._troopsPercentageMode;
                   localStorage.setItem(
@@ -185,7 +187,8 @@ export class ControlPanel extends LitElement implements Layer {
                     this._troopsPercentageMode ? "percentage" : "absolute",
                   );
                 }}
-                >${this._troopsPercentageMode
+              >
+                ${this._troopsPercentageMode
                   ? (() => {
                       const troopsFillPercent =
                         (this._troops / this._maxTroops) * 100;
@@ -194,8 +197,8 @@ export class ControlPanel extends LitElement implements Layer {
                         : `${Math.round(troopsFillPercent)}%`;
                     })()
                   : renderTroops(this._troops)}
-                / ${renderTroops(this._maxTroops)}</span
-              >
+                / ${renderTroops(this._maxTroops)}
+              </button>
               <span
                 class="${this._troopRateIsIncreasing
                   ? "text-green-500"
