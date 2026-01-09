@@ -272,6 +272,7 @@ export class InputHandler {
         this.activeKeys.has("ArrowRight")
       )
         deltaX -= this.PAN_SPEED;
+
       if (deltaX || deltaY) {
         this.eventBus.emit(new DragEvent(deltaX, deltaY));
       }
