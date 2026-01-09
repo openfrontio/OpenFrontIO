@@ -598,14 +598,6 @@ export class TerritoryLayer implements Layer {
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
       const start = startTimes[tile];
-      if (start === 0) {
-        activeMask[tile] = 0;
-        this.territoryRenderer.clearTransitionTile(
-          tile,
-          this.game.ownerID(tile),
-        );
-        continue;
-      }
       const elapsed = this.transitionElapsed(nowPacked, start);
       if (elapsed >= duration) {
         activeMask[tile] = 0;
