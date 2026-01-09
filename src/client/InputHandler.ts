@@ -169,9 +169,7 @@ export class InputHandler {
   initialize() {
     let saved: Record<string, string> = {};
     try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
+      const parsed = JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}");
       // flatten { key: {key, value} } → { key: value } and accept legacy string values
       saved = Object.fromEntries(
         Object.entries(parsed)
@@ -182,7 +180,7 @@ export class InputHandler {
             if (typeof v === "string") return [k, v];
             return [k, undefined];
           })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+          .filter(([, v]) => typeof v === "string"),
       ) as Record<string, string>;
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);
@@ -245,33 +243,14 @@ export class InputHandler {
       let deltaY = 0;
 
       // Skip if shift is held down
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
+      if (this.activeKeys.has("ShiftLeft") || this.activeKeys.has("ShiftRight")) {
         return;
       }
 
-      if (
-        this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has("ArrowUp")
-      )
-        deltaY += this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has("ArrowDown")
-      )
-        deltaY -= this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has("ArrowLeft")
-      )
-        deltaX += this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has("ArrowRight")
-      )
-        deltaX -= this.PAN_SPEED;
+      if (this.activeKeys.has(this.keybinds.moveUp) || this.activeKeys.has("ArrowUp")) deltaY += this.PAN_SPEED;
+      if (this.activeKeys.has(this.keybinds.moveDown) || this.activeKeys.has("ArrowDown")) deltaY -= this.PAN_SPEED;
+      if (this.activeKeys.has(this.keybinds.moveLeft) || this.activeKeys.has("ArrowLeft")) deltaX += this.PAN_SPEED;
+      if (this.activeKeys.has(this.keybinds.moveRight) || this.activeKeys.has("ArrowRight")) deltaX -= this.PAN_SPEED;
 
       if (deltaX || deltaY) {
         this.eventBus.emit(new DragEvent(deltaX, deltaY));
@@ -280,16 +259,10 @@ export class InputHandler {
       const cx = window.innerWidth / 2;
       const cy = window.innerHeight / 2;
 
-      if (
-        this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
-      ) {
+      if (this.activeKeys.has(this.keybinds.zoomOut) || this.activeKeys.has("Minus")) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
-      if (
-        this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
-      ) {
+      if (this.activeKeys.has(this.keybinds.zoomIn) || this.activeKeys.has("Equal")) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
     }, 1);
@@ -498,9 +471,7 @@ export class InputHandler {
       return;
     }
 
-    const dist =
-      Math.abs(event.x - this.lastPointerDownX) +
-      Math.abs(event.y - this.lastPointerDownY);
+    const dist = Math.abs(event.x - this.lastPointerDownX) + Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType === "touch") {
         this.eventBus.emit(new TouchEvent(event.x, event.y));
@@ -518,9 +489,7 @@ export class InputHandler {
 
   private onScroll(event: WheelEvent) {
     if (!event.shiftKey) {
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
+      const realCtrl = this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
       const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
       this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
     }
@@ -565,9 +534,7 @@ export class InputHandler {
 
       if (Math.abs(pinchDelta) > 1) {
         const zoomCenter = this.getPinchCenter();
-        this.eventBus.emit(
-          new ZoomEvent(zoomCenter.x, zoomCenter.y, -pinchDelta * 2),
-        );
+        this.eventBus.emit(new ZoomEvent(zoomCenter.x, zoomCenter.y, -pinchDelta * 2));
         this.lastPinchDistance = currentPinchDistance;
       }
     }
