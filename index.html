@@ -1,10 +1,5 @@
 <!doctype html>
-<html
-  lang="en"
-  class="h-full"
-  translate="no"
-  style="visibility: hidden; opacity: 0; transition: opacity 0.5s ease-out"
->
+<html lang="en" class="h-full preload" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -14,6 +9,15 @@
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/x-icon" href="/images/Favicon.svg" />
+
+    <!-- Preload styles -->
+    <style>
+      .preload {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+    </style>
 
     <!-- SEO -->
     <link rel="canonical" href="https://openfront.io/" />
@@ -96,7 +100,7 @@
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
     <div
-      class="fixed inset-0 w-full h-full -z-50 bg-cover bg-center bg-fixed pointer-events-none brightness-[0.5] blur-[6px] scale-[1.02]"
+      class="fixed inset-0 w-full h-full -z-50 bg-cover bg-center bg-fixed pointer-events-none brightness-[0.5]"
       style="
         background-image: url(&quot;/images/EuropeBackgroundBlurred.webp&quot;);
       "
@@ -696,13 +700,17 @@
 
     <!-- Scripts -->
     <script>
-      // Remove preload styles after everything is loaded
+      // Remove preload class after everything is loaded
       window.addEventListener("load", function () {
         requestAnimationFrame(() => {
-          document.documentElement.style.visibility = "";
-          document.documentElement.style.opacity = "";
+          document.documentElement.classList.remove("preload");
         });
       });
+
+      // Fallback: remove preload class after timeout in case DOMContentLoaded never fires
+      setTimeout(function () {
+        document.documentElement.classList.remove("preload");
+      }, 3000);
     </script>
 
     <script>
