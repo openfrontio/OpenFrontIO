@@ -180,12 +180,12 @@ export class MatchmakingModal extends BaseModal {
 
   protected async onOpen(): Promise<void> {
     const userMe = await getUserMe();
-    
+
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
       return;
     }
-    
+
     const isLoggedIn =
       userMe &&
       userMe.user &&

@@ -59,10 +59,13 @@ export class AccountModal extends BaseModal {
   private hasAnyStats(): boolean {
     if (!this.statsTree) return false;
     // Check if statsTree has any data
-    return Object.keys(this.statsTree).length > 0 && 
-           Object.values(this.statsTree).some(gameTypeStats => 
-             gameTypeStats && Object.keys(gameTypeStats).length > 0
-           );
+    return (
+      Object.keys(this.statsTree).length > 0 &&
+      Object.values(this.statsTree).some(
+        (gameTypeStats) =>
+          gameTypeStats && Object.keys(gameTypeStats).length > 0,
+      )
+    );
   }
 
   render() {
@@ -199,7 +202,9 @@ export class AccountModal extends BaseModal {
 
           <!-- Middle Row: Stats Section -->
           ${this.hasAnyStats()
-            ? html`<div class="bg-white/5 rounded-xl border border-white/10 p-6">
+            ? html`<div
+                class="bg-white/5 rounded-xl border border-white/10 p-6"
+              >
                 <h3
                   class="text-lg font-bold text-white mb-4 flex items-center gap-2"
                 >

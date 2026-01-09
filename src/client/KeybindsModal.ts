@@ -106,7 +106,9 @@ export class KeybindsModal extends BaseModal {
     const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
     for (const [k, v] of Object.entries(this.keybinds)) {
       // Normalize value to string
-      const normalizedValue = Array.isArray(v.value) ? v.value[0] || "" : v.value;
+      const normalizedValue = Array.isArray(v.value)
+        ? v.value[0] || ""
+        : v.value;
       if (normalizedValue === "Null") {
         delete activeKeybinds[k];
       } else {
@@ -178,8 +180,8 @@ export class KeybindsModal extends BaseModal {
     const entry = this.keybinds[action];
     if (!entry) return undefined;
     // Normalize value to string
-    const normalizedValue = Array.isArray(entry.value) 
-      ? entry.value[0] || "" 
+    const normalizedValue = Array.isArray(entry.value)
+      ? entry.value[0] || ""
       : entry.value;
     if (normalizedValue === "Null") return "";
     return normalizedValue || undefined;
