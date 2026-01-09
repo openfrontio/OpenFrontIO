@@ -45,12 +45,15 @@ export class ControlPanel extends LitElement implements Layer {
     );
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
-      let newAttackRatio =
-        (parseInt(
-          (document.getElementById("attack-ratio") as HTMLInputElement).value,
-        ) +
-          event.attackRatio) /
-        100;
+      const currentPercent = parseFloat(
+        (document.getElementById("attack-ratio") as HTMLInputElement).value,
+      );
+      const step = Math.abs(event.attackRatio);
+      let newPercent = currentPercent + event.attackRatio;
+      if (currentPercent === 1 && event.attackRatio > 0 && step > 1) {
+        newPercent = step;
+      }
+      let newAttackRatio = newPercent / 100;
 
       if (newAttackRatio < 0.01) {
         newAttackRatio = 0.01;
@@ -58,11 +61,6 @@ export class ControlPanel extends LitElement implements Layer {
 
       if (newAttackRatio > 1) {
         newAttackRatio = 1;
-      }
-
-      if (newAttackRatio === 0.11 && this.attackRatio === 0.01) {
-        // If we're changing the ratio from 1%, then set it to 10% instead of 11% to keep a consistency
-        newAttackRatio = 0.1;
       }
 
       this.attackRatio = newAttackRatio;

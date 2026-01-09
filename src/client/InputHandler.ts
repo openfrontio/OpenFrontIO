@@ -369,12 +369,14 @@ export class InputHandler {
 
       if (e.code === this.keybinds.attackRatioDown) {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(-10));
+        const increment = this.userSettings.attackRatioIncrement();
+        this.eventBus.emit(new AttackRatioEvent(-increment));
       }
 
       if (e.code === this.keybinds.attackRatioUp) {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(10));
+        const increment = this.userSettings.attackRatioIncrement();
+        this.eventBus.emit(new AttackRatioEvent(increment));
       }
 
       if (e.code === this.keybinds.centerCamera) {
