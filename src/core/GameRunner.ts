@@ -25,7 +25,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
-import { createNationsForGame } from "./game/NationUtils";
+import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";

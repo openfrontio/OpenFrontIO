@@ -12,6 +12,11 @@ import { TileRef } from "../../src/core/game/GameMap";
 export class TestConfig extends DefaultConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
+  private _spawnImmunityDuration: number = 0;
+
+  disableNavMesh(): boolean {
+    return this.gameConfig().disableNavMesh ?? true;
+  }
 
   radiusPortSpawn(): number {
     return 1;
@@ -54,8 +59,12 @@ export class TestConfig extends DefaultConfig {
     return 20;
   }
 
+  setSpawnImmunityDuration(duration: Tick) {
+    this._spawnImmunityDuration = duration;
+  }
+
   spawnImmunityDuration(): Tick {
-    return 0;
+    return this._spawnImmunityDuration;
   }
 
   attackLogic(

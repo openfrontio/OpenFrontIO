@@ -129,8 +129,8 @@ export class TeamStats extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="grid w-full"
-          style="grid-template-columns: repeat(${this.showUnits ? 5 : 4}, 1fr);"
+          class="grid w-full grid-cols-[repeat(var(--cols),1fr)]"
+          style="--cols:${this.showUnits ? 5 : 4};"
         >
           <!-- Header -->
           <div class="contents font-bold bg-slate-700/50">
@@ -247,6 +247,5 @@ export class TeamStats extends LitElement implements Layer {
 function formatPercentage(value: number): string {
   const perc = value * 100;
   if (Number.isNaN(perc)) return "0%";
-  if (perc === 100) return "100%";
-  return perc.toPrecision(2) + "%";
+  return perc.toFixed(1) + "%";
 }

@@ -114,7 +114,7 @@ export class AirPathFinder {
   }
 }
 
-export class PathFinder {
+export class MiniPathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;
   private path: TileRef[] | null = null;
@@ -122,28 +122,23 @@ export class PathFinder {
   private aStar: AStar<TileRef>;
   private computeFinished = true;
 
-  private constructor(
+  constructor(
     private game: Game,
-    private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
+    private iterations: number,
+    private waterPath: boolean,
+    private maxTries: number,
   ) {}
 
-  public static Mini(
-    game: Game,
-    iterations: number,
-    waterPath: boolean = true,
-    maxTries: number = 20,
-  ) {
-    return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
-      return new MiniAStar(
-        game.map(),
-        game.miniMap(),
-        curr,
-        dst,
-        iterations,
-        maxTries,
-        waterPath,
-      );
-    });
+  private createAStar(curr: TileRef, dst: TileRef): AStar<TileRef> {
+    return new MiniAStar(
+      this.game.map(),
+      this.game.miniMap(),
+      curr,
+      dst,
+      this.iterations,
+      this.maxTries,
+      this.waterPath,
+    );
   }
 
   nextTile(
@@ -171,7 +166,7 @@ export class PathFinder {
         this.dst = dst;
         this.path = null;
         this.path_idx = 0;
-        this.aStar = this.newAStar(curr, dst);
+        this.aStar = this.createAStar(curr, dst);
         this.computeFinished = false;
         return this.nextTile(curr, dst);
       } else {

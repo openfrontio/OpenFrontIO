@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { NavMesh } from "../pathfinding/navmesh/NavMesh";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -86,6 +87,7 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _isPaused: boolean = false;
+  private _navMesh: NavMesh | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -104,6 +106,11 @@ export class GameImpl implements Game {
       this.populateTeams();
     }
     this.addPlayers();
+
+    if (!_config.disableNavMesh()) {
+      this._navMesh = new NavMesh(this, { cachePaths: true });
+      this._navMesh.initialize();
+    }
   }
 
   private populateTeams() {
@@ -677,6 +684,14 @@ export class GameImpl implements Game {
     });
   }
 
+  public isSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().spawnImmunityDuration() >=
+      this.ticks()
+    );
+  }
+
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
       type: GameUpdateType.Emoji,
@@ -703,7 +718,9 @@ export class GameImpl implements Game {
       ];
     } else {
       const clientId = winner.clientID();
-      if (clientId === null) return;
+      if (clientId === null) {
+        return ["nation", winner.name()];
+      }
       return [
         "player",
         clientId,
@@ -948,6 +965,9 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  navMesh(): NavMesh | null {
+    return this._navMesh;
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {

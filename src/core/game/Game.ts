@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { NavMesh } from "../pathfinding/navmesh/NavMesh";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
@@ -82,6 +83,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
+  BritanniaClassic = "Britannia Classic",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
@@ -112,6 +114,11 @@ export enum GameMapType {
 
 export type GameMapName = keyof typeof GameMapType;
 
+/** Maps that have unusual thumbnail dimensions requiring object-fit: cover */
+export function hasUnusualThumbnailSize(map: GameMapType): boolean {
+  return map === GameMapType.AmazonRiver;
+}
+
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
     GameMapType.World,
@@ -125,8 +132,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Oceania,
   ],
   regional: [
-    GameMapType.BlackSea,
+    GameMapType.BritanniaClassic,
     GameMapType.Britannia,
+    GameMapType.BlackSea,
     GameMapType.GatewayToTheAtlantic,
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
@@ -157,7 +165,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
     GameMapType.Svalmel,
+    GameMapType.Surrounded,
   ],
+  arcade: [GameMapType.Didier, GameMapType.Sierpinski],
 };
 
 export enum GameType {
@@ -178,6 +188,11 @@ export const isGameMode = (value: unknown): value is GameMode =>
 export enum GameMapSize {
   Compact = "Compact",
   Normal = "Normal",
+}
+
+export interface PublicGameModifiers {
+  isCompact: boolean;
+  isRandomSpawn: boolean;
 }
 
 export interface UnitInfo {
@@ -213,6 +228,7 @@ export enum UnitType {
 
 export enum TrainType {
   Engine = "Engine",
+  TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
 
@@ -240,7 +256,7 @@ export type TrajectoryTile = {
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
-    destination?: TileRef;
+    targetTile?: TileRef;
   };
 
   [UnitType.Warship]: {
@@ -654,6 +670,8 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+  canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;
+  isImmune(): boolean;
 
   createAttack(
     target: Player | TerraNullius,
@@ -707,6 +725,9 @@ export interface Game extends GameMap {
   // Alliances
   alliances(): MutableAlliance[];
   expireAlliance(alliance: Alliance): void;
+
+  // Immunity timer
+  isSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
@@ -769,6 +790,7 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+  navMesh(): NavMesh | null;
 }
 
 export interface PlayerActions {

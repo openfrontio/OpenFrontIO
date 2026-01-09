@@ -1,6 +1,6 @@
+import countries from "resources/countries.json";
+import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
-import countries from "../assets/data/countries.json" with { type: "json" };
-import quickChatData from "../assets/data/QuickChat.json" with { type: "json" };
 import {
   ColorPaletteSchema,
   PatternDataSchema,
@@ -48,7 +48,8 @@ export type Intent =
   | UpgradeStructureIntent
   | DeleteUnitIntent
   | KickPlayerIntent
-  | TogglePauseIntent;
+  | TogglePauseIntent
+  | UpdateGameConfigIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -81,6 +82,9 @@ export type AllianceExtensionIntent = z.infer<
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
+export type UpdateGameConfigIntent = z.infer<
+  typeof UpdateGameConfigIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -167,16 +171,25 @@ export const GameConfigSchema = z.object({
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
+  publicGameModifiers: z
+    .object({
+      isCompact: z.boolean(),
+      isRandomSpawn: z.boolean(),
+    })
+    .optional(),
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
+  spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  isOneVOne: z.boolean().optional(),
 });
 
 export const TeamSchema = z.string();
@@ -298,13 +311,13 @@ export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.number().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nullable(),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
@@ -363,6 +376,11 @@ export const TogglePauseIntentSchema = BaseIntentSchema.extend({
   paused: z.boolean().default(false),
 });
 
+export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("update_game_config"),
+  config: GameConfigSchema.partial(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -387,6 +405,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
+  UpdateGameConfigIntentSchema,
 ]);
 
 //
@@ -454,6 +473,7 @@ export const WinnerSchema = z
   .union([
     z.tuple([z.literal("player"), ID]).rest(ID),
     z.tuple([z.literal("team"), SafeString]).rest(ID),
+    z.tuple([z.literal("nation"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;
