@@ -360,23 +360,13 @@ export class StatsModal extends BaseModal {
 
   render() {
     let dateRange = html``;
-    let summaryTags = html``;
     if (this.data) {
       const start = new Date(this.data.start).toLocaleDateString();
       const end = new Date(this.data.end).toLocaleDateString();
-      dateRange = html`<span class="text-sm font-normal text-white/40 ml-2"
+      dateRange = html`<span
+        class="text-sm font-normal text-white/40 ml-2 break-words"
         >(${start} - ${end})</span
       >`;
-      summaryTags = html`
-        <div class="flex flex-row gap-6 items-center ml-auto">
-          <span class="text-xs text-white/40 uppercase tracking-wider font-bold"
-            >${translateText("stats_modal.total_clans")}</span
-          >
-          <span class="text-xl font-bold text-white font-mono"
-            >${this.data.clans.length}</span
-          >
-        </div>
-      `;
     }
 
     const content = html`
@@ -386,9 +376,9 @@ export class StatsModal extends BaseModal {
           : ""}"
       >
         <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+          class="flex flex-wrap items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <div class="flex items-center gap-4 flex-1">
+          <div class="flex flex-wrap items-center gap-4 flex-1">
             <button
               @click=${this.close}
               class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
@@ -409,16 +399,15 @@ export class StatsModal extends BaseModal {
                 />
               </svg>
             </button>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <span
-                class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+                class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
               >
                 ${translateText("stats_modal.clan_stats")}
               </span>
               ${dateRange}
             </div>
           </div>
-          ${summaryTags}
         </div>
 
         <div

@@ -95,7 +95,7 @@ export class TerritoryPatternsModal extends BaseModal {
             </svg>
           </button>
           <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
           >
             ${translateText("territory_patterns.title")}
           </span>

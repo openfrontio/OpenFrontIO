@@ -156,7 +156,7 @@ export class SinglePlayerModal extends BaseModal {
             </svg>
           </button>
           <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex-1"
+            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex-1 break-words hyphens-auto"
           >
             ${translateText("main.solo") || "Solo"}
           </span>

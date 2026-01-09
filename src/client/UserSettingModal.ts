@@ -203,10 +203,10 @@ export class UserSettingModal extends BaseModal {
         <div
           class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
         >
-          <div class="flex items-center gap-4 flex-1">
+          <div class="flex items-center gap-4 flex-1 flex-wrap">
             <button
               @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
               aria-label="${translateText("common.back")}"
             >
               <svg
@@ -225,7 +225,7 @@ export class UserSettingModal extends BaseModal {
               </svg>
             </button>
             <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest"
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-all hyphens-auto min-w-0"
             >
               ${translateText("user_setting.title")}
             </span>
