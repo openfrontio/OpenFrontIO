@@ -559,7 +559,7 @@ export class SinglePlayerModal extends BaseModal {
                       }
                       // Focus the input after render
                       setTimeout(() => {
-                        const input = this.shadowRoot?.querySelector(
+                        const input = this.querySelector(
                           "#end-timer-value",
                         ) as HTMLInputElement;
                         if (input) {
@@ -788,9 +788,7 @@ export class SinglePlayerModal extends BaseModal {
           "Please enter a valid max timer value (1-120 minutes)",
       );
       // Focus the input
-      const input = this.shadowRoot?.querySelector(
-        "#end-timer-value",
-      ) as HTMLInputElement;
+      const input = this.querySelector("#end-timer-value") as HTMLInputElement;
       if (input) {
         input.focus();
         input.select();
