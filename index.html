@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
     <title>OpenFront (ALPHA)</title>
     <link rel="manifest" href="/manifest.json" />
@@ -43,6 +43,11 @@
       html {
         visibility: visible;
         opacity: 1;
+        touch-action: manipulation;
+      }
+
+      body {
+        touch-action: manipulation;
       }
 
       html.preload {
@@ -496,6 +501,29 @@
           document.documentElement.classList.remove("preload");
         });
       });
+    </script>
+
+    <script>
+      // Block pinch zoom and double-tap zoom on mobile
+      (() => {
+        const prevent = (e) => e.preventDefault();
+        ["gesturestart", "gesturechange", "gestureend"].forEach((evt) => {
+          document.addEventListener(evt, prevent, { passive: false });
+        });
+
+        let lastTouch = 0;
+        document.addEventListener(
+          "touchend",
+          (e) => {
+            const now = Date.now();
+            if (now - lastTouch < 300) {
+              e.preventDefault();
+            }
+            lastTouch = now;
+          },
+          { passive: false },
+        );
+      })();
     </script>
 
     <!-- Analytics -->

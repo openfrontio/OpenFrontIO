@@ -104,29 +104,14 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       return;
     }
 
-    // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
-      this.trajectoryPoints = [];
-      this.cachedSpawnTile = null;
-      return;
-    }
+    const targetTile = this.getTargetTile();
 
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
-    const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
-    );
-
-    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+    if (targetTile === null) {
       this.trajectoryPoints = [];
       this.lastTargetTile = null;
       this.cachedSpawnTile = null;
       return;
     }
-
-    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
     // Only recalculate if target tile changed
     if (this.lastTargetTile === targetTile) {
@@ -190,26 +175,12 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       return;
     }
 
-    // Convert mouse position to world coordinates
-    const rect = this.transformHandler.boundingRect();
-    if (!rect) {
+    const targetTile = this.getTargetTile();
+
+    if (targetTile === null) {
       this.trajectoryPoints = [];
       return;
     }
-
-    const localX = this.mousePos.x - rect.left;
-    const localY = this.mousePos.y - rect.top;
-    const worldCoords = this.transformHandler.screenToWorldCoordinates(
-      localX,
-      localY,
-    );
-
-    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
-      this.trajectoryPoints = [];
-      return;
-    }
-
-    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
     // Calculate trajectory using ParabolaPathFinder with cached spawn tile
     const pathFinder = new ParabolaPathFinder(this.game);
@@ -291,6 +262,31 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       if (i === this.untargetableSegmentBounds[0])
         i = this.untargetableSegmentBounds[1] - 1;
     }
+  }
+
+  // resolve the current target tile, preferring a locked ghost tile when present
+  private getTargetTile(): TileRef | null {
+    if (this.uiState.lockedGhostTile) {
+      return this.uiState.lockedGhostTile;
+    }
+
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) {
+      return null;
+    }
+
+    const localX = this.mousePos.x - rect.left;
+    const localY = this.mousePos.y - rect.top;
+    const worldCoords = this.transformHandler.screenToWorldCoordinates(
+      localX,
+      localY,
+    );
+
+    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+      return null;
+    }
+
+    return this.game.ref(worldCoords.x, worldCoords.y);
   }
 
   /**

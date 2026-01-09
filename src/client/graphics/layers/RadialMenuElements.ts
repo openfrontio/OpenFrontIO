@@ -3,6 +3,7 @@ import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { GhostStructureChangedEvent } from "../../InputHandler";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
@@ -412,7 +413,23 @@ function createMenuElements(
         if (buildableUnit === undefined) {
           return;
         }
-        if (params.buildMenu.canBuildOrUpgrade(item)) {
+        const isNukeSelection =
+          filterType === "attack" &&
+          (item.unitType === UnitType.AtomBomb ||
+            item.unitType === UnitType.HydrogenBomb);
+
+        const canBuild = params.buildMenu.canBuildOrUpgrade(item);
+
+        if (isNukeSelection && canBuild && params.uiState) {
+          // Reuse ghost placement flow so players see the full nuke trajectory/interception preview
+          params.uiState.ghostStructure = item.unitType;
+          params.uiState.lockedGhostTile = params.tile;
+          params.eventBus.emit(new GhostStructureChangedEvent(item.unitType));
+          params.closeMenu();
+          return;
+        }
+
+        if (canBuild) {
           params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
         }
         params.closeMenu();
