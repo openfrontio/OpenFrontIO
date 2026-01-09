@@ -72,6 +72,6 @@ export function initNavigation() {
     '.nav-menu-item[data-page="page-play"]',
   );
   if (initialPage && !initialPage.classList.contains("active")) {
-    initialPage.classList.add("active");
+    showPage("page-play");
   }
 }
