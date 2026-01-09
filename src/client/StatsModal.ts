@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  ClanLeaderboardEntry,
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
@@ -13,8 +14,55 @@ export class StatsModal extends BaseModal {
   @state() private isLoading: boolean = false;
   @state() private error: string | null = null;
   @state() private data: ClanLeaderboardResponse | null = null;
+  @state() private sortBy: "rank" | "games" | "wins" | "losses" | "ratio" =
+    "rank";
+  @state() private sortOrder: "asc" | "desc" = "asc";
 
   private hasLoaded = false;
+
+  private handleSort(column: "rank" | "games" | "wins" | "losses" | "ratio") {
+    if (this.sortBy === column) {
+      this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
+    } else {
+      this.sortBy = column;
+      this.sortOrder = column === "rank" ? "asc" : "desc";
+    }
+    this.requestUpdate();
+  }
+
+  private getSortedClans(clans: ClanLeaderboardEntry[]) {
+    const sorted = [...clans];
+    sorted.sort((a, b) => {
+      let aVal: number, bVal: number;
+
+      switch (this.sortBy) {
+        case "games":
+          aVal = a.games;
+          bVal = b.games;
+          break;
+        case "wins":
+          aVal = a.weightedWins;
+          bVal = b.weightedWins;
+          break;
+        case "losses":
+          aVal = a.weightedLosses;
+          bVal = b.weightedLosses;
+          break;
+        case "ratio":
+          aVal = a.weightedWLRatio;
+          bVal = b.weightedWLRatio;
+          break;
+        case "rank":
+        default:
+          // Original order
+          return 0;
+      }
+
+      return this.sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+    return sorted;
+  }
 
   protected onOpen(): void {
     if (!this.hasLoaded && !this.isLoading) {
@@ -162,28 +210,64 @@ export class StatsModal extends BaseModal {
                 <th class="py-4 px-4 text-left font-bold">
                   ${translateText("stats_modal.clan")}
                 </th>
-                <th class="py-4 px-4 text-right font-bold w-32">
-                  ${translateText("stats_modal.games")}
+                <th
+                  @click=${() => this.handleSort("games")}
+                  class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors select-none"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    ${translateText("stats_modal.games")}
+                    ${this.sortBy === "games"
+                      ? this.sortOrder === "asc"
+                        ? html`<span class="text-blue-400">↑</span>`
+                        : html`<span class="text-blue-400">↓</span>`
+                      : html`<span class="text-white/20">↕</span>`}
+                  </div>
                 </th>
                 <th
-                  class="py-4 px-4 text-right font-bold hidden md:table-cell"
+                  @click=${() => this.handleSort("wins")}
+                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors select-none"
                   title=${translateText("stats_modal.win_score_tooltip")}
                 >
-                  ${translateText("stats_modal.win_score")}
+                  <div class="flex items-center justify-end gap-1">
+                    ${translateText("stats_modal.win_score")}
+                    ${this.sortBy === "wins"
+                      ? this.sortOrder === "asc"
+                        ? html`<span class="text-blue-400">↑</span>`
+                        : html`<span class="text-blue-400">↓</span>`
+                      : html`<span class="text-white/20">↕</span>`}
+                  </div>
                 </th>
                 <th
-                  class="py-4 px-4 text-right font-bold hidden md:table-cell"
+                  @click=${() => this.handleSort("losses")}
+                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors select-none"
                   title=${translateText("stats_modal.loss_score_tooltip")}
                 >
-                  ${translateText("stats_modal.loss_score")}
+                  <div class="flex items-center justify-end gap-1">
+                    ${translateText("stats_modal.loss_score")}
+                    ${this.sortBy === "losses"
+                      ? this.sortOrder === "asc"
+                        ? html`<span class="text-blue-400">↑</span>`
+                        : html`<span class="text-blue-400">↓</span>`
+                      : html`<span class="text-white/20">↕</span>`}
+                  </div>
                 </th>
-                <th class="py-4 px-4 text-right font-bold pr-6">
-                  ${translateText("stats_modal.win_loss_ratio")}
+                <th
+                  @click=${() => this.handleSort("ratio")}
+                  class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors select-none"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    ${translateText("stats_modal.win_loss_ratio")}
+                    ${this.sortBy === "ratio"
+                      ? this.sortOrder === "asc"
+                        ? html`<span class="text-blue-400">↑</span>`
+                        : html`<span class="text-blue-400">↓</span>`
+                      : html`<span class="text-white/20">↕</span>`}
+                  </div>
                 </th>
               </tr>
             </thead>
             <tbody>
-              ${clans.map((clan, index) => {
+              ${this.getSortedClans(clans).map((clan, index) => {
                 const rankColor =
                   index === 0
                     ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/20"
