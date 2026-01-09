@@ -80,7 +80,7 @@ export class FlagInput extends LitElement {
         >
           <span
             id="flag-preview"
-            class="block w-full aspect-3/2 bg-[#333] overflow-hidden rounded-md"
+            class="block w-full aspect-3/2 dark:bg-[#333] overflow-hidden rounded-md"
           ></span>
         </button>
       </div>
