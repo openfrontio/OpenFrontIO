@@ -712,8 +712,23 @@ export class SinglePlayerModal extends BaseModal {
     `;
   }
 
-  protected onOpen(): void {
+  protected onClose(): void {
+    // Reset all transient form state to ensure clean slate
+    this.selectedMap = GameMapType.World;
+    this.selectedDifficulty = Difficulty.Medium;
+    this.gameMode = GameMode.FFA;
     this.useRandomMap = false;
+    this.disableNations = false;
+    this.bots = 400;
+    this.infiniteGold = false;
+    this.infiniteTroops = false;
+    this.compactMap = false;
+    this.maxTimer = false;
+    this.maxTimerValue = undefined;
+    this.instantBuild = false;
+    this.randomSpawn = false;
+    this.teamCount = 2;
+    this.disabledUnits = [];
   }
 
   private handleSelectRandomMap() {
