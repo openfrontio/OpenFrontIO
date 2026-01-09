@@ -232,7 +232,9 @@ class Client {
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
-        hlpModal.open();
+        if (hlpModal && hlpModal instanceof HelpModal) {
+          hlpModal.open();
+        }
       });
     }
 
@@ -257,7 +259,9 @@ class Client {
         flagButton.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          flagInputModal.open();
+          if (flagInputModal && flagInputModal instanceof FlagInputModal) {
+            flagInputModal.open();
+          }
         });
       }, 100);
     });
@@ -408,7 +412,9 @@ class Client {
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
-        settingsModal.open();
+        if (settingsModal && settingsModal instanceof UserSettingModal) {
+          settingsModal.open();
+        }
       });
 
     const hostModal = document.querySelector(
@@ -474,7 +480,7 @@ class Client {
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
-      this.joinModal.close();
+      this.joinModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -513,7 +519,7 @@ class Client {
       const lobbyId = crazyGamesSDK.getInviteGameId();
       if (lobbyId && ID.safeParse(lobbyId).success) {
         window.showPage?.("page-join-private-lobby");
-        this.joinModal.open(lobbyId);
+        this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -592,7 +598,7 @@ class Client {
       const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
         window.showPage?.("page-join-private-lobby");
-        this.joinModal.open(lobbyId);
+        this.joinModal?.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
     }
@@ -600,7 +606,7 @@ class Client {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.patternsModal.open(affiliateCode);
+        this.patternsModal?.open(affiliateCode);
       }
     }
     if (decodedHash.startsWith("#refresh")) {
@@ -696,7 +702,7 @@ class Client {
         this.gutterAds.hide();
       },
       () => {
-        this.joinModal.close();
+        this.joinModal?.close();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
