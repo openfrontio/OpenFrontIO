@@ -603,7 +603,7 @@ export class SinglePlayerModal extends BaseModal {
                         aria-label=${translateText("single_modal.max_timer")}
                         @input=${this.handleMaxTimerValueChanges}
                         @keydown=${this.handleMaxTimerValueKeyDown}
-                        placeholder="Mins"
+                        placeholder=${translateText("single_modal.max_timer_placeholder")}
                       />`
                     : html`<div
                         class="h-[2px] w-4 bg-white/10 rounded my-3"
@@ -760,8 +760,8 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private getEndTimerInput(): HTMLInputElement | null {
-    // Use this.querySelector to find slotted input in light DOM
-    return this.querySelector("#end-timer-value") as HTMLInputElement | null;
+    return (this.renderRoot.querySelector("#end-timer-value") as HTMLInputElement | null) || 
+           (this.querySelector("#end-timer-value") as HTMLInputElement | null);
   }
 
   private handleMaxTimerValueChanges(e: Event) {

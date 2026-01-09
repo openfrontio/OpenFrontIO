@@ -163,6 +163,8 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
+    "max_timer_placeholder": "Mins",
+    "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
