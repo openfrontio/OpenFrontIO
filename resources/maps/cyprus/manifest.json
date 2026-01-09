@@ -1,0 +1,100 @@
+{
+  "map": {
+    "height": 1253,
+    "num_land_tiles": 759954,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 313,
+    "num_land_tiles": 46085,
+    "width": 512
+  },
+  "map4x": {
+    "height": 626,
+    "num_land_tiles": 188049,
+    "width": 1024
+  },
+  "name": "cyprus",
+  "nations": [
+    {
+      "coordinates": [
+        539,
+        155
+      ],
+      "flag": "tr",
+      "name": "Mersin"
+    },
+    {
+      "coordinates": [
+        1867,
+        590
+      ],
+      "flag": "sy",
+      "name": "Lattakia"
+    },
+    {
+      "coordinates": [
+        1931,
+        219
+      ],
+      "flag": "tr",
+      "name": "Hatay"
+    },
+    {
+      "coordinates": [
+        1912,
+        960
+      ],
+      "flag": "sy",
+      "name": "Tartus"
+    },
+    {
+      "coordinates": [
+        144,
+        131
+      ],
+      "flag": "tr",
+      "name": "Antalya"
+    },
+    {
+      "coordinates": [
+        2019,
+        744
+      ],
+      "flag": "sy",
+      "name": "Hamah"
+    },
+    {
+      "coordinates": [
+        441,
+        905
+      ],
+      "flag": "cy",
+      "name": "Nicosia"
+    },
+    {
+      "coordinates": [
+        173,
+        978
+      ],
+      "flag": "cy",
+      "name": "Paphos"
+    },
+    {
+      "coordinates": [
+        411,
+        1051
+      ],
+      "flag": "cy",
+      "name": "Limassol"
+    },
+    {
+      "coordinates": [
+        815,
+        724
+      ],
+      "flag": "tr",
+      "name": "Northern Cyprus"
+    }
+  ]
+}
