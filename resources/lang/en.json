@@ -292,7 +292,8 @@
     "players_per_team": "of {num}"
   },
   "matchmaking_modal": {
-    "title": "Matchmaking",
+    "title": "1v1 Ranked Matchmaking (ALPHA)",
+    "elo": "ELO: {elo}",
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start..."

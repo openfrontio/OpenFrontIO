@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
+import { GameMapSize, GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
@@ -40,17 +40,12 @@ const playlist = new MapPlaylist(true);
 export async function startWorker() {
   log.info(`Worker starting...`);
 
-  if (config.enableMatchmaking()) {
-    log.info("Starting matchmaking");
-    setTimeout(
-      () => {
-        pollLobby(gm);
-      },
-      1000 + Math.random() * 2000,
-    );
-  } else {
-    log.info("Matchmaking disabled");
-  }
+  setTimeout(
+    () => {
+      pollLobby(gm);
+    },
+    1000 + Math.random() * 2000,
+  );
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -503,7 +498,9 @@ async function pollLobby(gm: GameManager) {
     if (data.assignment) {
       // TODO: Only allow specified players to join the game.
       console.log(`Creating game ${gameId}`);
-      const game = gm.createGame(gameId, playlist.gameConfig());
+      const config = playlist.gameConfig();
+      config.gameMapSize = GameMapSize.Compact;
+      const game = gm.createGame(gameId, config);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.
         console.log(`Starting game ${gameId}`);
