@@ -376,6 +376,20 @@ class Client {
       console.warn("Matchmaking modal element not found");
     }
     const matchmakingButton = document.getElementById("matchmaking-button");
+    const matchmakingButtonLoggedOut = document.getElementById(
+      "matchmaking-button-logged-out",
+    );
+
+    const updateMatchmakingButton = (loggedIn: boolean) => {
+      if (!loggedIn) {
+        matchmakingButton?.classList.add("hidden");
+        matchmakingButtonLoggedOut?.classList.remove("hidden");
+      } else {
+        matchmakingButton?.classList.remove("hidden");
+        matchmakingButtonLoggedOut?.classList.add("hidden");
+      }
+    };
+
     if (matchmakingButton) {
       matchmakingButton.addEventListener("click", () => {
         if (this.usernameInput?.isValid()) {
@@ -396,6 +410,15 @@ class Client {
     }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      // Check if user has actual authentication (discord or email), not just a publicId
+      const loggedIn =
+        userMeResponse !== false &&
+        userMeResponse !== null &&
+        typeof userMeResponse === "object" &&
+        userMeResponse.user &&
+        (userMeResponse.user.discord !== undefined ||
+          userMeResponse.user.email !== undefined);
+      updateMatchmakingButton(loggedIn);
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,

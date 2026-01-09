@@ -2,6 +2,7 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
+import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -155,7 +156,25 @@ export class MatchmakingModal extends BaseModal {
     };
   }
 
-  protected onOpen(): void {
+  protected async onOpen(): Promise<void> {
+    const userMe = await getUserMe();
+    const isLoggedIn =
+      userMe &&
+      userMe.user &&
+      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
+    if (!isLoggedIn) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("matchmaking_button.must_login"),
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      this.close();
+      return;
+    }
     this.connected = false;
     this.gameID = null;
     this.connect();
