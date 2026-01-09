@@ -150,7 +150,6 @@ class Client {
       const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
       versionElements.forEach((el) => {
         el.textContent = displayVersion;
-        el.appendChild(document.createElement("br"));
       });
     }
 
