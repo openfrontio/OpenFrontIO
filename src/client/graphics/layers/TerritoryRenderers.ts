@@ -13,6 +13,7 @@ export interface TerritoryRendererStrategy {
   redraw(): void;
   markAllDirty(): void;
   paintTile(tile: TileRef): void;
+  setTransitionProgress(tile: TileRef, progress: number): void;
   render(
     context: CanvasRenderingContext2D,
     viewport: { x: number; y: number; width: number; height: number },
@@ -31,6 +32,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
   private imageData: ImageData;
   private alternativeImageData: ImageData;
   private alternativeView = false;
+  private transitionProgress: Map<TileRef, number> = new Map();
 
   constructor(
     private readonly game: GameView,
@@ -85,19 +87,20 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
     const isDefended =
       owner && isBorderTile ? this.game.isDefended(tile) : false;
 
+    const transitionFactor = this.transitionProgress.get(tile) ?? 1;
     if (!owner) {
       if (hasFallout) {
         this.paintTileColor(
           this.imageData,
           tile,
           this.theme.falloutColor(),
-          150,
+          Math.round(150 * transitionFactor),
         );
         this.paintTileColor(
           this.alternativeImageData,
           tile,
           this.theme.falloutColor(),
-          150,
+          Math.round(150 * transitionFactor),
         );
       } else {
         this.clearTile(tile);
@@ -115,14 +118,14 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
           this.alternativeImageData,
           tile,
           alternativeColor,
-          255,
+          Math.round(255 * transitionFactor),
         );
       }
       this.paintTileColor(
         this.imageData,
         tile,
         owner.borderColor(tile, isDefended),
-        255,
+        Math.round(255 * transitionFactor),
       );
     } else {
       // Alternative view only shows borders.
@@ -131,7 +134,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
         this.imageData,
         tile,
         owner.territoryColor(tile),
-        150,
+        Math.round(150 * transitionFactor),
       );
     }
     FrameProfiler.end("CanvasTerritoryRenderer:paintTile", cpuStart);
@@ -173,6 +176,22 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
 
   setAlternativeView(enabled: boolean): void {
     this.alternativeView = enabled;
+  }
+
+  setTransitionProgress(tile: TileRef, progress: number): void {
+    const clamped = Math.max(0, Math.min(1, progress));
+    if (clamped >= 1) {
+      if (this.transitionProgress.delete(tile)) {
+        this.paintTile(tile);
+      }
+      return;
+    }
+    const previous = this.transitionProgress.get(tile);
+    if (previous !== undefined && Math.abs(previous - clamped) < 1 / 255) {
+      return;
+    }
+    this.transitionProgress.set(tile, clamped);
+    this.paintTile(tile);
   }
 
   setHover(): void {
@@ -257,6 +276,10 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
 
   paintTile(tile: TileRef): void {
     this.renderer.markTile(tile);
+  }
+
+  setTransitionProgress(tile: TileRef, progress: number): void {
+    this.renderer.setTransitionProgress(tile, progress);
   }
 
   render(

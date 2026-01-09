@@ -669,6 +669,11 @@ export class GameView implements GameMap {
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
+  private updatedOwnerChanges: Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -780,14 +785,24 @@ export class GameView implements GameMap {
 
     this.updatedTiles = [];
     this.updatedTerrainTiles = [];
+    this.updatedOwnerChanges = [];
     const packed = this.lastUpdate.packedTileUpdates;
     for (let i = 0; i + 1 < packed.length; i += 2) {
       const tile = packed[i];
       const state = packed[i + 1];
+      const previousOwner = this._map.ownerID(tile);
       const terrainChanged = this.updateTile(tile, state);
       this.updatedTiles.push(tile);
       if (terrainChanged) {
         this.updatedTerrainTiles.push(tile);
+      }
+      const newOwner = this._map.ownerID(tile);
+      if (previousOwner !== newOwner) {
+        this.updatedOwnerChanges.push({
+          tile,
+          previousOwner,
+          newOwner,
+        });
       }
     }
 
@@ -1105,6 +1120,14 @@ export class GameView implements GameMap {
 
   recentlyUpdatedTerrainTiles(): TileRef[] {
     return this.updatedTerrainTiles;
+  }
+
+  recentlyUpdatedOwnerTiles(): Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> {
+    return this.updatedOwnerChanges;
   }
 
   nearbyUnits(
