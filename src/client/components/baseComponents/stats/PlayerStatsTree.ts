@@ -137,7 +137,7 @@ export class PlayerStatsTreeView extends LitElement {
                     ? translateText("player_stats_tree.public")
                     : t === GameType.Private
                       ? translateText("player_stats_tree.private")
-                      : translateText("player_stats_tree.singleplayer")}
+                      : translateText("player_stats_tree.solo")}
                 </button>
               `,
             )}
