@@ -91,7 +91,7 @@ export class AccountModal extends BaseModal {
 
   private renderInner() {
     const isLoggedIn = !!this.userMeResponse?.user;
-    const title = translateText("account_modal.title") || "Account";
+    const title = translateText("account_modal.title");
 
     return html`
       <div
