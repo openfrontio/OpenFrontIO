@@ -324,10 +324,11 @@
     "started": "Started"
   },
   "matchmaking_modal": {
-    "title": "Matchmaking",
+    "title": "1v1 Ranked Matchmaking (ALPHA)",
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
-    "waiting_for_game": "Waiting for game to start..."
+    "waiting_for_game": "Waiting for game to start...",
+    "elo": "Your ELO: {elo}"
   },
   "username": {
     "enter_username": "Enter your username",
@@ -919,7 +920,7 @@
     "no_stats": "No stats recorded for this selection."
   },
   "matchmaking_button": {
-    "play_ranked": "Play Ranked",
-    "description": "Skill Based Matchmaking"
+    "play_ranked": "1v1 Ranked Matchmaking",
+    "description": "(ALPHA)"
   }
 }

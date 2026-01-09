@@ -375,6 +375,25 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
+    const matchmakingButton = document.getElementById("matchmaking-button");
+    if (matchmakingButton) {
+      matchmakingButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-matchmaking");
+          this.publicLobby.leaveLobby();
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(
