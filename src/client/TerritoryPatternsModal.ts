@@ -49,6 +49,18 @@ export class TerritoryPatternsModal extends BaseModal {
         this.onUserMe(event.detail);
       },
     );
+    window.addEventListener("pattern-selected", () => {
+      this.updateFromSettings();
+      this.refresh();
+    });
+  }
+
+  private updateFromSettings() {
+    this.selectedPattern =
+      this.cosmetics !== null
+        ? this.userSettings.getSelectedPatternName(this.cosmetics)
+        : null;
+    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
@@ -60,11 +72,7 @@ export class TerritoryPatternsModal extends BaseModal {
     }
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    this.selectedPattern =
-      this.cosmetics !== null
-        ? this.userSettings.getSelectedPatternName(this.cosmetics)
-        : null;
-    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
+    this.updateFromSettings();
     this.refresh();
   }
 
