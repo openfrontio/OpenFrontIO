@@ -256,7 +256,7 @@ export class MatchmakingModal extends BaseModal {
 
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
-  @query("matchmaking-modal") private matchmakingModal!: MatchmakingModal;
+  @query("matchmaking-modal") private matchmakingModal?: MatchmakingModal;
 
   constructor() {
     super();
