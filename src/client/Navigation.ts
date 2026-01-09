@@ -46,6 +46,27 @@ export function initNavigation() {
     });
   });
 
+  // Handle clicks on main container to close open modals (navigate back)
+  const mainEl = document.querySelector("main");
+  if (mainEl) {
+    mainEl.addEventListener("click", (e: Event) => {
+      const target = e.target as HTMLElement;
+      const isPlayPageHidden = document
+        .getElementById("page-play")
+        ?.classList.contains("hidden");
+
+      // Only proceed if we are NOT on the play page (meaning a modal page is open)
+      if (isPlayPageHidden) {
+        // If clicking on the main container directly (e.g. padding/background)
+        // or the max-width wrapper div directly
+        const wrapper = mainEl.firstElementChild as HTMLElement;
+        if (target === mainEl || (wrapper && target === wrapper)) {
+          showPage("page-play");
+        }
+      }
+    });
+  }
+
   // Set default active if not set
   const initialPage = document.querySelector(
     '.nav-menu-item[data-page="page-play"]',
