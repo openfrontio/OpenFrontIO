@@ -56,6 +56,15 @@ export class AccountModal extends BaseModal {
     );
   }
 
+  private hasAnyStats(): boolean {
+    if (!this.statsTree) return false;
+    // Check if statsTree has any data
+    return Object.keys(this.statsTree).length > 0 && 
+           Object.values(this.statsTree).some(gameTypeStats => 
+             gameTypeStats && Object.keys(gameTypeStats).length > 0
+           );
+  }
+
   render() {
     const content = this.isLoadingUser
       ? html`
@@ -189,17 +198,19 @@ export class AccountModal extends BaseModal {
           </div>
 
           <!-- Middle Row: Stats Section -->
-          <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-            <h3
-              class="text-lg font-bold text-white mb-4 flex items-center gap-2"
-            >
-              <span class="text-blue-400">📊</span>
-              ${translateText("account_modal.stats_overview")}
-            </h3>
-            <player-stats-tree-view
-              .statsTree=${this.statsTree}
-            ></player-stats-tree-view>
-          </div>
+          ${this.hasAnyStats()
+            ? html`<div class="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h3
+                  class="text-lg font-bold text-white mb-4 flex items-center gap-2"
+                >
+                  <span class="text-blue-400">📊</span>
+                  ${translateText("account_modal.stats_overview")}
+                </h3>
+                <player-stats-tree-view
+                  .statsTree=${this.statsTree}
+                ></player-stats-tree-view>
+              </div>`
+            : ""}
 
           <!-- Bottom Row: Recent Games Section -->
           <div class="bg-white/5 rounded-xl border border-white/10 p-6">
