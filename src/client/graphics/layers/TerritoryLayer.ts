@@ -42,10 +42,10 @@ export class TerritoryLayer implements Layer {
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
   private transitionActive = false;
-  private transitionEpoch = 1;
-  private transitionProgress = 1;
-  private transitionStartTime = 0;
-  private transitionDurationMs = 100;
+  private transitionDurationMs = 500;
+  private transitionTiles: TileRef[] = [];
+  private transitionStartTimes: Uint16Array | null = null;
+  private transitionActiveMask: Uint8Array | null = null;
   private lastGameTick = 0;
   private lastTickTime = 0;
   private lastTickDurationMs = 100;
@@ -359,6 +359,10 @@ export class TerritoryLayer implements Layer {
     this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
     this.configureRenderers();
     this.transitionActive = false;
+    this.transitionTiles = [];
+    this.ensureTransitionScratch();
+    this.transitionStartTimes?.fill(0);
+    this.transitionActiveMask?.fill(0);
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -419,7 +423,7 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const now = this.nowMs();
-    this.updateTransitionProgress(now);
+    this.updateTransitionState(now);
 
     const renderTerritoryStart = FrameProfiler.start();
     this.territoryRenderer.render();
@@ -511,6 +515,17 @@ export class TerritoryLayer implements Layer {
     return typeof performance !== "undefined" ? performance.now() : Date.now();
   }
 
+  private ensureTransitionScratch() {
+    const size = this.game.width() * this.game.height();
+    if (
+      !this.transitionStartTimes ||
+      this.transitionStartTimes.length !== size
+    ) {
+      this.transitionStartTimes = new Uint16Array(size);
+      this.transitionActiveMask = new Uint8Array(size);
+    }
+  }
+
   private updateTickTiming(now: number) {
     const currentTick = this.game.ticks();
     if (currentTick === this.lastGameTick) {
@@ -530,49 +545,94 @@ export class TerritoryLayer implements Layer {
     changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
     now: number,
   ) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    this.ensureTransitionScratch();
+    const startTimes = this.transitionStartTimes!;
+    const activeMask = this.transitionActiveMask!;
+    const renderer = this.territoryRenderer;
     if (changes.length === 0) {
       return;
     }
-    this.transitionEpoch = (this.transitionEpoch + 1) & 0xff;
-    if (this.transitionEpoch === 0) {
-      this.transitionEpoch = 1;
-    }
-    this.transitionStartTime = now;
-    this.transitionDurationMs = this.lastTickDurationMs;
-    this.transitionProgress = 0;
-    this.transitionActive = false;
+    const nowPacked = this.packTransitionTime(now);
+    const startPacked = nowPacked | 0x8000;
 
     for (const change of changes) {
       if (change.newOwner === change.previousOwner) {
         continue;
       }
-      if (this.territoryRenderer) {
-        this.territoryRenderer.setTransitionEpoch(
-          change.tile,
-          this.transitionEpoch,
-        );
-        this.transitionActive = true;
+      const tile = change.tile;
+      if (activeMask[tile] === 0) {
+        activeMask[tile] = 1;
+        this.transitionTiles.push(tile);
       }
+      startTimes[tile] = nowPacked;
+      renderer.setTransitionTile(tile, change.previousOwner, startPacked);
     }
+
+    this.transitionActive = this.transitionTiles.length > 0;
   }
 
-  private updateTransitionProgress(now: number) {
-    if (!this.territoryRenderer || !this.transitionActive) {
+  private updateTransitionState(now: number) {
+    if (!this.territoryRenderer) {
       return;
     }
-    const elapsed = now - this.transitionStartTime;
-    const duration =
-      this.transitionDurationMs > 0 ? this.transitionDurationMs : 1;
-    const progress = Math.max(0, Math.min(1, elapsed / duration));
-    const eased = progress * progress * (3 - 2 * progress);
-    this.transitionProgress = eased;
-    this.territoryRenderer.setTransitionProgress(
-      this.transitionProgress,
-      this.transitionEpoch,
+    this.ensureTransitionScratch();
+    const nowPacked = this.packTransitionTime(now);
+    this.territoryRenderer.setTransitionTime(
+      nowPacked,
+      this.transitionDurationMs,
     );
-    if (progress >= 1) {
-      this.transitionActive = false;
+
+    if (!this.transitionActive || this.transitionTiles.length === 0) {
+      return;
     }
+
+    const startTimes = this.transitionStartTimes!;
+    const activeMask = this.transitionActiveMask!;
+    const tiles = this.transitionTiles;
+    const duration = this.transitionDurationMs;
+    let writeIndex = 0;
+
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      const start = startTimes[tile];
+      if (start === 0) {
+        activeMask[tile] = 0;
+        this.territoryRenderer.clearTransitionTile(
+          tile,
+          this.game.ownerID(tile),
+        );
+        continue;
+      }
+      const elapsed = this.transitionElapsed(nowPacked, start);
+      if (elapsed >= duration) {
+        activeMask[tile] = 0;
+        startTimes[tile] = 0;
+        this.territoryRenderer.clearTransitionTile(
+          tile,
+          this.game.ownerID(tile),
+        );
+      } else {
+        tiles[writeIndex++] = tile;
+      }
+    }
+    tiles.length = writeIndex;
+    this.transitionActive = tiles.length > 0;
+  }
+
+  private packTransitionTime(now: number): number {
+    const wrap = 32768;
+    return Math.floor(now) % wrap | 0;
+  }
+
+  private transitionElapsed(nowPacked: number, startPacked: number): number {
+    const wrap = 32768;
+    if (nowPacked >= startPacked) {
+      return nowPacked - startPacked;
+    }
+    return wrap - startPacked + nowPacked;
   }
 
   private computePaletteSignature(): string {

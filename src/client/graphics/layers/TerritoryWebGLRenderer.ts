@@ -43,10 +43,8 @@ export class TerritoryWebGLRenderer {
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
     transitions: WebGLUniformLocation | null;
-    transitionEpoch: WebGLUniformLocation | null;
-    transitionProgress: WebGLUniformLocation | null;
-    transitionHintColor: WebGLUniformLocation | null;
-    transitionHintStrength: WebGLUniformLocation | null;
+    transitionNow: WebGLUniformLocation | null;
+    transitionDuration: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
@@ -66,7 +64,7 @@ export class TerritoryWebGLRenderer {
   };
 
   private readonly state: Uint16Array;
-  private readonly transitionEpochState: Uint8Array;
+  private readonly transitionState: Uint16Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
   private readonly transitionDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
@@ -79,10 +77,8 @@ export class TerritoryWebGLRenderer {
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
-  private transitionEpoch = 1;
-  private transitionProgress = 1;
-  private transitionHintColor: [number, number, number] = [1, 1, 1];
-  private transitionHintStrength = 0.25;
+  private transitionNow = 0;
+  private transitionDurationMs = 500;
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -96,7 +92,11 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = state;
-    this.transitionEpochState = new Uint8Array(state.length);
+    this.transitionState = new Uint16Array(state.length * 2);
+    for (let i = 0; i < state.length; i++) {
+      this.transitionState[i * 2] = state[i] & 0x0fff;
+      this.transitionState[i * 2 + 1] = 0;
+    }
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -120,10 +120,8 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         transitions: null,
-        transitionEpoch: null,
-        transitionProgress: null,
-        transitionHintColor: null,
-        transitionHintStrength: null,
+        transitionNow: null,
+        transitionDuration: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -161,10 +159,8 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         transitions: null,
-        transitionEpoch: null,
-        transitionProgress: null,
-        transitionHintColor: null,
-        transitionHintStrength: null,
+        transitionNow: null,
+        transitionDuration: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -192,18 +188,10 @@ export class TerritoryWebGLRenderer {
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
       transitions: gl.getUniformLocation(this.program, "u_transitions"),
-      transitionEpoch: gl.getUniformLocation(this.program, "u_transitionEpoch"),
-      transitionProgress: gl.getUniformLocation(
+      transitionNow: gl.getUniformLocation(this.program, "u_transitionNow"),
+      transitionDuration: gl.getUniformLocation(
         this.program,
-        "u_transitionProgress",
-      ),
-      transitionHintColor: gl.getUniformLocation(
-        this.program,
-        "u_transitionHintColor",
-      ),
-      transitionHintStrength: gl.getUniformLocation(
-        this.program,
-        "u_transitionHintStrength",
+        "u_transitionDurationMs",
       ),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
@@ -296,13 +284,13 @@ export class TerritoryWebGLRenderer {
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
-      gl.R8UI,
+      gl.RG16UI,
       this.canvas.width,
       this.canvas.height,
       0,
-      gl.RED_INTEGER,
-      gl.UNSIGNED_BYTE,
-      this.transitionEpochState,
+      gl.RG_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.transitionState,
     );
 
     gl.useProgram(this.program);
@@ -398,26 +386,11 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.hoverPulseSpeed) {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
-    if (this.uniforms.transitionEpoch) {
-      gl.uniform1i(this.uniforms.transitionEpoch, this.transitionEpoch);
+    if (this.uniforms.transitionNow) {
+      gl.uniform1i(this.uniforms.transitionNow, this.transitionNow);
     }
-    if (this.uniforms.transitionProgress) {
-      gl.uniform1f(this.uniforms.transitionProgress, this.transitionProgress);
-    }
-    if (this.uniforms.transitionHintColor) {
-      this.transitionHintColor = [1, 1, 1];
-      gl.uniform3f(
-        this.uniforms.transitionHintColor,
-        this.transitionHintColor[0],
-        this.transitionHintColor[1],
-        this.transitionHintColor[2],
-      );
-    }
-    if (this.uniforms.transitionHintStrength) {
-      gl.uniform1f(
-        this.uniforms.transitionHintStrength,
-        this.transitionHintStrength,
-      );
+    if (this.uniforms.transitionDuration) {
+      gl.uniform1f(this.uniforms.transitionDuration, this.transitionDurationMs);
     }
 
     gl.enable(gl.BLEND);
@@ -492,12 +465,18 @@ export class TerritoryWebGLRenderer {
     }
   }
 
-  setTransitionEpoch(tile: TileRef, epoch: number) {
-    const value = epoch & 0xff;
-    if (this.transitionEpochState[tile] === value) {
+  setTransitionTile(tile: TileRef, previousOwner: number, startPacked: number) {
+    const offset = tile * 2;
+    const ownerValue = previousOwner & 0xffff;
+    const startValue = startPacked & 0xffff;
+    if (
+      this.transitionState[offset] === ownerValue &&
+      this.transitionState[offset + 1] === startValue
+    ) {
       return;
     }
-    this.transitionEpochState[tile] = value;
+    this.transitionState[offset] = ownerValue;
+    this.transitionState[offset + 1] = startValue;
     if (this.needsTransitionFullUpload) {
       return;
     }
@@ -512,9 +491,13 @@ export class TerritoryWebGLRenderer {
     }
   }
 
-  setTransitionProgress(progress: number, epoch: number) {
-    this.transitionEpoch = epoch & 0xff;
-    this.transitionProgress = Math.max(0, Math.min(1, progress));
+  clearTransitionTile(tile: TileRef, currentOwner: number) {
+    this.setTransitionTile(tile, currentOwner, 0);
+  }
+
+  setTransitionTime(nowPacked: number, durationMs: number) {
+    this.transitionNow = nowPacked | 0;
+    this.transitionDurationMs = Math.max(1, durationMs);
   }
 
   markAllDirty() {
@@ -582,11 +565,11 @@ export class TerritoryWebGLRenderer {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
     }
-    if (this.uniforms.transitionEpoch) {
-      gl.uniform1i(this.uniforms.transitionEpoch, this.transitionEpoch);
+    if (this.uniforms.transitionNow) {
+      gl.uniform1i(this.uniforms.transitionNow, this.transitionNow);
     }
-    if (this.uniforms.transitionProgress) {
-      gl.uniform1f(this.uniforms.transitionProgress, this.transitionProgress);
+    if (this.uniforms.transitionDuration) {
+      gl.uniform1f(this.uniforms.transitionDuration, this.transitionDurationMs);
     }
 
     gl.clearColor(0, 0, 0, 0);
@@ -657,7 +640,7 @@ export class TerritoryWebGLRenderer {
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, this.transitionTexture);
 
-    const bytesPerPixel = Uint8Array.BYTES_PER_ELEMENT;
+    const bytesPerPixel = Uint16Array.BYTES_PER_ELEMENT * 2;
     let rowsUploaded = 0;
     let bytesUploaded = 0;
 
@@ -665,13 +648,13 @@ export class TerritoryWebGLRenderer {
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
-        gl.R8UI,
+        gl.RG16UI,
         this.canvas.width,
         this.canvas.height,
         0,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        this.transitionEpochState,
+        gl.RG_INTEGER,
+        gl.UNSIGNED_SHORT,
+        this.transitionState,
       );
       this.needsTransitionFullUpload = false;
       this.transitionDirtyRows.clear();
@@ -686,10 +669,10 @@ export class TerritoryWebGLRenderer {
 
     for (const [y, span] of this.transitionDirtyRows) {
       const width = span.maxX - span.minX + 1;
-      const offset = y * this.canvas.width + span.minX;
-      const rowSlice = this.transitionEpochState.subarray(
+      const offset = (y * this.canvas.width + span.minX) * 2;
+      const rowSlice = this.transitionState.subarray(
         offset,
-        offset + width,
+        offset + width * 2,
       );
       gl.texSubImage2D(
         gl.TEXTURE_2D,
@@ -698,8 +681,8 @@ export class TerritoryWebGLRenderer {
         y,
         width,
         1,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
+        gl.RG_INTEGER,
+        gl.UNSIGNED_SHORT,
         rowSlice,
       );
       rowsUploaded++;
@@ -897,10 +880,8 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_relations;
       uniform usampler2D u_patterns;
       uniform usampler2D u_transitions;
-      uniform int u_transitionEpoch;
-      uniform float u_transitionProgress;
-      uniform vec3 u_transitionHintColor;
-      uniform float u_transitionHintStrength;
+      uniform int u_transitionNow;
+      uniform float u_transitionDurationMs;
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
@@ -928,6 +909,24 @@ export class TerritoryWebGLRenderer {
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
+      }
+
+      uint prevOwnerAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_transitions, clamped, 0).r & 0xFFFu;
+      }
+
+      uint transitionPackedAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_transitions, clamped, 0).g;
       }
 
       uint relationCode(uint owner, uint other) {
@@ -985,25 +984,25 @@ export class TerritoryWebGLRenderer {
         ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
-        uint transitionEpoch = texelFetch(u_transitions, texCoord, 0).r;
-        bool inTransition =
-          (u_transitionEpoch != 0) && (transitionEpoch == uint(u_transitionEpoch));
-        float transition = inTransition ? u_transitionProgress : 1.0;
-        float hintMix = inTransition ? u_transitionHintStrength * (1.0 - transition) : 0.0;
         uint owner = state & 0xFFFu;
+        uint prevOwner = prevOwnerAtTex(texCoord);
+        uint startPacked = transitionPackedAtTex(texCoord);
+        const uint TRANSITION_FLAG = 0x8000u;
+        const uint TRANSITION_TIME_MASK = 0x7FFFu;
+        const uint TRANSITION_WRAP = 32768u;
+        bool hasTransition = (startPacked & TRANSITION_FLAG) != 0u;
+        float t = 1.0;
+        if (hasTransition) {
+          uint start = startPacked & TRANSITION_TIME_MASK;
+          uint nowTime = uint(u_transitionNow);
+          uint elapsed = nowTime >= start
+            ? (nowTime - start)
+            : (TRANSITION_WRAP - start + nowTime);
+          t = clamp(float(elapsed) / u_transitionDurationMs, 0.0, 1.0);
+        }
+        bool doTransition = hasTransition && t < 1.0 && prevOwner != owner;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
-
-        if (owner == 0u) {
-          if (hasFallout) {
-            vec3 color = u_fallout.rgb;
-            float a = u_alpha;
-            outColor = vec4(color * a, a);
-          } else {
-            outColor = vec4(0.0);
-          }
-          return;
-        }
 
         bool isBorder = false;
         bool hasFriendlyRelation = false;
@@ -1037,18 +1036,79 @@ export class TerritoryWebGLRenderer {
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
 
-        if (u_alternativeView) {
-          uint relationAlt = relationCode(owner, uint(u_viewerId));
-          vec4 altColor = u_altNeutral;
-          if (isSelf(relationAlt)) {
-            altColor = u_altSelf;
-          } else if (isFriendly(relationAlt)) {
-            altColor = u_altAlly;
-          } else if (isEmbargo(relationAlt)) {
-            altColor = u_altEnemy;
+        bool oldIsBorder = false;
+        bool oldFriendlyRelation = false;
+        bool oldEmbargoRelation = false;
+        if (doTransition && prevOwner != 0u) {
+          uint prevNeighbor = prevOwnerAtTex(texCoord + ivec2(1, 0));
+          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
+          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
+            uint rel = relationCode(prevOwner, prevNeighbor);
+            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
           }
-          float a = (isBorder ? 1.0 : 0.0) * transition;
-          vec3 color = altColor.rgb;
+          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(-1, 0));
+          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
+          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
+            uint rel = relationCode(prevOwner, prevNeighbor);
+            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+          }
+          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, 1));
+          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
+          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
+            uint rel = relationCode(prevOwner, prevNeighbor);
+            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+          }
+          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, -1));
+          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
+          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
+            uint rel = relationCode(prevOwner, prevNeighbor);
+            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+          }
+        }
+
+        if (u_alternativeView) {
+          vec3 newColor = vec3(0.0);
+          float newAlpha = 0.0;
+          if (owner != 0u) {
+            uint relationAlt = relationCode(owner, uint(u_viewerId));
+            vec4 altColor = u_altNeutral;
+            if (isSelf(relationAlt)) {
+              altColor = u_altSelf;
+            } else if (isFriendly(relationAlt)) {
+              altColor = u_altAlly;
+            } else if (isEmbargo(relationAlt)) {
+              altColor = u_altEnemy;
+            }
+            newColor = altColor.rgb;
+            newAlpha = isBorder ? 1.0 : 0.0;
+          }
+
+          vec3 color = newColor;
+          float a = newAlpha;
+          if (doTransition) {
+            vec3 oldColor = vec3(0.0);
+            float oldAlpha = 0.0;
+            if (prevOwner != 0u) {
+              uint relationAltOld = relationCode(prevOwner, uint(u_viewerId));
+              vec4 altColorOld = u_altNeutral;
+              if (isSelf(relationAltOld)) {
+                altColorOld = u_altSelf;
+              } else if (isFriendly(relationAltOld)) {
+                altColorOld = u_altAlly;
+              } else if (isEmbargo(relationAltOld)) {
+                altColorOld = u_altEnemy;
+              }
+              oldColor = altColorOld.rgb;
+              oldAlpha = oldIsBorder ? 1.0 : 0.0;
+            }
+            color = mix(oldColor, newColor, t);
+            a = mix(oldAlpha, newAlpha, t);
+          }
+
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
               ? (1.0 - u_hoverPulseStrength) +
@@ -1060,44 +1120,106 @@ export class TerritoryWebGLRenderer {
           return;
         }
 
-        vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0);
-        vec4 baseBorder = texelFetch(u_palette, ivec2(int(owner) * 2 + 1, 0), 0);
-        vec3 color = base.rgb;
-        float a = u_alpha;
-
-        if (isBorder) {
-          vec3 borderColor = baseBorder.rgb;
-
-          const float BORDER_TINT_RATIO = 0.35;
-          const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-          const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-
-          if (hasFriendlyRelation) {
-            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                          FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+        vec3 newColor = vec3(0.0);
+        float newAlpha = 0.0;
+        if (owner == 0u) {
+          if (hasFallout) {
+            newColor = u_fallout.rgb;
+            newAlpha = u_alpha;
           }
-          if (hasEmbargoRelation) {
-            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                          EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-          }
-
-          if (isDefended) {
-            bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-            const float LIGHT_FACTOR = 1.2;
-            const float DARK_FACTOR = 0.8;
-            borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
-          }
-
-          color = borderColor;
-          a = baseBorder.a * transition;
         } else {
-          bool isPrimary = patternIsPrimary(owner, texCoord);
-          color = isPrimary ? base.rgb : baseBorder.rgb;
-          a = u_alpha;
+          vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0);
+          vec4 baseBorder = texelFetch(
+            u_palette,
+            ivec2(int(owner) * 2 + 1, 0),
+            0
+          );
+          if (isBorder) {
+            vec3 borderColor = baseBorder.rgb;
+
+            const float BORDER_TINT_RATIO = 0.35;
+            const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+            const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+
+            if (hasFriendlyRelation) {
+              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                            FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+            }
+            if (hasEmbargoRelation) {
+              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                            EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+            }
+
+            if (isDefended) {
+              bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+              const float LIGHT_FACTOR = 1.2;
+              const float DARK_FACTOR = 0.8;
+              borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
+            }
+
+            newColor = borderColor;
+            newAlpha = baseBorder.a;
+          } else {
+            bool isPrimary = patternIsPrimary(owner, texCoord);
+            newColor = isPrimary ? base.rgb : baseBorder.rgb;
+            newAlpha = u_alpha;
+          }
         }
 
-        if (hintMix > 0.0) {
-          color = mix(color, u_transitionHintColor, hintMix);
+        vec3 color = newColor;
+        float a = newAlpha;
+        if (doTransition) {
+          vec3 oldColor = vec3(0.0);
+          float oldAlpha = 0.0;
+          if (prevOwner == 0u) {
+            if (hasFallout) {
+              oldColor = u_fallout.rgb;
+              oldAlpha = u_alpha;
+            }
+          } else {
+            vec4 oldBase = texelFetch(
+              u_palette,
+              ivec2(int(prevOwner) * 2, 0),
+              0
+            );
+            vec4 oldBorder = texelFetch(
+              u_palette,
+              ivec2(int(prevOwner) * 2 + 1, 0),
+              0
+            );
+            if (oldIsBorder) {
+              vec3 borderColor = oldBorder.rgb;
+
+              const float BORDER_TINT_RATIO = 0.35;
+              const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+              const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+
+              if (oldFriendlyRelation) {
+                borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                              FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+              }
+              if (oldEmbargoRelation) {
+                borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                              EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+              }
+
+              if (isDefended) {
+                bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+                const float LIGHT_FACTOR = 1.2;
+                const float DARK_FACTOR = 0.8;
+                borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
+              }
+
+              oldColor = borderColor;
+              oldAlpha = oldBorder.a;
+            } else {
+              bool isPrimary = patternIsPrimary(prevOwner, texCoord);
+              oldColor = isPrimary ? oldBase.rgb : oldBorder.rgb;
+              oldAlpha = u_alpha;
+            }
+          }
+          color = mix(oldColor, newColor, t);
+          a = mix(oldAlpha, newAlpha, t);
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
