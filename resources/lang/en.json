@@ -832,6 +832,7 @@
     "pattern": {
       "default": "Default"
     },
+    "select_skin": "Select Skin",
     "selected": "selected"
   },
   "flag_input": {
