@@ -765,7 +765,7 @@ export class SinglePlayerModal extends BaseModal {
     return (
       (this.renderRoot.querySelector(
         "#end-timer-value",
-      ) as HTMLInputElement | null) ||
+      ) as HTMLInputElement | null) ??
       (this.querySelector("#end-timer-value") as HTMLInputElement | null)
     );
   }
