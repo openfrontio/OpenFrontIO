@@ -207,7 +207,7 @@ export class UserSettingModal extends BaseModal {
             <button
               @click=${this.close}
               class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="Back"
+              aria-label="${translateText("common.back")}"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

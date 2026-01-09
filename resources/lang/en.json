@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "back": "Back",
     "available": "Available",
     "preset_max": "Max",
     "summary_send": "Send",
