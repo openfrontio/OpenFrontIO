@@ -239,24 +239,6 @@ export class AccountModal extends BaseModal {
     return html`
       <div class="bg-blue-500/10 rounded-xl border border-blue-500/20 p-6">
         <div class="flex items-start gap-4 mb-6">
-          <div
-            class="p-3 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-6 h-6"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.7l-1.2 4 6 3.2-2 2-4-1.5L1 16l7.4 1.6c.7.1 1.4-.1 1.9-.4l4.1-4.1 3.4 4.5c.5.6 1.1.7 1.3.6l.5-.6c.2-.2.2-.7-.4-1.4z"
-              />
-            </svg>
-          </div>
           <div>
             <h3 class="text-lg font-bold text-white uppercase tracking-wider">
               ${translateText("account_modal.save_progress_title")}
