@@ -247,6 +247,5 @@ export class TeamStats extends LitElement implements Layer {
 function formatPercentage(value: number): string {
   const perc = value * 100;
   if (Number.isNaN(perc)) return "0%";
-  if (perc === 100) return "100%";
-  return perc.toPrecision(2) + "%";
+  return perc.toFixed(1) + "%";
 }
