@@ -265,7 +265,15 @@ export class UserSettingModal extends BaseModal {
       <!-- 🚩 Flag Selector -->
       <div
         class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer"
+        role="button"
+        tabindex="0"
         @click=${this.openFlagSelector}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " " || e.keyCode === 13 || e.keyCode === 32) {
+            e.preventDefault();
+            this.openFlagSelector();
+          }
+        }}
       >
         <div class="flex flex-col flex-1 min-w-0 mr-4">
           <div class="text-white font-bold text-base block mb-1">
