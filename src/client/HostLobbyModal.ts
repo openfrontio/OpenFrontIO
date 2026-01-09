@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
@@ -16,12 +16,10 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
   GameInfo,
-  LobbyPreset,
   LobbyPresetConfig,
   TeamCountConfig,
   defaultLobbySettings,
@@ -32,6 +30,7 @@ import "./components/Difficulties";
 import {
   LobbyPresetControls,
   LobbyPresetKey,
+  PresetManagement,
   lobbyPresetKeys,
 } from "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
@@ -40,7 +39,7 @@ import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 @customElement("host-lobby-modal")
-export class HostLobbyModal extends LitElement {
+export class HostLobbyModal extends PresetManagement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -76,14 +75,9 @@ export class HostLobbyModal extends LitElement {
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
-  @state() private lobbyPresets: LobbyPreset[] = [];
-  @state() private selectedPresetName = "";
-  @state() private presetNameInput = "";
-
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
 
   connectedCallback() {
@@ -204,7 +198,8 @@ export class HostLobbyModal extends LitElement {
               this.applyPreset(e.detail)}
             @preset-delete=${this.deletePreset}
             @preset-name-input=${this.handlePresetNameInput}
-            @preset-save=${this.savePreset}
+            @preset-save=${(e: CustomEvent<string>) =>
+              this.savePreset(e, () => this.buildPresetConfig())}
           ></lobby-preset-controls>
           <!-- Map Selection -->
           <div class="options-section">
@@ -676,18 +671,6 @@ export class HostLobbyModal extends LitElement {
     }
   }
 
-  private loadPresets() {
-    this.lobbyPresets = LobbyPresetControls.listPresets(this.userSettings);
-  }
-
-  private handlePresetSelect(e: CustomEvent<string>) {
-    this.selectedPresetName = e.detail;
-  }
-
-  private handlePresetNameInput(e: CustomEvent<string>) {
-    this.presetNameInput = e.detail;
-  }
-
   private buildPresetConfig(): LobbyPresetConfig {
     const ret = {} as Record<LobbyPresetKey, LobbyPresetConfig[LobbyPresetKey]>;
     const state = this as unknown as Record<
@@ -703,24 +686,6 @@ export class HostLobbyModal extends LitElement {
       : GameMapSize.Normal;
     ret.maxTimerValue = this.maxTimer ? this.maxTimerValue : undefined;
     return ret as LobbyPresetConfig;
-  }
-
-  private savePreset(e: CustomEvent<string>) {
-    const name = (
-      e.detail ??
-      this.presetNameInput ??
-      this.selectedPresetName
-    ).trim();
-    if (!name) {
-      return;
-    }
-    this.lobbyPresets = LobbyPresetControls.savePreset(
-      this.userSettings,
-      name,
-      this.buildPresetConfig(),
-    );
-    this.selectedPresetName = name;
-    this.presetNameInput = "";
   }
 
   private async applyPreset(name?: string) {
@@ -750,20 +715,6 @@ export class HostLobbyModal extends LitElement {
 
     await this.loadNationCount();
     this.putGameConfig();
-  }
-
-  private deletePreset(e?: CustomEvent<string>) {
-    const presetName = (e?.detail ?? this.selectedPresetName).trim();
-    if (!presetName) {
-      return;
-    }
-    this.lobbyPresets = LobbyPresetControls.deletePreset(
-      this.userSettings,
-      presetName,
-    );
-    if (this.selectedPresetName === presetName) {
-      this.selectedPresetName = "";
-    }
   }
 
   private async handleRandomMapToggle() {

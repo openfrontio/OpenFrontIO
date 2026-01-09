@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
   defaultLobbySettings,
@@ -37,26 +37,67 @@ export type LobbyPresetDefaults = {
   [K in LobbyPresetKey]-?: LobbyPresetConfig[K];
 };
 
-@customElement("lobby-preset-controls")
-export class LobbyPresetControls extends LitElement {
-  @property({ type: Array }) presets: LobbyPreset[] = [];
-  @property({ type: String }) selectedName = "";
-  @property({ type: String }) nameInput = "";
+export class PresetManagement extends LitElement {
+  @state() protected lobbyPresets: LobbyPreset[] = [];
+  @state() protected selectedPresetName = "";
+  @state() protected presetNameInput = "";
 
-  static listPresets(userSettings = new UserSettings()): LobbyPreset[] {
-    return userSettings
+  protected userSettings: UserSettings;
+
+  constructor() {
+    super();
+    this.userSettings = new UserSettings();
+  }
+
+  protected loadPresets() {
+    this.lobbyPresets = this.listPresets();
+  }
+
+  protected handlePresetSelect(e: CustomEvent<string>) {
+    this.selectedPresetName = e.detail;
+  }
+
+  protected handlePresetNameInput(e: CustomEvent<string>) {
+    this.presetNameInput = e.detail;
+  }
+
+  protected savePreset(
+    e: CustomEvent<string>,
+    buildConfig: () => LobbyPresetConfig,
+  ) {
+    const name = (
+      e.detail ??
+      this.presetNameInput ??
+      this.selectedPresetName
+    ).trim();
+    if (!name) return;
+
+    this.lobbyPresets = this.savePresetConfig(name, buildConfig());
+    this.selectedPresetName = name;
+    this.presetNameInput = "";
+  }
+
+  protected deletePreset(e?: CustomEvent<string>) {
+    const presetName = (e?.detail ?? this.selectedPresetName).trim();
+    if (!presetName) return;
+
+    this.lobbyPresets = this.deletePresetConfig(presetName);
+    if (this.selectedPresetName === presetName) {
+      this.selectedPresetName = "";
+    }
+  }
+
+  protected listPresets(): LobbyPreset[] {
+    return this.userSettings
       .getLobbyPresets()
       .map((preset) => LobbyPresetControls.normalizePreset(preset));
   }
 
-  static savePreset(
-    userSettings: UserSettings,
+  protected savePresetConfig(
     name: string,
     config: LobbyPresetConfig,
   ): LobbyPreset[] {
-    const presets = LobbyPresetControls.listPresets(userSettings).filter(
-      (preset) => preset.name !== name,
-    );
+    const presets = this.listPresets().filter((preset) => preset.name !== name);
     const updated = [
       ...presets,
       {
@@ -64,19 +105,24 @@ export class LobbyPresetControls extends LitElement {
         config: LobbyPresetControls.normalizePresetConfig(config),
       },
     ];
-    userSettings.setLobbyPresets(updated);
+    this.userSettings.setLobbyPresets(updated);
     return updated;
   }
 
-  static deletePreset(userSettings: UserSettings, name: string): LobbyPreset[] {
-    const updated = LobbyPresetControls.listPresets(userSettings).filter(
-      (preset) => preset.name !== name,
-    );
-    userSettings.setLobbyPresets(updated);
+  protected deletePresetConfig(name: string): LobbyPreset[] {
+    const updated = this.listPresets().filter((preset) => preset.name !== name);
+    this.userSettings.setLobbyPresets(updated);
     return updated;
   }
+}
 
-  private static normalizePreset(preset: LobbyPreset): LobbyPreset {
+@customElement("lobby-preset-controls")
+export class LobbyPresetControls extends LitElement {
+  @property({ type: Array }) presets: LobbyPreset[] = [];
+  @property({ type: String }) selectedName = "";
+  @property({ type: String }) nameInput = "";
+
+  static normalizePreset(preset: LobbyPreset): LobbyPreset {
     const config = LobbyPresetControls.normalizePresetConfig(
       preset?.config ?? {},
     );

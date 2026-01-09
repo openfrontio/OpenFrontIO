@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
@@ -15,9 +15,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import {
-  LobbyPreset,
   LobbyPresetConfig,
   TeamCountConfig,
   defaultLobbySettings,
@@ -29,6 +27,7 @@ import "./components/Difficulties";
 import {
   LobbyPresetControls,
   LobbyPresetKey,
+  PresetManagement,
   lobbyPresetKeys,
 } from "./components/lobbyConfig/PresetControls";
 import "./components/Maps";
@@ -39,7 +38,7 @@ import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("single-player-modal")
-export class SinglePlayerModal extends LitElement {
+export class SinglePlayerModal extends PresetManagement {
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
@@ -70,12 +69,6 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] =
     defaultLobbySettings.disabledUnits ?? [];
-  @state() private lobbyPresets: LobbyPreset[] = [];
-  @state() private selectedPresetName = "";
-  @state() private presetNameInput = "";
-
-  private userSettings: UserSettings = new UserSettings();
-
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
@@ -110,7 +103,8 @@ export class SinglePlayerModal extends LitElement {
               this.applyPreset(e.detail)}
             @preset-delete=${this.deletePreset}
             @preset-name-input=${this.handlePresetNameInput}
-            @preset-save=${this.savePreset}
+            @preset-save=${(e: CustomEvent<string>) =>
+              this.savePreset(e, () => this.buildPresetConfig())}
           ></lobby-preset-controls>
           <!-- Map Selection -->
           <div class="options-section">
@@ -461,18 +455,6 @@ export class SinglePlayerModal extends LitElement {
     return this; // light DOM
   }
 
-  private loadPresets() {
-    this.lobbyPresets = LobbyPresetControls.listPresets(this.userSettings);
-  }
-
-  private handlePresetSelect(e: CustomEvent<string>) {
-    this.selectedPresetName = e.detail;
-  }
-
-  private handlePresetNameInput(e: CustomEvent<string>) {
-    this.presetNameInput = e.detail;
-  }
-
   private buildPresetConfig(): LobbyPresetConfig {
     const ret = {} as Record<LobbyPresetKey, LobbyPresetConfig[LobbyPresetKey]>;
     const state = this as unknown as Record<
@@ -488,24 +470,6 @@ export class SinglePlayerModal extends LitElement {
       : GameMapSize.Normal;
     ret.maxTimerValue = this.maxTimer ? this.maxTimerValue : undefined;
     return ret as LobbyPresetConfig;
-  }
-
-  private savePreset(e: CustomEvent<string>) {
-    const name = (
-      e.detail ??
-      this.presetNameInput ??
-      this.selectedPresetName
-    ).trim();
-    if (!name) {
-      return;
-    }
-    this.lobbyPresets = LobbyPresetControls.savePreset(
-      this.userSettings,
-      name,
-      this.buildPresetConfig(),
-    );
-    this.selectedPresetName = name;
-    this.presetNameInput = "";
   }
 
   private applyPreset(name?: string) {
@@ -532,20 +496,6 @@ export class SinglePlayerModal extends LitElement {
     this.gameMapSize = this.compactMap
       ? GameMapSize.Compact
       : GameMapSize.Normal;
-  }
-
-  private deletePreset(e?: CustomEvent<string>) {
-    const presetName = (e?.detail ?? this.selectedPresetName).trim();
-    if (!presetName) {
-      return;
-    }
-    this.lobbyPresets = LobbyPresetControls.deletePreset(
-      this.userSettings,
-      presetName,
-    );
-    if (this.selectedPresetName === presetName) {
-      this.selectedPresetName = "";
-    }
   }
 
   public open() {
