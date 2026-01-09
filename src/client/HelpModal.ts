@@ -1137,7 +1137,6 @@ export class HelpModal extends BaseModal {
       <o-modal
         id="helpModal"
         title="Instructions"
-        translationKey="main.instructions"
         ?inline=${this.inline}
         ?hideHeader=${true}
         ?hideCloseButton=${true}
