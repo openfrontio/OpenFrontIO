@@ -9,10 +9,6 @@ export class LanguageModal extends BaseModal {
   @property({ type: Array }) languageList: any[] = [];
   @property({ type: String }) currentLang = "en";
 
-  private handleClose = () => {
-    this.style.pointerEvents = "none";
-  };
-
   private selectLanguage = (lang: string) => {
     this.dispatchEvent(
       new CustomEvent("language-selected", {
@@ -148,7 +144,7 @@ export class LanguageModal extends BaseModal {
       <o-modal
         title=${translateText("select_lang.title")}
         ?inline=${this.inline}
-        .onClose=${this.handleClose}
+        .onClose=${this.close}
         hideHeader
         hideCloseButton
       >
