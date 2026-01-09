@@ -269,12 +269,7 @@ export class UserSettingModal extends BaseModal {
         tabindex="0"
         @click=${this.openFlagSelector}
         @keydown=${(e: KeyboardEvent) => {
-          if (
-            e.key === "Enter" ||
-            e.key === " " ||
-            e.keyCode === 13 ||
-            e.keyCode === 32
-          ) {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             this.openFlagSelector();
           }
