@@ -82,7 +82,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     this.requestUpdate();
                   }}
                   class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                  title="Toggle Visibility"
+                  title=${translateText("toggle_visibility")}
                 >
                   ${this.lobbyIdVisible
                     ? html`<svg
