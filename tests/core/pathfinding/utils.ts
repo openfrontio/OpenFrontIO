@@ -123,6 +123,7 @@ export async function gameFromString(mapRows: string[]): Promise<Game> {
     instantBuild: false,
     disableNavMesh: false,
     randomSpawn: false,
+    chatEnabled: false,
   };
   const config = new TestConfig(
     serverConfig,

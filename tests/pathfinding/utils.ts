@@ -221,6 +221,7 @@ export async function setupFromPath(
       infiniteTroops: false,
       instantBuild: false,
       randomSpawn: false,
+      chatEnabled: false,
       ...gameConfig,
     },
     new UserSettings(),
