@@ -184,7 +184,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
-  maxPlayers: z.number().optional(),
+  maxPlayers: z.number().int().min(2).max(1000).optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
@@ -518,6 +518,8 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
   error: z.string(),
   message: z.string().optional(),
+  translationKey: z.string().optional(),
+  args: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [

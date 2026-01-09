@@ -135,6 +135,10 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
+
+    if (gameConfig.maxPlayers !== undefined) {
+      this.gameConfig.maxPlayers = gameConfig.maxPlayers;
+    }
   }
 
   public joinClient(client: Client) {
@@ -159,12 +163,16 @@ export class GameServer {
     ) {
       this.log.warn(`cannot add client, game full`, {
         clientID: client.clientID,
+        currentPlayers: this.activeClients.length,
+        maxPlayers: this.gameConfig.maxPlayers,
       });
 
       client.ws.send(
         JSON.stringify({
           type: "error",
           error: "full-lobby",
+          translationKey: "private_lobby.lobby_full",
+          args: { limit: this.gameConfig.maxPlayers ?? "?" },
         } satisfies ServerErrorMessage),
       );
       return;
