@@ -1,5 +1,6 @@
-import { html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+﻿import { html, LitElement } from "lit";
+import { customElement, state, query } from "lit/decorators.js";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
 import { getUserMe } from "./Api";
@@ -16,13 +17,34 @@ export class MatchmakingModal extends BaseModal {
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
+  private elo = "unknown";
 
   constructor() {
     super();
     this.id = "page-matchmaking";
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        const userMeResponse = customEvent.detail as UserMeResponse;
+        this.elo =
+          userMeResponse.player?.leaderboard?.oneVone?.elo?.toString() ??
+          "unknown";
+        this.requestUpdate();
+      }
+    });
+  }
+
+  createRenderRoot() {
+    return this;
   }
 
   render() {
+    const eloDisplay = html`
+      <p class="text-center mt-2 mb-4 text-white/60">
+        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+      </p>
+    `;
+
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
@@ -61,6 +83,7 @@ export class MatchmakingModal extends BaseModal {
           </div>
         </div>
         <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+          ${eloDisplay}
           ${this.renderInner()}
         </div>
       </div>
@@ -134,8 +157,8 @@ export class MatchmakingModal extends BaseModal {
       }, 1000);
       this.socket?.send(
         JSON.stringify({
-          type: "auth",
-          playToken: await getPlayToken(),
+          type: "join",
+          jwt: await getPlayToken(),
         }),
       );
     };
@@ -229,5 +252,45 @@ export class MatchmakingModal extends BaseModal {
         composed: true,
       }),
     );
+  }
+}
+
+@customElement("matchmaking-button")
+export class MatchmakingButton extends LitElement {
+  @query("matchmaking-modal") private matchmakingModal!: MatchmakingModal;
+
+  constructor() {
+    super();
+  }
+
+  async connectedCallback() {
+    super.connectedCallback();
+  }
+
+  createRenderRoot() {
+    return this;
+  }
+
+  render() {
+    return html`
+      <div class="z-9999">
+        <o-button
+          @click="${this.open}"
+          translationKey="matchmaking_modal.title"
+          block
+          secondary
+        ></o-button>
+      </div>
+      <matchmaking-modal></matchmaking-modal>
+    `;
+  }
+
+  private open() {
+    this.matchmakingModal?.open();
+  }
+
+  public close() {
+    this.matchmakingModal?.close();
+    this.requestUpdate();
   }
 }

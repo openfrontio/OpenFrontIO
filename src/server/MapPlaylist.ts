@@ -121,7 +121,9 @@ export class MapPlaylist {
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: { isCompact, isRandomSpawn },
       difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
+        playerTeams === HumansVsNations
+          ? Difficulty.Impossible
+          : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,

@@ -336,20 +336,57 @@ export class NationAllianceBehavior {
     }
   }
 
-  // Betray friends if we have 10 times more troops than them
-  // TODO: Implement better and deeper strategies, for example:
-  // Check impact on relations with other players
-  // Check value of targets territory
-  // Check if target is distracted
-  // Check the targets territory size
-  maybeBetray(otherPlayer: Player): boolean {
+  maybeBetray(otherPlayer: Player, borderingPlayerCount: number): boolean {
+    if (!this.player.isAlliedWith(otherPlayer)) return false;
+
+    const { difficulty } = this.game.config().gameConfig();
+
+    // Betray very weak players (For example MIRVed ones)
+    if (difficulty !== Difficulty.Easy && difficulty !== Difficulty.Medium) {
+      const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
+      const otherPlayerOutgoingTroops = otherPlayer
+        .outgoingAttacks()
+        .reduce((sum, attack) => sum + attack.troops(), 0);
+      if (
+        otherPlayer.troops() + otherPlayerOutgoingTroops <
+          otherPlayerMaxTroops * 0.2 &&
+        otherPlayer.troops() < this.player.troops()
+      ) {
+        this.betray(otherPlayer);
+        return true;
+      }
+    }
+
+    // Betray very weak players (similar check as above but for the easier difficulties)
+    // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
     if (
-      this.player.isAlliedWith(otherPlayer) &&
+      (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
       return true;
     }
+
+    // Betray traitors who aren't significantly stronger than us
+    if (
+      difficulty !== Difficulty.Easy &&
+      otherPlayer.isTraitor() &&
+      otherPlayer.troops() < this.player.troops() * 1.2
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
+    // Betray our only bordering player if we are much stronger than them
+    if (
+      difficulty !== Difficulty.Easy &&
+      borderingPlayerCount === 1 &&
+      otherPlayer.troops() * 3 < this.player.troops()
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
     return false;
   }
 
