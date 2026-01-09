@@ -1,4 +1,4 @@
-﻿import { html, LitElement } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
