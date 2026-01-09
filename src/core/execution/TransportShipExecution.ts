@@ -162,8 +162,8 @@ export class TransportShipExecution implements Execution {
     }
     this.boat.move(spawnWater);
 
-    if (this.dst !== null) {
-      this.boat.setTargetTile(this.dst);
+    if (this.dstShore !== null) {
+      this.boat.setTargetTile(this.dstShore);
     } else {
       this.boat.setTargetTile(undefined);
     }
@@ -219,6 +219,7 @@ export class TransportShipExecution implements Execution {
       if (this.mg.owner(this.src!) !== this.attacker) {
         // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
         const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
+
         if (newSrc === false) {
           this.src = null;
         } else {
@@ -246,8 +247,8 @@ export class TransportShipExecution implements Execution {
         }
         this.dst = retreatWater;
 
-        if (this.boat.targetTile() !== this.dst) {
-          this.boat.setTargetTile(this.dst);
+        if (this.boat.targetTile() !== this.dstShore) {
+          this.boat.setTargetTile(this.dstShore!);
         }
       }
     }
