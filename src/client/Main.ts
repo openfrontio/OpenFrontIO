@@ -520,7 +520,15 @@ class Client {
     // Attempt to join lobby
     this.handleUrl();
 
+    let preventHashUpdate = false;
+
     const onHashUpdate = () => {
+      // Prevent double-handling when both popstate and hashchange fire
+      if (preventHashUpdate) {
+        preventHashUpdate = false;
+        return;
+      }
+
       // Reset the UI to its initial state
       this.joinModal?.close();
       if (this.gameStop !== null) {
@@ -532,7 +540,10 @@ class Client {
     };
 
     // Handle browser navigation & manual hash edits
-    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("popstate", () => {
+      preventHashUpdate = true;
+      onHashUpdate();
+    });
     window.addEventListener("hashchange", onHashUpdate);
 
     function updateSliderProgress(slider: HTMLInputElement) {
