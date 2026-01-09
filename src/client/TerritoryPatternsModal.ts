@@ -309,7 +309,11 @@ export class TerritoryPatternsModal extends BaseModal {
     if (typeof options === "string") {
       this.affiliateCode = options;
       this.showOnlyOwned = false;
-    } else if (options !== null && typeof options === "object") {
+    } else if (
+      options !== null &&
+      typeof options === "object" &&
+      !Array.isArray(options)
+    ) {
       this.affiliateCode = options.affiliateCode ?? null;
       this.showOnlyOwned = options.showOnlyOwned ?? false;
     } else {
