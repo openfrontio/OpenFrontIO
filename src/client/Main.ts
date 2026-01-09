@@ -54,17 +54,6 @@ import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
 
-// Initialize layout handlers
-const init = () => {
-  initLayout();
-  initNavigation();
-};
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
 declare global {
   interface Window {
     turnstile: any;
@@ -867,12 +856,16 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    new Client().initialize();
-  });
-} else {
+const bootstrap = () => {
+  initLayout();
   new Client().initialize();
+  initNavigation();
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
 }
 
 async function getTurnstileToken(): Promise<{
