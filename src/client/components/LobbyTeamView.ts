@@ -83,7 +83,9 @@ export class LobbyTeamView extends LitElement {
           this.clients,
           (c) => c.clientID ?? c.username,
           (client) =>
-            html`<div class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white">
+            html`<div
+              class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
+            >
               ${client.username}
             </div>`,
         )}
