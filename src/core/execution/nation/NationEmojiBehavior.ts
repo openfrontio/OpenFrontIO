@@ -175,6 +175,7 @@ export class NationEmojiBehavior {
 
   // Brag with our crown
   private brag(): void {
+    if (this.gameOver) return;
     if (!this.random.chance(300)) return;
 
     const sorted = this.game
