@@ -32,8 +32,10 @@ const DefaultKeybinds: Record<string, string> = {
 
 @customElement("keybinds-modal")
 export class KeybindsModal extends BaseModal {
-  @state() private keybinds: Record<string, { value: string; key: string }> =
-    {};
+  @state() private keybinds: Record<
+    string,
+    { value: string | string[]; key: string }
+  > = {};
 
   connectedCallback() {
     super.connectedCallback();
@@ -103,10 +105,12 @@ export class KeybindsModal extends BaseModal {
 
     const activeKeybinds: Record<string, string> = { ...DefaultKeybinds };
     for (const [k, v] of Object.entries(this.keybinds)) {
-      if (v.value === "Null") {
+      // Normalize value to string
+      const normalizedValue = Array.isArray(v.value) ? v.value[0] || "" : v.value;
+      if (normalizedValue === "Null") {
         delete activeKeybinds[k];
       } else {
-        activeKeybinds[k] = v.value;
+        activeKeybinds[k] = normalizedValue;
       }
     }
 
@@ -173,8 +177,12 @@ export class KeybindsModal extends BaseModal {
   private getKeyValue(action: string): string | undefined {
     const entry = this.keybinds[action];
     if (!entry) return undefined;
-    if (entry.value === "Null") return "";
-    return entry.value || undefined;
+    // Normalize value to string
+    const normalizedValue = Array.isArray(entry.value) 
+      ? entry.value[0] || "" 
+      : entry.value;
+    if (normalizedValue === "Null") return "";
+    return normalizedValue || undefined;
   }
 
   render() {
