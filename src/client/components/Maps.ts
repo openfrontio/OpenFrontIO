@@ -152,7 +152,7 @@ export class MapDisplay extends LitElement {
       const mask =
         "url('/images/MedalIconWhite.svg') no-repeat center / contain";
       return html`<div
-        class="w-5 h-5 bg-white/12 ${earned ? "opacity-100" : "opacity-25"}"
+        class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
         style="background-color:${colors[
           medal
         ]}; mask: ${mask}; -webkit-mask: ${mask};"
