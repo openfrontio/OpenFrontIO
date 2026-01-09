@@ -1,83 +1,53 @@
 {
- "name": "cyprus",
+  "name": "cyprus",
   "nations": [
     {
-      "coordinates": [
-        539,
-        155
-      ],
+      "coordinates": [539, 155],
       "flag": "tr",
       "name": "Mersin"
     },
     {
-      "coordinates": [
-        1867,
-        590
-      ],
+      "coordinates": [1867, 590],
       "flag": "sy",
       "name": "Lattakia"
     },
     {
-      "coordinates": [
-        1931,
-        219
-      ],
+      "coordinates": [1931, 219],
       "flag": "tr",
       "name": "Hatay"
     },
     {
-      "coordinates": [
-        1912,
-        960
-      ],
+      "coordinates": [1912, 960],
       "flag": "sy",
       "name": "Tartus"
     },
     {
-      "coordinates": [
-        144,
-        131
-      ],
+      "coordinates": [144, 131],
       "flag": "tr",
       "name": "Antalya"
     },
     {
-      "coordinates": [
-        2019,
-        744
-      ],
+      "coordinates": [2019, 744],
       "flag": "sy",
       "name": "Hamah"
     },
     {
-      "coordinates": [
-        441,
-        905
-      ],
+      "coordinates": [441, 905],
       "flag": "cy",
       "name": "Nicosia"
     },
     {
-      "coordinates": [
-        173,
-        978
-      ],
+      "coordinates": [173, 978],
       "flag": "cy",
       "name": "Paphos"
     },
     {
-      "coordinates": [
-        411,
-        1051
-      ],
+      "coordinates": [411, 1051],
       "flag": "cy",
       "name": "Limassol"
     },
     {
-      "coordinates": [
-        815,
-        724
-      ],
+      "coordinates": [815, 724],
       "flag": "tr",
       "name": "Northern Cyprus"
     }
