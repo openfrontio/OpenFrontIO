@@ -734,16 +734,12 @@
         }
       };
 
-      // Wire up the hamburger button - runs inline so it works before module loads
-      (function () {
-        const hamburger = document.getElementById("hamburger-btn");
-        if (hamburger) {
-          // Use onclick so the module bundle can override it later
-          hamburger.onclick = window.__toggleSidebar;
-          // Set initial aria-expanded
-          hamburger.setAttribute("aria-expanded", "false");
-        }
-      })();
+      // Wire up the hamburger button inline
+      const hamburger = document.getElementById("hamburger-btn");
+      if (hamburger) {
+        hamburger.onclick = window.__toggleSidebar;
+        hamburger.setAttribute("aria-expanded", "false");
+      }
     </script>
 
     <!-- Analytics -->
