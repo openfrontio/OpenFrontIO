@@ -12,6 +12,7 @@ import {
   MouseOverEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
+import { getHoverInfo } from "../HoverInfo";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
@@ -322,12 +323,14 @@ export class TerritoryLayer implements Layer {
       this.lastMousePosition.x,
       this.lastMousePosition.y,
     );
-    if (!this.game.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
     const previousTerritory = this.highlightedTerritory;
-    const territory = this.getTerritoryAtCell(cell);
+    const info = getHoverInfo(this.game, cell);
+    let territory: PlayerView | null = null;
+    if (info.player) {
+      territory = info.player;
+    } else if (info.unit) {
+      territory = info.unit.owner();
+    }
 
     if (territory) {
       this.highlightedTerritory = territory;
@@ -340,18 +343,6 @@ export class TerritoryLayer implements Layer {
         this.highlightedTerritory?.smallID() ?? null,
       );
     }
-  }
-
-  private getTerritoryAtCell(cell: { x: number; y: number }) {
-    const tile = this.game.ref(cell.x, cell.y);
-    if (!tile) {
-      return null;
-    }
-    if (!this.game.hasOwner(tile)) {
-      return null;
-    }
-    const owner = this.game.owner(tile);
-    return owner instanceof PlayerView ? owner : null;
   }
 
   redraw() {
