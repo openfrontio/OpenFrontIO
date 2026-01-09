@@ -310,43 +310,43 @@ export class NationAllianceBehavior {
   // It would make a lot of sense to use nextFloat here, but "there's a chance floats can cause desyncs"
   private isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return (
-          otherPlayer.troops() >
-            this.player.troops() * (this.random.nextInt(60, 70) / 100) ||
-          (otherPlayer.numTilesOwned() >
-            this.player.numTilesOwned() * (this.random.nextInt(70, 80) / 100) &&
-            otherPlayer.troops() > this.player.troops() * 0.5)
-        );
-      case Difficulty.Medium:
-        return (
-          otherPlayer.troops() >
-            this.player.troops() * (this.random.nextInt(70, 80) / 100) ||
-          (otherPlayer.numTilesOwned() >
-            this.player.numTilesOwned() * (this.random.nextInt(80, 90) / 100) &&
-            otherPlayer.troops() > this.player.troops() * 0.5)
-        );
-      case Difficulty.Hard:
-        return (
-          otherPlayer.troops() >
-            this.player.troops() * (this.random.nextInt(75, 85) / 100) ||
-          (otherPlayer.numTilesOwned() >
-            this.player.numTilesOwned() * (this.random.nextInt(85, 95) / 100) &&
-            otherPlayer.troops() > this.player.troops() * 0.5)
-        );
-      case Difficulty.Impossible:
-        return (
-          otherPlayer.troops() >
-            this.player.troops() * (this.random.nextInt(80, 90) / 100) ||
-          (otherPlayer.numTilesOwned() >
-            this.player.numTilesOwned() *
-              (this.random.nextInt(90, 100) / 100) &&
-            otherPlayer.troops() > this.player.troops() * 0.5)
-        );
-      default:
-        assertNever(difficulty);
-    }
+    const troopPercentRangeByDifficulty = {
+      [Difficulty.Easy]: [60, 70],
+      [Difficulty.Medium]: [70, 80],
+      [Difficulty.Hard]: [75, 85],
+      [Difficulty.Impossible]: [80, 90],
+    } as const;
+    const tilePercentRangeByDifficulty = {
+      [Difficulty.Easy]: [70, 80],
+      [Difficulty.Medium]: [80, 90],
+      [Difficulty.Hard]: [85, 95],
+      [Difficulty.Impossible]: [90, 100],
+    } as const;
+
+    const troopRange = troopPercentRangeByDifficulty[difficulty];
+    const tileRange = tilePercentRangeByDifficulty[difficulty];
+
+    const playerOutgoingTroops = this.player
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+    const otherOutgoingTroops = otherPlayer
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+    const playerTotalTroops = this.player.troops() + playerOutgoingTroops;
+    const otherTotalTroops = otherPlayer.troops() + otherOutgoingTroops;
+
+    const troopThreshold =
+      playerTotalTroops *
+      (this.random.nextInt(troopRange[0], troopRange[1]) / 100);
+    const tileThreshold =
+      this.player.numTilesOwned() *
+      (this.random.nextInt(tileRange[0], tileRange[1]) / 100);
+
+    const hasComparableTroops = otherTotalTroops > troopThreshold;
+    const hasComparableTiles =
+      otherPlayer.numTilesOwned() > tileThreshold &&
+      otherTotalTroops > playerTotalTroops * 0.5;
+    return hasComparableTroops || hasComparableTiles;
   }
 
   maybeBetray(otherPlayer: Player, borderingPlayerCount: number): boolean {
