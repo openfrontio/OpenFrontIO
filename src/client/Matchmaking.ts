@@ -1,5 +1,5 @@
 ﻿import { html, LitElement } from "lit";
-import { customElement, state, query } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
@@ -83,8 +83,7 @@ export class MatchmakingModal extends BaseModal {
           </div>
         </div>
         <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-          ${eloDisplay}
-          ${this.renderInner()}
+          ${eloDisplay} ${this.renderInner()}
         </div>
       </div>
     `;
