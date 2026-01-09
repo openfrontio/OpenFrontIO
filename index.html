@@ -111,10 +111,16 @@
     <div
       id="mobile-menu-backdrop"
       class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/50 [&.open]:z-[40000] transition-opacity"
+      role="presentation"
+      aria-hidden="true"
+      aria-controls="sidebar-menu"
     ></div>
     <div
       id="sidebar-menu"
-      class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-full [&.open]:translate-x-0 lg:hidden"
+      class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
+      role="navigation"
+      data-i18n-aria-label="main.menu"
+      aria-hidden="true"
     >
       <!-- Border Segments (Custom right border with gap for button) -->
       <div
@@ -185,42 +191,42 @@
         </div>
 
         <div class="flex flex-col">
-          <a
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-play"
             data-i18n="main.play"
-          ></a>
-          <a
+          ></button>
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-news"
             data-i18n="main.news"
-          ></a>
-          <a
+          ></button>
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-item-store"
             data-i18n="main.store"
-          ></a>
-          <a
+          ></button>
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-options"
             data-i18n="main.options"
-          ></a>
+          ></button>
           <!-- Keybinds menu item removed for mobile users -->
-          <a
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-stats"
             data-i18n="main.stats"
-          ></a>
-          <a
+          ></button>
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-account"
             data-i18n="main.account"
-          ></a>
-          <a
+          ></button>
+          <button
             class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
             data-page="page-help"
             data-i18n="main.help"
-          ></a>
+          ></button>
         </div>
 
         <div class="flex flex-col gap-4 w-full mt-auto">
@@ -290,17 +296,17 @@
             class="game-version-display text-[#2563eb] text-xs font-bold tracking-widest uppercase cursor-default select-text leading-none mt-1"
           ></div>
         </div>
-        <a
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-play"
           data-i18n="main.play"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-news"
           data-i18n="main.news"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
           data-page="page-item-store"
           data-i18n="main.store"
@@ -309,32 +315,32 @@
             class="absolute -top-1 -right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[9px] font-black px-1.5 py-0.5 rotate-12 shadow-lg whitespace-nowrap"
             >NEW</span
           >
-        </a>
-        <a
+        </button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-options"
           data-i18n="main.options"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-keybinds"
           data-i18n="main.keys"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-stats"
           data-i18n="main.stats"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-account"
           data-i18n="main.account"
-        ></a>
-        <a
+        ></button>
+        <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-help"
           data-i18n="main.help"
-        ></a>
+        ></button>
         <lang-selector></lang-selector>
       </nav>
 
@@ -728,11 +734,15 @@
             backdrop.classList.remove("open");
             document.documentElement.classList.remove("overflow-hidden");
             sidebar.setAttribute("aria-hidden", "true");
+            sidebar.removeAttribute("aria-modal");
+            backdrop.setAttribute("aria-hidden", "true");
           } else {
             sidebar.classList.add("open");
             backdrop.classList.add("open");
             document.documentElement.classList.add("overflow-hidden");
             sidebar.setAttribute("aria-hidden", "false");
+            sidebar.setAttribute("aria-modal", "true");
+            backdrop.setAttribute("aria-hidden", "false");
           }
 
           const hb = document.getElementById("hamburger-btn");
@@ -748,6 +758,27 @@
         hamburger.onclick = window.__toggleSidebar;
         hamburger.setAttribute("aria-expanded", "false");
       }
+
+      // Wire up backdrop click to close menu
+      const backdrop = document.getElementById("mobile-menu-backdrop");
+      if (backdrop) {
+        backdrop.onclick = function (e) {
+          const sidebar = document.getElementById("sidebar-menu");
+          if (sidebar && sidebar.classList.contains("open")) {
+            window.__toggleSidebar(e);
+          }
+        };
+      }
+
+      // Wire up Escape key to close menu
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" || e.key === "Esc") {
+          const sidebar = document.getElementById("sidebar-menu");
+          if (sidebar && sidebar.classList.contains("open")) {
+            window.__toggleSidebar(e);
+          }
+        }
+      });
     </script>
 
     <!-- Analytics -->
