@@ -157,7 +157,7 @@ export class AccountModal extends LitElement {
     return html`
       <button
         @click="${this.handleLogout}"
-        class="px-6 py-3 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+        class="px-6 py-3 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
       >
         Log Out
       </button>
@@ -172,7 +172,7 @@ export class AccountModal extends LitElement {
           <div class="mb-6">
             <button
               @click="${this.handleDiscordLogin}"
-              class="w-full px-6 py-3 text-sm font-medium text-white bg-[#5865F2] border border-transparent rounded-md hover:bg-[#4752C4] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center space-x-2"
+              class="w-full px-6 py-3 text-sm font-medium text-white bg-[#5865F2] border border-transparent rounded-md hover:bg-[#4752C4] focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <img
                 src="/images/DiscordLogo.svg"
@@ -209,23 +209,23 @@ export class AccountModal extends LitElement {
               name="email"
               .value="${this.email}"
               @input="${this.handleEmailInput}"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Enter your email address"
               required
             />
           </div>
         </div>
 
-        <div class="flex justify-end space-x-3">
+        <div class="flex justify-end gap-3">
           <button
             @click="${this.close}"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Cancel
           </button>
           <button
             @click="${this.handleSubmit}"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Submit
           </button>
@@ -233,7 +233,7 @@ export class AccountModal extends LitElement {
       </div>
       <button
         @click="${this.handleLogout}"
-        class="px-3 py-1 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+        class="px-3 py-1 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
       >
         ${translateText("account_modal.clear_session")}
       </button>
@@ -376,10 +376,10 @@ export class AccountButton extends LitElement {
     }
 
     return html`
-      <div class="fixed top-4 right-4 z-[9998]">
+      <div class="fixed top-4 right-4 z-9998">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-offset-4"
+          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-hidden focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
           title="${buttonTitle}"
         >
           ${this.renderIcon()}

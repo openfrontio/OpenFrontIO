@@ -11,8 +11,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -70,7 +69,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathFinder = PathFinders.Water(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -92,6 +91,10 @@ export class TransportShipExecution implements Execution {
       this.target = mg.terraNullius();
     } else {
       this.target = mg.player(this.targetID);
+    }
+    if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
+      this.active = false;
+      return;
     }
 
     this.startTroops ??= this.mg
@@ -137,13 +140,8 @@ export class TransportShipExecution implements Execution {
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
+      targetTile: this.dst ?? undefined,
     });
-
-    if (this.dst !== null) {
-      this.boat.setTargetTile(this.dst);
-    } else {
-      this.boat.setTargetTile(undefined);
-    }
 
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
@@ -220,9 +218,9 @@ export class TransportShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
-    switch (result.type) {
-      case PathFindResultType.Completed:
+    const result = this.pathFinder.next(this.boat.tile(), this.dst);
+    switch (result.status) {
+      case PathStatus.COMPLETE:
         if (this.mg.owner(this.dst) === this.attacker) {
           const deaths = this.boat.troops() * (malusForRetreat / 100);
           const survivors = this.boat.troops() - deaths;
@@ -265,12 +263,12 @@ export class TransportShipExecution implements Execution {
           .stats()
           .boatArriveTroops(this.attacker, this.target, this.boat.troops());
         return;
-      case PathFindResultType.NextTile:
+      case PathStatus.NEXT:
         this.boat.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case PathStatus.PENDING:
         break;
-      case PathFindResultType.PathNotFound:
+      case PathStatus.NOT_FOUND:
         // TODO: add to poisoned port list
         console.warn(`path not found to dst`);
         this.attacker.addTroops(this.boat.troops());

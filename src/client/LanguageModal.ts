@@ -64,10 +64,10 @@ export class LanguageModal extends LitElement {
 
     return html`
       <aside
-        class="fixed p-4 z-[9999] inset-0 bg-black/50 overflow-y-auto flex items-center justify-center"
+        class="fixed p-4 z-9999 inset-0 bg-black/50 overflow-y-auto flex items-center justify-center"
       >
         <div
-          class="bg-gray-800/80 dark:bg-gray-900/90 backdrop-blur-md rounded-lg min-w-[340px] max-w-[480px] w-full"
+          class="bg-gray-800/80 dark:bg-gray-900/90 backdrop-blur-md rounded-lg min-w-85 max-w-120 w-full"
         >
           <header
             class="relative rounded-t-md text-lg bg-black/60 dark:bg-black/80 text-center text-white px-6 py-4 pr-10"

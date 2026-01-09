@@ -29,6 +29,59 @@ export class NationWarshipBehavior {
     private emojiBehavior: NationEmojiBehavior,
   ) {}
 
+  maybeSpawnWarship(): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (!this.random.chance(50)) {
+      return false;
+    }
+    const ports = this.player.units(UnitType.Port);
+    const ships = this.player.units(UnitType.Warship);
+    if (
+      ports.length > 0 &&
+      ships.length === 0 &&
+      this.player.gold() > this.cost(UnitType.Warship)
+    ) {
+      const port = this.random.randElement(ports);
+      const targetTile = this.warshipSpawnTile(port.tile());
+      if (targetTile === null) {
+        return false;
+      }
+      const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
+      if (canBuild === false) {
+        return false;
+      }
+      this.game.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, targetTile),
+      );
+      return true;
+    }
+    return false;
+  }
+
+  private warshipSpawnTile(portTile: TileRef): TileRef | null {
+    const radius = 250;
+    for (let attempts = 0; attempts < 50; attempts++) {
+      const randX = this.random.nextInt(
+        this.game.x(portTile) - radius,
+        this.game.x(portTile) + radius,
+      );
+      const randY = this.random.nextInt(
+        this.game.y(portTile) - radius,
+        this.game.y(portTile) + radius,
+      );
+      if (!this.game.isValidCoord(randX, randY)) {
+        continue;
+      }
+      const tile = this.game.ref(randX, randY);
+      // Sanity check
+      if (!this.game.isOcean(tile)) {
+        continue;
+      }
+      return tile;
+    }
+    return null;
+  }
+
   trackShipsAndRetaliate(): void {
     this.trackTransportShipsAndRetaliate();
     this.trackTradeShipsAndRetaliate();
@@ -75,6 +128,11 @@ export class NationWarshipBehavior {
   }
 
   private maybeRetaliateWithWarship(tile: TileRef, enemy: Player): void {
+    // Don't send too many warships
+    if (this.player.units(UnitType.Warship).length >= 10) {
+      return;
+    }
+
     const { difficulty } = this.game.config().gameConfig();
     // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
     if (

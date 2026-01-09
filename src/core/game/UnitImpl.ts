@@ -265,13 +265,11 @@ export class UnitImpl implements Unit {
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
-    if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
-      this.mg.displayMessage(
-        `Your ${this._type} was destroyed`,
-        MessageType.UNIT_DESTROYED,
-        this.owner().id(),
-      );
+
+    if (displayMessage !== false) {
+      this.displayMessageOnDeleted();
     }
+
     if (destroyer !== undefined) {
       switch (this._type) {
         case UnitType.TransportShip:
@@ -294,6 +292,22 @@ export class UnitImpl implements Unit {
           break;
       }
     }
+  }
+
+  private displayMessageOnDeleted(): void {
+    if (this._type === UnitType.MIRVWarhead) {
+      return;
+    }
+
+    if (this._type === UnitType.Train && this._trainType !== TrainType.Engine) {
+      return;
+    }
+
+    this.mg.displayMessage(
+      `Your ${this._type} was destroyed`,
+      MessageType.UNIT_DESTROYED,
+      this.owner().id(),
+    );
   }
 
   isActive(): boolean {

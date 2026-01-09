@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import Countries from "../assets/data/countries.json" with { type: "json" };
+import Countries from "resources/countries.json" with { type: "json" };
 import { translateText } from "./Utils";
 
 @customElement("flag-input-modal")
@@ -20,10 +20,10 @@ export class FlagInputModal extends LitElement {
   render() {
     return html`
       <o-modal alwaysMaximized title=${translateText("flag_input.title")}>
-        <div class="flex justify-center w-full p-[1rem]">
+        <div class="flex justify-center w-full p-4">
           <input
-            class="h-[2rem] border-none border border-gray-300 
-          rounded-xl shadow-sm text-2xl text-center focus:outline-none
+            class="h-8 border-none border border-gray-300
+          rounded-xl shadow-xs text-2xl text-center focus:outline-hidden
           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black
           dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
             type="text"
@@ -34,7 +34,7 @@ export class FlagInputModal extends LitElement {
         </div>
 
         <div
-          class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
+          class="flex flex-wrap justify-evenly gap-4 overflow-y-auto overflow-x-hidden h-[90%]"
         >
           ${this.isModalOpen
             ? Countries.filter(
@@ -47,10 +47,10 @@ export class FlagInputModal extends LitElement {
                       this.setFlag(country.code);
                       this.close();
                     }}
-                    class="text-center cursor-pointer border-none bg-none opacity-70 
-                  w-[calc(100%/2-15px)] sm:w-[calc(100%/4-15px)] 
-                  md:w-[calc(100%/6-15px)] lg:w-[calc(100%/8-15px)] 
-                  xl:w-[calc(100%/10-15px)] min-w-[80px]"
+                    class="text-center cursor-pointer border-none bg-none opacity-70
+                  w-[calc(100%/2-15px)] sm:w-[calc(100%/4-15px)]
+                  md:w-[calc(100%/6-15px)] lg:w-[calc(100%/8-15px)]
+                  xl:w-[calc(100%/10-15px)] min-w-20"
                   >
                     <img
                       class="country-flag w-full h-auto"

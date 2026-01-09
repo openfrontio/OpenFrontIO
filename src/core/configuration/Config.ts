@@ -7,6 +7,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
+  PublicGameModifiers,
   Team,
   TerraNullius,
   Tick,
@@ -34,6 +35,7 @@ export interface ServerConfig {
     map: GameMapType,
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
   ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -56,7 +58,8 @@ export interface ServerConfig {
   subdomain(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
-  enableMatchmaking(): boolean;
+  getRandomPublicGameModifiers(): PublicGameModifiers;
+  supportsCompactMapForTeams(map: GameMapType): boolean;
 }
 
 export interface NukeMagnitude {
@@ -79,6 +82,7 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
+  disableNavMesh(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
