@@ -88,9 +88,23 @@ export class MapDisplay extends LitElement {
     }
   }
 
+  private handleKeydown(event: KeyboardEvent) {
+    // Trigger the same activation logic as click when Enter or Space is pressed
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      // Dispatch a click event to maintain compatibility with parent click handlers
+      (event.target as HTMLElement).click();
+    }
+  }
+
   render() {
     return html`
       <div
+        role="button"
+        tabindex="0"
+        aria-selected="${this.selected}"
+        aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
+        @keydown="${this.handleKeydown}"
         class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
           .selected
           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
