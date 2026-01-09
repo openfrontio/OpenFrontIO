@@ -6,7 +6,7 @@ import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
-import "./FlagInput";
+import "./FlagInputModal";
 
 interface FlagInputModalElement extends HTMLElement {
   open(): void;
