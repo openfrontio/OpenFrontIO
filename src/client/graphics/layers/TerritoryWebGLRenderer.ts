@@ -38,6 +38,23 @@ export class TerritoryWebGLRenderer {
   private readonly contestOwnersTexture: WebGLTexture | null;
   private readonly contestIdsTexture: WebGLTexture | null;
   private readonly contestTimesTexture: WebGLTexture | null;
+  private readonly prevOwnerTexture: WebGLTexture | null;
+  private readonly changeMaskTexture: WebGLTexture | null;
+  private readonly jfaTextureA: WebGLTexture | null;
+  private readonly jfaTextureB: WebGLTexture | null;
+  private readonly jfaFramebufferA: WebGLFramebuffer | null;
+  private readonly jfaFramebufferB: WebGLFramebuffer | null;
+  private readonly jfaSeedProgram: WebGLProgram | null;
+  private readonly jfaProgram: WebGLProgram | null;
+  private readonly jfaSeedUniforms: {
+    resolution: WebGLUniformLocation | null;
+    prevOwner: WebGLUniformLocation | null;
+  };
+  private readonly jfaUniforms: {
+    resolution: WebGLUniformLocation | null;
+    step: WebGLUniformLocation | null;
+    seeds: WebGLUniformLocation | null;
+  };
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
@@ -49,6 +66,12 @@ export class TerritoryWebGLRenderer {
     contestTimes: WebGLUniformLocation | null;
     contestNow: WebGLUniformLocation | null;
     contestDuration: WebGLUniformLocation | null;
+    prevOwner: WebGLUniformLocation | null;
+    changeMask: WebGLUniformLocation | null;
+    jfaSeeds: WebGLUniformLocation | null;
+    smoothProgress: WebGLUniformLocation | null;
+    smoothMaxDistance: WebGLUniformLocation | null;
+    smoothEnabled: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
@@ -71,11 +94,15 @@ export class TerritoryWebGLRenderer {
   private contestOwnersState: Uint16Array;
   private contestIdsState: Uint16Array;
   private contestTimesState: Uint16Array;
+  private smoothPrevOwnerState: Uint16Array;
+  private smoothChangeMaskState: Uint8Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
   private readonly contestDirtyRows: Map<number, DirtySpan> = new Map();
+  private readonly smoothDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
   private needsContestFullUpload = true;
   private needsContestTimesUpload = true;
+  private needsSmoothFullUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
   private hoverHighlightStrength = 0.7;
@@ -86,6 +113,13 @@ export class TerritoryWebGLRenderer {
   private animationStartTime = Date.now();
   private contestNow = 0;
   private contestDurationMs = 5000;
+  private smoothProgress = 1;
+  private smoothMaxDistance = 12;
+  private smoothEnabled = false;
+  private jfaSupported = false;
+  private jfaDirty = false;
+  private jfaSteps: number[] = [];
+  private jfaResultIsA = true;
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -102,6 +136,11 @@ export class TerritoryWebGLRenderer {
     this.contestOwnersState = new Uint16Array(state.length * 2);
     this.contestIdsState = new Uint16Array(state.length);
     this.contestTimesState = new Uint16Array(1);
+    this.smoothPrevOwnerState = new Uint16Array(state.length);
+    for (let i = 0; i < state.length; i++) {
+      this.smoothPrevOwnerState[i] = state[i] & 0x0fff;
+    }
+    this.smoothChangeMaskState = new Uint8Array(state.length);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -120,6 +159,16 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
+      this.prevOwnerTexture = null;
+      this.changeMaskTexture = null;
+      this.jfaTextureA = null;
+      this.jfaTextureB = null;
+      this.jfaFramebufferA = null;
+      this.jfaFramebufferB = null;
+      this.jfaSeedProgram = null;
+      this.jfaProgram = null;
+      this.jfaSeedUniforms = { resolution: null, prevOwner: null };
+      this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
         resolution: null,
         state: null,
@@ -131,6 +180,12 @@ export class TerritoryWebGLRenderer {
         contestTimes: null,
         contestNow: null,
         contestDuration: null,
+        prevOwner: null,
+        changeMask: null,
+        jfaSeeds: null,
+        smoothProgress: null,
+        smoothMaxDistance: null,
+        smoothEnabled: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -163,6 +218,16 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
+      this.prevOwnerTexture = null;
+      this.changeMaskTexture = null;
+      this.jfaTextureA = null;
+      this.jfaTextureB = null;
+      this.jfaFramebufferA = null;
+      this.jfaFramebufferB = null;
+      this.jfaSeedProgram = null;
+      this.jfaProgram = null;
+      this.jfaSeedUniforms = { resolution: null, prevOwner: null };
+      this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
         resolution: null,
         state: null,
@@ -174,6 +239,12 @@ export class TerritoryWebGLRenderer {
         contestTimes: null,
         contestNow: null,
         contestDuration: null,
+        prevOwner: null,
+        changeMask: null,
+        jfaSeeds: null,
+        smoothProgress: null,
+        smoothMaxDistance: null,
+        smoothEnabled: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -194,6 +265,31 @@ export class TerritoryWebGLRenderer {
       return;
     }
 
+    this.jfaSupported = !!gl.getExtension("EXT_color_buffer_float");
+    this.jfaSeedProgram = this.jfaSupported
+      ? this.createJfaSeedProgram(gl)
+      : null;
+    this.jfaProgram = this.jfaSupported ? this.createJfaProgram(gl) : null;
+    if (!this.jfaSeedProgram || !this.jfaProgram) {
+      this.jfaSupported = false;
+    }
+    this.jfaSeedUniforms = this.jfaSeedProgram
+      ? {
+          resolution: gl.getUniformLocation(
+            this.jfaSeedProgram,
+            "u_resolution",
+          ),
+          prevOwner: gl.getUniformLocation(this.jfaSeedProgram, "u_prevOwner"),
+        }
+      : { resolution: null, prevOwner: null };
+    this.jfaUniforms = this.jfaProgram
+      ? {
+          resolution: gl.getUniformLocation(this.jfaProgram, "u_resolution"),
+          step: gl.getUniformLocation(this.jfaProgram, "u_step"),
+          seeds: gl.getUniformLocation(this.jfaProgram, "u_seeds"),
+        }
+      : { resolution: null, step: null, seeds: null };
+
     this.uniforms = {
       resolution: gl.getUniformLocation(this.program, "u_resolution"),
       state: gl.getUniformLocation(this.program, "u_state"),
@@ -208,6 +304,15 @@ export class TerritoryWebGLRenderer {
         this.program,
         "u_contestDurationMs",
       ),
+      prevOwner: gl.getUniformLocation(this.program, "u_prevOwner"),
+      changeMask: gl.getUniformLocation(this.program, "u_changeMask"),
+      jfaSeeds: gl.getUniformLocation(this.program, "u_jfaSeeds"),
+      smoothProgress: gl.getUniformLocation(this.program, "u_smoothProgress"),
+      smoothMaxDistance: gl.getUniformLocation(
+        this.program,
+        "u_smoothMaxDistance",
+      ),
+      smoothEnabled: gl.getUniformLocation(this.program, "u_smoothEnabled"),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
@@ -269,6 +374,12 @@ export class TerritoryWebGLRenderer {
     this.contestOwnersTexture = gl.createTexture();
     this.contestIdsTexture = gl.createTexture();
     this.contestTimesTexture = gl.createTexture();
+    this.prevOwnerTexture = gl.createTexture();
+    this.changeMaskTexture = gl.createTexture();
+    this.jfaTextureA = this.jfaSupported ? gl.createTexture() : null;
+    this.jfaTextureB = this.jfaSupported ? gl.createTexture() : null;
+    this.jfaFramebufferA = this.jfaSupported ? gl.createFramebuffer() : null;
+    this.jfaFramebufferB = this.jfaSupported ? gl.createFramebuffer() : null;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
@@ -348,6 +459,109 @@ export class TerritoryWebGLRenderer {
       this.contestTimesState,
     );
 
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.smoothPrevOwnerState,
+    );
+
+    gl.activeTexture(gl.TEXTURE8);
+    gl.bindTexture(gl.TEXTURE_2D, this.changeMaskTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R8UI,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      this.smoothChangeMaskState,
+    );
+
+    if (
+      this.jfaSupported &&
+      this.jfaTextureA &&
+      this.jfaTextureB &&
+      this.jfaFramebufferA &&
+      this.jfaFramebufferB
+    ) {
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaTextureA);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG16F,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.HALF_FLOAT,
+        null,
+      );
+
+      gl.activeTexture(gl.TEXTURE10);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaTextureB);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG16F,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.HALF_FLOAT,
+        null,
+      );
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaFramebufferA);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.jfaTextureA,
+        0,
+      );
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaFramebufferB);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.jfaTextureB,
+        0,
+      );
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      this.jfaSteps = this.buildJfaSteps(this.canvas.width, this.canvas.height);
+      this.jfaDirty = true;
+    }
+
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
     gl.uniform1i(this.uniforms.palette, 1);
@@ -356,6 +570,9 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.contestOwners, 4);
     gl.uniform1i(this.uniforms.contestIds, 5);
     gl.uniform1i(this.uniforms.contestTimes, 6);
+    gl.uniform1i(this.uniforms.prevOwner, 7);
+    gl.uniform1i(this.uniforms.changeMask, 8);
+    gl.uniform1i(this.uniforms.jfaSeeds, 9);
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -448,6 +665,32 @@ export class TerritoryWebGLRenderer {
     }
     if (this.uniforms.contestDuration) {
       gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
+    }
+    if (this.uniforms.smoothProgress) {
+      gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
+    }
+    if (this.uniforms.smoothMaxDistance) {
+      gl.uniform1f(this.uniforms.smoothMaxDistance, this.smoothMaxDistance);
+    }
+    if (this.uniforms.smoothEnabled) {
+      gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
+    }
+
+    if (this.jfaSupported && this.jfaTextureA && this.jfaTextureB) {
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(
+        gl.TEXTURE_2D,
+        this.jfaResultIsA ? this.jfaTextureA : this.jfaTextureB,
+      );
+    }
+    if (this.uniforms.smoothProgress) {
+      gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
+    }
+    if (this.uniforms.smoothMaxDistance) {
+      gl.uniform1f(this.uniforms.smoothMaxDistance, this.smoothMaxDistance);
+    }
+    if (this.uniforms.smoothEnabled) {
+      gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
     }
 
     gl.enable(gl.BLEND);
@@ -593,12 +836,65 @@ export class TerritoryWebGLRenderer {
     this.contestDurationMs = Math.max(1, durationMs);
   }
 
+  setSmoothTile(tile: TileRef, previousOwner: number) {
+    this.smoothPrevOwnerState[tile] = previousOwner & 0xffff;
+    this.smoothChangeMaskState[tile] = 1;
+    if (this.needsSmoothFullUpload) {
+      this.jfaDirty = true;
+      return;
+    }
+    const x = tile % this.canvas.width;
+    const y = Math.floor(tile / this.canvas.width);
+    const span = this.smoothDirtyRows.get(y);
+    if (span === undefined) {
+      this.smoothDirtyRows.set(y, { minX: x, maxX: x });
+    } else {
+      span.minX = Math.min(span.minX, x);
+      span.maxX = Math.max(span.maxX, x);
+    }
+    this.jfaDirty = true;
+  }
+
+  clearSmoothTile(tile: TileRef, currentOwner: number) {
+    this.smoothPrevOwnerState[tile] = currentOwner & 0xffff;
+    this.smoothChangeMaskState[tile] = 0;
+    if (this.needsSmoothFullUpload) {
+      this.jfaDirty = true;
+      return;
+    }
+    const x = tile % this.canvas.width;
+    const y = Math.floor(tile / this.canvas.width);
+    const span = this.smoothDirtyRows.get(y);
+    if (span === undefined) {
+      this.smoothDirtyRows.set(y, { minX: x, maxX: x });
+    } else {
+      span.minX = Math.min(span.minX, x);
+      span.maxX = Math.max(span.maxX, x);
+    }
+    this.jfaDirty = true;
+  }
+
+  setSmoothProgress(progress: number) {
+    this.smoothProgress = Math.max(0, Math.min(1, progress));
+  }
+
+  setSmoothMaxDistance(distance: number) {
+    this.smoothMaxDistance = Math.max(1, distance);
+  }
+
+  setSmoothEnabled(enabled: boolean) {
+    this.smoothEnabled = enabled && this.jfaSupported;
+  }
+
   markAllDirty() {
     this.needsFullUpload = true;
     this.dirtyRows.clear();
     this.needsContestFullUpload = true;
     this.needsContestTimesUpload = true;
     this.contestDirtyRows.clear();
+    this.needsSmoothFullUpload = true;
+    this.smoothDirtyRows.clear();
+    this.jfaDirty = true;
   }
 
   refreshPalette() {
@@ -631,6 +927,14 @@ export class TerritoryWebGLRenderer {
       "TerritoryWebGLRenderer:uploadContestTimes",
       uploadContestTimesSpan,
     );
+
+    const uploadSmoothSpan = FrameProfiler.start();
+    this.uploadSmoothTextures();
+    FrameProfiler.end("TerritoryWebGLRenderer:uploadSmooth", uploadSmoothSpan);
+
+    if (this.jfaSupported && this.smoothEnabled) {
+      this.updateJfa();
+    }
 
     const renderSpan = FrameProfiler.start();
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -862,6 +1166,203 @@ export class TerritoryWebGLRenderer {
     return { rows: 1, bytes };
   }
 
+  private uploadSmoothTextures(): { rows: number; bytes: number } {
+    if (!this.gl || !this.prevOwnerTexture || !this.changeMaskTexture) {
+      return { rows: 0, bytes: 0 };
+    }
+    const gl = this.gl;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
+    const bytesPerOwner = Uint16Array.BYTES_PER_ELEMENT;
+    const bytesPerMask = Uint8Array.BYTES_PER_ELEMENT;
+    let rowsUploaded = 0;
+    let bytesUploaded = 0;
+
+    if (this.needsSmoothFullUpload) {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.R16UI,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_SHORT,
+        this.smoothPrevOwnerState,
+      );
+
+      gl.activeTexture(gl.TEXTURE8);
+      gl.bindTexture(gl.TEXTURE_2D, this.changeMaskTexture);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.R8UI,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        this.smoothChangeMaskState,
+      );
+
+      this.needsSmoothFullUpload = false;
+      this.smoothDirtyRows.clear();
+      rowsUploaded = this.canvas.height;
+      bytesUploaded =
+        this.canvas.width * this.canvas.height * (bytesPerOwner + bytesPerMask);
+      return { rows: rowsUploaded, bytes: bytesUploaded };
+    }
+
+    if (this.smoothDirtyRows.size === 0) {
+      return { rows: 0, bytes: 0 };
+    }
+
+    for (const [y, span] of this.smoothDirtyRows) {
+      const width = span.maxX - span.minX + 1;
+      const ownerOffset = y * this.canvas.width + span.minX;
+      const ownerSlice = this.smoothPrevOwnerState.subarray(
+        ownerOffset,
+        ownerOffset + width,
+      );
+
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_SHORT,
+        ownerSlice,
+      );
+
+      const maskOffset = y * this.canvas.width + span.minX;
+      const maskSlice = this.smoothChangeMaskState.subarray(
+        maskOffset,
+        maskOffset + width,
+      );
+      gl.activeTexture(gl.TEXTURE8);
+      gl.bindTexture(gl.TEXTURE_2D, this.changeMaskTexture);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_BYTE,
+        maskSlice,
+      );
+
+      rowsUploaded++;
+      bytesUploaded += width * (bytesPerOwner + bytesPerMask);
+    }
+    this.smoothDirtyRows.clear();
+    return { rows: rowsUploaded, bytes: bytesUploaded };
+  }
+
+  private updateJfa() {
+    if (
+      !this.gl ||
+      !this.jfaSupported ||
+      !this.jfaSeedProgram ||
+      !this.jfaProgram ||
+      !this.jfaFramebufferA ||
+      !this.jfaFramebufferB ||
+      !this.jfaTextureA ||
+      !this.jfaTextureB ||
+      !this.prevOwnerTexture ||
+      !this.vao
+    ) {
+      return;
+    }
+    if (!this.jfaDirty) {
+      return;
+    }
+    const gl = this.gl;
+    const prevBlend = gl.isEnabled(gl.BLEND);
+    gl.disable(gl.BLEND);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.bindVertexArray(this.vao);
+
+    gl.useProgram(this.jfaSeedProgram);
+    if (this.jfaSeedUniforms.resolution) {
+      gl.uniform2f(
+        this.jfaSeedUniforms.resolution,
+        this.canvas.width,
+        this.canvas.height,
+      );
+    }
+    if (this.jfaSeedUniforms.prevOwner) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+      gl.uniform1i(this.jfaSeedUniforms.prevOwner, 0);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaFramebufferA);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    let readTex = this.jfaTextureA;
+    let writeFbo = this.jfaFramebufferB;
+    let writeTex = this.jfaTextureB;
+    for (const step of this.jfaSteps) {
+      gl.useProgram(this.jfaProgram);
+      if (this.jfaUniforms.resolution) {
+        gl.uniform2f(
+          this.jfaUniforms.resolution,
+          this.canvas.width,
+          this.canvas.height,
+        );
+      }
+      if (this.jfaUniforms.step) {
+        gl.uniform1f(this.jfaUniforms.step, step);
+      }
+      if (this.jfaUniforms.seeds) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, readTex);
+        gl.uniform1i(this.jfaUniforms.seeds, 0);
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, writeFbo);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      const tempTex = readTex;
+      readTex = writeTex;
+      writeTex = tempTex;
+      writeFbo =
+        writeFbo === this.jfaFramebufferB
+          ? this.jfaFramebufferA
+          : this.jfaFramebufferB;
+    }
+
+    this.jfaResultIsA = readTex === this.jfaTextureA;
+    this.jfaDirty = false;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (prevBlend) {
+      gl.enable(gl.BLEND);
+    }
+  }
+
+  private buildJfaSteps(width: number, height: number): number[] {
+    const maxDim = Math.max(width, height);
+    let step = 1;
+    while (step < maxDim) {
+      step <<= 1;
+    }
+    step >>= 1;
+    const steps: number[] = [];
+    while (step >= 1) {
+      steps.push(step);
+      step >>= 1;
+    }
+    return steps;
+  }
+
   private uploadPalette() {
     if (
       !this.gl ||
@@ -1028,10 +1529,186 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  private createJfaSeedProgram(
+    gl: WebGL2RenderingContext,
+  ): WebGLProgram | null {
+    const vertexShaderSource = `#version 300 es
+      precision mediump float;
+      layout(location = 0) in vec2 a_position;
+      uniform vec2 u_resolution;
+      void main() {
+        vec2 zeroToOne = a_position / u_resolution;
+        vec2 clipSpace = zeroToOne * 2.0 - 1.0;
+        clipSpace.y = -clipSpace.y;
+        gl_Position = vec4(clipSpace, 0.0, 1.0);
+      }
+    `;
+
+    const fragmentShaderSource = `#version 300 es
+      precision highp float;
+      precision highp usampler2D;
+
+      uniform usampler2D u_prevOwner;
+      uniform vec2 u_resolution;
+
+      out vec2 outSeed;
+
+      uint ownerAt(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_prevOwner, clamped, 0).r;
+      }
+
+      void main() {
+        ivec2 fragCoord = ivec2(gl_FragCoord.xy);
+        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+
+        uint owner = ownerAt(texCoord);
+        bool isBorder = false;
+        uint nOwner = ownerAt(texCoord + ivec2(1, 0));
+        isBorder = isBorder || (nOwner != owner);
+        nOwner = ownerAt(texCoord + ivec2(-1, 0));
+        isBorder = isBorder || (nOwner != owner);
+        nOwner = ownerAt(texCoord + ivec2(0, 1));
+        isBorder = isBorder || (nOwner != owner);
+        nOwner = ownerAt(texCoord + ivec2(0, -1));
+        isBorder = isBorder || (nOwner != owner);
+
+        outSeed = isBorder ? vec2(texCoord) : vec2(-1.0, -1.0);
+      }
+    `;
+
+    const vertexShader = this.compileShader(
+      gl,
+      gl.VERTEX_SHADER,
+      vertexShaderSource,
+    );
+    const fragmentShader = this.compileShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentShaderSource,
+    );
+    if (!vertexShader || !fragmentShader) {
+      return null;
+    }
+
+    const program = gl.createProgram();
+    if (!program) return null;
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error(
+        "[TerritoryWebGLRenderer] JFA seed link error",
+        gl.getProgramInfoLog(program),
+      );
+      gl.deleteProgram(program);
+      return null;
+    }
+    return program;
+  }
+
+  private createJfaProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
+    const vertexShaderSource = `#version 300 es
+      precision mediump float;
+      layout(location = 0) in vec2 a_position;
+      uniform vec2 u_resolution;
+      void main() {
+        vec2 zeroToOne = a_position / u_resolution;
+        vec2 clipSpace = zeroToOne * 2.0 - 1.0;
+        clipSpace.y = -clipSpace.y;
+        gl_Position = vec4(clipSpace, 0.0, 1.0);
+      }
+    `;
+
+    const fragmentShaderSource = `#version 300 es
+      precision highp float;
+
+      uniform sampler2D u_seeds;
+      uniform vec2 u_resolution;
+      uniform float u_step;
+
+      out vec2 outSeed;
+
+      vec2 seedAt(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_seeds, clamped, 0).rg;
+      }
+
+      void considerSeed(ivec2 coord, ivec2 texCoord, inout vec2 bestSeed, inout float bestDist) {
+        vec2 seed = seedAt(coord);
+        if (seed.x < 0.0) {
+          return;
+        }
+        float dist = length(seed - vec2(texCoord));
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestSeed = seed;
+        }
+      }
+
+      void main() {
+        ivec2 fragCoord = ivec2(gl_FragCoord.xy);
+        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+        int step = int(u_step + 0.5);
+
+        vec2 bestSeed = seedAt(texCoord);
+        float bestDist = bestSeed.x < 0.0 ? 1e20 : length(bestSeed - vec2(texCoord));
+
+        considerSeed(texCoord + ivec2(-step, -step), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(0, -step), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(step, -step), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(-step, 0), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(step, 0), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(-step, step), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(0, step), texCoord, bestSeed, bestDist);
+        considerSeed(texCoord + ivec2(step, step), texCoord, bestSeed, bestDist);
+
+        outSeed = bestSeed;
+      }
+    `;
+
+    const vertexShader = this.compileShader(
+      gl,
+      gl.VERTEX_SHADER,
+      vertexShaderSource,
+    );
+    const fragmentShader = this.compileShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentShaderSource,
+    );
+    if (!vertexShader || !fragmentShader) {
+      return null;
+    }
+
+    const program = gl.createProgram();
+    if (!program) return null;
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error(
+        "[TerritoryWebGLRenderer] JFA link error",
+        gl.getProgramInfoLog(program),
+      );
+      gl.deleteProgram(program);
+      return null;
+    }
+    return program;
+  }
+
   private createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
     const vertexShaderSource = `#version 300 es
       precision mediump float;
-      in vec2 a_position;
+      layout(location = 0) in vec2 a_position;
       uniform vec2 u_resolution;
       void main() {
         vec2 zeroToOne = a_position / u_resolution;
@@ -1054,6 +1731,12 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_contestTimes;
       uniform int u_contestNow;
       uniform float u_contestDurationMs;
+      uniform usampler2D u_prevOwner;
+      uniform usampler2D u_changeMask;
+      uniform sampler2D u_jfaSeeds;
+      uniform float u_smoothProgress;
+      uniform float u_smoothMaxDistance;
+      uniform bool u_smoothEnabled;
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
@@ -1081,6 +1764,33 @@ export class TerritoryWebGLRenderer {
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
+      }
+
+      uint prevOwnerAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_prevOwner, clamped, 0).r & 0xFFFu;
+      }
+
+      uint changeMaskAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_changeMask, clamped, 0).r;
+      }
+
+      vec2 jfaSeedAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_jfaSeeds, clamped, 0).rg;
       }
 
       uvec2 contestOwnersAtTex(ivec2 texCoord) {
@@ -1401,6 +2111,96 @@ export class TerritoryWebGLRenderer {
             color = contestedFillColor;
             a = contestedFillAlpha;
           }
+        }
+
+        bool smoothActive = u_smoothEnabled &&
+          u_smoothProgress < 1.0 &&
+          !u_alternativeView &&
+          !contested &&
+          changeMaskAtTex(texCoord) != 0u;
+
+        if (smoothActive) {
+          uint oldOwner = prevOwnerAtTex(texCoord);
+          bool oldIsBorder = false;
+          bool oldFriendlyRelation = false;
+          bool oldEmbargoRelation = false;
+
+          if (oldOwner != 0u) {
+            uint prevNeighbor = prevOwnerAtTex(texCoord + ivec2(1, 0));
+            oldIsBorder = oldIsBorder || (prevNeighbor != oldOwner);
+            if (prevNeighbor != oldOwner && prevNeighbor != 0u) {
+              uint rel = relationCode(oldOwner, prevNeighbor);
+              oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+              oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+            }
+            prevNeighbor = prevOwnerAtTex(texCoord + ivec2(-1, 0));
+            oldIsBorder = oldIsBorder || (prevNeighbor != oldOwner);
+            if (prevNeighbor != oldOwner && prevNeighbor != 0u) {
+              uint rel = relationCode(oldOwner, prevNeighbor);
+              oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+              oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+            }
+            prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, 1));
+            oldIsBorder = oldIsBorder || (prevNeighbor != oldOwner);
+            if (prevNeighbor != oldOwner && prevNeighbor != 0u) {
+              uint rel = relationCode(oldOwner, prevNeighbor);
+              oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+              oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+            }
+            prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, -1));
+            oldIsBorder = oldIsBorder || (prevNeighbor != oldOwner);
+            if (prevNeighbor != oldOwner && prevNeighbor != 0u) {
+              uint rel = relationCode(oldOwner, prevNeighbor);
+              oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
+              oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+            }
+          }
+
+          vec3 oldColor = vec3(0.0);
+          float oldAlpha = 0.0;
+          if (oldOwner == 0u) {
+            if (hasFallout) {
+              oldColor = u_fallout.rgb;
+              oldAlpha = u_alpha;
+            }
+          } else {
+            vec4 oldBase = texelFetch(u_palette, ivec2(int(oldOwner) * 2, 0), 0);
+            vec4 oldBorder = texelFetch(
+              u_palette,
+              ivec2(int(oldOwner) * 2 + 1, 0),
+              0
+            );
+            if (oldIsBorder) {
+              vec3 oldBorderColor = oldBorder.rgb;
+
+              const float BORDER_TINT_RATIO = 0.35;
+              const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+              const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+
+              if (oldFriendlyRelation) {
+                oldBorderColor = oldBorderColor * (1.0 - BORDER_TINT_RATIO) +
+                                FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+              }
+              if (oldEmbargoRelation) {
+                oldBorderColor = oldBorderColor * (1.0 - BORDER_TINT_RATIO) +
+                                EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+              }
+
+              oldColor = applyDefended(oldBorderColor, isDefended, texCoord);
+              oldAlpha = oldBorder.a;
+            } else {
+              bool oldPrimary = patternIsPrimary(oldOwner, texCoord);
+              oldColor = oldPrimary ? oldBase.rgb : oldBorder.rgb;
+              oldAlpha = u_alpha;
+            }
+          }
+
+          vec2 seed = jfaSeedAtTex(texCoord);
+          float distance = seed.x < 0.0 ? 1e6 : length(seed - vec2(texCoord));
+          float edge = u_smoothProgress * u_smoothMaxDistance;
+          float reveal = 1.0 - smoothstep(edge - 0.5, edge + 0.5, distance);
+          color = mix(oldColor, color, reveal);
+          a = mix(oldAlpha, a, reveal);
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
