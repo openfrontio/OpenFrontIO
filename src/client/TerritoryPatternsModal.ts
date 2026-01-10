@@ -279,7 +279,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
       >
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">

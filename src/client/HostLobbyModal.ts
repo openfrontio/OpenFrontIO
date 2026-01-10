@@ -102,7 +102,7 @@ export class HostLobbyModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         <!-- Header -->
         <div
@@ -614,7 +614,7 @@ export class HostLobbyModal extends BaseModal {
                           min="0"
                           max="120"
                           .value=${String(this.maxTimerValue ?? 0)}
-                          class="w-full text-center rounded bg-black/50 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleMaxTimerValueChanges}
                           @keydown=${this.handleMaxTimerValueKeyDown}
@@ -694,7 +694,7 @@ export class HostLobbyModal extends BaseModal {
                           .value=${String(
                             this.spawnImmunityDurationMinutes ?? 0,
                           )}
-                          class="w-full text-center rounded bg-black/50 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleSpawnImmunityDurationInput}
                           @keydown=${this.handleSpawnImmunityDurationKeyDown}

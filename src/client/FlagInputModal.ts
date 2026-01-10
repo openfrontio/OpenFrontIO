@@ -18,7 +18,7 @@ export class FlagInputModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
           class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
@@ -54,7 +54,7 @@ export class FlagInputModal extends BaseModal {
 
         <div class="flex justify-center w-full px-6 pb-4 shrink-0">
           <input
-            class="h-12 w-full max-w-md border border-white/10 bg-black/50
+            class="h-12 w-full max-w-md border border-white/10 bg-black/60
             rounded-xl shadow-inner text-xl text-center focus:outline-none
             focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-white/30 transition-all"
             type="text"

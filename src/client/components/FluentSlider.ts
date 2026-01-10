@@ -106,7 +106,7 @@ export class FluentSlider extends LitElement {
                 .min=${this.min}
                 .max=${this.max}
                 .valueAsNumber=${this.value}
-                class="w-[60px] bg-black/50 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
+                class="w-[60px] bg-black/60 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
                 @input=${this.handleNumberInput}
                 @blur=${() => {
                   this.isEditing = false;
