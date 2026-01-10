@@ -1,6 +1,6 @@
 import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
-import { LangSelector } from "./LangSelector";
+import type { LangSelector } from "./LangSelector";
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
@@ -144,6 +144,18 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
+export function formatDebugTranslation(
+  key: string,
+  params: Record<string, string | number>,
+): string {
+  const entries = Object.entries(params);
+  if (entries.length === 0) return key;
+  const serializedParams = entries
+    .map(([paramKey, value]) => `${paramKey}=${String(value)}`)
+    .join(",");
+  return `${key}::${serializedParams}`;
+}
+
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
@@ -156,6 +168,10 @@ export const translateText = (
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
+  }
+
+  if (langSelector.currentLang === "debug") {
+    return formatDebugTranslation(key, params);
   }
 
   if (
