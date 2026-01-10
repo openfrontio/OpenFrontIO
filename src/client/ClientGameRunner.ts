@@ -359,10 +359,6 @@ export class ClientGameRunner {
         this.skinTestTimeoutId = null;
       }
       this.skinTestTimeoutId = setTimeout(() => {
-        const timeoutId = this.skinTestTimeoutId;
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
         this.skinTestTimeoutId = null;
         if (this.isActive) {
           this.showSkinTestModal();
