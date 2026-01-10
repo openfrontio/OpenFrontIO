@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType } from "../../src/core/game/Game";
+import { GameMapType, PublicGameModifiers } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -8,9 +8,6 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   turnstileSecretKey(): string {
-    throw new Error("Method not implemented.");
-  }
-  enableMatchmaking(): boolean {
     throw new Error("Method not implemented.");
   }
   apiKey(): string {
@@ -80,6 +77,12 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   gitCommit(): string {
+    throw new Error("Method not implemented.");
+  }
+  getRandomPublicGameModifiers(): PublicGameModifiers {
+    return { isCompact: false, isRandomSpawn: false };
+  }
+  supportsCompactMapForTeams(map: GameMapType): boolean {
     throw new Error("Method not implemented.");
   }
 }

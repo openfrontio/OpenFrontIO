@@ -188,9 +188,6 @@ export class TerritoryLayer implements Layer {
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);
     const myPlayer = this.game.myPlayer();
-    const colorBlindEnabled =
-      this.userSettings.colorBlind() &&
-      this.game.config().gameConfig().gameMode === GameMode.Team;
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -231,14 +228,7 @@ export class TerritoryLayer implements Layer {
         }
       }
 
-      if (
-        colorBlindEnabled &&
-        myPlayer !== null &&
-        human.smallID() !== myPlayer.smallID() &&
-        myPlayer.isOnSameTeam(human)
-      ) {
-        this.drawTeammateGlowForPlayer(human);
-      }
+      this.maybeDrawTeammateGlow(human);
     }
   }
 
@@ -280,19 +270,21 @@ export class TerritoryLayer implements Layer {
       teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
     );
 
-    const myPlayer = this.game.myPlayer();
-    if (
-      this.userSettings.colorBlind() &&
-      this.game.config().gameConfig().gameMode === GameMode.Team &&
-      myPlayer !== null &&
-      focusedPlayer.smallID() !== myPlayer.smallID() &&
-      myPlayer.isOnSameTeam(focusedPlayer)
-    ) {
-      this.drawTeammateGlowForPlayer(focusedPlayer);
-    }
+    this.maybeDrawTeammateGlow(focusedPlayer);
   }
 
-  private drawTeammateGlowForPlayer(player: PlayerView): void {
+  private maybeDrawTeammateGlow(player: PlayerView): void {
+    const myPlayer = this.game.myPlayer();
+    if (
+      !this.userSettings.colorBlind() ||
+      this.game.config().gameConfig().gameMode !== GameMode.Team ||
+      myPlayer === null ||
+      player.smallID() === myPlayer.smallID() ||
+      !myPlayer.isOnSameTeam(player)
+    ) {
+      return;
+    }
+
     const spawnTile = player.spawnTile();
     if (spawnTile === undefined) {
       return;

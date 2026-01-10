@@ -1,6 +1,6 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../core/game/Game";
+import { Difficulty, GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
@@ -19,6 +19,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Asia: "Asia",
   Mars: "Mars",
   SouthAmerica: "South America",
+  BritanniaClassic: "Britannia Classic",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
   Australia: "Australia",
@@ -45,7 +46,12 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Manicouagan: "Manicouagan",
   Lemnos: "Lemnos",
   TwoLakes: "Two Lakes",
+  Sierpinski: "Sierpinski",
   StraitOfHormuz: "Strait of Hormuz",
+  Surrounded: "Surrounded",
+  Didier: "Didier",
+  DidierFrance: "Didier (France)",
+  AmazonRiver: "Amazon River",
 };
 
 @customElement("map-display")
@@ -53,58 +59,15 @@ export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
+  @property({ type: Boolean }) showMedals = false;
+  @property({ attribute: false }) wins: Set<Difficulty> = new Set();
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
 
-  static styles = css`
-    .option-card {
-      width: 100%;
-      min-width: 100px;
-      max-width: 120px;
-      padding: 4px 4px 0 4px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(30, 30, 30, 0.95);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-    }
-
-    .option-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.3);
-      background: rgba(40, 40, 40, 0.95);
-    }
-
-    .option-card.selected {
-      border-color: #4a9eff;
-      background: rgba(74, 158, 255, 0.1);
-    }
-
-    .option-card-title {
-      font-size: 14px;
-      color: #aaa;
-      text-align: center;
-      margin: 0 0 4px 0;
-    }
-
-    .option-image {
-      width: 100%;
-      aspect-ratio: 4/2;
-      color: #aaa;
-      transition: transform 0.2s ease-in-out;
-      border-radius: 8px;
-      background-color: rgba(255, 255, 255, 0.1);
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -127,22 +90,94 @@ export class MapDisplay extends LitElement {
     }
   }
 
+  private handleKeydown(event: KeyboardEvent) {
+    // Trigger the same activation logic as click when Enter or Space is pressed
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      // Dispatch a click event to maintain compatibility with parent click handlers
+      (event.target as HTMLElement).click();
+    }
+  }
+
   render() {
     return html`
-      <div class="option-card ${this.selected ? "selected" : ""}">
+      <div
+        role="button"
+        tabindex="0"
+        aria-selected="${this.selected}"
+        aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
+        @keydown="${this.handleKeydown}"
+        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
+          .selected
+          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 active:scale-95"}"
+      >
         ${this.isLoading
-          ? html`<div class="option-image">
+          ? html`<div
+              class="w-full aspect-[2/1] text-white/40 transition-transform duration-200 rounded-lg bg-black/20 text-xs font-bold uppercase tracking-wider flex items-center justify-center animate-pulse"
+            >
               ${translateText("map_component.loading")}
             </div>`
           : this.mapWebpPath
-            ? html`<img
-                src="${this.mapWebpPath}"
-                alt="${this.mapKey}"
-                class="option-image"
-              />`
-            : html`<div class="option-image">Error</div>`}
-        <div class="option-card-title">${this.translation || this.mapName}</div>
+            ? html`<div
+                class="w-full aspect-[2/1] relative overflow-hidden rounded-lg bg-black/20"
+              >
+                <img
+                  src="${this.mapWebpPath}"
+                  alt="${this.translation || this.mapName}"
+                  class="w-full h-full object-cover ${this.selected
+                    ? "opacity-100"
+                    : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
+                />
+              </div>`
+            : html`<div
+                class="w-full aspect-[2/1] text-red-400 transition-transform duration-200 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
+              >
+                ${translateText("map_component.error")}
+              </div>`}
+        ${this.showMedals
+          ? html`<div class="flex gap-1 justify-center w-full">
+              ${this.renderMedals()}
+            </div>`
+          : null}
+        <div
+          class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight break-words hyphens-auto"
+        >
+          ${this.translation || this.mapName}
+        </div>
       </div>
     `;
+  }
+
+  private renderMedals() {
+    const medalOrder: Difficulty[] = [
+      Difficulty.Easy,
+      Difficulty.Medium,
+      Difficulty.Hard,
+      Difficulty.Impossible,
+    ];
+    const colors: Record<Difficulty, string> = {
+      [Difficulty.Easy]: "var(--medal-easy)",
+      [Difficulty.Medium]: "var(--medal-medium)",
+      [Difficulty.Hard]: "var(--medal-hard)",
+      [Difficulty.Impossible]: "var(--medal-impossible)",
+    };
+    const wins = this.readWins();
+    return medalOrder.map((medal) => {
+      const earned = wins.has(medal);
+      const mask =
+        "url('/images/MedalIconWhite.svg') no-repeat center / contain";
+      return html`<div
+        class="w-5 h-5 ${earned ? "opacity-100" : "opacity-25"}"
+        style="background-color:${colors[
+          medal
+        ]}; mask: ${mask}; -webkit-mask: ${mask};"
+        title=${translateText(`difficulty.${medal.toLowerCase()}`)}
+      ></div>`;
+    });
+  }
+
+  private readWins(): Set<Difficulty> {
+    return this.wins ?? new Set();
   }
 }

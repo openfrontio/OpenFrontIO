@@ -56,7 +56,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 rounded-lg z-[9999] shadow-2xl backdrop-blur-sm text-white w-[350px] max-w-[90%] md:w-[700px] md:max-w-[700px] animate-fadeIn"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175 animate-fadeIn"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
@@ -70,13 +70,13 @@ export class WinModal extends LitElement implements Layer {
         >
           <button
             @click=${this._handleExit}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
             ${translateText("win_modal.exit")}
           </button>
           <button
             @click=${this.hide}
-            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
             ${this.isWin
               ? translateText("win_modal.keep")
@@ -123,13 +123,14 @@ export class WinModal extends LitElement implements Layer {
 
   renderYoutubeTutorial() {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.youtube_tutorial")}
         </h3>
-        <div class="relative w-full" style="padding-bottom: 56.25%;">
+        <!-- 56.25% = 9:16 -->
+        <div class="relative w-full pb-[56.25%]">
           <iframe
-            class="absolute top-0 left-0 w-full h-full rounded"
+            class="absolute top-0 left-0 w-full h-full rounded-sm"
             src="${this.isVisible
               ? "https://www.youtube.com/embed/EN2oOog3pSs"
               : ""}"
@@ -145,7 +146,7 @@ export class WinModal extends LitElement implements Layer {
 
   renderPatternButton() {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
@@ -215,7 +216,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   steamWishlist(): TemplateResult {
-    return html`<p class="m-0 mb-5 text-center bg-black/30 p-2.5 rounded">
+    return html`<p class="m-0 mb-5 text-center bg-black/30 p-2.5 rounded-sm">
       <a
         href="https://store.steampowered.com/app/3560670"
         target="_blank"
@@ -229,7 +230,7 @@ export class WinModal extends LitElement implements Layer {
 
   discordDisplay(): TemplateResult {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.join_discord")}
         </h3>
@@ -240,7 +241,7 @@ export class WinModal extends LitElement implements Layer {
           href="https://discord.com/invite/openfront"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-block px-6 py-3 bg-indigo-600 text-white rounded font-semibold transition-all duration-200 hover:bg-indigo-700 hover:-translate-y-px no-underline"
+          class="inline-block px-6 py-3 bg-indigo-600 text-white rounded-sm font-semibold transition-all duration-200 hover:bg-indigo-700 hover:-translate-y-px no-underline"
         >
           ${translateText("win_modal.join_server")}
         </a>
@@ -301,6 +302,12 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        this.show();
+      } else if (wu.winner[0] === "nation") {
+        this._title = translateText("win_modal.nation_won", {
+          nation: wu.winner[1],
+        });
+        this.isWin = false;
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);

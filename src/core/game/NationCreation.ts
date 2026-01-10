@@ -2,6 +2,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { GameStartInfo } from "../Schemas";
 import {
   Cell,
+  GameMapSize,
   GameMode,
   GameType,
   HumansVsNations,
@@ -14,6 +15,7 @@ import { Nation as ManifestNation } from "./TerrainMapLoader";
 /**
  * Creates the nations array for a game, handling HumansVsNations mode specially.
  * In HumansVsNations mode, the number of nations matches the number of human players to ensure fair gameplay.
+ * For compact maps, only 25% of the nations are used.
  */
 export function createNationsForGame(
   gameStart: GameStartInfo,
@@ -31,13 +33,23 @@ export function createNationsForGame(
       new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
     );
 
+  const isCompactMap = gameStart.config.gameMapSize === GameMapSize.Compact;
+
   const isHumansVsNations =
     gameStart.config.gameMode === GameMode.Team &&
     gameStart.config.playerTeams === HumansVsNations;
 
-  // For non-HumansVsNations modes, simply use the manifest nations
+  // For compact maps, use only 25% of nations (minimum 1)
+  let effectiveNations = manifestNations;
+  if (isCompactMap && !isHumansVsNations) {
+    const targetCount = getCompactMapNationCount(manifestNations.length, true);
+    const shuffled = random.shuffleArray(manifestNations);
+    effectiveNations = shuffled.slice(0, targetCount);
+  }
+
+  // For non-HumansVsNations modes, simply use the effective nations
   if (!isHumansVsNations) {
-    return manifestNations.map(toNation);
+    return effectiveNations.map(toNation);
   }
 
   // HumansVsNations mode: balance nation count to match human count
@@ -57,9 +69,11 @@ export function createNationsForGame(
 
   // If we need more nations than defined in manifest, create additional ones
   const nations: Nation[] = manifestNations.map(toNation);
+  const usedNames = new Set(nations.map((n) => n.playerInfo.name));
   const additionalCount = targetNationCount - manifestNations.length;
   for (let i = 0; i < additionalCount; i++) {
-    const name = generateNationName(random);
+    const name = generateUniqueNationName(random, usedNames);
+    usedNames.add(name);
     nations.push(
       new Nation(
         undefined,
@@ -69,6 +83,59 @@ export function createNationsForGame(
   }
 
   return nations;
+}
+
+// For compact maps, only 25% of nations are used (minimum 1).
+export function getCompactMapNationCount(
+  manifestNationCount: number,
+  isCompactMap: boolean,
+): number {
+  if (manifestNationCount === 0) {
+    return 0;
+  }
+  if (isCompactMap) {
+    return Math.max(1, Math.floor(manifestNationCount * 0.25));
+  }
+  return manifestNationCount;
+}
+
+function generateUniqueNationName(
+  random: PseudoRandom,
+  usedNames: Set<string>,
+): string {
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const name = generateNationName(random);
+    if (!usedNames.has(name)) {
+      return name;
+    }
+  }
+  // Fallback if we can't generate unique name (extremely unlikely)
+  // Append a number to ensure uniqueness
+  let counter = 1;
+  const baseName = generateNationName(random);
+  while (usedNames.has(`${baseName} ${counter}`)) {
+    counter++;
+  }
+  return `${baseName} ${counter}`;
+}
+
+function generateNationName(random: PseudoRandom): string {
+  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
+  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
+
+  const result: string[] = [];
+
+  for (const part of template) {
+    if (part === PLURAL_NOUN) {
+      result.push(pluralize(noun));
+    } else if (part === NOUN) {
+      result.push(noun);
+    } else {
+      result.push(part);
+    }
+  }
+
+  return result.join(" ");
 }
 
 const PLURAL_NOUN = Symbol("plural!");
@@ -263,25 +330,6 @@ const NOUNS = [
   "Tomato",
   "Penguin",
 ];
-
-function generateNationName(random: PseudoRandom): string {
-  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
-  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
-
-  const result: string[] = [];
-
-  for (const part of template) {
-    if (part === PLURAL_NOUN) {
-      result.push(pluralize(noun));
-    } else if (part === NOUN) {
-      result.push(noun);
-    } else {
-      result.push(part);
-    }
-  }
-
-  return result.join(" ");
-}
 
 // Words from NOUNS that need irregular "-oes" plural
 const O_TO_OES = new Set(["Potato", "Tomato"]);

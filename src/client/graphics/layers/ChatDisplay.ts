@@ -125,13 +125,12 @@ export class ChatDisplay extends LitElement implements Layer {
     }
     return html`
       <div
-        class="${this._hidden
-          ? "w-fit px-[10px] py-[5px]"
-          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
-        style="pointer-events: auto"
+        class="pointer-events-auto ${this._hidden
+          ? "w-fit px-2.5 py-1.25"
+          : ""} rounded-md bg-black/60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
       >
         <div>
-          <div class="w-full bg-black/80 sticky top-0 px-[10px]">
+          <div class="w-full bg-black/80 sticky top-0 px-2.5">
             <button
               class="text-white cursor-pointer pointer-events-auto ${this
                 ._hidden
@@ -153,22 +152,21 @@ export class ChatDisplay extends LitElement implements Layer {
             <span
               class="${this.newEvents
                 ? ""
-                : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
+                : "hidden"} inline-block px-2 bg-red-500 rounded-xs"
               >${this.newEvents}</span
             >
           </button>
 
           <table
-            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
+            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs pointer-events-none ${this
               ._hidden
               ? "hidden"
               : ""}"
-            style="pointer-events: auto;"
           >
             <tbody>
               ${this.chatEvents.map(
                 (chat) => html`
-                  <tr class="border-b border-opacity-0">
+                  <tr class="border-b border-gray-200/0">
                     <td class="lg:p-3 p-1 text-left">
                       ${this.getChatContent(chat)}
                     </td>

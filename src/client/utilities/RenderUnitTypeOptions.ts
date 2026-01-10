@@ -1,4 +1,3 @@
-// renderUnitTypeOptions.ts
 import { html, TemplateResult } from "lit";
 import { UnitType } from "../../core/game/Game";
 import { translateText } from "../Utils";
@@ -25,25 +24,24 @@ export function renderUnitTypeOptions({
   disabledUnits,
   toggleUnit,
 }: UnitTypeRenderContext): TemplateResult[] {
-  return unitOptions.map(
-    ({ type, translationKey }) => html`
-      <label
-        class="option-card ${disabledUnits.includes(type) ? "" : "selected"}"
-        style="width: 140px;"
+  return unitOptions.map(({ type, translationKey }) => {
+    const isEnabled = !disabledUnits.includes(type);
+    return html`
+      <button
+        class="relative p-4 rounded-xl border transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[100px] w-full cursor-pointer ${isEnabled
+          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+        aria-pressed="${isEnabled}"
+        @click=${() => toggleUnit(type, isEnabled)}
       >
-        <div class="checkbox-icon"></div>
-        <input
-          type="checkbox"
-          .checked=${disabledUnits.includes(type)}
-          @change=${(e: Event) => {
-            const checked = (e.target as HTMLInputElement).checked;
-            toggleUnit(type, checked);
-          }}
-        />
-        <div class="option-card-title" style="text-align: center;">
+        <div
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight break-words hyphens-auto ${isEnabled
+            ? "text-white"
+            : "text-white/60"}"
+        >
           ${translateText(translationKey)}
         </div>
-      </label>
-    `,
-  );
+      </button>
+    `;
+  });
 }

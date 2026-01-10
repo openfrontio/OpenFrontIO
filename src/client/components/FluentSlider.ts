@@ -1,56 +1,12 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 
 @customElement("fluent-slider")
 export class FluentSlider extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      width: 100%;
-      font-family: inherit;
-    }
-    .slider-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      width: 100%;
-      text-align: center;
-    }
-    .option-card-title {
-      font-size: 14px; /* match other cards */
-      color: #aaa; /* light gray text */
-      text-align: center;
-      margin: 0 0 4px 0;
-      font-weight: normal;
-    }
-    input[type="range"] {
-      width: 100%;
-      max-width: 100%;
-      background-color: transparent;
-    }
-    input[type="number"] {
-      width: 60px;
-      background-color: #2d3748;
-      color: #aaa; /* match label color */
-      border: 1px solid #4a5568;
-      text-align: center;
-      border-radius: 4px;
-      font-weight: normal;
-      font-family: inherit;
-    }
-    span.editable {
-      cursor: pointer;
-      min-width: 60px;
-      display: inline-block;
-      text-align: center;
-      color: #aaa; /* match label color */
-      font-weight: normal;
-      user-select: none;
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
@@ -84,7 +40,7 @@ export class FluentSlider extends LitElement {
     this.dispatchValueChange();
   }
 
-  private handleNumberChange(e: Event) {
+  private handleNumberInput(e: Event) {
     const target = e.target as HTMLInputElement;
     let val = target.valueAsNumber;
     if (isNaN(val)) {
@@ -93,11 +49,19 @@ export class FluentSlider extends LitElement {
     if (val < this.min) val = this.min;
     if (val > this.max) val = this.max;
     this.value = val;
+    // Don't dispatch value change on every input - only on blur/enter
+  }
+
+  private handleNumberComplete() {
+    // Dispatch the value change when editing is complete
     this.dispatchValueChange();
   }
 
   private handleNumberKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") this.isEditing = false;
+    if (e.key === "Enter") {
+      this.isEditing = false;
+      this.handleNumberComplete();
+    }
   }
 
   private enableEditing() {
@@ -106,18 +70,35 @@ export class FluentSlider extends LitElement {
   }
 
   render() {
+    const percentage =
+      this.max === this.min
+        ? 0
+        : ((this.value - this.min) / (this.max - this.min)) * 100;
     return html`
-      <div class="slider-container">
+      <div
+        class="flex flex-col items-center justify-center gap-1 w-full text-center"
+      >
         <input
           type="range"
           .min=${this.min}
           .max=${this.max}
           .step=${this.step}
           .valueAsNumber=${this.value}
+          style="background: linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, rgba(255, 255, 255, 0.15) ${percentage}%, rgba(255, 255, 255, 0.15) 100%); background-size: 100% 6px; background-repeat: no-repeat; background-position: center; border-radius: 9999px;"
+          class="w-full h-6 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none 
+                 [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors
+                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-webkit-slider-thumb]:transition-all active:[&::-webkit-slider-thumb]:scale-110 active:[&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]
+                 [&::-moz-range-track]:w-full [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:cursor-pointer [&::-moz-range-track]:bg-transparent [&::-moz-range-track]:rounded-full [&::-moz-range-track]:transition-colors
+                 [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[0_0_0_6px_rgba(59,130,246,0.3)]"
           @input=${this.handleSliderInput}
           @change=${this.handleSliderChange}
         />
-        <div class="option-card-title">
+        <div
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight mb-1 flex flex-col items-center ${this
+            .value > 0
+            ? "text-white"
+            : "text-white/60"}"
+        >
           <span>${this.labelKey ? translateText(this.labelKey) : ""}</span>
           ${this.isEditing
             ? html`<input
@@ -125,12 +106,19 @@ export class FluentSlider extends LitElement {
                 .min=${this.min}
                 .max=${this.max}
                 .valueAsNumber=${this.value}
-                @input=${this.handleNumberChange}
-                @blur=${() => (this.isEditing = false)}
+                class="w-[60px] bg-black/40 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
+                @input=${this.handleNumberInput}
+                @blur=${() => {
+                  this.isEditing = false;
+                  this.handleNumberComplete();
+                }}
                 @keydown=${this.handleNumberKeyDown}
               />`
             : html`<span
-                class="editable"
+                class="cursor-pointer min-w-[60px] inline-block text-center text-sm font-bold select-none hover:text-white transition-colors mt-1 ${this
+                  .value > 0
+                  ? "text-white"
+                  : "text-white/60"}"
                 role="button"
                 tabindex="0"
                 @click=${this.enableEditing}

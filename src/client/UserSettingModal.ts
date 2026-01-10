@@ -1,60 +1,37 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
-import "./components/baseComponents/setting/SettingKeybind";
-import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { BaseModal } from "./components/BaseModal";
+import "./FlagInputModal";
+
+interface FlagInputModalElement extends HTMLElement {
+  open(): void;
+  returnTo?: string;
+}
 
 @customElement("user-setting")
-export class UserSettingModal extends LitElement {
+export class UserSettingModal extends BaseModal {
   private userSettings: UserSettings = new UserSettings();
-
-  @state() private settingsMode: "basic" | "keybinds" = "basic";
-  @state() private keybinds: Record<string, { value: string; key: string }> =
-    {};
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-
-    const savedKeybinds = localStorage.getItem("settings.keybinds");
-    if (savedKeybinds) {
-      try {
-        this.keybinds = JSON.parse(savedKeybinds);
-      } catch (e) {
-        console.warn("Invalid keybinds JSON:", e);
-      }
-    }
-  }
-
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-    isModalOpen: boolean;
-  };
-
-  createRenderRoot() {
-    return this;
-  }
-
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener("keydown", this.handleEasterEggKey);
     super.disconnectedCallback();
-    document.body.style.overflow = "auto";
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
+  private handleEasterEggKey = (e: KeyboardEvent) => {
+    if (!this.isModalOpen || this.showEasterEggSettings) return;
 
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
+    // Validate that the event target is inside this component
+    const target = e.target as Node;
+    if (!this.contains(target)) {
+      return;
     }
 
     const key = e.key.toLowerCase();
@@ -71,7 +48,8 @@ export class UserSettingModal extends LitElement {
     console.log("🪺 Setting~ unlocked by EVAN combo!");
     this.showEasterEggSettings = true;
     const popup = document.createElement("div");
-    popup.className = "easter-egg-popup";
+    popup.className =
+      "fixed top-10 left-1/2 p-4 px-6 bg-black/80 text-white text-xl rounded-xl animate-fadePop z-[9999]";
     popup.textContent = "🎉 You found a secret setting!";
     document.body.appendChild(popup);
 
@@ -213,73 +191,114 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
-  private handleKeybindChange(
-    e: CustomEvent<{ action: string; value: string; key: string }>,
-  ) {
-    console.log("Keybind change event:", e);
-    const { action, value, key } = e.detail;
-    const prevValue = this.keybinds[action]?.value ?? "";
-
-    const values = Object.entries(this.keybinds)
-      .filter(([k]) => k !== action)
-      .map(([, v]) => v.value);
-    if (values.includes(value) && value !== "Null") {
-      const popup = document.createElement("div");
-      popup.className = "setting-popup";
-      popup.textContent = `The key "${value}" is already assigned to another action.`;
-      document.body.appendChild(popup);
-      const element = this.renderRoot.querySelector(
-        `setting-keybind[action="${action}"]`,
-      ) as SettingKeybind;
-      if (element) {
-        element.value = prevValue;
-        element.requestUpdate();
-      }
-      return;
+  private openFlagSelector = () => {
+    const flagInputModal =
+      document.querySelector<FlagInputModalElement>("#flag-input-modal");
+    if (flagInputModal?.open) {
+      this.close();
+      flagInputModal.returnTo = "#" + (this.id || "page-options");
+      flagInputModal.open();
     }
-    this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
-    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
-  }
+  };
 
   render() {
-    return html`
-      <o-modal title="${translateText("user_setting.title")}">
-        <div class="modal-overlay">
-          <div class="modal-content user-setting-modal">
-            <div class="flex mb-4 w-full justify-center">
-              <button
-                class="w-1/2 text-center px-3 py-1 rounded-l 
-      ${this.settingsMode === "basic"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
-                @click=${() => (this.settingsMode = "basic")}
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10"
+          : ""}"
+      >
+        <div
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+        >
+          <div class="flex items-center gap-4 flex-1 flex-wrap">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
+              aria-label="${translateText("common.back")}"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                ${translateText("user_setting.tab_basic")}
-              </button>
-              <button
-                class="w-1/2 text-center px-3 py-1 rounded-r 
-      ${this.settingsMode === "keybinds"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
-                @click=${() => (this.settingsMode = "keybinds")}
-              >
-                ${translateText("user_setting.tab_keybinds")}
-              </button>
-            </div>
-
-            <div class="settings-list">
-              ${this.settingsMode === "basic"
-                ? this.renderBasicSettings()
-                : this.renderKeybindSettings()}
-            </div>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-all hyphens-auto min-w-0"
+            >
+              ${translateText("user_setting.title")}
+            </span>
           </div>
         </div>
+
+        <div
+          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
+        >
+          <div class="flex flex-col gap-2">${this.renderBasicSettings()}</div>
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        title="${translateText("user_setting.title")}"
+        ?inline=${this.inline}
+        hideCloseButton
+        hideHeader
+      >
+        ${content}
       </o-modal>
     `;
   }
 
+  protected onClose(): void {
+    window.removeEventListener("keydown", this.handleEasterEggKey);
+  }
+
   private renderBasicSettings() {
     return html`
+      <!-- 🚩 Flag Selector -->
+      <div
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer"
+        role="button"
+        tabindex="0"
+        @click=${this.openFlagSelector}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            this.openFlagSelector();
+          }
+        }}
+      >
+        <div class="flex flex-col flex-1 min-w-0 mr-4">
+          <div class="text-white font-bold text-base block mb-1">
+            ${translateText("flag_input.title")}
+          </div>
+          <div class="text-white/50 text-sm leading-snug">
+            ${translateText("flag_input.button_title")}
+          </div>
+        </div>
+
+        <div
+          class="relative inline-block w-12 h-8 shrink-0 rounded overflow-hidden border border-white/20"
+        >
+          <flag-input class="w-full h-full pointer-events-none"></flag-input>
+        </div>
+      </div>
+
       <!-- 🌙 Dark Mode -->
       <setting-toggle
         label="${translateText("user_setting.dark_mode_label")}"
@@ -446,238 +465,11 @@ export class UserSettingModal extends LitElement {
     `;
   }
 
-  private renderKeybindSettings() {
-    return html`
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.view_options")}
-      </div>
-
-      <setting-keybind
-        action="toggleView"
-        label=${translateText("user_setting.toggle_view")}
-        description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
-        .value=${this.keybinds["toggleView"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.build_controls")}
-      </div>
-
-      <setting-keybind
-        action="buildCity"
-        label=${translateText("user_setting.build_city")}
-        description=${translateText("user_setting.build_city_desc")}
-        defaultKey="Digit1"
-        .value=${this.keybinds["buildCity"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildFactory"
-        label=${translateText("user_setting.build_factory")}
-        description=${translateText("user_setting.build_factory_desc")}
-        defaultKey="Digit2"
-        .value=${this.keybinds["buildFactory"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildPort"
-        label=${translateText("user_setting.build_port")}
-        description=${translateText("user_setting.build_port_desc")}
-        defaultKey="Digit3"
-        .value=${this.keybinds["buildPort"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildDefensePost"
-        label=${translateText("user_setting.build_defense_post")}
-        description=${translateText("user_setting.build_defense_post_desc")}
-        defaultKey="Digit4"
-        .value=${this.keybinds["buildDefensePost"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildMissileSilo"
-        label=${translateText("user_setting.build_missile_silo")}
-        description=${translateText("user_setting.build_missile_silo_desc")}
-        defaultKey="Digit5"
-        .value=${this.keybinds["buildMissileSilo"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildSamLauncher"
-        label=${translateText("user_setting.build_sam_launcher")}
-        description=${translateText("user_setting.build_sam_launcher_desc")}
-        defaultKey="Digit6"
-        .value=${this.keybinds["buildSamLauncher"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildWarship"
-        label=${translateText("user_setting.build_warship")}
-        description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit7"
-        .value=${this.keybinds["buildWarship"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildAtomBomb"
-        label=${translateText("user_setting.build_atom_bomb")}
-        description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit8"
-        .value=${this.keybinds["buildAtomBomb"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildHydrogenBomb"
-        label=${translateText("user_setting.build_hydrogen_bomb")}
-        description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit9"
-        .value=${this.keybinds["buildHydrogenBomb"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildMIRV"
-        label=${translateText("user_setting.build_mirv")}
-        description=${translateText("user_setting.build_mirv_desc")}
-        defaultKey="Digit0"
-        .value=${this.keybinds["buildMIRV"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.attack_ratio_controls")}
-      </div>
-
-      <setting-keybind
-        action="attackRatioDown"
-        label=${translateText("user_setting.attack_ratio_down")}
-        description=${translateText("user_setting.attack_ratio_down_desc")}
-        defaultKey="KeyT"
-        .value=${this.keybinds["attackRatioDown"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="attackRatioUp"
-        label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
-        defaultKey="KeyY"
-        .value=${this.keybinds["attackRatioUp"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.attack_keybinds")}
-      </div>
-
-      <setting-keybind
-        action="boatAttack"
-        label=${translateText("user_setting.boat_attack")}
-        description=${translateText("user_setting.boat_attack_desc")}
-        defaultKey="KeyB"
-        .value=${this.keybinds["boatAttack"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="groundAttack"
-        label=${translateText("user_setting.ground_attack")}
-        description=${translateText("user_setting.ground_attack_desc")}
-        defaultKey="KeyG"
-        .value=${this.keybinds["groundAttack"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.zoom_controls")}
-      </div>
-
-      <setting-keybind
-        action="zoomOut"
-        label=${translateText("user_setting.zoom_out")}
-        description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
-        .value=${this.keybinds["zoomOut"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="zoomIn"
-        label=${translateText("user_setting.zoom_in")}
-        description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
-        .value=${this.keybinds["zoomIn"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.camera_movement")}
-      </div>
-
-      <setting-keybind
-        action="centerCamera"
-        label=${translateText("user_setting.center_camera")}
-        description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
-        .value=${this.keybinds["centerCamera"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveUp"
-        label=${translateText("user_setting.move_up")}
-        description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
-        .value=${this.keybinds["moveUp"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveLeft"
-        label=${translateText("user_setting.move_left")}
-        description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
-        .value=${this.keybinds["moveLeft"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveDown"
-        label=${translateText("user_setting.move_down")}
-        description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
-        .value=${this.keybinds["moveDown"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="moveRight"
-        label=${translateText("user_setting.move_right")}
-        description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
-        .value=${this.keybinds["moveRight"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-    `;
+  protected onOpen(): void {
+    window.addEventListener("keydown", this.handleEasterEggKey);
   }
 
   public open() {
-    this.requestUpdate();
-    this.modalEl?.open();
-  }
-
-  public close() {
-    this.modalEl?.close();
+    super.open();
   }
 }

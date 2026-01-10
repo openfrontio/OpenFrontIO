@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 declare global {
@@ -21,42 +21,20 @@ export class GoogleAdElement extends LitElement {
   @property({ type: String }) adFormat = "auto";
   @property({ type: Boolean }) fullWidthResponsive = true;
   @property({ type: String }) adTest = "off"; // "on" for testing, remove or set to "off" for production
-  @property({ type: String }) darkBackgroundColor = "rgba(0, 0, 0, 0.2)";
 
   // Disable shadow DOM so AdSense can access the elements
   createRenderRoot() {
     return this;
   }
 
-  static styles = css`
-    .google-ad-container {
-      margin-top: 1rem;
-      border-radius: 0.5rem;
-      padding: 0.5rem;
-      width: 100%;
-      overflow: hidden;
-      transition:
-        opacity 0.3s ease,
-        height 0.3s ease;
-    }
-    .google-ad-container.hidden {
-      opacity: 0;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      overflow: hidden;
-    }
-  `;
-
   render() {
     if (isElectron()) {
       return html``;
     }
     return html`
-      <div class="google-ad-container">
+      <div class="mt-4 rounded-lg p-2 w-full overflow-hidden">
         <ins
-          class="adsbygoogle"
-          style="display:block"
+          class="adsbygoogle block"
           data-ad-client="${this.adClient}"
           data-ad-slot="${this.adSlot}"
           data-ad-format="${this.adFormat}"
