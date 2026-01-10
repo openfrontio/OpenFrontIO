@@ -59,7 +59,8 @@ function getDiscordAvatarUrl(user: {
   avatar: string | null;
 }): string | null {
   if (!user.avatar) return null;
-  return `https://cdn.discordapp.com/avatars/${encodeURIComponent(user.id)}/${encodeURIComponent(user.avatar)}.png?size=64`;
+  const extension = user.avatar.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/avatars/${encodeURIComponent(user.id)}/${encodeURIComponent(user.avatar)}.${extension}?size=64`;
 }
 
 function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
