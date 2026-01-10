@@ -72,7 +72,7 @@ export class AccountModal extends BaseModal {
     const content = this.isLoadingUser
       ? html`
           <div
-            class="flex flex-col items-center justify-center p-12 text-white bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 h-full min-h-[400px]"
+            class="flex flex-col items-center justify-center p-12 text-white bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 h-full min-h-[400px]"
           >
             <div
               class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"
@@ -107,7 +107,7 @@ export class AccountModal extends BaseModal {
 
     return html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
+        class="h-full flex flex-col bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
           class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"

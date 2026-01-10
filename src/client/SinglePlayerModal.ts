@@ -129,7 +129,7 @@ export class SinglePlayerModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
+        class="h-full flex flex-col bg-black/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <!-- Header -->
         <div
@@ -599,7 +599,7 @@ export class SinglePlayerModal extends BaseModal {
                         min="1"
                         max="120"
                         .value=${String(this.maxTimerValue ?? "")}
-                        class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                        class="w-full text-center rounded bg-black/50 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                         aria-label=${translateText("single_modal.max_timer")}
                         @input=${this.handleMaxTimerValueChanges}
                         @keydown=${this.handleMaxTimerValueKeyDown}
