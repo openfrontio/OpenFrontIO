@@ -647,6 +647,10 @@
     "join_server": "Join Server",
     "youtube_tutorial": "Need some help?"
   },
+  "skin_test_modal": {
+    "title": "Testing Complete",
+    "rate_skin": "Rate this Skin"
+  },
   "leaderboard": {
     "title": "Leaderboard",
     "hide": "Hide",

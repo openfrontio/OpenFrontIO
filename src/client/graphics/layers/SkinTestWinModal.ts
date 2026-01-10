@@ -65,13 +65,13 @@ export class SkinTestWinModal extends LitElement implements Layer {
         <h2
           class="m-0 mb-6 text-2xl font-bold text-center text-white uppercase tracking-wider"
         >
-          Testing Complete
+          ${translateText("skin_test_modal.title")}
         </h2>
 
         <div class="flex flex-col items-center gap-6 mb-6">
           <div class="text-center">
             <h3 class="text-lg font-semibold text-white/90 mb-2">
-              Rate this Skin
+              ${translateText("skin_test_modal.rate_skin")}
             </h3>
             <div class="flex gap-4 justify-center">
               <button
