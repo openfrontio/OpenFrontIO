@@ -494,6 +494,12 @@ class Client {
       });
     }
 
+    if (matchmakingButtonLoggedOut) {
+      matchmakingButtonLoggedOut.addEventListener("click", () => {
+        window.showPage?.("page-account");
+      });
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       // Check if user has actual authentication (discord or email), not just a publicId
       const loggedIn =
