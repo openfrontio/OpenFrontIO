@@ -907,17 +907,35 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private estimateBoatEtaSeconds(boat: UnitView): number | null {
+    const targetTile = boat.targetTile();
+    if (targetTile === undefined) {
+      return null;
+    }
+
+    const distance = this.game.manhattanDist(boat.tile(), targetTile);
+    if (!Number.isFinite(distance) || distance < 0) {
+      return null;
+    }
+
+    const secondsPerTick =
+      this.game.config().serverConfig().turnIntervalMs() / 1000;
+    return Math.ceil(distance * secondsPerTick);
+  }
+
   private renderBoats() {
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingBoats.map(
-                (boat) => html`
+              ${this.outgoingBoats.map((boat) => {
+                const etaSeconds = this.estimateBoatEtaSeconds(boat);
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
-                      content: html`${translateText("events_display.boat")}:
-                      ${renderTroops(boat.troops())}`,
+                      content: html`${translateText("events_display.boat")}: ${renderTroops(
+                        boat.troops(),
+                      )}${etaSeconds !== null ? html` (${etaSeconds}s)` : ""}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -935,8 +953,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           )}...)</span
                         >`}
                   </div>
-                `,
-              )}
+                `;
+              })}
             </div>
           `
         : ""}
