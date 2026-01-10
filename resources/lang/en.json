@@ -26,6 +26,7 @@
     "title": "OpenFront (ALPHA)",
     "join_discord": "Discord",
     "login_discord": "Login with Discord",
+    "sign_in": "Sign in",
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
     "log_out": "Log out",
