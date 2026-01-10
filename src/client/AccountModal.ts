@@ -414,9 +414,6 @@ export class AccountModal extends BaseModal {
               @click="${this.handleDiscordLogin}"
               class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
             >
-              <div
-                class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
-              ></div>
               <img
                 src="/images/DiscordLogo.svg"
                 alt="Discord"
