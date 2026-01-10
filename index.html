@@ -344,15 +344,45 @@
         ></button>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-account"
-          data-i18n="main.account"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-help"
           data-i18n="main.help"
         ></button>
         <lang-selector></lang-selector>
+        <button
+          id="nav-account-button"
+          class="nav-menu-item h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
+          data-page="page-account"
+          aria-label="Account"
+          title="Account"
+        >
+          <img
+            id="nav-account-avatar"
+            class="hidden w-8 h-8 rounded-full object-cover"
+            alt=""
+            referrerpolicy="no-referrer"
+          />
+          <svg
+            id="nav-account-person-icon"
+            class="w-5 h-5"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21a8 8 0 0 0-16 0" />
+            <path d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+          </svg>
+          <span
+            id="nav-account-signin-text"
+            class="text-xs font-bold tracking-widest"
+          >
+            Sign in
+          </span>
+        </button>
       </nav>
 
       <div
@@ -381,7 +411,7 @@
               >
                 <!-- Flag -->
                 <div
-                  class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center"
+                  class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center lg:hidden"
                 >
                   <!-- Hamburger (Mobile) -->
                   <button
@@ -408,12 +438,6 @@
                       />
                     </svg>
                   </button>
-
-                  <!-- Flag (Desktop) -->
-                  <flag-input
-                    id="flag-input-component"
-                    class="hidden lg:flex w-full h-full items-center justify-center rounded-md overflow-hidden"
-                  ></flag-input>
                 </div>
 
                 <!-- Username -->
@@ -428,7 +452,7 @@
                 <!-- Pattern button (Mobile - inside bar, Desktop - hidden here) -->
                 <button
                   id="territory-patterns-input-preview-button"
-                  class="aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0"
+                  class="aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0"
                   style="padding: 4px !important"
                   data-i18n-title="main.pick_pattern"
                 ></button>
@@ -436,10 +460,17 @@
 
               <!-- Pattern button (Desktop only - separate column) -->
               <div class="hidden lg:flex lg:col-span-3">
-                <div
-                  id="territory-patterns-preview-desktop-wrapper"
-                  class="w-full h-[60px]"
-                ></div>
+                <div class="w-full h-[60px] flex gap-2">
+                  <div
+                    id="territory-patterns-preview-desktop-wrapper"
+                    class="flex-1 h-full"
+                  ></div>
+                  <flag-input
+                    id="flag-input-component"
+                    show-select-label
+                    class="flex-1 h-full border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105"
+                  ></flag-input>
+                </div>
               </div>
             </div>
 

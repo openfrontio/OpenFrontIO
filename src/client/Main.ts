@@ -54,6 +54,56 @@ import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
 
+function getDiscordAvatarUrl(user: {
+  id: string;
+  avatar: string | null;
+}): string | null {
+  if (!user.avatar) return null;
+  return `https://cdn.discordapp.com/avatars/${encodeURIComponent(user.id)}/${encodeURIComponent(user.avatar)}.png?size=64`;
+}
+
+function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
+  const button = document.getElementById("nav-account-button");
+  if (!button) return;
+
+  const avatarEl = document.getElementById(
+    "nav-account-avatar",
+  ) as HTMLImageElement | null;
+  const personIconEl = document.getElementById(
+    "nav-account-person-icon",
+  ) as SVGElement | null;
+  const signInTextEl = document.getElementById(
+    "nav-account-signin-text",
+  ) as HTMLSpanElement | null;
+
+  const showAvatar = (src: string) => {
+    if (avatarEl) {
+      avatarEl.src = src;
+      avatarEl.classList.remove("hidden");
+    }
+    personIconEl?.classList.add("hidden");
+    signInTextEl?.classList.add("hidden");
+  };
+
+  const showSignIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    signInTextEl?.classList.remove("hidden");
+  };
+
+  const discord =
+    userMeResponse !== false ? userMeResponse.user.discord : undefined;
+  if (discord && avatarEl) {
+    const url = getDiscordAvatarUrl(discord);
+    if (url) {
+      showAvatar(url);
+      return;
+    }
+  }
+
+  showSignIn();
+}
+
 declare global {
   interface Window {
     turnstile: any;
@@ -283,7 +333,7 @@ class Client {
             "territory-patterns-preview-desktop-wrapper"
           ) {
             patternButton.className =
-              "w-full h-[60px] border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
+              "w-full h-[60px] border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
             patternButton.style.backgroundSize = "auto 100%";
             patternButton.style.backgroundRepeat = "repeat-x";
             desktopWrapper.appendChild(patternButton);
@@ -297,7 +347,7 @@ class Client {
               "territory-patterns-preview-desktop-wrapper"
           ) {
             patternButton.className =
-              "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
+              "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
             patternButton.style.backgroundSize = "";
             patternButton.style.backgroundRepeat = "";
             mobileParent.appendChild(patternButton);
@@ -407,6 +457,7 @@ class Client {
         (userMeResponse.user.discord !== undefined ||
           userMeResponse.user.email !== undefined);
       updateMatchmakingButton(loggedIn);
+      updateAccountNavButton(userMeResponse);
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
