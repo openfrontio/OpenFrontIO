@@ -20,11 +20,12 @@ import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";
+import "./components/baseComponents/lobby/MapCard";
+import "./components/baseComponents/lobby/MapListDisplay";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
@@ -232,21 +233,17 @@ export class SinglePlayerModal extends BaseModal {
                               mapValue,
                           );
                           return html`
-                            <div
+                            <map-list-display
                               @click=${() => this.handleMapSelection(mapValue)}
-                              class="cursor-pointer transition-transform duration-200 active:scale-95"
-                            >
-                              <map-display
-                                .mapKey=${mapKey}
-                                .selected=${!this.useRandomMap &&
-                                this.selectedMap === mapValue}
-                                .showMedals=${this.showAchievements}
-                                .wins=${this.mapWins.get(mapValue) ?? new Set()}
-                                .translation=${translateText(
-                                  `map.${mapKey?.toLowerCase()}`,
-                                )}
-                              ></map-display>
-                            </div>
+                              .mapKey=${mapKey}
+                              .selected=${!this.useRandomMap &&
+                              this.selectedMap === mapValue}
+                              .showMedals=${this.showAchievements}
+                              .wins=${this.mapWins.get(mapValue) ?? new Set()}
+                              .translation=${translateText(
+                                `map.${mapKey?.toLowerCase()}`,
+                              )}
+                            ></map-list-display>
                           `;
                         })}
                       </div>
@@ -264,30 +261,12 @@ export class SinglePlayerModal extends BaseModal {
                   <div
                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                   >
-                    <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                    <lobby-map-card
                       @click=${this.handleSelectRandomMap}
-                    >
-                      <div
-                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-                      >
-                        <img
-                          src=${randomMap}
-                          alt=${translateText("map.random")}
-                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                        />
-                      </div>
-                      <div class="p-3 text-center border-t border-white/5">
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                        >
-                          ${translateText("map.random")}
-                        </div>
-                      </div>
-                    </button>
+                      .imageSrc=${randomMap}
+                      .name=${translateText("map.random")}
+                      aria-selected=${this.useRandomMap ? "true" : "false"}
+                    ></lobby-map-card>
                   </div>
                 </div>
               </div>

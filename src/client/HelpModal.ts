@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/Maps";
+import "./components/baseComponents/lobby/MapListDisplay";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
