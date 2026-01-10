@@ -54,7 +54,7 @@ export class TerritoryLayer implements Layer {
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
-  private contestDurationMs = 5000;
+  private contestDurationMs = 1000;
   private contestActive = false;
   private contestNextId = 1;
   private contestFreeIds: number[] = [];
