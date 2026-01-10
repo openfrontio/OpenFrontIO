@@ -4,4 +4,5 @@ export interface UIState {
   attackRatio: number;
   ghostStructure: UnitType | null;
   rocketDirectionUp: boolean;
+  localAttackHeld: boolean;
 }

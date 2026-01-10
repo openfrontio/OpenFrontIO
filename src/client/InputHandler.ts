@@ -212,6 +212,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
+      localAttack: "KeyL",
       swapDirection: "KeyU",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
@@ -338,6 +339,7 @@ export class InputHandler {
           "Equal",
           this.keybinds.attackRatioDown,
           this.keybinds.attackRatioUp,
+          this.keybinds.localAttack,
           this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
@@ -346,6 +348,10 @@ export class InputHandler {
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
+      }
+
+      if (e.code === this.keybinds.localAttack) {
+        this.uiState.localAttackHeld = true;
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -383,6 +389,10 @@ export class InputHandler {
       if (e.code === this.keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
+      }
+
+      if (e.code === this.keybinds.localAttack) {
+        this.uiState.localAttackHeld = false;
       }
 
       if (e.code === this.keybinds.centerCamera) {
@@ -631,6 +641,7 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
+    this.uiState.localAttackHeld = false;
   }
 
   isModifierKeyPressed(event: PointerEvent): boolean {

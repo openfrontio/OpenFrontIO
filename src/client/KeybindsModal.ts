@@ -21,6 +21,7 @@ const DefaultKeybinds: Record<string, string> = {
   attackRatioUp: "KeyY",
   boatAttack: "KeyB",
   groundAttack: "KeyG",
+  localAttack: "KeyL",
   zoomOut: "KeyQ",
   zoomIn: "KeyE",
   centerCamera: "KeyC",
@@ -429,6 +430,16 @@ export class KeybindsModal extends BaseModal {
         defaultKey="KeyG"
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="localAttack"
+        label=${translateText("user_setting.local_attack")}
+        description=${translateText("user_setting.local_attack_desc")}
+        defaultKey="KeyL"
+        .value=${this.getKeyValue("localAttack")}
+        .display=${this.getKeyChar("localAttack")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

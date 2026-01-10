@@ -497,6 +497,8 @@
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "local_attack": "Localized Attack (Hold)",
+    "local_attack_desc": "Hold to start attacks from the nearest border tile to the target.",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",

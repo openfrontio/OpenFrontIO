@@ -601,12 +601,15 @@ export const centerButtonElement: CenterButtonElement = {
         }
       } else {
         const targetId = params.selected?.id() ?? null;
-        const sourceTile = await resolveAttackSourceTile(
-          params.game,
-          params.myPlayer,
-          targetId,
-          params.tile,
-        );
+        const useLocalAttack = params.uiState?.localAttackHeld ?? false;
+        const sourceTile = useLocalAttack
+          ? await resolveAttackSourceTile(
+              params.game,
+              params.myPlayer,
+              targetId,
+              params.tile,
+            )
+          : null;
         params.playerActionHandler.handleAttack(
           params.myPlayer,
           targetId,

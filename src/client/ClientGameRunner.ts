@@ -688,12 +688,15 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     const targetId = this.gameView.owner(tile).id();
-    const sourceTile = await resolveAttackSourceTile(
-      this.gameView,
-      this.myPlayer,
-      targetId,
-      tile,
-    );
+    const useLocalAttack = this.renderer.uiState.localAttackHeld;
+    const sourceTile = useLocalAttack
+      ? await resolveAttackSourceTile(
+          this.gameView,
+          this.myPlayer,
+          targetId,
+          tile,
+        )
+      : null;
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
