@@ -511,7 +511,6 @@ class Client {
     // Attempt to join lobby
     this.handleUrl();
 
-
     const onHashUpdate = () => {
       // Prevent double-handling when both popstate and hashchange fire
       if (this.preventHashUpdate) {
