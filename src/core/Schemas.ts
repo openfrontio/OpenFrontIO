@@ -255,6 +255,7 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("attack"),
   targetID: ID.nullable(),
   troops: z.number().nonnegative().nullable(),
+  sourceTile: z.number().nullable().optional(),
 });
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({

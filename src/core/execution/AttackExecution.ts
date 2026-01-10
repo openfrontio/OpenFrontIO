@@ -97,6 +97,8 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    this.sourceTile = this.resolveSourceTile();
+
     this.startTroops ??= this.mg
       .config()
       .attackAmount(this._owner, this.target);
@@ -309,6 +311,21 @@ export class AttackExecution implements Execution {
     if (request !== undefined) {
       request.reject();
     }
+  }
+
+  private resolveSourceTile(): TileRef | null {
+    if (this.sourceTile === null) {
+      return null;
+    }
+    if (this.mg.owner(this.sourceTile) !== this._owner) {
+      return null;
+    }
+    for (const neighbor of this.mg.neighbors(this.sourceTile)) {
+      if (this.mg.owner(neighbor) === this.target) {
+        return this.sourceTile;
+      }
+    }
+    return null;
   }
 
   private addNeighbors(tile: TileRef) {

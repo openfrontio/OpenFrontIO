@@ -30,11 +30,16 @@ export class PlayerActionHandler {
     return await player.actions(tile);
   }
 
-  handleAttack(player: PlayerView, targetId: string | null) {
+  handleAttack(
+    player: PlayerView,
+    targetId: string | null,
+    sourceTile: TileRef | null = null,
+  ) {
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
         this.uiState.attackRatio * player.troops(),
+        sourceTile,
       ),
     );
   }
