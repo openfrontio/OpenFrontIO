@@ -1864,12 +1864,9 @@ export class TerritoryWebGLRenderer {
 
         uint contestIdRaw = contestIdRawAtTex(texCoord);
         const uint CONTEST_ID_MASK = 0x7FFFu;
-        const uint CONTEST_ATTACKER_EVER = 0x8000u;
         uint contestId = contestIdRaw & CONTEST_ID_MASK;
-        bool attackerEver = (contestIdRaw & CONTEST_ATTACKER_EVER) != 0u;
         uvec2 contestOwners = contestOwnersAtTex(texCoord);
         uint defender = contestOwners.r & 0xFFFu;
-        uint attacker = contestOwners.g & 0xFFFu;
 
         bool contested = false;
         if (contestId != 0u) {
@@ -1885,34 +1882,12 @@ export class TerritoryWebGLRenderer {
         bool isBorder = false;
         bool hasFriendlyRelation = false;
         bool hasEmbargoRelation = false;
-        bool pushedBorder = false;
-        bool attackerFriendlyRelation = false;
-        bool attackerEmbargoRelation = false;
-        bool regainedBorder = false;
-
         uint nOwner = ownerAtTex(texCoord + ivec2(1, 0));
         isBorder = isBorder || (nOwner != owner);
         if (nOwner != owner && nOwner != 0u) {
           uint rel = relationCode(owner, nOwner);
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
-        if (contested) {
-          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(1, 0));
-          uint nContestId = nContestRaw & CONTEST_ID_MASK;
-          bool sameComponent = nContestId == contestId;
-          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
-          if (attackerEver && !nAttackerEver) {
-            pushedBorder = true;
-            if (attacker != 0u && nOwner != 0u && nOwner != attacker) {
-              uint rel = relationCode(attacker, nOwner);
-              attackerEmbargoRelation = attackerEmbargoRelation || isEmbargo(rel);
-              attackerFriendlyRelation = attackerFriendlyRelation || isFriendly(rel);
-            }
-          }
-          if (sameComponent && owner == defender && nOwner == attacker) {
-            regainedBorder = true;
-          }
         }
 
         nOwner = ownerAtTex(texCoord + ivec2(-1, 0));
@@ -1922,23 +1897,6 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
-        if (contested) {
-          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(-1, 0));
-          uint nContestId = nContestRaw & CONTEST_ID_MASK;
-          bool sameComponent = nContestId == contestId;
-          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
-          if (attackerEver && !nAttackerEver) {
-            pushedBorder = true;
-            if (attacker != 0u && nOwner != 0u && nOwner != attacker) {
-              uint rel = relationCode(attacker, nOwner);
-              attackerEmbargoRelation = attackerEmbargoRelation || isEmbargo(rel);
-              attackerFriendlyRelation = attackerFriendlyRelation || isFriendly(rel);
-            }
-          }
-          if (sameComponent && owner == defender && nOwner == attacker) {
-            regainedBorder = true;
-          }
-        }
 
         nOwner = ownerAtTex(texCoord + ivec2(0, 1));
         isBorder = isBorder || (nOwner != owner);
@@ -1947,23 +1905,6 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
-        if (contested) {
-          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(0, 1));
-          uint nContestId = nContestRaw & CONTEST_ID_MASK;
-          bool sameComponent = nContestId == contestId;
-          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
-          if (attackerEver && !nAttackerEver) {
-            pushedBorder = true;
-            if (attacker != 0u && nOwner != 0u && nOwner != attacker) {
-              uint rel = relationCode(attacker, nOwner);
-              attackerEmbargoRelation = attackerEmbargoRelation || isEmbargo(rel);
-              attackerFriendlyRelation = attackerFriendlyRelation || isFriendly(rel);
-            }
-          }
-          if (sameComponent && owner == defender && nOwner == attacker) {
-            regainedBorder = true;
-          }
-        }
 
         nOwner = ownerAtTex(texCoord + ivec2(0, -1));
         isBorder = isBorder || (nOwner != owner);
@@ -1971,23 +1912,6 @@ export class TerritoryWebGLRenderer {
           uint rel = relationCode(owner, nOwner);
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
-        if (contested) {
-          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(0, -1));
-          uint nContestId = nContestRaw & CONTEST_ID_MASK;
-          bool sameComponent = nContestId == contestId;
-          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
-          if (attackerEver && !nAttackerEver) {
-            pushedBorder = true;
-            if (attacker != 0u && nOwner != 0u && nOwner != attacker) {
-              uint rel = relationCode(attacker, nOwner);
-              attackerEmbargoRelation = attackerEmbargoRelation || isEmbargo(rel);
-              attackerFriendlyRelation = attackerFriendlyRelation || isFriendly(rel);
-            }
-          }
-          if (sameComponent && owner == defender && nOwner == attacker) {
-            regainedBorder = true;
-          }
         }
 
         if (u_alternativeView) {
@@ -2080,32 +2004,6 @@ export class TerritoryWebGLRenderer {
           contestedFillAlpha = u_alpha;
         }
 
-        vec3 attackerBorderColor = vec3(0.0);
-        float attackerBorderAlpha = 0.0;
-        if (attacker != 0u) {
-          vec4 attackerBorder = texelFetch(
-            u_palette,
-            ivec2(int(attacker) * 2 + 1, 0),
-            0
-          );
-          vec3 attackerColor = attackerBorder.rgb;
-          const float ATTACKER_BORDER_TINT_RATIO = 0.35;
-          const vec3 ATTACKER_FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-          const vec3 ATTACKER_EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-
-          if (attackerFriendlyRelation) {
-            attackerColor = attackerColor * (1.0 - ATTACKER_BORDER_TINT_RATIO) +
-              ATTACKER_FRIENDLY_TINT_TARGET * ATTACKER_BORDER_TINT_RATIO;
-          }
-          if (attackerEmbargoRelation) {
-            attackerColor = attackerColor * (1.0 - ATTACKER_BORDER_TINT_RATIO) +
-              ATTACKER_EMBARGO_TINT_TARGET * ATTACKER_BORDER_TINT_RATIO;
-          }
-
-          attackerBorderColor = applyDefended(attackerColor, isDefended, texCoord);
-          attackerBorderAlpha = attackerBorder.a;
-        }
-
         vec3 color = contested ? contestedFillColor : fillColor;
         float a = contested ? contestedFillAlpha : fillAlpha;
 
@@ -2114,22 +2012,6 @@ export class TerritoryWebGLRenderer {
           a = borderAlpha;
         }
 
-        if (contested) {
-          if (regainedBorder) {
-            vec3 regained = applyDefended(vec3(1.0, 0.2, 0.2), isDefended, texCoord);
-            color = regained;
-            a = 1.0;
-          } else if (pushedBorder) {
-            color = attackerBorderColor;
-            a = attackerBorderAlpha;
-          } else if (isBorder && owner != 0u) {
-            color = borderColor;
-            a = borderAlpha;
-          } else if (owner != 0u) {
-            color = contestedFillColor;
-            a = contestedFillAlpha;
-          }
-        }
 
         uint oldOwner = prevOwnerAtTex(texCoord);
         bool smoothActive = u_smoothEnabled &&
