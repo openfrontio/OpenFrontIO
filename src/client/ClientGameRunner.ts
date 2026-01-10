@@ -246,6 +246,7 @@ export class ClientGameRunner {
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
+  private skinTestTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -351,7 +352,16 @@ export class ClientGameRunner {
       );
 
       // Show modal after 2 minutes OR when player wins, whichever comes first
-      setTimeout(() => {
+      if (this.skinTestTimeoutId !== null) {
+        clearTimeout(this.skinTestTimeoutId);
+        this.skinTestTimeoutId = null;
+      }
+      this.skinTestTimeoutId = setTimeout(() => {
+        const timeoutId = this.skinTestTimeoutId;
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+        this.skinTestTimeoutId = null;
         if (this.isActive) {
           this.showSkinTestModal();
         }
@@ -562,6 +572,10 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    if (this.skinTestTimeoutId !== null) {
+      clearTimeout(this.skinTestTimeoutId);
+      this.skinTestTimeoutId = null;
+    }
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
