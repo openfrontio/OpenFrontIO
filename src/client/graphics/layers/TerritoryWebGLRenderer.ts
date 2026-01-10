@@ -45,11 +45,15 @@ export class TerritoryWebGLRenderer {
   private readonly jfaTextureB: WebGLTexture | null;
   private readonly jfaFramebufferA: WebGLFramebuffer | null;
   private readonly jfaFramebufferB: WebGLFramebuffer | null;
+  private readonly jfaResultOldTexture: WebGLTexture | null;
+  private readonly jfaResultNewTexture: WebGLTexture | null;
+  private readonly jfaResultOldFramebuffer: WebGLFramebuffer | null;
+  private readonly jfaResultNewFramebuffer: WebGLFramebuffer | null;
   private readonly jfaSeedProgram: WebGLProgram | null;
   private readonly jfaProgram: WebGLProgram | null;
   private readonly jfaSeedUniforms: {
     resolution: WebGLUniformLocation | null;
-    prevOwner: WebGLUniformLocation | null;
+    owner: WebGLUniformLocation | null;
   };
   private readonly jfaUniforms: {
     resolution: WebGLUniformLocation | null;
@@ -68,7 +72,8 @@ export class TerritoryWebGLRenderer {
     contestNow: WebGLUniformLocation | null;
     contestDuration: WebGLUniformLocation | null;
     prevOwner: WebGLUniformLocation | null;
-    jfaSeeds: WebGLUniformLocation | null;
+    jfaSeedsOld: WebGLUniformLocation | null;
+    jfaSeedsNew: WebGLUniformLocation | null;
     smoothProgress: WebGLUniformLocation | null;
     smoothMaxDistance: WebGLUniformLocation | null;
     smoothEnabled: WebGLUniformLocation | null;
@@ -116,7 +121,6 @@ export class TerritoryWebGLRenderer {
   private jfaDirty = false;
   private prevStateCopySupported = false;
   private jfaSteps: number[] = [];
-  private jfaResultIsA = true;
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -158,9 +162,13 @@ export class TerritoryWebGLRenderer {
       this.jfaTextureB = null;
       this.jfaFramebufferA = null;
       this.jfaFramebufferB = null;
+      this.jfaResultOldTexture = null;
+      this.jfaResultNewTexture = null;
+      this.jfaResultOldFramebuffer = null;
+      this.jfaResultNewFramebuffer = null;
       this.jfaSeedProgram = null;
       this.jfaProgram = null;
-      this.jfaSeedUniforms = { resolution: null, prevOwner: null };
+      this.jfaSeedUniforms = { resolution: null, owner: null };
       this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
         resolution: null,
@@ -174,7 +182,8 @@ export class TerritoryWebGLRenderer {
         contestNow: null,
         contestDuration: null,
         prevOwner: null,
-        jfaSeeds: null,
+        jfaSeedsOld: null,
+        jfaSeedsNew: null,
         smoothProgress: null,
         smoothMaxDistance: null,
         smoothEnabled: null,
@@ -217,9 +226,13 @@ export class TerritoryWebGLRenderer {
       this.jfaTextureB = null;
       this.jfaFramebufferA = null;
       this.jfaFramebufferB = null;
+      this.jfaResultOldTexture = null;
+      this.jfaResultNewTexture = null;
+      this.jfaResultOldFramebuffer = null;
+      this.jfaResultNewFramebuffer = null;
       this.jfaSeedProgram = null;
       this.jfaProgram = null;
-      this.jfaSeedUniforms = { resolution: null, prevOwner: null };
+      this.jfaSeedUniforms = { resolution: null, owner: null };
       this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
         resolution: null,
@@ -233,7 +246,8 @@ export class TerritoryWebGLRenderer {
         contestNow: null,
         contestDuration: null,
         prevOwner: null,
-        jfaSeeds: null,
+        jfaSeedsOld: null,
+        jfaSeedsNew: null,
         smoothProgress: null,
         smoothMaxDistance: null,
         smoothEnabled: null,
@@ -271,9 +285,9 @@ export class TerritoryWebGLRenderer {
             this.jfaSeedProgram,
             "u_resolution",
           ),
-          prevOwner: gl.getUniformLocation(this.jfaSeedProgram, "u_prevOwner"),
+          owner: gl.getUniformLocation(this.jfaSeedProgram, "u_ownerTexture"),
         }
-      : { resolution: null, prevOwner: null };
+      : { resolution: null, owner: null };
     this.jfaUniforms = this.jfaProgram
       ? {
           resolution: gl.getUniformLocation(this.jfaProgram, "u_resolution"),
@@ -297,7 +311,8 @@ export class TerritoryWebGLRenderer {
         "u_contestDurationMs",
       ),
       prevOwner: gl.getUniformLocation(this.program, "u_prevOwner"),
-      jfaSeeds: gl.getUniformLocation(this.program, "u_jfaSeeds"),
+      jfaSeedsOld: gl.getUniformLocation(this.program, "u_jfaSeedsOld"),
+      jfaSeedsNew: gl.getUniformLocation(this.program, "u_jfaSeedsNew"),
       smoothProgress: gl.getUniformLocation(this.program, "u_smoothProgress"),
       smoothMaxDistance: gl.getUniformLocation(
         this.program,
@@ -372,6 +387,14 @@ export class TerritoryWebGLRenderer {
     this.jfaTextureB = this.jfaSupported ? gl.createTexture() : null;
     this.jfaFramebufferA = this.jfaSupported ? gl.createFramebuffer() : null;
     this.jfaFramebufferB = this.jfaSupported ? gl.createFramebuffer() : null;
+    this.jfaResultOldTexture = this.jfaSupported ? gl.createTexture() : null;
+    this.jfaResultNewTexture = this.jfaSupported ? gl.createTexture() : null;
+    this.jfaResultOldFramebuffer = this.jfaSupported
+      ? gl.createFramebuffer()
+      : null;
+    this.jfaResultNewFramebuffer = this.jfaSupported
+      ? gl.createFramebuffer()
+      : null;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
@@ -505,7 +528,11 @@ export class TerritoryWebGLRenderer {
       this.jfaTextureA &&
       this.jfaTextureB &&
       this.jfaFramebufferA &&
-      this.jfaFramebufferB
+      this.jfaFramebufferB &&
+      this.jfaResultOldTexture &&
+      this.jfaResultNewTexture &&
+      this.jfaResultOldFramebuffer &&
+      this.jfaResultNewFramebuffer
     ) {
       gl.activeTexture(gl.TEXTURE9);
       gl.bindTexture(gl.TEXTURE_2D, this.jfaTextureA);
@@ -559,6 +586,59 @@ export class TerritoryWebGLRenderer {
         this.jfaTextureB,
         0,
       );
+
+      gl.activeTexture(gl.TEXTURE10);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG16F,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.HALF_FLOAT,
+        null,
+      );
+
+      gl.activeTexture(gl.TEXTURE11);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultNewTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG16F,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.HALF_FLOAT,
+        null,
+      );
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaResultOldFramebuffer);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.jfaResultOldTexture,
+        0,
+      );
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaResultNewFramebuffer);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.jfaResultNewTexture,
+        0,
+      );
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
       this.jfaSteps = this.buildJfaSteps(this.canvas.width, this.canvas.height);
@@ -574,7 +654,8 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.contestIds, 5);
     gl.uniform1i(this.uniforms.contestTimes, 6);
     gl.uniform1i(this.uniforms.prevOwner, 7);
-    gl.uniform1i(this.uniforms.jfaSeeds, 8);
+    gl.uniform1i(this.uniforms.jfaSeedsOld, 8);
+    gl.uniform1i(this.uniforms.jfaSeedsNew, 9);
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -678,12 +759,15 @@ export class TerritoryWebGLRenderer {
       gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
     }
 
-    if (this.jfaSupported && this.jfaTextureA && this.jfaTextureB) {
+    if (
+      this.jfaSupported &&
+      this.jfaResultOldTexture &&
+      this.jfaResultNewTexture
+    ) {
       gl.activeTexture(gl.TEXTURE8);
-      gl.bindTexture(
-        gl.TEXTURE_2D,
-        this.jfaResultIsA ? this.jfaTextureA : this.jfaTextureB,
-      );
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultNewTexture);
     }
     if (this.uniforms.smoothProgress) {
       gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
@@ -877,7 +961,11 @@ export class TerritoryWebGLRenderer {
 
   setSmoothEnabled(enabled: boolean) {
     this.smoothEnabled =
-      enabled && this.jfaSupported && this.prevStateCopySupported;
+      enabled &&
+      this.jfaSupported &&
+      this.prevStateCopySupported &&
+      !!this.jfaResultOldTexture &&
+      !!this.jfaResultNewTexture;
   }
 
   markAllDirty() {
@@ -1165,6 +1253,11 @@ export class TerritoryWebGLRenderer {
       !this.jfaTextureA ||
       !this.jfaTextureB ||
       !this.prevOwnerTexture ||
+      !this.stateTexture ||
+      !this.jfaResultOldFramebuffer ||
+      !this.jfaResultNewFramebuffer ||
+      !this.jfaResultOldTexture ||
+      !this.jfaResultNewTexture ||
       !this.vao
     ) {
       return;
@@ -1178,61 +1271,84 @@ export class TerritoryWebGLRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.bindVertexArray(this.vao);
 
-    gl.useProgram(this.jfaSeedProgram);
-    if (this.jfaSeedUniforms.resolution) {
-      gl.uniform2f(
-        this.jfaSeedUniforms.resolution,
-        this.canvas.width,
-        this.canvas.height,
-      );
-    }
-    if (this.jfaSeedUniforms.prevOwner) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
-      gl.uniform1i(this.jfaSeedUniforms.prevOwner, 0);
-    }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaFramebufferA);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    let readTex = this.jfaTextureA;
-    let writeFbo = this.jfaFramebufferB;
-    let writeTex = this.jfaTextureB;
-    for (const step of this.jfaSteps) {
-      gl.useProgram(this.jfaProgram);
-      if (this.jfaUniforms.resolution) {
+    const runJfa = (
+      ownerTexture: WebGLTexture,
+      resultFramebuffer: WebGLFramebuffer,
+    ) => {
+      gl.useProgram(this.jfaSeedProgram);
+      if (this.jfaSeedUniforms.resolution) {
         gl.uniform2f(
-          this.jfaUniforms.resolution,
+          this.jfaSeedUniforms.resolution,
           this.canvas.width,
           this.canvas.height,
         );
       }
-      if (this.jfaUniforms.step) {
-        gl.uniform1f(this.jfaUniforms.step, step);
-      }
-      if (this.jfaUniforms.seeds) {
+      if (this.jfaSeedUniforms.owner) {
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, readTex);
-        gl.uniform1i(this.jfaUniforms.seeds, 0);
+        gl.bindTexture(gl.TEXTURE_2D, ownerTexture);
+        gl.uniform1i(this.jfaSeedUniforms.owner, 0);
       }
-      gl.bindFramebuffer(gl.FRAMEBUFFER, writeFbo);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaFramebufferA);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-      const tempTex = readTex;
-      readTex = writeTex;
-      writeTex = tempTex;
-      writeFbo =
-        writeFbo === this.jfaFramebufferB
-          ? this.jfaFramebufferA
-          : this.jfaFramebufferB;
-    }
+      let readTex = this.jfaTextureA;
+      let readFbo = this.jfaFramebufferA;
+      let writeFbo = this.jfaFramebufferB;
+      let writeTex = this.jfaTextureB;
+      for (const step of this.jfaSteps) {
+        gl.useProgram(this.jfaProgram);
+        if (this.jfaUniforms.resolution) {
+          gl.uniform2f(
+            this.jfaUniforms.resolution,
+            this.canvas.width,
+            this.canvas.height,
+          );
+        }
+        if (this.jfaUniforms.step) {
+          gl.uniform1f(this.jfaUniforms.step, step);
+        }
+        if (this.jfaUniforms.seeds) {
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, readTex);
+          gl.uniform1i(this.jfaUniforms.seeds, 0);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, writeFbo);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    this.jfaResultIsA = readTex === this.jfaTextureA;
+        const tempTex = readTex;
+        readTex = writeTex;
+        writeTex = tempTex;
+        const tempFbo = readFbo;
+        readFbo = writeFbo;
+        writeFbo = tempFbo;
+      }
+
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, readFbo);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, resultFramebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
+    };
+
+    runJfa(this.prevOwnerTexture, this.jfaResultOldFramebuffer);
+    runJfa(this.stateTexture, this.jfaResultNewFramebuffer);
+
     this.jfaDirty = false;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     if (prevBlend) {
       gl.enable(gl.BLEND);
     }
+    gl.bindVertexArray(null);
   }
 
   private buildJfaSteps(width: number, height: number): number[] {
@@ -1435,7 +1551,7 @@ export class TerritoryWebGLRenderer {
       precision highp float;
       precision highp usampler2D;
 
-      uniform usampler2D u_prevOwner;
+      uniform usampler2D u_ownerTexture;
       uniform vec2 u_resolution;
 
       out vec2 outSeed;
@@ -1446,7 +1562,7 @@ export class TerritoryWebGLRenderer {
           ivec2(0, 0),
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
-        return texelFetch(u_prevOwner, clamped, 0).r & 0xFFFu;
+        return texelFetch(u_ownerTexture, clamped, 0).r & 0xFFFu;
       }
 
       void main() {
@@ -1619,7 +1735,8 @@ export class TerritoryWebGLRenderer {
       uniform int u_contestNow;
       uniform float u_contestDurationMs;
       uniform usampler2D u_prevOwner;
-      uniform sampler2D u_jfaSeeds;
+      uniform sampler2D u_jfaSeedsOld;
+      uniform sampler2D u_jfaSeedsNew;
       uniform float u_smoothProgress;
       uniform float u_smoothMaxDistance;
       uniform bool u_smoothEnabled;
@@ -1661,13 +1778,22 @@ export class TerritoryWebGLRenderer {
         return texelFetch(u_prevOwner, clamped, 0).r & 0xFFFu;
       }
 
-      vec2 jfaSeedAtTex(ivec2 texCoord) {
+      vec2 jfaSeedOldAtTex(ivec2 texCoord) {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
-        return texelFetch(u_jfaSeeds, clamped, 0).rg;
+        return texelFetch(u_jfaSeedsOld, clamped, 0).rg;
+      }
+
+      vec2 jfaSeedNewAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+        );
+        return texelFetch(u_jfaSeedsNew, clamped, 0).rg;
       }
 
       uvec2 contestOwnersAtTex(ivec2 texCoord) {
@@ -2108,10 +2234,16 @@ export class TerritoryWebGLRenderer {
             }
           }
 
-          vec2 seed = jfaSeedAtTex(texCoord);
-          float distance = seed.x < 0.0 ? 1e6 : length(seed - vec2(texCoord));
-          float edge = u_smoothProgress * u_smoothMaxDistance;
-          float reveal = 1.0 - smoothstep(edge - 0.5, edge + 0.5, distance);
+          vec2 seedOld = jfaSeedOldAtTex(texCoord);
+          float oldDistance =
+            seedOld.x < 0.0 ? 1e6 : length(seedOld - vec2(texCoord));
+          vec2 seedNew = jfaSeedNewAtTex(texCoord);
+          float newDistance =
+            seedNew.x < 0.0 ? 1e6 : length(seedNew - vec2(texCoord));
+          float maxDistance = max(oldDistance + newDistance, 0.001);
+          float edge = u_smoothProgress * maxDistance;
+          float reveal =
+            1.0 - smoothstep(edge - 0.5, edge + 0.5, oldDistance);
           color = mix(oldColor, color, reveal);
           a = mix(oldAlpha, a, reveal);
         }
