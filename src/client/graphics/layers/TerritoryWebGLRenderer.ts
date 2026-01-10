@@ -75,7 +75,6 @@ export class TerritoryWebGLRenderer {
     jfaSeedsOld: WebGLUniformLocation | null;
     jfaSeedsNew: WebGLUniformLocation | null;
     smoothProgress: WebGLUniformLocation | null;
-    smoothMaxDistance: WebGLUniformLocation | null;
     smoothEnabled: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
@@ -106,16 +105,19 @@ export class TerritoryWebGLRenderer {
   private needsContestTimesUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
+  // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
   private hoverHighlightStrength = 0.3;
+  // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
   private hoverHighlightColor: [number, number, number] = [1, 1, 1];
+  // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
   private hoverPulseStrength = 0.25;
+  // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
   private contestNow = 0;
   private contestDurationMs = 0;
   private smoothProgress = 1;
-  private smoothMaxDistance = 12;
   private smoothEnabled = true;
   private jfaSupported = false;
   private jfaDirty = false;
@@ -185,7 +187,6 @@ export class TerritoryWebGLRenderer {
         jfaSeedsOld: null,
         jfaSeedsNew: null,
         smoothProgress: null,
-        smoothMaxDistance: null,
         smoothEnabled: null,
         patternStride: null,
         patternRows: null,
@@ -249,7 +250,6 @@ export class TerritoryWebGLRenderer {
         jfaSeedsOld: null,
         jfaSeedsNew: null,
         smoothProgress: null,
-        smoothMaxDistance: null,
         smoothEnabled: null,
         patternStride: null,
         patternRows: null,
@@ -314,10 +314,6 @@ export class TerritoryWebGLRenderer {
       jfaSeedsOld: gl.getUniformLocation(this.program, "u_jfaSeedsOld"),
       jfaSeedsNew: gl.getUniformLocation(this.program, "u_jfaSeedsNew"),
       smoothProgress: gl.getUniformLocation(this.program, "u_smoothProgress"),
-      smoothMaxDistance: gl.getUniformLocation(
-        this.program,
-        "u_smoothMaxDistance",
-      ),
       smoothEnabled: gl.getUniformLocation(this.program, "u_smoothEnabled"),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
@@ -752,9 +748,6 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.smoothProgress) {
       gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
     }
-    if (this.uniforms.smoothMaxDistance) {
-      gl.uniform1f(this.uniforms.smoothMaxDistance, this.smoothMaxDistance);
-    }
     if (this.uniforms.smoothEnabled) {
       gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
     }
@@ -768,15 +761,6 @@ export class TerritoryWebGLRenderer {
       gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
       gl.activeTexture(gl.TEXTURE9);
       gl.bindTexture(gl.TEXTURE_2D, this.jfaResultNewTexture);
-    }
-    if (this.uniforms.smoothProgress) {
-      gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
-    }
-    if (this.uniforms.smoothMaxDistance) {
-      gl.uniform1f(this.uniforms.smoothMaxDistance, this.smoothMaxDistance);
-    }
-    if (this.uniforms.smoothEnabled) {
-      gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
     }
 
     gl.enable(gl.BLEND);
@@ -953,10 +937,6 @@ export class TerritoryWebGLRenderer {
 
   setSmoothProgress(progress: number) {
     this.smoothProgress = Math.max(0, Math.min(1, progress));
-  }
-
-  setSmoothMaxDistance(distance: number) {
-    this.smoothMaxDistance = Math.max(1, distance);
   }
 
   setSmoothEnabled(enabled: boolean) {
@@ -1738,7 +1718,6 @@ export class TerritoryWebGLRenderer {
       uniform sampler2D u_jfaSeedsOld;
       uniform sampler2D u_jfaSeedsNew;
       uniform float u_smoothProgress;
-      uniform float u_smoothMaxDistance;
       uniform bool u_smoothEnabled;
       uniform int u_patternStride;
       uniform int u_patternRows;
