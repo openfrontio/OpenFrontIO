@@ -76,14 +76,14 @@ export class SkinTestWinModal extends LitElement implements Layer {
             <div class="flex gap-4 justify-center">
               <button
                 @click=${() => this._handleRate("up")}
-                class="p-3 rounded-full transition-all duration-200 hover:scale-110 ${this
+                class="p-3 rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center overflow-visible ${this
                   .rated === "up"
                   ? "bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]"
                   : "bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"}"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="h-8 w-8"
+                  class="h-8 w-8 block"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -98,14 +98,14 @@ export class SkinTestWinModal extends LitElement implements Layer {
               </button>
               <button
                 @click=${() => this._handleRate("down")}
-                class="p-3 rounded-full transition-all duration-200 hover:scale-110 ${this
+                class="p-3 rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center overflow-visible ${this
                   .rated === "down"
                   ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]"
                   : "bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"}"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="h-8 w-8"
+                  class="h-8 w-8 block"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -149,11 +149,9 @@ export class SkinTestWinModal extends LitElement implements Layer {
         @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: translate(-50%, -48%);
           }
           to {
             opacity: 1;
-            transform: translate(-50%, -50%);
           }
         }
         .animate-fadeIn {
