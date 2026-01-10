@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
+import { EventBus } from "../../../core/EventBus";
 import { handlePurchase } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../../components/PatternButton";
@@ -8,6 +9,8 @@ import { Layer } from "./Layer";
 
 @customElement("skin-test-win-modal")
 export class SkinTestWinModal extends LitElement implements Layer {
+  public eventBus: EventBus;
+
   @state()
   isVisible = false;
 
