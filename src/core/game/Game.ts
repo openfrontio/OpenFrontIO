@@ -114,6 +114,7 @@ export enum GameMapType {
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
   Didier = "Didier",
+  DidierFrance = "Didier (France)",
   AmazonRiver = "Amazon River",
 }
 
@@ -174,7 +175,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Svalmel,
     GameMapType.Surrounded,
   ],
-  arcade: [GameMapType.Didier, GameMapType.Sierpinski],
+  arcade: [
+    GameMapType.Didier,
+    GameMapType.DidierFrance,
+    GameMapType.Sierpinski,
+  ],
 };
 
 export enum GameType {
