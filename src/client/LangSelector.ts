@@ -236,6 +236,27 @@ export class LangSelector extends LitElement {
       element.textContent = text;
     });
 
+    const applyAttributeTranslation = (
+      dataAttr: string,
+      targetAttr: string,
+    ): void => {
+      document.querySelectorAll(`[${dataAttr}]`).forEach((element) => {
+        const key = element.getAttribute(dataAttr);
+        if (key === null) return;
+        const text = this.translateText(key);
+        if (text === null) {
+          console.warn(`Translation key not found: ${key}`);
+          return;
+        }
+        element.setAttribute(targetAttr, text);
+      });
+    };
+
+    applyAttributeTranslation("data-i18n-title", "title");
+    applyAttributeTranslation("data-i18n-alt", "alt");
+    applyAttributeTranslation("data-i18n-aria-label", "aria-label");
+    applyAttributeTranslation("data-i18n-placeholder", "placeholder");
+
     components.forEach((tag) => {
       document.querySelectorAll(tag).forEach((el) => {
         if (typeof (el as any).requestUpdate === "function") {

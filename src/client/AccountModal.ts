@@ -173,11 +173,7 @@ export class AccountModal extends BaseModal {
     const isLinked = me?.discord ?? me?.email;
 
     if (!isLinked) {
-      return html`
-        <div class="p-6 flex justify-center items-start min-h-full">
-          <div class="w-full max-w-2xl">${this.renderLinkAccountSection()}</div>
-        </div>
-      `;
+      return this.renderLoginOptions();
     }
 
     return html`
@@ -235,60 +231,6 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  private renderLinkAccountSection(): TemplateResult {
-    return html`
-      <div class="bg-blue-500/10 rounded-xl border border-blue-500/20 p-6">
-        <div class="flex items-start gap-4 mb-6">
-          <div>
-            <h3 class="text-lg font-bold text-white uppercase tracking-wider">
-              ${translateText("account_modal.save_progress_title")}
-            </h3>
-            <p class="text-sm text-white/60 mt-1">
-              ${translateText("account_modal.save_progress_desc")}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <button
-            @click="${this.handleDiscordLogin}"
-            class="w-full px-4 py-3 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2 group relative overflow-hidden shadow-lg hover:shadow-xl"
-          >
-            <img
-              src="/images/DiscordLogo.svg"
-              alt="Discord"
-              class="w-5 h-5 relative z-10"
-            />
-            <span class="font-bold text-sm relative z-10 tracking-wide"
-              >${translateText("main.login_discord") ||
-              translateText("account_modal.link_discord")}</span
-            >
-          </button>
-
-          <div class="relative group w-full">
-            <div class="flex gap-2">
-              <input
-                type="email"
-                .value="${this.email}"
-                @input="${this.handleEmailInput}"
-                class="flex-1 min-w-0 px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium"
-                placeholder="${translateText(
-                  "account_modal.link_via_email_placeholder",
-                )}"
-              />
-              <button
-                @click="${this.handleSubmit}"
-                class="px-5 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all border border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0"
-              >
-                ${translateText("account_modal.link_button")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
   private renderLoggedInAs(): TemplateResult {
     const me = this.userMeResponse?.user;
     if (me?.discord) {
@@ -309,46 +251,7 @@ export class AccountModal extends BaseModal {
         </div>
       `;
     }
-
-    // "Mini" Login Options for linking account
-    return html`
-      <div class="w-full space-y-3">
-        <button
-          @click="${this.handleDiscordLogin}"
-          class="w-full px-4 py-3 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none transition-colors duration-200 flex items-center justify-center gap-2 group relative overflow-hidden"
-        >
-          <img
-            src="/images/DiscordLogo.svg"
-            alt="Discord"
-            class="w-5 h-5 relative z-10"
-          />
-          <span class="font-bold text-sm relative z-10 tracking-wide"
-            >${translateText("main.login_discord") ||
-            translateText("account_modal.link_discord")}</span
-          >
-        </button>
-
-        <div class="relative group">
-          <div class="flex gap-2">
-            <input
-              type="email"
-              .value="${this.email}"
-              @input="${this.handleEmailInput}"
-              class="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-blue-500 transition-all font-medium"
-              placeholder="${translateText(
-                "account_modal.link_via_email_placeholder",
-              )}"
-            />
-            <button
-              @click="${this.handleSubmit}"
-              class="px-4 py-2 text-sm font-bold text-white uppercase bg-blue-600 hover:bg-blue-500 rounded-lg transition-all"
-            >
-              ${translateText("account_modal.link_button")}
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    return html``;
   }
 
   private viewGame(gameId: string): void {
@@ -398,11 +301,6 @@ export class AccountModal extends BaseModal {
                 <line x1="15" y1="12" x2="3" y2="12"></line>
               </svg>
             </div>
-            <h3
-              class="text-xl font-bold text-white uppercase tracking-widest mb-2"
-            >
-              ${translateText("account_modal.welcome_back")}
-            </h3>
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>

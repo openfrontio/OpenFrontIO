@@ -44,7 +44,7 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe } from "./Utils";
+import { incrementGamesPlayed, isInIframe, translateText } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -72,17 +72,28 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const personIconEl = document.getElementById(
     "nav-account-person-icon",
   ) as SVGElement | null;
+  const emailBadgeEl = document.getElementById(
+    "nav-account-email-badge",
+  ) as HTMLElement | null;
   const signInTextEl = document.getElementById(
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
 
   const showAvatar = (src: string) => {
     if (avatarEl) {
+      avatarEl.alt = translateText("main.discord_avatar_alt");
       // If the avatar fails to load (bad URL / CDN issue / offline), fall back
       // to the default sign-in UI instead of leaving a broken image.
       avatarEl.onerror = () => {
         avatarEl.src = "";
-        showSignIn();
+        // If the user is still logged in via email, show the email badge state.
+        const email =
+          userMeResponse !== false ? userMeResponse.user.email : undefined;
+        if (email) {
+          showEmailLoggedIn();
+        } else {
+          showSignIn();
+        }
       };
       avatarEl.onload = () => {
         // Clear error handler after a successful load.
@@ -92,23 +103,42 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
       avatarEl.classList.remove("hidden");
     }
     personIconEl?.classList.add("hidden");
+    emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.add("hidden");
   };
 
   const showSignIn = () => {
     avatarEl?.classList.add("hidden");
     personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.add("hidden");
     signInTextEl?.classList.remove("hidden");
+  };
+
+  const showEmailLoggedIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.remove("hidden");
+    signInTextEl?.classList.add("hidden");
   };
 
   const discord =
     userMeResponse !== false ? userMeResponse.user.discord : undefined;
   if (discord && avatarEl) {
+    avatarEl.alt = translateText("main.user_avatar_alt", {
+      username: discord.username,
+    });
     const url = getDiscordAvatarUrl(discord);
     if (url) {
       showAvatar(url);
       return;
     }
+  }
+
+  const email =
+    userMeResponse !== false ? userMeResponse.user.email : undefined;
+  if (email) {
+    showEmailLoggedIn();
+    return;
   }
 
   showSignIn();
