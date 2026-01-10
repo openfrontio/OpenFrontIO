@@ -87,6 +87,11 @@ export class TerritoryLayer implements Layer {
   tick() {
     const tickProfile = FrameProfiler.start();
     const now = this.nowMs();
+    const currentTheme = this.game.config().theme();
+    if (currentTheme !== this.theme) {
+      this.theme = currentTheme;
+      this.redraw();
+    }
     if (this.game.inSpawnPhase()) {
       this.spawnHighlight();
     }
@@ -410,7 +415,7 @@ export class TerritoryLayer implements Layer {
   }
 
   private hoverHighlightOptions() {
-    const baseColor = this.theme.spawnHighlightSelfColor();
+    const baseColor = this.theme.playerHighlightColor();
     const rgba = baseColor.rgba;
 
     if (this.alternativeView) {
