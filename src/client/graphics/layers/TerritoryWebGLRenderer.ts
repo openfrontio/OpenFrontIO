@@ -35,16 +35,20 @@ export class TerritoryWebGLRenderer {
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
   private readonly patternTexture: WebGLTexture | null;
-  private readonly transitionTexture: WebGLTexture | null;
+  private readonly contestOwnersTexture: WebGLTexture | null;
+  private readonly contestIdsTexture: WebGLTexture | null;
+  private readonly contestTimesTexture: WebGLTexture | null;
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
-    transitions: WebGLUniformLocation | null;
-    transitionNow: WebGLUniformLocation | null;
-    transitionDuration: WebGLUniformLocation | null;
+    contestOwners: WebGLUniformLocation | null;
+    contestIds: WebGLUniformLocation | null;
+    contestTimes: WebGLUniformLocation | null;
+    contestNow: WebGLUniformLocation | null;
+    contestDuration: WebGLUniformLocation | null;
     patternStride: WebGLUniformLocation | null;
     patternRows: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
@@ -64,11 +68,14 @@ export class TerritoryWebGLRenderer {
   };
 
   private readonly state: Uint16Array;
-  private readonly transitionState: Uint16Array;
+  private contestOwnersState: Uint16Array;
+  private contestIdsState: Uint16Array;
+  private contestTimesState: Uint16Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
-  private readonly transitionDirtyRows: Map<number, DirtySpan> = new Map();
+  private readonly contestDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
-  private needsTransitionFullUpload = true;
+  private needsContestFullUpload = true;
+  private needsContestTimesUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
   private hoverHighlightStrength = 0.7;
@@ -77,8 +84,8 @@ export class TerritoryWebGLRenderer {
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
-  private transitionNow = 0;
-  private transitionDurationMs = 500;
+  private contestNow = 0;
+  private contestDurationMs = 5000;
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -92,11 +99,9 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = state;
-    this.transitionState = new Uint16Array(state.length * 2);
-    for (let i = 0; i < state.length; i++) {
-      this.transitionState[i * 2] = state[i] & 0x0fff;
-      this.transitionState[i * 2 + 1] = 0;
-    }
+    this.contestOwnersState = new Uint16Array(state.length * 2);
+    this.contestIdsState = new Uint16Array(state.length);
+    this.contestTimesState = new Uint16Array(1);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -112,16 +117,20 @@ export class TerritoryWebGLRenderer {
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
-      this.transitionTexture = null;
+      this.contestOwnersTexture = null;
+      this.contestIdsTexture = null;
+      this.contestTimesTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
         patterns: null,
-        transitions: null,
-        transitionNow: null,
-        transitionDuration: null,
+        contestOwners: null,
+        contestIds: null,
+        contestTimes: null,
+        contestNow: null,
+        contestDuration: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -151,16 +160,20 @@ export class TerritoryWebGLRenderer {
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
-      this.transitionTexture = null;
+      this.contestOwnersTexture = null;
+      this.contestIdsTexture = null;
+      this.contestTimesTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
         patterns: null,
-        transitions: null,
-        transitionNow: null,
-        transitionDuration: null,
+        contestOwners: null,
+        contestIds: null,
+        contestTimes: null,
+        contestNow: null,
+        contestDuration: null,
         patternStride: null,
         patternRows: null,
         fallout: null,
@@ -187,11 +200,13 @@ export class TerritoryWebGLRenderer {
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
-      transitions: gl.getUniformLocation(this.program, "u_transitions"),
-      transitionNow: gl.getUniformLocation(this.program, "u_transitionNow"),
-      transitionDuration: gl.getUniformLocation(
+      contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
+      contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
+      contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
+      contestNow: gl.getUniformLocation(this.program, "u_contestNow"),
+      contestDuration: gl.getUniformLocation(
         this.program,
-        "u_transitionDurationMs",
+        "u_contestDurationMs",
       ),
       patternStride: gl.getUniformLocation(this.program, "u_patternStride"),
       patternRows: gl.getUniformLocation(this.program, "u_patternRows"),
@@ -251,7 +266,9 @@ export class TerritoryWebGLRenderer {
     this.paletteTexture = gl.createTexture();
     this.relationTexture = gl.createTexture();
     this.patternTexture = gl.createTexture();
-    this.transitionTexture = gl.createTexture();
+    this.contestOwnersTexture = gl.createTexture();
+    this.contestIdsTexture = gl.createTexture();
+    this.contestTimesTexture = gl.createTexture();
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
@@ -275,7 +292,7 @@ export class TerritoryWebGLRenderer {
     this.uploadPalette();
 
     gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, this.transitionTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestOwnersTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -290,7 +307,45 @@ export class TerritoryWebGLRenderer {
       0,
       gl.RG_INTEGER,
       gl.UNSIGNED_SHORT,
-      this.transitionState,
+      this.contestOwnersState,
+    );
+
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestIdsTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestIdsState,
+    );
+
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestTimesTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestTimesState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestTimesState,
     );
 
     gl.useProgram(this.program);
@@ -298,7 +353,9 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
     gl.uniform1i(this.uniforms.patterns, 3);
-    gl.uniform1i(this.uniforms.transitions, 4);
+    gl.uniform1i(this.uniforms.contestOwners, 4);
+    gl.uniform1i(this.uniforms.contestIds, 5);
+    gl.uniform1i(this.uniforms.contestTimes, 6);
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -386,11 +443,11 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.hoverPulseSpeed) {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
-    if (this.uniforms.transitionNow) {
-      gl.uniform1i(this.uniforms.transitionNow, this.transitionNow);
+    if (this.uniforms.contestNow) {
+      gl.uniform1i(this.uniforms.contestNow, this.contestNow);
     }
-    if (this.uniforms.transitionDuration) {
-      gl.uniform1f(this.uniforms.transitionDuration, this.transitionDurationMs);
+    if (this.uniforms.contestDuration) {
+      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
     }
 
     gl.enable(gl.BLEND);
@@ -465,46 +522,83 @@ export class TerritoryWebGLRenderer {
     }
   }
 
-  setTransitionTile(tile: TileRef, previousOwner: number, startPacked: number) {
+  setContestTile(
+    tile: TileRef,
+    defenderOwner: number,
+    attackerOwner: number,
+    componentId: number,
+    attackerEver: boolean,
+  ) {
     const offset = tile * 2;
-    const ownerValue = previousOwner & 0xffff;
-    const startValue = startPacked & 0xffff;
+    const defenderValue = defenderOwner & 0xffff;
+    const attackerValue = attackerOwner & 0xffff;
+    const idValue = (componentId & 0x7fff) | (attackerEver ? 0x8000 : 0);
     if (
-      this.transitionState[offset] === ownerValue &&
-      this.transitionState[offset + 1] === startValue
+      this.contestOwnersState[offset] === defenderValue &&
+      this.contestOwnersState[offset + 1] === attackerValue &&
+      this.contestIdsState[tile] === idValue
     ) {
       return;
     }
-    this.transitionState[offset] = ownerValue;
-    this.transitionState[offset + 1] = startValue;
-    if (this.needsTransitionFullUpload) {
+    this.contestOwnersState[offset] = defenderValue;
+    this.contestOwnersState[offset + 1] = attackerValue;
+    this.contestIdsState[tile] = idValue;
+    if (this.needsContestFullUpload) {
       return;
     }
     const x = tile % this.canvas.width;
     const y = Math.floor(tile / this.canvas.width);
-    const span = this.transitionDirtyRows.get(y);
+    const span = this.contestDirtyRows.get(y);
     if (span === undefined) {
-      this.transitionDirtyRows.set(y, { minX: x, maxX: x });
+      this.contestDirtyRows.set(y, { minX: x, maxX: x });
     } else {
       span.minX = Math.min(span.minX, x);
       span.maxX = Math.max(span.maxX, x);
     }
   }
 
-  clearTransitionTile(tile: TileRef, currentOwner: number) {
-    this.setTransitionTile(tile, currentOwner, 0);
+  clearContestTile(tile: TileRef) {
+    this.setContestTile(tile, 0, 0, 0, false);
   }
 
-  setTransitionTime(nowPacked: number, durationMs: number) {
-    this.transitionNow = nowPacked | 0;
-    this.transitionDurationMs = Math.max(1, durationMs);
+  setContestTime(componentId: number, nowPacked: number) {
+    if (componentId <= 0) {
+      return;
+    }
+    this.ensureContestTimeCapacity(componentId);
+    const packed = nowPacked & 0xffff;
+    if (this.contestTimesState[componentId] === packed) {
+      return;
+    }
+    this.contestTimesState[componentId] = packed;
+    this.needsContestTimesUpload = true;
+  }
+
+  ensureContestTimeCapacity(componentId: number) {
+    if (componentId < this.contestTimesState.length) {
+      return;
+    }
+    let nextLength = Math.max(1, this.contestTimesState.length);
+    while (nextLength <= componentId) {
+      nextLength *= 2;
+    }
+    const nextState = new Uint16Array(nextLength);
+    nextState.set(this.contestTimesState);
+    this.contestTimesState = nextState;
+    this.needsContestTimesUpload = true;
+  }
+
+  setContestNow(nowPacked: number, durationMs: number) {
+    this.contestNow = nowPacked | 0;
+    this.contestDurationMs = Math.max(1, durationMs);
   }
 
   markAllDirty() {
     this.needsFullUpload = true;
     this.dirtyRows.clear();
-    this.needsTransitionFullUpload = true;
-    this.transitionDirtyRows.clear();
+    this.needsContestFullUpload = true;
+    this.needsContestTimesUpload = true;
+    this.contestDirtyRows.clear();
   }
 
   refreshPalette() {
@@ -524,11 +618,18 @@ export class TerritoryWebGLRenderer {
     this.uploadStateTexture();
     FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadStateSpan);
 
-    const uploadTransitionSpan = FrameProfiler.start();
-    this.uploadTransitionTexture();
+    const uploadContestSpan = FrameProfiler.start();
+    this.uploadContestTexture();
     FrameProfiler.end(
-      "TerritoryWebGLRenderer:uploadTransitions",
-      uploadTransitionSpan,
+      "TerritoryWebGLRenderer:uploadContests",
+      uploadContestSpan,
+    );
+
+    const uploadContestTimesSpan = FrameProfiler.start();
+    this.uploadContestTimesTexture();
+    FrameProfiler.end(
+      "TerritoryWebGLRenderer:uploadContestTimes",
+      uploadContestTimesSpan,
     );
 
     const renderSpan = FrameProfiler.start();
@@ -565,11 +666,11 @@ export class TerritoryWebGLRenderer {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
     }
-    if (this.uniforms.transitionNow) {
-      gl.uniform1i(this.uniforms.transitionNow, this.transitionNow);
+    if (this.uniforms.contestNow) {
+      gl.uniform1i(this.uniforms.contestNow, this.contestNow);
     }
-    if (this.uniforms.transitionDuration) {
-      gl.uniform1f(this.uniforms.transitionDuration, this.transitionDurationMs);
+    if (this.uniforms.contestDuration) {
+      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
     }
 
     gl.clearColor(0, 0, 0, 0);
@@ -634,17 +735,21 @@ export class TerritoryWebGLRenderer {
     return { rows: rowsUploaded, bytes: bytesUploaded };
   }
 
-  private uploadTransitionTexture(): { rows: number; bytes: number } {
-    if (!this.gl || !this.transitionTexture) return { rows: 0, bytes: 0 };
+  private uploadContestTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.contestOwnersTexture || !this.contestIdsTexture) {
+      return { rows: 0, bytes: 0 };
+    }
     const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, this.transitionTexture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
-    const bytesPerPixel = Uint16Array.BYTES_PER_ELEMENT * 2;
+    const bytesPerOwnerPixel = Uint16Array.BYTES_PER_ELEMENT * 2;
+    const bytesPerIdPixel = Uint16Array.BYTES_PER_ELEMENT;
     let rowsUploaded = 0;
     let bytesUploaded = 0;
 
-    if (this.needsTransitionFullUpload) {
+    if (this.needsContestFullUpload) {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestOwnersTexture);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
@@ -654,26 +759,47 @@ export class TerritoryWebGLRenderer {
         0,
         gl.RG_INTEGER,
         gl.UNSIGNED_SHORT,
-        this.transitionState,
+        this.contestOwnersState,
       );
-      this.needsTransitionFullUpload = false;
-      this.transitionDirtyRows.clear();
+
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestIdsTexture);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.R16UI,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_SHORT,
+        this.contestIdsState,
+      );
+
+      this.needsContestFullUpload = false;
+      this.contestDirtyRows.clear();
       rowsUploaded = this.canvas.height;
-      bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      bytesUploaded =
+        this.canvas.width *
+        this.canvas.height *
+        (bytesPerOwnerPixel + bytesPerIdPixel);
       return { rows: rowsUploaded, bytes: bytesUploaded };
     }
 
-    if (this.transitionDirtyRows.size === 0) {
+    if (this.contestDirtyRows.size === 0) {
       return { rows: 0, bytes: 0 };
     }
 
-    for (const [y, span] of this.transitionDirtyRows) {
+    for (const [y, span] of this.contestDirtyRows) {
       const width = span.maxX - span.minX + 1;
-      const offset = (y * this.canvas.width + span.minX) * 2;
-      const rowSlice = this.transitionState.subarray(
-        offset,
-        offset + width * 2,
+      const ownerOffset = (y * this.canvas.width + span.minX) * 2;
+      const ownerSlice = this.contestOwnersState.subarray(
+        ownerOffset,
+        ownerOffset + width * 2,
       );
+
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestOwnersTexture);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
@@ -683,13 +809,57 @@ export class TerritoryWebGLRenderer {
         1,
         gl.RG_INTEGER,
         gl.UNSIGNED_SHORT,
-        rowSlice,
+        ownerSlice,
       );
+
+      const idOffset = y * this.canvas.width + span.minX;
+      const idSlice = this.contestIdsState.subarray(idOffset, idOffset + width);
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestIdsTexture);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RED_INTEGER,
+        gl.UNSIGNED_SHORT,
+        idSlice,
+      );
+
       rowsUploaded++;
-      bytesUploaded += width * bytesPerPixel;
+      bytesUploaded += width * (bytesPerOwnerPixel + bytesPerIdPixel);
     }
-    this.transitionDirtyRows.clear();
+    this.contestDirtyRows.clear();
     return { rows: rowsUploaded, bytes: bytesUploaded };
+  }
+
+  private uploadContestTimesTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.contestTimesTexture) {
+      return { rows: 0, bytes: 0 };
+    }
+    if (!this.needsContestTimesUpload) {
+      return { rows: 0, bytes: 0 };
+    }
+    const gl = this.gl;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestTimesTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestTimesState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestTimesState,
+    );
+    this.needsContestTimesUpload = false;
+    const bytes = this.contestTimesState.length * Uint16Array.BYTES_PER_ELEMENT;
+    return { rows: 1, bytes };
   }
 
   private uploadPalette() {
@@ -879,9 +1049,11 @@ export class TerritoryWebGLRenderer {
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
       uniform usampler2D u_patterns;
-      uniform usampler2D u_transitions;
-      uniform int u_transitionNow;
-      uniform float u_transitionDurationMs;
+      uniform usampler2D u_contestOwners;
+      uniform usampler2D u_contestIds;
+      uniform usampler2D u_contestTimes;
+      uniform int u_contestNow;
+      uniform float u_contestDurationMs;
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
@@ -911,22 +1083,22 @@ export class TerritoryWebGLRenderer {
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
       }
 
-      uint prevOwnerAtTex(ivec2 texCoord) {
+      uvec2 contestOwnersAtTex(ivec2 texCoord) {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
-        return texelFetch(u_transitions, clamped, 0).r & 0xFFFu;
+        return texelFetch(u_contestOwners, clamped, 0).rg;
       }
 
-      uint transitionPackedAtTex(ivec2 texCoord) {
+      uint contestIdRawAtTex(ivec2 texCoord) {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
-        return texelFetch(u_transitions, clamped, 0).g;
+        return texelFetch(u_contestIds, clamped, 0).r;
       }
 
       uint relationCode(uint owner, uint other) {
@@ -979,34 +1151,51 @@ export class TerritoryWebGLRenderer {
         return (byteVal & (1u << bitIndex)) == 0u;
       }
 
+      vec3 applyDefended(vec3 color, bool defended, ivec2 texCoord) {
+        if (!defended) {
+          return color;
+        }
+        bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+        const float LIGHT_FACTOR = 1.2;
+        const float DARK_FACTOR = 0.8;
+        return color * (isLightTile ? LIGHT_FACTOR : DARK_FACTOR);
+      }
+
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
         ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
         uint owner = state & 0xFFFu;
-        uint prevOwner = prevOwnerAtTex(texCoord);
-        uint startPacked = transitionPackedAtTex(texCoord);
-        const uint TRANSITION_FLAG = 0x8000u;
-        const uint TRANSITION_TIME_MASK = 0x7FFFu;
-        const uint TRANSITION_WRAP = 32768u;
-        bool hasTransition = (startPacked & TRANSITION_FLAG) != 0u;
-        float t = 1.0;
-        if (hasTransition) {
-          uint start = startPacked & TRANSITION_TIME_MASK;
-          uint nowTime = uint(u_transitionNow);
-          uint elapsed = nowTime >= start
-            ? (nowTime - start)
-            : (TRANSITION_WRAP - start + nowTime);
-          t = clamp(float(elapsed) / u_transitionDurationMs, 0.0, 1.0);
-        }
-        bool doTransition = hasTransition && t < 1.0 && prevOwner != owner;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
+
+        uint contestIdRaw = contestIdRawAtTex(texCoord);
+        const uint CONTEST_ID_MASK = 0x7FFFu;
+        const uint CONTEST_ATTACKER_EVER = 0x8000u;
+        uint contestId = contestIdRaw & CONTEST_ID_MASK;
+        bool attackerEver = (contestIdRaw & CONTEST_ATTACKER_EVER) != 0u;
+        uvec2 contestOwners = contestOwnersAtTex(texCoord);
+        uint defender = contestOwners.r & 0xFFFu;
+        uint attacker = contestOwners.g & 0xFFFu;
+
+        bool contested = false;
+        if (contestId != 0u) {
+          uint lastTime = texelFetch(u_contestTimes, ivec2(int(contestId), 0), 0).r;
+          const uint CONTEST_WRAP = 32768u;
+          uint nowTime = uint(u_contestNow);
+          uint elapsed = nowTime >= lastTime
+            ? (nowTime - lastTime)
+            : (CONTEST_WRAP - lastTime + nowTime);
+          contested = float(elapsed) < u_contestDurationMs;
+        }
 
         bool isBorder = false;
         bool hasFriendlyRelation = false;
         bool hasEmbargoRelation = false;
+        bool pushedBorder = false;
+        bool regainedBorder = false;
+
         uint nOwner = ownerAtTex(texCoord + ivec2(1, 0));
         isBorder = isBorder || (nOwner != owner);
         if (nOwner != owner && nOwner != 0u) {
@@ -1014,6 +1203,19 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
+        if (contested) {
+          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(1, 0));
+          uint nContestId = nContestRaw & CONTEST_ID_MASK;
+          bool sameComponent = nContestId == contestId;
+          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
+          if (attackerEver && !nAttackerEver) {
+            pushedBorder = true;
+          }
+          if (sameComponent && owner == defender && nOwner == attacker) {
+            regainedBorder = true;
+          }
+        }
+
         nOwner = ownerAtTex(texCoord + ivec2(-1, 0));
         isBorder = isBorder || (nOwner != owner);
         if (nOwner != owner && nOwner != 0u) {
@@ -1021,6 +1223,19 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
+        if (contested) {
+          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(-1, 0));
+          uint nContestId = nContestRaw & CONTEST_ID_MASK;
+          bool sameComponent = nContestId == contestId;
+          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
+          if (attackerEver && !nAttackerEver) {
+            pushedBorder = true;
+          }
+          if (sameComponent && owner == defender && nOwner == attacker) {
+            regainedBorder = true;
+          }
+        }
+
         nOwner = ownerAtTex(texCoord + ivec2(0, 1));
         isBorder = isBorder || (nOwner != owner);
         if (nOwner != owner && nOwner != 0u) {
@@ -1028,6 +1243,19 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
+        if (contested) {
+          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(0, 1));
+          uint nContestId = nContestRaw & CONTEST_ID_MASK;
+          bool sameComponent = nContestId == contestId;
+          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
+          if (attackerEver && !nAttackerEver) {
+            pushedBorder = true;
+          }
+          if (sameComponent && owner == defender && nOwner == attacker) {
+            regainedBorder = true;
+          }
+        }
+
         nOwner = ownerAtTex(texCoord + ivec2(0, -1));
         isBorder = isBorder || (nOwner != owner);
         if (nOwner != owner && nOwner != 0u) {
@@ -1035,44 +1263,22 @@ export class TerritoryWebGLRenderer {
           hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
           hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
         }
-
-        bool oldIsBorder = false;
-        bool oldFriendlyRelation = false;
-        bool oldEmbargoRelation = false;
-        if (doTransition && prevOwner != 0u) {
-          uint prevNeighbor = prevOwnerAtTex(texCoord + ivec2(1, 0));
-          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
-          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
-            uint rel = relationCode(prevOwner, prevNeighbor);
-            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
-            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+        if (contested) {
+          uint nContestRaw = contestIdRawAtTex(texCoord + ivec2(0, -1));
+          uint nContestId = nContestRaw & CONTEST_ID_MASK;
+          bool sameComponent = nContestId == contestId;
+          bool nAttackerEver = sameComponent && ((nContestRaw & CONTEST_ATTACKER_EVER) != 0u);
+          if (attackerEver && !nAttackerEver) {
+            pushedBorder = true;
           }
-          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(-1, 0));
-          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
-          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
-            uint rel = relationCode(prevOwner, prevNeighbor);
-            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
-            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
-          }
-          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, 1));
-          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
-          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
-            uint rel = relationCode(prevOwner, prevNeighbor);
-            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
-            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
-          }
-          prevNeighbor = prevOwnerAtTex(texCoord + ivec2(0, -1));
-          oldIsBorder = oldIsBorder || (prevNeighbor != prevOwner);
-          if (prevNeighbor != prevOwner && prevNeighbor != 0u) {
-            uint rel = relationCode(prevOwner, prevNeighbor);
-            oldEmbargoRelation = oldEmbargoRelation || isEmbargo(rel);
-            oldFriendlyRelation = oldFriendlyRelation || isFriendly(rel);
+          if (sameComponent && owner == defender && nOwner == attacker) {
+            regainedBorder = true;
           }
         }
 
         if (u_alternativeView) {
-          vec3 newColor = vec3(0.0);
-          float newAlpha = 0.0;
+          vec3 color = vec3(0.0);
+          float a = 0.0;
           if (owner != 0u) {
             uint relationAlt = relationCode(owner, uint(u_viewerId));
             vec4 altColor = u_altNeutral;
@@ -1083,32 +1289,9 @@ export class TerritoryWebGLRenderer {
             } else if (isEmbargo(relationAlt)) {
               altColor = u_altEnemy;
             }
-            newColor = altColor.rgb;
-            newAlpha = isBorder ? 1.0 : 0.0;
+            color = altColor.rgb;
+            a = isBorder ? 1.0 : 0.0;
           }
-
-          vec3 color = newColor;
-          float a = newAlpha;
-          if (doTransition) {
-            vec3 oldColor = vec3(0.0);
-            float oldAlpha = 0.0;
-            if (prevOwner != 0u) {
-              uint relationAltOld = relationCode(prevOwner, uint(u_viewerId));
-              vec4 altColorOld = u_altNeutral;
-              if (isSelf(relationAltOld)) {
-                altColorOld = u_altSelf;
-              } else if (isFriendly(relationAltOld)) {
-                altColorOld = u_altAlly;
-              } else if (isEmbargo(relationAltOld)) {
-                altColorOld = u_altEnemy;
-              }
-              oldColor = altColorOld.rgb;
-              oldAlpha = oldIsBorder ? 1.0 : 0.0;
-            }
-            color = mix(oldColor, newColor, t);
-            a = mix(oldAlpha, newAlpha, t);
-          }
-
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
               ? (1.0 - u_hoverPulseStrength) +
@@ -1120,12 +1303,17 @@ export class TerritoryWebGLRenderer {
           return;
         }
 
-        vec3 newColor = vec3(0.0);
-        float newAlpha = 0.0;
+        vec3 fillColor = vec3(0.0);
+        float fillAlpha = 0.0;
+        vec3 borderColor = vec3(0.0);
+        float borderAlpha = 0.0;
+        vec3 ownerBase = vec3(0.0);
+        vec4 ownerBorder = vec4(0.0);
+
         if (owner == 0u) {
           if (hasFallout) {
-            newColor = u_fallout.rgb;
-            newAlpha = u_alpha;
+            fillColor = u_fallout.rgb;
+            fillAlpha = u_alpha;
           }
         } else {
           vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0);
@@ -1134,92 +1322,85 @@ export class TerritoryWebGLRenderer {
             ivec2(int(owner) * 2 + 1, 0),
             0
           );
+          ownerBase = base.rgb;
+          ownerBorder = baseBorder;
           if (isBorder) {
-            vec3 borderColor = baseBorder.rgb;
+            vec3 bColor = baseBorder.rgb;
 
             const float BORDER_TINT_RATIO = 0.35;
             const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
             const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
 
             if (hasFriendlyRelation) {
-              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                            FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+              bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
+                      FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
             }
             if (hasEmbargoRelation) {
-              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                            EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+              bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
+                      EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
             }
 
-            if (isDefended) {
-              bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-              const float LIGHT_FACTOR = 1.2;
-              const float DARK_FACTOR = 0.8;
-              borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
-            }
-
-            newColor = borderColor;
-            newAlpha = baseBorder.a;
+            borderColor = applyDefended(bColor, isDefended, texCoord);
+            borderAlpha = baseBorder.a;
           } else {
             bool isPrimary = patternIsPrimary(owner, texCoord);
-            newColor = isPrimary ? base.rgb : baseBorder.rgb;
-            newAlpha = u_alpha;
+            fillColor = isPrimary ? base.rgb : baseBorder.rgb;
+            fillAlpha = u_alpha;
           }
         }
 
-        vec3 color = newColor;
-        float a = newAlpha;
-        if (doTransition) {
-          vec3 oldColor = vec3(0.0);
-          float oldAlpha = 0.0;
-          if (prevOwner == 0u) {
-            if (hasFallout) {
-              oldColor = u_fallout.rgb;
-              oldAlpha = u_alpha;
-            }
-          } else {
-            vec4 oldBase = texelFetch(
+        vec3 contestedFillColor = fillColor;
+        float contestedFillAlpha = fillAlpha;
+        if (contested && owner != 0u) {
+          vec3 defenderBase = ownerBase;
+          if (defender != 0u) {
+            vec4 defenderColor = texelFetch(
               u_palette,
-              ivec2(int(prevOwner) * 2, 0),
+              ivec2(int(defender) * 2, 0),
               0
             );
-            vec4 oldBorder = texelFetch(
-              u_palette,
-              ivec2(int(prevOwner) * 2 + 1, 0),
-              0
-            );
-            if (oldIsBorder) {
-              vec3 borderColor = oldBorder.rgb;
-
-              const float BORDER_TINT_RATIO = 0.35;
-              const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-              const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-
-              if (oldFriendlyRelation) {
-                borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                              FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-              }
-              if (oldEmbargoRelation) {
-                borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                              EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-              }
-
-              if (isDefended) {
-                bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-                const float LIGHT_FACTOR = 1.2;
-                const float DARK_FACTOR = 0.8;
-                borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
-              }
-
-              oldColor = borderColor;
-              oldAlpha = oldBorder.a;
-            } else {
-              bool isPrimary = patternIsPrimary(prevOwner, texCoord);
-              oldColor = isPrimary ? oldBase.rgb : oldBorder.rgb;
-              oldAlpha = u_alpha;
-            }
+            defenderBase = defenderColor.rgb;
           }
-          color = mix(oldColor, newColor, t);
-          a = mix(oldAlpha, newAlpha, t);
+          bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+          contestedFillColor = isLightTile ? ownerBase : defenderBase;
+          contestedFillAlpha = u_alpha;
+        }
+
+        vec3 attackerBorderColor = vec3(0.0);
+        float attackerBorderAlpha = 0.0;
+        if (attacker != 0u) {
+          vec4 attackerBorder = texelFetch(
+            u_palette,
+            ivec2(int(attacker) * 2 + 1, 0),
+            0
+          );
+          attackerBorderColor = applyDefended(attackerBorder.rgb, isDefended, texCoord);
+          attackerBorderAlpha = attackerBorder.a;
+        }
+
+        vec3 color = contested ? contestedFillColor : fillColor;
+        float a = contested ? contestedFillAlpha : fillAlpha;
+
+        if (isBorder && owner != 0u) {
+          color = borderColor;
+          a = borderAlpha;
+        }
+
+        if (contested) {
+          if (regainedBorder) {
+            vec3 regained = applyDefended(vec3(1.0, 0.2, 0.2), isDefended, texCoord);
+            color = regained;
+            a = 1.0;
+          } else if (pushedBorder) {
+            color = attackerBorderColor;
+            a = attackerBorderAlpha;
+          } else if (isBorder && owner != 0u) {
+            color = borderColor;
+            a = borderAlpha;
+          } else if (owner != 0u) {
+            color = contestedFillColor;
+            a = contestedFillAlpha;
+          }
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {

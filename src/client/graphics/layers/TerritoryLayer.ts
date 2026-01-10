@@ -17,6 +17,18 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
 
+const CONTEST_ID_MASK = 0x7fff;
+const CONTEST_ATTACKER_EVER_BIT = 0x8000;
+const CONTEST_TIME_WRAP = 32768;
+
+type ContestComponent = {
+  id: number;
+  attacker: number;
+  defender: number;
+  lastActivityPacked: number;
+  tiles: TileRef[];
+};
+
 export class TerritoryLayer implements Layer {
   profileName(): string {
     return "TerritoryLayer:renderLayer";
@@ -42,14 +54,15 @@ export class TerritoryLayer implements Layer {
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
-  private transitionActive = false;
-  private transitionDurationMs = 500;
-  private transitionTiles: TileRef[] = [];
-  private transitionStartTimes: Uint16Array | null = null;
-  private transitionActiveMask: Uint8Array | null = null;
-  private lastGameTick = 0;
-  private lastTickTime = 0;
-  private lastTickDurationMs = 100;
+  private contestDurationMs = 5000;
+  private contestActive = false;
+  private contestNextId = 1;
+  private contestFreeIds: number[] = [];
+  private contestComponentIds: Uint16Array | null = null;
+  private contestPrevOwners: Uint16Array | null = null;
+  private contestAttackers: Uint16Array | null = null;
+  private contestTileIndices: Int32Array | null = null;
+  private contestComponents = new Map<number, ContestComponent>();
 
   constructor(
     private game: GameView,
@@ -61,7 +74,6 @@ export class TerritoryLayer implements Layer {
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
     this.lastMyPlayerSmallId = game.myPlayer()?.smallID() ?? null;
-    this.lastTickTime = this.nowMs();
   }
 
   shouldTransform(): boolean {
@@ -71,7 +83,6 @@ export class TerritoryLayer implements Layer {
   tick() {
     const tickProfile = FrameProfiler.start();
     const now = this.nowMs();
-    this.updateTickTiming(now);
     if (this.game.inSpawnPhase()) {
       this.spawnHighlight();
     }
@@ -84,7 +95,7 @@ export class TerritoryLayer implements Layer {
     this.refreshPaletteIfNeeded();
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
-    this.beginTileTransitions(this.game.recentlyUpdatedOwnerTiles(), now);
+    this.applyContestChanges(this.game.recentlyUpdatedOwnerTiles(), now);
     const updates = this.game.updatesSinceLastTick();
 
     // Detect alliance mutations
@@ -349,11 +360,8 @@ export class TerritoryLayer implements Layer {
     this.lastMyPlayerSmallId = this.game.myPlayer()?.smallID() ?? null;
     this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
     this.configureRenderers();
-    this.transitionActive = false;
-    this.transitionTiles = [];
-    this.ensureTransitionScratch();
-    this.transitionStartTimes?.fill(0);
-    this.transitionActiveMask?.fill(0);
+    this.ensureContestScratch();
+    this.syncContestStateToRenderer();
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -414,7 +422,7 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const now = this.nowMs();
-    this.updateTransitionState(now);
+    this.updateContestState(now);
 
     const renderTerritoryStart = FrameProfiler.start();
     this.territoryRenderer.render();
@@ -506,116 +514,353 @@ export class TerritoryLayer implements Layer {
     return typeof performance !== "undefined" ? performance.now() : Date.now();
   }
 
-  private ensureTransitionScratch() {
+  private ensureContestScratch() {
     const size = this.game.width() * this.game.height();
-    if (
-      !this.transitionStartTimes ||
-      this.transitionStartTimes.length !== size
-    ) {
-      this.transitionStartTimes = new Uint16Array(size);
-      this.transitionActiveMask = new Uint8Array(size);
+    if (!this.contestComponentIds || this.contestComponentIds.length !== size) {
+      this.contestComponentIds = new Uint16Array(size);
+      this.contestPrevOwners = new Uint16Array(size);
+      this.contestAttackers = new Uint16Array(size);
+      this.contestTileIndices = new Int32Array(size);
+      this.contestTileIndices.fill(-1);
+      this.contestComponents.clear();
+      this.contestFreeIds = [];
+      this.contestNextId = 1;
+      this.contestActive = false;
     }
   }
 
-  private updateTickTiming(now: number) {
-    const currentTick = this.game.ticks();
-    if (currentTick === this.lastGameTick) {
-      return;
-    }
-    if (this.lastGameTick !== 0) {
-      const tickDelta = Math.max(1, currentTick - this.lastGameTick);
-      const elapsed = now - this.lastTickTime;
-      const estimate = elapsed / tickDelta;
-      this.lastTickDurationMs = Math.max(50, Math.min(200, estimate));
-    }
-    this.lastGameTick = currentTick;
-    this.lastTickTime = now;
-  }
-
-  private beginTileTransitions(
+  private applyContestChanges(
     changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
     now: number,
   ) {
-    if (!this.territoryRenderer) {
+    if (!this.territoryRenderer || changes.length === 0) {
       return;
     }
-    this.ensureTransitionScratch();
-    const startTimes = this.transitionStartTimes!;
-    const activeMask = this.transitionActiveMask!;
-    const renderer = this.territoryRenderer;
-    if (changes.length === 0) {
-      return;
-    }
-    const nowPacked = this.packTransitionTime(now);
-    const startPacked = nowPacked | 0x8000;
+    this.ensureContestScratch();
+    const nowPacked = this.packContestTime(now);
 
     for (const change of changes) {
       if (change.newOwner === change.previousOwner) {
         continue;
       }
       const tile = change.tile;
-      if (activeMask[tile] === 0) {
-        activeMask[tile] = 1;
-        this.transitionTiles.push(tile);
+      const currentId = this.contestId(tile);
+      if (currentId === 0) {
+        this.startContestForTile(
+          tile,
+          change.previousOwner,
+          change.newOwner,
+          nowPacked,
+        );
+        continue;
       }
-      startTimes[tile] = nowPacked;
-      renderer.setTransitionTile(tile, change.previousOwner, startPacked);
-    }
 
-    this.transitionActive = this.transitionTiles.length > 0;
+      const component = this.contestComponents.get(currentId);
+      if (!component) {
+        this.clearContestTile(tile);
+        this.startContestForTile(
+          tile,
+          change.previousOwner,
+          change.newOwner,
+          nowPacked,
+        );
+        continue;
+      }
+
+      if (
+        change.newOwner === component.attacker ||
+        change.newOwner === component.defender
+      ) {
+        const attackerEver =
+          change.newOwner === component.attacker || this.hasAttackerEver(tile);
+        this.setContestTileData(
+          tile,
+          component.defender,
+          component.attacker,
+          component.id,
+          attackerEver,
+        );
+        component.lastActivityPacked = nowPacked;
+        this.territoryRenderer.setContestTime(component.id, nowPacked);
+      } else {
+        this.removeTileFromComponent(tile, component);
+        this.startContestForTile(
+          tile,
+          change.previousOwner,
+          change.newOwner,
+          nowPacked,
+        );
+      }
+    }
   }
 
-  private updateTransitionState(now: number) {
+  private updateContestState(now: number) {
     if (!this.territoryRenderer) {
       return;
     }
-    this.ensureTransitionScratch();
-    const nowPacked = this.packTransitionTime(now);
-    this.territoryRenderer.setTransitionTime(
-      nowPacked,
-      this.transitionDurationMs,
-    );
+    this.ensureContestScratch();
+    const nowPacked = this.packContestTime(now);
+    this.territoryRenderer.setContestNow(nowPacked, this.contestDurationMs);
 
-    if (!this.transitionActive || this.transitionTiles.length === 0) {
+    if (!this.contestActive) {
       return;
     }
 
-    const startTimes = this.transitionStartTimes!;
-    const activeMask = this.transitionActiveMask!;
-    const tiles = this.transitionTiles;
-    const duration = this.transitionDurationMs;
-    let writeIndex = 0;
-
-    for (let i = 0; i < tiles.length; i++) {
-      const tile = tiles[i];
-      const start = startTimes[tile];
-      const elapsed = this.transitionElapsed(nowPacked, start);
-      if (elapsed >= duration) {
-        activeMask[tile] = 0;
-        startTimes[tile] = 0;
-        this.territoryRenderer.clearTransitionTile(
-          tile,
-          this.game.ownerID(tile),
-        );
-      } else {
-        tiles[writeIndex++] = tile;
+    const expired: ContestComponent[] = [];
+    for (const component of this.contestComponents.values()) {
+      const elapsed = this.contestElapsed(
+        nowPacked,
+        component.lastActivityPacked,
+      );
+      if (elapsed >= this.contestDurationMs) {
+        expired.push(component);
       }
     }
-    tiles.length = writeIndex;
-    this.transitionActive = tiles.length > 0;
+
+    for (const component of expired) {
+      this.expireContestComponent(component);
+    }
   }
 
-  private packTransitionTime(now: number): number {
-    const wrap = 32768;
-    return Math.floor(now) % wrap | 0;
+  private startContestForTile(
+    tile: TileRef,
+    defender: number,
+    attacker: number,
+    nowPacked: number,
+  ) {
+    if (attacker === defender || attacker === 0 || defender === 0) {
+      return;
+    }
+    const neighbors = this.collectNeighborComponents(tile, attacker, defender);
+    let component: ContestComponent;
+    if (neighbors.length === 0) {
+      component = this.createContestComponent(attacker, defender, nowPacked);
+    } else {
+      component = neighbors[0];
+      for (let i = 1; i < neighbors.length; i++) {
+        this.mergeContestComponents(component, neighbors[i]);
+      }
+    }
+
+    this.addTileToComponent(tile, component, true);
+    component.lastActivityPacked = nowPacked;
+    this.territoryRenderer?.setContestTime(component.id, nowPacked);
   }
 
-  private transitionElapsed(nowPacked: number, startPacked: number): number {
-    const wrap = 32768;
+  private collectNeighborComponents(
+    tile: TileRef,
+    attacker: number,
+    defender: number,
+  ): ContestComponent[] {
+    const components: ContestComponent[] = [];
+    const seen = new Set<number>();
+    for (const neighbor of this.game.neighbors(tile)) {
+      const id = this.contestId(neighbor);
+      if (id === 0 || seen.has(id)) {
+        continue;
+      }
+      const component = this.contestComponents.get(id);
+      if (!component) {
+        continue;
+      }
+      if (component.attacker === attacker && component.defender === defender) {
+        components.push(component);
+        seen.add(id);
+      }
+    }
+    return components;
+  }
+
+  private createContestComponent(
+    attacker: number,
+    defender: number,
+    nowPacked: number,
+  ): ContestComponent {
+    const id = this.allocateContestComponentId();
+    const component: ContestComponent = {
+      id,
+      attacker,
+      defender,
+      lastActivityPacked: nowPacked,
+      tiles: [],
+    };
+    this.contestComponents.set(id, component);
+    this.contestActive = true;
+    this.territoryRenderer?.ensureContestTimeCapacity(id);
+    return component;
+  }
+
+  private allocateContestComponentId(): number {
+    const reused = this.contestFreeIds.pop();
+    if (reused !== undefined) {
+      return reused;
+    }
+    return this.contestNextId++;
+  }
+
+  private releaseContestComponentId(id: number) {
+    if (id <= 0) {
+      return;
+    }
+    this.contestFreeIds.push(id);
+  }
+
+  private addTileToComponent(
+    tile: TileRef,
+    component: ContestComponent,
+    attackerEver: boolean,
+  ) {
+    this.setContestTileData(
+      tile,
+      component.defender,
+      component.attacker,
+      component.id,
+      attackerEver,
+    );
+    this.contestTileIndices![tile] = component.tiles.length;
+    component.tiles.push(tile);
+    this.contestActive = true;
+  }
+
+  private removeTileFromComponent(tile: TileRef, component: ContestComponent) {
+    const tileIndex = this.contestTileIndices![tile];
+    const tiles = component.tiles;
+    const lastIndex = tiles.length - 1;
+    if (tileIndex >= 0 && tileIndex <= lastIndex) {
+      if (tileIndex !== lastIndex) {
+        const swapTile = tiles[lastIndex];
+        tiles[tileIndex] = swapTile;
+        this.contestTileIndices![swapTile] = tileIndex;
+      }
+      tiles.pop();
+    }
+    this.contestTileIndices![tile] = -1;
+    this.clearContestTile(tile);
+    if (component.tiles.length === 0) {
+      this.contestComponents.delete(component.id);
+      this.releaseContestComponentId(component.id);
+      this.contestActive = this.contestComponents.size > 0;
+    }
+  }
+
+  private mergeContestComponents(
+    target: ContestComponent,
+    source: ContestComponent,
+  ) {
+    for (const tile of source.tiles) {
+      const attackerEver = this.hasAttackerEver(tile);
+      this.setContestTileData(
+        tile,
+        target.defender,
+        target.attacker,
+        target.id,
+        attackerEver,
+      );
+      this.contestTileIndices![tile] = target.tiles.length;
+      target.tiles.push(tile);
+    }
+    target.lastActivityPacked = Math.max(
+      target.lastActivityPacked,
+      source.lastActivityPacked,
+    );
+    this.territoryRenderer?.setContestTime(
+      target.id,
+      target.lastActivityPacked,
+    );
+    this.contestComponents.delete(source.id);
+    this.releaseContestComponentId(source.id);
+  }
+
+  private expireContestComponent(component: ContestComponent) {
+    for (const tile of component.tiles) {
+      this.contestTileIndices![tile] = -1;
+      this.clearContestTile(tile);
+    }
+    component.tiles.length = 0;
+    this.contestComponents.delete(component.id);
+    this.releaseContestComponentId(component.id);
+    this.contestActive = this.contestComponents.size > 0;
+  }
+
+  private setContestTileData(
+    tile: TileRef,
+    defender: number,
+    attacker: number,
+    componentId: number,
+    attackerEver: boolean,
+  ) {
+    this.contestPrevOwners![tile] = defender;
+    this.contestAttackers![tile] = attacker;
+    this.contestComponentIds![tile] =
+      (componentId & CONTEST_ID_MASK) |
+      (attackerEver ? CONTEST_ATTACKER_EVER_BIT : 0);
+    this.territoryRenderer?.setContestTile(
+      tile,
+      defender,
+      attacker,
+      componentId,
+      attackerEver,
+    );
+  }
+
+  private clearContestTile(tile: TileRef) {
+    this.contestPrevOwners![tile] = 0;
+    this.contestAttackers![tile] = 0;
+    this.contestComponentIds![tile] = 0;
+    this.territoryRenderer?.clearContestTile(tile);
+  }
+
+  private contestId(tile: TileRef): number {
+    return this.contestComponentIds![tile] & CONTEST_ID_MASK;
+  }
+
+  private hasAttackerEver(tile: TileRef): boolean {
+    return (this.contestComponentIds![tile] & CONTEST_ATTACKER_EVER_BIT) !== 0;
+  }
+
+  private packContestTime(now: number): number {
+    return Math.floor(now) % CONTEST_TIME_WRAP;
+  }
+
+  private contestElapsed(nowPacked: number, startPacked: number): number {
     if (nowPacked >= startPacked) {
       return nowPacked - startPacked;
     }
-    return wrap - startPacked + nowPacked;
+    return CONTEST_TIME_WRAP - startPacked + nowPacked;
+  }
+
+  private syncContestStateToRenderer() {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    if (!this.contestComponentIds) {
+      return;
+    }
+    this.contestActive = this.contestComponents.size > 0;
+    let maxId = 0;
+    for (const component of this.contestComponents.values()) {
+      maxId = Math.max(maxId, component.id);
+    }
+    if (maxId > 0) {
+      this.territoryRenderer.ensureContestTimeCapacity(maxId);
+    }
+    for (const component of this.contestComponents.values()) {
+      this.territoryRenderer.setContestTime(
+        component.id,
+        component.lastActivityPacked,
+      );
+      for (const tile of component.tiles) {
+        const packed = this.contestComponentIds![tile];
+        const attackerEver = (packed & CONTEST_ATTACKER_EVER_BIT) !== 0;
+        this.territoryRenderer.setContestTile(
+          tile,
+          component.defender,
+          component.attacker,
+          component.id,
+          attackerEver,
+        );
+      }
+    }
   }
 
   private computePaletteSignature(): string {
