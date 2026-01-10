@@ -42,6 +42,7 @@ export class SkinTestWinModal extends LitElement implements Layer {
 
   hide() {
     this.isVisible = false;
+    this.rated = null;
   }
 
   private _handleExit() {
