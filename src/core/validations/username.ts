@@ -80,10 +80,7 @@ export function censorNameWithClanTag(username: string): string {
 
   // Restore clan tag if it existed and is not profane
   if (clanTag && !clanTagIsProfane) {
-    if (usernameIsProfane) {
-      return `[${clanTag}] ${censoredNameWithoutClan}`;
-    }
-    return username;
+    return `[${clanTag.toUpperCase()}] ${censoredNameWithoutClan}`;
   }
 
   // Don't restore profane or nonexistent clan tag

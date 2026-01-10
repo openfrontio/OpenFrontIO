@@ -15,6 +15,8 @@ export const BUTTON_WIDTH = 150;
 
 @customElement("pattern-button")
 export class PatternButton extends LitElement {
+  @property({ type: Boolean })
+  selected: boolean = false;
   @property({ type: Object })
   pattern: Pattern | null = null;
 
@@ -70,35 +72,56 @@ export class PatternButton extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-50"
+        class="flex flex-col items-center justify-between gap-2 p-3 bg-white/5 backdrop-blur-sm border rounded-xl w-48 h-full transition-all duration-200 ${this
+          .selected
+          ? "border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
+          : "hover:bg-white/10 hover:border-white/20 hover:shadow-xl border-white/10"}"
       >
         <button
-          class="bg-white/90 border-2 border-black/10 rounded-lg cursor-pointer transition-all duration-200 w-full
-                 hover:bg-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20
-                 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          class="group relative flex flex-col items-center w-full gap-2 rounded-lg cursor-pointer transition-all duration-200
+                 disabled:cursor-not-allowed flex-1"
           ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
-          <div class="text-sm font-bold text-gray-800 mb-1 text-center">
-            ${isDefaultPattern
-              ? translateText("territory_patterns.pattern.default")
-              : this.translateCosmetic(
-                  "territory_patterns.pattern",
-                  this.pattern!.name,
-                )}
-          </div>
-          ${this.colorPalette !== null
-            ? html`
-                <div class="text-xs font-bold text-gray-800 mb-1 text-center">
-                  ${this.translateCosmetic(
-                    "territory_patterns.color_palette",
-                    this.colorPalette!.name,
+          <div class="flex flex-col items-center w-full">
+            <div
+              class="text-xs font-bold text-white uppercase tracking-wider mb-1 text-center truncate w-full ${this
+                .requiresPurchase
+                ? "opacity-50"
+                : ""}"
+              title="${isDefaultPattern
+                ? translateText("territory_patterns.pattern.default")
+                : this.translateCosmetic(
+                    "territory_patterns.pattern",
+                    this.pattern!.name,
+                  )}"
+            >
+              ${isDefaultPattern
+                ? translateText("territory_patterns.pattern.default")
+                : this.translateCosmetic(
+                    "territory_patterns.pattern",
+                    this.pattern!.name,
                   )}
-                </div>
-              `
-            : null}
+            </div>
+            ${this.colorPalette !== null
+              ? html`
+                  <div
+                    class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 text-center truncate w-full ${this
+                      .requiresPurchase
+                      ? "opacity-50"
+                      : ""}"
+                  >
+                    ${this.translateCosmetic(
+                      "territory_patterns.color_palette",
+                      this.colorPalette!.name,
+                    )}
+                  </div>
+                `
+              : html`<div class="h-[22px] mb-2 w-full"></div>`}
+          </div>
+
           <div
-            class="size-30 flex items-center justify-center bg-white rounded-sm p-1 mx-auto overflow-hidden"
+            class="w-full aspect-square flex items-center justify-center bg-white/5 rounded-lg p-2 border border-white/10 group-hover:border-white/20 transition-colors duration-200 overflow-hidden"
           >
             ${renderPatternPreview(
               this.pattern !== null
@@ -114,18 +137,22 @@ export class PatternButton extends LitElement {
           </div>
         </button>
 
-        ${this.requiresPurchase
-          ? html`
-              <button
-                class="w-full px-4 py-2 bg-green-500 text-white border-0 rounded-md text-sm font-semibold cursor-pointer transition-colors duration-200
-                   hover:bg-green-600"
-                @click=${this.handlePurchase}
-              >
-                ${translateText("territory_patterns.purchase")}
-                (${this.pattern!.product!.price})
-              </button>
-            `
-          : null}
+        <div class="w-full mt-2">
+          ${this.requiresPurchase && this.pattern?.product
+            ? html`
+                <button
+                  class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
+                   hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"
+                  @click=${this.handlePurchase}
+                >
+                  ${translateText("territory_patterns.purchase")}
+                  <span class="ml-1 text-white/60"
+                    >(${this.pattern.product.price})</span
+                  >
+                </button>
+              `
+            : html`<div class="h-[34px]"></div>`}
+        </div>
       </div>
     `;
   }
@@ -142,7 +169,6 @@ export function renderPatternPreview(
   return html`<img
     src="${generatePreviewDataUrl(pattern, width, height)}"
     alt="Pattern preview"
-    <!-- pixelated should also handle crisp-edges -->
     class="w-full h-full object-contain [image-rendering:pixelated]"
   />`;
 }
@@ -150,11 +176,7 @@ export function renderPatternPreview(
 function renderBlankPreview(width: number, height: number): TemplateResult {
   return html`
     <div
-      class="flex items-center justify-center bg-white rounded-sm box-border overflow-hidden relative border border-[#ccc] w-(--width) h-(--height)"
-      style="
-        --height: ${height}px;
-        --width: ${width}px;
-      "
+      class="md:hidden flex items-center justify-center h-full w-full bg-white rounded overflow-hidden relative border border-[#ccc] box-border"
     >
       <div
         class="grid grid-cols-2 grid-rows-2 gap-0 w-[calc(100%-1px)] h-[calc(100%-2px)] box-border"
@@ -164,6 +186,15 @@ function renderBlankPreview(width: number, height: number): TemplateResult {
         <div class="bg-white border border-black/10 box-border"></div>
         <div class="bg-white border border-black/10 box-border"></div>
       </div>
+    </div>
+    <div
+      class="hidden md:flex items-center justify-center h-full w-full bg-white/5 rounded overflow-hidden relative border border-white/10 box-border text-center p-1"
+    >
+      <span
+        class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full"
+      >
+        ${translateText("territory_patterns.select_skin")}
+      </span>
     </div>
   `;
 }

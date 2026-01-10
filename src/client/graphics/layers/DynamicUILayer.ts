@@ -18,7 +18,7 @@ const TEXT_STACK_SPACING = 8;
 const TEXT_DURATION = 2500;
 
 export class DynamicUILayer implements Layer {
-  private readonly allElements: Array<UIElement> = [];
+  private readonly uiElements: Array<UIElement> = [];
   private lastRefresh = Date.now();
 
   constructor(
@@ -105,14 +105,14 @@ export class DynamicUILayer implements Layer {
   onBombEvent(unit: UnitView) {
     if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
       const target = new NukeTelegraph(this.transformHandler, this.game, unit);
-      this.allElements.push(target);
+      this.uiElements.push(target);
     }
   }
 
   onTransportShipEvent(unit: UnitView) {
     if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
       const target = new NavalTarget(this.transformHandler, this.game, unit);
-      this.allElements.push(target);
+      this.uiElements.push(target);
     }
   }
 
@@ -121,14 +121,14 @@ export class DynamicUILayer implements Layer {
     const dt = now - this.lastRefresh;
     this.lastRefresh = now;
     if (this.game.config().userSettings()?.fxLayer()) {
-      this.renderAllTargets(context, dt);
+      this.renderUIElements(context, dt);
     }
   }
 
-  renderAllTargets(context: CanvasRenderingContext2D, delta: number) {
-    for (let i = this.allElements.length - 1; i >= 0; i--) {
-      if (!this.allElements[i].render(context, delta)) {
-        this.allElements.splice(i, 1);
+  renderUIElements(context: CanvasRenderingContext2D, delta: number) {
+    for (let i = this.uiElements.length - 1; i >= 0; i--) {
+      if (!this.uiElements[i].render(context, delta)) {
+        this.uiElements.splice(i, 1);
       }
     }
   }
@@ -154,7 +154,7 @@ export class DynamicUILayer implements Layer {
       typeof num === "bigint" ? (num < 0n ? -num : num) : Math.abs(num);
     const shortened = renderNumber(absNum, 0);
     const sign = num >= 0 ? "+" : "-";
-    this.allElements.push(
+    this.uiElements.push(
       new TextIndicator(
         this.transformHandler,
         `${sign} ${shortened}`,
