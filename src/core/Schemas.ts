@@ -187,6 +187,7 @@ export const GameConfigSchema = z.object({
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
+  percentageTilesOwnedToWin: z.number().int().min(1).max(100).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
   isOneVOne: z.boolean().optional(),

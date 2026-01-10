@@ -27,6 +27,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
+import { fetchCosmetics } from "./Cosmetics";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -34,6 +35,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  ReplaySpeedChangeEvent,
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
@@ -49,7 +51,9 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { SkinTestWinModal } from "./graphics/layers/SkinTestWinModal";
 import SoundManager from "./sound/SoundManager";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -62,6 +66,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  isSkinTest?: boolean;
 }
 
 export function joinLobby(
@@ -210,6 +215,7 @@ async function createClientGame(
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    lobbyConfig.isSkinTest,
   );
 
   const canvas = createCanvas();
@@ -256,6 +262,48 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private async showSkinTestModal() {
+    console.log("Showing skin test modal");
+
+    // Stop the game
+    this.isActive = false;
+
+    const modal = document.querySelector(
+      "skin-test-win-modal",
+    ) as SkinTestWinModal;
+    if (!modal || !(modal instanceof SkinTestWinModal)) {
+      console.error("SkinTestWinModal not found");
+      return;
+    }
+
+    if (!this.myPlayer?.cosmetics?.pattern) {
+      console.error("No pattern found on player", this.myPlayer?.cosmetics);
+      return;
+    }
+
+    try {
+      const cosmetics = await fetchCosmetics();
+      if (!cosmetics) {
+        console.error("Failed to fetch cosmetics");
+        return;
+      }
+
+      const patternName = this.myPlayer.cosmetics.pattern.name;
+      const pattern = cosmetics.patterns[patternName];
+      if (pattern) {
+        console.log("Showing skin test modal for pattern:", patternName);
+        modal.show(
+          pattern,
+          this.myPlayer.cosmetics.pattern.colorPalette ?? null,
+        );
+      } else {
+        console.error("Pattern not found in cosmetics:", patternName);
+      }
+    } catch (e) {
+      console.error("Error showing skin test modal", e);
+    }
+  }
+
   private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -298,6 +346,40 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
+    if (this.lobby.isSkinTest) {
+      // Set game speed to maximum
+      this.eventBus.emit(
+        new ReplaySpeedChangeEvent(ReplaySpeedMultiplier.fastest),
+      );
+
+      // Show modal after 2 minutes OR when player wins, whichever comes first
+      setTimeout(() => {
+        if (this.isActive) {
+          this.showSkinTestModal();
+        }
+      }, 120000);
+
+      // Single initial attack with half troops to start territory expansion
+      const initialAttack = () => {
+        if (!this.isActive) return;
+
+        if (this.myPlayer === null) {
+          const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+          if (myPlayer === null) {
+            setTimeout(initialAttack, 100);
+            return;
+          }
+          this.myPlayer = myPlayer;
+        }
+
+        const troopCount = this.myPlayer.troops() ?? 1000000;
+        this.eventBus.emit(
+          new SendAttackIntentEvent(null, Math.floor(troopCount / 2)),
+        );
+      };
+      setTimeout(initialAttack, 100);
+    }
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
@@ -344,7 +426,12 @@ export class ClientGameRunner {
       this.currentTickDelay = undefined;
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        if (this.lobby.isSkinTest) {
+          // For skin tests, show the modal immediately on win instead of waiting
+          this.showSkinTestModal();
+        } else {
+          this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        }
       }
     });
 

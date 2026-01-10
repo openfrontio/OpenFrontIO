@@ -98,10 +98,12 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  isSkinTest?: boolean;
 }
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private skinTestTimeout: ReturnType<typeof setTimeout> | null = null;
   private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
@@ -688,6 +690,7 @@ class Client {
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
+        isSkinTest: lobby.isSkinTest,
       },
       () => {
         console.log("Closing modals");
@@ -762,9 +765,17 @@ class Client {
         history.pushState(null, "", `#join=${lobby.gameID}`);
       },
     );
+
+    if (lobby.isSkinTest) {
+      if (this.skinTestTimeout) clearTimeout(this.skinTestTimeout);
+    }
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
+    if (this.skinTestTimeout) {
+      clearTimeout(this.skinTestTimeout);
+      this.skinTestTimeout = null;
+    }
     if (this.gameStop === null) {
       return;
     }
