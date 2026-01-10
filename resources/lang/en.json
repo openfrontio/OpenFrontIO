@@ -651,6 +651,8 @@
   "skin_test_modal": {
     "title": "Testing Complete",
     "rate_skin": "Rate this Skin",
+    "rate_up": "Rate up",
+    "rate_down": "Rate down",
     "test_skin": "Test Skin"
   },
   "leaderboard": {

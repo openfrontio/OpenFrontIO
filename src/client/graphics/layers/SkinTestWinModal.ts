@@ -76,6 +76,7 @@ export class SkinTestWinModal extends LitElement implements Layer {
             <div class="flex gap-4 justify-center">
               <button
                 @click=${() => this._handleRate("up")}
+                aria-label=${translateText("skin_test_modal.rate_up")}
                 class="p-3 rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center overflow-visible ${this
                   .rated === "up"
                   ? "bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]"
@@ -98,6 +99,7 @@ export class SkinTestWinModal extends LitElement implements Layer {
               </button>
               <button
                 @click=${() => this._handleRate("down")}
+                aria-label=${translateText("skin_test_modal.rate_down")}
                 class="p-3 rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center overflow-visible ${this
                   .rated === "down"
                   ? "bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]"
