@@ -64,7 +64,6 @@ export class TerritoryLayer implements Layer {
   private contestTileIndices: Int32Array | null = null;
   private contestComponents = new Map<number, ContestComponent>();
   private smoothDurationMs = 100;
-  private smoothMaxDistance = 12;
   private smoothActive = false;
   private smoothStartMs = 0;
   private smoothSnapshotPending = false;
@@ -560,7 +559,6 @@ export class TerritoryLayer implements Layer {
         this.smoothActive = false;
       }
     }
-    this.territoryRenderer.setSmoothMaxDistance(this.smoothMaxDistance);
     this.territoryRenderer.setSmoothProgress(progress);
     this.territoryRenderer.setSmoothEnabled(this.smoothActive);
   }
@@ -903,7 +901,6 @@ export class TerritoryLayer implements Layer {
     if (!this.territoryRenderer) {
       return;
     }
-    this.territoryRenderer.setSmoothMaxDistance(this.smoothMaxDistance);
     if (this.smoothActive) {
       const now = this.nowMs();
       const elapsed = now - this.smoothStartMs;
