@@ -933,9 +933,10 @@ export class EventsDisplay extends LitElement implements Layer {
                 return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
-                      content: html`${translateText("events_display.boat")}: ${renderTroops(
-                        boat.troops(),
-                      )}${etaSeconds !== null ? html` (${etaSeconds}s)` : ""}`,
+                      content: html`${translateText("events_display.boat")}:
+                      ${renderTroops(boat.troops())}${etaSeconds !== null
+                        ? html` (${etaSeconds}s)`
+                        : ""}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
