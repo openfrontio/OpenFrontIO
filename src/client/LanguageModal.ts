@@ -1,53 +1,20 @@
-import { LitElement, html } from "lit";
+import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import "./components/baseComponents/Modal";
+import { BaseModal } from "./components/BaseModal";
+
+interface LanguageOption {
+  code: string;
+  svg: string;
+  native: string;
+  en: string;
+}
 
 @customElement("language-modal")
-export class LanguageModal extends LitElement {
-  @property({ type: Boolean }) visible = false;
-  @property({ type: Array }) languageList: any[] = [];
+export class LanguageModal extends BaseModal {
+  @property({ type: Array }) languageList: LanguageOption[] = [];
   @property({ type: String }) currentLang = "en";
-
-  createRenderRoot() {
-    return this; // Use Light DOM for TailwindCSS classes
-  }
-
-  private close = () => {
-    this.dispatchEvent(
-      new CustomEvent("close-modal", {
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  };
-
-  updated(changedProps: Map<string, unknown>) {
-    if (changedProps.has("visible")) {
-      if (this.visible) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "auto";
-      }
-    }
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    window.removeEventListener("keydown", this.handleKeyDown);
-    document.body.style.overflow = "auto";
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
 
   private selectLanguage = (lang: string) => {
     this.dispatchEvent(
@@ -57,49 +24,73 @@ export class LanguageModal extends LitElement {
         composed: true,
       }),
     );
+    this.close();
   };
 
   render() {
-    if (!this.visible) return null;
-
-    return html`
-      <aside
-        class="fixed p-4 z-9999 inset-0 bg-black/50 overflow-y-auto flex items-center justify-center"
+    const content = html`
+      <div
+        class="h-full flex flex-col ${
+          this.inline
+            ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+            : "bg-[#232323] text-white"
+        }"
       >
+        <!-- Header -->
         <div
-          class="bg-gray-800/80 dark:bg-gray-900/90 backdrop-blur-md rounded-lg min-w-85 max-w-120 w-full"
+          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0"
         >
-          <header
-            class="relative rounded-t-md text-lg bg-black/60 dark:bg-black/80 text-center text-white px-6 py-4 pr-10"
-          >
-            ${translateText("select_lang.title")}
-            <div
-              class="cursor-pointer absolute right-4 top-4 font-bold hover:text-gray-300"
+          <div class="flex items-center gap-4">
+            <button
               @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="${translateText("common.back")}"
             >
-              ✕
-            </div>
-          </header>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
+            >
+              ${translateText("select_lang.title")}
+            </span>
+          </div>
+        </div>
 
-          <section
-            class="relative text-white dark:text-gray-100 p-6 max-h-[60dvh] overflow-y-auto"
+        <div
+          class="flex-1 overflow-y-auto custom-scrollbar pr-2 mr-1"
+        >
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
           >
             ${this.languageList.map((lang) => {
               const isActive = this.currentLang === lang.code;
               const isDebug = lang.code === "debug";
 
               let buttonClasses =
-                "w-full flex items-center gap-2 p-2 mb-2 rounded-md transition-colors duration-300 border";
+                "relative group rounded-xl border transition-all duration-200 flex items-center p-3 gap-3 w-full cursor-pointer";
 
               if (isDebug) {
                 buttonClasses +=
-                  " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-lg shadow-cyan-400/25 bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600 to-purple-600";
+                  " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)] bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600 to-purple-600";
               } else if (isActive) {
                 buttonClasses +=
-                  " bg-gray-400 dark:bg-gray-500 border-gray-300 dark:border-gray-400 text-black dark:text-white";
+                  " bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]";
               } else {
                 buttonClasses +=
-                  " bg-gray-600 dark:bg-gray-700 border-gray-500 dark:border-gray-600 text-white dark:text-gray-100 hover:bg-gray-500 dark:hover:bg-gray-600";
+                  " bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
               }
 
               return html`
@@ -109,16 +100,63 @@ export class LanguageModal extends LitElement {
                 >
                   <img
                     src="/flags/${lang.svg}.svg"
-                    class="w-6 h-4 object-contain"
+                    class="w-8 h-6 object-contain shadow-sm rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
-                  <span>${lang.native} (${lang.en})</span>
+                  <div class="flex flex-col items-start min-w-0">
+                    <span
+                      class="text-sm font-bold uppercase tracking-wider truncate w-full text-left ${isActive
+                        ? "text-white"
+                        : "text-gray-200 group-hover:text-white"}"
+                      >${lang.native}</span
+                    >
+                    <span
+                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors truncate w-full text-left"
+                      >${lang.en}</span
+                    >
+                  </div>
+
+                  ${isActive
+                    ? html`
+                        <div class="ml-auto text-blue-400 shrink-0">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            class="w-5 h-5"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      `
+                    : ""}
                 </button>
               `;
             })}
-          </section>
+            </div>
+          </div>
         </div>
-      </aside>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        title=${translateText("select_lang.title")}
+        ?inline=${this.inline}
+        .onClose=${this.close.bind(this)}
+        hideHeader
+        hideCloseButton
+      >
+        ${content}
+      </o-modal>
     `;
   }
 }

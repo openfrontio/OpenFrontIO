@@ -226,6 +226,10 @@ export class UnitDisplay extends LitElement implements Layer {
     }
     const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
+    const displayHotkey = hotkey
+      .replace("Digit", "")
+      .replace("Key", "")
+      .toUpperCase();
 
     return html`
       <div
@@ -247,7 +251,7 @@ export class UnitDisplay extends LitElement implements Layer {
                 <div class="font-bold text-sm mb-1">
                   ${translateText(
                     "unit_type." + structureKey,
-                  )}${` [${hotkey.toUpperCase()}]`}
+                  )}${` [${displayHotkey}]`}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -299,7 +303,7 @@ export class UnitDisplay extends LitElement implements Layer {
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
           ${html`<div class="ml-1 text-xs relative -top-1.5 text-gray-400">
-            ${hotkey.toUpperCase()}
+            ${displayHotkey}
           </div>`}
           <div class="flex items-center gap-1 pt-1">
             <img src=${icon} alt=${structureKey} class="align-middle size-6" />
