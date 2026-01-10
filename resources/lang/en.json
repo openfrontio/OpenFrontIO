@@ -716,7 +716,7 @@
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_trade": "Received {gold} gold from trade with {name}",
     "missile_intercepted": "Missile intercepted {unit}",
-    "mirv_warheads_intercepted": "{count} MIRV warheads intercepted",
+    "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
     "received_troops_from_player": "Received {troops} troops from {name}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
