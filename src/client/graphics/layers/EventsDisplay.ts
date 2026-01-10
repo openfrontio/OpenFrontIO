@@ -930,12 +930,18 @@ export class EventsDisplay extends LitElement implements Layer {
             <div class="flex flex-wrap gap-y-1 gap-x-2">
               ${this.outgoingBoats.map((boat) => {
                 const etaSeconds = this.estimateBoatEtaSeconds(boat);
+                const etaText =
+                  etaSeconds !== null
+                    ? translateText("events_display.seconds_abbrev", {
+                        seconds: etaSeconds,
+                      })
+                    : "";
                 return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${translateText("events_display.boat")}:
                       ${renderTroops(boat.troops())}${etaSeconds !== null
-                        ? html` (${etaSeconds}s)`
+                        ? html` (${etaText})`
                         : ""}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
