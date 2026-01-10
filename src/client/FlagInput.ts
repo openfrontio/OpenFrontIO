@@ -68,13 +68,16 @@ export class FlagInput extends LitElement {
   render() {
     const isDefaultFlag = this.isDefaultFlagValue(this.flag);
     const showSelect = this.showSelectLabel && isDefaultFlag;
+    const buttonTitle = showSelect
+      ? translateText("flag_input.title")
+      : translateText("flag_input.button_title");
 
     return html`
       <button
         id="flag-input_"
         class="flag-btn m-0 border-0 bg-transparent hover:bg-white/10 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105"
         style="padding: 0 !important;"
-        title=${translateText("flag_input.button_title")}
+        title=${buttonTitle}
       >
         <span
           id="flag-preview"
