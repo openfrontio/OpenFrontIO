@@ -63,6 +63,13 @@ export class TerritoryLayer implements Layer {
   private contestAttackers: Uint16Array | null = null;
   private contestTileIndices: Int32Array | null = null;
   private contestComponents = new Map<number, ContestComponent>();
+  private smoothDurationMs = 100;
+  private smoothMaxDistance = 12;
+  private smoothActive = false;
+  private smoothStartMs = 0;
+  private smoothTiles: TileRef[] = [];
+  private smoothActiveMask: Uint8Array | null = null;
+  private smoothPrevOwners: Uint16Array | null = null;
 
   constructor(
     private game: GameView,
@@ -95,6 +102,7 @@ export class TerritoryLayer implements Layer {
     this.refreshPaletteIfNeeded();
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
+    this.applySmoothChanges(this.game.recentlyUpdatedOwnerTiles(), now);
     this.applyContestChanges(this.game.recentlyUpdatedOwnerTiles(), now);
     const updates = this.game.updatesSinceLastTick();
 
@@ -362,6 +370,8 @@ export class TerritoryLayer implements Layer {
     this.configureRenderers();
     this.ensureContestScratch();
     this.syncContestStateToRenderer();
+    this.ensureSmoothScratch();
+    this.syncSmoothStateToRenderer();
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -422,6 +432,7 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const now = this.nowMs();
+    this.updateSmoothState(now);
     this.updateContestState(now);
 
     const renderTerritoryStart = FrameProfiler.start();
@@ -527,6 +538,70 @@ export class TerritoryLayer implements Layer {
       this.contestNextId = 1;
       this.contestActive = false;
     }
+  }
+
+  private ensureSmoothScratch() {
+    const size = this.game.width() * this.game.height();
+    if (!this.smoothActiveMask || this.smoothActiveMask.length !== size) {
+      this.smoothActiveMask = new Uint8Array(size);
+      this.smoothPrevOwners = new Uint16Array(size);
+      this.smoothTiles = [];
+      this.smoothActive = false;
+      this.smoothStartMs = 0;
+    }
+  }
+
+  private applySmoothChanges(
+    changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
+    now: number,
+  ) {
+    if (!this.territoryRenderer || changes.length === 0) {
+      return;
+    }
+    this.ensureSmoothScratch();
+    this.smoothStartMs = now;
+    this.smoothActive = true;
+    this.territoryRenderer.setSmoothEnabled(true);
+    this.territoryRenderer.setSmoothMaxDistance(this.smoothMaxDistance);
+
+    for (const change of changes) {
+      if (change.newOwner === change.previousOwner) {
+        continue;
+      }
+      const tile = change.tile;
+      this.smoothPrevOwners![tile] = change.previousOwner;
+      if (this.smoothActiveMask![tile] === 0) {
+        this.smoothActiveMask![tile] = 1;
+        this.smoothTiles.push(tile);
+      }
+      this.territoryRenderer.setSmoothTile(tile, change.previousOwner);
+    }
+  }
+
+  private updateSmoothState(now: number) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    this.ensureSmoothScratch();
+    let progress = 1;
+    if (this.smoothActive) {
+      const elapsed = now - this.smoothStartMs;
+      progress = Math.max(0, Math.min(1, elapsed / this.smoothDurationMs));
+      if (progress >= 1) {
+        for (const tile of this.smoothTiles) {
+          if (this.smoothActiveMask![tile] === 0) {
+            continue;
+          }
+          this.smoothActiveMask![tile] = 0;
+          this.smoothPrevOwners![tile] = 0;
+          this.territoryRenderer.clearSmoothTile(tile, this.game.ownerID(tile));
+        }
+        this.smoothTiles = [];
+        this.smoothActive = false;
+      }
+    }
+    this.territoryRenderer.setSmoothProgress(progress);
+    this.territoryRenderer.setSmoothEnabled(this.smoothActive);
   }
 
   private applyContestChanges(
@@ -860,6 +935,35 @@ export class TerritoryLayer implements Layer {
           attackerEver,
         );
       }
+    }
+  }
+
+  private syncSmoothStateToRenderer() {
+    if (!this.territoryRenderer || !this.smoothActiveMask) {
+      return;
+    }
+    if (this.smoothActive) {
+      this.territoryRenderer.setSmoothEnabled(true);
+      this.territoryRenderer.setSmoothMaxDistance(this.smoothMaxDistance);
+      const now = this.nowMs();
+      const elapsed = now - this.smoothStartMs;
+      const progress = Math.max(
+        0,
+        Math.min(1, elapsed / this.smoothDurationMs),
+      );
+      this.territoryRenderer.setSmoothProgress(progress);
+      for (const tile of this.smoothTiles) {
+        if (this.smoothActiveMask[tile] === 0) {
+          continue;
+        }
+        this.territoryRenderer.setSmoothTile(
+          tile,
+          this.smoothPrevOwners![tile],
+        );
+      }
+    } else {
+      this.territoryRenderer.setSmoothEnabled(false);
+      this.territoryRenderer.setSmoothProgress(1);
     }
   }
 
