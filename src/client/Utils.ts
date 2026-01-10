@@ -61,6 +61,12 @@ export function renderNumber(
   }
 }
 
+export function formatPercentage(value: number): string {
+  const perc = value * 100;
+  if (Number.isNaN(perc)) return "0%";
+  return perc.toFixed(1) + "%";
+}
+
 /**
  * Formats a keyboard key code for user-friendly display.
  * Handles empty values, spaces, and normalizes key codes like "Digit1" and "KeyA".
