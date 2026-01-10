@@ -263,8 +263,6 @@ export class ClientGameRunner {
   }
 
   private async showSkinTestModal() {
-    console.log("Showing skin test modal");
-
     // Stop the game
     this.isActive = false;
 
@@ -291,7 +289,6 @@ export class ClientGameRunner {
       const patternName = this.myPlayer.cosmetics.pattern.name;
       const pattern = cosmetics.patterns[patternName];
       if (pattern) {
-        console.log("Showing skin test modal for pattern:", patternName);
         modal.show(
           pattern,
           this.myPlayer.cosmetics.pattern.colorPalette ?? null,
