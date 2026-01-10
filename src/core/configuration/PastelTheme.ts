@@ -35,6 +35,8 @@ export class PastelTheme implements Theme {
   /** Alternate View colors for enemies, red */
   private _enemyColor = colord("rgb(255,0,0)");
 
+  /** Hover highlight color for player territories */
+  private _playerHighlightColor = colord("rgb(221, 221, 221)");
   /** Default spawn highlight colors for other players in FFA, yellow */
   private _spawnHighlightColor = colord("rgb(255,213,79)");
   /** Added non-default spawn highlight colors for self, full white */
@@ -208,6 +210,9 @@ export class PastelTheme implements Theme {
   }
   enemyColor(): Colord {
     return this._enemyColor;
+  }
+  playerHighlightColor(): Colord {
+    return this._playerHighlightColor;
   }
 
   spawnHighlightColor(): Colord {
