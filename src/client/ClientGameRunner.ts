@@ -123,10 +123,32 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      ).then((r) => {
-        currentGameRunner = r;
-        r.start();
-      });
+      )
+        .then((r) => {
+          currentGameRunner = r;
+          r.start();
+        })
+        .catch((e) => {
+          console.error("error creating client game", e);
+
+          currentGameRunner = null;
+
+          const startingModal = document.querySelector(
+            "game-starting-modal",
+          ) as HTMLElement;
+          if (startingModal) {
+            startingModal.classList.add("hidden");
+          }
+          showErrorModal(
+            e.message,
+            e.stack,
+            lobbyConfig.gameID,
+            lobbyConfig.clientID,
+            true,
+            false,
+            "error_modal.connection_error",
+          );
+        });
     }
     if (message.type === "error") {
       if (message.error === "full-lobby") {

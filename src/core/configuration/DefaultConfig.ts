@@ -90,8 +90,10 @@ const numPlayersConfig = {
   [GameMapType.TwoLakes]: [60, 50, 40],
   [GameMapType.StraitOfHormuz]: [40, 36, 30],
   [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
-  [GameMapType.Didier]: [100, 70, 50],
+  [GameMapType.Didier]: [50, 40, 30],
+  [GameMapType.DidierFrance]: [100, 70, 50],
   [GameMapType.AmazonRiver]: [50, 40, 30],
+  [GameMapType.Sierpinski]: [20, 15, 10],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -221,9 +223,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
-  }
-  enableMatchmaking(): boolean {
-    return false;
   }
 
   getRandomPublicGameModifiers(): PublicGameModifiers {

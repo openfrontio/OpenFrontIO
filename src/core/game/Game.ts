@@ -109,10 +109,12 @@ export enum GameMapType {
   Lisbon = "Lisbon",
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
+  Sierpinski = "Sierpinski",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
   Didier = "Didier",
+  DidierFrance = "Didier (France)",
   AmazonRiver = "Amazon River",
 }
 
@@ -172,7 +174,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+  ],
+  arcade: [
     GameMapType.Didier,
+    GameMapType.DidierFrance,
+    GameMapType.Sierpinski,
   ],
 };
 
@@ -262,7 +268,7 @@ export type TrajectoryTile = {
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
-    destination?: TileRef;
+    targetTile?: TileRef;
   };
 
   [UnitType.Warship]: {

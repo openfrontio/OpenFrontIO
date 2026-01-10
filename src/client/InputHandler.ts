@@ -176,13 +176,21 @@ export class InputHandler {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            if (v && typeof v === "object" && "value" in (v as any)) {
-              return [k, (v as any).value as string];
+            // Extract value from nested object or plain string
+            let val: unknown;
+            if (v && typeof v === "object" && "value" in v) {
+              val = (v as { value: unknown }).value;
+            } else {
+              val = v;
             }
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
+
+            // Map invalid values to undefined (filtered later)
+            if (typeof val !== "string" || val === "Null") {
+              return [k, undefined];
+            }
+            return [k, val];
           })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+          .filter(([, v]) => typeof v === "string"),
       ) as Record<string, string>;
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);
