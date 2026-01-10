@@ -20,6 +20,7 @@ import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
 const CONTEST_ID_MASK = 0x7fff;
 const CONTEST_ATTACKER_EVER_BIT = 0x8000;
 const CONTEST_TIME_WRAP = 32768;
+const DEFAULT_CONTEST_DURATION_MS = 200;
 
 type ContestComponent = {
   id: number;
@@ -54,7 +55,7 @@ export class TerritoryLayer implements Layer {
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
-  private contestDurationMs = 1000;
+  private contestDurationMs = DEFAULT_CONTEST_DURATION_MS;
   private contestActive = false;
   private contestNextId = 1;
   private contestFreeIds: number[] = [];

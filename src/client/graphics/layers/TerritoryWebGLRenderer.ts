@@ -903,7 +903,7 @@ export class TerritoryWebGLRenderer {
 
   setContestNow(nowPacked: number, durationMs: number) {
     this.contestNow = nowPacked | 0;
-    this.contestDurationMs = Math.max(1, durationMs);
+    this.contestDurationMs = Math.max(0, durationMs);
   }
 
   snapshotStateForSmoothing() {
