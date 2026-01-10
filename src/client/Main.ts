@@ -78,6 +78,16 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
 
   const showAvatar = (src: string) => {
     if (avatarEl) {
+      // If the avatar fails to load (bad URL / CDN issue / offline), fall back
+      // to the default sign-in UI instead of leaving a broken image.
+      avatarEl.onerror = () => {
+        avatarEl.src = "";
+        showSignIn();
+      };
+      avatarEl.onload = () => {
+        // Clear error handler after a successful load.
+        avatarEl.onerror = null;
+      };
       avatarEl.src = src;
       avatarEl.classList.remove("hidden");
     }
