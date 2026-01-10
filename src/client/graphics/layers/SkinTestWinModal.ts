@@ -26,10 +26,6 @@ export class SkinTestWinModal extends LitElement implements Layer {
     return this;
   }
 
-  constructor() {
-    super();
-  }
-
   init() {
     // Layer interface implementation - LitElement handles its own rendering
   }
@@ -53,7 +49,6 @@ export class SkinTestWinModal extends LitElement implements Layer {
   private _handleRate(rating: "up" | "down") {
     this.rated = rating;
     // Here we could send an event to the server to record the rating
-    console.log(`Skin rated: ${rating}`);
   }
 
   render() {
