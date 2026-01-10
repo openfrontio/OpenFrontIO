@@ -649,7 +649,8 @@
   },
   "skin_test_modal": {
     "title": "Testing Complete",
-    "rate_skin": "Rate this Skin"
+    "rate_skin": "Rate this Skin",
+    "test_skin": "Test Skin"
   },
   "leaderboard": {
     "title": "Leaderboard",
