@@ -71,7 +71,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-left focus:outline-none focus:ring-0 focus:bg-white/5 transition-colors overflow-x-auto whitespace-nowrap text-ellipsis pr-2"
+          class="flex-1 min-w-0 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-left focus:outline-none focus:ring-0 transition-colors overflow-x-auto whitespace-nowrap text-ellipsis pr-2"
         />
       </div>
       ${this.validationError
