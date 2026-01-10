@@ -247,6 +247,8 @@ export class ClientGameRunner {
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
   private skinTestTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private skinTestInitialAttackTimeoutId: ReturnType<typeof setTimeout> | null =
+    null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -368,13 +370,25 @@ export class ClientGameRunner {
       }, 120000);
 
       // Single initial attack with half troops to start territory expansion
+      const scheduleInitialAttack = (delayMs: number) => {
+        if (this.skinTestInitialAttackTimeoutId !== null) {
+          clearTimeout(this.skinTestInitialAttackTimeoutId);
+          this.skinTestInitialAttackTimeoutId = null;
+        }
+        this.skinTestInitialAttackTimeoutId = setTimeout(() => {
+          this.skinTestInitialAttackTimeoutId = null;
+          if (!this.isActive) return;
+          initialAttack();
+        }, delayMs);
+      };
+
       const initialAttack = () => {
         if (!this.isActive) return;
 
         if (this.myPlayer === null) {
           const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
           if (myPlayer === null) {
-            setTimeout(initialAttack, 100);
+            scheduleInitialAttack(100);
             return;
           }
           this.myPlayer = myPlayer;
@@ -385,7 +399,7 @@ export class ClientGameRunner {
           new SendAttackIntentEvent(null, Math.floor(troopCount / 2)),
         );
       };
-      setTimeout(initialAttack, 100);
+      scheduleInitialAttack(100);
     }
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
@@ -575,6 +589,10 @@ export class ClientGameRunner {
     if (this.skinTestTimeoutId !== null) {
       clearTimeout(this.skinTestTimeoutId);
       this.skinTestTimeoutId = null;
+    }
+    if (this.skinTestInitialAttackTimeoutId !== null) {
+      clearTimeout(this.skinTestInitialAttackTimeoutId);
+      this.skinTestInitialAttackTimeoutId = null;
     }
     this.worker.cleanup();
     this.transport.leaveGame();
