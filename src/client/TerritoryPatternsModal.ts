@@ -1,7 +1,6 @@
 import type { TemplateResult } from "lit";
 import { html, render } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { v4 as uuidv4 } from "uuid";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import {
@@ -239,9 +238,8 @@ export class TerritoryPatternsModal extends BaseModal {
     pattern: Pattern,
     colorPalette: ColorPalette | null,
   ) {
-    const clientID = this.userMeResponse
-      ? this.userMeResponse.player.publicId
-      : uuidv4();
+    if (!this.userMeResponse) return;
+    const clientID = this.userMeResponse.player.publicId;
     const gameID = pattern.name;
 
     const selectedPattern = {
