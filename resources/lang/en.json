@@ -263,7 +263,7 @@
     "betweentwoseas": "Between Two Seas",
     "faroeislands": "Faroe Islands",
     "deglaciatedantarctica": "Deglaciated Antarctica",
-    "europeclassic": "Europe (classic)",
+    "europeclassic": "Europe (Classic)",
     "falklandislands": "Falkland Islands",
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
@@ -287,6 +287,7 @@
     "straitofhormuz": "Strait of Hormuz",
     "surrounded": "Surrounded",
     "didier": "Didier",
+    "didierfrance": "Didier (France)",
     "amazonriver": "Amazon River"
   },
   "map_categories": {
