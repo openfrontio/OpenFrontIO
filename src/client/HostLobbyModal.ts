@@ -104,7 +104,7 @@ export class HostLobbyModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         <!-- Header -->
         <div
@@ -203,6 +203,25 @@ export class HostLobbyModal extends BaseModal {
                 : this.lobbyIdVisible
                   ? this.lobbyId
                   : "••••••••"}
+            </button>
+            <button
+              @click=${this.copyToClipboard}
+              class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              title="${translateText("common.click_to_copy")}"
+              aria-label="${translateText("common.click_to_copy")}"
+              type="button"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                height="16px"
+                width="16px"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+                />
+              </svg>
             </button>
           </div>
         </div>
@@ -621,7 +640,7 @@ export class HostLobbyModal extends BaseModal {
                           min="0"
                           max="120"
                           .value=${String(this.maxTimerValue ?? 0)}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleMaxTimerValueChanges}
                           @keydown=${this.handleMaxTimerValueKeyDown}
@@ -701,7 +720,7 @@ export class HostLobbyModal extends BaseModal {
                           .value=${String(
                             this.spawnImmunityDurationMinutes ?? 0,
                           )}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleSpawnImmunityDurationInput}
                           @keydown=${this.handleSpawnImmunityDurationKeyDown}

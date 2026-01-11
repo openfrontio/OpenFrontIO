@@ -98,7 +98,7 @@ export class HelpModal extends BaseModal {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
           : ""}"
       >
         <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
@@ -700,7 +700,7 @@ export class HelpModal extends BaseModal {
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/TargetIcon.svg"
+                        src="/images/TargetIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_target")}</span>
