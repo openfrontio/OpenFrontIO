@@ -83,7 +83,9 @@ export class PatternInput extends LitElement {
           class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-slate-900/80 rounded-lg overflow-hidden"
           disabled
         >
-          <span class="text-xs text-white/40">Loading...</span>
+          <span
+            class="w-6 h-6 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+          ></span>
         </button>
       `;
     }
