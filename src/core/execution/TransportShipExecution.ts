@@ -11,8 +11,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -30,6 +29,7 @@ export class TransportShipExecution implements Execution {
   // TODO make private
   public path: TileRef[];
   private dst: TileRef | null;
+  private dstShore: TileRef | null;
 
   private boat: Unit;
 
@@ -70,7 +70,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathFinder = PathFinders.Water(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -104,8 +104,8 @@ export class TransportShipExecution implements Execution {
 
     this.startTroops = Math.min(this.startTroops, this.attacker.troops());
 
-    this.dst = targetTransportTile(this.mg, this.ref);
-    if (this.dst === null) {
+    this.dstShore = targetTransportTile(this.mg, this.ref);
+    if (this.dstShore === null) {
       console.warn(
         `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
       );
@@ -113,9 +113,18 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
+    this.dst = this.adjacentWater(this.dstShore);
+    if (this.dst === null) {
+      console.warn(
+        `${this.attacker} cannot find water tile adjacent to destination`,
+      );
+      this.active = false;
+      return;
+    }
+
     const closestTileSrc = this.attacker.canBuild(
       UnitType.TransportShip,
-      this.dst,
+      this.dstShore,
     );
     if (closestTileSrc === false) {
       console.warn(`can't build transport ship`);
@@ -141,10 +150,21 @@ export class TransportShipExecution implements Execution {
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
+      targetTile: this.dst ?? undefined,
     });
 
-    if (this.dst !== null) {
-      this.boat.setTargetTile(this.dst);
+    // Move boat from shore to adjacent water for pathfinding
+    const spawnWater = this.adjacentWater(this.src);
+    if (spawnWater === null) {
+      console.warn(`No adjacent water for transport ship spawn`);
+      this.boat.delete(false);
+      this.active = false;
+      return;
+    }
+    this.boat.move(spawnWater);
+
+    if (this.dstShore !== null) {
+      this.boat.setTargetTile(this.dstShore);
     } else {
       this.boat.setTargetTile(undefined);
     }
@@ -200,6 +220,7 @@ export class TransportShipExecution implements Execution {
       if (this.mg.owner(this.src!) !== this.attacker) {
         // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
         const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
+
         if (newSrc === false) {
           this.src = null;
         } else {
@@ -216,18 +237,27 @@ export class TransportShipExecution implements Execution {
         this.active = false;
         return;
       } else {
-        this.dst = this.src;
+        this.dstShore = this.src;
+        const retreatWater = this.adjacentWater(this.src);
+        if (retreatWater === null) {
+          console.warn(`No adjacent water for retreat destination`);
+          this.attacker.addTroops(this.boat.troops());
+          this.boat.delete(false);
+          this.active = false;
+          return;
+        }
+        this.dst = retreatWater;
 
-        if (this.boat.targetTile() !== this.dst) {
-          this.boat.setTargetTile(this.dst);
+        if (this.boat.targetTile() !== this.dstShore) {
+          this.boat.setTargetTile(this.dstShore!);
         }
       }
     }
 
-    const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
-    switch (result.type) {
-      case PathFindResultType.Completed:
-        if (this.mg.owner(this.dst) === this.attacker) {
+    const result = this.pathFinder.next(this.boat.tile(), this.dst);
+    switch (result.status) {
+      case PathStatus.COMPLETE:
+        if (this.mg.owner(this.dstShore!) === this.attacker) {
           const deaths = this.boat.troops() * (malusForRetreat / 100);
           const survivors = this.boat.troops() - deaths;
           this.attacker.addTroops(survivors);
@@ -247,7 +277,7 @@ export class TransportShipExecution implements Execution {
           }
           return;
         }
-        this.attacker.conquer(this.dst);
+        this.attacker.conquer(this.dstShore!);
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
           this.attacker.addTroops(this.boat.troops());
         } else {
@@ -256,7 +286,7 @@ export class TransportShipExecution implements Execution {
               this.boat.troops(),
               this.attacker,
               this.targetID,
-              this.dst,
+              this.dstShore!,
               false,
             ),
           );
@@ -269,12 +299,12 @@ export class TransportShipExecution implements Execution {
           .stats()
           .boatArriveTroops(this.attacker, this.target, this.boat.troops());
         return;
-      case PathFindResultType.NextTile:
+      case PathStatus.NEXT:
         this.boat.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case PathStatus.PENDING:
         break;
-      case PathFindResultType.PathNotFound:
+      case PathStatus.NOT_FOUND:
         // TODO: add to poisoned port list
         console.warn(`path not found to dst`);
         this.attacker.addTroops(this.boat.troops());
@@ -290,5 +320,18 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private adjacentWater(tile: TileRef): TileRef | null {
+    if (this.mg.isWater(tile)) {
+      return tile;
+    }
+
+    for (const neighbor of this.mg.neighbors(tile)) {
+      if (this.mg.isWater(neighbor)) {
+        return neighbor;
+      }
+    }
+    return null;
   }
 }

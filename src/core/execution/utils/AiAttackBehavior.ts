@@ -2,10 +2,13 @@ import {
   Difficulty,
   Game,
   Player,
+  PlayerID,
   PlayerType,
   Relation,
   TerraNullius,
 } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
+import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
   assertNever,
@@ -38,8 +41,156 @@ export class AiAttackBehavior {
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
 
+  maybeAttack() {
+    if (this.player === null || this.allianceBehavior === undefined) {
+      throw new Error("not initialized");
+    }
+
+    const border = Array.from(this.player.borderTiles())
+      .flatMap((t) => this.game.neighbors(t))
+      .filter(
+        (t) =>
+          this.game.isLand(t) &&
+          this.game.ownerID(t) !== this.player?.smallID(),
+      );
+    const borderingPlayers = [
+      ...new Set(
+        border
+          .map((t) => this.game.playerBySmallID(this.game.ownerID(t)))
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
+    const borderingFriends = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === true,
+    );
+    const borderingEnemies = borderingPlayers.filter(
+      (o) => this.player?.isFriendly(o) === false,
+    );
+
+    // Attack TerraNullius but not nuked territory
+    const hasNonNukedTerraNullius = border.some(
+      (t) => !this.game.hasOwner(t) && !this.game.hasFallout(t),
+    );
+    if (hasNonNukedTerraNullius) {
+      this.sendAttack(this.game.terraNullius());
+      return;
+    }
+
+    if (borderingEnemies.length === 0) {
+      if (this.random.chance(5)) {
+        this.attackWithRandomBoat();
+      }
+    } else {
+      if (this.random.chance(10)) {
+        this.attackWithRandomBoat(borderingEnemies);
+        return;
+      }
+
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
+    }
+
+    this.attackBestTarget(borderingFriends, borderingEnemies);
+  }
+
+  private attackWithRandomBoat(borderingEnemies: Player[] = []) {
+    if (this.player === null) throw new Error("not initialized");
+    const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isOceanShore(t),
+    );
+    if (oceanShore.length === 0) {
+      return;
+    }
+
+    const src = this.random.randElement(oceanShore);
+
+    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
+    let dst = this.findRandomBoatTarget(src, borderingEnemies, true);
+    if (dst === null) {
+      // None found? Then look for players
+      dst = this.findRandomBoatTarget(src, borderingEnemies, false);
+      if (dst === null) {
+        return;
+      }
+    }
+
+    this.game.addExecution(
+      new TransportShipExecution(
+        this.player,
+        this.game.owner(dst).id(),
+        dst,
+        this.player.troops() / 5,
+        null,
+      ),
+    );
+    return;
+  }
+
+  private findRandomBoatTarget(
+    tile: TileRef,
+    borderingEnemies: Player[],
+    highInterestOnly: boolean = false,
+  ): TileRef | null {
+    if (this.player === null) throw new Error("not initialized");
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const unreachablePlayers = new Set<PlayerID>();
+    for (let i = 0; i < 500; i++) {
+      const randX = this.random.nextInt(x - 150, x + 150);
+      const randY = this.random.nextInt(y - 150, y + 150);
+      if (!this.game.isValidCoord(randX, randY)) {
+        continue;
+      }
+      const randTile = this.game.ref(randX, randY);
+      if (!this.game.isLand(randTile)) {
+        continue;
+      }
+      const owner = this.game.owner(randTile);
+      if (owner === this.player) {
+        continue;
+      }
+      // Skip players we already know are unreachable (Performance optimization)
+      if (owner.isPlayer() && unreachablePlayers.has(owner.id())) {
+        continue;
+      }
+      // Don't send boats to players with which we share a border, that usually looks stupid
+      if (owner.isPlayer() && borderingEnemies.includes(owner)) {
+        continue;
+      }
+      // Don't spam boats into players which are stronger than us
+      if (owner.isPlayer() && owner.troops() > this.player.troops()) {
+        continue;
+      }
+
+      let matchesCriteria = false;
+      if (highInterestOnly) {
+        // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
+      } else {
+        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
+        matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
+      }
+      if (!matchesCriteria) {
+        continue;
+      }
+
+      // Validate that we can actually build a transport ship to this target
+      if (canBuildTransportShip(this.game, this.player, randTile) === false) {
+        if (owner.isPlayer()) {
+          unreachablePlayers.add(owner.id());
+        }
+        continue;
+      }
+
+      return randTile;
+    }
+    return null;
+  }
+
   // attackBestTarget is called with borderingFriends and borderingEnemies sorted by troops (ascending)
-  attackBestTarget(borderingFriends: Player[], borderingEnemies: Player[]) {
+  private attackBestTarget(
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ) {
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
 
@@ -78,27 +229,29 @@ export class AiAttackBehavior {
     const assist = (): boolean => this.assistAllies();
 
     const traitor = (): boolean => {
-      const weakestTraitor = this.findWeakestTraitor(borderingEnemies);
-      if (weakestTraitor) {
-        this.sendAttack(weakestTraitor);
+      const traitor = this.findTraitor(borderingEnemies);
+      if (traitor) {
+        this.sendAttack(traitor);
         return true;
       }
       return false;
     };
 
     const afk = (): boolean => {
-      // borderingEnemies is already sorted by troops (ascending), so first match is weakest
-      const weakestAfk = borderingEnemies.find((enemy) =>
-        enemy.isDisconnected(),
+      // borderingEnemies is already sorted by troops (ascending), so first match is weakest afk enemy
+      const afk = borderingEnemies.find(
+        (enemy) =>
+          enemy.isDisconnected() && enemy.troops() < this.player.troops() * 3,
       );
-      if (weakestAfk) {
-        this.sendAttack(weakestAfk);
+      if (afk) {
+        this.sendAttack(afk);
         return true;
       }
       return false;
     };
 
-    const betray = (): boolean => this.maybeBetrayAndAttack(borderingFriends);
+    const betray = (): boolean =>
+      this.maybeBetrayAndAttack(borderingFriends, borderingEnemies);
 
     const nuked = (): boolean => {
       if (this.isBorderingNukedTerritory()) {
@@ -109,9 +262,9 @@ export class AiAttackBehavior {
     };
 
     const victim = (): boolean => {
-      const weakestVictim = this.findWeakestVictim(borderingEnemies);
-      if (weakestVictim) {
-        this.sendAttack(weakestVictim);
+      const victim = this.findVictim(borderingEnemies);
+      if (victim) {
+        this.sendAttack(victim);
         return true;
       }
       return false;
@@ -122,7 +275,17 @@ export class AiAttackBehavior {
         if (relation.relation !== Relation.Hostile) continue;
         const other = relation.player;
         if (this.player.isFriendly(other)) continue;
+        if (other.troops() > this.player.troops() * 3) continue;
         this.sendAttack(other);
+        return true;
+      }
+      return false;
+    };
+
+    const veryWeak = (): boolean => {
+      const veryWeak = this.findVeryWeakEnemy(borderingEnemies);
+      if (veryWeak) {
+        this.sendAttack(veryWeak);
         return true;
       }
       return false;
@@ -131,8 +294,12 @@ export class AiAttackBehavior {
     const weakest = (): boolean => {
       if (borderingEnemies.length > 0) {
         // borderingEnemies is already sorted by troops (ascending), so first match is weakest
-        this.sendAttack(borderingEnemies[0]);
-        return true;
+        const weakest = borderingEnemies[0];
+        // Don't attack if they have more troops than us
+        if (weakest.troops() < this.player.troops()) {
+          this.sendAttack(weakest);
+          return true;
+        }
       }
       return false;
     };
@@ -152,48 +319,17 @@ export class AiAttackBehavior {
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
       case Difficulty.Easy:
+        // prettier-ignore
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
-        return [
-          bots,
-          nuked,
-          retaliate,
-          assist,
-          betray,
-          hated,
-          afk,
-          traitor,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island];
       case Difficulty.Hard:
-        return [
-          bots,
-          retaliate,
-          assist,
-          betray,
-          nuked,
-          traitor,
-          afk,
-          hated,
-          victim,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island];
       case Difficulty.Impossible:
-        return [
-          retaliate,
-          bots,
-          assist,
-          traitor,
-          afk,
-          betray,
-          nuked,
-          victim,
-          hated,
-          weakest,
-          island,
-        ];
+        // prettier-ignore
+        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island];
       default:
         assertNever(difficulty);
     }
@@ -309,23 +445,31 @@ export class AiAttackBehavior {
     return false;
   }
 
-  // Find a traitor who isn't much stronger than us (max 20% more troops)
-  private findWeakestTraitor(borderingEnemies: Player[]): Player | null {
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+  // Find a traitor who isn't significantly stronger than us
+  private findTraitor(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest traitor
     return (
       borderingEnemies.find(
         (enemy) =>
-          enemy.isTraitor() && enemy.troops() * 1.2 < this.player.troops(),
+          enemy.isTraitor() && enemy.troops() < this.player.troops() * 1.2,
       ) ?? null
     );
   }
 
-  private maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
+  private maybeBetrayAndAttack(
+    borderingFriends: Player[],
+    borderingEnemies: Player[],
+  ): boolean {
     if (this.allianceBehavior === undefined) throw new Error("not initialized");
 
     if (borderingFriends.length > 0) {
       for (const friend of borderingFriends) {
-        if (this.allianceBehavior.maybeBetray(friend)) {
+        if (
+          this.allianceBehavior.maybeBetray(
+            friend,
+            borderingFriends.length + borderingEnemies.length,
+          )
+        ) {
           this.sendAttack(friend, true);
           return true;
         }
@@ -349,12 +493,12 @@ export class AiAttackBehavior {
     return false;
   }
 
-  // Find someone who is weaker than us and is under big attack from others (50%+ of their troops incoming)
-  private findWeakestVictim(borderingEnemies: Player[]): Player | null {
-    // borderingEnemies is already sorted by troops (ascending), so first match is weakest
+  // Find someone who isn't significantly stronger than us and is under big attack from others (50%+ of their troops incoming)
+  private findVictim(borderingEnemies: Player[]): Player | null {
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest victim
     return (
       borderingEnemies.find((enemy) => {
-        if (enemy.troops() >= this.player.troops()) return false;
+        if (enemy.troops() > this.player.troops() * 1.2) return false;
 
         const totalIncomingTroops = enemy
           .incomingAttacks()
@@ -363,6 +507,21 @@ export class AiAttackBehavior {
         return totalIncomingTroops > enemy.troops() * 0.5;
       }) ?? null
     );
+  }
+
+  // Find very weak (less than 15% of their maxTroops) enemies
+  // which also don't have significantly more troops than us (to target MIRVed players)
+  private findVeryWeakEnemy(borderingEnemies: Player[]): Player | null {
+    const veryWeakEnemies = borderingEnemies.filter((enemy) => {
+      const enemyMaxTroops = this.game.config().maxTroops(enemy);
+      return (
+        enemy.troops() < enemyMaxTroops * 0.15 &&
+        enemy.troops() < this.player.troops() * 1.2
+      );
+    });
+
+    // borderingEnemies is already sorted by troops (ascending), so first match is weakest very weak enemy
+    return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
   }
 
   private findNearestIslandEnemy(): Player | null {
@@ -374,8 +533,8 @@ export class AiAttackBehavior {
       if (!p.isAlive()) return false;
       if (p.borderTiles().size === 0) return false;
       if (this.player.isFriendly(p)) return false;
-      // Don't spam boats into players more than 2x our troops
-      return p.troops() <= this.player.troops() * 2;
+      // Don't spam boats into players with more troops
+      return p.troops() < this.player.troops();
     });
 
     if (filteredPlayers.length > 0) {

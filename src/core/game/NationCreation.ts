@@ -69,9 +69,11 @@ export function createNationsForGame(
 
   // If we need more nations than defined in manifest, create additional ones
   const nations: Nation[] = manifestNations.map(toNation);
+  const usedNames = new Set(nations.map((n) => n.playerInfo.name));
   const additionalCount = targetNationCount - manifestNations.length;
   for (let i = 0; i < additionalCount; i++) {
-    const name = generateNationName(random);
+    const name = generateUniqueNationName(random, usedNames);
+    usedNames.add(name);
     nations.push(
       new Nation(
         undefined,
@@ -95,6 +97,45 @@ export function getCompactMapNationCount(
     return Math.max(1, Math.floor(manifestNationCount * 0.25));
   }
   return manifestNationCount;
+}
+
+function generateUniqueNationName(
+  random: PseudoRandom,
+  usedNames: Set<string>,
+): string {
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const name = generateNationName(random);
+    if (!usedNames.has(name)) {
+      return name;
+    }
+  }
+  // Fallback if we can't generate unique name (extremely unlikely)
+  // Append a number to ensure uniqueness
+  let counter = 1;
+  const baseName = generateNationName(random);
+  while (usedNames.has(`${baseName} ${counter}`)) {
+    counter++;
+  }
+  return `${baseName} ${counter}`;
+}
+
+function generateNationName(random: PseudoRandom): string {
+  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
+  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
+
+  const result: string[] = [];
+
+  for (const part of template) {
+    if (part === PLURAL_NOUN) {
+      result.push(pluralize(noun));
+    } else if (part === NOUN) {
+      result.push(noun);
+    } else {
+      result.push(part);
+    }
+  }
+
+  return result.join(" ");
 }
 
 const PLURAL_NOUN = Symbol("plural!");
@@ -289,25 +330,6 @@ const NOUNS = [
   "Tomato",
   "Penguin",
 ];
-
-function generateNationName(random: PseudoRandom): string {
-  const template = NAME_TEMPLATES[random.nextInt(0, NAME_TEMPLATES.length)];
-  const noun = NOUNS[random.nextInt(0, NOUNS.length)];
-
-  const result: string[] = [];
-
-  for (const part of template) {
-    if (part === PLURAL_NOUN) {
-      result.push(pluralize(noun));
-    } else if (part === NOUN) {
-      result.push(noun);
-    } else {
-      result.push(part);
-    }
-  }
-
-  return result.join(" ");
-}
 
 // Words from NOUNS that need irregular "-oes" plural
 const O_TO_OES = new Set(["Potato", "Tomato"]);

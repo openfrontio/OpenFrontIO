@@ -1,4 +1,11 @@
-import { Difficulty, Execution, Game, Player, PlayerID } from "../game/Game";
+import {
+  Difficulty,
+  Execution,
+  Game,
+  Player,
+  PlayerID,
+  PlayerType,
+} from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever } from "../Util";
 import { EmojiExecution } from "./EmojiExecution";
@@ -54,15 +61,21 @@ export class DonateTroopsExecution implements Execution {
         this.recipient.updateRelation(this.sender, 50);
       }
 
-      this.mg.addExecution(
-        new EmojiExecution(
-          this.recipient,
-          this.sender.id(),
-          this.random.randElement(
-            this.troops >= minTroops ? EMOJI_LOVE : EMOJI_DONATION_TOO_SMALL,
+      // Only AI nations auto-respond with emojis, human players should not
+      if (
+        this.recipient.type() === PlayerType.Nation &&
+        this.recipient.canSendEmoji(this.sender)
+      ) {
+        this.mg.addExecution(
+          new EmojiExecution(
+            this.recipient,
+            this.sender.id(),
+            this.random.randElement(
+              this.troops >= minTroops ? EMOJI_LOVE : EMOJI_DONATION_TOO_SMALL,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } else {
       console.warn(
         `cannot send troops from ${this.sender} to ${this.recipient}`,

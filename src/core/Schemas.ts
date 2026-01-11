@@ -182,12 +182,14 @@ export const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  isOneVOne: z.boolean().optional(),
 });
 
 export const TeamSchema = z.string();
@@ -309,13 +311,13 @@ export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.number().nullable(),
+  gold: z.number().nonnegative().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_troops"),
   recipient: ID,
-  troops: z.number().nullable(),
+  troops: z.number().nonnegative().nullable(),
 });
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
@@ -471,6 +473,7 @@ export const WinnerSchema = z
   .union([
     z.tuple([z.literal("player"), ID]).rest(ID),
     z.tuple([z.literal("team"), SafeString]).rest(ID),
+    z.tuple([z.literal("nation"), SafeString]).rest(ID),
   ])
   .optional();
 export type Winner = z.infer<typeof WinnerSchema>;

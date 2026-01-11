@@ -117,86 +117,111 @@ export class PlayerStatsTreeView extends LitElement {
       : 0;
 
     return html`
-      <!-- Type selector -->
-      <div class="flex gap-2 mt-2 justify-center">
-        ${types.map(
-          (t) => html`
-            <button
-              class="text-xs px-2 py-0.5 rounded-sm border ${this
-                .selectedType === t
-                ? "border-white/60 text-white"
-                : "border-white/20 text-gray-300"}"
-              @click=${() => this.setGameType(t)}
-            >
-              ${t === GameType.Public
-                ? translateText("player_stats_tree.public")
-                : t === GameType.Private
-                  ? translateText("player_stats_tree.private")
-                  : translateText("player_stats_tree.singleplayer")}
-            </button>
-          `,
-        )}
-      </div>
-      <!-- Mode selector -->
-      ${modes.length
-        ? html`<div class="flex gap-2 mt-2 justify-center">
-            ${modes.map(
-              (m) => html`
+      <div class="flex flex-col gap-4">
+        <!-- Filters -->
+        <div
+          class="flex flex-wrap gap-2 items-center justify-between p-2 bg-black/20 rounded-lg border border-white/5"
+        >
+          <!-- Type selector -->
+          <div class="flex gap-1">
+            ${types.map(
+              (t) => html`
                 <button
-                  class="text-xs px-2 py-0.5 rounded-sm border ${this
-                    .selectedMode === m
-                    ? "border-white/60 text-white"
-                    : "border-white/20 text-gray-300"}"
-                  @click=${() => this.setMode(m)}
-                  title=${translateText("player_stats_tree.mode")}
+                  class="text-xs px-3 py-1.5 rounded-md border font-bold uppercase tracking-wider transition-all duration-200 ${this
+                    .selectedType === t
+                    ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/40"
+                    : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"}"
+                  @click=${() => this.setGameType(t)}
                 >
-                  ${this.labelForMode(m)}
+                  ${t === GameType.Public
+                    ? translateText("player_stats_tree.public")
+                    : t === GameType.Private
+                      ? translateText("player_stats_tree.private")
+                      : translateText("player_stats_tree.solo")}
                 </button>
               `,
             )}
-          </div>`
-        : html``}
-      <!-- Difficulty selector -->
-      ${diffs.length
-        ? html`<div class="flex gap-2 mt-2 justify-center">
-            ${diffs.map(
-              (d) =>
-                html` <button
-                  class="text-xs px-2 py-0.5 rounded-sm border ${this
-                    .selectedDifficulty === d
-                    ? "border-white/60 text-white"
-                    : "border-white/20 text-gray-300"}"
-                  @click=${() => this.setDifficulty(d)}
-                  title=${translateText("difficulty.difficulty")}
+          </div>
+
+          <div class="flex gap-2">
+            <!-- Mode selector -->
+            ${modes.length
+              ? html`<div
+                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
                 >
-                  ${translateText(`difficulty.${d}`)}
-                </button>`,
-            )}
-          </div>`
-        : html``}
-      ${leaf
-        ? html`
-            <hr class="w-2/3 border-gray-600 my-2" />
-            <player-stats-grid
-              .titles=${[
-                translateText("player_stats_tree.stats_wins"),
-                translateText("player_stats_tree.stats_losses"),
-                translateText("player_stats_tree.stats_wlr"),
-                translateText("player_stats_tree.stats_games_played"),
-              ]}
-              .values=${[
-                renderNumber(leaf.wins),
-                renderNumber(leaf.losses),
-                wlr.toFixed(2),
-                renderNumber(leaf.total),
-              ]}
-            ></player-stats-grid>
-            <hr class="w-2/3 border-gray-600 my-2" />
-            <player-stats-table
-              .stats=${this.getDisplayedStats()}
-            ></player-stats-table>
-          `
-        : html``}
+                  ${modes.map(
+                    (m) => html`
+                      <button
+                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
+                          .selectedMode === m
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-gray-400 hover:text-white"}"
+                        @click=${() => this.setMode(m)}
+                        title=${translateText("player_stats_tree.mode")}
+                      >
+                        ${this.labelForMode(m)}
+                      </button>
+                    `,
+                  )}
+                </div>`
+              : html``}
+
+            <!-- Difficulty selector -->
+            ${diffs.length
+              ? html`<div
+                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
+                >
+                  ${diffs.map(
+                    (d) =>
+                      html` <button
+                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
+                          .selectedDifficulty === d
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-gray-400 hover:text-white"}"
+                        @click=${() => this.setDifficulty(d)}
+                        title=${translateText("difficulty.difficulty")}
+                      >
+                        ${translateText(`difficulty.${d.toLowerCase()}`)}
+                      </button>`,
+                  )}
+                </div>`
+              : html``}
+          </div>
+        </div>
+
+        ${leaf
+          ? html`
+              <div class="space-y-6 mt-2">
+                <player-stats-grid
+                  .titles=${[
+                    translateText("player_stats_tree.stats_wins"),
+                    translateText("player_stats_tree.stats_losses"),
+                    translateText("player_stats_tree.stats_wlr"),
+                    translateText("player_stats_tree.stats_games_played"),
+                  ]}
+                  .values=${[
+                    renderNumber(leaf.wins),
+                    renderNumber(leaf.losses),
+                    wlr.toFixed(2),
+                    renderNumber(leaf.total),
+                  ]}
+                ></player-stats-grid>
+
+                <div class="border-t border-white/10 pt-6">
+                  <player-stats-table
+                    .stats=${this.getDisplayedStats()}
+                  ></player-stats-table>
+                </div>
+              </div>
+            `
+          : html`
+              <div
+                class="py-12 text-center text-white/30 italic border border-white/5 rounded-xl bg-white/5"
+              >
+                ${translateText("player_stats_tree.no_stats")}
+              </div>
+            `}
+      </div>
     `;
   }
 }

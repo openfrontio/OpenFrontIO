@@ -3,7 +3,12 @@ import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { renderNumber, renderTroops, translateText } from "../../Utils";
+import {
+  formatPercentage,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import { Layer } from "./Layer";
 
 interface TeamEntry {
@@ -242,11 +247,4 @@ export class TeamStats extends LitElement implements Layer {
       </div>
     `;
   }
-}
-
-function formatPercentage(value: number): string {
-  const perc = value * 100;
-  if (Number.isNaN(perc)) return "0%";
-  if (perc === 100) return "100%";
-  return perc.toPrecision(2) + "%";
 }

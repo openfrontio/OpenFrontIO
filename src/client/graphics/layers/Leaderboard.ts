@@ -4,7 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { renderTroops, translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
+import { formatPercentage, renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
 interface Entry {
@@ -273,10 +273,4 @@ export class Leaderboard extends LitElement implements Layer {
       </button>
     `;
   }
-}
-
-function formatPercentage(value: number): string {
-  const perc = value * 100;
-  if (Number.isNaN(perc)) return "0%";
-  return perc.toFixed(1) + "%";
 }

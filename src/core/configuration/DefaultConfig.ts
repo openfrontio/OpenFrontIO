@@ -90,8 +90,10 @@ const numPlayersConfig = {
   [GameMapType.TwoLakes]: [60, 50, 40],
   [GameMapType.StraitOfHormuz]: [40, 36, 30],
   [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
-  [GameMapType.Didier]: [100, 70, 50],
+  [GameMapType.Didier]: [50, 40, 30],
+  [GameMapType.DidierFrance]: [100, 70, 50],
   [GameMapType.AmazonRiver]: [50, 40, 30],
+  [GameMapType.Sierpinski]: [20, 15, 10],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -165,17 +167,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     return token;
   }
-  numWorkers(): number {
-    const raw = Env.NUM_WORKERS;
-    if (!raw) {
-      throw new Error("NUM_WORKERS not set");
-    }
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      throw new Error(`Invalid NUM_WORKERS value "${raw}"`);
-    }
-    return Math.floor(parsed);
-  }
+  abstract numWorkers(): number;
   abstract env(): GameEnv;
   turnIntervalMs(): number {
     return 100;
@@ -231,9 +223,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
-  }
-  enableMatchmaking(): boolean {
-    return false;
   }
 
   getRandomPublicGameModifiers(): PublicGameModifiers {
@@ -342,6 +331,9 @@ export class DefaultConfig implements Config {
   }
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
+  }
+  disableNavMesh(): boolean {
+    return this._gameConfig.disableNavMesh ?? false;
   }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
