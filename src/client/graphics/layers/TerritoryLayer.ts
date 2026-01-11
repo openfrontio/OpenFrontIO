@@ -69,6 +69,7 @@ export class TerritoryLayer implements Layer {
   private contestAttackers: Uint16Array | null = null;
   private contestTileIndices: Int32Array | null = null;
   private contestComponents = new Map<number, ContestComponent>();
+  private contestTileCount = 0;
   private tickSnapshotPending = false;
   private tickTimeMsCurrent = 0;
   private tickTimeMsPrev = 0;
@@ -133,6 +134,11 @@ export class TerritoryLayer implements Layer {
     this.applyContestChanges(ownerUpdates, nowTickPacked);
     this.updateContestState(nowTickPacked);
     this.updateContestStrengths();
+    let tileCount = 0;
+    for (const component of this.contestComponents.values()) {
+      tileCount += component.tiles.length;
+    }
+    this.contestTileCount = tileCount;
     const updates = this.game.updatesSinceLastTick();
 
     // Detect alliance mutations
@@ -1135,6 +1141,7 @@ export class TerritoryLayer implements Layer {
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
       `contest: ${this.contestActive ? "on" : "off"} comps ${this.contestComponents.size}`,
+      `contestTiles: ${this.contestTileCount}`,
       `contestTicks: ${this.contestDurationTicks}`,
       `hovered: ${stats.hoveredPlayerId}`,
     ];
