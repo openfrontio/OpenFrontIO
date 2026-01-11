@@ -126,12 +126,13 @@ export class HeadsUpMessage extends LitElement implements Layer {
         ${this.isVisible
           ? html`
               <div
-                class="fixed top-4 left-1/2 -translate-x-1/2 z-[11000]
+                class="fixed top-[10%] left-1/2 -translate-x-1/2 z-[11000]
                             inline-flex items-center justify-center h-8 lg:h-10
                             w-fit max-w-[90vw]
                             bg-gray-900/60 rounded-md lg:rounded-lg
                             backdrop-blur-md text-white text-md lg:text-xl px-3 lg:px-4
-                            whitespace-normal break-words text-center"
+                            text-center break-words"
+                style="word-wrap: break-word; hyphens: auto;"
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}
               >
                 ${this.getMessage()}
