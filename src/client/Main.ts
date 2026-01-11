@@ -63,7 +63,9 @@ function getDiscordAvatarUrl(user: {
   // - id is a Discord numeric string
   // - avatar is a hash, optionally prefixed with "a_" for animated avatars
   if (!/^\d+$/.test(user.id)) return null;
-  if (!/^[a-zA-Z0-9_]+$/.test(user.avatar)) return null;
+  if (!/^[a-f0-9]+$/.test(user.avatar) && !/^a_[a-f0-9]+$/.test(user.avatar)) {
+    return null;
+  }
 
   const extension = user.avatar.startsWith("a_") ? "gif" : "png";
   return `https://cdn.discordapp.com/avatars/${encodeURIComponent(user.id)}/${encodeURIComponent(user.avatar)}.${extension}?size=64`;
