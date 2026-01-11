@@ -77,9 +77,11 @@ export class TransportShipExecution implements Execution {
       mg.config().boatMaxNumber()
     ) {
       mg.displayMessage(
-        `No boats available, max ${mg.config().boatMaxNumber()}`,
+        "events_display.no_boats_available",
         MessageType.ATTACK_FAILED,
         this.attacker.id(),
+        undefined,
+        { max: mg.config().boatMaxNumber() },
       );
       this.active = false;
       return;
@@ -270,9 +272,11 @@ export class TransportShipExecution implements Execution {
             .boatArriveTroops(this.attacker, this.target, survivors);
           if (deaths) {
             this.mg.displayMessage(
-              `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+              "events_display.attack_cancelled_retreat",
               MessageType.ATTACK_CANCELLED,
               this.attacker.id(),
+              undefined,
+              { troops: renderTroops(deaths) },
             );
           }
           return;
