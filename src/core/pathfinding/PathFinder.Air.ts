@@ -47,10 +47,18 @@ export class AirPathFinder implements PathFinder<TileRef> {
     let nextY = y;
     const ratio = Math.floor(1 + Math.abs(dstY - y) / (Math.abs(dstX - x) + 1));
 
-    if (random.chance(ratio) && x !== dstX) {
+    if (x === dstX) {
+      // Can only move in Y
+      nextY += y < dstY ? 1 : -1;
+    } else if (y === dstY) {
+      // Can only move in X
       nextX += x < dstX ? 1 : -1;
     } else {
-      nextY += y < dstY ? 1 : -1;
+      if (random.chance(ratio)) {
+        nextX += x < dstX ? 1 : -1;
+      } else {
+        nextY += y < dstY ? 1 : -1;
+      }
     }
 
     return this.game.ref(nextX, nextY);

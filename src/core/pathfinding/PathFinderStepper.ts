@@ -102,9 +102,16 @@ export class PathFinderStepper<T> implements SteppingPathFinder<T> {
 
   findPath(from: T | T[], to: T): T[] | null {
     if (this.config.preCheck) {
-      const first = Array.isArray(from) ? from[0] : from;
-      const result = this.config.preCheck(first, to);
-      if (result?.status === PathStatus.NOT_FOUND) return null;
+      const fromArray = Array.isArray(from) ? from : [from];
+
+      const allFailed = fromArray.every((f) => {
+        const result = this.config.preCheck!(f, to);
+        return result?.status === PathStatus.NOT_FOUND;
+      });
+
+      if (allFailed) {
+        return null;
+      }
     }
 
     return this.finder.findPath(from, to);

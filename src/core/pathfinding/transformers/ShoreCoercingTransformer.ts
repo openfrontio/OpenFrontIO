@@ -18,24 +18,19 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
   ) {}
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
-    // Coerce from tiles
     const fromArray = Array.isArray(from) ? from : [from];
-    const coercedFromArray: Array<{
-      water: TileRef;
-      original: TileRef | null;
-    }> = [];
+    const waterToOriginal = new Map<TileRef, TileRef | null>();
+    const waterFrom: TileRef[] = [];
 
     for (const f of fromArray) {
       const coerced = this.coerceToWater(f);
       if (coerced.water !== null) {
-        coercedFromArray.push({
-          water: coerced.water,
-          original: coerced.original,
-        });
+        waterFrom.push(coerced.water);
+        waterToOriginal.set(coerced.water, coerced.original);
       }
     }
 
-    if (coercedFromArray.length === 0) {
+    if (waterFrom.length === 0) {
       return null;
     }
 
@@ -45,52 +40,27 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       return null;
     }
 
-    // Build water-only from array
-    const waterFrom =
-      coercedFromArray.length === 1
-        ? coercedFromArray[0].water
-        : coercedFromArray.map((c) => c.water);
-
     // Search on water tiles
     const path = this.inner.findPath(waterFrom, coercedTo.water);
     if (!path || path.length === 0) {
       return null;
     }
 
-    // Fix extremes: find which source was used and prepend/append originals
-    const result = [...path];
-
-    // Find the original for the source that was used (closest to path start)
-    if (coercedFromArray.length > 0) {
-      const pathStart = result[0];
-      let bestOriginal: TileRef | null = null;
-      let minDist = Infinity;
-
-      for (const { water, original } of coercedFromArray) {
-        if (original !== null) {
-          const dist = this.map.manhattanDist(pathStart, water);
-          if (dist < minDist) {
-            minDist = dist;
-            bestOriginal = original;
-          }
-        }
-      }
-
-      // Prepend original if we have one and it's not already at start
-      if (bestOriginal !== null && result[0] !== bestOriginal) {
-        result.unshift(bestOriginal);
-      }
+    // Look up the actual path start in the map
+    const originalShore = waterToOriginal.get(path[0]);
+    if (originalShore !== undefined && originalShore !== null) {
+      path.unshift(originalShore);
     }
 
     // Append original to if different
     if (
       coercedTo.original !== null &&
-      result[result.length - 1] !== coercedTo.original
+      path[path.length - 1] !== coercedTo.original
     ) {
-      result.push(coercedTo.original);
+      path.push(coercedTo.original);
     }
 
-    return result;
+    return path;
   }
 
   /**

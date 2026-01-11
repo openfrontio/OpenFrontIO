@@ -11,12 +11,16 @@ export class MinHeap implements PriorityQueue {
   private priorities: Float32Array;
   private size = 0;
 
-  constructor(capacity: number) {
+  constructor(private capacity: number) {
     this.heap = new Int32Array(capacity);
     this.priorities = new Float32Array(capacity);
   }
 
   push(node: number, priority: number): void {
+    if (this.size >= this.capacity) {
+      throw new Error(`MinHeap capacity exceeded: ${this.capacity}`);
+    }
+
     let i = this.size++;
     this.heap[i] = node;
     this.priorities[i] = priority;

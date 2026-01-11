@@ -8,8 +8,8 @@
  *   npx tsx tests/pathfinding/benchmark/compare.ts --synthetic <map-name> <adapters>
  *
  * Examples:
- *   npx tsx tests/pathfinding/benchmark/compare.ts default hpa,legacy
- *   npx tsx tests/pathfinding/benchmark/compare.ts --synthetic giantworldmap hpa,legacy,a.optimized
+ *   npx tsx tests/pathfinding/benchmark/compare.ts default hpa,a.baseline
+ *   npx tsx tests/pathfinding/benchmark/compare.ts --synthetic giantworldmap hpa,hpa.cached,a.full
  */
 
 import {
@@ -111,17 +111,18 @@ Usage:
 
 Arguments:
   <scenario>    Name of the scenario (default: "default")
-  <adapters>    Comma-separated list of adapters to compare (e.g., "hpa,legacy,a.optimized")
+  <adapters>    Comma-separated list of adapters to compare (e.g., "hpa,a.baseline")
 
 Examples:
-  npx tsx tests/pathfinding/benchmark/compare.ts default hpa,legacy
-  npx tsx tests/pathfinding/benchmark/compare.ts --synthetic giantworldmap hpa,legacy,a.optimized
+  npx tsx tests/pathfinding/benchmark/compare.ts default hpa,a.baseline
+  npx tsx tests/pathfinding/benchmark/compare.ts --synthetic giantworldmap hpa,hpa.cached,a.full
 
 Available adapters:
+  a.baseline   - A* on minimap (inlined)
+  a.generic    - A* on minimap (adapter)
+  a.full       - A* on full map
   hpa          - Hierarchical pathfinding (no cache)
   hpa.cached   - Hierarchical pathfinding (with cache)
-  legacy       - Legacy A* algorithm
-  a.optimized  - Optimized A* algorithm
 `);
 }
 
