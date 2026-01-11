@@ -40,7 +40,6 @@ export class TerritoryWebGLRenderer {
   private readonly contestOwnersTexture: WebGLTexture | null;
   private readonly contestIdsTexture: WebGLTexture | null;
   private readonly contestTimesTexture: WebGLTexture | null;
-  private readonly contestSpeedsTexture: WebGLTexture | null;
   private readonly contestStrengthsTexture: WebGLTexture | null;
   private readonly prevOwnerTexture: WebGLTexture | null;
   private readonly olderOwnerTexture: WebGLTexture | null;
@@ -93,7 +92,6 @@ export class TerritoryWebGLRenderer {
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
-    contestSpeeds: WebGLUniformLocation | null;
     contestStrengths: WebGLUniformLocation | null;
     jfaAvailable: WebGLUniformLocation | null;
     contestNow: WebGLUniformLocation | null;
@@ -134,14 +132,12 @@ export class TerritoryWebGLRenderer {
   private contestOwnersState: Uint16Array;
   private contestIdsState: Uint16Array;
   private contestTimesState: Uint16Array;
-  private contestSpeedsState: Uint16Array;
   private contestStrengthsState: Uint16Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
   private readonly contestDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
   private needsContestFullUpload = true;
   private needsContestTimesUpload = true;
-  private needsContestSpeedsUpload = true;
   private needsContestStrengthsUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
@@ -188,7 +184,6 @@ export class TerritoryWebGLRenderer {
     this.contestOwnersState = new Uint16Array(state.length * 2);
     this.contestIdsState = new Uint16Array(state.length);
     this.contestTimesState = new Uint16Array(1);
-    this.contestSpeedsState = new Uint16Array(1);
     this.contestStrengthsState = new Uint16Array(1);
 
     this.gl = this.canvas.getContext("webgl2", {
@@ -210,7 +205,6 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
-      this.contestSpeedsTexture = null;
       this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
       this.olderOwnerTexture = null;
@@ -256,7 +250,6 @@ export class TerritoryWebGLRenderer {
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
-        contestSpeeds: null,
         contestStrengths: null,
         jfaAvailable: null,
         contestNow: null,
@@ -301,7 +294,6 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
-      this.contestSpeedsTexture = null;
       this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
       this.olderOwnerTexture = null;
@@ -347,7 +339,6 @@ export class TerritoryWebGLRenderer {
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
-        contestSpeeds: null,
         contestStrengths: null,
         jfaAvailable: null,
         contestNow: null,
@@ -439,7 +430,6 @@ export class TerritoryWebGLRenderer {
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
       contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
-      contestSpeeds: gl.getUniformLocation(this.program, "u_contestSpeeds"),
       contestStrengths: gl.getUniformLocation(
         this.program,
         "u_contestStrengths",
@@ -540,7 +530,6 @@ export class TerritoryWebGLRenderer {
     this.contestOwnersTexture = gl.createTexture();
     this.contestIdsTexture = gl.createTexture();
     this.contestTimesTexture = gl.createTexture();
-    this.contestSpeedsTexture = gl.createTexture();
     this.contestStrengthsTexture = gl.createTexture();
     this.prevOwnerTexture = gl.createTexture();
     this.olderOwnerTexture = gl.createTexture();
@@ -652,25 +641,6 @@ export class TerritoryWebGLRenderer {
       gl.RED_INTEGER,
       gl.UNSIGNED_SHORT,
       this.contestTimesState,
-    );
-
-    gl.activeTexture(gl.TEXTURE10);
-    gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.R16UI,
-      this.contestSpeedsState.length,
-      1,
-      0,
-      gl.RED_INTEGER,
-      gl.UNSIGNED_SHORT,
-      this.contestSpeedsState,
     );
 
     gl.activeTexture(gl.TEXTURE11);
@@ -998,7 +968,6 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.contestOwners, 4);
     gl.uniform1i(this.uniforms.contestIds, 5);
     gl.uniform1i(this.uniforms.contestTimes, 6);
-    gl.uniform1i(this.uniforms.contestSpeeds, 10);
     gl.uniform1i(this.uniforms.contestStrengths, 11);
     gl.uniform1i(this.uniforms.prevOwner, 7);
     gl.uniform1i(this.uniforms.jfaSeedsOld, 8);
@@ -1336,34 +1305,6 @@ export class TerritoryWebGLRenderer {
     this.needsContestTimesUpload = true;
   }
 
-  setContestSpeed(componentId: number, speed: number) {
-    if (componentId <= 0) {
-      return;
-    }
-    this.ensureContestSpeedCapacity(componentId);
-    const clamped = Math.max(0, Math.min(1, speed));
-    const packed = Math.round(clamped * 65535) & 0xffff;
-    if (this.contestSpeedsState[componentId] === packed) {
-      return;
-    }
-    this.contestSpeedsState[componentId] = packed;
-    this.needsContestSpeedsUpload = true;
-  }
-
-  ensureContestSpeedCapacity(componentId: number) {
-    if (componentId < this.contestSpeedsState.length) {
-      return;
-    }
-    let nextLength = Math.max(1, this.contestSpeedsState.length);
-    while (nextLength <= componentId) {
-      nextLength *= 2;
-    }
-    const nextState = new Uint16Array(nextLength);
-    nextState.set(this.contestSpeedsState);
-    this.contestSpeedsState = nextState;
-    this.needsContestSpeedsUpload = true;
-  }
-
   setContestStrength(componentId: number, strength: number) {
     if (componentId <= 0) {
       return;
@@ -1544,7 +1485,6 @@ export class TerritoryWebGLRenderer {
     this.dirtyRows.clear();
     this.needsContestFullUpload = true;
     this.needsContestTimesUpload = true;
-    this.needsContestSpeedsUpload = true;
     this.needsContestStrengthsUpload = true;
     this.contestDirtyRows.clear();
     this.jfaDirty = true;
@@ -1580,13 +1520,6 @@ export class TerritoryWebGLRenderer {
     FrameProfiler.end(
       "TerritoryWebGLRenderer:uploadContestTimes",
       uploadContestTimesSpan,
-    );
-
-    const uploadContestSpeedsSpan = FrameProfiler.start();
-    this.uploadContestSpeedsTexture();
-    FrameProfiler.end(
-      "TerritoryWebGLRenderer:uploadContestSpeeds",
-      uploadContestSpeedsSpan,
     );
 
     const uploadContestStrengthsSpan = FrameProfiler.start();
@@ -1683,10 +1616,6 @@ export class TerritoryWebGLRenderer {
     if (changeMaskTexture) {
       gl.activeTexture(gl.TEXTURE13);
       gl.bindTexture(gl.TEXTURE_2D, changeMaskTexture);
-    }
-    if (this.contestSpeedsTexture) {
-      gl.activeTexture(gl.TEXTURE10);
-      gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
     }
     if (this.contestStrengthsTexture) {
       gl.activeTexture(gl.TEXTURE11);
@@ -1957,34 +1886,6 @@ export class TerritoryWebGLRenderer {
     );
     this.needsContestTimesUpload = false;
     const bytes = this.contestTimesState.length * Uint16Array.BYTES_PER_ELEMENT;
-    return { rows: 1, bytes };
-  }
-
-  private uploadContestSpeedsTexture(): { rows: number; bytes: number } {
-    if (!this.gl || !this.contestSpeedsTexture) {
-      return { rows: 0, bytes: 0 };
-    }
-    if (!this.needsContestSpeedsUpload) {
-      return { rows: 0, bytes: 0 };
-    }
-    const gl = this.gl;
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.activeTexture(gl.TEXTURE10);
-    gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.R16UI,
-      this.contestSpeedsState.length,
-      1,
-      0,
-      gl.RED_INTEGER,
-      gl.UNSIGNED_SHORT,
-      this.contestSpeedsState,
-    );
-    this.needsContestSpeedsUpload = false;
-    const bytes =
-      this.contestSpeedsState.length * Uint16Array.BYTES_PER_ELEMENT;
     return { rows: 1, bytes };
   }
 
@@ -2712,7 +2613,6 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_contestOwners;
       uniform usampler2D u_contestIds;
       uniform usampler2D u_contestTimes;
-      uniform usampler2D u_contestSpeeds;
       uniform usampler2D u_contestStrengths;
       uniform bool u_jfaAvailable;
       uniform int u_contestNow;
@@ -2798,18 +2698,6 @@ export class TerritoryWebGLRenderer {
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_contestIds, clamped, 0).r;
-      }
-
-      float contestSpeed(uint contestId) {
-        if (contestId == 0u) {
-          return 0.0;
-        }
-        uint speedRaw = texelFetch(
-          u_contestSpeeds,
-          ivec2(int(contestId), 0),
-          0
-        ).r;
-        return clamp(float(speedRaw) / 65535.0, 0.0, 1.0);
       }
 
       float contestStrength(uint contestId) {
@@ -3212,18 +3100,18 @@ export class TerritoryWebGLRenderer {
           if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {
             float oldDistance = length(seedOld - vec2(texCoord));
             float newDistance = length(seedNew - vec2(texCoord));
-            float bandWidth = mix(1.6, 0.8, contestSpeed(contestId));
+            float battle = clamp(abs(contestStrength(contestId) - 0.5) * 2.0, 0.0, 1.0);
+            float bandWidth = mix(1.6, 0.9, battle);
             float frontDistance = min(oldDistance, newDistance);
             float band =
               1.0 - smoothstep(bandWidth, bandWidth + 0.6, frontDistance);
-            float speed = contestSpeed(contestId);
-            float scale = mix(0.1, 0.22, speed);
-            float drift = mix(0.05, 0.18, speed);
+            float scale = mix(0.1, 0.2, battle);
+            float drift = mix(0.05, 0.14, battle);
             vec2 p = vec2(texCoord) * scale +
               vec2(u_time * drift, -u_time * drift * 0.6);
             float n = fbm(p);
             float cloud = smoothstep(0.55, 0.82, n);
-            float intensity = mix(0.08, 0.28, speed);
+            float intensity = mix(0.06, 0.22, battle);
             float alpha = cloud * band * intensity;
             vec3 smoke = vec3(0.85, 0.83, 0.8);
             color = mix(color, smoke, alpha);

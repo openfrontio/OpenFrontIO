@@ -21,10 +21,6 @@ const CONTEST_ID_MASK = 0x7fff;
 const CONTEST_ATTACKER_EVER_BIT = 0x8000;
 const CONTEST_TIME_WRAP = 32768;
 const DEFAULT_CONTEST_DURATION_TICKS = 2;
-const CONTEST_SPEED_TPS_MAX = 20;
-const CONTEST_SPEED_EMA_ALPHA = 0.8;
-const CONTEST_SPEED_DECAY_HALFLIFE_MS = 100;
-const CONTEST_SPEED_DT_MAX_MS = 200;
 const CONTEST_STRENGTH_EMA_ALPHA = 0.8;
 const CONTEST_STRENGTH_MIN = 0.01;
 const CONTEST_STRENGTH_MAX = 0.95;
@@ -36,7 +32,6 @@ type ContestComponent = {
   defender: number;
   lastActivityPacked: number;
   tiles: TileRef[];
-  speed: number;
   strength: number;
 };
 
@@ -83,8 +78,6 @@ export class TerritoryLayer implements Layer {
   private tickNumberOlder: number | null = null;
   private interpolationDelayMs = 100;
   private lastInterpolationPair: "prevCurrent" | "olderPrev" = "prevCurrent";
-  private contestSpeedDeltas = new Map<number, number>();
-  private contestSpeedLastUpdateMs = 0;
 
   constructor(
     private game: GameView,
@@ -138,11 +131,9 @@ export class TerritoryLayer implements Layer {
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
     const ownerUpdates = this.game.recentlyUpdatedOwnerTiles();
-    this.contestSpeedDeltas.clear();
     const nowTickPacked = this.packContestTick(this.game.ticks());
     this.applyContestChanges(ownerUpdates, nowTickPacked);
     this.updateContestState(nowTickPacked);
-    this.updateContestSpeeds(now);
     this.updateContestStrengths();
     const updates = this.game.updatesSinceLastTick();
 
@@ -635,11 +626,6 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer.setSmoothEnabled(true);
   }
 
-  private recordContestSpeed(componentId: number) {
-    const current = this.contestSpeedDeltas.get(componentId) ?? 0;
-    this.contestSpeedDeltas.set(componentId, current + 1);
-  }
-
   private applyContestChanges(
     changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
     nowTickPacked: number,
@@ -656,30 +642,24 @@ export class TerritoryLayer implements Layer {
       const tile = change.tile;
       const currentId = this.contestId(tile);
       if (currentId === 0) {
-        const component = this.startContestForTile(
+        this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowTickPacked,
         );
-        if (component) {
-          this.recordContestSpeed(component.id);
-        }
         continue;
       }
 
       const component = this.contestComponents.get(currentId);
       if (!component) {
         this.clearContestTile(tile);
-        const newComponent = this.startContestForTile(
+        this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowTickPacked,
         );
-        if (newComponent) {
-          this.recordContestSpeed(newComponent.id);
-        }
         continue;
       }
 
@@ -698,54 +678,15 @@ export class TerritoryLayer implements Layer {
         );
         component.lastActivityPacked = nowTickPacked;
         this.territoryRenderer.setContestTime(component.id, nowTickPacked);
-        this.recordContestSpeed(component.id);
       } else {
         this.removeTileFromComponent(tile, component);
-        const newComponent = this.startContestForTile(
+        this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowTickPacked,
         );
-        if (newComponent) {
-          this.recordContestSpeed(newComponent.id);
-        }
       }
-    }
-  }
-
-  private updateContestSpeeds(now: number) {
-    if (!this.territoryRenderer) {
-      return;
-    }
-    if (this.contestComponents.size === 0) {
-      this.contestSpeedLastUpdateMs = now;
-      return;
-    }
-    if (this.contestSpeedLastUpdateMs <= 0) {
-      this.contestSpeedLastUpdateMs = now;
-    }
-    let dt = now - this.contestSpeedLastUpdateMs;
-    dt = Math.max(1, Math.min(CONTEST_SPEED_DT_MAX_MS, dt));
-    this.contestSpeedLastUpdateMs = now;
-
-    const decay = Math.pow(0.5, dt / CONTEST_SPEED_DECAY_HALFLIFE_MS);
-    for (const component of this.contestComponents.values()) {
-      const delta = this.contestSpeedDeltas.get(component.id) ?? 0;
-      if (delta > 0) {
-        const tilesPerSecond = (delta / dt) * 1000;
-        const instant = Math.min(
-          1,
-          tilesPerSecond / CONTEST_SPEED_TPS_MAX,
-        );
-        component.speed =
-          component.speed * (1 - CONTEST_SPEED_EMA_ALPHA) +
-          instant * CONTEST_SPEED_EMA_ALPHA;
-      } else {
-        component.speed *= decay;
-      }
-      component.speed = Math.max(0, Math.min(1, component.speed));
-      this.territoryRenderer.setContestSpeed(component.id, component.speed);
     }
   }
 
@@ -756,14 +697,25 @@ export class TerritoryLayer implements Layer {
     if (this.contestComponents.size === 0) {
       return;
     }
-    const pairStrength = new Map<string, number>();
+
+    const involvedIds = new Set<number>();
     for (const component of this.contestComponents.values()) {
-      const key = `${component.attacker}:${component.defender}`;
+      involvedIds.add(component.attacker);
+      involvedIds.add(component.defender);
+    }
+    const totalTroopsById = this.buildTotalTroopsLookup(involvedIds);
+    const attackTroopsById = this.buildAttackTroopsLookup(involvedIds);
+
+    const pairStrength = new Map<number, number>();
+    for (const component of this.contestComponents.values()) {
+      const key = (component.attacker << 16) | component.defender;
       let strength = pairStrength.get(key);
       if (strength === undefined) {
         strength = this.computeContestStrength(
           component.attacker,
           component.defender,
+          totalTroopsById,
+          attackTroopsById,
         );
         pairStrength.set(key, strength);
       }
@@ -781,36 +733,73 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  private computeContestStrength(attackerId: number, defenderId: number) {
-    const attacker = this.game.playerBySmallID(attackerId);
-    const defender = this.game.playerBySmallID(defenderId);
-    if (
-      !attacker ||
-      !defender ||
-      !(attacker instanceof PlayerView) ||
-      !(defender instanceof PlayerView)
-    ) {
+  private buildTotalTroopsLookup(
+    involvedIds: Set<number>,
+  ): Map<number, number> {
+    const totals = new Map<number, number>();
+    for (const id of involvedIds) {
+      const player = this.game.playerBySmallID(id);
+      if (player instanceof PlayerView) {
+        totals.set(id, player.troops());
+      }
+    }
+    return totals;
+  }
+
+  private buildAttackTroopsLookup(
+    involvedIds: Set<number>,
+  ): Map<number, Map<number, number>> {
+    const totals = new Map<number, Map<number, number>>();
+    for (const id of involvedIds) {
+      const player = this.game.playerBySmallID(id);
+      if (!(player instanceof PlayerView)) {
+        continue;
+      }
+      const outgoing = player.outgoingAttacks();
+      if (outgoing.length === 0) {
+        continue;
+      }
+      for (const attack of outgoing) {
+        if (!involvedIds.has(attack.targetID)) {
+          continue;
+        }
+        let byTarget = totals.get(id);
+        if (!byTarget) {
+          byTarget = new Map<number, number>();
+          totals.set(id, byTarget);
+        }
+        byTarget.set(
+          attack.targetID,
+          (byTarget.get(attack.targetID) ?? 0) + attack.troops,
+        );
+      }
+    }
+    return totals;
+  }
+
+  private computeContestStrength(
+    attackerId: number,
+    defenderId: number,
+    totalTroopsById: Map<number, number>,
+    attackTroopsById: Map<number, Map<number, number>>,
+  ) {
+    const attackerTroops = totalTroopsById.get(attackerId);
+    const defenderTroops = totalTroopsById.get(defenderId);
+    if (attackerTroops === undefined || defenderTroops === undefined) {
       return 0.5;
     }
-    const attackerAttackTroops = this.attackTroops(attacker, defenderId);
-    const defenderAttackTroops = this.attackTroops(defender, attackerId);
-    const attackerPower = attacker.troops() + attackerAttackTroops;
-    const defenderPower = defender.troops() + defenderAttackTroops;
+
+    const attackerAttackTroops =
+      attackTroopsById.get(attackerId)?.get(defenderId) ?? 0;
+    const defenderAttackTroops =
+      attackTroopsById.get(defenderId)?.get(attackerId) ?? 0;
+    const attackerPower = attackerTroops + attackerAttackTroops;
+    const defenderPower = defenderTroops + defenderAttackTroops;
     const totalPower = attackerPower + defenderPower;
     if (totalPower <= 0) {
       return 0.5;
     }
     return Math.max(0, Math.min(1, attackerPower / totalPower));
-  }
-
-  private attackTroops(attacker: PlayerView, targetId: number) {
-    let total = 0;
-    for (const attack of attacker.outgoingAttacks()) {
-      if (attack.targetID === targetId) {
-        total += attack.troops;
-      }
-    }
-    return total;
   }
 
   private updateContestState(nowTickPacked: number) {
@@ -855,7 +844,11 @@ export class TerritoryLayer implements Layer {
     const neighbors = this.collectNeighborComponents(tile, attacker, defender);
     let component: ContestComponent;
     if (neighbors.length === 0) {
-      component = this.createContestComponent(attacker, defender, nowTickPacked);
+      component = this.createContestComponent(
+        attacker,
+        defender,
+        nowTickPacked,
+      );
     } else {
       component = neighbors[0];
       for (let i = 1; i < neighbors.length; i++) {
@@ -905,13 +898,11 @@ export class TerritoryLayer implements Layer {
       defender,
       lastActivityPacked: nowTickPacked,
       tiles: [],
-      speed: 0,
       strength: 0.5,
     };
     this.contestComponents.set(id, component);
     this.contestActive = true;
     this.territoryRenderer?.ensureContestTimeCapacity(id);
-    this.territoryRenderer?.setContestSpeed(id, 0);
     this.territoryRenderer?.setContestStrength(id, 0.5);
     return component;
   }
@@ -963,7 +954,6 @@ export class TerritoryLayer implements Layer {
     this.contestTileIndices![tile] = -1;
     this.clearContestTile(tile);
     if (component.tiles.length === 0) {
-      this.territoryRenderer?.setContestSpeed(component.id, 0);
       this.territoryRenderer?.setContestStrength(component.id, 0);
       this.contestComponents.delete(component.id);
       this.releaseContestComponentId(component.id);
@@ -979,10 +969,6 @@ export class TerritoryLayer implements Layer {
     const sourceSize = source.tiles.length;
     const totalSize = targetSize + sourceSize;
     if (totalSize > 0) {
-      target.speed = Math.min(
-        1,
-        (target.speed * targetSize + source.speed * sourceSize) / totalSize,
-      );
       target.strength = Math.min(
         1,
         (target.strength * targetSize + source.strength * sourceSize) /
@@ -1010,7 +996,6 @@ export class TerritoryLayer implements Layer {
       target.lastActivityPacked,
     );
     this.contestComponents.delete(source.id);
-    this.territoryRenderer?.setContestSpeed(source.id, 0);
     this.territoryRenderer?.setContestStrength(source.id, 0);
     this.releaseContestComponentId(source.id);
   }
@@ -1021,7 +1006,6 @@ export class TerritoryLayer implements Layer {
       this.clearContestTile(tile);
     }
     component.tiles.length = 0;
-    this.territoryRenderer?.setContestSpeed(component.id, 0);
     this.territoryRenderer?.setContestStrength(component.id, 0);
     this.contestComponents.delete(component.id);
     this.releaseContestComponentId(component.id);
@@ -1089,7 +1073,6 @@ export class TerritoryLayer implements Layer {
     }
     if (maxId > 0) {
       this.territoryRenderer.ensureContestTimeCapacity(maxId);
-      this.territoryRenderer.ensureContestSpeedCapacity(maxId);
       this.territoryRenderer.ensureContestStrengthCapacity(maxId);
     }
     for (const component of this.contestComponents.values()) {
@@ -1097,7 +1080,6 @@ export class TerritoryLayer implements Layer {
         component.id,
         component.lastActivityPacked,
       );
-      this.territoryRenderer.setContestSpeed(component.id, component.speed);
       this.territoryRenderer.setContestStrength(
         component.id,
         component.strength,
