@@ -375,7 +375,7 @@ export class UserSettingModal extends BaseModal {
       document.querySelector<FlagInputModalElement>("#flag-input-modal");
     if (flagInputModal?.open) {
       this.close();
-      flagInputModal.returnTo = "#" + (this.id || "page-options");
+      flagInputModal.returnTo = "#" + (this.id || "page-settings");
       flagInputModal.open();
     }
   };

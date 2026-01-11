@@ -45,7 +45,7 @@
     "play": "Play",
     "news": "News",
     "store": "Store",
-    "options": "Options",
+    "settings": "Settings",
     "keys": "Keys",
     "stats": "Stats",
     "account": "Account",
@@ -427,7 +427,7 @@
     "factory": "Factory"
   },
   "user_setting": {
-    "title": "User Settings",
+    "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
     "dark_mode_label": "Dark Mode",
