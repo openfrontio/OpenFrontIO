@@ -149,7 +149,7 @@ export class LobbyChatPanel extends LitElement {
   }
 
   createRenderRoot() {
-    return this; // use light DOM for existing styles
+    return this;
   }
 }
 
