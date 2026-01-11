@@ -10,6 +10,14 @@ interface ChatMessage {
   text: string;
 }
 
+type LobbyChatMessageEvent = CustomEvent<{
+  username: string;
+  isHost: boolean;
+  text: string;
+}>;
+
+type EventBusReadyEvent = CustomEvent<void>;
+
 @customElement("lobby-chat-panel")
 export class LobbyChatPanel extends LitElement {
   @state() private messages: ChatMessage[] = [];
@@ -20,18 +28,30 @@ export class LobbyChatPanel extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener("lobby-chat:message", this.onIncoming as any);
+    document.addEventListener(
+      "lobby-chat:message",
+      this.onIncoming as EventListener,
+    );
     const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
     }
     this.username = window.__username ?? null;
-    document.addEventListener("event-bus:ready", this.onBusReady as any);
+    document.addEventListener(
+      "event-bus:ready",
+      this.onBusReady as EventListener,
+    );
   }
 
   disconnectedCallback(): void {
-    document.removeEventListener("lobby-chat:message", this.onIncoming as any);
-    document.removeEventListener("event-bus:ready", this.onBusReady as any);
+    document.removeEventListener(
+      "lobby-chat:message",
+      this.onIncoming as EventListener,
+    );
+    document.removeEventListener(
+      "event-bus:ready",
+      this.onBusReady as EventListener,
+    );
     super.disconnectedCallback();
   }
 
@@ -39,9 +59,7 @@ export class LobbyChatPanel extends LitElement {
     this.bus = bus;
   }
 
-  private onIncoming = async (
-    e: CustomEvent<{ username: string; isHost: boolean; text: string }>,
-  ) => {
+  private onIncoming = async (e: LobbyChatMessageEvent) => {
     const { username, isHost, text } = e.detail;
     this.messages = [...this.messages, { username, isHost, text }];
     await this.updateComplete;
@@ -51,7 +69,7 @@ export class LobbyChatPanel extends LitElement {
     if (container) container.scrollTop = container.scrollHeight;
   };
 
-  private onBusReady = () => {
+  private onBusReady = (_e: EventBusReadyEvent) => {
     const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
@@ -59,19 +77,27 @@ export class LobbyChatPanel extends LitElement {
     this.username ??= window.__username ?? null;
   };
 
+  private get canSend(): boolean {
+    return this.bus !== null || window.__eventBus !== undefined;
+  }
+
   private sendMessage() {
     const text = this.inputText.trim();
     if (!text) return;
+
+    // Try to get the bus from global if not already set
     if (!this.bus) {
       const globalBus = window.__eventBus;
       if (globalBus) {
         this.bus = globalBus;
       }
     }
+
+    // If still no bus, don't clear input - user can retry
     if (!this.bus) {
-      console.warn("LobbyChatPanel: EventBus unavailable. Message not sent.");
       return;
     }
+
     const capped = text.slice(0, 300);
     this.bus.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
@@ -110,7 +136,11 @@ export class LobbyChatPanel extends LitElement {
             }}
             placeholder=${translateText("lobby_chat.placeholder")}
           />
-          <button class="lcp-send" @click=${() => this.sendMessage()}>
+          <button
+            class="lcp-send"
+            @click=${() => this.sendMessage()}
+            ?disabled=${!this.canSend}
+          >
             ${translateText("lobby_chat.send")}
           </button>
         </div>
