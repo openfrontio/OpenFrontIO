@@ -105,6 +105,8 @@ export class FlagInput extends LitElement {
       return;
     }
 
+    preview.innerHTML = "";
+
     if (this.flag?.startsWith("!")) {
       renderPlayerFlag(this.flag, preview);
     } else {
