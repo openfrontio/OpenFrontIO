@@ -152,10 +152,7 @@ export class PublicLobby extends LitElement {
         <!-- Mode Badge in top left -->
         ${fullModeLabel
           ? html`<span
-              class="absolute top-4 left-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 ${this
-                .isLobbyHighlighted
-                ? "bg-green-500/90 text-white"
-                : "bg-white text-blue-600"}"
+              class="absolute top-4 left-4 px-4 py-1 rounded font-bold text-sm lg:text-base uppercase tracking-wide z-30 bg-black/60 text-white border border-white/10 backdrop-blur-sm"
             >
               ${fullModeLabel}
             </span>`
@@ -165,13 +162,13 @@ export class PublicLobby extends LitElement {
         ${timeRemaining > 0
           ? html`
               <span
-                class="absolute top-4 right-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 bg-blue-600 text-white"
+                class="absolute top-4 right-4 px-4 py-1 rounded font-bold text-sm lg:text-base tracking-wide z-30 bg-blue-600 text-white border border-white/10 backdrop-blur-sm"
               >
                 ${timeDisplay}
               </span>
             `
           : html`<span
-              class="absolute top-4 right-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 bg-green-600 text-white"
+              class="absolute top-4 right-4 px-4 py-1 rounded font-bold text-sm lg:text-base uppercase tracking-wide z-30 bg-green-600 text-white border border-white/10 backdrop-blur-sm"
             >
               ${translateText("public_lobby.started")}
             </span>`}
