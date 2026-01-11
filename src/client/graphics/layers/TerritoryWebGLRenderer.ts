@@ -2718,35 +2718,6 @@ export class TerritoryWebGLRenderer {
         return fract(52.9829189 * x);
       }
 
-      float hash12(vec2 p) {
-        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-      }
-
-      float valueNoise(vec2 p) {
-        vec2 i = floor(p);
-        vec2 f = fract(p);
-        float a = hash12(i);
-        float b = hash12(i + vec2(1.0, 0.0));
-        float c = hash12(i + vec2(0.0, 1.0));
-        float d = hash12(i + vec2(1.0, 1.0));
-        vec2 u = f * f * (3.0 - 2.0 * f);
-        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-      }
-
-      float fbm(vec2 p) {
-        float value = 0.0;
-        float amp = 0.65;
-        vec2 shift = vec2(19.0, 7.0);
-        value += amp * valueNoise(p);
-        amp *= 0.5;
-        p = p * 2.1 + shift;
-        value += amp * valueNoise(p);
-        amp *= 0.5;
-        p = p * 2.05 + shift;
-        value += amp * valueNoise(p);
-        return value;
-      }
-
       uint relationCode(uint owner, uint other) {
         if (owner == 0u || other == 0u) {
           return 0u;
@@ -3091,30 +3062,6 @@ export class TerritoryWebGLRenderer {
             color = hintColor;
           } else {
             color = mix(color, hintColor, 0.08);
-          }
-        }
-
-        if (useContestedFill && u_jfaAvailable) {
-          vec2 seedOld = jfaSeedOldAtTex(texCoord);
-          vec2 seedNew = jfaSeedNewAtTex(texCoord);
-          if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {
-            float oldDistance = length(seedOld - vec2(texCoord));
-            float newDistance = length(seedNew - vec2(texCoord));
-            float battle = clamp(abs(contestStrength(contestId) - 0.5) * 2.0, 0.0, 1.0);
-            float bandWidth = mix(1.6, 0.9, battle);
-            float frontDistance = min(oldDistance, newDistance);
-            float band =
-              1.0 - smoothstep(bandWidth, bandWidth + 0.6, frontDistance);
-            float scale = mix(0.1, 0.2, battle);
-            float drift = mix(0.05, 0.14, battle);
-            vec2 p = vec2(texCoord) * scale +
-              vec2(u_time * drift, -u_time * drift * 0.6);
-            float n = fbm(p);
-            float cloud = smoothstep(0.55, 0.82, n);
-            float intensity = mix(0.06, 0.22, battle);
-            float alpha = cloud * band * intensity;
-            vec3 smoke = vec3(0.85, 0.83, 0.8);
-            color = mix(color, smoke, alpha);
           }
         }
 
