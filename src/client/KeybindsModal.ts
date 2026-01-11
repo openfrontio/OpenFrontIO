@@ -1,6 +1,8 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
+import { UserSettings } from "../core/game/UserSettings";
+import "./components/baseComponents/setting/SettingDropdown";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import { BaseModal } from "./components/BaseModal";
@@ -32,6 +34,8 @@ const DefaultKeybinds: Record<string, string> = {
 
 @customElement("keybinds-modal")
 export class KeybindsModal extends BaseModal {
+  private userSettings: UserSettings = new UserSettings();
+
   @state() private keybinds: Record<
     string,
     { value: string | string[]; key: string }
@@ -385,6 +389,23 @@ export class KeybindsModal extends BaseModal {
       >
         ${translateText("user_setting.attack_ratio_controls")}
       </h2>
+
+      <setting-dropdown
+        label="Attack Ratio Increment"
+        description="The amount to increase/decrease the attack ratio by."
+        .options=${[
+          { value: "0.01", label: "1%" },
+          { value: "0.025", label: "2.5%" },
+          { value: "0.05", label: "5%" },
+          { value: "0.1", label: "10%" },
+          { value: "0.2", label: "20%" },
+        ]}
+        value=${this.userSettings.attackRatioIncrement().toString()}
+        @change=${(e: CustomEvent) => {
+          this.userSettings.setAttackRatioIncrement(parseFloat(e.detail.value));
+          this.requestUpdate();
+        }}
+      ></setting-dropdown>
 
       <setting-keybind
         action="attackRatioDown"

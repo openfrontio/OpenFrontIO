@@ -207,4 +207,12 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  attackRatioIncrement(): number {
+    return this.getFloat("settings.attackRatioIncrement", 0.1);
+  }
+
+  setAttackRatioIncrement(value: number): void {
+    this.setFloat("settings.attackRatioIncrement", value);
+  }
 }

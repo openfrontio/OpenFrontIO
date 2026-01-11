@@ -4,6 +4,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -16,6 +17,8 @@ export class ControlPanel extends LitElement implements Layer {
   public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
+
+  private userSettings = new UserSettings();
 
   @state()
   private attackRatio: number = 0.2;
@@ -45,12 +48,19 @@ export class ControlPanel extends LitElement implements Layer {
     );
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(AttackRatioEvent, (event) => {
-      let newAttackRatio =
-        (parseInt(
+      const currentRatio =
+        parseInt(
           (document.getElementById("attack-ratio") as HTMLInputElement).value,
-        ) +
-          event.attackRatio) /
-        100;
+        ) / 100;
+
+      const direction = Math.sign(event.attackRatio);
+      if (direction === 0) return;
+
+      const increment = this.userSettings.attackRatioIncrement();
+      let newAttackRatio = currentRatio + direction * increment;
+
+      // to avoid floating point weirdness (e.g. 0.300000004)
+      newAttackRatio = Math.round(newAttackRatio * 1000) / 1000;
 
       if (newAttackRatio < 0.01) {
         newAttackRatio = 0.01;

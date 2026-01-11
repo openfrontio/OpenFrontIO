@@ -377,12 +377,12 @@ export class InputHandler {
 
       if (e.code === this.keybinds.attackRatioDown) {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(-10));
+        this.eventBus.emit(new AttackRatioEvent(-1));
       }
 
       if (e.code === this.keybinds.attackRatioUp) {
         e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(10));
+        this.eventBus.emit(new AttackRatioEvent(1));
       }
 
       if (e.code === this.keybinds.centerCamera) {
