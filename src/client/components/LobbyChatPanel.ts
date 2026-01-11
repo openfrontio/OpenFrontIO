@@ -130,24 +130,30 @@ style.textContent = `
     flex-direction: column;
     gap: 8px;
     max-height: 240px;
+    width: 100%;
   }
   .lcp-messages {
     overflow-y: auto;
-    border: 1px solid #444;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 8px;
-    height: 180px;
+    height: 150px;
+    min-height: 120px;
     background: rgba(0, 0, 0, 0.5);
     color: #ddd;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    -webkit-overflow-scrolling: touch;
   }
   .lcp-msg {
-    font-size: 0.9rem;
-    padding: 6px 10px;
-    border-radius: 10px;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 12px;
     background: rgba(0, 0, 0, 0.6);
+    max-width: 85%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   .lcp-msg--local {
     align-self: flex-end;
@@ -162,20 +168,72 @@ style.textContent = `
   .lcp-sender {
     color: #9ae6b4;
     margin-right: 4px;
+    font-weight: 500;
   }
   .lcp-input-row {
     display: flex;
     gap: 8px;
+    flex-wrap: nowrap;
   }
   .lcp-input {
     flex: 1;
+    min-width: 0;
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 10px 12px;
+    font-size: 16px;
     color: #000;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .lcp-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    background: #fff;
   }
   .lcp-send {
     border-radius: 8px;
-    padding: 6px 12px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(59, 130, 246, 0.8);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 60px;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lcp-send:hover {
+    background: rgba(59, 130, 246, 1);
+  }
+  .lcp-send:active {
+    background: rgba(37, 99, 235, 1);
+    transform: scale(0.98);
+  }
+  @media (max-width: 640px) {
+    .lcp-container {
+      max-height: 200px;
+    }
+    .lcp-messages {
+      height: 120px;
+      min-height: 100px;
+      padding: 6px;
+    }
+    .lcp-msg {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      max-width: 90%;
+    }
+    .lcp-input {
+      padding: 8px 10px;
+    }
+    .lcp-send {
+      padding: 8px 12px;
+      min-width: 50px;
+    }
   }
 `;
 document.head.appendChild(style);
