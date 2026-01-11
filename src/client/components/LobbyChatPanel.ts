@@ -106,7 +106,7 @@ export class LobbyChatPanel extends LitElement {
   render() {
     return html`
       <div class="lcp-container">
-        <div class="lcp-messages">
+        <div class="lcp-messages" role="log" aria-live="polite">
           ${this.messages.map((m) => {
             const displayName = m.isHost ? `${m.username} (Host)` : m.username;
             const isLocal =
@@ -135,6 +135,7 @@ export class LobbyChatPanel extends LitElement {
               }
             }}
             placeholder=${translateText("lobby_chat.placeholder")}
+            aria-label=${translateText("lobby_chat.placeholder")}
           />
           <button
             class="lcp-send"
