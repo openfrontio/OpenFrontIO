@@ -85,7 +85,7 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       }
     }
 
-    // No water neighbor found - let HPA* handle at minimap level
+    // No water neighbor found - cannot coerce
     return { water: null, original: tile };
   }
 }
