@@ -462,6 +462,15 @@
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
     "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
+    "easter_confidence_in_victory_label": "Confidence in Victory",
+    "easter_confidence_in_victory_desc": "How confident you are about winning the game",
+    "easter_confidence_in_victory": {
+      "cautious": "Cautious",
+      "careful": "Careful",
+      "confident": "Confident",
+      "bold": "Bold",
+      "overconfident": "Overconfident"
+    },
     "press_a_key": "Press a key",
     "view_options": "View Options",
     "toggle_view": "Toggle View",
