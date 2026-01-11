@@ -426,7 +426,7 @@ describe("InputHandler AutoUpgrade", () => {
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyX");
     });
 
-    test("ignores non-string and 'Null' values and preserves defaults", () => {
+    test("ignores non-string values and preserves defaults, but keeps 'Null' for unbound keys", () => {
       const mixed = {
         moveUp: { key: "moveUp", value: null },
         moveLeft: "Null",
@@ -435,9 +435,9 @@ describe("InputHandler AutoUpgrade", () => {
 
       inputHandler.initialize();
 
-      // defaults from InputHandler should remain
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
-      expect((inputHandler as any).keybinds.moveLeft).toBe("KeyA");
+      // "Null" is preserved to indicate unbound keybind
+      expect((inputHandler as any).keybinds.moveLeft).toBe("Null");
     });
 
     test("handles invalid JSON gracefully and warns", () => {
