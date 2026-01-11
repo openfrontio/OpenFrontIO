@@ -30,6 +30,7 @@ import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -331,25 +332,13 @@ class Client {
       console.warn("Flag input modal element not found");
     }
 
-    // Wait for the flag-input component to be fully ready
-    customElements.whenDefined("flag-input").then(() => {
-      // Use a small delay to ensure the component has rendered
-      setTimeout(() => {
-        const flagButton = document.querySelector(
-          "#flag-input-component #flag-input_",
-        );
-        if (!flagButton) {
-          console.warn("Flag button not found inside component");
-          return;
+    // Attach listener to any flag-input component (desktop or potentially others)
+    document.querySelectorAll("flag-input").forEach((flagInput) => {
+      flagInput.addEventListener("flag-input-click", () => {
+        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
+          flagInputModal.open();
         }
-        flagButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (flagInputModal && flagInputModal instanceof FlagInputModal) {
-            flagInputModal.open();
-          }
-        });
-      }, 100);
+      });
     });
 
     this.patternsModal = document.getElementById(
@@ -361,49 +350,27 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    const patternButton = document.getElementById(
-      "territory-patterns-input-preview-button",
-    );
-    if (isInIframe() && patternButton) {
-      patternButton.style.display = "none";
-    }
 
-    // Move button to desktop wrapper on large screens
-    const desktopWrapper = document.getElementById(
-      "territory-patterns-preview-desktop-wrapper",
-    );
-    if (desktopWrapper && patternButton) {
-      const moveButtonBasedOnScreenSize = () => {
-        if (window.innerWidth >= 1024) {
-          // Desktop: move to wrapper
-          if (
-            patternButton.parentElement?.id !==
-            "territory-patterns-preview-desktop-wrapper"
-          ) {
-            patternButton.className =
-              "w-full h-[60px] border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
-            patternButton.style.backgroundSize = "auto 100%";
-            patternButton.style.backgroundRepeat = "repeat-x";
-            desktopWrapper.appendChild(patternButton);
-          }
-        } else {
-          // Mobile: move back to bar
-          const mobileParent = document.querySelector(".lg\\:col-span-9.flex");
-          if (
-            mobileParent &&
-            patternButton.parentElement?.id ===
-              "territory-patterns-preview-desktop-wrapper"
-          ) {
-            patternButton.className =
-              "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
-            patternButton.style.backgroundSize = "";
-            patternButton.style.backgroundRepeat = "";
-            mobileParent.appendChild(patternButton);
+    // Attach listener to any pattern-input component
+    document.querySelectorAll("pattern-input").forEach((patternInput) => {
+      patternInput.addEventListener("pattern-input-click", () => {
+        // Open the Store page which contains the patterns UI
+        window.showPage?.("page-item-store");
+        const skinStoreModal = document.getElementById(
+          "page-item-store",
+        ) as HTMLElement & { open?: (opts: any) => void };
+        if (skinStoreModal) {
+          skinStoreModal.classList.remove("hidden");
+          if (typeof skinStoreModal.open === "function") {
+            skinStoreModal.open({ showOnlyOwned: true });
           }
         }
-      };
-      moveButtonBasedOnScreenSize();
-      window.addEventListener("resize", moveButtonBasedOnScreenSize);
+      });
+    });
+
+    if (isInIframe()) {
+      const mobilePat = document.getElementById("pattern-input-mobile");
+      if (mobilePat) mobilePat.style.display = "none";
     }
 
     if (
@@ -412,13 +379,17 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    if (patternButton === null)
-      throw new Error("territory-patterns-input-preview-button");
-    this.patternsModal.previewButton = patternButton;
+
+    // We no longer need to manually manage the preview button as PatternInput handles it component-side.
+    // However, we still want to ensure the modal can be opened.
+    // The setupPatternInput above handles the click event for the new buttons.
+
     this.patternsModal.refresh();
-    // Listen for pattern selection to update preview button
+
+    // Listen for pattern selection to update any other listeners if needed,
+    // though PatternInput handles its own updates via window event.
     this.patternsModal.addEventListener("pattern-selected", () => {
-      this.patternsModal.refresh();
+      // PatternInput components will update themselves.
     });
 
     window.addEventListener("showPage", (e: any) => {
@@ -426,19 +397,6 @@ class Client {
         setTimeout(() => {
           this.patternsModal.refresh();
         }, 50);
-      }
-    });
-
-    patternButton.addEventListener("click", () => {
-      window.showPage?.("page-item-store");
-      const skinStoreModal = document.getElementById(
-        "page-item-store",
-      ) as HTMLElement & { open?: (opts: any) => void };
-      if (skinStoreModal) {
-        skinStoreModal.classList.remove("hidden");
-        if (typeof skinStoreModal.open === "function") {
-          skinStoreModal.open({ showOnlyOwned: true });
-        }
       }
     });
 

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
 import { FlagSchema } from "../core/Schemas";
@@ -16,8 +16,6 @@ export class FlagInput extends LitElement {
   private isDefaultFlagValue(flag: string): boolean {
     return !flag || flag === "xx";
   }
-
-  static styles = css``;
 
   public getCurrentFlag(): string {
     return this.flag;
@@ -49,6 +47,17 @@ export class FlagInput extends LitElement {
     }
   };
 
+  private onInputClick(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.dispatchEvent(
+      new CustomEvent("flag-input-click", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.flag = this.getStoredFlag();
@@ -78,6 +87,7 @@ export class FlagInput extends LitElement {
         class="flag-btn m-0 border-0 bg-transparent hover:bg-white/10 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105"
         style="padding: 0 !important;"
         title=${buttonTitle}
+        @click=${this.onInputClick}
       >
         <span
           id="flag-preview"

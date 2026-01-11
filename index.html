@@ -466,25 +466,24 @@
                 </div>
 
                 <!-- Pattern button (Mobile - inside bar, Desktop - hidden here) -->
-                <button
-                  id="territory-patterns-input-preview-button"
+                <pattern-input
+                  id="pattern-input-mobile"
                   class="aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0"
-                  style="padding: 4px !important"
-                  data-i18n-title="main.pick_pattern"
-                ></button>
+                ></pattern-input>
               </div>
 
               <!-- Pattern button (Desktop only - separate column) -->
               <div class="hidden lg:flex lg:col-span-3">
                 <div class="w-full h-[60px] flex gap-2">
-                  <div
-                    id="territory-patterns-preview-desktop-wrapper"
-                    class="flex-1 h-full"
-                  ></div>
-                  <flag-input
-                    id="flag-input-component"
+                  <pattern-input
+                    id="pattern-input-desktop"
                     show-select-label
-                    class="flex-1 h-full border border-white/20 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105"
+                    class="flex-1 h-full bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105"
+                  ></pattern-input>
+                  <flag-input
+                    id="flag-input-desktop"
+                    show-select-label
+                    class="flex-1 h-full bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105"
                   ></flag-input>
                 </div>
               </div>
