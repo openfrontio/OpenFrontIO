@@ -383,7 +383,7 @@ describe("Disconnected", () => {
       player1.conquer(game.map().ref(coastX, 4));
       player2.conquer(game.map().ref(coastX, 1));
 
-      const enemyShoreTile = game.map().ref(coastX, 8);
+      const enemyShoreTile = game.map().ref(coastX, 15);
 
       game.addExecution(
         new TransportShipExecution(

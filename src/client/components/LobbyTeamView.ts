@@ -71,10 +71,10 @@ export class LobbyTeamView extends LitElement {
       (t) => t.players.length === 0 && t.team !== ColoredTeams.Nations,
     );
     return html` <div
-      class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch max-h-[65vh]"
+      class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch"
     >
       <div
-        class="w-full md:w-60 bg-gray-800 p-2 border border-gray-700 rounded-lg max-h-40 md:max-h-[65vh] overflow-auto"
+        class="w-full md:w-60 bg-gray-800 p-2 border border-gray-700 rounded-lg"
       >
         <div class="font-bold mb-1.5 text-gray-300 text-sm">
           ${translateText("host_modal.players")}
@@ -83,14 +83,14 @@ export class LobbyTeamView extends LitElement {
           this.clients,
           (c) => c.clientID ?? c.username,
           (client) =>
-            html`<div class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs">
+            html`<div
+              class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
+            >
               ${client.username}
             </div>`,
         )}
       </div>
-      <div
-        class="flex-1 flex flex-col gap-3 md:gap-4 overflow-auto max-h-[65vh] md:pr-1"
-      >
+      <div class="flex-1 flex flex-col gap-3 md:gap-4 md:pr-1">
         <div>
           <div class="font-semibold text-gray-200 mb-1 text-sm">
             ${translateText("host_modal.assigned_teams")}
@@ -127,20 +127,22 @@ export class LobbyTeamView extends LitElement {
       (c) => c.clientID ?? c.username,
       (client) =>
         html`<span class="player-tag">
-          ${client.username}
+          <span class="text-white">${client.username}</span>
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
               >`
-            : html`<button
-                class="remove-player-btn"
-                @click=${() => this.onKickPlayer?.(client.clientID)}
-                aria-label=${translateText("host_modal.remove_player", {
-                  username: client.username,
-                })}
-              >
-                ×
-              </button>`}
+            : this.onKickPlayer
+              ? html`<button
+                  class="remove-player-btn"
+                  @click=${() => this.onKickPlayer?.(client.clientID)}
+                  aria-label=${translateText("host_modal.remove_player", {
+                    username: client.username,
+                  })}
+                >
+                  ×
+                </button>`
+              : html``}
         </span>`,
     )} `;
   }
@@ -182,23 +184,25 @@ export class LobbyTeamView extends LitElement {
                   html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
-                    <span class="truncate">${p.username}</span>
+                    <span class="truncate text-white">${p.username}</span>
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
                         >`
-                      : html`<button
-                          class="remove-player-btn ml-2"
-                          @click=${() => this.onKickPlayer?.(p.clientID)}
-                          aria-label=${translateText(
-                            "host_modal.remove_player",
-                            {
-                              username: p.username,
-                            },
-                          )}
-                        >
-                          ×
-                        </button>`}
+                      : this.onKickPlayer
+                        ? html`<button
+                            class="remove-player-btn ml-2"
+                            @click=${() => this.onKickPlayer?.(p.clientID)}
+                            aria-label=${translateText(
+                              "host_modal.remove_player",
+                              {
+                                username: p.username,
+                              },
+                            )}
+                          >
+                            ×
+                          </button>`
+                        : html``}
                   </div>`,
               )}
         </div>

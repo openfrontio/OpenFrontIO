@@ -42,7 +42,7 @@ export class Target implements UIElement {
     let t: number;
     if (this.ended) {
       // end animation
-      t = Math.max(0, 1 - this.lifeTime / this.animationDuration);
+      t = Math.max(0, 1 - this.animationElapsedTime / this.animationDuration);
     } else {
       t = 1; // No start fade feels more reactive
     }
