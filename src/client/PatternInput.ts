@@ -26,6 +26,7 @@ export class PatternInput extends LitElement {
 
   private userSettings = new UserSettings();
   private cosmetics: Cosmetics | null = null;
+  private _abortController: AbortController | null = null;
 
   private _onPatternSelected = () => {
     this.updateFromSettings();
@@ -54,16 +55,25 @@ export class PatternInput extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
+    this._abortController = new AbortController();
     this.isLoading = true;
-    this.cosmetics = await getCachedCosmetics();
+    const cosmetics = await getCachedCosmetics();
+    if (!this.isConnected) return;
+    this.cosmetics = cosmetics;
     this.updateFromSettings();
+    if (!this.isConnected) return;
     this.isLoading = false;
-    window.addEventListener("pattern-selected", this._onPatternSelected);
+    window.addEventListener("pattern-selected", this._onPatternSelected, {
+      signal: this._abortController.signal,
+    });
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener("pattern-selected", this._onPatternSelected);
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
   }
 
   createRenderRoot() {
