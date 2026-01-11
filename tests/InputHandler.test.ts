@@ -451,5 +451,41 @@ describe("InputHandler AutoUpgrade", () => {
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
     });
+
+    describe("Attack Ratio Keybinds", () => {
+      test("should emit AttackRatioEvent with 1 when up key is pressed", () => {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        inputHandler.initialize();
+
+        const keyEvent = new KeyboardEvent("keyup", {
+          code: "KeyY",
+        });
+
+        window.dispatchEvent(keyEvent);
+
+        expect(mockEmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            attackRatio: 1,
+          }),
+        );
+      });
+
+      test("should emit AttackRatioEvent with -1 when down key is pressed", () => {
+        const mockEmit = vi.spyOn(eventBus, "emit");
+        inputHandler.initialize();
+
+        const keyEvent = new KeyboardEvent("keyup", {
+          code: "KeyT",
+        });
+
+        window.dispatchEvent(keyEvent);
+
+        expect(mockEmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            attackRatio: -1,
+          }),
+        );
+      });
+    });
   });
 });

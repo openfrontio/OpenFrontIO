@@ -492,6 +492,8 @@
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
     "attack_ratio_down": "Decrease Attack Ratio",
     "attack_ratio_down_desc": "Decrease attack ratio by 10%",
+    "attack_ratio_increment_label": "Attack Ratio Increment",
+    "attack_ratio_increment_desc": "The amount to increase/decrease the attack ratio by.",
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",

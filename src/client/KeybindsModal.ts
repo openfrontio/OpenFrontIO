@@ -391,8 +391,8 @@ export class KeybindsModal extends BaseModal {
       </h2>
 
       <setting-dropdown
-        label="Attack Ratio Increment"
-        description="The amount to increase/decrease the attack ratio by."
+        label=${translateText("user_setting.attack_ratio_increment_label")}
+        description=${translateText("user_setting.attack_ratio_increment_desc")}
         .options=${[
           { value: "0.01", label: "1%" },
           { value: "0.025", label: "2.5%" },
