@@ -2,27 +2,38 @@ export function initNavigation() {
   const showPage = (pageId: string) => {
     (window as any).currentPageId = pageId;
 
-    // Hide all pages
-    document.querySelectorAll(".page-content").forEach((el) => {
-      el.classList.add("hidden");
-      el.classList.remove("block");
-    });
-    document.getElementById("page-play")?.classList.add("hidden");
+    // Hide only the currently visible modal
+    const visibleModal = document.querySelector(".page-content:not(.hidden)");
+    if (visibleModal) {
+      visibleModal.classList.add("hidden");
+      visibleModal.classList.remove("block");
+    }
 
-    const target = document.getElementById(pageId);
-    if (target) {
-      target.classList.remove("hidden");
-      // Modals need block display explicitly
-      if (target.classList.contains("page-content")) {
-        target.classList.add("block");
-      }
+    // Handle page-play separately (it's not a page-content element)
+    const pagePlayEl = document.getElementById("page-play");
+    if (pageId === "page-play") {
+      pagePlayEl?.classList.remove("hidden");
+    } else {
+      pagePlayEl?.classList.add("hidden");
+    }
 
-      // If the target itself is a modal component with inline attribute, open it
-      if (
-        target.hasAttribute("inline") &&
-        typeof (target as any).open === "function"
-      ) {
-        (target as any).open();
+    // Show the target page if it's a modal
+    if (pageId !== "page-play") {
+      const target = document.getElementById(pageId);
+      if (target) {
+        target.classList.remove("hidden");
+        // Modals need block display explicitly
+        if (target.classList.contains("page-content")) {
+          target.classList.add("block");
+        }
+
+        // If the target itself is a modal component with inline attribute, open it
+        if (
+          target.hasAttribute("inline") &&
+          typeof (target as any).open === "function"
+        ) {
+          (target as any).open();
+        }
       }
     }
 
@@ -52,37 +63,52 @@ export function initNavigation() {
     }
   });
 
-  // Handle clicks on main container to close open modals (navigate back)
-  const mainEl = document.querySelector("main");
-  if (mainEl) {
-    mainEl.addEventListener("click", (e: Event) => {
-      const target = e.target as HTMLElement;
-      const isPlayPageHidden = document
-        .getElementById("page-play")
-        ?.classList.contains("hidden");
+  // Wait for main-layout component to render before setting up click handler
+  customElements.whenDefined("main-layout").then(() => {
+    // Handle clicks on main container to close open modals (navigate back)
+    const mainEl = document.querySelector("main");
 
-      // Only proceed if we are NOT on the play page (meaning a modal page is open)
-      if (isPlayPageHidden) {
-        // If clicking on the main container directly (e.g. padding/background)
-        // or the max-width wrapper div directly
-        const wrapper = mainEl.firstElementChild as HTMLElement;
-        if (target === mainEl || (wrapper && target === wrapper)) {
-          showPage("page-play");
+    if (mainEl) {
+      mainEl.addEventListener("click", (e: Event) => {
+        const target = e.target as HTMLElement;
+        const isPlayPageHidden = document
+          .getElementById("page-play")
+          ?.classList.contains("hidden");
+
+        // Only proceed if we are NOT on the play page (meaning a modal page is open)
+        if (isPlayPageHidden) {
+          // Close modal if clicking on main element itself, or directly on a page-content element
+          const isOnMain = target === mainEl;
+          const isOnPageContent = target.classList.contains("page-content");
+
+          if (isOnMain || isOnPageContent) {
+            // Find the open modal and call its close() method instead of showPage directly
+            // This ensures proper cleanup (like websocket disconnection)
+            const openModal = document.querySelector(
+              ".page-content:not(.hidden)",
+            ) as any;
+
+            if (openModal && typeof openModal.close === "function") {
+              // Call leaveLobby or closeAndLeave first if it exists (for lobby modals)
+              if (typeof openModal.leaveLobby === "function") {
+                openModal.leaveLobby();
+              } else if (typeof openModal.closeAndLeave === "function") {
+                openModal.closeAndLeave();
+                return; // closeAndLeave already calls close()
+              }
+              openModal.close();
+            } else {
+              showPage("page-play");
+            }
+          }
         }
-      }
-    });
-  }
-
-  // Set default active if not set. We don't rely on finding the button element
-  // because it might be inside a Lit component that hasn't rendered yet.
-  // Ideally we should check if any page is currently visible/active.
-  // For now, we just default to page-play if it's the startup.
-  // We use a small timeout to allow initial render to potentially complete,
-  // ensuring the active class is applied to the buttons.
-  setTimeout(() => {
-    const anyActive = document.querySelector(".nav-menu-item.active");
-    if (!anyActive) {
-      showPage("page-play");
+      });
     }
-  }, 0);
+  });
+
+  // Set default page to play if no menu item is active
+  const anyActive = document.querySelector(".nav-menu-item.active");
+  if (!anyActive) {
+    showPage("page-play");
+  }
 }
