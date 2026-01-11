@@ -11,7 +11,13 @@ import { translateText } from "./Utils";
 let cosmeticsCache: Promise<Cosmetics | null> | null = null;
 
 function getCachedCosmetics(): Promise<Cosmetics | null> {
-  cosmeticsCache ??= fetchCosmetics();
+  if (!cosmeticsCache) {
+    const fetchPromise = fetchCosmetics();
+    cosmeticsCache = fetchPromise.catch((err) => {
+      cosmeticsCache = null;
+      throw err;
+    });
+  }
   return cosmeticsCache;
 }
 
