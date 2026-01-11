@@ -88,9 +88,9 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
 
-  const showAvatar = (src: string) => {
+  const showAvatar = (src: string, alt?: string) => {
     if (avatarEl) {
-      avatarEl.alt = translateText("main.discord_avatar_alt");
+      avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
       // If the avatar fails to load (bad URL / CDN issue / offline), fall back
       // to the default sign-in UI instead of leaving a broken image.
       avatarEl.onerror = () => {
@@ -133,12 +133,12 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const discord =
     userMeResponse !== false ? userMeResponse.user.discord : undefined;
   if (discord && avatarEl) {
-    avatarEl.alt = translateText("main.user_avatar_alt", {
+    const avatarAlt = translateText("main.user_avatar_alt", {
       username: discord.username,
     });
     const url = getDiscordAvatarUrl(discord);
     if (url) {
-      showAvatar(url);
+      showAvatar(url, avatarAlt);
       return;
     }
   }
