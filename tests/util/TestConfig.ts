@@ -70,6 +70,7 @@ export class TestConfig extends DefaultConfig {
   attackLogic(
     gm: Game,
     attackTroops: number,
+    attackLossMultiplier: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
@@ -95,6 +96,7 @@ export class UseRealAttackLogic extends TestConfig {
   attackLogic(
     gm: Game,
     attackTroops: number,
+    attackLossMultiplier: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
