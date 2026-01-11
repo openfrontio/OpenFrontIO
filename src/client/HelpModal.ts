@@ -700,7 +700,7 @@ export class HelpModal extends BaseModal {
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/TargetIcon.svg"
+                        src="/images/TargetIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_target")}</span>
