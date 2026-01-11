@@ -21,6 +21,7 @@ const CONTEST_ID_MASK = 0x7fff;
 const CONTEST_ATTACKER_EVER_BIT = 0x8000;
 const CONTEST_TIME_WRAP = 32768;
 const DEFAULT_CONTEST_DURATION_TICKS = 2;
+const ENABLE_CONTEST_TRACKING = false;
 const CONTEST_STRENGTH_EMA_ALPHA = 0.8;
 const CONTEST_STRENGTH_MIN = 0.01;
 const CONTEST_STRENGTH_MAX = 0.95;
@@ -70,6 +71,7 @@ export class TerritoryLayer implements Layer {
   private contestTileIndices: Int32Array | null = null;
   private contestComponents = new Map<number, ContestComponent>();
   private contestTileCount = 0;
+  private contestEnabled = ENABLE_CONTEST_TRACKING;
   private tickSnapshotPending = false;
   private tickTimeMsCurrent = 0;
   private tickTimeMsPrev = 0;
@@ -131,16 +133,21 @@ export class TerritoryLayer implements Layer {
     }
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
-    const ownerUpdates = this.game.recentlyUpdatedOwnerTiles();
-    const nowTickPacked = this.packContestTick(this.game.ticks());
-    this.applyContestChanges(ownerUpdates, nowTickPacked);
-    this.updateContestState(nowTickPacked);
-    this.updateContestStrengths();
-    let tileCount = 0;
-    for (const component of this.contestComponents.values()) {
-      tileCount += component.tiles.length;
+    if (this.contestEnabled) {
+      const ownerUpdates = this.game.recentlyUpdatedOwnerTiles();
+      const nowTickPacked = this.packContestTick(this.game.ticks());
+      this.applyContestChanges(ownerUpdates, nowTickPacked);
+      this.updateContestState(nowTickPacked);
+      this.updateContestStrengths();
+      let tileCount = 0;
+      for (const component of this.contestComponents.values()) {
+        tileCount += component.tiles.length;
+      }
+      this.contestTileCount = tileCount;
+    } else {
+      this.contestTileCount = 0;
+      this.contestActive = false;
     }
-    this.contestTileCount = tileCount;
     const updates = this.game.updatesSinceLastTick();
 
     // Detect alliance mutations
@@ -405,8 +412,15 @@ export class TerritoryLayer implements Layer {
     this.lastMyPlayerSmallId = this.game.myPlayer()?.smallID() ?? null;
     this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
     this.configureRenderers();
-    this.ensureContestScratch();
-    this.syncContestStateToRenderer();
+    if (this.contestEnabled) {
+      this.ensureContestScratch();
+      this.syncContestStateToRenderer();
+    } else {
+      this.contestActive = false;
+      this.contestComponents.clear();
+      this.contestFreeIds = [];
+      this.contestNextId = 1;
+    }
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -429,6 +443,7 @@ export class TerritoryLayer implements Layer {
     }
 
     this.territoryRenderer = renderer;
+    this.territoryRenderer.setContestEnabled(this.contestEnabled);
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
@@ -1146,7 +1161,7 @@ export class TerritoryLayer implements Layer {
       `delayMs: ${this.interpolationDelayMs.toFixed(0)}`,
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
-      `contest: ${this.contestActive ? "on" : "off"} comps ${this.contestComponents.size}`,
+      `contests: ${this.contestEnabled ? "on" : "off"} comps ${this.contestComponents.size}`,
       `contestTiles: ${this.contestTileCount}`,
       `contestTicks: ${this.contestDurationTicks}`,
       `hovered: ${stats.hoveredPlayerId}`,

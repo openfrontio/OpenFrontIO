@@ -27,6 +27,8 @@ const PATTERN_STRIDE_BYTES = 1052;
 export class TerritoryWebGLRenderer {
   public readonly canvas: HTMLCanvasElement;
 
+  private contestEnabled = false;
+
   private readonly gl: WebGL2RenderingContext | null;
   private readonly program: WebGLProgram | null;
   private readonly vao: WebGLVertexArrayObject | null;
@@ -89,6 +91,7 @@ export class TerritoryWebGLRenderer {
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
+    contestEnabled: WebGLUniformLocation | null;
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
@@ -247,6 +250,7 @@ export class TerritoryWebGLRenderer {
         palette: null,
         relations: null,
         patterns: null,
+        contestEnabled: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -336,6 +340,7 @@ export class TerritoryWebGLRenderer {
         palette: null,
         relations: null,
         patterns: null,
+        contestEnabled: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -427,6 +432,7 @@ export class TerritoryWebGLRenderer {
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
+      contestEnabled: gl.getUniformLocation(this.program, "u_contestEnabled"),
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
       contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
@@ -1224,6 +1230,20 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  setContestEnabled(enabled: boolean) {
+    if (this.contestEnabled === enabled) {
+      return;
+    }
+    this.contestEnabled = enabled;
+    if (this.contestEnabled) {
+      this.needsContestFullUpload = true;
+      this.needsContestTimesUpload = true;
+      this.needsContestStrengthsUpload = true;
+    } else {
+      this.contestDirtyRows.clear();
+    }
+  }
+
   markTile(tile: TileRef) {
     if (this.needsFullUpload) {
       return;
@@ -1246,6 +1266,9 @@ export class TerritoryWebGLRenderer {
     componentId: number,
     attackerEver: boolean,
   ) {
+    if (!this.contestEnabled) {
+      return;
+    }
     const offset = tile * 2;
     const defenderValue = defenderOwner & 0xffff;
     const attackerValue = attackerOwner & 0xffff;
@@ -1279,6 +1302,9 @@ export class TerritoryWebGLRenderer {
   }
 
   setContestTime(componentId: number, nowPacked: number) {
+    if (!this.contestEnabled) {
+      return;
+    }
     if (componentId <= 0) {
       return;
     }
@@ -1306,6 +1332,9 @@ export class TerritoryWebGLRenderer {
   }
 
   setContestStrength(componentId: number, strength: number) {
+    if (!this.contestEnabled) {
+      return;
+    }
     if (componentId <= 0) {
       return;
     }
@@ -1334,6 +1363,9 @@ export class TerritoryWebGLRenderer {
   }
 
   setContestNow(nowPacked: number, durationTicks: number) {
+    if (!this.contestEnabled) {
+      return;
+    }
     this.contestNow = nowPacked | 0;
     this.contestDurationTicks = Math.max(0, durationTicks);
   }
@@ -1508,26 +1540,28 @@ export class TerritoryWebGLRenderer {
     this.uploadStateTexture();
     FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadStateSpan);
 
-    const uploadContestSpan = FrameProfiler.start();
-    this.uploadContestTexture();
-    FrameProfiler.end(
-      "TerritoryWebGLRenderer:uploadContests",
-      uploadContestSpan,
-    );
+    if (this.contestEnabled) {
+      const uploadContestSpan = FrameProfiler.start();
+      this.uploadContestTexture();
+      FrameProfiler.end(
+        "TerritoryWebGLRenderer:uploadContests",
+        uploadContestSpan,
+      );
 
-    const uploadContestTimesSpan = FrameProfiler.start();
-    this.uploadContestTimesTexture();
-    FrameProfiler.end(
-      "TerritoryWebGLRenderer:uploadContestTimes",
-      uploadContestTimesSpan,
-    );
+      const uploadContestTimesSpan = FrameProfiler.start();
+      this.uploadContestTimesTexture();
+      FrameProfiler.end(
+        "TerritoryWebGLRenderer:uploadContestTimes",
+        uploadContestTimesSpan,
+      );
 
-    const uploadContestStrengthsSpan = FrameProfiler.start();
-    this.uploadContestStrengthsTexture();
-    FrameProfiler.end(
-      "TerritoryWebGLRenderer:uploadContestStrengths",
-      uploadContestStrengthsSpan,
-    );
+      const uploadContestStrengthsSpan = FrameProfiler.start();
+      this.uploadContestStrengthsTexture();
+      FrameProfiler.end(
+        "TerritoryWebGLRenderer:uploadContestStrengths",
+        uploadContestStrengthsSpan,
+      );
+    }
 
     if (this.jfaSupported) {
       this.updateChangeMask();
@@ -1667,6 +1701,9 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.viewerId) {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
+    }
+    if (this.uniforms.contestEnabled) {
+      gl.uniform1i(this.uniforms.contestEnabled, this.contestEnabled ? 1 : 0);
     }
     if (this.uniforms.contestNow) {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
@@ -2602,19 +2639,20 @@ export class TerritoryWebGLRenderer {
     `;
 
     const fragmentShaderSource = `#version 300 es
-      precision highp float;
-      precision highp usampler2D;
+	      precision highp float;
+	      precision highp usampler2D;
 
-      uniform usampler2D u_state;
-      uniform usampler2D u_latestState;
-      uniform sampler2D u_palette;
-      uniform usampler2D u_relations;
-      uniform usampler2D u_patterns;
-      uniform usampler2D u_contestOwners;
-      uniform usampler2D u_contestIds;
-      uniform usampler2D u_contestTimes;
-      uniform usampler2D u_contestStrengths;
-      uniform bool u_jfaAvailable;
+	      uniform usampler2D u_state;
+	      uniform usampler2D u_latestState;
+	      uniform sampler2D u_palette;
+	      uniform usampler2D u_relations;
+	      uniform usampler2D u_patterns;
+	      uniform bool u_contestEnabled;
+	      uniform usampler2D u_contestOwners;
+	      uniform usampler2D u_contestIds;
+	      uniform usampler2D u_contestTimes;
+	      uniform usampler2D u_contestStrengths;
+	      uniform bool u_jfaAvailable;
       uniform int u_contestNow;
       uniform float u_contestDurationTicks;
       uniform usampler2D u_prevOwner;
@@ -2805,28 +2843,34 @@ export class TerritoryWebGLRenderer {
         uint latestOwner = latestState & 0xFFFu;
         uint oldOwner = prevOwnerAtTex(texCoord);
         uint changeMask = texelFetch(u_changeMask, texCoord, 0).r;
-        bool smoothActive = u_smoothEnabled &&
-          u_smoothProgress < 1.0 &&
-          !u_alternativeView &&
-          u_jfaAvailable &&
-          changeMask != 0u;
+	        bool smoothActive = u_smoothEnabled &&
+	          u_smoothProgress < 1.0 &&
+	          !u_alternativeView &&
+	          u_jfaAvailable &&
+	          changeMask != 0u;
 
-        uint contestIdRaw = contestIdRawAtTex(texCoord);
-        const uint CONTEST_ID_MASK = 0x7FFFu;
-        uint contestId = contestIdRaw & CONTEST_ID_MASK;
-        uvec2 contestOwners = contestOwnersAtTex(texCoord);
-        uint defender = contestOwners.r & 0xFFFu;
+	        uint contestIdRaw = 0u;
+	        const uint CONTEST_ID_MASK = 0x7FFFu;
+	        uint contestId = 0u;
+	        uvec2 contestOwners = uvec2(0u);
+	        uint defender = 0u;
+	        bool contested = false;
+	        if (u_contestEnabled) {
+	          contestIdRaw = contestIdRawAtTex(texCoord);
+	          contestId = contestIdRaw & CONTEST_ID_MASK;
+	          contestOwners = contestOwnersAtTex(texCoord);
+	          defender = contestOwners.r & 0xFFFu;
 
-        bool contested = false;
-        if (contestId != 0u) {
-          uint lastTime = texelFetch(u_contestTimes, ivec2(int(contestId), 0), 0).r;
-          const uint CONTEST_WRAP = 32768u;
-          uint nowTime = uint(u_contestNow);
-          uint elapsed = nowTime >= lastTime
-            ? (nowTime - lastTime)
-            : (CONTEST_WRAP - lastTime + nowTime);
-          contested = float(elapsed) < u_contestDurationTicks;
-        }
+	          if (contestId != 0u) {
+	            uint lastTime = texelFetch(u_contestTimes, ivec2(int(contestId), 0), 0).r;
+	            const uint CONTEST_WRAP = 32768u;
+	            uint nowTime = uint(u_contestNow);
+	            uint elapsed = nowTime >= lastTime
+	              ? (nowTime - lastTime)
+	              : (CONTEST_WRAP - lastTime + nowTime);
+	            contested = float(elapsed) < u_contestDurationTicks;
+	          }
+	        }
 
         bool isBorder = false;
         bool hasFriendlyRelation = false;
