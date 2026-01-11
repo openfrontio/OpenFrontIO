@@ -13,26 +13,22 @@ import { GameMode } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
-import "./components/LobbyChatPanel";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
+import "./components/LobbyChatPanel";
 import "./components/LobbyTeamView";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
   @state() private message: string = "";
   @state() private hasJoined = false;
-  @state() private players: string[] = [];
-  // Whether the host enabled lobby chat (private lobbies only)
-  @state() private chatEnabled: boolean = false;
   @state() private players: ClientInfo[] = [];
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
   @state() private lobbyIdVisible: boolean = true;
   @state() private copySuccess: boolean = false;
   @state() private currentLobbyId: string = "";
+  @state() private chatEnabled: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -55,45 +51,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
               class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
               aria-label=${translateText("common.close")}
             >
-              <path
-                d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
-              ></path>
-            </svg>
-          </button>
-        </div>
-        <div class="message-area ${this.message ? "show" : ""}">
-          ${this.message}
-        </div>
-        <div class="options-layout">
-          ${this.hasJoined && this.players.length > 0
-            ? html`
-                <div class="options-section">
-                  <div class="option-title">
-                    ${this.players.length}
-                    ${this.players.length === 1
-                      ? translateText("private_lobby.player")
-                      : translateText("private_lobby.players")}
-                  </div>
-
-                  <div class="players-list">
-                    ${this.players.map(
-                      (player) =>
-                        html`<span class="player-tag">${player}</span>`,
-                    )}
-                  </div>
-                </div>
-
-                ${this.chatEnabled
-                  ? html`
-                      <div class="options-section" style="margin-top: 12px;">
-                        <div class="option-title">
-                          ${translateText("lobby_chat.title")}
-                        </div>
-                        <lobby-chat-panel></lobby-chat-panel>
-                      </div>
-                    `
-                  : ""}
-              `
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
@@ -246,6 +203,19 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                     .teamCount=${this.gameConfig?.playerTeams ?? 2}
                   ></lobby-team-view>
+
+                  ${this.chatEnabled
+                    ? html`
+                        <div
+                          class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5"
+                        >
+                          <div class="text-sm font-semibold text-white/80 mb-2">
+                            ${translateText("lobby_chat.title")}
+                          </div>
+                          <lobby-chat-panel></lobby-chat-panel>
+                        </div>
+                      `
+                    : ""}
                 </div>
               `
             : ""}
@@ -652,13 +622,11 @@ export class JoinPrivateLobbyModal extends BaseModal {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        this.players = data.clients?.map((p) => p.username) ?? [];
-        // Reflect server-configured chat toggle for joiners
-        this.chatEnabled = Boolean(data.gameConfig?.chatEnabled);
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         if (data.gameConfig) {
           this.gameConfig = data.gameConfig;
+          this.chatEnabled = data.gameConfig.chatEnabled ?? false;
         }
       })
       .catch((error) => {
