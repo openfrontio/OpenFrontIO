@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
+import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import { BaseModal } from "./components/BaseModal";
@@ -32,6 +33,8 @@ const DefaultKeybinds: Record<string, string> = {
 
 @customElement("keybinds-modal")
 export class KeybindsModal extends BaseModal {
+  private userSettings: UserSettings = new UserSettings();
+
   @state() private keybinds: Record<
     string,
     { value: string | string[]; key: string }
@@ -389,7 +392,9 @@ export class KeybindsModal extends BaseModal {
       <setting-keybind
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
-        description=${translateText("user_setting.attack_ratio_down_desc")}
+        description=${translateText("user_setting.attack_ratio_down_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyT"
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
@@ -399,7 +404,9 @@ export class KeybindsModal extends BaseModal {
       <setting-keybind
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
+        description=${translateText("user_setting.attack_ratio_up_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyY"
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}

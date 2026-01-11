@@ -420,6 +420,21 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
+      <!-- ⚔️ Attack Ratio Increment -->
+      <setting-select
+        label=${translateText("user_setting.attack_ratio_increment_label")}
+        description=${translateText("user_setting.attack_ratio_increment_desc")}
+        .options=${[
+          { value: 1, label: "1%" },
+          { value: 2, label: "2%" },
+          { value: 5, label: "5%" },
+          { value: 10, label: "10%" },
+          { value: 20, label: "20%" },
+        ]}
+        .value=${String(this.userSettings.attackRatioIncrement())}
+        @change=${this.changeAttackRatioIncrement}
+      ></setting-select>
+
       ${this.showEasterEggSettings
         ? html`
             <setting-slider
