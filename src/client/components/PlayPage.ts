@@ -91,34 +91,6 @@ export class PlayPage extends LitElement {
             <public-lobby
               class="block w-full transition-all duration-[50ms]"
             ></public-lobby>
-
-            <!-- Matchmaking Buttons (Full Width within column) -->
-            <!-- Not Logged In Button -->
-            <button
-              id="matchmaking-button-logged-out"
-              class="w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 overflow-hidden relative cursor-pointer"
-            >
-              <span
-                class="relative z-10 text-2xl"
-                data-i18n="matchmaking_button.login_required"
-              ></span>
-            </button>
-
-            <!-- Logged In Button -->
-            <button
-              id="matchmaking-button"
-              class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 group overflow-hidden relative"
-              data-i18n-title="matchmaking_modal.title"
-            >
-              <span
-                class="relative z-10 text-2xl"
-                data-i18n="matchmaking_button.play_ranked"
-              ></span>
-              <span
-                class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-                data-i18n="matchmaking_button.description"
-              ></span>
-            </button>
           </div>
 
           <!-- Right Column: Custom Games & Modes -->
@@ -162,6 +134,36 @@ export class PlayPage extends LitElement {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Matchmaking Buttons (Full Width across entire grid) -->
+          <div class="lg:col-span-12 flex flex-col gap-6">
+            <!-- Not Logged In Button -->
+            <button
+              id="matchmaking-button-logged-out"
+              class="w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 overflow-hidden relative cursor-pointer"
+            >
+              <span
+                class="relative z-10 text-2xl"
+                data-i18n="matchmaking_button.login_required"
+              ></span>
+            </button>
+
+            <!-- Logged In Button -->
+            <button
+              id="matchmaking-button"
+              class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 group overflow-hidden relative"
+              data-i18n-title="matchmaking_modal.title"
+            >
+              <span
+                class="relative z-10 text-2xl"
+                data-i18n="matchmaking_button.play_ranked"
+              ></span>
+              <span
+                class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+                data-i18n="matchmaking_button.description"
+              ></span>
+            </button>
           </div>
         </div>
       </div>
