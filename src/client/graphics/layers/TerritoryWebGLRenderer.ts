@@ -31,6 +31,8 @@ export class TerritoryWebGLRenderer {
   private readonly program: WebGLProgram | null;
   private readonly vao: WebGLVertexArrayObject | null;
   private readonly vertexBuffer: WebGLBuffer | null;
+  private readonly jfaVao: WebGLVertexArrayObject | null;
+  private readonly jfaVertexBuffer: WebGLBuffer | null;
   private readonly stateTexture: WebGLTexture | null;
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
@@ -38,6 +40,8 @@ export class TerritoryWebGLRenderer {
   private readonly contestOwnersTexture: WebGLTexture | null;
   private readonly contestIdsTexture: WebGLTexture | null;
   private readonly contestTimesTexture: WebGLTexture | null;
+  private readonly contestSpeedsTexture: WebGLTexture | null;
+  private readonly contestStrengthsTexture: WebGLTexture | null;
   private readonly prevOwnerTexture: WebGLTexture | null;
   private readonly stateFramebuffer: WebGLFramebuffer | null;
   private readonly prevStateFramebuffer: WebGLFramebuffer | null;
@@ -61,7 +65,10 @@ export class TerritoryWebGLRenderer {
     seeds: WebGLUniformLocation | null;
   };
   private readonly uniforms: {
-    resolution: WebGLUniformLocation | null;
+    mapResolution: WebGLUniformLocation | null;
+    viewResolution: WebGLUniformLocation | null;
+    viewScale: WebGLUniformLocation | null;
+    viewOffset: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
@@ -69,6 +76,9 @@ export class TerritoryWebGLRenderer {
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
+    contestSpeeds: WebGLUniformLocation | null;
+    contestStrengths: WebGLUniformLocation | null;
+    jfaAvailable: WebGLUniformLocation | null;
     contestNow: WebGLUniformLocation | null;
     contestDuration: WebGLUniformLocation | null;
     prevOwner: WebGLUniformLocation | null;
@@ -94,15 +104,27 @@ export class TerritoryWebGLRenderer {
     viewerId: WebGLUniformLocation | null;
   };
 
+  private readonly mapWidth: number;
+  private readonly mapHeight: number;
+  private viewWidth: number;
+  private viewHeight: number;
+  private viewScale = 1;
+  private viewOffsetX = 0;
+  private viewOffsetY = 0;
+
   private readonly state: Uint16Array;
   private contestOwnersState: Uint16Array;
   private contestIdsState: Uint16Array;
   private contestTimesState: Uint16Array;
+  private contestSpeedsState: Uint16Array;
+  private contestStrengthsState: Uint16Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
   private readonly contestDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
   private needsContestFullUpload = true;
   private needsContestTimesUpload = true;
+  private needsContestSpeedsUpload = true;
+  private needsContestStrengthsUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
   // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
@@ -120,6 +142,7 @@ export class TerritoryWebGLRenderer {
   private smoothProgress = 1;
   private smoothEnabled = true;
   private jfaSupported = false;
+  private jfaDisabledReason: string | null = null;
   private jfaDirty = false;
   private prevStateCopySupported = false;
   private jfaSteps: number[] = [];
@@ -132,13 +155,19 @@ export class TerritoryWebGLRenderer {
     state: Uint16Array,
   ) {
     this.canvas = document.createElement("canvas");
-    this.canvas.width = game.width();
-    this.canvas.height = game.height();
+    this.mapWidth = game.width();
+    this.mapHeight = game.height();
+    this.viewWidth = this.mapWidth;
+    this.viewHeight = this.mapHeight;
+    this.canvas.width = this.viewWidth;
+    this.canvas.height = this.viewHeight;
 
     this.state = state;
     this.contestOwnersState = new Uint16Array(state.length * 2);
     this.contestIdsState = new Uint16Array(state.length);
     this.contestTimesState = new Uint16Array(1);
+    this.contestSpeedsState = new Uint16Array(1);
+    this.contestStrengthsState = new Uint16Array(1);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -150,6 +179,8 @@ export class TerritoryWebGLRenderer {
       this.program = null;
       this.vao = null;
       this.vertexBuffer = null;
+      this.jfaVao = null;
+      this.jfaVertexBuffer = null;
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
@@ -157,6 +188,8 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
+      this.contestSpeedsTexture = null;
+      this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
       this.stateFramebuffer = null;
       this.prevStateFramebuffer = null;
@@ -173,7 +206,10 @@ export class TerritoryWebGLRenderer {
       this.jfaSeedUniforms = { resolution: null, owner: null };
       this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
-        resolution: null,
+        mapResolution: null,
+        viewResolution: null,
+        viewScale: null,
+        viewOffset: null,
         state: null,
         palette: null,
         relations: null,
@@ -181,6 +217,9 @@ export class TerritoryWebGLRenderer {
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
+        contestSpeeds: null,
+        contestStrengths: null,
+        jfaAvailable: null,
         contestNow: null,
         contestDuration: null,
         prevOwner: null,
@@ -213,6 +252,8 @@ export class TerritoryWebGLRenderer {
     if (!this.program) {
       this.vao = null;
       this.vertexBuffer = null;
+      this.jfaVao = null;
+      this.jfaVertexBuffer = null;
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
@@ -220,6 +261,8 @@ export class TerritoryWebGLRenderer {
       this.contestOwnersTexture = null;
       this.contestIdsTexture = null;
       this.contestTimesTexture = null;
+      this.contestSpeedsTexture = null;
+      this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
       this.stateFramebuffer = null;
       this.prevStateFramebuffer = null;
@@ -236,7 +279,10 @@ export class TerritoryWebGLRenderer {
       this.jfaSeedUniforms = { resolution: null, owner: null };
       this.jfaUniforms = { resolution: null, step: null, seeds: null };
       this.uniforms = {
-        resolution: null,
+        mapResolution: null,
+        viewResolution: null,
+        viewScale: null,
+        viewOffset: null,
         state: null,
         palette: null,
         relations: null,
@@ -244,6 +290,9 @@ export class TerritoryWebGLRenderer {
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
+        contestSpeeds: null,
+        contestStrengths: null,
+        jfaAvailable: null,
         contestNow: null,
         contestDuration: null,
         prevOwner: null,
@@ -272,12 +321,18 @@ export class TerritoryWebGLRenderer {
     }
 
     this.jfaSupported = !!gl.getExtension("EXT_color_buffer_float");
+    if (!this.jfaSupported) {
+      this.jfaDisabledReason = "EXT_color_buffer_float unavailable";
+    }
     this.jfaSeedProgram = this.jfaSupported
       ? this.createJfaSeedProgram(gl)
       : null;
     this.jfaProgram = this.jfaSupported ? this.createJfaProgram(gl) : null;
     if (!this.jfaSeedProgram || !this.jfaProgram) {
       this.jfaSupported = false;
+      if (!this.jfaDisabledReason) {
+        this.jfaDisabledReason = "JFA shaders unavailable";
+      }
     }
     this.jfaSeedUniforms = this.jfaSeedProgram
       ? {
@@ -297,7 +352,10 @@ export class TerritoryWebGLRenderer {
       : { resolution: null, step: null, seeds: null };
 
     this.uniforms = {
-      resolution: gl.getUniformLocation(this.program, "u_resolution"),
+      mapResolution: gl.getUniformLocation(this.program, "u_mapResolution"),
+      viewResolution: gl.getUniformLocation(this.program, "u_viewResolution"),
+      viewScale: gl.getUniformLocation(this.program, "u_viewScale"),
+      viewOffset: gl.getUniformLocation(this.program, "u_viewOffset"),
       state: gl.getUniformLocation(this.program, "u_state"),
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
@@ -305,6 +363,12 @@ export class TerritoryWebGLRenderer {
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
       contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
+      contestSpeeds: gl.getUniformLocation(this.program, "u_contestSpeeds"),
+      contestStrengths: gl.getUniformLocation(
+        this.program,
+        "u_contestStrengths",
+      ),
+      jfaAvailable: gl.getUniformLocation(this.program, "u_jfaAvailable"),
       contestNow: gl.getUniformLocation(this.program, "u_contestNow"),
       contestDuration: gl.getUniformLocation(
         this.program,
@@ -342,20 +406,20 @@ export class TerritoryWebGLRenderer {
       viewerId: gl.getUniformLocation(this.program, "u_viewerId"),
     };
 
-    // Vertex data: two triangles covering the full map (pixel-perfect).
+    // Vertex data: two triangles covering the full view (pixel-perfect).
     const vertices = new Float32Array([
       0,
       0,
-      this.canvas.width,
+      this.viewWidth,
       0,
       0,
-      this.canvas.height,
+      this.viewHeight,
       0,
-      this.canvas.height,
-      this.canvas.width,
+      this.viewHeight,
+      this.viewWidth,
       0,
-      this.canvas.width,
-      this.canvas.height,
+      this.viewWidth,
+      this.viewHeight,
     ]);
 
     this.vao = gl.createVertexArray();
@@ -369,6 +433,29 @@ export class TerritoryWebGLRenderer {
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 2 * 4, 0);
     gl.bindVertexArray(null);
 
+    const mapVertices = new Float32Array([
+      0,
+      0,
+      this.mapWidth,
+      0,
+      0,
+      this.mapHeight,
+      0,
+      this.mapHeight,
+      this.mapWidth,
+      0,
+      this.mapWidth,
+      this.mapHeight,
+    ]);
+    this.jfaVao = gl.createVertexArray();
+    this.jfaVertexBuffer = gl.createBuffer();
+    gl.bindVertexArray(this.jfaVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.jfaVertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, mapVertices, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 2 * 4, 0);
+    gl.bindVertexArray(null);
+
     this.stateTexture = gl.createTexture();
     this.paletteTexture = gl.createTexture();
     this.relationTexture = gl.createTexture();
@@ -376,6 +463,8 @@ export class TerritoryWebGLRenderer {
     this.contestOwnersTexture = gl.createTexture();
     this.contestIdsTexture = gl.createTexture();
     this.contestTimesTexture = gl.createTexture();
+    this.contestSpeedsTexture = gl.createTexture();
+    this.contestStrengthsTexture = gl.createTexture();
     this.prevOwnerTexture = gl.createTexture();
     this.stateFramebuffer = gl.createFramebuffer();
     this.prevStateFramebuffer = gl.createFramebuffer();
@@ -403,8 +492,8 @@ export class TerritoryWebGLRenderer {
       gl.TEXTURE_2D,
       0,
       gl.R16UI,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       0,
       gl.RED_INTEGER,
       gl.UNSIGNED_SHORT,
@@ -424,8 +513,8 @@ export class TerritoryWebGLRenderer {
       gl.TEXTURE_2D,
       0,
       gl.RG16UI,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       0,
       gl.RG_INTEGER,
       gl.UNSIGNED_SHORT,
@@ -443,8 +532,8 @@ export class TerritoryWebGLRenderer {
       gl.TEXTURE_2D,
       0,
       gl.R16UI,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       0,
       gl.RED_INTEGER,
       gl.UNSIGNED_SHORT,
@@ -470,6 +559,44 @@ export class TerritoryWebGLRenderer {
       this.contestTimesState,
     );
 
+    gl.activeTexture(gl.TEXTURE10);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestSpeedsState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestSpeedsState,
+    );
+
+    gl.activeTexture(gl.TEXTURE11);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestStrengthsTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestStrengthsState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestStrengthsState,
+    );
+
     gl.activeTexture(gl.TEXTURE7);
     gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -481,8 +608,8 @@ export class TerritoryWebGLRenderer {
       gl.TEXTURE_2D,
       0,
       gl.R16UI,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       0,
       gl.RED_INTEGER,
       gl.UNSIGNED_SHORT,
@@ -540,8 +667,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.RG16F,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RG,
         gl.HALF_FLOAT,
@@ -558,8 +685,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.RG16F,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RG,
         gl.HALF_FLOAT,
@@ -593,8 +720,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.RG16F,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RG,
         gl.HALF_FLOAT,
@@ -611,8 +738,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.RG16F,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RG,
         gl.HALF_FLOAT,
@@ -637,7 +764,7 @@ export class TerritoryWebGLRenderer {
       );
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-      this.jfaSteps = this.buildJfaSteps(this.canvas.width, this.canvas.height);
+      this.jfaSteps = this.buildJfaSteps(this.mapWidth, this.mapHeight);
       this.jfaDirty = true;
     }
 
@@ -649,15 +776,34 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.contestOwners, 4);
     gl.uniform1i(this.uniforms.contestIds, 5);
     gl.uniform1i(this.uniforms.contestTimes, 6);
+    gl.uniform1i(this.uniforms.contestSpeeds, 10);
+    gl.uniform1i(this.uniforms.contestStrengths, 11);
     gl.uniform1i(this.uniforms.prevOwner, 7);
     gl.uniform1i(this.uniforms.jfaSeedsOld, 8);
     gl.uniform1i(this.uniforms.jfaSeedsNew, 9);
 
-    if (this.uniforms.resolution) {
+    if (this.uniforms.mapResolution) {
       gl.uniform2f(
-        this.uniforms.resolution,
-        this.canvas.width,
-        this.canvas.height,
+        this.uniforms.mapResolution,
+        this.mapWidth,
+        this.mapHeight,
+      );
+    }
+    if (this.uniforms.viewResolution) {
+      gl.uniform2f(
+        this.uniforms.viewResolution,
+        this.viewWidth,
+        this.viewHeight,
+      );
+    }
+    if (this.uniforms.viewScale) {
+      gl.uniform1f(this.uniforms.viewScale, this.viewScale);
+    }
+    if (this.uniforms.viewOffset) {
+      gl.uniform2f(
+        this.uniforms.viewOffset,
+        this.viewOffsetX,
+        this.viewOffsetY,
       );
     }
     if (this.uniforms.alpha) {
@@ -717,6 +863,19 @@ export class TerritoryWebGLRenderer {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
     }
+    if (this.uniforms.viewResolution) {
+      gl.uniform2f(this.uniforms.viewResolution, this.viewWidth, this.viewHeight);
+    }
+    if (this.uniforms.viewScale) {
+      gl.uniform1f(this.uniforms.viewScale, this.viewScale);
+    }
+    if (this.uniforms.viewOffset) {
+      gl.uniform2f(
+        this.uniforms.viewOffset,
+        this.viewOffsetX,
+        this.viewOffsetY,
+      );
+    }
     if (this.uniforms.alternativeView) {
       gl.uniform1i(this.uniforms.alternativeView, 0);
     }
@@ -738,6 +897,9 @@ export class TerritoryWebGLRenderer {
     }
     if (this.uniforms.hoverPulseSpeed) {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
+    }
+    if (this.uniforms.jfaAvailable) {
+      gl.uniform1i(this.uniforms.jfaAvailable, this.jfaSupported ? 1 : 0);
     }
     if (this.uniforms.contestNow) {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
@@ -765,7 +927,7 @@ export class TerritoryWebGLRenderer {
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.viewport(0, 0, this.viewWidth, this.viewHeight);
   }
 
   static create(game: GameView, theme: Theme): TerritoryWebGLCreateResult {
@@ -796,6 +958,54 @@ export class TerritoryWebGLRenderer {
     this.alternativeView = enabled;
   }
 
+  setViewSize(width: number, height: number) {
+    const nextWidth = Math.max(1, Math.floor(width));
+    const nextHeight = Math.max(1, Math.floor(height));
+    if (nextWidth === this.viewWidth && nextHeight === this.viewHeight) {
+      return;
+    }
+    this.viewWidth = nextWidth;
+    this.viewHeight = nextHeight;
+    this.canvas.width = nextWidth;
+    this.canvas.height = nextHeight;
+    if (!this.gl || !this.vertexBuffer) {
+      return;
+    }
+    const gl = this.gl;
+    const vertices = new Float32Array([
+      0,
+      0,
+      this.viewWidth,
+      0,
+      0,
+      this.viewHeight,
+      0,
+      this.viewHeight,
+      this.viewWidth,
+      0,
+      this.viewWidth,
+      this.viewHeight,
+    ]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    if (this.program) {
+      gl.useProgram(this.program);
+      if (this.uniforms.viewResolution) {
+        gl.uniform2f(
+          this.uniforms.viewResolution,
+          this.viewWidth,
+          this.viewHeight,
+        );
+      }
+    }
+  }
+
+  setViewTransform(scale: number, offsetX: number, offsetY: number) {
+    this.viewScale = scale;
+    this.viewOffsetX = offsetX;
+    this.viewOffsetY = offsetY;
+  }
+
   setHoveredPlayerId(playerSmallId: number | null) {
     const encoded = playerSmallId ?? -1;
     this.hoveredPlayerId = encoded;
@@ -824,8 +1034,8 @@ export class TerritoryWebGLRenderer {
     if (this.needsFullUpload) {
       return;
     }
-    const x = tile % this.canvas.width;
-    const y = Math.floor(tile / this.canvas.width);
+    const x = tile % this.mapWidth;
+    const y = Math.floor(tile / this.mapWidth);
     const span = this.dirtyRows.get(y);
     if (span === undefined) {
       this.dirtyRows.set(y, { minX: x, maxX: x });
@@ -859,8 +1069,8 @@ export class TerritoryWebGLRenderer {
     if (this.needsContestFullUpload) {
       return;
     }
-    const x = tile % this.canvas.width;
-    const y = Math.floor(tile / this.canvas.width);
+    const x = tile % this.mapWidth;
+    const y = Math.floor(tile / this.mapWidth);
     const span = this.contestDirtyRows.get(y);
     if (span === undefined) {
       this.contestDirtyRows.set(y, { minX: x, maxX: x });
@@ -901,6 +1111,62 @@ export class TerritoryWebGLRenderer {
     this.needsContestTimesUpload = true;
   }
 
+  setContestSpeed(componentId: number, speed: number) {
+    if (componentId <= 0) {
+      return;
+    }
+    this.ensureContestSpeedCapacity(componentId);
+    const clamped = Math.max(0, Math.min(1, speed));
+    const packed = Math.round(clamped * 65535) & 0xffff;
+    if (this.contestSpeedsState[componentId] === packed) {
+      return;
+    }
+    this.contestSpeedsState[componentId] = packed;
+    this.needsContestSpeedsUpload = true;
+  }
+
+  ensureContestSpeedCapacity(componentId: number) {
+    if (componentId < this.contestSpeedsState.length) {
+      return;
+    }
+    let nextLength = Math.max(1, this.contestSpeedsState.length);
+    while (nextLength <= componentId) {
+      nextLength *= 2;
+    }
+    const nextState = new Uint16Array(nextLength);
+    nextState.set(this.contestSpeedsState);
+    this.contestSpeedsState = nextState;
+    this.needsContestSpeedsUpload = true;
+  }
+
+  setContestStrength(componentId: number, strength: number) {
+    if (componentId <= 0) {
+      return;
+    }
+    this.ensureContestStrengthCapacity(componentId);
+    const clamped = Math.max(0, Math.min(1, strength));
+    const packed = Math.round(clamped * 65535) & 0xffff;
+    if (this.contestStrengthsState[componentId] === packed) {
+      return;
+    }
+    this.contestStrengthsState[componentId] = packed;
+    this.needsContestStrengthsUpload = true;
+  }
+
+  ensureContestStrengthCapacity(componentId: number) {
+    if (componentId < this.contestStrengthsState.length) {
+      return;
+    }
+    let nextLength = Math.max(1, this.contestStrengthsState.length);
+    while (nextLength <= componentId) {
+      nextLength *= 2;
+    }
+    const nextState = new Uint16Array(nextLength);
+    nextState.set(this.contestStrengthsState);
+    this.contestStrengthsState = nextState;
+    this.needsContestStrengthsUpload = true;
+  }
+
   setContestNow(nowPacked: number, durationMs: number) {
     this.contestNow = nowPacked | 0;
     this.contestDurationMs = Math.max(0, durationMs);
@@ -921,12 +1187,12 @@ export class TerritoryWebGLRenderer {
     gl.blitFramebuffer(
       0,
       0,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       0,
       0,
-      this.canvas.width,
-      this.canvas.height,
+      this.mapWidth,
+      this.mapHeight,
       gl.COLOR_BUFFER_BIT,
       gl.NEAREST,
     );
@@ -953,6 +1219,8 @@ export class TerritoryWebGLRenderer {
     this.dirtyRows.clear();
     this.needsContestFullUpload = true;
     this.needsContestTimesUpload = true;
+    this.needsContestSpeedsUpload = true;
+    this.needsContestStrengthsUpload = true;
     this.contestDirtyRows.clear();
     this.jfaDirty = true;
   }
@@ -988,14 +1256,93 @@ export class TerritoryWebGLRenderer {
       uploadContestTimesSpan,
     );
 
+    const uploadContestSpeedsSpan = FrameProfiler.start();
+    this.uploadContestSpeedsTexture();
+    FrameProfiler.end(
+      "TerritoryWebGLRenderer:uploadContestSpeeds",
+      uploadContestSpeedsSpan,
+    );
+
+    const uploadContestStrengthsSpan = FrameProfiler.start();
+    this.uploadContestStrengthsTexture();
+    FrameProfiler.end(
+      "TerritoryWebGLRenderer:uploadContestStrengths",
+      uploadContestStrengthsSpan,
+    );
+
     if (this.jfaSupported && this.smoothEnabled) {
       this.updateJfa();
     }
 
     const renderSpan = FrameProfiler.start();
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.viewport(0, 0, this.viewWidth, this.viewHeight);
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
+    if (this.stateTexture) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
+    }
+    if (this.paletteTexture) {
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.paletteTexture);
+    }
+    if (this.relationTexture) {
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.relationTexture);
+    }
+    if (this.patternTexture) {
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, this.patternTexture);
+    }
+    if (this.contestOwnersTexture) {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestOwnersTexture);
+    }
+    if (this.contestIdsTexture) {
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestIdsTexture);
+    }
+    if (this.contestTimesTexture) {
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestTimesTexture);
+    }
+    if (this.prevOwnerTexture) {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+    }
+    if (this.jfaResultOldTexture) {
+      gl.activeTexture(gl.TEXTURE8);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
+    }
+    if (this.jfaResultNewTexture) {
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultNewTexture);
+    }
+    if (this.contestSpeedsTexture) {
+      gl.activeTexture(gl.TEXTURE10);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
+    }
+    if (this.contestStrengthsTexture) {
+      gl.activeTexture(gl.TEXTURE11);
+      gl.bindTexture(gl.TEXTURE_2D, this.contestStrengthsTexture);
+    }
+    if (this.uniforms.viewResolution) {
+      gl.uniform2f(
+        this.uniforms.viewResolution,
+        this.viewWidth,
+        this.viewHeight,
+      );
+    }
+    if (this.uniforms.viewScale) {
+      gl.uniform1f(this.uniforms.viewScale, this.viewScale);
+    }
+    if (this.uniforms.viewOffset) {
+      gl.uniform2f(
+        this.uniforms.viewOffset,
+        this.viewOffsetX,
+        this.viewOffsetY,
+      );
+    }
     if (this.uniforms.alternativeView) {
       gl.uniform1i(this.uniforms.alternativeView, this.alternativeView ? 1 : 0);
     }
@@ -1032,12 +1379,39 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.contestDuration) {
       gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
     }
+    if (this.uniforms.smoothProgress) {
+      gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
+    }
+    if (this.uniforms.smoothEnabled) {
+      gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
+    }
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
     FrameProfiler.end("TerritoryWebGLRenderer:draw", renderSpan);
+  }
+
+  getDebugStats() {
+    return {
+      mapWidth: this.mapWidth,
+      mapHeight: this.mapHeight,
+      viewWidth: this.viewWidth,
+      viewHeight: this.viewHeight,
+      viewScale: this.viewScale,
+      viewOffsetX: this.viewOffsetX,
+      viewOffsetY: this.viewOffsetY,
+      smoothEnabled: this.smoothEnabled,
+      smoothProgress: this.smoothProgress,
+      jfaSupported: this.jfaSupported,
+      jfaDisabledReason: this.jfaDisabledReason,
+      jfaDirty: this.jfaDirty,
+      prevStateCopySupported: this.prevStateCopySupported,
+      contestDurationMs: this.contestDurationMs,
+      contestNow: this.contestNow,
+      hoveredPlayerId: this.hoveredPlayerId,
+    };
   }
 
   private uploadStateTexture(): { rows: number; bytes: number } {
@@ -1055,8 +1429,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.R16UI,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RED_INTEGER,
         gl.UNSIGNED_SHORT,
@@ -1064,8 +1438,8 @@ export class TerritoryWebGLRenderer {
       );
       this.needsFullUpload = false;
       this.dirtyRows.clear();
-      rowsUploaded = this.canvas.height;
-      bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      rowsUploaded = this.mapHeight;
+      bytesUploaded = this.mapWidth * this.mapHeight * bytesPerPixel;
       return { rows: rowsUploaded, bytes: bytesUploaded };
     }
 
@@ -1075,7 +1449,7 @@ export class TerritoryWebGLRenderer {
 
     for (const [y, span] of this.dirtyRows) {
       const width = span.maxX - span.minX + 1;
-      const offset = y * this.canvas.width + span.minX;
+      const offset = y * this.mapWidth + span.minX;
       const rowSlice = this.state.subarray(offset, offset + width);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
@@ -1114,8 +1488,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.RG16UI,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RG_INTEGER,
         gl.UNSIGNED_SHORT,
@@ -1128,8 +1502,8 @@ export class TerritoryWebGLRenderer {
         gl.TEXTURE_2D,
         0,
         gl.R16UI,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         gl.RED_INTEGER,
         gl.UNSIGNED_SHORT,
@@ -1138,10 +1512,10 @@ export class TerritoryWebGLRenderer {
 
       this.needsContestFullUpload = false;
       this.contestDirtyRows.clear();
-      rowsUploaded = this.canvas.height;
+      rowsUploaded = this.mapHeight;
       bytesUploaded =
-        this.canvas.width *
-        this.canvas.height *
+        this.mapWidth *
+        this.mapHeight *
         (bytesPerOwnerPixel + bytesPerIdPixel);
       return { rows: rowsUploaded, bytes: bytesUploaded };
     }
@@ -1152,7 +1526,7 @@ export class TerritoryWebGLRenderer {
 
     for (const [y, span] of this.contestDirtyRows) {
       const width = span.maxX - span.minX + 1;
-      const ownerOffset = (y * this.canvas.width + span.minX) * 2;
+      const ownerOffset = (y * this.mapWidth + span.minX) * 2;
       const ownerSlice = this.contestOwnersState.subarray(
         ownerOffset,
         ownerOffset + width * 2,
@@ -1172,7 +1546,7 @@ export class TerritoryWebGLRenderer {
         ownerSlice,
       );
 
-      const idOffset = y * this.canvas.width + span.minX;
+      const idOffset = y * this.mapWidth + span.minX;
       const idSlice = this.contestIdsState.subarray(idOffset, idOffset + width);
       gl.activeTexture(gl.TEXTURE5);
       gl.bindTexture(gl.TEXTURE_2D, this.contestIdsTexture);
@@ -1222,6 +1596,62 @@ export class TerritoryWebGLRenderer {
     return { rows: 1, bytes };
   }
 
+  private uploadContestSpeedsTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.contestSpeedsTexture) {
+      return { rows: 0, bytes: 0 };
+    }
+    if (!this.needsContestSpeedsUpload) {
+      return { rows: 0, bytes: 0 };
+    }
+    const gl = this.gl;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.activeTexture(gl.TEXTURE10);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestSpeedsTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestSpeedsState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestSpeedsState,
+    );
+    this.needsContestSpeedsUpload = false;
+    const bytes =
+      this.contestSpeedsState.length * Uint16Array.BYTES_PER_ELEMENT;
+    return { rows: 1, bytes };
+  }
+
+  private uploadContestStrengthsTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.contestStrengthsTexture) {
+      return { rows: 0, bytes: 0 };
+    }
+    if (!this.needsContestStrengthsUpload) {
+      return { rows: 0, bytes: 0 };
+    }
+    const gl = this.gl;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.activeTexture(gl.TEXTURE11);
+    gl.bindTexture(gl.TEXTURE_2D, this.contestStrengthsTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.contestStrengthsState.length,
+      1,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.contestStrengthsState,
+    );
+    this.needsContestStrengthsUpload = false;
+    const bytes =
+      this.contestStrengthsState.length * Uint16Array.BYTES_PER_ELEMENT;
+    return { rows: 1, bytes };
+  }
+
   private updateJfa() {
     if (
       !this.gl ||
@@ -1238,7 +1668,7 @@ export class TerritoryWebGLRenderer {
       !this.jfaResultNewFramebuffer ||
       !this.jfaResultOldTexture ||
       !this.jfaResultNewTexture ||
-      !this.vao
+      !this.jfaVao
     ) {
       return;
     }
@@ -1248,8 +1678,8 @@ export class TerritoryWebGLRenderer {
     const gl = this.gl;
     const prevBlend = gl.isEnabled(gl.BLEND);
     gl.disable(gl.BLEND);
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.bindVertexArray(this.vao);
+    gl.viewport(0, 0, this.mapWidth, this.mapHeight);
+    gl.bindVertexArray(this.jfaVao);
 
     const runJfa = (
       ownerTexture: WebGLTexture,
@@ -1259,8 +1689,8 @@ export class TerritoryWebGLRenderer {
       if (this.jfaSeedUniforms.resolution) {
         gl.uniform2f(
           this.jfaSeedUniforms.resolution,
-          this.canvas.width,
-          this.canvas.height,
+          this.mapWidth,
+          this.mapHeight,
         );
       }
       if (this.jfaSeedUniforms.owner) {
@@ -1280,8 +1710,8 @@ export class TerritoryWebGLRenderer {
         if (this.jfaUniforms.resolution) {
           gl.uniform2f(
             this.jfaUniforms.resolution,
-            this.canvas.width,
-            this.canvas.height,
+            this.mapWidth,
+            this.mapHeight,
           );
         }
         if (this.jfaUniforms.step) {
@@ -1308,12 +1738,12 @@ export class TerritoryWebGLRenderer {
       gl.blitFramebuffer(
         0,
         0,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         0,
         0,
-        this.canvas.width,
-        this.canvas.height,
+        this.mapWidth,
+        this.mapHeight,
         gl.COLOR_BUFFER_BIT,
         gl.NEAREST,
       );
@@ -1516,7 +1946,7 @@ export class TerritoryWebGLRenderer {
     gl: WebGL2RenderingContext,
   ): WebGLProgram | null {
     const vertexShaderSource = `#version 300 es
-      precision mediump float;
+      precision highp float;
       layout(location = 0) in vec2 a_position;
       uniform vec2 u_resolution;
       void main() {
@@ -1547,7 +1977,10 @@ export class TerritoryWebGLRenderer {
 
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+        ivec2 texCoord = ivec2(
+          fragCoord.x,
+          int(u_resolution.y) - 1 - fragCoord.y
+        );
 
         uint owner = ownerAt(texCoord);
         bool isBorder = false;
@@ -1596,7 +2029,7 @@ export class TerritoryWebGLRenderer {
 
   private createJfaProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
     const vertexShaderSource = `#version 300 es
-      precision mediump float;
+      precision highp float;
       layout(location = 0) in vec2 a_position;
       uniform vec2 u_resolution;
       void main() {
@@ -1639,7 +2072,10 @@ export class TerritoryWebGLRenderer {
 
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+        ivec2 texCoord = ivec2(
+          fragCoord.x,
+          int(u_resolution.y) - 1 - fragCoord.y
+        );
         int step = int(u_step + 0.5);
 
         vec2 bestSeed = seedAt(texCoord);
@@ -1692,9 +2128,9 @@ export class TerritoryWebGLRenderer {
     const vertexShaderSource = `#version 300 es
       precision mediump float;
       layout(location = 0) in vec2 a_position;
-      uniform vec2 u_resolution;
+      uniform vec2 u_viewResolution;
       void main() {
-        vec2 zeroToOne = a_position / u_resolution;
+        vec2 zeroToOne = a_position / u_viewResolution;
         vec2 clipSpace = zeroToOne * 2.0 - 1.0;
         clipSpace.y = -clipSpace.y;
         gl_Position = vec4(clipSpace, 0.0, 1.0);
@@ -1712,6 +2148,9 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_contestOwners;
       uniform usampler2D u_contestIds;
       uniform usampler2D u_contestTimes;
+      uniform usampler2D u_contestSpeeds;
+      uniform usampler2D u_contestStrengths;
+      uniform bool u_jfaAvailable;
       uniform int u_contestNow;
       uniform float u_contestDurationMs;
       uniform usampler2D u_prevOwner;
@@ -1722,7 +2161,10 @@ export class TerritoryWebGLRenderer {
       uniform int u_patternStride;
       uniform int u_patternRows;
       uniform int u_viewerId;
-      uniform vec2 u_resolution;
+      uniform vec2 u_mapResolution;
+      uniform vec2 u_viewResolution;
+      uniform float u_viewScale;
+      uniform vec2 u_viewOffset;
       uniform vec4 u_fallout;
       uniform vec4 u_altSelf;
       uniform vec4 u_altAlly;
@@ -1743,7 +2185,7 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
       }
@@ -1752,7 +2194,7 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_prevOwner, clamped, 0).r & 0xFFFu;
       }
@@ -1761,7 +2203,7 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_jfaSeedsOld, clamped, 0).rg;
       }
@@ -1770,7 +2212,7 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_jfaSeedsNew, clamped, 0).rg;
       }
@@ -1779,7 +2221,7 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_contestOwners, clamped, 0).rg;
       }
@@ -1788,9 +2230,68 @@ export class TerritoryWebGLRenderer {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
-          ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_contestIds, clamped, 0).r;
+      }
+
+      float contestSpeed(uint contestId) {
+        if (contestId == 0u) {
+          return 0.0;
+        }
+        uint speedRaw = texelFetch(
+          u_contestSpeeds,
+          ivec2(int(contestId), 0),
+          0
+        ).r;
+        return clamp(float(speedRaw) / 65535.0, 0.0, 1.0);
+      }
+
+      float contestStrength(uint contestId) {
+        if (contestId == 0u) {
+          return 0.5;
+        }
+        uint strengthRaw = texelFetch(
+          u_contestStrengths,
+          ivec2(int(contestId), 0),
+          0
+        ).r;
+        return clamp(float(strengthRaw) / 65535.0, 0.0, 1.0);
+      }
+
+      float blueNoise(ivec2 texCoord) {
+        vec2 p = vec2(texCoord);
+        float x = fract(0.06711056 * p.x + 0.00583715 * p.y);
+        return fract(52.9829189 * x);
+      }
+
+      float hash12(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+      }
+
+      float valueNoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        float a = hash12(i);
+        float b = hash12(i + vec2(1.0, 0.0));
+        float c = hash12(i + vec2(0.0, 1.0));
+        float d = hash12(i + vec2(1.0, 1.0));
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+      }
+
+      float fbm(vec2 p) {
+        float value = 0.0;
+        float amp = 0.65;
+        vec2 shift = vec2(19.0, 7.0);
+        value += amp * valueNoise(p);
+        amp *= 0.5;
+        p = p * 2.1 + shift;
+        value += amp * valueNoise(p);
+        amp *= 0.5;
+        p = p * 2.05 + shift;
+        value += amp * valueNoise(p);
+        return value;
       }
 
       uint relationCode(uint owner, uint other) {
@@ -1855,12 +2356,33 @@ export class TerritoryWebGLRenderer {
 
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+        vec2 viewCoord = vec2(
+          float(fragCoord.x),
+          u_viewResolution.y - 1.0 - float(fragCoord.y)
+        );
+        vec2 mapHalf = u_mapResolution * 0.5;
+        vec2 mapCoord = (viewCoord - mapHalf) / u_viewScale + u_viewOffset + mapHalf;
+        if (
+          mapCoord.x < 0.0 ||
+          mapCoord.y < 0.0 ||
+          mapCoord.x >= u_mapResolution.x ||
+          mapCoord.y >= u_mapResolution.y
+        ) {
+          outColor = vec4(0.0);
+          return;
+        }
+        ivec2 texCoord = ivec2(mapCoord);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
+        uint oldOwner = prevOwnerAtTex(texCoord);
+        bool smoothActive = u_smoothEnabled &&
+          u_smoothProgress < 1.0 &&
+          !u_alternativeView &&
+          oldOwner != owner &&
+          u_jfaAvailable;
 
         uint contestIdRaw = contestIdRawAtTex(texCoord);
         const uint CONTEST_ID_MASK = 0x7FFFu;
@@ -1999,8 +2521,9 @@ export class TerritoryWebGLRenderer {
             );
             defenderBase = defenderColor.rgb;
           }
-          bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-          contestedFillColor = isLightTile ? ownerBase : defenderBase;
+          float strength = contestStrength(contestId);
+          float noise = blueNoise(texCoord);
+          contestedFillColor = noise < strength ? ownerBase : defenderBase;
           contestedFillAlpha = u_alpha;
         }
 
@@ -2011,14 +2534,6 @@ export class TerritoryWebGLRenderer {
           color = borderColor;
           a = borderAlpha;
         }
-
-
-        uint oldOwner = prevOwnerAtTex(texCoord);
-        bool smoothActive = u_smoothEnabled &&
-          u_smoothProgress < 1.0 &&
-          !u_alternativeView &&
-          !contested &&
-          oldOwner != owner;
 
         if (smoothActive) {
           bool oldIsBorder = false;
@@ -2097,16 +2612,77 @@ export class TerritoryWebGLRenderer {
 
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
           float oldDistance =
-            seedOld.x < 0.0 ? 1e6 : length(seedOld - vec2(texCoord));
+            seedOld.x < 0.0 ? 1e6 : length(seedOld - mapCoord);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
           float newDistance =
-            seedNew.x < 0.0 ? 1e6 : length(seedNew - vec2(texCoord));
+            seedNew.x < 0.0 ? 1e6 : length(seedNew - mapCoord);
           float maxDistance = max(oldDistance + newDistance, 0.001);
           float edge = u_smoothProgress * maxDistance;
-          float reveal =
-            1.0 - smoothstep(edge - 0.5, edge + 0.5, oldDistance);
-          color = mix(oldColor, color, reveal);
-          a = mix(oldAlpha, a, reveal);
+          float phi = oldDistance - edge;
+
+          float showNew = step(phi, 0.0);
+          color = mix(oldColor, color, showNew);
+          a = mix(oldAlpha, a, showNew);
+
+          const float FRONT_HALF_WIDTH = 0.5;
+          float frontBand = step(abs(phi), FRONT_HALF_WIDTH);
+          if (frontBand > 0.0) {
+            uint borderOwner = phi <= 0.0 ? owner : oldOwner;
+            uint otherOwner = phi <= 0.0 ? oldOwner : owner;
+            if (borderOwner == 0u) {
+              borderOwner = otherOwner;
+              otherOwner = 0u;
+            }
+            if (borderOwner != 0u) {
+              vec4 borderBase = texelFetch(
+                u_palette,
+                ivec2(int(borderOwner) * 2 + 1, 0),
+                0
+              );
+              vec3 bColor = borderBase.rgb;
+              if (otherOwner != 0u) {
+                uint rel = relationCode(borderOwner, otherOwner);
+                const float BORDER_TINT_RATIO = 0.35;
+                const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+                const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+                if (isFriendly(rel)) {
+                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
+                          FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+                }
+                if (isEmbargo(rel)) {
+                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
+                          EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+                }
+              }
+              bColor = applyDefended(bColor, isDefended, texCoord);
+              color = bColor;
+              a = borderBase.a;
+            }
+          }
+        }
+
+        if (contested && owner != 0u && u_jfaAvailable) {
+          vec2 seedOld = jfaSeedOldAtTex(texCoord);
+          vec2 seedNew = jfaSeedNewAtTex(texCoord);
+          if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {
+            float oldDistance = length(seedOld - vec2(texCoord));
+            float newDistance = length(seedNew - vec2(texCoord));
+            float bandWidth = mix(1.6, 0.8, contestSpeed(contestId));
+            float frontDistance = min(oldDistance, newDistance);
+            float band =
+              1.0 - smoothstep(bandWidth, bandWidth + 0.6, frontDistance);
+            float speed = contestSpeed(contestId);
+            float scale = mix(0.1, 0.22, speed);
+            float drift = mix(0.05, 0.18, speed);
+            vec2 p = vec2(texCoord) * scale +
+              vec2(u_time * drift, -u_time * drift * 0.6);
+            float n = fbm(p);
+            float cloud = smoothstep(0.55, 0.82, n);
+            float intensity = mix(0.08, 0.28, speed);
+            float alpha = cloud * band * intensity;
+            vec3 smoke = vec3(0.85, 0.83, 0.8);
+            color = mix(color, smoke, alpha);
+          }
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {

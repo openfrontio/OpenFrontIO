@@ -21,6 +21,14 @@ const CONTEST_ID_MASK = 0x7fff;
 const CONTEST_ATTACKER_EVER_BIT = 0x8000;
 const CONTEST_TIME_WRAP = 32768;
 const DEFAULT_CONTEST_DURATION_MS = 200;
+const CONTEST_SPEED_TPS_MAX = 20;
+const CONTEST_SPEED_EMA_ALPHA = 0.8;
+const CONTEST_SPEED_DECAY_HALFLIFE_MS = 100;
+const CONTEST_SPEED_DT_MAX_MS = 200;
+const CONTEST_STRENGTH_EMA_ALPHA = 0.8;
+const CONTEST_STRENGTH_MIN = 0.01;
+const CONTEST_STRENGTH_MAX = 0.95;
+const DEBUG_TERRITORY_OVERLAY = true;
 
 type ContestComponent = {
   id: number;
@@ -28,6 +36,8 @@ type ContestComponent = {
   defender: number;
   lastActivityPacked: number;
   tiles: TileRef[];
+  speed: number;
+  strength: number;
 };
 
 export class TerritoryLayer implements Layer {
@@ -68,6 +78,8 @@ export class TerritoryLayer implements Layer {
   private smoothActive = false;
   private smoothStartMs = 0;
   private smoothSnapshotPending = false;
+  private contestSpeedDeltas = new Map<number, number>();
+  private contestSpeedLastUpdateMs = 0;
 
   constructor(
     private game: GameView,
@@ -113,7 +125,10 @@ export class TerritoryLayer implements Layer {
       this.smoothStartMs = now;
       this.smoothActive = true;
     }
+    this.contestSpeedDeltas.clear();
     this.applyContestChanges(ownerUpdates, now);
+    this.updateContestSpeeds(now);
+    this.updateContestStrengths();
     const updates = this.game.updatesSinceLastTick();
 
     // Detect alliance mutations
@@ -449,17 +464,31 @@ export class TerritoryLayer implements Layer {
     this.updateContestState(now);
 
     const renderTerritoryStart = FrameProfiler.start();
+    this.territoryRenderer.setViewSize(
+      context.canvas.width,
+      context.canvas.height,
+    );
+    const viewOffset = this.transformHandler.viewOffset();
+    this.territoryRenderer.setViewTransform(
+      this.transformHandler.scale,
+      viewOffset.x,
+      viewOffset.y,
+    );
     this.territoryRenderer.render();
     FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
     const drawTerritoryStart = FrameProfiler.start();
+    // Draw the WebGL territory in screen space; overlays still use world space.
+    context.save();
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.drawImage(
       this.territoryRenderer.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
+      0,
+      0,
+      context.canvas.width,
+      context.canvas.height,
     );
+    context.restore();
     FrameProfiler.end("TerritoryLayer:drawTerritoryCanvas", drawTerritoryStart);
 
     if (this.game.inSpawnPhase()) {
@@ -475,6 +504,12 @@ export class TerritoryLayer implements Layer {
         "TerritoryLayer:drawHighlightCanvas",
         highlightDrawStart,
       );
+    }
+
+    if (DEBUG_TERRITORY_OVERLAY) {
+      const overlayStart = FrameProfiler.start();
+      this.drawDebugOverlay(context);
+      FrameProfiler.end("TerritoryLayer:debugOverlay", overlayStart);
     }
   }
 
@@ -569,6 +604,11 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer.setSmoothEnabled(this.smoothActive);
   }
 
+  private recordContestSpeed(componentId: number) {
+    const current = this.contestSpeedDeltas.get(componentId) ?? 0;
+    this.contestSpeedDeltas.set(componentId, current + 1);
+  }
+
   private applyContestChanges(
     changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
     now: number,
@@ -586,24 +626,30 @@ export class TerritoryLayer implements Layer {
       const tile = change.tile;
       const currentId = this.contestId(tile);
       if (currentId === 0) {
-        this.startContestForTile(
+        const component = this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowPacked,
         );
+        if (component) {
+          this.recordContestSpeed(component.id);
+        }
         continue;
       }
 
       const component = this.contestComponents.get(currentId);
       if (!component) {
         this.clearContestTile(tile);
-        this.startContestForTile(
+        const newComponent = this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowPacked,
         );
+        if (newComponent) {
+          this.recordContestSpeed(newComponent.id);
+        }
         continue;
       }
 
@@ -622,16 +668,119 @@ export class TerritoryLayer implements Layer {
         );
         component.lastActivityPacked = nowPacked;
         this.territoryRenderer.setContestTime(component.id, nowPacked);
+        this.recordContestSpeed(component.id);
       } else {
         this.removeTileFromComponent(tile, component);
-        this.startContestForTile(
+        const newComponent = this.startContestForTile(
           tile,
           change.previousOwner,
           change.newOwner,
           nowPacked,
         );
+        if (newComponent) {
+          this.recordContestSpeed(newComponent.id);
+        }
       }
     }
+  }
+
+  private updateContestSpeeds(now: number) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    if (this.contestComponents.size === 0) {
+      this.contestSpeedLastUpdateMs = now;
+      return;
+    }
+    if (this.contestSpeedLastUpdateMs <= 0) {
+      this.contestSpeedLastUpdateMs = now;
+    }
+    let dt = now - this.contestSpeedLastUpdateMs;
+    dt = Math.max(1, Math.min(CONTEST_SPEED_DT_MAX_MS, dt));
+    this.contestSpeedLastUpdateMs = now;
+
+    const decay = Math.pow(0.5, dt / CONTEST_SPEED_DECAY_HALFLIFE_MS);
+    for (const component of this.contestComponents.values()) {
+      const delta = this.contestSpeedDeltas.get(component.id) ?? 0;
+      if (delta > 0) {
+        const tilesPerSecond = (delta / dt) * 1000;
+        const instant = Math.min(
+          1,
+          tilesPerSecond / CONTEST_SPEED_TPS_MAX,
+        );
+        component.speed =
+          component.speed * (1 - CONTEST_SPEED_EMA_ALPHA) +
+          instant * CONTEST_SPEED_EMA_ALPHA;
+      } else {
+        component.speed *= decay;
+      }
+      component.speed = Math.max(0, Math.min(1, component.speed));
+      this.territoryRenderer.setContestSpeed(component.id, component.speed);
+    }
+  }
+
+  private updateContestStrengths() {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    if (this.contestComponents.size === 0) {
+      return;
+    }
+    const pairStrength = new Map<string, number>();
+    for (const component of this.contestComponents.values()) {
+      const key = `${component.attacker}:${component.defender}`;
+      let strength = pairStrength.get(key);
+      if (strength === undefined) {
+        strength = this.computeContestStrength(
+          component.attacker,
+          component.defender,
+        );
+        pairStrength.set(key, strength);
+      }
+      component.strength =
+        component.strength * (1 - CONTEST_STRENGTH_EMA_ALPHA) +
+        strength * CONTEST_STRENGTH_EMA_ALPHA;
+      component.strength = Math.max(
+        CONTEST_STRENGTH_MIN,
+        Math.min(CONTEST_STRENGTH_MAX, component.strength),
+      );
+      this.territoryRenderer.setContestStrength(
+        component.id,
+        component.strength,
+      );
+    }
+  }
+
+  private computeContestStrength(attackerId: number, defenderId: number) {
+    const attacker = this.game.playerBySmallID(attackerId);
+    const defender = this.game.playerBySmallID(defenderId);
+    if (
+      !attacker ||
+      !defender ||
+      !(attacker instanceof PlayerView) ||
+      !(defender instanceof PlayerView)
+    ) {
+      return 0.5;
+    }
+    const attackerAttackTroops = this.attackTroops(attacker, defenderId);
+    const defenderAttackTroops = this.attackTroops(defender, attackerId);
+    const attackerPower = attacker.troops() + attackerAttackTroops;
+    const defenderPower = defender.troops() + defenderAttackTroops;
+    const totalPower = attackerPower + defenderPower;
+    if (totalPower <= 0) {
+      return 0.5;
+    }
+    return Math.max(0, Math.min(1, attackerPower / totalPower));
+  }
+
+  private attackTroops(attacker: PlayerView, targetId: number) {
+    let total = 0;
+    for (const attack of attacker.outgoingAttacks()) {
+      if (attack.targetID === targetId) {
+        total += attack.troops;
+      }
+    }
+    return total;
   }
 
   private updateContestState(now: number) {
@@ -667,9 +816,9 @@ export class TerritoryLayer implements Layer {
     defender: number,
     attacker: number,
     nowPacked: number,
-  ) {
+  ): ContestComponent | null {
     if (attacker === defender || attacker === 0 || defender === 0) {
-      return;
+      return null;
     }
     const neighbors = this.collectNeighborComponents(tile, attacker, defender);
     let component: ContestComponent;
@@ -685,6 +834,7 @@ export class TerritoryLayer implements Layer {
     this.addTileToComponent(tile, component, true);
     component.lastActivityPacked = nowPacked;
     this.territoryRenderer?.setContestTime(component.id, nowPacked);
+    return component;
   }
 
   private collectNeighborComponents(
@@ -723,10 +873,14 @@ export class TerritoryLayer implements Layer {
       defender,
       lastActivityPacked: nowPacked,
       tiles: [],
+      speed: 0,
+      strength: 0.5,
     };
     this.contestComponents.set(id, component);
     this.contestActive = true;
     this.territoryRenderer?.ensureContestTimeCapacity(id);
+    this.territoryRenderer?.setContestSpeed(id, 0);
+    this.territoryRenderer?.setContestStrength(id, 0.5);
     return component;
   }
 
@@ -777,6 +931,8 @@ export class TerritoryLayer implements Layer {
     this.contestTileIndices![tile] = -1;
     this.clearContestTile(tile);
     if (component.tiles.length === 0) {
+      this.territoryRenderer?.setContestSpeed(component.id, 0);
+      this.territoryRenderer?.setContestStrength(component.id, 0);
       this.contestComponents.delete(component.id);
       this.releaseContestComponentId(component.id);
       this.contestActive = this.contestComponents.size > 0;
@@ -787,6 +943,20 @@ export class TerritoryLayer implements Layer {
     target: ContestComponent,
     source: ContestComponent,
   ) {
+    const targetSize = target.tiles.length;
+    const sourceSize = source.tiles.length;
+    const totalSize = targetSize + sourceSize;
+    if (totalSize > 0) {
+      target.speed = Math.min(
+        1,
+        (target.speed * targetSize + source.speed * sourceSize) / totalSize,
+      );
+      target.strength = Math.min(
+        1,
+        (target.strength * targetSize + source.strength * sourceSize) /
+          totalSize,
+      );
+    }
     for (const tile of source.tiles) {
       const attackerEver = this.hasAttackerEver(tile);
       this.setContestTileData(
@@ -808,6 +978,8 @@ export class TerritoryLayer implements Layer {
       target.lastActivityPacked,
     );
     this.contestComponents.delete(source.id);
+    this.territoryRenderer?.setContestSpeed(source.id, 0);
+    this.territoryRenderer?.setContestStrength(source.id, 0);
     this.releaseContestComponentId(source.id);
   }
 
@@ -817,6 +989,8 @@ export class TerritoryLayer implements Layer {
       this.clearContestTile(tile);
     }
     component.tiles.length = 0;
+    this.territoryRenderer?.setContestSpeed(component.id, 0);
+    this.territoryRenderer?.setContestStrength(component.id, 0);
     this.contestComponents.delete(component.id);
     this.releaseContestComponentId(component.id);
     this.contestActive = this.contestComponents.size > 0;
@@ -883,11 +1057,18 @@ export class TerritoryLayer implements Layer {
     }
     if (maxId > 0) {
       this.territoryRenderer.ensureContestTimeCapacity(maxId);
+      this.territoryRenderer.ensureContestSpeedCapacity(maxId);
+      this.territoryRenderer.ensureContestStrengthCapacity(maxId);
     }
     for (const component of this.contestComponents.values()) {
       this.territoryRenderer.setContestTime(
         component.id,
         component.lastActivityPacked,
+      );
+      this.territoryRenderer.setContestSpeed(component.id, component.speed);
+      this.territoryRenderer.setContestStrength(
+        component.id,
+        component.strength,
       );
       for (const tile of component.tiles) {
         const packed = this.contestComponentIds![tile];
@@ -940,5 +1121,49 @@ export class TerritoryLayer implements Layer {
       this.lastPaletteSignature = signature;
       this.territoryRenderer.refreshPalette();
     }
+  }
+
+  private drawDebugOverlay(context: CanvasRenderingContext2D) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    const stats = this.territoryRenderer.getDebugStats();
+    context.save();
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.font = "12px monospace";
+    context.textBaseline = "top";
+    const jfaStatus = stats.jfaSupported
+      ? "on"
+      : `off (${stats.jfaDisabledReason ?? "disabled"})`;
+    const lines = [
+      `map: ${stats.mapWidth}x${stats.mapHeight}`,
+      `view: ${stats.viewWidth}x${stats.viewHeight}`,
+      `scale: ${stats.viewScale.toFixed(2)}`,
+      `offset: ${stats.viewOffsetX.toFixed(1)}, ${stats.viewOffsetY.toFixed(1)}`,
+      `smooth: ${stats.smoothEnabled ? "on" : "off"} ${stats.smoothProgress.toFixed(2)} active ${this.smoothActive ? "yes" : "no"}`,
+      `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
+      `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
+      `contest: ${this.contestActive ? "on" : "off"} comps ${this.contestComponents.size}`,
+      `contestMs: ${this.contestDurationMs}`,
+      `smoothMs: ${this.smoothDurationMs}`,
+      `hovered: ${stats.hoveredPlayerId}`,
+    ];
+    const padding = 6;
+    const lineHeight = 14;
+    let maxWidth = 0;
+    for (const line of lines) {
+      maxWidth = Math.max(maxWidth, context.measureText(line).width);
+    }
+    const width = Math.ceil(maxWidth + padding * 2);
+    const height = padding * 2 + lines.length * lineHeight;
+    context.fillStyle = "rgba(0, 0, 0, 0.6)";
+    context.fillRect(10, 10, width, height);
+    context.fillStyle = "rgba(255, 255, 255, 0.9)";
+    let y = 10 + padding;
+    for (const line of lines) {
+      context.fillText(line, 10 + padding, y);
+      y += lineHeight;
+    }
+    context.restore();
   }
 }
