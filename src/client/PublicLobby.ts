@@ -124,90 +124,117 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-300 ${this
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 ${this
           .isLobbyHighlighted
           ? "ring-2 ring-blue-600 scale-[1.01] opacity-70"
-          : "hover:scale-[1.01] hover:border-white/30"} ${this.isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
+          : "hover:scale-[1.01]"} active:scale-[0.98] ${this.isButtonDebounced
+          ? "cursor-not-allowed"
           : ""}"
       >
-        <!-- Map Image Area -->
-        <div class="flex-1 w-full relative overflow-hidden bg-blue-500/85">
+        <!-- Main card gradient - stops before text -->
+        <div
+          class="absolute inset-0 bg-gradient-to-b from-transparent via-black/3 to-black/8 pointer-events-none z-10"
+        ></div>
+
+        <!-- Map Image Area with gradient overlay -->
+        <div
+          class="flex-1 w-full relative overflow-hidden bg-[rgb(70,132,180)]"
+        >
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
                 alt="${lobby.gameConfig.gameMap}"
-                class="w-full h-full object-cover filter drop-shadow-2xl"
+                class="w-full h-full object-cover"
               />`
-            : html`<div class="w-full h-full bg-gray-800 rounded-lg"></div>`}
+            : ""}
         </div>
 
-        <!-- Content Banner -->
-        <div
-          class="relative w-full p-5 flex flex-col gap-1 text-left z-10 bg-slate-900/95 backdrop-blur-xl border-t border-white/10"
-        >
-          <div class="flex justify-between items-end w-full">
-            <div class="flex flex-col gap-1">
-              <!-- Header: Status or Join -->
-              <div
-                class="text-sm font-bold uppercase tracking-widest text-blue-400 mb-1"
+        <!-- Mode Badge in top left -->
+        ${fullModeLabel
+          ? html`<span
+              class="absolute top-4 left-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 ${this
+                .isLobbyHighlighted
+                ? "bg-green-500/90 text-white"
+                : "bg-white text-blue-600"}"
+            >
+              ${fullModeLabel}
+            </span>`
+          : ""}
+
+        <!-- Timer in top right -->
+        ${timeRemaining > 0
+          ? html`
+              <span
+                class="absolute top-4 right-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 bg-blue-600 text-white"
               >
-                ${this.currLobby
-                  ? isStarting
-                    ? html`<span class="text-green-400 animate-pulse"
-                        >${translateText("public_lobby.starting_game")}</span
-                      >`
-                    : html`${translateText("public_lobby.waiting_for_players")}
+                ${timeDisplay}
+              </span>
+            `
+          : html`<span
+              class="absolute top-4 right-4 px-2 py-1 rounded text-sm lg:text-base font-medium uppercase tracking-wide z-30 bg-green-600 text-white"
+            >
+              ${translateText("public_lobby.started")}
+            </span>`}
+
+        <!-- Content Banner -->
+        <div class="absolute bottom-0 left-0 right-0 z-20">
+          <!-- Gradient overlay for text area - adds extra darkening -->
+          <div
+            class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90 pointer-events-none"
+          ></div>
+
+          <div class="relative p-6 flex flex-col gap-2 text-left">
+            <!-- Header: Status or Join -->
+            <div
+              class="text-sm font-medium uppercase tracking-[0.2em] text-white"
+            >
+              ${this.currLobby
+                ? isStarting
+                  ? html`<span class="text-green-400 animate-pulse"
+                      >${translateText("public_lobby.starting_game")}</span
+                    >`
+                  : html`<span class="text-orange-400"
+                      >${translateText("public_lobby.waiting_for_players")}
                       ${[0, 1, 2]
                         .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
-                        .join("")}`
-                  : html`<span
-                      class="group-hover:text-blue-300 transition-colors"
-                      >${translateText("public_lobby.join")}</span
-                    >`}
-              </div>
-
-              <!-- Map Name & Mode -->
-              <div
-                class="text-3xl font-black text-white leading-none tracking-tight"
-              >
-                ${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-                )}
-              </div>
-              <div class="flex flex-wrap items-center gap-2 mt-2">
-                ${fullModeLabel
-                  ? html`<span
-                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${this
-                        .isLobbyHighlighted
-                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                        : "bg-white/10 text-white border border-white/10"} backdrop-blur-sm"
-                    >
-                      ${fullModeLabel}
-                    </span>`
-                  : ""}
-                ${modifierLabel.map(
-                  (label) =>
-                    html`<span
-                      class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${this
-                        .isLobbyHighlighted
-                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                        : "bg-white/10 text-white border border-white/10"} backdrop-blur-sm"
-                    >
-                      ${label}
-                    </span>`,
-                )}
-              </div>
+                        .join("")}</span
+                    >`
+                : html`${translateText("public_lobby.join")}`}
             </div>
 
-            <!-- Player Count & Time -->
-            <div class="flex flex-col items-end gap-1">
+            <!-- Map Name - Full Width -->
+            <div
+              class="text-3xl lg:text-4xl font-medium text-white leading-none tracking-wide w-full"
+            >
+              ${translateText(
+                `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+              )}
+            </div>
+
+            <!-- Modifier Badges and Player Count Row -->
+            <div class="flex justify-between items-center w-full gap-4">
+              <!-- Modifier Badges -->
+              ${modifierLabel.length > 0
+                ? html`<div class="flex gap-2 flex-wrap">
+                    ${modifierLabel.map(
+                      (label) => html`
+                        <span
+                          class="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide bg-purple-500/80 text-white"
+                        >
+                          ${label}
+                        </span>
+                      `,
+                    )}
+                  </div>`
+                : html`<div></div>`}
+
+              <!-- Player Count -->
               <div class="flex items-center gap-2">
-                <span class="text-2xl font-bold text-white"
+                <span class="text-base font-mono font-medium text-white"
                   >${lobby.numClients}/${lobby.gameConfig.maxPlayers}</span
                 >
                 <svg
-                  class="w-5 h-5 text-white/50"
+                  class="w-5 h-5 text-white"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -216,19 +243,6 @@ export class PublicLobby extends LitElement {
                   ></path>
                 </svg>
               </div>
-              ${timeRemaining > 0
-                ? html`
-                    <div
-                      class="text-sm font-mono font-medium text-blue-200 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30"
-                    >
-                      ${timeDisplay}
-                    </div>
-                  `
-                : html`<div
-                    class="text-sm font-bold text-green-200 bg-green-500/20 border border-green-500/30 px-2 py-0.5 rounded uppercase tracking-wider"
-                  >
-                    ${translateText("public_lobby.started")}
-                  </div>`}
             </div>
           </div>
         </div>
