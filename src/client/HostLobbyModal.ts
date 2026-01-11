@@ -561,28 +561,11 @@ export class HostLobbyModal extends BaseModal {
                   this.compactMap,
                   this.handleCompactMapChange,
                 )}
-
-                <!-- Enable Lobby Chat (Private only) -->
-                <label
-                  for="enable-chat"
-                  class="option-card ${this.chatEnabled ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="enable-chat"
-                    @change=${(e: Event) => {
-                      this.chatEnabled = Boolean(
-                        (e.target as HTMLInputElement).checked,
-                      );
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.chatEnabled}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("lobby_chat.enable")}
-                  </div>
-                </label>
+                ${this.renderOptionToggle(
+                  "lobby_chat.enable",
+                  this.chatEnabled,
+                  this.handleChatEnabledChange,
+                )}
 
                 <!-- Max Timer -->
                 <div
@@ -1061,6 +1044,11 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
+    this.putGameConfig();
+  };
+
+  private handleChatEnabledChange = (val: boolean) => {
+    this.chatEnabled = val;
     this.putGameConfig();
   };
 

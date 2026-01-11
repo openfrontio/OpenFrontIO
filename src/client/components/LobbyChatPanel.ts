@@ -123,8 +123,10 @@ export class LobbyChatPanel extends LitElement {
   }
 }
 
-const style = document.createElement("style");
-style.textContent = `
+if (!document.head.querySelector("#lcp-styles")) {
+  const style = document.createElement("style");
+  style.id = "lcp-styles";
+  style.textContent = `
   .lcp-container {
     display: flex;
     flex-direction: column;
@@ -236,4 +238,5 @@ style.textContent = `
     }
   }
 `;
-document.head.appendChild(style);
+  document.head.appendChild(style);
+}
