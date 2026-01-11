@@ -68,9 +68,9 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
   const button = document.getElementById("nav-account-button");
   if (!button) return;
 
-  const avatarEl = document.getElementById(
-    "nav-account-avatar",
-  ) as HTMLImageElement | null;
+  const avatarEl = document.getElementById("nav-account-avatar") as
+    | (HTMLImageElement & { _navToken?: symbol })
+    | null;
   const personIconEl = document.getElementById(
     "nav-account-person-icon",
   ) as SVGElement | null;
@@ -81,12 +81,18 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
     "nav-account-signin-text",
   ) as HTMLSpanElement | null;
 
+  // Unique token for this update call
+  const navToken = Symbol();
+  if (avatarEl) avatarEl._navToken = navToken;
+
   const showAvatar = (src: string, alt?: string) => {
     if (avatarEl) {
       avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
       // If the avatar fails to load (bad URL / CDN issue / offline), fall back
       // to the default sign-in UI instead of leaving a broken image.
       avatarEl.onerror = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
         avatarEl.src = "";
         // If the user is still logged in via email, show the email badge state.
         const email =
@@ -98,6 +104,8 @@ function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
         }
       };
       avatarEl.onload = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
         // Clear error handler after a successful load.
         avatarEl.onerror = null;
       };
