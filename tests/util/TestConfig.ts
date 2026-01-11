@@ -109,6 +109,7 @@ export class UseRealAttackLogic extends TestConfig {
       this,
       gm,
       attackTroops,
+      attackLossMultiplier,
       attacker,
       defender,
       tileToConquer,
