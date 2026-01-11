@@ -423,7 +423,7 @@ export class UserSettingModal extends BaseModal {
             </span>
           </div>
 
-          <div class="flex items-center gap-2 justify-center mt-4">
+          <div class="hidden md:flex items-center gap-2 justify-center mt-4">
             <button
               class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
                 .activeTab === "basic"
