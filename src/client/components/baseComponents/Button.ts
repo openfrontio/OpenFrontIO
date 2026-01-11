@@ -21,7 +21,7 @@ export class OButton extends LitElement {
     return html`
       <button
         class=${classMap({
-          "bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all duration-300 transform hover:-translate-y-px outline-none border border-transparent text-center text-base lg:text-lg":
+          "text-white font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all duration-300 transform hover:-translate-y-px outline-none border border-transparent text-center text-base lg:text-lg":
             true,
           "dark:bg-blue-500 dark:hover:bg-blue-600": true,
           "w-full block": this.block,
