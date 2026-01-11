@@ -73,12 +73,13 @@ export class LobbyChatPanel extends LitElement {
     const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
+      this.requestUpdate();
     }
     this.username ??= window.__username ?? null;
   };
 
   private get canSend(): boolean {
-    return this.bus !== null || window.__eventBus !== undefined;
+    return this.bus !== null;
   }
 
   private sendMessage() {
