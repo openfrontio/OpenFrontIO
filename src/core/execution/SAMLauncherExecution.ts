@@ -272,9 +272,11 @@ export class SAMLauncherExecution implements Execution {
 
         // Message
         this.mg.displayMessage(
-          `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+          "events_display.mirv_warheads_intercepted",
           MessageType.SAM_HIT,
           samOwner.id(),
+          undefined,
+          { count: mirvWarheadTargets.length },
         );
 
         mirvWarheadTargets.forEach(({ unit: u }) => {

@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
+import { formatDebugTranslation } from "./Utils";
 
 import en from "../../resources/lang/en.json";
 import metadata from "../../resources/lang/metadata.json";
@@ -103,6 +104,12 @@ export class LangSelector extends LitElement {
     if (!lang) return {};
     const cached = this.languageCache.get(lang);
     if (cached) return cached;
+
+    if (lang === "debug") {
+      const empty: Record<string, string> = {};
+      this.languageCache.set(lang, empty);
+      return empty;
+    }
 
     if (lang === "en") {
       const flat = flattenTranslations(en);
@@ -249,6 +256,10 @@ export class LangSelector extends LitElement {
     key: string,
     params: Record<string, string | number> = {},
   ): string {
+    if (this.currentLang === "debug") {
+      return formatDebugTranslation(key, params);
+    }
+
     let text: string | undefined;
     if (this.translations && key in this.translations) {
       text = this.translations[key];
