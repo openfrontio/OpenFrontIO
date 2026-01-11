@@ -1,17 +1,17 @@
 {
   "map": {
-    "height": 280,
-    "num_land_tiles": 1172808,
+    "height": 276,
+    "num_land_tiles": 1150819,
     "width": 5536
   },
   "map16x": {
-    "height": 70,
-    "num_land_tiles": 71047,
+    "height": 69,
+    "num_land_tiles": 69690,
     "width": 1384
   },
   "map4x": {
-    "height": 140,
-    "num_land_tiles": 290101,
+    "height": 138,
+    "num_land_tiles": 284707,
     "width": 2768
   },
   "name": "Amazon River",

@@ -46,7 +46,7 @@ export const EMOJI_DONATION_TOO_SMALL = (["❓", "🥱"] as const).map(emojiId);
 
 export class NationEmojiBehavior {
   private readonly lastEmojiSent = new Map<Player, Tick>();
-  private hasSentWinnerClap = false;
+  private gameOver = false;
 
   constructor(
     private random: PseudoRandom,
@@ -107,7 +107,7 @@ export class NationEmojiBehavior {
 
   // Check if game is over - send congratulations
   private congratulateWinner(): void {
-    if (this.hasSentWinnerClap) return;
+    if (this.gameOver) return;
 
     const percentToWin = this.game.config().percentageTilesOwnedToWin();
     const numTilesWithoutFallout =
@@ -136,10 +136,11 @@ export class NationEmojiBehavior {
       const winningPercent = (winningTiles / numTilesWithoutFallout) * 100;
       if (winningPercent < percentToWin) return;
 
+      this.gameOver = true;
+
       // Don't congratulate if it's our own team
       if (winningTeam === this.player.team()) return;
 
-      this.hasSentWinnerClap = true;
       this.sendEmoji(AllPlayers, EMOJI_CONGRATULATE);
     } else {
       // FFA game: The largest nation congratulates if a human player won
@@ -156,6 +157,8 @@ export class NationEmojiBehavior {
         (firstPlace.numTilesOwned() / numTilesWithoutFallout) * 100;
       if (firstPlacePercent < percentToWin) return;
 
+      this.gameOver = true;
+
       // Only send if first place is a human
       if (firstPlace.type() !== PlayerType.Human) return;
 
@@ -166,13 +169,13 @@ export class NationEmojiBehavior {
         .sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0];
       if (largestNation !== this.player) return;
 
-      this.hasSentWinnerClap = true;
       this.sendEmoji(firstPlace, EMOJI_CONGRATULATE);
     }
   }
 
   // Brag with our crown
   private brag(): void {
+    if (this.gameOver) return;
     if (!this.random.chance(300)) return;
 
     const sorted = this.game
@@ -263,6 +266,7 @@ export class NationEmojiBehavior {
 
   sendEmoji(otherPlayer: Player | typeof AllPlayers, emojisList: number[]) {
     if (!this.shouldSendEmoji(otherPlayer, false)) return;
+    if (!this.player.canSendEmoji(otherPlayer)) return;
 
     this.game.addExecution(
       new EmojiExecution(
@@ -301,6 +305,7 @@ export function respondToEmoji(
   if (recipient === AllPlayers || recipient.type() !== PlayerType.Nation) {
     return;
   }
+  if (!recipient.canSendEmoji(sender)) return;
 
   if (emojiString === "🖕") {
     recipient.updateRelation(sender, -100);
@@ -346,6 +351,7 @@ export function respondToMIRV(
   mirvTarget: Player,
 ) {
   if (!random.chance(8)) return;
+  if (!mirvTarget.canSendEmoji(AllPlayers)) return;
 
   game.addExecution(
     new EmojiExecution(

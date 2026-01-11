@@ -1,27 +1,37 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
+import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
-export class MatchmakingModal extends LitElement {
+export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
-  private connected = false;
+  @state() private connected = false;
   @state() private socket: WebSocket | null = null;
-
   @state() private gameID: string | null = null;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+  private elo = "unknown";
 
   constructor() {
     super();
+    this.id = "page-matchmaking";
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        const userMeResponse = customEvent.detail as UserMeResponse;
+        this.elo =
+          userMeResponse.player?.leaderboard?.oneVone?.elo?.toString() ??
+          "unknown";
+        this.requestUpdate();
+      }
+    });
   }
 
   createRenderRoot() {
@@ -29,24 +39,106 @@ export class MatchmakingModal extends LitElement {
   }
 
   render() {
+    const eloDisplay = html`
+      <p class="text-center mt-2 mb-4 text-white/60">
+        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+      </p>
+    `;
+
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10"
+          : ""}"
+      >
+        <div
+          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+        >
+          <div class="flex items-center gap-4 flex-1">
+            <button
+              @click=${this.close}
+              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+              aria-label="${translateText("common.back")}"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
+            >
+              ${translateText("matchmaking_modal.title")}
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+          ${eloDisplay} ${this.renderInner()}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         id="matchmaking-modal"
         title="${translateText("matchmaking_modal.title")}"
+        hideCloseButton
+        hideHeader
       >
-        ${this.renderInner()}
+        ${content}
       </o-modal>
     `;
   }
 
   private renderInner() {
     if (!this.connected) {
-      return html`${translateText("matchmaking_modal.connecting")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.connecting")}
+          </p>
+        </div>
+      `;
     }
     if (this.gameID === null) {
-      return html`${translateText("matchmaking_modal.searching")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.searching")}
+          </p>
+        </div>
+      `;
     } else {
-      return html`${translateText("matchmaking_modal.waiting_for_game")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.waiting_for_game")}
+          </p>
+        </div>
+      `;
     }
   }
 
@@ -64,8 +156,8 @@ export class MatchmakingModal extends LitElement {
       }, 1000);
       this.socket?.send(
         JSON.stringify({
-          type: "auth",
-          playToken: await getPlayToken(),
+          type: "join",
+          jwt: await getPlayToken(),
         }),
       );
     };
@@ -81,26 +173,49 @@ export class MatchmakingModal extends LitElement {
     this.socket.onerror = (event: ErrorEvent) => {
       console.error("WebSocket error occurred:", event);
     };
-    this.socket.onclose = (event) => {
+    this.socket.onclose = () => {
       console.log("Matchmaking server closed connection");
     };
   }
 
-  public close() {
+  protected async onOpen(): Promise<void> {
+    const userMe = await getUserMe();
+
+    // Early return if modal was closed during async operation
+    if (!this.isModalOpen) {
+      return;
+    }
+
+    const isLoggedIn =
+      userMe &&
+      userMe.user &&
+      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
+    if (!isLoggedIn) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("matchmaking_button.must_login"),
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      this.close();
+      return;
+    }
+    this.connected = false;
+    this.gameID = null;
+    this.connect();
+    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
+  }
+
+  protected onClose(): void {
     this.connected = false;
     this.socket?.close();
-    this.modalEl?.close();
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
-  }
-
-  public async open() {
-    this.modalEl?.open();
-    this.requestUpdate();
-    this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
   }
 
   private async checkGame() {
@@ -147,8 +262,7 @@ export class MatchmakingModal extends LitElement {
 
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
-  @query("matchmaking-modal") private matchmakingModal: MatchmakingModal;
-  @state() private matchmakingEnabled = false;
+  @query("matchmaking-modal") private matchmakingModal?: MatchmakingModal;
 
   constructor() {
     super();
@@ -156,8 +270,6 @@ export class MatchmakingButton extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    const config = await getServerConfigFromClient();
-    this.matchmakingEnabled = config.enableMatchmaking();
   }
 
   createRenderRoot() {
@@ -165,19 +277,14 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
-    if (!this.matchmakingEnabled) {
-      return html``;
-    }
-
     return html`
       <div class="z-9999">
-        <button
+        <o-button
           @click="${this.open}"
-          class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-hidden focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
-          title="${translateText("matchmaking_modal.title")}"
-        >
-          Matchmaking
-        </button>
+          translationKey="matchmaking_modal.title"
+          block
+          secondary
+        ></o-button>
       </div>
       <matchmaking-modal></matchmaking-modal>
     `;
