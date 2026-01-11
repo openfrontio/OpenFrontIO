@@ -140,7 +140,7 @@ export class MobileNavBar extends LitElement {
           data-i18n="main.help"
         ></button>
         <div
-          class="flex flex-col w-full mt-auto [.in-game_&]:hidden flex w-full items-end justify-end pt-4 border-t border-white/10"
+          class="flex flex-col w-full mt-auto [.in-game_&]:hidden items-end justify-end pt-4 border-t border-white/10"
         >
           <lang-selector></lang-selector>
         </div>

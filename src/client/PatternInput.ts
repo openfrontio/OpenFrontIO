@@ -6,10 +6,20 @@ import { PlayerPattern } from "../core/Schemas";
 import { renderPatternPreview } from "./components/PatternButton";
 import { fetchCosmetics } from "./Cosmetics";
 import { translateText } from "./Utils";
+
+// Module-level cosmetics cache to avoid refetching on every component mount
+let cosmeticsCache: Promise<Cosmetics | null> | null = null;
+
+function getCachedCosmetics(): Promise<Cosmetics | null> {
+  cosmeticsCache ??= fetchCosmetics();
+  return cosmeticsCache;
+}
+
 @customElement("pattern-input")
 export class PatternInput extends LitElement {
   @state() public pattern: PlayerPattern | null = null;
   @state() public selectedColor: string | null = null;
+  @state() private isLoading: boolean = true;
 
   @property({ type: Boolean, attribute: "show-select-label" })
   public showSelectLabel: boolean = false;
@@ -44,8 +54,10 @@ export class PatternInput extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    this.cosmetics = await fetchCosmetics();
+    this.isLoading = true;
+    this.cosmetics = await getCachedCosmetics();
     this.updateFromSettings();
+    this.isLoading = false;
     window.addEventListener("pattern-selected", this._onPatternSelected);
   }
 
@@ -63,6 +75,19 @@ export class PatternInput extends LitElement {
     const showSelect = this.showSelectLabel && isDefault;
     const buttonTitle = translateText("territory_patterns.title");
 
+    // Show loading state
+    if (this.isLoading) {
+      return html`
+        <button
+          id="pattern-input"
+          class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-slate-900/80 rounded-lg overflow-hidden"
+          disabled
+        >
+          <span class="text-xs text-white/40">Loading...</span>
+        </button>
+      `;
+    }
+
     let previewContent;
     if (this.pattern) {
       previewContent = renderPatternPreview(this.pattern, 128, 128);
@@ -72,9 +97,8 @@ export class PatternInput extends LitElement {
 
     return html`
       <button
-        id="pattern-input_"
-        class="pattern-btn m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
-        style="padding: 0 !important;"
+        id="pattern-input"
+        class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >
