@@ -26,7 +26,7 @@ export class PublicLobby extends LitElement {
 
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 750;
+  private debounceDelay: number = 150;
   private lobbyIDToStart = new Map<GameID, number>();
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
