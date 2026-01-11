@@ -1,8 +1,8 @@
 {
   "map": {
     "height": 1420,
-    "num_land_tiles": 874650,
-    "width": 1750
+    "num_land_tiles": 874763,
+    "width": 1748
   },
   "map16x": {
     "height": 355,
@@ -11,10 +11,10 @@
   },
   "map4x": {
     "height": 710,
-    "num_land_tiles": 216592,
-    "width": 875
+    "num_land_tiles": 216609,
+    "width": 874
   },
-  "name": "lemnos",
+  "name": "Lemnos",
   "nations": [
     {
       "coordinates": [550, 317],
@@ -57,7 +57,7 @@
       "name": "Portianou"
     },
     {
-      "coordinates": [1177, 975],
+      "coordinates": [1074, 913],
       "flag": "",
       "name": "Pyrgos"
     }
