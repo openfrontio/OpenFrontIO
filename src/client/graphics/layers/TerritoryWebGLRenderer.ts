@@ -43,14 +43,18 @@ export class TerritoryWebGLRenderer {
   private readonly contestSpeedsTexture: WebGLTexture | null;
   private readonly contestStrengthsTexture: WebGLTexture | null;
   private readonly prevOwnerTexture: WebGLTexture | null;
+  private readonly olderOwnerTexture: WebGLTexture | null;
   private readonly stateFramebuffer: WebGLFramebuffer | null;
   private readonly prevStateFramebuffer: WebGLFramebuffer | null;
+  private readonly olderStateFramebuffer: WebGLFramebuffer | null;
   private readonly jfaTextureA: WebGLTexture | null;
   private readonly jfaTextureB: WebGLTexture | null;
   private readonly jfaFramebufferA: WebGLFramebuffer | null;
   private readonly jfaFramebufferB: WebGLFramebuffer | null;
+  private readonly jfaResultOlderTexture: WebGLTexture | null;
   private readonly jfaResultOldTexture: WebGLTexture | null;
   private readonly jfaResultNewTexture: WebGLTexture | null;
+  private readonly jfaResultOlderFramebuffer: WebGLFramebuffer | null;
   private readonly jfaResultOldFramebuffer: WebGLFramebuffer | null;
   private readonly jfaResultNewFramebuffer: WebGLFramebuffer | null;
   private readonly jfaSeedProgram: WebGLProgram | null;
@@ -70,6 +74,7 @@ export class TerritoryWebGLRenderer {
     viewScale: WebGLUniformLocation | null;
     viewOffset: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
+    latestState: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
@@ -138,14 +143,16 @@ export class TerritoryWebGLRenderer {
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
   private contestNow = 0;
-  private contestDurationMs = 0;
+  private contestDurationTicks = 0;
   private smoothProgress = 1;
   private smoothEnabled = true;
   private jfaSupported = false;
   private jfaDisabledReason: string | null = null;
   private jfaDirty = false;
+  private jfaHistoryInitialized = false;
   private prevStateCopySupported = false;
   private jfaSteps: number[] = [];
+  private interpolationPair: "prevCurrent" | "olderPrev" = "prevCurrent";
   private readonly userSettings = new UserSettings();
   private readonly patternBytesCache = new Map<string, Uint8Array>();
 
@@ -191,14 +198,18 @@ export class TerritoryWebGLRenderer {
       this.contestSpeedsTexture = null;
       this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
+      this.olderOwnerTexture = null;
       this.stateFramebuffer = null;
       this.prevStateFramebuffer = null;
+      this.olderStateFramebuffer = null;
       this.jfaTextureA = null;
       this.jfaTextureB = null;
       this.jfaFramebufferA = null;
       this.jfaFramebufferB = null;
+      this.jfaResultOlderTexture = null;
       this.jfaResultOldTexture = null;
       this.jfaResultNewTexture = null;
+      this.jfaResultOlderFramebuffer = null;
       this.jfaResultOldFramebuffer = null;
       this.jfaResultNewFramebuffer = null;
       this.jfaSeedProgram = null;
@@ -211,6 +222,7 @@ export class TerritoryWebGLRenderer {
         viewScale: null,
         viewOffset: null,
         state: null,
+        latestState: null,
         palette: null,
         relations: null,
         patterns: null,
@@ -264,14 +276,18 @@ export class TerritoryWebGLRenderer {
       this.contestSpeedsTexture = null;
       this.contestStrengthsTexture = null;
       this.prevOwnerTexture = null;
+      this.olderOwnerTexture = null;
       this.stateFramebuffer = null;
       this.prevStateFramebuffer = null;
+      this.olderStateFramebuffer = null;
       this.jfaTextureA = null;
       this.jfaTextureB = null;
       this.jfaFramebufferA = null;
       this.jfaFramebufferB = null;
+      this.jfaResultOlderTexture = null;
       this.jfaResultOldTexture = null;
       this.jfaResultNewTexture = null;
+      this.jfaResultOlderFramebuffer = null;
       this.jfaResultOldFramebuffer = null;
       this.jfaResultNewFramebuffer = null;
       this.jfaSeedProgram = null;
@@ -284,6 +300,7 @@ export class TerritoryWebGLRenderer {
         viewScale: null,
         viewOffset: null,
         state: null,
+        latestState: null,
         palette: null,
         relations: null,
         patterns: null,
@@ -357,6 +374,7 @@ export class TerritoryWebGLRenderer {
       viewScale: gl.getUniformLocation(this.program, "u_viewScale"),
       viewOffset: gl.getUniformLocation(this.program, "u_viewOffset"),
       state: gl.getUniformLocation(this.program, "u_state"),
+      latestState: gl.getUniformLocation(this.program, "u_latestState"),
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
@@ -372,7 +390,7 @@ export class TerritoryWebGLRenderer {
       contestNow: gl.getUniformLocation(this.program, "u_contestNow"),
       contestDuration: gl.getUniformLocation(
         this.program,
-        "u_contestDurationMs",
+        "u_contestDurationTicks",
       ),
       prevOwner: gl.getUniformLocation(this.program, "u_prevOwner"),
       jfaSeedsOld: gl.getUniformLocation(this.program, "u_jfaSeedsOld"),
@@ -466,14 +484,20 @@ export class TerritoryWebGLRenderer {
     this.contestSpeedsTexture = gl.createTexture();
     this.contestStrengthsTexture = gl.createTexture();
     this.prevOwnerTexture = gl.createTexture();
+    this.olderOwnerTexture = gl.createTexture();
     this.stateFramebuffer = gl.createFramebuffer();
     this.prevStateFramebuffer = gl.createFramebuffer();
+    this.olderStateFramebuffer = gl.createFramebuffer();
     this.jfaTextureA = this.jfaSupported ? gl.createTexture() : null;
     this.jfaTextureB = this.jfaSupported ? gl.createTexture() : null;
     this.jfaFramebufferA = this.jfaSupported ? gl.createFramebuffer() : null;
     this.jfaFramebufferB = this.jfaSupported ? gl.createFramebuffer() : null;
+    this.jfaResultOlderTexture = this.jfaSupported ? gl.createTexture() : null;
     this.jfaResultOldTexture = this.jfaSupported ? gl.createTexture() : null;
     this.jfaResultNewTexture = this.jfaSupported ? gl.createTexture() : null;
+    this.jfaResultOlderFramebuffer = this.jfaSupported
+      ? gl.createFramebuffer()
+      : null;
     this.jfaResultOldFramebuffer = this.jfaSupported
       ? gl.createFramebuffer()
       : null;
@@ -616,11 +640,32 @@ export class TerritoryWebGLRenderer {
       this.state,
     );
 
+    gl.activeTexture(gl.TEXTURE13);
+    gl.bindTexture(gl.TEXTURE_2D, this.olderOwnerTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R16UI,
+      this.mapWidth,
+      this.mapHeight,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_SHORT,
+      this.state,
+    );
+
     if (
       this.stateFramebuffer &&
       this.prevStateFramebuffer &&
+      this.olderStateFramebuffer &&
       this.stateTexture &&
-      this.prevOwnerTexture
+      this.prevOwnerTexture &&
+      this.olderOwnerTexture
     ) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.stateFramebuffer);
       gl.framebufferTexture2D(
@@ -640,9 +685,19 @@ export class TerritoryWebGLRenderer {
         0,
       );
       const prevStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.olderStateFramebuffer);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.olderOwnerTexture,
+        0,
+      );
+      const olderStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
       this.prevStateCopySupported =
         stateStatus === gl.FRAMEBUFFER_COMPLETE &&
-        prevStatus === gl.FRAMEBUFFER_COMPLETE;
+        prevStatus === gl.FRAMEBUFFER_COMPLETE &&
+        olderStatus === gl.FRAMEBUFFER_COMPLETE;
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
@@ -652,8 +707,10 @@ export class TerritoryWebGLRenderer {
       this.jfaTextureB &&
       this.jfaFramebufferA &&
       this.jfaFramebufferB &&
+      this.jfaResultOlderTexture &&
       this.jfaResultOldTexture &&
       this.jfaResultNewTexture &&
+      this.jfaResultOlderFramebuffer &&
       this.jfaResultOldFramebuffer &&
       this.jfaResultNewFramebuffer
     ) {
@@ -710,6 +767,24 @@ export class TerritoryWebGLRenderer {
         0,
       );
 
+      gl.activeTexture(gl.TEXTURE12);
+      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOlderTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG16F,
+        this.mapWidth,
+        this.mapHeight,
+        0,
+        gl.RG,
+        gl.HALF_FLOAT,
+        null,
+      );
+
       gl.activeTexture(gl.TEXTURE10);
       gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -746,6 +821,14 @@ export class TerritoryWebGLRenderer {
         null,
       );
 
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaResultOlderFramebuffer);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        this.jfaResultOlderTexture,
+        0,
+      );
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.jfaResultOldFramebuffer);
       gl.framebufferTexture2D(
         gl.FRAMEBUFFER,
@@ -770,6 +853,9 @@ export class TerritoryWebGLRenderer {
 
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
+    if (this.uniforms.latestState) {
+      gl.uniform1i(this.uniforms.latestState, 12);
+    }
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
     gl.uniform1i(this.uniforms.patterns, 3);
@@ -905,7 +991,7 @@ export class TerritoryWebGLRenderer {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
     }
     if (this.uniforms.contestDuration) {
-      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
+      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationTicks);
     }
     if (this.uniforms.smoothProgress) {
       gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
@@ -1167,9 +1253,9 @@ export class TerritoryWebGLRenderer {
     this.needsContestStrengthsUpload = true;
   }
 
-  setContestNow(nowPacked: number, durationMs: number) {
+  setContestNow(nowPacked: number, durationTicks: number) {
     this.contestNow = nowPacked | 0;
-    this.contestDurationMs = Math.max(0, durationMs);
+    this.contestDurationTicks = Math.max(0, durationTicks);
   }
 
   snapshotStateForSmoothing() {
@@ -1177,11 +1263,27 @@ export class TerritoryWebGLRenderer {
       !this.gl ||
       !this.prevStateCopySupported ||
       !this.stateFramebuffer ||
-      !this.prevStateFramebuffer
+      !this.prevStateFramebuffer ||
+      !this.olderStateFramebuffer
     ) {
       return;
     }
     const gl = this.gl;
+
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.prevStateFramebuffer);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.olderStateFramebuffer);
+    gl.blitFramebuffer(
+      0,
+      0,
+      this.mapWidth,
+      this.mapHeight,
+      0,
+      0,
+      this.mapWidth,
+      this.mapHeight,
+      gl.COLOR_BUFFER_BIT,
+      gl.NEAREST,
+    );
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.stateFramebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.prevStateFramebuffer);
     gl.blitFramebuffer(
@@ -1198,6 +1300,44 @@ export class TerritoryWebGLRenderer {
     );
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+
+    if (
+      this.jfaSupported &&
+      this.jfaResultOlderFramebuffer &&
+      this.jfaResultOldFramebuffer &&
+      this.jfaResultNewFramebuffer
+    ) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.jfaResultOldFramebuffer);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.jfaResultOlderFramebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.jfaResultNewFramebuffer);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.jfaResultOldFramebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    }
     this.jfaDirty = true;
   }
 
@@ -1212,6 +1352,10 @@ export class TerritoryWebGLRenderer {
       this.prevStateCopySupported &&
       !!this.jfaResultOldTexture &&
       !!this.jfaResultNewTexture;
+  }
+
+  setInterpolationPair(pair: "prevCurrent" | "olderPrev") {
+    this.interpolationPair = pair;
   }
 
   markAllDirty() {
@@ -1270,7 +1414,7 @@ export class TerritoryWebGLRenderer {
       uploadContestStrengthsSpan,
     );
 
-    if (this.jfaSupported && this.smoothEnabled) {
+    if (this.jfaSupported) {
       this.updateJfa();
     }
 
@@ -1278,9 +1422,23 @@ export class TerritoryWebGLRenderer {
     gl.viewport(0, 0, this.viewWidth, this.viewHeight);
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
-    if (this.stateTexture) {
+
+    const canUseOlderPair =
+      this.interpolationPair === "olderPrev" &&
+      !!this.prevOwnerTexture &&
+      !!this.olderOwnerTexture &&
+      !!this.jfaResultOldTexture &&
+      !!this.jfaResultOlderTexture;
+    const renderPair = canUseOlderPair ? "olderPrev" : "prevCurrent";
+
+    const toStateTexture =
+      renderPair === "olderPrev" ? this.prevOwnerTexture : this.stateTexture;
+    const fromStateTexture =
+      renderPair === "olderPrev" ? this.olderOwnerTexture : this.prevOwnerTexture;
+
+    if (toStateTexture) {
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
+      gl.bindTexture(gl.TEXTURE_2D, toStateTexture);
     }
     if (this.paletteTexture) {
       gl.activeTexture(gl.TEXTURE1);
@@ -1306,17 +1464,27 @@ export class TerritoryWebGLRenderer {
       gl.activeTexture(gl.TEXTURE6);
       gl.bindTexture(gl.TEXTURE_2D, this.contestTimesTexture);
     }
-    if (this.prevOwnerTexture) {
+    if (fromStateTexture) {
       gl.activeTexture(gl.TEXTURE7);
-      gl.bindTexture(gl.TEXTURE_2D, this.prevOwnerTexture);
+      gl.bindTexture(gl.TEXTURE_2D, fromStateTexture);
     }
-    if (this.jfaResultOldTexture) {
+
+    const seedsOld =
+      renderPair === "olderPrev" ? this.jfaResultOlderTexture : this.jfaResultOldTexture;
+    const seedsNew =
+      renderPair === "olderPrev" ? this.jfaResultOldTexture : this.jfaResultNewTexture;
+    if (seedsOld) {
       gl.activeTexture(gl.TEXTURE8);
-      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultOldTexture);
+      gl.bindTexture(gl.TEXTURE_2D, seedsOld);
     }
-    if (this.jfaResultNewTexture) {
+    if (seedsNew) {
       gl.activeTexture(gl.TEXTURE9);
-      gl.bindTexture(gl.TEXTURE_2D, this.jfaResultNewTexture);
+      gl.bindTexture(gl.TEXTURE_2D, seedsNew);
+    }
+
+    if (this.stateTexture) {
+      gl.activeTexture(gl.TEXTURE12);
+      gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
     }
     if (this.contestSpeedsTexture) {
       gl.activeTexture(gl.TEXTURE10);
@@ -1377,7 +1545,7 @@ export class TerritoryWebGLRenderer {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
     }
     if (this.uniforms.contestDuration) {
-      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationMs);
+      gl.uniform1f(this.uniforms.contestDuration, this.contestDurationTicks);
     }
     if (this.uniforms.smoothProgress) {
       gl.uniform1f(this.uniforms.smoothProgress, this.smoothProgress);
@@ -1408,7 +1576,7 @@ export class TerritoryWebGLRenderer {
       jfaDisabledReason: this.jfaDisabledReason,
       jfaDirty: this.jfaDirty,
       prevStateCopySupported: this.prevStateCopySupported,
-      contestDurationMs: this.contestDurationMs,
+      contestDurationTicks: this.contestDurationTicks,
       contestNow: this.contestNow,
       hoveredPlayerId: this.hoveredPlayerId,
     };
@@ -1662,11 +1830,8 @@ export class TerritoryWebGLRenderer {
       !this.jfaFramebufferB ||
       !this.jfaTextureA ||
       !this.jfaTextureB ||
-      !this.prevOwnerTexture ||
       !this.stateTexture ||
-      !this.jfaResultOldFramebuffer ||
       !this.jfaResultNewFramebuffer ||
-      !this.jfaResultOldTexture ||
       !this.jfaResultNewTexture ||
       !this.jfaVao
     ) {
@@ -1749,10 +1914,46 @@ export class TerritoryWebGLRenderer {
       );
     };
 
-    runJfa(this.prevOwnerTexture, this.jfaResultOldFramebuffer);
     runJfa(this.stateTexture, this.jfaResultNewFramebuffer);
 
     this.jfaDirty = false;
+
+    if (
+      !this.jfaHistoryInitialized &&
+      this.jfaResultOlderFramebuffer &&
+      this.jfaResultOldFramebuffer
+    ) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.jfaResultNewFramebuffer);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.jfaResultOldFramebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.jfaResultOlderFramebuffer);
+      gl.blitFramebuffer(
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        0,
+        0,
+        this.mapWidth,
+        this.mapHeight,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+      this.jfaHistoryInitialized = true;
+    }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     if (prevBlend) {
@@ -2142,6 +2343,7 @@ export class TerritoryWebGLRenderer {
       precision highp usampler2D;
 
       uniform usampler2D u_state;
+      uniform usampler2D u_latestState;
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
       uniform usampler2D u_patterns;
@@ -2152,7 +2354,7 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_contestStrengths;
       uniform bool u_jfaAvailable;
       uniform int u_contestNow;
-      uniform float u_contestDurationMs;
+      uniform float u_contestDurationTicks;
       uniform usampler2D u_prevOwner;
       uniform sampler2D u_jfaSeedsOld;
       uniform sampler2D u_jfaSeedsNew;
@@ -2377,6 +2579,8 @@ export class TerritoryWebGLRenderer {
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
+        uint latestState = texelFetch(u_latestState, texCoord, 0).r;
+        uint latestOwner = latestState & 0xFFFu;
         uint oldOwner = prevOwnerAtTex(texCoord);
         bool smoothActive = u_smoothEnabled &&
           u_smoothProgress < 1.0 &&
@@ -2398,7 +2602,7 @@ export class TerritoryWebGLRenderer {
           uint elapsed = nowTime >= lastTime
             ? (nowTime - lastTime)
             : (CONTEST_WRAP - lastTime + nowTime);
-          contested = float(elapsed) < u_contestDurationMs;
+          contested = float(elapsed) < u_contestDurationTicks;
         }
 
         bool isBorder = false;
@@ -2511,8 +2715,15 @@ export class TerritoryWebGLRenderer {
 
         vec3 contestedFillColor = fillColor;
         float contestedFillAlpha = fillAlpha;
-        if (contested && owner != 0u) {
-          vec3 defenderBase = ownerBase;
+        bool useContestedFill = false;
+        if (contested && latestOwner != 0u) {
+          useContestedFill = true;
+          vec3 latestOwnerBase = texelFetch(
+            u_palette,
+            ivec2(int(latestOwner) * 2, 0),
+            0
+          ).rgb;
+          vec3 defenderBase = latestOwnerBase;
           if (defender != 0u) {
             vec4 defenderColor = texelFetch(
               u_palette,
@@ -2523,12 +2734,12 @@ export class TerritoryWebGLRenderer {
           }
           float strength = contestStrength(contestId);
           float noise = blueNoise(texCoord);
-          contestedFillColor = noise < strength ? ownerBase : defenderBase;
+          contestedFillColor = noise < strength ? latestOwnerBase : defenderBase;
           contestedFillAlpha = u_alpha;
         }
 
-        vec3 color = contested ? contestedFillColor : fillColor;
-        float a = contested ? contestedFillAlpha : fillAlpha;
+        vec3 color = useContestedFill ? contestedFillColor : fillColor;
+        float a = useContestedFill ? contestedFillAlpha : fillAlpha;
 
         if (isBorder && owner != 0u) {
           color = borderColor;
@@ -2661,7 +2872,27 @@ export class TerritoryWebGLRenderer {
           }
         }
 
-        if (contested && owner != 0u && u_jfaAvailable) {
+        bool pendingOwnerChange = latestOwner != owner;
+        if (pendingOwnerChange && !useContestedFill && !u_alternativeView) {
+          vec3 hintColor = vec3(1.0);
+          if (latestOwner != 0u) {
+            hintColor = texelFetch(
+              u_palette,
+              ivec2(int(latestOwner) * 2, 0),
+              0
+            ).rgb;
+          }
+          const float HINT_ALPHA_RATIO = 0.12;
+          float hintAlpha = u_alpha * HINT_ALPHA_RATIO;
+          if (a < hintAlpha) {
+            a = hintAlpha;
+            color = hintColor;
+          } else {
+            color = mix(color, hintColor, 0.08);
+          }
+        }
+
+        if (useContestedFill && u_jfaAvailable) {
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
           if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {

@@ -20,7 +20,7 @@ import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
 const CONTEST_ID_MASK = 0x7fff;
 const CONTEST_ATTACKER_EVER_BIT = 0x8000;
 const CONTEST_TIME_WRAP = 32768;
-const DEFAULT_CONTEST_DURATION_MS = 200;
+const DEFAULT_CONTEST_DURATION_TICKS = 2;
 const CONTEST_SPEED_TPS_MAX = 20;
 const CONTEST_SPEED_EMA_ALPHA = 0.8;
 const CONTEST_SPEED_DECAY_HALFLIFE_MS = 100;
@@ -65,7 +65,7 @@ export class TerritoryLayer implements Layer {
   private lastFocusedPlayer: PlayerView | null = null;
   private lastMyPlayerSmallId: number | null = null;
   private lastPaletteSignature: string | null = null;
-  private contestDurationMs = DEFAULT_CONTEST_DURATION_MS;
+  private contestDurationTicks = DEFAULT_CONTEST_DURATION_TICKS;
   private contestActive = false;
   private contestNextId = 1;
   private contestFreeIds: number[] = [];
@@ -74,10 +74,15 @@ export class TerritoryLayer implements Layer {
   private contestAttackers: Uint16Array | null = null;
   private contestTileIndices: Int32Array | null = null;
   private contestComponents = new Map<number, ContestComponent>();
-  private smoothDurationMs = 100;
-  private smoothActive = false;
-  private smoothStartMs = 0;
-  private smoothSnapshotPending = false;
+  private tickSnapshotPending = false;
+  private tickTimeMsCurrent = 0;
+  private tickTimeMsPrev = 0;
+  private tickTimeMsOlder = 0;
+  private tickNumberCurrent: number | null = null;
+  private tickNumberPrev: number | null = null;
+  private tickNumberOlder: number | null = null;
+  private interpolationDelayMs = 100;
+  private lastInterpolationPair: "prevCurrent" | "olderPrev" = "prevCurrent";
   private contestSpeedDeltas = new Map<number, number>();
   private contestSpeedLastUpdateMs = 0;
 
@@ -116,17 +121,27 @@ export class TerritoryLayer implements Layer {
     }
     this.refreshPaletteIfNeeded();
 
+    const tickNumber = this.game.ticks();
+    if (this.tickNumberCurrent !== tickNumber) {
+      this.tickNumberOlder = this.tickNumberPrev;
+      this.tickNumberPrev = this.tickNumberCurrent;
+      this.tickNumberCurrent = tickNumber;
+
+      this.tickTimeMsOlder = this.tickTimeMsPrev;
+      this.tickTimeMsPrev = this.tickTimeMsCurrent;
+      this.tickTimeMsCurrent = now;
+
+      if (this.territoryRenderer) {
+        this.tickSnapshotPending = true;
+      }
+    }
+
     this.game.recentlyUpdatedTiles().forEach((t) => this.markTile(t));
     const ownerUpdates = this.game.recentlyUpdatedOwnerTiles();
-    if (ownerUpdates.length > 0) {
-      if (this.territoryRenderer) {
-        this.smoothSnapshotPending = true;
-      }
-      this.smoothStartMs = now;
-      this.smoothActive = true;
-    }
     this.contestSpeedDeltas.clear();
-    this.applyContestChanges(ownerUpdates, now);
+    const nowTickPacked = this.packContestTick(this.game.ticks());
+    this.applyContestChanges(ownerUpdates, nowTickPacked);
+    this.updateContestState(nowTickPacked);
     this.updateContestSpeeds(now);
     this.updateContestStrengths();
     const updates = this.game.updatesSinceLastTick();
@@ -395,7 +410,6 @@ export class TerritoryLayer implements Layer {
     this.configureRenderers();
     this.ensureContestScratch();
     this.syncContestStateToRenderer();
-    this.syncSmoothStateToRenderer();
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -456,12 +470,11 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const now = this.nowMs();
-    if (this.smoothSnapshotPending) {
+    if (this.tickSnapshotPending) {
       this.territoryRenderer.snapshotStateForSmoothing();
-      this.smoothSnapshotPending = false;
+      this.tickSnapshotPending = false;
     }
-    this.updateSmoothState(now);
-    this.updateContestState(now);
+    this.updateInterpolationState(now);
 
     const renderTerritoryStart = FrameProfiler.start();
     this.territoryRenderer.setViewSize(
@@ -588,20 +601,38 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  private updateSmoothState(now: number) {
+  private updateInterpolationState(now: number) {
     if (!this.territoryRenderer) {
       return;
     }
-    let progress = 1;
-    if (this.smoothActive) {
-      const elapsed = now - this.smoothStartMs;
-      progress = Math.max(0, Math.min(1, elapsed / this.smoothDurationMs));
-      if (progress >= 1) {
-        this.smoothActive = false;
-      }
+
+    if (this.tickTimeMsPrev <= 0 || this.tickTimeMsCurrent <= 0) {
+      this.lastInterpolationPair = "prevCurrent";
+      this.territoryRenderer.setInterpolationPair("prevCurrent");
+      this.territoryRenderer.setSmoothProgress(1);
+      this.territoryRenderer.setSmoothEnabled(false);
+      return;
     }
+
+    const renderTime = now - this.interpolationDelayMs;
+
+    let pair: "prevCurrent" | "olderPrev" = "prevCurrent";
+    let fromTime = this.tickTimeMsPrev;
+    let toTime = this.tickTimeMsCurrent;
+
+    if (this.tickTimeMsOlder > 0 && renderTime < this.tickTimeMsPrev) {
+      pair = "olderPrev";
+      fromTime = this.tickTimeMsOlder;
+      toTime = this.tickTimeMsPrev;
+    }
+
+    const denom = Math.max(1, Math.min(250, toTime - fromTime));
+    const progress = Math.max(0, Math.min(1, (renderTime - fromTime) / denom));
+
+    this.lastInterpolationPair = pair;
+    this.territoryRenderer.setInterpolationPair(pair);
     this.territoryRenderer.setSmoothProgress(progress);
-    this.territoryRenderer.setSmoothEnabled(this.smoothActive);
+    this.territoryRenderer.setSmoothEnabled(true);
   }
 
   private recordContestSpeed(componentId: number) {
@@ -611,13 +642,12 @@ export class TerritoryLayer implements Layer {
 
   private applyContestChanges(
     changes: Array<{ tile: TileRef; previousOwner: number; newOwner: number }>,
-    now: number,
+    nowTickPacked: number,
   ) {
     if (!this.territoryRenderer || changes.length === 0) {
       return;
     }
     this.ensureContestScratch();
-    const nowPacked = this.packContestTime(now);
 
     for (const change of changes) {
       if (change.newOwner === change.previousOwner) {
@@ -630,7 +660,7 @@ export class TerritoryLayer implements Layer {
           tile,
           change.previousOwner,
           change.newOwner,
-          nowPacked,
+          nowTickPacked,
         );
         if (component) {
           this.recordContestSpeed(component.id);
@@ -645,7 +675,7 @@ export class TerritoryLayer implements Layer {
           tile,
           change.previousOwner,
           change.newOwner,
-          nowPacked,
+          nowTickPacked,
         );
         if (newComponent) {
           this.recordContestSpeed(newComponent.id);
@@ -666,8 +696,8 @@ export class TerritoryLayer implements Layer {
           component.id,
           attackerEver,
         );
-        component.lastActivityPacked = nowPacked;
-        this.territoryRenderer.setContestTime(component.id, nowPacked);
+        component.lastActivityPacked = nowTickPacked;
+        this.territoryRenderer.setContestTime(component.id, nowTickPacked);
         this.recordContestSpeed(component.id);
       } else {
         this.removeTileFromComponent(tile, component);
@@ -675,7 +705,7 @@ export class TerritoryLayer implements Layer {
           tile,
           change.previousOwner,
           change.newOwner,
-          nowPacked,
+          nowTickPacked,
         );
         if (newComponent) {
           this.recordContestSpeed(newComponent.id);
@@ -783,13 +813,15 @@ export class TerritoryLayer implements Layer {
     return total;
   }
 
-  private updateContestState(now: number) {
+  private updateContestState(nowTickPacked: number) {
     if (!this.territoryRenderer) {
       return;
     }
     this.ensureContestScratch();
-    const nowPacked = this.packContestTime(now);
-    this.territoryRenderer.setContestNow(nowPacked, this.contestDurationMs);
+    this.territoryRenderer.setContestNow(
+      nowTickPacked,
+      this.contestDurationTicks,
+    );
 
     if (!this.contestActive) {
       return;
@@ -798,10 +830,10 @@ export class TerritoryLayer implements Layer {
     const expired: ContestComponent[] = [];
     for (const component of this.contestComponents.values()) {
       const elapsed = this.contestElapsed(
-        nowPacked,
+        nowTickPacked,
         component.lastActivityPacked,
       );
-      if (elapsed >= this.contestDurationMs) {
+      if (elapsed >= this.contestDurationTicks) {
         expired.push(component);
       }
     }
@@ -815,7 +847,7 @@ export class TerritoryLayer implements Layer {
     tile: TileRef,
     defender: number,
     attacker: number,
-    nowPacked: number,
+    nowTickPacked: number,
   ): ContestComponent | null {
     if (attacker === defender || attacker === 0 || defender === 0) {
       return null;
@@ -823,7 +855,7 @@ export class TerritoryLayer implements Layer {
     const neighbors = this.collectNeighborComponents(tile, attacker, defender);
     let component: ContestComponent;
     if (neighbors.length === 0) {
-      component = this.createContestComponent(attacker, defender, nowPacked);
+      component = this.createContestComponent(attacker, defender, nowTickPacked);
     } else {
       component = neighbors[0];
       for (let i = 1; i < neighbors.length; i++) {
@@ -832,8 +864,8 @@ export class TerritoryLayer implements Layer {
     }
 
     this.addTileToComponent(tile, component, true);
-    component.lastActivityPacked = nowPacked;
-    this.territoryRenderer?.setContestTime(component.id, nowPacked);
+    component.lastActivityPacked = nowTickPacked;
+    this.territoryRenderer?.setContestTime(component.id, nowTickPacked);
     return component;
   }
 
@@ -864,14 +896,14 @@ export class TerritoryLayer implements Layer {
   private createContestComponent(
     attacker: number,
     defender: number,
-    nowPacked: number,
+    nowTickPacked: number,
   ): ContestComponent {
     const id = this.allocateContestComponentId();
     const component: ContestComponent = {
       id,
       attacker,
       defender,
-      lastActivityPacked: nowPacked,
+      lastActivityPacked: nowTickPacked,
       tiles: [],
       speed: 0,
       strength: 0.5,
@@ -1032,8 +1064,8 @@ export class TerritoryLayer implements Layer {
     return (this.contestComponentIds![tile] & CONTEST_ATTACKER_EVER_BIT) !== 0;
   }
 
-  private packContestTime(now: number): number {
-    return Math.floor(now) % CONTEST_TIME_WRAP;
+  private packContestTick(tick: number): number {
+    return Math.floor(tick) % CONTEST_TIME_WRAP;
   }
 
   private contestElapsed(nowPacked: number, startPacked: number): number {
@@ -1084,25 +1116,6 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  private syncSmoothStateToRenderer() {
-    if (!this.territoryRenderer) {
-      return;
-    }
-    if (this.smoothActive) {
-      const now = this.nowMs();
-      const elapsed = now - this.smoothStartMs;
-      const progress = Math.max(
-        0,
-        Math.min(1, elapsed / this.smoothDurationMs),
-      );
-      this.territoryRenderer.setSmoothProgress(progress);
-      this.territoryRenderer.setSmoothEnabled(true);
-    } else {
-      this.territoryRenderer.setSmoothEnabled(false);
-      this.territoryRenderer.setSmoothProgress(1);
-    }
-  }
-
   private computePaletteSignature(): string {
     let maxSmallId = 0;
     for (const player of this.game.playerViews()) {
@@ -1140,12 +1153,13 @@ export class TerritoryLayer implements Layer {
       `view: ${stats.viewWidth}x${stats.viewHeight}`,
       `scale: ${stats.viewScale.toFixed(2)}`,
       `offset: ${stats.viewOffsetX.toFixed(1)}, ${stats.viewOffsetY.toFixed(1)}`,
-      `smooth: ${stats.smoothEnabled ? "on" : "off"} ${stats.smoothProgress.toFixed(2)} active ${this.smoothActive ? "yes" : "no"}`,
+      `smooth: ${stats.smoothEnabled ? "on" : "off"} ${stats.smoothProgress.toFixed(2)} pair ${this.lastInterpolationPair}`,
+      `tick: ${this.tickNumberCurrent ?? "-"} prev ${this.tickNumberPrev ?? "-"}`,
+      `delayMs: ${this.interpolationDelayMs.toFixed(0)}`,
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
       `contest: ${this.contestActive ? "on" : "off"} comps ${this.contestComponents.size}`,
-      `contestMs: ${this.contestDurationMs}`,
-      `smoothMs: ${this.smoothDurationMs}`,
+      `contestTicks: ${this.contestDurationTicks}`,
       `hovered: ${stats.hoveredPlayerId}`,
     ];
     const padding = 6;
