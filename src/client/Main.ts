@@ -51,6 +51,7 @@ import {
   translateText,
 } from "./Utils";
 import "./components/DesktopNavBar";
+import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/baseComponents/Button";
