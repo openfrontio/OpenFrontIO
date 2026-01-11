@@ -100,6 +100,7 @@ export interface Config {
   attackLogic(
     gm: Game,
     attackTroops: number,
+    attackLossMultiplier: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
