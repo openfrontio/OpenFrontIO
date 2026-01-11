@@ -153,37 +153,39 @@ export class HostLobbyModal extends BaseModal {
               class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
               title="Toggle Visibility"
             >
-              ${this.lobbyIdVisible
-                ? html`<svg
-                    viewBox="0 0 512 512"
-                    height="16px"
-                    width="16px"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                    ></path>
-                  </svg>`
-                : html`<svg
-                    viewBox="0 0 512 512"
-                    height="16px"
-                    width="16px"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                    ></path>
-                    <path
-                      d="M144 256l224 0"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                      stroke-linecap="round"
-                    ></path>
-                  </svg>`}
+              ${
+                this.lobbyIdVisible
+                  ? html`<svg
+                      viewBox="0 0 512 512"
+                      height="16px"
+                      width="16px"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                      ></path>
+                    </svg>`
+                  : html`<svg
+                      viewBox="0 0 512 512"
+                      height="16px"
+                      width="16px"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="32"
+                      ></path>
+                      <path
+                        d="M144 256l224 0"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="32"
+                        stroke-linecap="round"
+                      ></path>
+                    </svg>`
+              }
             </button>
             <button
               @click=${this.copyToClipboard}
@@ -198,11 +200,13 @@ export class HostLobbyModal extends BaseModal {
               aria-label="${translateText("common.click_to_copy")}"
               type="button"
             >
-              ${this.copySuccess
-                ? translateText("common.copied")
-                : this.lobbyIdVisible
-                  ? this.lobbyId
-                  : "••••••••"}
+              ${
+                this.copySuccess
+                  ? translateText("common.copied")
+                  : this.lobbyIdVisible
+                    ? this.lobbyId
+                    : "••••••••"
+              }
             </button>
           </div>
         </div>
@@ -283,10 +287,11 @@ export class HostLobbyModal extends BaseModal {
                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                   >
                     <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${
+                        this.useRandomMap
+                          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                      }"
                       @click=${this.handleSelectRandomMap}
                     >
                       <div
@@ -421,54 +426,56 @@ export class HostLobbyModal extends BaseModal {
               </div>
             </div>
 
-            ${this.gameMode === GameMode.FFA
-              ? ""
-              : html`
-                  <!-- Team Count -->
-                  <div class="space-y-6">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                    >
-                      ${translateText("host_modal.team_count")}
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      ${[
-                        2,
-                        3,
-                        4,
-                        5,
-                        6,
-                        7,
-                        Quads,
-                        Trios,
-                        Duos,
-                        HumansVsNations,
-                      ].map((o) => {
-                        const isSelected = this.teamCount === o;
-                        return html`
-                          <button
-                            @click=${() => this.handleTeamCountSelection(o)}
-                            class="w-full px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
-                              ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                          >
-                            <span
-                              class="text-xs font-bold uppercase tracking-wider text-center text-white break-words hyphens-auto"
+            ${
+              this.gameMode === GameMode.FFA
+                ? ""
+                : html`
+                    <!-- Team Count -->
+                    <div class="space-y-6">
+                      <div
+                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+                      >
+                        ${translateText("host_modal.team_count")}
+                      </div>
+                      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        ${[
+                          2,
+                          3,
+                          4,
+                          5,
+                          6,
+                          7,
+                          Quads,
+                          Trios,
+                          Duos,
+                          HumansVsNations,
+                        ].map((o) => {
+                          const isSelected = this.teamCount === o;
+                          return html`
+                            <button
+                              @click=${() => this.handleTeamCountSelection(o)}
+                              class="w-full px-4 py-3 rounded-xl border transition-all duration-200 flex items-center justify-center ${isSelected
+                                ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
                             >
-                              ${typeof o === "string"
-                                ? o === HumansVsNations
-                                  ? translateText("public_lobby.teams_hvn")
-                                  : translateText(`host_modal.teams_${o}`)
-                                : translateText("public_lobby.teams", {
-                                    num: o,
-                                  })}
-                            </span>
-                          </button>
-                        `;
-                      })}
+                              <span
+                                class="text-xs font-bold uppercase tracking-wider text-center text-white break-words hyphens-auto"
+                              >
+                                ${typeof o === "string"
+                                  ? o === HumansVsNations
+                                    ? translateText("public_lobby.teams_hvn")
+                                    : translateText(`host_modal.teams_${o}`)
+                                  : translateText("public_lobby.teams", {
+                                      num: o,
+                                    })}
+                              </span>
+                            </button>
+                          `;
+                        })}
+                      </div>
                     </div>
-                  </div>
-                `}
+                  `
+            }
 
             <!-- Game Options -->
             <div class="space-y-6">
@@ -500,10 +507,11 @@ export class HostLobbyModal extends BaseModal {
               <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Bots Slider -->
                 <div
-                  class="col-span-2 rounded-xl p-4 flex flex-col justify-center min-h-[100px] border transition-all duration-200 ${this
-                    .bots > 0
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+                  class="col-span-2 rounded-xl p-4 flex flex-col justify-center min-h-[100px] border transition-all duration-200 ${
+                    this.bots > 0
+                      ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                      : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"
+                  }"
                 >
                   <fluent-slider
                     min="0"
@@ -516,16 +524,18 @@ export class HostLobbyModal extends BaseModal {
                   ></fluent-slider>
                 </div>
 
-                ${!(
-                  this.gameMode === GameMode.Team &&
-                  this.teamCount === HumansVsNations
-                )
-                  ? this.renderOptionToggle(
-                      "host_modal.disable_nations",
-                      this.disableNations,
-                      this.handleDisableNationsChange,
-                    )
-                  : ""}
+                ${
+                  !(
+                    this.gameMode === GameMode.Team &&
+                    this.teamCount === HumansVsNations
+                  )
+                    ? this.renderOptionToggle(
+                        "host_modal.disable_nations",
+                        this.disableNations,
+                        this.handleDisableNationsChange,
+                      )
+                    : ""
+                }
                 ${this.renderOptionToggle(
                   "host_modal.instant_build",
                   this.instantBuild,
@@ -591,74 +601,83 @@ export class HostLobbyModal extends BaseModal {
                 <div
                   role="button"
                   tabindex="0"
-                  @click=${this.createToggleHandlers(
-                    () => this.maxTimer,
-                    (val) => (this.maxTimer = val),
-                    () => this.maxTimerValue,
-                    (val) => (this.maxTimerValue = val),
-                    30,
-                  ).click}
-                  @keydown=${this.createToggleHandlers(
-                    () => this.maxTimer,
-                    (val) => (this.maxTimer = val),
-                    () => this.maxTimerValue,
-                    (val) => (this.maxTimerValue = val),
-                    30,
-                  ).keydown}
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .maxTimer
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+                  @click=${
+                    this.createToggleHandlers(
+                      () => this.maxTimer,
+                      (val) => (this.maxTimer = val),
+                      () => this.maxTimerValue,
+                      (val) => (this.maxTimerValue = val),
+                      30,
+                    ).click
+                  }
+                  @keydown=${
+                    this.createToggleHandlers(
+                      () => this.maxTimer,
+                      (val) => (this.maxTimer = val),
+                      () => this.maxTimerValue,
+                      (val) => (this.maxTimerValue = val),
+                      30,
+                    ).keydown
+                  }
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${
+                    this.maxTimer
+                      ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                      : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"
+                  }"
                 >
                   <div class="flex items-center justify-center w-full mt-1">
                     <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .maxTimer
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        this.maxTimer
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-white/20 bg-white/5"
+                      }"
                     >
-                      ${this.maxTimer
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
+                      ${
+                        this.maxTimer
+                          ? html`<svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              class="h-3 w-3 text-white"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd"
+                              />
+                            </svg>`
+                          : ""
+                      }
                     </div>
                   </div>
 
-                  ${this.maxTimer
-                    ? html`
-                        <input
-                          type="number"
-                          min="0"
-                          max="120"
-                          .value=${String(this.maxTimerValue ?? 0)}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                          @click=${(e: Event) => e.stopPropagation()}
-                          @input=${this.handleMaxTimerValueChanges}
-                          @keydown=${this.handleMaxTimerValueKeyDown}
-                          placeholder=${translateText(
-                            "host_modal.mins_placeholder",
-                          )}
-                        />
-                      `
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
+                  ${
+                    this.maxTimer
+                      ? html`
+                          <input
+                            type="number"
+                            min="0"
+                            max="120"
+                            .value=${String(this.maxTimerValue ?? 0)}
+                            class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                            @click=${(e: Event) => e.stopPropagation()}
+                            @input=${this.handleMaxTimerValueChanges}
+                            @keydown=${this.handleMaxTimerValueKeyDown}
+                            placeholder=${translateText(
+                              "host_modal.mins_placeholder",
+                            )}
+                          />
+                        `
+                      : html`<div
+                          class="h-[2px] w-4 bg-white/10 rounded my-3"
+                        ></div>`
+                  }
 
                   <div
-                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
-                      .maxTimer
-                      ? "text-white"
-                      : "text-white/60"}"
+                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${
+                      this.maxTimer ? "text-white" : "text-white/60"
+                    }"
                   >
                     ${translateText("host_modal.max_timer")}
                   </div>
@@ -668,77 +687,86 @@ export class HostLobbyModal extends BaseModal {
                 <div
                   role="button"
                   tabindex="0"
-                  @click=${this.createToggleHandlers(
-                    () => this.spawnImmunity,
-                    (val) => (this.spawnImmunity = val),
-                    () => this.spawnImmunityDurationMinutes,
-                    (val) => (this.spawnImmunityDurationMinutes = val),
-                    5,
-                  ).click}
-                  @keydown=${this.createToggleHandlers(
-                    () => this.spawnImmunity,
-                    (val) => (this.spawnImmunity = val),
-                    () => this.spawnImmunityDurationMinutes,
-                    (val) => (this.spawnImmunityDurationMinutes = val),
-                    5,
-                  ).keydown}
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .spawnImmunity
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
+                  @click=${
+                    this.createToggleHandlers(
+                      () => this.spawnImmunity,
+                      (val) => (this.spawnImmunity = val),
+                      () => this.spawnImmunityDurationMinutes,
+                      (val) => (this.spawnImmunityDurationMinutes = val),
+                      5,
+                    ).click
+                  }
+                  @keydown=${
+                    this.createToggleHandlers(
+                      () => this.spawnImmunity,
+                      (val) => (this.spawnImmunity = val),
+                      () => this.spawnImmunityDurationMinutes,
+                      (val) => (this.spawnImmunityDurationMinutes = val),
+                      5,
+                    ).keydown
+                  }
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${
+                    this.spawnImmunity
+                      ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                      : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"
+                  }"
                 >
                   <div class="flex items-center justify-center w-full mt-1">
                     <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .spawnImmunity
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        this.spawnImmunity
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-white/20 bg-white/5"
+                      }"
                     >
-                      ${this.spawnImmunity
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
+                      ${
+                        this.spawnImmunity
+                          ? html`<svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              class="h-3 w-3 text-white"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd"
+                              />
+                            </svg>`
+                          : ""
+                      }
                     </div>
                   </div>
 
-                  ${this.spawnImmunity
-                    ? html`
-                        <input
-                          type="number"
-                          min="0"
-                          max="120"
-                          step="1"
-                          .value=${String(
-                            this.spawnImmunityDurationMinutes ?? 0,
-                          )}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                          @click=${(e: Event) => e.stopPropagation()}
-                          @input=${this.handleSpawnImmunityDurationInput}
-                          @keydown=${this.handleSpawnImmunityDurationKeyDown}
-                          placeholder=${translateText(
-                            "host_modal.mins_placeholder",
-                          )}
-                        />
-                      `
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
+                  ${
+                    this.spawnImmunity
+                      ? html`
+                          <input
+                            type="number"
+                            min="0"
+                            max="120"
+                            step="1"
+                            .value=${String(
+                              this.spawnImmunityDurationMinutes ?? 0,
+                            )}
+                            class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                            @click=${(e: Event) => e.stopPropagation()}
+                            @input=${this.handleSpawnImmunityDurationInput}
+                            @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                            placeholder=${translateText(
+                              "host_modal.mins_placeholder",
+                            )}
+                          />
+                        `
+                      : html`<div
+                          class="h-[2px] w-4 bg-white/10 rounded my-3"
+                        ></div>`
+                  }
 
                   <div
-                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
-                      .spawnImmunity
-                      ? "text-white"
-                      : "text-white/60"}"
+                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${
+                      this.spawnImmunity ? "text-white" : "text-white/60"
+                    }"
                   >
                     ${translateText("host_modal.player_immunity_duration")}
                   </div>
@@ -788,14 +816,18 @@ export class HostLobbyModal extends BaseModal {
                   class="text-xs font-bold text-white/40 uppercase tracking-widest"
                 >
                   ${this.clients.length}
-                  ${this.clients.length === 1
-                    ? translateText("host_modal.player")
-                    : translateText("host_modal.players")}
+                  ${
+                    this.clients.length === 1
+                      ? translateText("host_modal.player")
+                      : translateText("host_modal.players")
+                  }
                   <span style="margin: 0 8px;">•</span>
                   ${this.getEffectiveNationCount()}
-                  ${this.getEffectiveNationCount() === 1
-                    ? translateText("host_modal.nation_player")
-                    : translateText("host_modal.nation_players")}
+                  ${
+                    this.getEffectiveNationCount() === 1
+                      ? translateText("host_modal.nation_player")
+                      : translateText("host_modal.nation_players")
+                  }
                 </div>
               </div>
 
@@ -841,9 +873,11 @@ export class HostLobbyModal extends BaseModal {
             @click=${this.startGame}
             ?disabled=${this.clients.length < 2}
           >
-            ${this.clients.length === 1
-              ? translateText("host_modal.waiting")
-              : translateText("host_modal.start")}
+            ${
+              this.clients.length === 1
+                ? translateText("host_modal.waiting")
+                : translateText("host_modal.start")
+            }
           </button>
         </div>
       </div>
