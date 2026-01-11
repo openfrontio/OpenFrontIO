@@ -75,6 +75,11 @@ export class NationWarshipBehavior {
   }
 
   private maybeRetaliateWithWarship(tile: TileRef, enemy: Player): void {
+    // Don't send too many warships
+    if (this.player.units(UnitType.Warship).length >= 10) {
+      return;
+    }
+
     const { difficulty } = this.game.config().gameConfig();
     // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
     if (

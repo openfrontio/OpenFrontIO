@@ -89,7 +89,9 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: UnitType | null) {}
 }
 
-export class SwapRocketDirectionEvent implements GameEvent {}
+export class SwapRocketDirectionEvent implements GameEvent {
+  constructor(public readonly rocketDirectionUp: boolean) {}
+}
 
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
@@ -432,7 +434,8 @@ export class InputHandler {
 
       if (e.code === this.keybinds.swapDirection) {
         e.preventDefault();
-        this.eventBus.emit(new SwapRocketDirectionEvent());
+        const nextDirection = !this.uiState.rocketDirectionUp;
+        this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
       // Shift-D to toggle performance overlay

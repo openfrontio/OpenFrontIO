@@ -203,7 +203,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             width="20"
             height="20"
             alt="${translateText(description)}"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           <span class="w-full text-right p-1"
             >${player.totalUnitLevels(type)}</span
@@ -259,6 +259,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
+    const totalTroops = player.troops();
 
     if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
@@ -284,7 +285,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             alt=${translateText("player_info_overlay.alliance_timeout")}
             width="20"
             height="20"
-            style="vertical-align: middle;"
+            class="align-middle"
           />
           ${this.allianceExpirationText(alliance)}
         </span>`;
@@ -317,7 +318,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${player.cosmetics.flag
             ? player.cosmetics.flag!.startsWith("!")
               ? html`<div
-                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  class="h-8 mr-1 aspect-3/4 player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
@@ -327,7 +328,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   })}
                 ></div>`
               : html`<img
-                  class="h-8 mr-1 aspect-[3/4]"
+                  class="h-8 mr-1 aspect-3/4"
                   src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}
@@ -378,6 +379,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     </span>
                   </div>`
                 : ""}
+              ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
               <div
                 class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
                           font-bold text-yellow-400 text-sm opacity-80"
@@ -388,7 +390,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   alt=${translateText("player_info_overlay.gold")}
                   width="15"
                   height="15"
-                  style="vertical-align: middle;"
+                  class="align-middle"
                 />
                 <span class="w-full text-center"
                   >${renderNumber(player.gold())}</span
@@ -438,6 +440,43 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     `;
   }
 
+  private renderTroopBar(
+    totalTroops: number,
+    attackingTroops: number,
+    maxTroops: number,
+  ) {
+    const base = Math.max(maxTroops, 1);
+    const greenPercentRaw = (totalTroops / base) * 100;
+    const orangePercentRaw = (attackingTroops / base) * 100;
+
+    const greenPercent = Math.max(0, Math.min(100, greenPercentRaw));
+    const orangePercent = Math.max(
+      0,
+      Math.min(100 - greenPercent, orangePercentRaw),
+    );
+
+    return html`
+      <div
+        class="w-full mt-2 mb-2 h-5 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden"
+      >
+        <div class="h-full flex">
+          ${greenPercent > 0
+            ? html`<div
+                class="h-full bg-green-500 transition-[width] duration-200"
+                style="width: ${greenPercent}%;"
+              ></div>`
+            : ""}
+          ${orangePercent > 0
+            ? html`<div
+                class="h-full bg-orange-400 transition-[width] duration-200"
+                style="width: ${orangePercent}%;"
+              ></div>`
+            : ""}
+        </div>
+      </div>
+    `;
+  }
+
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
       (unit.owner() === this.game.myPlayer() ||
@@ -475,11 +514,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="block lg:flex fixed top-[150px] right-4 w-full z-50 flex-col max-w-[180px]"
+        class="block lg:flex fixed top-37.5 right-4 w-full z-50 flex-col max-w-45"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-xs shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

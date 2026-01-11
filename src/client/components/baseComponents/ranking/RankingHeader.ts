@@ -14,7 +14,7 @@ export class RankingHeader extends LitElement {
   render() {
     return html`
       <li
-        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-[5px] rounded-md flex justify-between items-center"
+        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-1.25 rounded-md flex justify-between items-center"
       >
         ${this.renderHeaderContent()}
       </li>
@@ -35,7 +35,7 @@ export class RankingHeader extends LitElement {
       case RankType.Hydros:
       case RankType.MIRV:
         return html`
-          <div class="flex justify-between sm:pl-[70px] sm:pr-[70px] w-full">
+          <div class="flex justify-between sm:px-17.5 w-full">
             ${this.renderBombHeaderButton(
               translateText("game_info_modal.atoms"),
               RankType.Atoms,
@@ -78,8 +78,8 @@ export class RankingHeader extends LitElement {
     return html`
       <button
         @click=${() => this.onSort(type)}
-        style="${this.rankType === type
-          ? "border-bottom: solid 2px white;"
+        class="${this.rankType === type
+          ? "border-b-2 border-b-white"
           : nothing}"
       >
         ${label}
