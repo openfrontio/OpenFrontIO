@@ -1,5 +1,5 @@
 import type { TemplateResult } from "lit";
-import { html, render } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
@@ -17,7 +17,6 @@ import { hasLinkedAccount } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { renderPatternPreview } from "./components/PatternButton";
 import {
   fetchCosmetics,
   handlePurchase,
@@ -369,7 +368,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
       >
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
@@ -481,6 +480,7 @@ export class TerritoryPatternsModal extends BaseModal {
     this.selectedColor = hexCode;
     this.userSettings.setSelectedColor(hexCode);
     this.refresh();
+    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
     this.close();
   }
 
@@ -498,34 +498,6 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   public async refresh() {
-    this.requestUpdate();
-
-    const preview = this.selectedColor
-      ? this.renderColorPreview(this.selectedColor, 48, 48)
-      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
-
-    if (
-      this.previewButton === null ||
-      !document.body.contains(this.previewButton)
-    ) {
-      this.previewButton = document.getElementById(
-        "territory-patterns-input-preview-button",
-      );
-    }
-
-    if (this.previewButton === null) return;
-
-    // Check if the element is still in the DOM to avoid lit-html errors
-    if (!document.body.contains(this.previewButton)) {
-      console.warn(
-        "TerritoryPatternsModal: previewButton is disconnected from DOM, skipping render",
-      );
-      return;
-    }
-
-    // Clear and re-render using Lit
-    render(preview, this.previewButton);
-    this.previewButton.style.padding = "4px";
     this.requestUpdate();
   }
 }

@@ -23,7 +23,6 @@ import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./KeybindsModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -31,6 +30,7 @@ import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -44,7 +44,17 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe } from "./Utils";
+import {
+  getDiscordAvatarUrl,
+  incrementGamesPlayed,
+  isInIframe,
+  translateText,
+} from "./Utils";
+import "./components/DesktopNavBar";
+import "./components/Footer";
+import "./components/MainLayout";
+import "./components/MobileNavBar";
+import "./components/PlayPage";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -53,6 +63,100 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
+
+function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
+  const button = document.getElementById("nav-account-button");
+  if (!button) return;
+
+  const avatarEl = document.getElementById("nav-account-avatar") as
+    | (HTMLImageElement & { _navToken?: symbol })
+    | null;
+  const personIconEl = document.getElementById(
+    "nav-account-person-icon",
+  ) as SVGElement | null;
+  const emailBadgeEl = document.getElementById(
+    "nav-account-email-badge",
+  ) as HTMLElement | null;
+  const signInTextEl = document.getElementById(
+    "nav-account-signin-text",
+  ) as HTMLSpanElement | null;
+
+  // Unique token for this update call
+  const navToken = Symbol();
+  if (avatarEl) avatarEl._navToken = navToken;
+
+  const showAvatar = (src: string, alt?: string) => {
+    if (avatarEl) {
+      avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
+      // If the avatar fails to load (bad URL / CDN issue / offline), fall back
+      // to the default sign-in UI instead of leaving a broken image.
+      avatarEl.onerror = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
+        avatarEl.src = "";
+        // If the user is still logged in via email, show the email badge state.
+        const email =
+          userMeResponse !== false ? userMeResponse.user.email : undefined;
+        if (email) {
+          showEmailLoggedIn();
+        } else {
+          showSignIn();
+        }
+      };
+      avatarEl.onload = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
+        // Clear error handler after a successful load.
+        avatarEl.onerror = null;
+      };
+      avatarEl.src = src;
+      avatarEl.classList.remove("hidden");
+    }
+    personIconEl?.classList.add("hidden");
+    emailBadgeEl?.classList.add("hidden");
+    signInTextEl?.classList.add("hidden");
+    button?.classList.remove("border", "border-white/20");
+  };
+
+  const showSignIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.add("hidden");
+    signInTextEl?.classList.remove("hidden");
+    // Restore border when showing signin state
+    button?.classList.add("border", "border-white/20");
+  };
+
+  const showEmailLoggedIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.remove("hidden");
+    signInTextEl?.classList.add("hidden");
+    button?.classList.add("border", "border-white/20");
+  };
+
+  const discord =
+    userMeResponse !== false ? userMeResponse.user.discord : undefined;
+  if (discord && avatarEl) {
+    const avatarAlt = translateText("main.user_avatar_alt", {
+      username: discord.username,
+    });
+    const url = getDiscordAvatarUrl(discord);
+    if (url) {
+      showAvatar(url, avatarAlt);
+      return;
+    }
+  }
+
+  const email =
+    userMeResponse !== false ? userMeResponse.user.email : undefined;
+  if (email) {
+    showEmailLoggedIn();
+    return;
+  }
+
+  showSignIn();
+}
 
 declare global {
   interface Window {
@@ -129,6 +233,10 @@ class Client {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
+
+    // Wait for components to render before setting version
+    await customElements.whenDefined("mobile-nav-bar");
+    await customElements.whenDefined("desktop-nav-bar");
 
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
@@ -234,25 +342,13 @@ class Client {
       console.warn("Flag input modal element not found");
     }
 
-    // Wait for the flag-input component to be fully ready
-    customElements.whenDefined("flag-input").then(() => {
-      // Use a small delay to ensure the component has rendered
-      setTimeout(() => {
-        const flagButton = document.querySelector(
-          "#flag-input-component #flag-input_",
-        );
-        if (!flagButton) {
-          console.warn("Flag button not found inside component");
-          return;
+    // Attach listener to any flag-input component (desktop or potentially others)
+    document.querySelectorAll("flag-input").forEach((flagInput) => {
+      flagInput.addEventListener("flag-input-click", () => {
+        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
+          flagInputModal.open();
         }
-        flagButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (flagInputModal && flagInputModal instanceof FlagInputModal) {
-            flagInputModal.open();
-          }
-        });
-      }, 100);
+      });
     });
 
     this.patternsModal = document.getElementById(
@@ -264,49 +360,27 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    const patternButton = document.getElementById(
-      "territory-patterns-input-preview-button",
-    );
-    if (isInIframe() && patternButton) {
-      patternButton.style.display = "none";
-    }
 
-    // Move button to desktop wrapper on large screens
-    const desktopWrapper = document.getElementById(
-      "territory-patterns-preview-desktop-wrapper",
-    );
-    if (desktopWrapper && patternButton) {
-      const moveButtonBasedOnScreenSize = () => {
-        if (window.innerWidth >= 1024) {
-          // Desktop: move to wrapper
-          if (
-            patternButton.parentElement?.id !==
-            "territory-patterns-preview-desktop-wrapper"
-          ) {
-            patternButton.className =
-              "w-full h-[60px] border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden";
-            patternButton.style.backgroundSize = "auto 100%";
-            patternButton.style.backgroundRepeat = "repeat-x";
-            desktopWrapper.appendChild(patternButton);
-          }
-        } else {
-          // Mobile: move back to bar
-          const mobileParent = document.querySelector(".lg\\:col-span-9.flex");
-          if (
-            mobileParent &&
-            patternButton.parentElement?.id ===
-              "territory-patterns-preview-desktop-wrapper"
-          ) {
-            patternButton.className =
-              "aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0";
-            patternButton.style.backgroundSize = "";
-            patternButton.style.backgroundRepeat = "";
-            mobileParent.appendChild(patternButton);
+    // Attach listener to any pattern-input component
+    document.querySelectorAll("pattern-input").forEach((patternInput) => {
+      patternInput.addEventListener("pattern-input-click", () => {
+        // Open the Store page which contains the patterns UI
+        window.showPage?.("page-item-store");
+        const skinStoreModal = document.getElementById(
+          "page-item-store",
+        ) as HTMLElement & { open?: (opts: any) => void };
+        if (skinStoreModal) {
+          skinStoreModal.classList.remove("hidden");
+          if (typeof skinStoreModal.open === "function") {
+            skinStoreModal.open({ showOnlyOwned: true });
           }
         }
-      };
-      moveButtonBasedOnScreenSize();
-      window.addEventListener("resize", moveButtonBasedOnScreenSize);
+      });
+    });
+
+    if (isInIframe()) {
+      const mobilePat = document.getElementById("pattern-input-mobile");
+      if (mobilePat) mobilePat.style.display = "none";
     }
 
     if (
@@ -315,13 +389,17 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    if (patternButton === null)
-      throw new Error("territory-patterns-input-preview-button");
-    this.patternsModal.previewButton = patternButton;
+
+    // We no longer need to manually manage the preview button as PatternInput handles it component-side.
+    // However, we still want to ensure the modal can be opened.
+    // The setupPatternInput above handles the click event for the new buttons.
+
     this.patternsModal.refresh();
-    // Listen for pattern selection to update preview button
+
+    // Listen for pattern selection to update any other listeners if needed,
+    // though PatternInput handles its own updates via window event.
     this.patternsModal.addEventListener("pattern-selected", () => {
-      this.patternsModal.refresh();
+      // PatternInput components will update themselves.
     });
 
     window.addEventListener("showPage", (e: any) => {
@@ -329,19 +407,6 @@ class Client {
         setTimeout(() => {
           this.patternsModal.refresh();
         }, 50);
-      }
-    });
-
-    patternButton.addEventListener("click", () => {
-      window.showPage?.("page-item-store");
-      const skinStoreModal = document.getElementById(
-        "page-item-store",
-      ) as HTMLElement & { open?: (opts: any) => void };
-      if (skinStoreModal) {
-        skinStoreModal.classList.remove("hidden");
-        if (typeof skinStoreModal.open === "function") {
-          skinStoreModal.open({ showOnlyOwned: true });
-        }
       }
     });
 
@@ -398,6 +463,12 @@ class Client {
       });
     }
 
+    if (matchmakingButtonLoggedOut) {
+      matchmakingButtonLoggedOut.addEventListener("click", () => {
+        window.showPage?.("page-account");
+      });
+    }
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       // Check if user has actual authentication (discord or email), not just a publicId
       const loggedIn =
@@ -408,6 +479,7 @@ class Client {
         (userMeResponse.user.discord !== undefined ||
           userMeResponse.user.email !== undefined);
       updateMatchmakingButton(loggedIn);
+      updateAccountNavButton(userMeResponse);
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,

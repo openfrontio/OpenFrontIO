@@ -41,7 +41,7 @@ export class SettingKeybind extends LitElement {
 
         <div class="flex items-center gap-3 shrink-0">
           <div
-            class="relative h-12 min-w-[80px] px-4 flex items-center justify-center bg-black/40 border border-white/20 rounded-lg text-xl font-bold font-mono shadow-inner hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer select-none text-white
+            class="relative h-12 min-w-[80px] px-4 flex items-center justify-center bg-black/60 border border-white/20 rounded-lg text-xl font-bold font-mono shadow-inner hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer select-none text-white
             ${this.listening
               ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
               : ""}"

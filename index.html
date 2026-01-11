@@ -127,552 +127,102 @@
 
     <div
       id="mobile-menu-backdrop"
-      class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/50 [&.open]:z-[40000] transition-opacity"
+      class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/60 [&.open]:z-[40000] transition-opacity"
       role="presentation"
       aria-hidden="true"
     ></div>
-    <div
+
+    <mobile-nav-bar
       id="sidebar-menu"
       class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
       role="dialog"
       data-i18n-aria-label="main.menu"
       aria-hidden="true"
-    >
-      <!-- Border Segments (Custom right border with gap for button) -->
-      <div
-        class="absolute right-0 top-0 w-px bg-transparent"
-        style="height: calc(50% - 64px)"
-      ></div>
-      <div
-        class="absolute right-0 bottom-0 w-px bg-transparent"
-        style="height: calc(50% - 64px)"
-      ></div>
-
-      <div
-        class="flex-1 w-full flex flex-col justify-start overflow-y-auto md:pt-[clamp(1rem,3vh,4rem)] md:pb-[clamp(0.5rem,2vh,2rem)] md:px-[clamp(1rem,1.5vw,2rem)] p-5 gap-[clamp(1rem,3vh,3rem)]"
-      >
-        <!-- Logo + Menu -->
-        <div
-          class="flex flex-col text-[#2563eb] mb-[clamp(1rem,2vh,2rem)] ml-[clamp(0.2rem,0.4vw,0.4vh)]"
-        >
-          <div class="flex flex-col items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 1364 259"
-              width="100%"
-              height="100%"
-              fill="currentColor"
-              class="w-[clamp(120px,15vw,192px)] h-[clamp(40px,6vh,64px)] drop-shadow-[0_0_10px_rgba(37,99,235,0.3)]"
-            >
-              <!-- (Logo paths preserved) -->
-              <path
-                d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
-              />
-              <path
-                d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
-              />
-              <path
-                d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
-              />
-              <path
-                d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
-              />
-              <path
-                d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
-              />
-              <path
-                d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
-              />
-              <path
-                d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
-              />
-              <path
-                d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
-              />
-              <path
-                d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
-              />
-              <path
-                d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
-              />
-              <path
-                d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
-              />
-            </svg>
-            <div
-              id="game-version"
-              class="l-header__highlightText text-center"
-            ></div>
-          </div>
-        </div>
-
-        <div class="flex flex-col">
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-play"
-            data-i18n="main.play"
-          ></button>
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-news"
-            data-i18n="main.news"
-          ></button>
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-item-store"
-            data-i18n="main.store"
-          ></button>
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-options"
-            data-i18n="main.options"
-          ></button>
-          <!-- Keybinds menu item removed for mobile users -->
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-stats"
-            data-i18n="main.stats"
-          ></button>
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-account"
-            data-i18n="main.account"
-          ></button>
-          <button
-            class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
-            data-page="page-help"
-            data-i18n="main.help"
-          ></button>
-        </div>
-
-        <div class="flex flex-col gap-4 w-full mt-auto">
-          <div
-            class="[.in-game_&]:hidden flex w-full items-center justify-end gap-4 pt-4 border-t border-white/10"
-          >
-            <div class="flex-shrink-0">
-              <lang-selector></lang-selector>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    ></mobile-nav-bar>
 
     <!-- MAIN CONTENT AREA -->
     <div
       class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar -->
-      <nav
-        class="hidden lg:flex w-full bg-slate-950/70 backdrop-blur-md border-b border-white/10 items-center justify-center gap-8 py-4 shrink-0 transition-opacity z-50 relative"
-      >
-        <div class="flex flex-col items-center justify-center">
-          <div class="h-8 text-[#2563eb]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 1364 259"
-              fill="currentColor"
-              class="h-full w-auto drop-shadow-[0_0_10px_rgba(37,99,235,0.4)]"
-            >
-              <path
-                d="M0,174V51h15.24v-17.14h16.81v-16.98h16.96V0h1266v17.23h17.13v16.81h16.98v16.96h14.88v123h-15.13v17.08h-17.08v17.08h-16.9v17.04H324.9v16.86h-16.9v16.95h-102v-17.12h-17.07v-17.05H48.73v-17.05h-16.89v-16.89H14.94v-16.89H0ZM1297.95,17.35H65.9v16.7h-17.08v17.08h-14.5v123.08h14.85v16.9h17.08v17.08h139.9v17.08h17.08v16.36h67.9v-16.72h17.08v-17.07h989.88v-17.07h17.08v-16.9h14.44V50.8h-14.75v-17.08h-16.9v-16.37Z"
-              />
-              <path
-                d="M189.1,154.78v17.07h-16.9v16.75h-51.07v-16.42h-16.9v-17.07h-16.97v-84.88h16.63v-17.07h16.9v-16.84h51.07v16.5h17.07v17.07h16.7v84.89h-16.54ZM137.87,53.1v17.15h-16.6v84.86h16.97v16.61h16.89v-16.97h16.6v-84.86h-16.97v-16.79h-16.89Z"
-              />
-              <path
-                d="M273.91,104.06v-16.73h50.92v16.45h16.85v68.05h-16.44v17.06h-50.96v16.88h16.4v16.96h-67.28v-16.61h16.33v-101.86h-16.38v-16.98h33.4v16.63c6.12,0,11.72,0,17.31,0,0,22.56,0,45.13,0,67.75h33.59v-67.61h-33.73Z"
-              />
-              <path
-                d="M631.12,188.64v-16.36h16.53V53.2h-16.25v-16.86h118.33v33.29h-16.65v-16.36h-50.72v50.44h33.36v-16.35h16.99v50.25h-16.6v-16.33h-33.73v50.65h16.37v16.72h-67.63Z"
-              />
-              <path
-                d="M596.78,103.8v84.94h-33.54v-84.39h-34.03v84.25h-33.85v-101.29h84.5v16.49h16.93Z"
-              />
-              <path
-                d="M1107.12,188.71v-84.34h-34.03v84.37h-33.7v-101.41h84.42v16.41h16.86v84.96h-33.54Z"
-              />
-              <path
-                d="M988.1,171.78v16.87h-67.88v-16.38h-16.87v-68.06h16.38v-16.87h68.06v16.38h16.87v68.06h-16.55ZM970.78,104.35h-33.39v67.38h33.39v-67.38Z"
-              />
-              <path
-                d="M460.77,155.38v16.49h-16.58v16.83h-68.05v-16.5h-16.83v-68.05h16.49v-16.83h68.05v16.49h16.83v34.06h-67.31v33.82h33.47v-16.31h33.92ZM393.39,104.18v16.56h33.3v-16.56h-33.3Z"
-              />
-              <path
-                d="M1209.13,172h-16.9v-67.9h-16.96v-16.9h16.68v-17.08h16.9v-16.82h16.9v33.58h50.98v16.91h-50.4v67.96h16.48v-16.43h50.95v16.54h-16.55v16.76h-68.08v-16.6Z"
-              />
-              <path
-                d="M834.91,120.94v16.96h-16.65v33.88h16.41v16.96h-67.29v-16.63h16.34v-67.87h-16.4v-16.97h50.42v33.81h17.3l-.14-.14Z"
-              />
-              <path
-                d="M835.05,121.08v-33.75h33.76v16.43h16.85v33.96h-33.43v-16.79c-6.13,0-11.73,0-17.32,0,0,0,.14.14.14.14Z"
-              />
-            </svg>
-          </div>
-          <div
-            class="game-version-display text-[#2563eb] text-xs font-bold tracking-widest uppercase cursor-default select-text leading-none mt-1"
-          ></div>
-        </div>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-play"
-          data-i18n="main.play"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-news"
-          data-i18n="main.news"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
-          data-page="page-item-store"
-          data-i18n="main.store"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-options"
-          data-i18n="main.options"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-keybinds"
-          data-i18n="main.keys"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-stats"
-          data-i18n="main.stats"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-account"
-          data-i18n="main.account"
-        ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-help"
-          data-i18n="main.help"
-        ></button>
-        <lang-selector></lang-selector>
-      </nav>
+      <desktop-nav-bar></desktop-nav-bar>
 
       <div
         id="turnstile-container"
         class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"
       ></div>
+
       <gutter-ads></gutter-ads>
 
       <!-- Main container with responsive padding -->
-      <main
-        class="relative [.in-game_&]:hidden flex flex-col flex-1 overflow-hidden w-full px-[clamp(1.5rem,3vw,3rem)] pt-[clamp(0.75rem,1.5vw,1.5rem)] pb-[clamp(0.75rem,1.5vw,1.5rem)]"
-      >
-        <div
-          class="w-full max-w-[20cm] mx-auto flex flex-col flex-1 gap-[clamp(1.5rem,3vw,3rem)] overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:[scrollbar-width:auto] lg:[-ms-overflow-style:auto] lg:[&::-webkit-scrollbar]:block"
-        >
-          <div
-            id="page-play"
-            class="flex flex-col gap-2 w-full max-w-6xl mx-auto px-0 sm:px-4 transition-all duration-300 my-auto min-h-0"
-          >
-            <token-login class="w-full hidden"></token-login>
+      <main-layout class="contents">
+        <play-page class="contents"></play-page>
 
-            <!-- Header / Identity Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
-              <div
-                class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-blue-500/20 relative z-20 text-sm sm:text-base shrink-0"
-              >
-                <!-- Flag -->
-                <div
-                  class="h-[40px] sm:h-[50px] shrink-0 aspect-[4/3] flex items-center justify-center"
-                >
-                  <!-- Hamburger (Mobile) -->
-                  <button
-                    id="hamburger-btn"
-                    class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 border border-blue-400/20 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
-                    data-i18n-aria-label="main.menu"
-                    aria-expanded="false"
-                    aria-controls="sidebar-menu"
-                    aria-haspopup="dialog"
-                    data-i18n-title="main.menu"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-8 h-8"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                      />
-                    </svg>
-                  </button>
+        <news-modal
+          id="page-news"
+          inline
+          class="hidden w-full h-full page-content"
+        ></news-modal>
+        <single-player-modal
+          id="page-single-player"
+          inline
+          class="hidden w-full h-full page-content"
+        ></single-player-modal>
+        <host-lobby-modal
+          id="page-host-lobby"
+          inline
+          class="hidden w-full h-full page-content"
+        ></host-lobby-modal>
+        <join-private-lobby-modal
+          id="page-join-private-lobby"
+          inline
+          class="hidden w-full h-full page-content"
+        ></join-private-lobby-modal>
+        <territory-patterns-modal
+          id="page-item-store"
+          inline
+          class="hidden w-full h-full page-content"
+        ></territory-patterns-modal>
+        <matchmaking-modal
+          id="page-matchmaking"
+          inline
+          class="hidden w-full h-full page-content"
+        ></matchmaking-modal>
+        <user-setting
+          id="page-settings"
+          inline
+          class="hidden w-full h-full page-content"
+        ></user-setting>
+        <stats-modal
+          id="page-stats"
+          inline
+          class="hidden w-full h-full page-content"
+        ></stats-modal>
+        <account-modal
+          id="page-account"
+          inline
+          class="hidden w-full h-full page-content"
+        ></account-modal>
+        <help-modal
+          id="page-help"
+          inline
+          class="hidden w-full h-full page-content"
+        ></help-modal>
+        <language-modal
+          id="page-language"
+          inline
+          class="hidden w-full h-full page-content"
+        ></language-modal>
+        <flag-input-modal
+          id="flag-input-modal"
+          inline
+          class="hidden w-full h-full page-content"
+        ></flag-input-modal>
+      </main-layout>
 
-                  <!-- Flag (Desktop) -->
-                  <flag-input
-                    id="flag-input-component"
-                    class="hidden lg:flex w-full h-full items-center justify-center rounded-md overflow-hidden"
-                  ></flag-input>
-                </div>
+      <!-- Desktop Footer -->
+      <page-footer></page-footer>
 
-                <!-- Username -->
-                <div
-                  class="flex-1 min-w-0 h-[40px] sm:h-[50px] flex items-center"
-                >
-                  <username-input
-                    class="relative w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
-                  ></username-input>
-                </div>
-
-                <!-- Pattern button (Mobile - inside bar, Desktop - hidden here) -->
-                <button
-                  id="territory-patterns-input-preview-button"
-                  class="aspect-square h-[40px] sm:h-[50px] lg:hidden border border-white/20 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg cursor-pointer focus:outline-none transition-all duration-200 hover:scale-105 overflow-hidden shrink-0"
-                  style="padding: 4px !important"
-                  data-i18n-title="main.pick_pattern"
-                ></button>
-              </div>
-
-              <!-- Pattern button (Desktop only - separate column) -->
-              <div class="hidden lg:flex lg:col-span-3">
-                <div
-                  id="territory-patterns-preview-desktop-wrapper"
-                  class="w-full h-[60px]"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Primary Game Actions Area -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-              <!-- Left Column: Featured Lobbies / Quick Play -->
-              <div class="lg:col-span-9 flex flex-col gap-6 min-w-0">
-                <!-- Public Lobby Card -->
-                <public-lobby
-                  class="block w-full transition-all duration-300"
-                ></public-lobby>
-
-                <!-- Matchmaking Buttons (Full Width within column) -->
-                <!-- Not Logged In Button -->
-                <button
-                  id="matchmaking-button-logged-out"
-                  class="w-full h-20 bg-purple-600/50 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 overflow-hidden relative opacity-60 cursor-not-allowed"
-                  disabled
-                  aria-disabled="true"
-                >
-                  <span
-                    class="relative z-10 text-2xl"
-                    data-i18n="matchmaking_button.login_required"
-                  ></span>
-                </button>
-
-                <!-- Logged In Button -->
-                <button
-                  id="matchmaking-button"
-                  class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 group overflow-hidden relative"
-                  data-i18n-title="matchmaking_modal.title"
-                >
-                  <span
-                    class="relative z-10 text-2xl"
-                    data-i18n="matchmaking_button.play_ranked"
-                  ></span>
-                  <span
-                    class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
-                    data-i18n="matchmaking_button.description"
-                  ></span>
-                </button>
-              </div>
-
-              <!-- Right Column: Custom Games & Modes -->
-              <div class="lg:col-span-3">
-                <div class="h-40 lg:h-[30.5rem] relative z-10">
-                  <div
-                    class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
-                  >
-                    <div
-                      class="py-2 bg-blue-900/20 border-b border-blue-400/10 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
-                      data-i18n="host_modal.label"
-                    ></div>
-                    <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
-                      <o-button
-                        id="single-player"
-                        data-i18n-title="main.solo"
-                        translationKey="main.solo"
-                        fill
-                        class="flex-1 transition-transform hover:-translate-y-0.5"
-                      ></o-button>
-
-                      <o-button
-                        id="host-lobby-button"
-                        data-i18n-title="main.create"
-                        translationKey="main.create"
-                        fill
-                        secondary
-                        class="flex-1 opacity-90 hover:opacity-100"
-                      ></o-button>
-
-                      <o-button
-                        id="join-private-lobby-button"
-                        data-i18n-title="main.join"
-                        translationKey="main.join"
-                        fill
-                        secondary
-                        class="flex-1 opacity-90 hover:opacity-100"
-                      ></o-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <news-modal
-            id="page-news"
-            inline
-            class="hidden w-full h-full page-content"
-          ></news-modal>
-          <single-player-modal
-            id="page-single-player"
-            inline
-            class="hidden w-full h-full page-content"
-          ></single-player-modal>
-          <host-lobby-modal
-            id="page-host-lobby"
-            inline
-            class="hidden w-full h-full page-content"
-          ></host-lobby-modal>
-          <join-private-lobby-modal
-            id="page-join-private-lobby"
-            inline
-            class="hidden w-full h-full page-content"
-          ></join-private-lobby-modal>
-          <territory-patterns-modal
-            id="page-item-store"
-            inline
-            class="hidden w-full h-full page-content"
-          ></territory-patterns-modal>
-          <matchmaking-modal
-            id="page-matchmaking"
-            inline
-            class="hidden w-full h-full page-content"
-          ></matchmaking-modal>
-          <user-setting
-            id="page-options"
-            inline
-            class="hidden w-full h-full page-content"
-          ></user-setting>
-          <keybinds-modal
-            id="page-keybinds"
-            inline
-            class="hidden w-full h-full page-content"
-          ></keybinds-modal>
-          <stats-modal
-            id="page-stats"
-            inline
-            class="hidden w-full h-full page-content"
-          ></stats-modal>
-          <account-modal
-            id="page-account"
-            inline
-            class="hidden w-full h-full page-content"
-          ></account-modal>
-          <help-modal
-            id="page-help"
-            inline
-            class="hidden w-full h-full page-content"
-          ></help-modal>
-          <language-modal
-            id="page-language"
-            inline
-            class="hidden w-full h-full page-content"
-          ></language-modal>
-          <flag-input-modal
-            id="flag-input-modal"
-            inline
-            class="hidden w-full h-full page-content"
-          ></flag-input-modal>
-
-          <!-- Desktop Footer -->
-        </div>
-      </main>
-      <footer
-        class="[.in-game_&]:hidden bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
-      >
-        <div class="flex items-center justify-center gap-6 pt-2">
-          <a
-            href="https://github.com/openfrontio/OpenFrontIO"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-          >
-            <img
-              src="/icons/github-mark-white.svg"
-              data-i18n-alt="news.github_link"
-              class="h-7 w-7 object-contain"
-            />
-          </a>
-          <a
-            href="https://www.reddit.com/r/OpenFrontIO/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-          >
-            <svg
-              class="h-7 w-7 object-contain"
-              viewBox="0 0 24 24"
-              fill="white"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.249-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"
-              />
-            </svg>
-          </a>
-          <a
-            href="https://discord.gg/jRpxXvG42t"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-          >
-            <svg
-              class="h-7 w-7 object-contain"
-              viewBox="0 0 24 24"
-              fill="white"
-            >
-              <path
-                d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-14.36a.074.074 0 0 0-.032-.027zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.085 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z"
-              />
-            </svg>
-          </a>
-          <a
-            href="https://openfront.wiki/Main_Page"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
-          >
-            <img
-              src="/icons/wiki-logo.svg"
-              data-i18n-alt="main.wiki"
-              class="h-7 w-7 object-contain"
-            />
-          </a>
-        </div>
-        <div class="text-xs mt-2 flex items-center justify-center gap-4">
-          <a
-            href="/terms-of-service.html"
-            data-i18n="main.terms_of_service"
-            target="_blank"
-            class="hover:text-white transition-colors"
-          ></a>
-          <span data-i18n="main.copyright"></span>
-          <a
-            href="/privacy-policy.html"
-            data-i18n="main.privacy_policy"
-            target="_blank"
-            class="hover:text-white transition-colors"
-          ></a>
-        </div>
-      </footer>
       <!-- Global Modals -->
       <territory-patterns-modal
         id="territory-patterns-modal"

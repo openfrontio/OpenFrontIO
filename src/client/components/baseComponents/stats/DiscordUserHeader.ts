@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { DiscordUser } from "../../../../core/ApiSchemas";
-import { translateText } from "../../../Utils";
+import { getDiscordAvatarUrl, translateText } from "../../../Utils";
 
 @customElement("discord-user-header")
 export class DiscordUserHeader extends LitElement {
@@ -23,15 +23,7 @@ export class DiscordUserHeader extends LitElement {
   private get avatarUrl(): string | null {
     const u = this._data;
     if (!u) return null;
-    if (u.avatar) {
-      const ext = u.avatar.startsWith("a_") ? "gif" : "png";
-      return `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${ext}`;
-    }
-    if (u.discriminator !== undefined) {
-      const idx = Number(u.discriminator) % 5;
-      return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
-    }
-    return null;
+    return getDiscordAvatarUrl(u);
   }
 
   private get discordDisplayName(): string {

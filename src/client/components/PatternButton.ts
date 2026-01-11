@@ -209,7 +209,7 @@ function renderBlankPreview(width: number, height: number): TemplateResult {
       </div>
     </div>
     <div
-      class="hidden md:flex items-center justify-center h-full w-full bg-white/5 rounded overflow-hidden relative border border-white/10 box-border text-center p-1"
+      class="hidden md:flex items-center justify-center h-full w-full rounded overflow-hidden relative text-center p-1"
     >
       <span
         class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full"

@@ -32,7 +32,7 @@ export class LanguageModal extends BaseModal {
       <div
         class="h-full flex flex-col ${
           this.inline
-            ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+            ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
             : "bg-[#232323] text-white"
         }"
       >
