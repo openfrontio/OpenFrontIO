@@ -41,7 +41,8 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
     }
 
     // Search on water tiles
-    const path = this.inner.findPath(waterFrom, coercedTo.water);
+    const fromTiles = waterFrom.length === 1 ? waterFrom[0] : waterFrom;
+    const path = this.inner.findPath(fromTiles, coercedTo.water);
     if (!path || path.length === 0) {
       return null;
     }
