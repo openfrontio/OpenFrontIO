@@ -1,5 +1,7 @@
 export function initNavigation() {
   const showPage = (pageId: string) => {
+    (window as any).currentPageId = pageId;
+
     // Hide all pages
     document.querySelectorAll(".page-content").forEach((el) => {
       el.classList.add("hidden");
@@ -39,11 +41,15 @@ export function initNavigation() {
 
   window.showPage = showPage;
 
-  document.querySelectorAll(".nav-menu-item[data-page]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const pageId = (el as HTMLElement).dataset.page;
+  // Use event delegation for navigation items (they may be inside Lit components)
+  document.addEventListener("click", (e) => {
+    const target = (e.target as HTMLElement).closest(
+      ".nav-menu-item[data-page]",
+    );
+    if (target) {
+      const pageId = (target as HTMLElement).dataset.page;
       if (pageId) showPage(pageId);
-    });
+    }
   });
 
   // Handle clicks on main container to close open modals (navigate back)
@@ -67,11 +73,16 @@ export function initNavigation() {
     });
   }
 
-  // Set default active if not set
-  const initialPage = document.querySelector(
-    '.nav-menu-item[data-page="page-play"]',
-  );
-  if (initialPage && !initialPage.classList.contains("active")) {
-    showPage("page-play");
-  }
+  // Set default active if not set. We don't rely on finding the button element
+  // because it might be inside a Lit component that hasn't rendered yet.
+  // Ideally we should check if any page is currently visible/active.
+  // For now, we just default to page-play if it's the startup.
+  // We use a small timeout to allow initial render to potentially complete,
+  // ensuring the active class is applied to the buttons.
+  setTimeout(() => {
+    const anyActive = document.querySelector(".nav-menu-item.active");
+    if (!anyActive) {
+      showPage("page-play");
+    }
+  }, 0);
 }

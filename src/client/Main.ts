@@ -50,6 +50,9 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./components/DesktopNavBar";
+import "./components/MainLayout";
+import "./components/MobileNavBar";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -215,6 +218,10 @@ class Client {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
+
+    // Wait for components to render before setting version
+    await customElements.whenDefined("mobile-nav-bar");
+    await customElements.whenDefined("desktop-nav-bar");
 
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
