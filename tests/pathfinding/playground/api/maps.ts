@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Game } from "../../../../src/core/game/Game.js";
-import { AStarWaterHierarchical } from "../../../../src/core/pathfinding/algorithms/AStar.WaterHierarchical.js";
+import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
 import { setupFromPath } from "../../utils.js";
 
 // Available comparison adapters
@@ -14,26 +14,21 @@ export interface MapInfo {
   displayName: string;
 }
 
+export interface GraphBuildData {
+  nodes: any[];
+  edges: any[];
+  nodesCount: number;
+  edgesCount: number;
+  clustersCount: number;
+  buildTime: number;
+}
+
 export interface MapCache {
   game: Game;
-  hpaStar: AStarWaterHierarchical;
+  graphBuildData: GraphBuildData | null;
 }
 
 const cache = new Map<string, MapCache>();
-
-/**
- * Global configuration for map loading
- */
-let config = {
-  cachePaths: true,
-};
-
-/**
- * Set configuration options
- */
-export function setConfig(options: { cachePaths?: boolean }) {
-  config = { ...config, ...options };
-}
 
 /**
  * Get the resources/maps directory path
@@ -106,6 +101,25 @@ export function listMaps(): MapInfo[] {
 }
 
 /**
+ * Extract graph build data from DebugSpan
+ */
+function extractGraphBuildData(): GraphBuildData | null {
+  const span = DebugSpan.get();
+  if (!span || span.name !== "abstractGraph:build") {
+    return null;
+  }
+
+  return {
+    nodes: (span.data.nodes as any[]) || [],
+    edges: (span.data.edges as any[]) || [],
+    nodesCount: (span.data.nodesCount as number) || 0,
+    edgesCount: (span.data.edgesCount as number) || 0,
+    clustersCount: (span.data.clustersCount as number) || 0,
+    buildTime: span.duration || 0,
+  };
+}
+
+/**
  * Load a map from cache or disk
  */
 export async function loadMap(mapName: string): Promise<MapCache> {
@@ -116,21 +130,17 @@ export async function loadMap(mapName: string): Promise<MapCache> {
 
   const mapsDir = getMapsDirectory();
 
+  // Enable DebugSpan to capture graph build data
+  DebugSpan.enable();
+
   // Use the existing setupFromPath utility to load the map
   const game = await setupFromPath(mapsDir, mapName, { disableNavMesh: false });
 
-  // Get pre-built graph from game
-  const graph = game.miniWaterGraph();
-  if (!graph) {
-    throw new Error(`No water graph available for map: ${mapName}`);
-  }
+  // Capture graph build data from DebugSpan
+  const graphBuildData = extractGraphBuildData();
+  DebugSpan.disable();
 
-  // Initialize AStarWaterHierarchical with minimap and graph
-  const hpaStar = new AStarWaterHierarchical(game.miniMap(), graph, {
-    cachePaths: config.cachePaths,
-  });
-
-  const cacheEntry: MapCache = { game, hpaStar };
+  const cacheEntry: MapCache = { game, graphBuildData };
 
   // Store in cache
   cache.set(mapName, cacheEntry);
@@ -142,7 +152,7 @@ export async function loadMap(mapName: string): Promise<MapCache> {
  * Get map metadata for client
  */
 export async function getMapMetadata(mapName: string) {
-  const { game, hpaStar } = await loadMap(mapName);
+  const { game, graphBuildData } = await loadMap(mapName);
 
   // Extract map data
   const mapData: number[] = [];
@@ -153,48 +163,83 @@ export async function getMapMetadata(mapName: string) {
     }
   }
 
-  // Extract static graph data from GameMapHPAStar
-  // Access internal graph via type casting (test code only)
-  const graph = (hpaStar as any).graph;
+  const graph = game.miniWaterGraph();
   const miniMap = game.miniMap();
+  const clusterSize = graph?.clusterSize ?? 0;
 
-  // Convert nodes to client format
-  const allNodes = graph.getAllNodes().map((node: any) => ({
-    id: node.id,
-    x: miniMap.x(node.tile),
-    y: miniMap.y(node.tile),
-  }));
-
-  // Convert edges to client format
-  const edges: Array<{
+  // Use graphBuildData from DebugSpan if available, otherwise fall back to direct access
+  let allNodes: Array<{ id: number; x: number; y: number }>;
+  let edges: Array<{
     fromId: number;
     toId: number;
     from: number[];
     to: number[];
     cost: number;
-  }> = [];
-  for (let i = 0; i < graph.edgeCount; i++) {
-    const edge = graph.getEdge(i);
-    if (!edge) continue;
+  }>;
 
-    const nodeA = graph.getNode(edge.nodeA);
-    const nodeB = graph.getNode(edge.nodeB);
-    if (!nodeA || !nodeB) continue;
+  if (graphBuildData) {
+    // Convert nodes from DebugSpan data (AbstractNode format)
+    allNodes = graphBuildData.nodes.map((node: any) => ({
+      id: node.id,
+      x: miniMap.x(node.tile),
+      y: miniMap.y(node.tile),
+    }));
 
-    edges.push({
-      fromId: edge.nodeA,
-      toId: edge.nodeB,
-      from: [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2],
-      to: [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2],
-      cost: edge.cost,
+    // Convert edges from DebugSpan data (AbstractEdge format)
+    edges = graphBuildData.edges.map((edge: any) => {
+      const nodeA = graphBuildData.nodes.find((n: any) => n.id === edge.nodeA);
+      const nodeB = graphBuildData.nodes.find((n: any) => n.id === edge.nodeB);
+      return {
+        fromId: edge.nodeA,
+        toId: edge.nodeB,
+        from: nodeA
+          ? [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2]
+          : [0, 0],
+        to: nodeB
+          ? [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2]
+          : [0, 0],
+        cost: edge.cost,
+      };
     });
+
+    console.log(
+      `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges (from DebugSpan, built in ${graphBuildData.buildTime.toFixed(2)}ms)`,
+    );
+  } else if (graph) {
+    // Fallback: extract directly from graph
+    allNodes = graph.getAllNodes().map((node: any) => ({
+      id: node.id,
+      x: miniMap.x(node.tile),
+      y: miniMap.y(node.tile),
+    }));
+
+    edges = [];
+    for (let i = 0; i < graph.edgeCount; i++) {
+      const edge = graph.getEdge(i);
+      if (!edge) continue;
+
+      const nodeA = graph.getNode(edge.nodeA);
+      const nodeB = graph.getNode(edge.nodeB);
+      if (!nodeA || !nodeB) continue;
+
+      edges.push({
+        fromId: edge.nodeA,
+        toId: edge.nodeB,
+        from: [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2],
+        to: [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2],
+        cost: edge.cost,
+      });
+    }
+
+    console.log(
+      `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges (fallback)`,
+    );
+  } else {
+    // No graph available
+    allNodes = [];
+    edges = [];
+    console.log(`Map ${mapName}: no graph available`);
   }
-
-  console.log(
-    `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges`,
-  );
-
-  const clusterSize = graph.clusterSize;
 
   return {
     name: mapName,
@@ -205,6 +250,7 @@ export async function getMapMetadata(mapName: string) {
       allNodes,
       edges,
       clusterSize,
+      buildTime: graphBuildData?.buildTime,
     },
     adapters: COMPARISON_ADAPTERS,
   };

@@ -815,8 +815,8 @@ function updateTimingsPanel(result) {
   const primary = result.primary;
   const timings = primary && primary.debug ? primary.debug.timings : {};
 
-  // Use timings.total (excludes debug overhead) instead of raw time
-  const hpaTime = timings.total || 0;
+  // Use total span time from DebugSpan
+  const hpaTime = timings["hpa:findPathSingle"] || 0;
 
   // Show HPA* time and path length (or 0.00 in light gray if no data)
   const hpaTimeEl = document.getElementById("hpaTime");
@@ -840,8 +840,9 @@ function updateTimingsPanel(result) {
   const earlyExitEl = document.getElementById("timingEarlyExit");
   const earlyExitValueEl = document.getElementById("timingEarlyExitValue");
   earlyExitEl.style.display = "flex";
-  if (timings.earlyExitLocalPath !== undefined) {
-    earlyExitValueEl.textContent = `${timings.earlyExitLocalPath.toFixed(2)}ms`;
+  const earlyExitTime = timings["hpa:findPathSingle:earlyExit"];
+  if (earlyExitTime !== undefined) {
+    earlyExitValueEl.textContent = `${earlyExitTime.toFixed(2)}ms`;
     earlyExitValueEl.style.color = "#f5f5f5";
   } else {
     earlyExitValueEl.textContent = "—";
@@ -852,8 +853,9 @@ function updateTimingsPanel(result) {
   const findNodesEl = document.getElementById("timingFindNodes");
   const findNodesValueEl = document.getElementById("timingFindNodesValue");
   findNodesEl.style.display = "flex";
-  if (timings.findNodes !== undefined) {
-    findNodesValueEl.textContent = `${timings.findNodes.toFixed(2)}ms`;
+  const nodeLookupTime = timings["hpa:findPathSingle:nodeLookup"];
+  if (nodeLookupTime !== undefined) {
+    findNodesValueEl.textContent = `${nodeLookupTime.toFixed(2)}ms`;
     findNodesValueEl.style.color = "#f5f5f5";
   } else {
     findNodesValueEl.textContent = "—";
@@ -866,8 +868,9 @@ function updateTimingsPanel(result) {
     "timingAbstractPathValue",
   );
   abstractPathEl.style.display = "flex";
-  if (timings.findAbstractPath !== undefined) {
-    abstractPathValueEl.textContent = `${timings.findAbstractPath.toFixed(2)}ms`;
+  const abstractPathTime = timings["hpa:findPathSingle:abstractPath"];
+  if (abstractPathTime !== undefined) {
+    abstractPathValueEl.textContent = `${abstractPathTime.toFixed(2)}ms`;
     abstractPathValueEl.style.color = "#f5f5f5";
   } else {
     abstractPathValueEl.textContent = "—";
@@ -878,8 +881,9 @@ function updateTimingsPanel(result) {
   const initialPathEl = document.getElementById("timingInitialPath");
   const initialPathValueEl = document.getElementById("timingInitialPathValue");
   initialPathEl.style.display = "flex";
-  if (timings.buildInitialPath !== undefined) {
-    initialPathValueEl.textContent = `${timings.buildInitialPath.toFixed(2)}ms`;
+  const initialPathTime = timings["hpa:findPathSingle:initialPath"];
+  if (initialPathTime !== undefined) {
+    initialPathValueEl.textContent = `${initialPathTime.toFixed(2)}ms`;
     initialPathValueEl.style.color = "#f5f5f5";
   } else {
     initialPathValueEl.textContent = "—";

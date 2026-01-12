@@ -1,4 +1,5 @@
 import { GameMap, TileRef } from "../../game/GameMap";
+import { DebugSpan } from "../../utilities/DebugSpan";
 import { BFSGrid } from "./BFS.Grid";
 import { ConnectedComponents } from "./ConnectedComponents";
 
@@ -24,16 +25,6 @@ export interface Cluster {
   y: number;
   nodeIds: number[];
 }
-
-export type BuildDebugInfo = {
-  clusters: number | null;
-  nodes: number | null;
-  edges: number | null;
-  actualBFSCalls: number | null;
-  potentialBFSCalls: number | null;
-  skippedByComponentFilter: number | null;
-  timings: { [key: string]: number };
-};
 
 export class AbstractGraph {
   // Nodes (array indexed by id)
@@ -95,6 +86,10 @@ export class AbstractGraph {
 
   getOtherNode(edge: AbstractEdge, nodeId: number): number {
     return edge.nodeA === nodeId ? edge.nodeB : edge.nodeA;
+  }
+
+  getAllEdges(): readonly AbstractEdge[] {
+    return this._edges;
   }
 
   get edgeCount(): number {
@@ -217,8 +212,6 @@ export class AbstractGraphBuilder {
   private nextEdgeId = 0;
   private edgeBetween = new Map<number, Map<number, AbstractEdge>>();
 
-  public debugInfo: BuildDebugInfo | null = null;
-
   constructor(
     private readonly map: GameMap,
     private readonly clusterSize: number = AbstractGraphBuilder.CLUSTER_SIZE,
@@ -231,8 +224,8 @@ export class AbstractGraphBuilder {
     this.waterComponents = new ConnectedComponents(map);
   }
 
-  build(debug: boolean = false): AbstractGraph {
-    performance.mark("abstractgraph:build:start");
+  build(): AbstractGraph {
+    DebugSpan.start("abstractGraph:build");
 
     this.graph = new AbstractGraph(
       this.clusterSize,
@@ -240,37 +233,8 @@ export class AbstractGraphBuilder {
       this.clustersY,
     );
 
-    if (debug) {
-      console.log(
-        `[DEBUG] Building abstract graph with cluster size ${this.clusterSize} (${this.clustersX}x${this.clustersY} clusters)`,
-      );
-
-      this.debugInfo = {
-        clusters: null,
-        nodes: null,
-        edges: null,
-        actualBFSCalls: null,
-        potentialBFSCalls: null,
-        skippedByComponentFilter: null,
-        timings: {},
-      };
-    }
-
     // Initialize water components
-    performance.mark("abstractgraph:build:water-component:start");
     this.waterComponents.initialize();
-    performance.mark("abstractgraph:build:water-component:end");
-    const wcMeasure = performance.measure(
-      "abstractgraph:build:water-component",
-      "abstractgraph:build:water-component:start",
-      "abstractgraph:build:water-component:end",
-    );
-
-    if (debug) {
-      console.log(
-        `[DEBUG] Water Component Identification: ${wcMeasure.duration.toFixed(2)}ms`,
-      );
-    }
 
     // Pre-create all clusters
     for (let cy = 0; cy < this.clustersY; cy++) {
@@ -281,98 +245,31 @@ export class AbstractGraphBuilder {
     }
 
     // Find nodes (gateways) at cluster boundaries
-    performance.mark("abstractgraph:build:nodes:start");
+    DebugSpan.start("abstractGraph:build:nodes");
     for (let cy = 0; cy < this.clustersY; cy++) {
       for (let cx = 0; cx < this.clustersX; cx++) {
         this.processCluster(cx, cy);
       }
     }
-    performance.mark("abstractgraph:build:nodes:end");
-    const nodesMeasure = performance.measure(
-      "abstractgraph:build:nodes",
-      "abstractgraph:build:nodes:start",
-      "abstractgraph:build:nodes:end",
-    );
-
-    if (debug) {
-      console.log(
-        `[DEBUG] Node identification: ${nodesMeasure.duration.toFixed(2)}ms`,
-      );
-      this.debugInfo!.potentialBFSCalls = 0;
-      this.debugInfo!.skippedByComponentFilter = 0;
-    }
+    DebugSpan.end();
 
     // Build edges between nodes in same cluster
-    performance.mark("abstractgraph:build:edges:start");
+    DebugSpan.start("abstractGraph:build:edges");
     for (let cy = 0; cy < this.clustersY; cy++) {
       for (let cx = 0; cx < this.clustersX; cx++) {
         const cluster = this.graph.getCluster(cx, cy);
         if (!cluster || cluster.nodeIds.length === 0) continue;
-
-        if (debug) {
-          const n = cluster.nodeIds.length;
-          this.debugInfo!.potentialBFSCalls! += (n * (n - 1)) / 2;
-
-          // Count skipped by component filter
-          for (let i = 0; i < n; i++) {
-            for (let j = i + 1; j < n; j++) {
-              const nodeI = this.graph.getNode(cluster.nodeIds[i])!;
-              const nodeJ = this.graph.getNode(cluster.nodeIds[j])!;
-              if (nodeI.componentId !== nodeJ.componentId) {
-                this.debugInfo!.skippedByComponentFilter!++;
-              }
-            }
-          }
-        }
-
         this.buildClusterConnections(cx, cy);
       }
     }
-    performance.mark("abstractgraph:build:edges:end");
-    const edgesMeasure = performance.measure(
-      "abstractgraph:build:edges",
-      "abstractgraph:build:edges:start",
-      "abstractgraph:build:edges:end",
-    );
+    DebugSpan.end(); // abstractGraph:build:edges
 
-    if (debug) {
-      this.debugInfo!.actualBFSCalls =
-        this.debugInfo!.potentialBFSCalls! -
-        this.debugInfo!.skippedByComponentFilter!;
-
-      console.log(
-        `[DEBUG] Edge identification: ${edgesMeasure.duration.toFixed(2)}ms`,
-      );
-      console.log(
-        `[DEBUG]   Potential BFS calls: ${this.debugInfo!.potentialBFSCalls}`,
-      );
-      console.log(
-        `[DEBUG]   Skipped by component filter: ${this.debugInfo!.skippedByComponentFilter} (${((this.debugInfo!.skippedByComponentFilter! / this.debugInfo!.potentialBFSCalls!) * 100).toFixed(1)}%)`,
-      );
-      console.log(
-        `[DEBUG]   Actual BFS calls: ${this.debugInfo!.actualBFSCalls}`,
-      );
-    }
-
-    performance.mark("abstractgraph:build:end");
-    const totalMeasure = performance.measure(
-      "abstractgraph:build:total",
-      "abstractgraph:build:start",
-      "abstractgraph:build:end",
-    );
-
-    if (debug) {
-      console.log(
-        `[DEBUG] Abstract graph built in ${totalMeasure.duration.toFixed(2)}ms`,
-      );
-      console.log(`[DEBUG] Nodes: ${this.graph.nodeCount}`);
-      console.log(`[DEBUG] Edges: ${this.graph.edgeCount}`);
-      console.log(`[DEBUG] Clusters: ${this.clustersX * this.clustersY}`);
-
-      this.debugInfo!.clusters = this.clustersX * this.clustersY;
-      this.debugInfo!.nodes = this.graph.nodeCount;
-      this.debugInfo!.edges = this.graph.edgeCount;
-    }
+    DebugSpan.set("nodes", () => this.graph.getAllNodes());
+    DebugSpan.set("edges", () => this.graph.getAllEdges());
+    DebugSpan.set("nodesCount", () => this.graph.nodeCount);
+    DebugSpan.set("edgesCount", () => this.graph.edgeCount);
+    DebugSpan.set("clustersCount", () => this.clustersX * this.clustersY);
+    DebugSpan.end(); // abstractGraph:build
 
     // Initialize path cache after all edges are built
     this.graph._initPathCache();
