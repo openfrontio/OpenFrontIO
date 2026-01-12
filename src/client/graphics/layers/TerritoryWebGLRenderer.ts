@@ -2870,21 +2870,35 @@ export class TerritoryWebGLRenderer {
       }
 
       vec2 jfaSeedOldAtTex(ivec2 texCoord) {
+        // JFA was written with Y-flipped coords, so flip when reading
+        ivec2 flipped = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
         ivec2 clamped = clamp(
-          texCoord,
+          flipped,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        return texelFetch(u_jfaSeedsOld, clamped, 0).rg;
+        vec2 seed = texelFetch(u_jfaSeedsOld, clamped, 0).rg;
+        // Also flip the seed Y coordinate back to map space
+        if (seed.x >= 0.0) {
+          seed.y = u_mapResolution.y - seed.y;
+        }
+        return seed;
       }
 
       vec2 jfaSeedNewAtTex(ivec2 texCoord) {
+        // JFA was written with Y-flipped coords, so flip when reading
+        ivec2 flipped = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
         ivec2 clamped = clamp(
-          texCoord,
+          flipped,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        return texelFetch(u_jfaSeedsNew, clamped, 0).rg;
+        vec2 seed = texelFetch(u_jfaSeedsNew, clamped, 0).rg;
+        // Also flip the seed Y coordinate back to map space
+        if (seed.x >= 0.0) {
+          seed.y = u_mapResolution.y - seed.y;
+        }
+        return seed;
       }
 
       uvec2 contestOwnersAtTex(ivec2 texCoord) {
@@ -3013,7 +3027,9 @@ export class TerritoryWebGLRenderer {
         uint latestState = texelFetch(u_latestState, texCoord, 0).r;
         uint latestOwner = latestState & 0xFFFu;
         uint oldOwner = prevOwnerAtTex(texCoord);
-        uint changeMask = texelFetch(u_changeMask, texCoord, 0).r;
+        // ChangeMask was written with Y-flipped coords, so flip when reading
+        ivec2 changeMaskCoord = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
+        uint changeMask = texelFetch(u_changeMask, changeMaskCoord, 0).r;
 	        bool smoothActive = u_smoothEnabled &&
 	          u_smoothProgress < 1.0 &&
 	          !u_alternativeView &&
@@ -3192,6 +3208,9 @@ export class TerritoryWebGLRenderer {
         }
 
         if (smoothActive) {
+          // DEBUG: uncomment to visualize tiles in smooth mode
+           color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return;
+          
           // Compute old color blended on terrain
           vec3 oldColor = baseTerrainColor;
           if (oldOwner == 0u) {
@@ -3211,37 +3230,59 @@ export class TerritoryWebGLRenderer {
             oldColor = mix(baseTerrainColor, oldPatternColor, u_alpha);
           }
 
+          // Simple per-tile linear sweep - GPU efficient, no JFA distance needed
+          // Use JFA seeds only to determine sweep direction
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
-          bool hasOldSeed = seedOld.x >= 0.0;
-          bool hasNewSeed = seedNew.x >= 0.0;
           
-          // If either seed is invalid, we can't compute meaningful distances
-          // for smooth animation - just use the current color
-          if (!hasOldSeed || !hasNewSeed) {
-            // Skip smooth animation - show current state
-          } else {
-            float oldDistance = hasOldSeed
-              ? max(length(seedOld - mapCoord) - 0.5, 0.0)
-              : 1e6;
-            float newDistance = hasNewSeed
-              ? max(length(seedNew - mapCoord) - 0.5, 0.0)
-              : 1e6;
-            float maxDistance = max(oldDistance + newDistance, 0.001);
-            float edge = u_smoothProgress * maxDistance;
-            float phi = oldDistance - edge;
-
-            float showNew = step(phi, 0.0);
-            color = mix(oldColor, color, showNew);
-
-            const float FRONT_HALF_WIDTH = 0.5;
-            float distToFront = abs(phi);
-            float aa = max(fwidth(phi), 0.001);
-            float frontBandAlpha =
-              1.0 - smoothstep(FRONT_HALF_WIDTH - aa, FRONT_HALF_WIDTH + aa, distToFront);
-            if (frontBandAlpha > 0.0) {
-            uint borderOwner = phi <= 0.0 ? owner : oldOwner;
-            uint otherOwner = phi <= 0.0 ? oldOwner : owner;
+          // Determine sweep direction: from old territory toward new
+          vec2 sweepDir = vec2(1.0, 0.0); // default: left to right
+          if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {
+            vec2 dir = seedNew - seedOld;
+            if (length(dir) > 0.01) {
+              sweepDir = normalize(dir);
+            }
+          } else if (seedNew.x >= 0.0) {
+            // Expanding into unowned - sweep from new border inward
+            vec2 dir = mapCoord - seedNew;
+            if (length(dir) > 0.01) {
+              sweepDir = normalize(dir);
+            }
+          } else if (seedOld.x >= 0.0) {
+            // Losing territory - sweep from old border outward
+            vec2 dir = seedOld - mapCoord;
+            if (length(dir) > 0.01) {
+              sweepDir = normalize(dir);
+            }
+          }
+          
+          // Position within tile (0-1)
+          vec2 tilePos = fract(mapCoord);
+          vec2 tileCenter = vec2(0.5, 0.5);
+          
+          // Project tile position onto sweep direction
+          // At progress=0: front is at the "old" edge (dot = -0.5)
+          // At progress=1: front is at the "new" edge (dot = +0.5)
+          float posAlongSweep = dot(tilePos - tileCenter, sweepDir); // -0.5 to +0.5
+          float frontPos = u_smoothProgress - 0.5; // -0.5 to +0.5
+          float distToFront = posAlongSweep - frontPos;
+          
+          // Smooth blend over ~1 pixel in screen space
+          float pixelInTiles = 1.0 / u_viewScale;
+          float showNew = smoothstep(-pixelInTiles, pixelInTiles, -distToFront);
+          color = mix(oldColor, color, showNew);
+          
+          // Draw border at front - width in screen pixels
+          const float BORDER_PIXELS = 1.5;
+          float borderHalfWidth = BORDER_PIXELS / u_viewScale;
+          float absDist = abs(distToFront);
+          float aa = max(fwidth(distToFront), 0.001);
+          float frontBandAlpha =
+            1.0 - smoothstep(borderHalfWidth - aa, borderHalfWidth + aa, absDist);
+          
+          if (frontBandAlpha > 0.0) {
+            uint borderOwner = distToFront <= 0.0 ? owner : oldOwner;
+            uint otherOwner = distToFront <= 0.0 ? oldOwner : owner;
             if (borderOwner == 0u) {
               borderOwner = otherOwner;
               otherOwner = 0u;
@@ -3268,11 +3309,9 @@ export class TerritoryWebGLRenderer {
                 }
               }
               bColor = applyDefended(bColor, isDefended, texCoord);
-              // Blend border on top (borders are opaque)
               color = mix(color, bColor, frontBandAlpha * borderBase.a);
             }
           }
-          } // end of else (has at least one valid seed)
         }
 
         bool pendingOwnerChange = latestOwner != owner;
