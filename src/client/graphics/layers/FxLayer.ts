@@ -1,3 +1,4 @@
+
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import {
@@ -13,6 +14,9 @@ import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
+import { EventBus } from "../../../core/EventBus";
+import { MoveWarshipIntentEvent } from "../../Transport";
+import { MoveIndicatorFx } from "../fx/MoveIndicatorFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -26,7 +30,11 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  // added eventBus to listen MoveWarshipIntentEvent
+  constructor(
+    private game: GameView,
+    private eventBus: EventBus,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -235,6 +243,14 @@ export class FxLayer implements Layer {
 
   async init() {
     this.redraw();
+
+    // listening for warship move clicks for MoveIndicatorFx
+    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+      const x = this.game.x(e.tile);
+      const y = this.game.y(e.tile);
+      this.allFx.push(new MoveIndicatorFx(x, y));
+    });
+
     try {
       this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
       console.log("FX sprites loaded successfully");
