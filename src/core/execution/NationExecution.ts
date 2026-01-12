@@ -2,6 +2,7 @@ import {
   Difficulty,
   Execution,
   Game,
+  GameMode,
   Gold,
   Nation,
   Player,
@@ -250,15 +251,29 @@ export class NationExecution implements Execution {
 
   private handleUnits() {
     if (this.warshipBehavior === null) throw new Error("not initialized");
+    const hasCoastalTiles = this.hasCoastalTiles();
+    const isTeamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
     return (
       this.maybeSpawnStructure(UnitType.City, (num) => num) ||
       this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
       this.warshipBehavior.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) => num) ||
+      this.maybeSpawnStructure(UnitType.Factory, (num) =>
+        hasCoastalTiles ? num * 3 : num,
+      ) ||
       this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num ** 2) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) =>
+        isTeamGame ? num : num ** 2,
+      ) ||
       this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
     );
+  }
+
+  private hasCoastalTiles(): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    for (const tile of this.player.borderTiles()) {
+      if (this.mg.isOceanShore(tile)) return true;
+    }
+    return false;
   }
 
   private maybeSpawnStructure(
@@ -294,6 +309,7 @@ export class NationExecution implements Execution {
         : randTerritoryTileArray(this.random, this.mg, this.player, 25);
     if (tiles.length === 0) return null;
     const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
+    if (valueFunction === null) return null;
     let bestTile: TileRef | null = null;
     let bestValue = 0;
     for (const t of tiles) {

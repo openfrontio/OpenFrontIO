@@ -11,7 +11,7 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef, euclDistFN } from "../../game/GameMap";
-import { ParabolaPathFinder } from "../../pathfinding/PathFinding";
+import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
@@ -60,9 +60,16 @@ export class NationNukeBehavior {
     const hydroCost = this.getPerceivedNukeCost(UnitType.HydrogenBomb);
     const atomCost = this.getPerceivedNukeCost(UnitType.AtomBomb);
     let nukeType: UnitType;
-    if (this.player.gold() >= hydroCost) {
+    if (
+      !this.game.config().isUnitDisabled(UnitType.HydrogenBomb) &&
+      this.player.gold() >= hydroCost
+    ) {
       nukeType = UnitType.HydrogenBomb;
-    } else if (!this.isHydroNation && this.player.gold() >= atomCost) {
+    } else if (
+      !this.game.config().isUnitDisabled(UnitType.AtomBomb) &&
+      (!this.isHydroNation || this.isUnderHeavyAttack()) &&
+      this.player.gold() >= atomCost
+    ) {
       nukeType = UnitType.AtomBomb;
     } else {
       return;
@@ -342,6 +349,11 @@ export class NationNukeBehavior {
 
   // Simulate saving up for a MIRV
   private getPerceivedNukeCost(type: UnitType): Gold {
+    // If MIRVs are disabled, return the actual cost
+    if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
+      return this.cost(type);
+    }
+
     // Return the actual cost in team games (saving up for a MIRV is not relevant, the game will be finished before that)
     // or if we already have enough gold to buy both a MIRV and a hydro
     if (
@@ -352,7 +364,7 @@ export class NationNukeBehavior {
       return this.cost(type);
     }
 
-    // On Hard & Impossible, ignore perceived cost when under heavy attack (2x troops)
+    // On Hard & Impossible, ignore perceived cost when under heavy attack
     // The nation is probably going to get destroyed soon, so go all-in on nukes
     const difficulty = this.game.config().gameConfig().difficulty;
     if (
@@ -380,8 +392,7 @@ export class NationNukeBehavior {
 
     const myTroops = this.player.troops();
 
-    // Consider it a heavy attack if total incoming attacks have 2x our troops
-    return totalIncomingTroops >= myTroops * 2;
+    return totalIncomingTroops >= myTroops;
   }
 
   private removeOldNukeEvents() {
@@ -445,20 +456,14 @@ export class NationNukeBehavior {
     spawnTile: TileRef,
     targetTile: TileRef,
   ): boolean {
-    const pathFinder = new ParabolaPathFinder(this.game);
     const speed = this.game.config().defaultNukeSpeed();
-    const distanceBasedHeight = true; // Atom/Hydrogen bombs use distance-based height
-    const rocketDirectionUp = true; // AI nukes always go "up" for now
+    const pathFinder = UniversalPathFinding.Parabola(this.game, {
+      increment: speed,
+      distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
+      directionUp: true, // AI nukes always go "up" for now
+    });
 
-    pathFinder.computeControlPoints(
-      spawnTile,
-      targetTile,
-      speed,
-      distanceBasedHeight,
-      rocketDirectionUp,
-    );
-
-    const trajectory = pathFinder.allTiles();
+    const trajectory = pathFinder.findPath(spawnTile, targetTile) ?? [];
     if (trajectory.length === 0) {
       return false;
     }
@@ -654,13 +659,13 @@ export class NationNukeBehavior {
     this.recentlySentNukes.push([tick, tile, nukeType]);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
-      // Increase perceived cost by 25% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
-      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 125n) / 100n;
+      // Increase perceived cost by 35% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
+      this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 135n) / 100n;
     } else if (nukeType === UnitType.HydrogenBomb) {
       this.hydrogenBombsLaunched++;
-      // Increase perceived cost by 15% each time to simulate saving up for a MIRV
+      // Increase perceived cost by 25% each time to simulate saving up for a MIRV
       this.hydrogenBombPerceivedCost =
-        (this.hydrogenBombPerceivedCost * 115n) / 100n;
+        (this.hydrogenBombPerceivedCost * 125n) / 100n;
     }
     this.game.addExecution(new NukeExecution(nukeType, this.player, tile));
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
