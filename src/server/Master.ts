@@ -160,15 +160,21 @@ export async function startMaster() {
           });
         };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
+        const runLoop = () => {
+          fetchLobbies()
+            .then((lobbies) => {
               if (lobbies === 0) {
                 scheduleLobbies();
               }
-            }),
-          100,
-        );
+            })
+            .catch((error) => {
+              log.error("Error in check loop:", error);
+            })
+            .finally(() => {
+              setTimeout(runLoop, 100);
+            });
+        };
+        runLoop();
       }
     }
   });
