@@ -21,7 +21,6 @@ import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/lobby/MapCard";
-import "./components/baseComponents/lobby/MapListDisplay";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -233,7 +232,7 @@ export class SinglePlayerModal extends BaseModal {
                               mapValue,
                           );
                           return html`
-                            <map-list-display
+                            <lobby-map-card
                               @click=${() => this.handleMapSelection(mapValue)}
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
@@ -243,7 +242,7 @@ export class SinglePlayerModal extends BaseModal {
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
-                            ></map-list-display>
+                            ></lobby-map-card>
                           `;
                         })}
                       </div>
