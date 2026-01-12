@@ -88,7 +88,7 @@ export class MapPlaylist {
 
   constructor(private disableTeams: boolean = false) {}
 
-  public gameConfig(): GameConfig {
+  public async gameConfig(): Promise<GameConfig> {
     const { map, mode } = this.getNextMap();
 
     const playerTeams =
@@ -107,7 +107,10 @@ export class MapPlaylist {
 
     // Maps with smallest player count < 50 don't support compact map in team games
     // The smallest player count is the 3rd number in numPlayersConfig
-    if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
+    if (
+      mode === GameMode.Team &&
+      !(await config.supportsCompactMapForTeams(map))
+    ) {
       isCompact = false;
     }
 
@@ -116,7 +119,12 @@ export class MapPlaylist {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
+      maxPlayers: await config.lobbyMaxPlayers(
+        map,
+        mode,
+        playerTeams,
+        isCompact,
+      ),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: { isCompact, isRandomSpawn },

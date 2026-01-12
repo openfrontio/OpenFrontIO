@@ -49,7 +49,7 @@ export class TestServerConfig implements ServerConfig {
   gameCreationRate(): number {
     throw new Error("Method not implemented.");
   }
-  lobbyMaxPlayers(map: GameMapType): number {
+  async lobbyMaxPlayers(map: GameMapType): Promise<number> {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
@@ -82,7 +82,7 @@ export class TestServerConfig implements ServerConfig {
   getRandomPublicGameModifiers(): PublicGameModifiers {
     return { isCompact: false, isRandomSpawn: false };
   }
-  supportsCompactMapForTeams(map: GameMapType): boolean {
+  async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
     throw new Error("Method not implemented.");
   }
 }

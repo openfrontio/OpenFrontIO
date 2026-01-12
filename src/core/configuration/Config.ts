@@ -36,7 +36,7 @@ export interface ServerConfig {
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
     isCompactMap?: boolean,
-  ): number;
+  ): Promise<number>;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -59,7 +59,7 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   getRandomPublicGameModifiers(): PublicGameModifiers;
-  supportsCompactMapForTeams(map: GameMapType): boolean;
+  supportsCompactMapForTeams(map: GameMapType): Promise<boolean>;
 }
 
 export interface NukeMagnitude {
