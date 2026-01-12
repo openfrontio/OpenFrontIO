@@ -39,6 +39,7 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { TestSkinExecution } from "./TestSkinExecution";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -246,8 +247,7 @@ export class ClientGameRunner {
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
   private skinTestTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private skinTestInitialAttackTimeoutId: ReturnType<typeof setTimeout> | null =
-    null;
+  private testSkinExecution: TestSkinExecution | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -341,37 +341,16 @@ export class ClientGameRunner {
         }
       }, 120000);
 
-      // Single initial attack with half troops to start territory expansion
-      const scheduleInitialAttack = (delayMs: number) => {
-        if (this.skinTestInitialAttackTimeoutId !== null) {
-          clearTimeout(this.skinTestInitialAttackTimeoutId);
-          this.skinTestInitialAttackTimeoutId = null;
-        }
-        this.skinTestInitialAttackTimeoutId = setTimeout(() => {
-          this.skinTestInitialAttackTimeoutId = null;
-          if (!this.isActive) return;
-          initialAttack();
-        }, delayMs);
-      };
-
-      const initialAttack = () => {
-        if (!this.isActive) return;
-
-        if (this.myPlayer === null) {
-          const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
-          if (myPlayer === null) {
-            scheduleInitialAttack(100);
-            return;
-          }
-          this.myPlayer = myPlayer;
-        }
-
-        const troopCount = this.myPlayer.troops() ?? 1000000;
-        this.eventBus.emit(
-          new SendAttackIntentEvent(null, Math.floor(troopCount / 2)),
-        );
-      };
-      scheduleInitialAttack(100);
+      if (this.testSkinExecution !== null) {
+        this.testSkinExecution.stop();
+      }
+      this.testSkinExecution = new TestSkinExecution(
+        this.gameView,
+        this.eventBus,
+        this.lobby.clientID,
+        () => this.isActive,
+      );
+      this.testSkinExecution.start();
     }
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
@@ -562,9 +541,9 @@ export class ClientGameRunner {
       clearTimeout(this.skinTestTimeoutId);
       this.skinTestTimeoutId = null;
     }
-    if (this.skinTestInitialAttackTimeoutId !== null) {
-      clearTimeout(this.skinTestInitialAttackTimeoutId);
-      this.skinTestInitialAttackTimeoutId = null;
+    if (this.testSkinExecution !== null) {
+      this.testSkinExecution.stop();
+      this.testSkinExecution = null;
     }
     this.worker.cleanup();
     this.transport.leaveGame();
