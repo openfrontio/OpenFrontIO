@@ -11,7 +11,7 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef, euclDistFN } from "../../game/GameMap";
-import { ParabolaPathFinder } from "../../pathfinding/PathFinding";
+import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
@@ -456,20 +456,14 @@ export class NationNukeBehavior {
     spawnTile: TileRef,
     targetTile: TileRef,
   ): boolean {
-    const pathFinder = new ParabolaPathFinder(this.game);
     const speed = this.game.config().defaultNukeSpeed();
-    const distanceBasedHeight = true; // Atom/Hydrogen bombs use distance-based height
-    const rocketDirectionUp = true; // AI nukes always go "up" for now
+    const pathFinder = UniversalPathFinding.Parabola(this.game, {
+      increment: speed,
+      distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
+      directionUp: true, // AI nukes always go "up" for now
+    });
 
-    pathFinder.computeControlPoints(
-      spawnTile,
-      targetTile,
-      speed,
-      distanceBasedHeight,
-      rocketDirectionUp,
-    );
-
-    const trajectory = pathFinder.allTiles();
+    const trajectory = pathFinder.findPath(spawnTile, targetTile) ?? [];
     if (trajectory.length === 0) {
       return false;
     }
