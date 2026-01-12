@@ -25,7 +25,6 @@ export class MoveIndicatorFx implements Fx {
 
     ctx.save();
     ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
-    ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
     ctx.lineWidth = 0.7;
 
     // draw 4 chevrons pointing inward
