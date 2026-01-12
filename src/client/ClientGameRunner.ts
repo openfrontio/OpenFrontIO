@@ -264,9 +264,25 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private stopSkinTest() {
+    if (this.skinTestTimeoutId !== null) {
+      clearTimeout(this.skinTestTimeoutId);
+      this.skinTestTimeoutId = null;
+    }
+    if (this.testSkinExecution !== null) {
+      try {
+        this.testSkinExecution.stop();
+      } finally {
+        this.testSkinExecution = null;
+      }
+    }
+  }
+
   private showSkinTestModal() {
     // Stop the game
     this.isActive = false;
+
+    this.stopSkinTest();
 
     this.myPlayer ??= this.gameView.playerByClientID(this.lobby.clientID);
 
@@ -343,9 +359,8 @@ export class ClientGameRunner {
         }
       }, 120000);
 
-      if (this.testSkinExecution !== null) {
-        this.testSkinExecution.stop();
-      }
+      // Clean up any prior skin test resources, then start a fresh execution
+      this.stopSkinTest();
       this.testSkinExecution = new TestSkinExecution(
         this.gameView,
         this.eventBus,
@@ -539,14 +554,8 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
-    if (this.skinTestTimeoutId !== null) {
-      clearTimeout(this.skinTestTimeoutId);
-      this.skinTestTimeoutId = null;
-    }
-    if (this.testSkinExecution !== null) {
-      this.testSkinExecution.stop();
-      this.testSkinExecution = null;
-    }
+    // Clean up skin test resources
+    this.stopSkinTest();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
