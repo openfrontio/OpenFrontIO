@@ -51,7 +51,6 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
 import SoundManager from "./sound/SoundManager";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
@@ -246,7 +245,6 @@ export class ClientGameRunner {
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
-  private skinTestTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private testSkinExecution: TestSkinExecution | null = null;
 
   private lastTickReceiveTime: number = 0;
@@ -265,10 +263,6 @@ export class ClientGameRunner {
   }
 
   private stopSkinTest() {
-    if (this.skinTestTimeoutId !== null) {
-      clearTimeout(this.skinTestTimeoutId);
-      this.skinTestTimeoutId = null;
-    }
     if (this.testSkinExecution !== null) {
       try {
         this.testSkinExecution.stop();
@@ -276,26 +270,6 @@ export class ClientGameRunner {
         this.testSkinExecution = null;
       }
     }
-  }
-
-  private showSkinTestModal() {
-    // Stop the game
-    this.isActive = false;
-
-    this.stopSkinTest();
-
-    this.myPlayer ??= this.gameView.playerByClientID(this.lobby.clientID);
-
-    if (!this.myPlayer?.cosmetics?.pattern) {
-      console.error("No pattern found on player", this.myPlayer?.cosmetics);
-      return;
-    }
-
-    const patternName = this.myPlayer.cosmetics.pattern.name;
-    const colorPalette = this.myPlayer.cosmetics.pattern.colorPalette ?? null;
-
-    // Emit an event and let the modal listen and handle fetching/displaying
-    this.eventBus.emit(new ShowSkinTestModalEvent(patternName, colorPalette));
   }
 
   private async saveGame(update: WinUpdate) {
@@ -347,25 +321,21 @@ export class ClientGameRunner {
         new ReplaySpeedChangeEvent(ReplaySpeedMultiplier.fastest),
       );
 
-      // Show modal after 2 minutes OR when player wins, whichever comes first
-      if (this.skinTestTimeoutId !== null) {
-        clearTimeout(this.skinTestTimeoutId);
-        this.skinTestTimeoutId = null;
-      }
-      this.skinTestTimeoutId = setTimeout(() => {
-        this.skinTestTimeoutId = null;
-        if (this.isActive) {
-          this.showSkinTestModal();
-        }
-      }, 120000);
-
-      // Clean up any prior skin test resources, then start a fresh execution
+      // Clean up any prior skin test resources, then set a new timeout and start a fresh execution
       this.stopSkinTest();
+
+      // Start a fresh TestSkinExecution which manages its own modal timeout
       this.testSkinExecution = new TestSkinExecution(
         this.gameView,
         this.eventBus,
         this.lobby.clientID,
         () => this.isActive,
+        () => {
+          // Called when execution requests the modal be shown — stop the game and
+          // clean up resources first.
+          this.isActive = false;
+          this.stopSkinTest();
+        },
       );
       this.testSkinExecution.start();
     }
@@ -417,7 +387,7 @@ export class ClientGameRunner {
       if (gu.updates[GameUpdateType.Win].length > 0) {
         if (this.lobby.isSkinTest) {
           // For skin tests, show the modal immediately on win instead of waiting
-          this.showSkinTestModal();
+          this.testSkinExecution?.showModal();
         } else {
           this.saveGame(gu.updates[GameUpdateType.Win][0]);
         }

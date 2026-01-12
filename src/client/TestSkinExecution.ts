@@ -1,11 +1,13 @@
 import { EventBus } from "../core/EventBus";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { ClientID } from "../core/Schemas";
+import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
 import { SendAttackIntentEvent } from "./Transport";
 
 export class TestSkinExecution {
   private myPlayer: PlayerView | null = null;
   private initialAttackTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private modalTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private gameView: GameView,
@@ -13,10 +15,24 @@ export class TestSkinExecution {
     private clientID: ClientID,
 
     private isActive: () => boolean,
+    // callback to request the runner stop the game before showing the modal
+    private onShowModalRequested: () => void,
   ) {}
 
   public start() {
+    // schedule the initial attack
     this.scheduleInitialAttack(100);
+
+    // schedule the modal after 2 minutes
+    if (this.modalTimeoutId !== null) {
+      clearTimeout(this.modalTimeoutId);
+      this.modalTimeoutId = null;
+    }
+    this.modalTimeoutId = setTimeout(() => {
+      this.modalTimeoutId = null;
+      if (!this.isActive()) return;
+      this.showModal();
+    }, 120000);
   }
 
   public stop() {
@@ -24,6 +40,41 @@ export class TestSkinExecution {
       clearTimeout(this.initialAttackTimeoutId);
       this.initialAttackTimeoutId = null;
     }
+    if (this.modalTimeoutId !== null) {
+      clearTimeout(this.modalTimeoutId);
+      this.modalTimeoutId = null;
+    }
+  }
+
+  public showModal() {
+    try {
+      this.onShowModalRequested();
+    } catch (e) {
+      // ignore
+    }
+
+    // Clear running timeouts to avoid duplicate work
+    this.stop();
+
+    // Resolve player and emit modal event
+    const myPlayer = this.gameView.playerByClientID(this.clientID);
+    if (!myPlayer) {
+      console.error(
+        "No player found to show skin test modal for",
+        this.clientID,
+      );
+      return;
+    }
+
+    if (!myPlayer?.cosmetics?.pattern) {
+      console.error("No pattern found on player", myPlayer?.cosmetics);
+      return;
+    }
+
+    const patternName = myPlayer.cosmetics.pattern.name;
+    const colorPalette = myPlayer.cosmetics.pattern.colorPalette ?? null;
+
+    this.eventBus.emit(new ShowSkinTestModalEvent(patternName, colorPalette));
   }
 
   private scheduleInitialAttack(delayMs: number) {
