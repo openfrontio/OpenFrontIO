@@ -624,7 +624,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
-        description=${translateText("user_setting.attack_ratio_down_desc")}
+        description=${translateText("user_setting.attack_ratio_down_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyT"
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
@@ -634,7 +636,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
+        description=${translateText("user_setting.attack_ratio_up_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyY"
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}
