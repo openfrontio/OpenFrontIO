@@ -77,6 +77,15 @@ export const DebugSpan = {
       }
     }
   },
+  wrap<T>(name: string, fn: () => T): T {
+    this.start(name);
+
+    try {
+      return fn();
+    } finally {
+      this.end(name);
+    }
+  },
   set(
     key: string,
     valueFn: (previous: unknown) => unknown,
@@ -91,8 +100,19 @@ export const DebugSpan = {
     const span = root ? stack[0] : stack[stack.length - 1];
     span.data[key] = valueFn(span.data[key]);
   },
-  get(): Span | undefined {
+  getLastSpan(name?: string): Span | undefined {
     if (!isEnabled()) return;
+
+    if (name) {
+      for (let i = globalThis.__DEBUG_SPANS__?.length - 1 || 0; i >= 0; i--) {
+        const span = globalThis.__DEBUG_SPANS__[i];
+        if (span.name === name) {
+          return span;
+        }
+      }
+
+      return undefined;
+    }
 
     globalThis.__DEBUG_SPANS__ = globalThis.__DEBUG_SPANS__ ?? [];
     return globalThis.__DEBUG_SPANS__[globalThis.__DEBUG_SPANS__.length - 1];

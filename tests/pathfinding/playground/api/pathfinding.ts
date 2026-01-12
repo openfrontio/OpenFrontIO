@@ -13,6 +13,7 @@ interface PrimaryResult {
   debug: {
     nodePath: Array<[number, number]> | null;
     initialPath: Array<[number, number]> | null;
+    cachedSegmentsUsed: number | null;
     timings: Record<string, number>;
   };
 }
@@ -104,12 +105,10 @@ function computePrimaryPath(
   // Enable DebugSpan to capture internal state
   DebugSpan.enable();
 
-  const start = performance.now();
   const path = pf.findPath(fromRef, toRef);
-  const time = performance.now() - start;
 
   // Get span data and disable
-  const span = DebugSpan.get();
+  const span = DebugSpan.getLastSpan();
   DebugSpan.disable();
 
   // Convert node path (miniMap coords) to full map coords
@@ -134,16 +133,22 @@ function computePrimaryPath(
     });
   }
 
+  let cachedSegmentsUsed: number | null = null;
+  if (span?.data?.cachedSegmentsUsed !== undefined) {
+    cachedSegmentsUsed = span.data.cachedSegmentsUsed as number;
+  }
+
   // Extract timings from span hierarchy
   const timings = span ? extractTimings(span) : {};
 
   return {
     path: pathToCoords(path, game),
     length: path ? path.length : 0,
-    time,
+    time: timings["hpa:findPath"] || 0,
     debug: {
       nodePath,
       initialPath,
+      cachedSegmentsUsed,
       timings,
     },
   };

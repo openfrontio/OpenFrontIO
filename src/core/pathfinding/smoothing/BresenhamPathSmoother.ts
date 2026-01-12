@@ -1,4 +1,5 @@
 import { GameMap, TileRef } from "../../game/GameMap";
+import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
 import { PathSmoother } from "./PathSmoother";
 
@@ -163,6 +164,8 @@ export class BresenhamSmoothingTransformer implements PathFinder<TileRef> {
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
     const path = this.inner.findPath(from, to);
-    return path ? this.smoother.smooth(path) : null;
+    return DebugSpan.wrap("smoothingTransformer", () =>
+      path ? this.smoother.smooth(path) : null,
+    );
   }
 }

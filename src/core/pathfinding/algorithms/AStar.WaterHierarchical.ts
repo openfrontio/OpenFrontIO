@@ -43,11 +43,13 @@ export class AStarWaterHierarchical implements PathFinder<number> {
   }
 
   findPath(from: number | number[], to: number): number[] | null {
-    if (Array.isArray(from)) {
-      return this.findPathMultiSource(from as TileRef[], to as TileRef);
-    }
+    return DebugSpan.wrap("hpa:findPath", () => {
+      if (Array.isArray(from)) {
+        return this.findPathMultiSource(from as TileRef[], to as TileRef);
+      }
 
-    return this.findPathSingle(from as TileRef, to as TileRef);
+      return this.findPathSingle(from as TileRef, to as TileRef);
+    });
   }
 
   private findPathMultiSource(
@@ -75,7 +77,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
   }
 
   findPathSingle(from: TileRef, to: TileRef): TileRef[] | null {
-    DebugSpan.start("hpa:findPathSingle");
     const dist = this.map.manhattanDist(from, to);
 
     // Early exit for very short distances
@@ -89,7 +90,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       DebugSpan.end();
 
       if (localPath) {
-        DebugSpan.end("hpa:findPathSingle");
         return localPath;
       }
     }
@@ -100,12 +100,10 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     DebugSpan.end();
 
     if (!startNode) {
-      DebugSpan.end("hpa:findPathSingle");
       return null;
     }
 
     if (!endNode) {
-      DebugSpan.end("hpa:findPathSingle");
       return null;
     }
 
@@ -123,7 +121,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     DebugSpan.end();
 
     if (!nodePath) {
-      DebugSpan.end("hpa:findPathSingle");
       return null;
     }
 
@@ -156,7 +153,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     );
 
     if (!startSegment) {
-      DebugSpan.end("hpa:findPathSingle");
       return null;
     }
 
@@ -169,7 +165,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
       const edge = this.graph.getEdgeBetween(fromNodeId, toNodeId);
       if (!edge) {
-        DebugSpan.end("hpa:findPathSingle");
         return null;
       }
 
@@ -201,7 +196,6 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       );
 
       if (!segmentPath) {
-        DebugSpan.end("hpa:findPathSingle");
         return null;
       }
 
@@ -229,14 +223,12 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     );
 
     if (!endSegment) {
-      DebugSpan.end("hpa:findPathSingle");
       return null;
     }
 
     initialPath.push(...endSegment.slice(1));
 
     DebugSpan.set("initialPath", () => initialPath);
-    DebugSpan.end("hpa:findPathSingle");
 
     // Smoothing moved to SmoothingTransformer - return raw path
     return initialPath;

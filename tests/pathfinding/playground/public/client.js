@@ -20,6 +20,7 @@ const state = {
 
 // Colors for comparison paths
 const COMPARISON_COLORS = {
+  "hpa.cached": "#00ffff", // cyan
   hpa: "#ff8800", // orange
   "a.baseline": "#ff00ff", // magenta
   "a.generic": "#88ff00", // lime
@@ -814,20 +815,6 @@ function updatePathInfo(result) {
 function updateTimingsPanel(result) {
   const primary = result.primary;
   const timings = primary && primary.debug ? primary.debug.timings : {};
-
-  // Use total span time from DebugSpan
-  const hpaTime = timings["hpa:findPathSingle"] || 0;
-
-  // Show HPA* time and path length (or 0.00 in light gray if no data)
-  const hpaTimeEl = document.getElementById("hpaTime");
-  if (hpaTime > 0) {
-    hpaTimeEl.textContent = `${hpaTime.toFixed(2)}ms`;
-    hpaTimeEl.classList.remove("faded");
-  } else {
-    hpaTimeEl.textContent = "0.00ms";
-    hpaTimeEl.classList.add("faded");
-  }
-
   const hpaTilesEl = document.getElementById("hpaTiles");
   if (primary && primary.length > 0) {
     hpaTilesEl.textContent = `- ${primary.length} tiles`;
@@ -890,6 +877,19 @@ function updateTimingsPanel(result) {
     initialPathValueEl.style.color = "#666";
   }
 
+  // Smooth Path
+  const smoothPathEl = document.getElementById("timingSmoothPath");
+  const smoothPathValueEl = document.getElementById("timingSmoothPathValue");
+  smoothPathEl.style.display = "flex";
+  const smoothPathTime = timings["smoothingTransformer"];
+  if (smoothPathTime !== undefined) {
+    smoothPathValueEl.textContent = `${smoothPathTime.toFixed(2)}ms`;
+    smoothPathValueEl.style.color = "#f5f5f5";
+  } else {
+    smoothPathValueEl.textContent = "—";
+    smoothPathValueEl.style.color = "#666";
+  }
+
   // Show comparisons section
   const comparisonsSection = document.getElementById("comparisonsSection");
   const comparisonsContainer = document.getElementById("comparisonsContainer");
@@ -907,6 +907,23 @@ function updateTimingsPanel(result) {
     for (const comp of result.comparisons) {
       compMap[comp.adapter] = comp;
     }
+  }
+
+  // Use total span time from DebugSpan
+  let hpaTime = timings["findPath"] || 0;
+
+  if (compMap["hpa.cached"]) {
+    hpaTime = compMap["hpa.cached"].time;
+  }
+
+  // Show HPA* time and path length (or 0.00 in light gray if no data)
+  const hpaTimeEl = document.getElementById("hpaTime");
+  if (hpaTime > 0) {
+    hpaTimeEl.textContent = `${hpaTime.toFixed(2)}ms`;
+    hpaTimeEl.classList.remove("faded");
+  } else {
+    hpaTimeEl.textContent = "0.00ms";
+    hpaTimeEl.classList.add("faded");
   }
 
   // Find fastest time overall (including HPA*) when we have data

@@ -6,8 +6,14 @@ import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
 import { setupFromPath } from "../../utils.js";
 
 // Available comparison adapters
-// Note: "hpa" runs same algorithm without debug overhead for fair timing comparison
-export const COMPARISON_ADAPTERS = ["hpa", "a.baseline", "a.generic", "a.full"];
+// Note: "hpa.cached" runs same algorithm without debug overhead for fair timing comparison
+export const COMPARISON_ADAPTERS = [
+  "hpa.cached",
+  "hpa",
+  "a.baseline",
+  "a.generic",
+  "a.full",
+];
 
 export interface MapInfo {
   name: string;
@@ -104,7 +110,7 @@ export function listMaps(): MapInfo[] {
  * Extract graph build data from DebugSpan
  */
 function extractGraphBuildData(): GraphBuildData | null {
-  const span = DebugSpan.get();
+  const span = DebugSpan.getLastSpan();
   if (!span || span.name !== "abstractGraph:build") {
     return null;
   }
