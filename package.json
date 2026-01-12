@@ -53,7 +53,7 @@
     "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.20",
     "benchmark": "^2.1.4",
-    "canvas": "^3.1.0",
+    "canvas": "^3.2.1",
     "chai": "^5.1.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",

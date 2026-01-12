@@ -8,11 +8,7 @@ import {
   listMaps,
   setConfig,
 } from "./api/maps.js";
-import {
-  clearAdapterCaches,
-  computePath,
-  computePfMiniPath,
-} from "./api/pathfinding.js";
+import { clearAdapterCaches, computePath } from "./api/pathfinding.js";
 
 // Parse command-line arguments
 const args = process.argv.slice(2);
@@ -112,12 +108,18 @@ app.get("/api/maps/:name/thumbnail", (req: Request, res: Response) => {
  *   map: string,
  *   from: [x, y],
  *   to: [x, y],
- *   includePfMini?: boolean
+ *   adapters?: string[]  // Optional: which comparison adapters to run
+ * }
+ *
+ * Response:
+ * {
+ *   primary: { path, length, time, debug: { nodePath, initialPath, timings } },
+ *   comparisons: [{ adapter, path, length, time }, ...]
  * }
  */
 app.post("/api/pathfind", async (req: Request, res: Response) => {
   try {
-    const { map, from, to, includePfMini } = req.body;
+    const { map, from, to, adapters } = req.body;
 
     // Validate request
     if (!map || !from || !to) {
@@ -144,7 +146,7 @@ app.post("/api/pathfind", async (req: Request, res: Response) => {
       map,
       from as [number, number],
       to as [number, number],
-      { includePfMini: !!includePfMini },
+      { adapters },
     );
 
     res.json(result);
@@ -159,66 +161,6 @@ app.post("/api/pathfind", async (req: Request, res: Response) => {
     } else {
       res.status(500).json({
         error: "Failed to compute path",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-});
-
-/**
- * POST /api/pathfind-pfmini
- * Compute only PathFinder.Mini path
- *
- * Request body:
- * {
- *   map: string,
- *   from: [x, y],
- *   to: [x, y]
- * }
- */
-app.post("/api/pathfind-pfmini", async (req: Request, res: Response) => {
-  try {
-    const { map, from, to } = req.body;
-
-    // Validate request
-    if (!map || !from || !to) {
-      return res.status(400).json({
-        error: "Invalid request",
-        message: "Missing required fields: map, from, to",
-      });
-    }
-
-    if (
-      !Array.isArray(from) ||
-      from.length !== 2 ||
-      !Array.isArray(to) ||
-      to.length !== 2
-    ) {
-      return res.status(400).json({
-        error: "Invalid coordinates",
-        message: "from and to must be [x, y] coordinate arrays",
-      });
-    }
-
-    // Compute PF.Mini path only
-    const result = await computePfMiniPath(
-      map,
-      from as [number, number],
-      to as [number, number],
-    );
-
-    res.json(result);
-  } catch (error) {
-    console.error("Error computing PF.Mini path:", error);
-
-    if (error instanceof Error && error.message.includes("is not water")) {
-      res.status(400).json({
-        error: "Invalid coordinates",
-        message: error.message,
-      });
-    } else {
-      res.status(500).json({
-        error: "Failed to compute PF.Mini path",
         message: error instanceof Error ? error.message : String(error),
       });
     }

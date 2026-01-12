@@ -1,5 +1,4 @@
 import { TrainExecution } from "../execution/TrainExecution";
-import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
@@ -72,6 +71,7 @@ export function createTrainStopHandlers(
 }
 
 export class TrainStation {
+  id: number = -1; // assigned by StationManager
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
   private cluster: Cluster | null;
@@ -168,29 +168,6 @@ export class TrainStation {
     if (handler) {
       handler.onStop(this.mg, this, trainExecution);
     }
-  }
-}
-
-/**
- * Make the trainstation usable with A*
- */
-export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
-  constructor(private game: Game) {}
-
-  neighbors(node: TrainStation): TrainStation[] {
-    return node.neighbors();
-  }
-
-  cost(node: TrainStation): number {
-    return 1;
-  }
-
-  position(node: TrainStation): { x: number; y: number } {
-    return { x: this.game.x(node.tile()), y: this.game.y(node.tile()) };
-  }
-
-  isTraversable(from: TrainStation, to: TrainStation): boolean {
-    return true;
   }
 }
 

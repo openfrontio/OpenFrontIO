@@ -1,6 +1,6 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
 import { Game, Player, Unit } from "../../../src/core/game/Game";
-import { PathStatus } from "../../../src/core/pathfinding/PathFinder";
+import { PathStatus } from "../../../src/core/pathfinding/types";
 import { setup } from "../../util/Setup";
 
 describe("TradeShipExecution", () => {
