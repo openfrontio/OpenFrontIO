@@ -3200,26 +3200,33 @@ export class TerritoryWebGLRenderer {
           }
 
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
-          float oldDistance = seedOld.x < 0.0
-            ? 1e6
-            : max(length(seedOld - mapCoord) - 0.5, 0.0);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
-          float newDistance = seedNew.x < 0.0
-            ? 1e6
-            : max(length(seedNew - mapCoord) - 0.5, 0.0);
-          float maxDistance = max(oldDistance + newDistance, 0.001);
-          float edge = u_smoothProgress * maxDistance;
-          float phi = oldDistance - edge;
+          bool hasOldSeed = seedOld.x >= 0.0;
+          bool hasNewSeed = seedNew.x >= 0.0;
+          
+          // If neither seed is valid, this tile is far from any change - skip smooth logic
+          if (!hasOldSeed && !hasNewSeed) {
+            // Just use the current color, no animation needed
+          } else {
+            float oldDistance = hasOldSeed
+              ? max(length(seedOld - mapCoord) - 0.5, 0.0)
+              : 1e6;
+            float newDistance = hasNewSeed
+              ? max(length(seedNew - mapCoord) - 0.5, 0.0)
+              : 1e6;
+            float maxDistance = max(oldDistance + newDistance, 0.001);
+            float edge = u_smoothProgress * maxDistance;
+            float phi = oldDistance - edge;
 
-          float showNew = step(phi, 0.0);
-          color = mix(oldColor, color, showNew);
+            float showNew = step(phi, 0.0);
+            color = mix(oldColor, color, showNew);
 
-          const float FRONT_HALF_WIDTH = 0.5;
-          float distToFront = abs(phi);
-          float aa = max(fwidth(phi), 0.001);
-          float frontBandAlpha =
-            1.0 - smoothstep(FRONT_HALF_WIDTH - aa, FRONT_HALF_WIDTH + aa, distToFront);
-          if (frontBandAlpha > 0.0) {
+            const float FRONT_HALF_WIDTH = 0.5;
+            float distToFront = abs(phi);
+            float aa = max(fwidth(phi), 0.001);
+            float frontBandAlpha =
+              1.0 - smoothstep(FRONT_HALF_WIDTH - aa, FRONT_HALF_WIDTH + aa, distToFront);
+            if (frontBandAlpha > 0.0) {
             uint borderOwner = phi <= 0.0 ? owner : oldOwner;
             uint otherOwner = phi <= 0.0 ? oldOwner : owner;
             if (borderOwner == 0u) {
@@ -3252,6 +3259,7 @@ export class TerritoryWebGLRenderer {
               color = mix(color, bColor, frontBandAlpha * borderBase.a);
             }
           }
+          } // end of else (has at least one valid seed)
         }
 
         bool pendingOwnerChange = latestOwner != owner;
