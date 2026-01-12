@@ -1,4 +1,5 @@
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import {
   ConquestUpdate,
@@ -7,15 +8,14 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import { MoveWarshipIntentEvent } from "../../Transport";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
+import { MoveIndicatorFx } from "../fx/MoveIndicatorFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { EventBus } from "../../../core/EventBus";
-import { MoveWarshipIntentEvent } from "../../Transport";
-import { MoveIndicatorFx } from "../fx/MoveIndicatorFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
