@@ -22,7 +22,10 @@ import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AS
 import { PathFinding } from "../../src/core/pathfinding/PathFinder";
 import { PathFinderBuilder } from "../../src/core/pathfinding/PathFinderBuilder";
 import { StepperConfig } from "../../src/core/pathfinding/PathFinderStepper";
+import { ComponentCheckTransformer } from "../../src/core/pathfinding/transformers/ComponentCheckTransformer";
 import { MiniMapTransformer } from "../../src/core/pathfinding/transformers/MiniMapTransformer";
+import { ShoreCoercingTransformer } from "../../src/core/pathfinding/transformers/ShoreCoercingTransformer";
+import { SmoothingWaterTransformer } from "../../src/core/pathfinding/transformers/SmoothingWaterTransformer";
 import {
   PathStatus,
   SteppingPathFinder,
@@ -111,6 +114,34 @@ export function getAdapter(
     }
     case "hpa.cached":
       return PathFinding.Water(game);
+    case "hpa.bresenham": {
+      // HPA* with Bresenham smoother (same as default hpa, for explicit comparison)
+      const pf = game.miniWaterHPA()!;
+      const graph = game.miniWaterGraph()!;
+      const miniMap = game.miniMap();
+      const componentCheckFn = (t: TileRef) => graph.getComponentId(t);
+
+      return PathFinderBuilder.create(pf)
+        .wrap((pf) => new ComponentCheckTransformer(pf, componentCheckFn))
+        .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
+        .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
+        .wrap((pf) => new MiniMapTransformer(pf, game, miniMap))
+        .buildWithStepper(tileStepperConfig(game));
+    }
+    case "hpa.optimized": {
+      // HPA* with optimized smoother
+      const pf = game.miniWaterHPA()!;
+      const graph = game.miniWaterGraph()!;
+      const miniMap = game.miniMap();
+      const componentCheckFn = (t: TileRef) => graph.getComponentId(t);
+
+      return PathFinderBuilder.create(pf)
+        .wrap((pf) => new ComponentCheckTransformer(pf, componentCheckFn))
+        .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
+        .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
+        .wrap((pf) => new MiniMapTransformer(pf, game, miniMap))
+        .buildWithStepper(tileStepperConfig(game));
+    }
     default:
       throw new Error(`Unknown pathfinding adapter: ${name}`);
   }

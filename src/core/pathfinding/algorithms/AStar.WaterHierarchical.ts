@@ -2,7 +2,7 @@ import { GameMap, TileRef } from "../../game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
 import { AbstractGraphAStar } from "./AStar.AbstractGraph";
-import { AStarBounded } from "./AStar.Bounded";
+import { AStarWaterBounded } from "./AStar.WaterBounded";
 import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
 import { LAND_MARKER } from "./ConnectedComponents";
@@ -10,8 +10,8 @@ import { LAND_MARKER } from "./ConnectedComponents";
 export class AStarWaterHierarchical implements PathFinder<number> {
   private tileBFS: BFSGrid;
   private abstractAStar: AbstractGraphAStar;
-  private localAStar: AStarBounded;
-  private localAStarMultiCluster: AStarBounded;
+  private localAStar: AStarWaterBounded;
+  private localAStarMultiCluster: AStarWaterBounded;
   private sourceResolver: SourceResolver;
 
   constructor(
@@ -31,12 +31,15 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     // BoundedAStar for cluster-bounded local pathfinding
     const maxLocalNodes = clusterSize * clusterSize;
-    this.localAStar = new AStarBounded(map, maxLocalNodes);
+    this.localAStar = new AStarWaterBounded(map, maxLocalNodes);
 
     // BoundedAStar for multi-cluster (3x3) local pathfinding
     const multiClusterSize = clusterSize * 3;
     const maxMultiClusterNodes = multiClusterSize * multiClusterSize;
-    this.localAStarMultiCluster = new AStarBounded(map, maxMultiClusterNodes);
+    this.localAStarMultiCluster = new AStarWaterBounded(
+      map,
+      maxMultiClusterNodes,
+    );
 
     // SourceResolver for multi-source search
     this.sourceResolver = new SourceResolver(this.map, this.graph);
