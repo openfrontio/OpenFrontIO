@@ -36,6 +36,7 @@ export class TerritoryWebGLRenderer {
   private readonly jfaVao: WebGLVertexArrayObject | null;
   private readonly jfaVertexBuffer: WebGLBuffer | null;
   private readonly stateTexture: WebGLTexture | null;
+  private readonly terrainTexture: WebGLTexture | null;
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
   private readonly patternTexture: WebGLTexture | null;
@@ -87,6 +88,7 @@ export class TerritoryWebGLRenderer {
     viewScale: WebGLUniformLocation | null;
     viewOffset: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
+    terrain: WebGLUniformLocation | null;
     latestState: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
@@ -121,6 +123,7 @@ export class TerritoryWebGLRenderer {
     hoverPulseSpeed: WebGLUniformLocation | null;
     time: WebGLUniformLocation | null;
     viewerId: WebGLUniformLocation | null;
+    darkMode: WebGLUniformLocation | null;
   };
 
   private readonly mapWidth: number;
@@ -202,6 +205,7 @@ export class TerritoryWebGLRenderer {
       this.jfaVao = null;
       this.jfaVertexBuffer = null;
       this.stateTexture = null;
+      this.terrainTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
@@ -246,6 +250,7 @@ export class TerritoryWebGLRenderer {
         viewScale: null,
         viewOffset: null,
         state: null,
+        terrain: null,
         latestState: null,
         palette: null,
         relations: null,
@@ -280,6 +285,7 @@ export class TerritoryWebGLRenderer {
         hoverPulseSpeed: null,
         time: null,
         viewerId: null,
+        darkMode: null,
       };
       return;
     }
@@ -292,6 +298,7 @@ export class TerritoryWebGLRenderer {
       this.jfaVao = null;
       this.jfaVertexBuffer = null;
       this.stateTexture = null;
+      this.terrainTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
       this.patternTexture = null;
@@ -336,6 +343,7 @@ export class TerritoryWebGLRenderer {
         viewScale: null,
         viewOffset: null,
         state: null,
+        terrain: null,
         latestState: null,
         palette: null,
         relations: null,
@@ -370,6 +378,7 @@ export class TerritoryWebGLRenderer {
         hoverPulseSpeed: null,
         time: null,
         viewerId: null,
+        darkMode: null,
       };
       return;
     }
@@ -428,6 +437,7 @@ export class TerritoryWebGLRenderer {
       viewScale: gl.getUniformLocation(this.program, "u_viewScale"),
       viewOffset: gl.getUniformLocation(this.program, "u_viewOffset"),
       state: gl.getUniformLocation(this.program, "u_state"),
+      terrain: gl.getUniformLocation(this.program, "u_terrain"),
       latestState: gl.getUniformLocation(this.program, "u_latestState"),
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
@@ -477,6 +487,7 @@ export class TerritoryWebGLRenderer {
       hoverPulseSpeed: gl.getUniformLocation(this.program, "u_hoverPulseSpeed"),
       time: gl.getUniformLocation(this.program, "u_time"),
       viewerId: gl.getUniformLocation(this.program, "u_viewerId"),
+      darkMode: gl.getUniformLocation(this.program, "u_darkMode"),
     };
 
     // Vertex data: two triangles covering the full view (pixel-perfect).
@@ -530,6 +541,7 @@ export class TerritoryWebGLRenderer {
     gl.bindVertexArray(null);
 
     this.stateTexture = gl.createTexture();
+    this.terrainTexture = gl.createTexture();
     this.paletteTexture = gl.createTexture();
     this.relationTexture = gl.createTexture();
     this.patternTexture = gl.createTexture();
@@ -588,6 +600,26 @@ export class TerritoryWebGLRenderer {
       gl.RED_INTEGER,
       gl.UNSIGNED_SHORT,
       this.state,
+    );
+
+    // Terrain texture (immutable, only uploaded once)
+    gl.activeTexture(gl.TEXTURE14);
+    gl.bindTexture(gl.TEXTURE_2D, this.terrainTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R8UI,
+      this.mapWidth,
+      this.mapHeight,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_BYTE,
+      game.terrainView(),
     );
 
     this.uploadPalette();
@@ -965,6 +997,9 @@ export class TerritoryWebGLRenderer {
 
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
+    if (this.uniforms.terrain) {
+      gl.uniform1i(this.uniforms.terrain, 14);
+    }
     if (this.uniforms.latestState) {
       gl.uniform1i(this.uniforms.latestState, 12);
     }
@@ -1642,6 +1677,10 @@ export class TerritoryWebGLRenderer {
       gl.activeTexture(gl.TEXTURE12);
       gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
     }
+    if (this.terrainTexture) {
+      gl.activeTexture(gl.TEXTURE14);
+      gl.bindTexture(gl.TEXTURE_2D, this.terrainTexture);
+    }
 
     const changeMaskTexture =
       renderPair === "olderPrev"
@@ -1716,6 +1755,12 @@ export class TerritoryWebGLRenderer {
     }
     if (this.uniforms.smoothEnabled) {
       gl.uniform1i(this.uniforms.smoothEnabled, this.smoothEnabled ? 1 : 0);
+    }
+    if (this.uniforms.darkMode) {
+      gl.uniform1i(
+        this.uniforms.darkMode,
+        this.userSettings.darkMode() ? 1 : 0,
+      );
     }
 
     gl.clearColor(0, 0, 0, 0);
@@ -2413,9 +2458,11 @@ export class TerritoryWebGLRenderer {
         nOwner = ownerAt(texCoord + ivec2(0, -1));
         isBorder = isBorder || (nOwner != owner);
 
-        outSeed = isBorder ? vec2(texCoord) : vec2(-1.0, -1.0);
-      }
-    `;
+	        // Seed in map-space at the *tile center* so we can later interpret the
+	        // boundary as half a tile away (distance-to-edge = distance-to-center - 0.5).
+	        outSeed = isBorder ? (vec2(texCoord) + vec2(0.5)) : vec2(-1.0, -1.0);
+	      }
+	    `;
 
     const vertexShader = this.compileShader(
       gl,
@@ -2478,17 +2525,17 @@ export class TerritoryWebGLRenderer {
         return texelFetch(u_seeds, clamped, 0).rg;
       }
 
-      void considerSeed(ivec2 coord, ivec2 texCoord, inout vec2 bestSeed, inout float bestDist) {
-        vec2 seed = seedAt(coord);
-        if (seed.x < 0.0) {
-          return;
-        }
-        float dist = length(seed - vec2(texCoord));
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestSeed = seed;
-        }
-      }
+	      void considerSeed(ivec2 coord, ivec2 texCoord, inout vec2 bestSeed, inout float bestDist) {
+	        vec2 seed = seedAt(coord);
+	        if (seed.x < 0.0) {
+	          return;
+	        }
+	        float dist = length(seed - (vec2(texCoord) + vec2(0.5)));
+	        if (dist < bestDist) {
+	          bestDist = dist;
+	          bestSeed = seed;
+	        }
+	      }
 
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
@@ -2498,8 +2545,9 @@ export class TerritoryWebGLRenderer {
         );
         int step = int(u_step + 0.5);
 
-        vec2 bestSeed = seedAt(texCoord);
-        float bestDist = bestSeed.x < 0.0 ? 1e20 : length(bestSeed - vec2(texCoord));
+	        vec2 bestSeed = seedAt(texCoord);
+	        vec2 texPos = vec2(texCoord) + vec2(0.5);
+	        float bestDist = bestSeed.x < 0.0 ? 1e20 : length(bestSeed - texPos);
 
         considerSeed(texCoord + ivec2(-step, -step), texCoord, bestSeed, bestDist);
         considerSeed(texCoord + ivec2(0, -step), texCoord, bestSeed, bestDist);
@@ -2643,6 +2691,7 @@ export class TerritoryWebGLRenderer {
 	      precision highp usampler2D;
 
 	      uniform usampler2D u_state;
+	      uniform usampler2D u_terrain;
 	      uniform usampler2D u_latestState;
 	      uniform sampler2D u_palette;
 	      uniform usampler2D u_relations;
@@ -2681,6 +2730,7 @@ export class TerritoryWebGLRenderer {
       uniform float u_hoverPulseStrength;
       uniform float u_hoverPulseSpeed;
       uniform float u_time;
+      uniform bool u_darkMode;
 
       out vec4 outColor;
 
@@ -2691,6 +2741,110 @@ export class TerritoryWebGLRenderer {
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
+      }
+
+      // Terrain bit layout: bit7=land, bit6=shoreline, bit5=ocean, bits0-4=magnitude
+      uint terrainAtTex(ivec2 texCoord) {
+        ivec2 clamped = clamp(
+          texCoord,
+          ivec2(0, 0),
+          ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
+        );
+        return texelFetch(u_terrain, clamped, 0).r;
+      }
+
+      bool isLand(uint terrain) {
+        return (terrain & 0x80u) != 0u;  // bit 7
+      }
+
+      bool isShoreline(uint terrain) {
+        return (terrain & 0x40u) != 0u;  // bit 6
+      }
+
+      bool isOcean(uint terrain) {
+        return (terrain & 0x20u) != 0u;  // bit 5
+      }
+
+      uint getMagnitude(uint terrain) {
+        return terrain & 0x1Fu;  // bits 0-4
+      }
+
+      // Compute terrain color based on type, magnitude, and theme
+      // Colors match PastelTheme (light) and PastelThemeDark exactly
+      vec3 terrainColor(uint terrain) {
+        uint mag = getMagnitude(terrain);
+        float fmag = float(mag);
+
+        if (isLand(terrain)) {
+          if (isShoreline(terrain)) {
+            // Shore/beach - land adjacent to water
+            // Light: rgb(204,203,158), Dark: rgb(134,133,88)
+            return u_darkMode
+              ? vec3(134.0/255.0, 133.0/255.0, 88.0/255.0)
+              : vec3(204.0/255.0, 203.0/255.0, 158.0/255.0);
+          }
+          if (mag < 10u) {
+            // Plains (mag 0-9)
+            // Light: rgb(190, 220-2*mag, 138), Dark: rgb(140, 170-2*mag, 88)
+            return u_darkMode
+              ? vec3(140.0/255.0, (170.0 - 2.0*fmag)/255.0, 88.0/255.0)
+              : vec3(190.0/255.0, (220.0 - 2.0*fmag)/255.0, 138.0/255.0);
+          } else if (mag < 20u) {
+            // Highland (mag 10-19)
+            // Light: rgb(200+2*mag, 183+2*mag, 138+2*mag)
+            // Dark: rgb(150+2*mag, 133+2*mag, 88+2*mag)
+            return u_darkMode
+              ? vec3((150.0 + 2.0*fmag)/255.0, (133.0 + 2.0*fmag)/255.0, (88.0 + 2.0*fmag)/255.0)
+              : vec3((200.0 + 2.0*fmag)/255.0, (183.0 + 2.0*fmag)/255.0, (138.0 + 2.0*fmag)/255.0);
+          } else {
+            // Mountain (mag 20-30)
+            // Light: rgb(230+mag/2, 230+mag/2, 230+mag/2)
+            // Dark: rgb(180+mag/2, 180+mag/2, 180+mag/2)
+            float base = u_darkMode ? 180.0 : 230.0;
+            float val = (base + fmag/2.0) / 255.0;
+            return vec3(val, val, val);
+          }
+        } else {
+          // Water
+          if (isShoreline(terrain)) {
+            // Shoreline water - lighter, adjacent to land
+            // Light: rgb(100,143,255), Dark: rgb(50,50,50)
+            return u_darkMode
+              ? vec3(50.0/255.0, 50.0/255.0, 50.0/255.0)
+              : vec3(100.0/255.0, 143.0/255.0, 255.0/255.0);
+          }
+          if (isOcean(terrain)) {
+            // Ocean - depth-adjusted
+            // Light base: rgb(70,132,180), adjusted by +1-min(mag,10)
+            // Dark base: rgb(14,11,30), adjusted by +9-mag for mag<10
+            float depthAdj = float(min(mag, 10u));
+            if (u_darkMode) {
+              // Dark: rgb(14+9-mag, 11+9-mag, 30+9-mag) for mag<10, else rgb(14,11,30)
+              if (mag < 10u) {
+                return vec3(
+                  (14.0 + 9.0 - fmag)/255.0,
+                  (11.0 + 9.0 - fmag)/255.0,
+                  (30.0 + 9.0 - fmag)/255.0
+                );
+              }
+              return vec3(14.0/255.0, 11.0/255.0, 30.0/255.0);
+            } else {
+              // Light: rgb(70-10+11-min(mag,10), 132-10+11-min(mag,10), 180-10+11-min(mag,10))
+              // = rgb(71-depthAdj, 133-depthAdj, 181-depthAdj)
+              return vec3(
+                (71.0 - depthAdj)/255.0,
+                (133.0 - depthAdj)/255.0,
+                (181.0 - depthAdj)/255.0
+              );
+            }
+          } else {
+            // Lake - use same as shoreline water for simplicity
+            // Light: rgb(100,143,255), Dark: rgb(50,50,50)
+            return u_darkMode
+              ? vec3(50.0/255.0, 50.0/255.0, 50.0/255.0)
+              : vec3(100.0/255.0, 143.0/255.0, 255.0/255.0);
+          }
+        }
       }
 
       uint prevOwnerAtTex(ivec2 texCoord) {
@@ -2816,14 +2970,16 @@ export class TerritoryWebGLRenderer {
         return color * (isLightTile ? LIGHT_FACTOR : DARK_FACTOR);
       }
 
-      void main() {
-        ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-        vec2 viewCoord = vec2(
-          float(fragCoord.x),
-          u_viewResolution.y - 1.0 - float(fragCoord.y)
-        );
-        vec2 mapHalf = u_mapResolution * 0.5;
-        vec2 mapCoord = (viewCoord - mapHalf) / u_viewScale + u_viewOffset + mapHalf;
+	      void main() {
+	        // gl_FragCoord.xy is already at pixel center (0.5, 0.5 ...).
+	        // Use the pixel center to avoid half-pixel snapping/offset artifacts,
+	        // especially noticeable on the interpolated JFA border/front.
+	        vec2 viewCoord = vec2(
+	          gl_FragCoord.x - 0.5,
+	          u_viewResolution.y - gl_FragCoord.y - 0.5
+	        );
+	        vec2 mapHalf = u_mapResolution * 0.5;
+	        vec2 mapCoord = (viewCoord - mapHalf) / u_viewScale + u_viewOffset + mapHalf;
         if (
           mapCoord.x < 0.0 ||
           mapCoord.y < 0.0 ||
@@ -2833,6 +2989,8 @@ export class TerritoryWebGLRenderer {
           outColor = vec4(0.0);
           return;
         }
+        // Tile centers are at (0.5, 1.5, 2.5, ...). Floor gives the tile index.
+        // Original ivec2(mapCoord) is equivalent but less explicit.
         ivec2 texCoord = ivec2(mapCoord);
 
         uint state = texelFetch(u_state, texCoord, 0).r;
@@ -2872,6 +3030,7 @@ export class TerritoryWebGLRenderer {
 	          }
 	        }
 
+        // Border detection: check if any neighbor has a different owner.
         bool isBorder = false;
         bool hasFriendlyRelation = false;
         bool hasEmbargoRelation = false;
@@ -2909,9 +3068,13 @@ export class TerritoryWebGLRenderer {
           }
         }
 
+        // Get terrain for background rendering (needed for both normal and alt view)
+        uint terrain = terrainAtTex(texCoord);
+        vec3 baseTerrainColor = terrainColor(terrain);
+
         if (u_alternativeView) {
-          vec3 color = vec3(0.0);
-          float a = 0.0;
+          // Start with terrain as base
+          vec3 color = baseTerrainColor;
           if (owner != 0u) {
             uint relationAlt = relationCode(owner, uint(u_viewerId));
             vec4 altColor = u_altNeutral;
@@ -2922,8 +3085,9 @@ export class TerritoryWebGLRenderer {
             } else if (isEmbargo(relationAlt)) {
               altColor = u_altEnemy;
             }
-            color = altColor.rgb;
-            a = isBorder ? 1.0 : 0.0;
+            // Blend territory on top of terrain, borders fully opaque
+            float territoryAlpha = isBorder ? 1.0 : u_alpha;
+            color = mix(baseTerrainColor, altColor.rgb, territoryAlpha);
           }
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
@@ -2932,22 +3096,24 @@ export class TerritoryWebGLRenderer {
             : 1.0;
             color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
           }
-          outColor = vec4(color * a, a);
+          outColor = vec4(color, 1.0);
           return;
         }
 
-        vec3 fillColor = vec3(0.0);
-        float fillAlpha = 0.0;
+        // Normal view: blend territory on top of terrain
+        vec3 fillColor = baseTerrainColor;
         vec3 borderColor = vec3(0.0);
         float borderAlpha = 0.0;
         vec3 ownerBase = vec3(0.0);
         vec4 ownerBorder = vec4(0.0);
 
         if (owner == 0u) {
+          // Unowned tile - show terrain (or fallout if irradiated)
           if (hasFallout) {
-            fillColor = u_fallout.rgb;
-            fillAlpha = u_alpha;
+            // Blend fallout on top of terrain
+            fillColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
           }
+          // Otherwise fillColor is already baseTerrainColor
         } else {
           vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0);
           vec4 baseBorder = texelFetch(
@@ -2977,13 +3143,13 @@ export class TerritoryWebGLRenderer {
             borderAlpha = baseBorder.a;
           } else {
             bool isPrimary = patternIsPrimary(owner, texCoord);
-            fillColor = isPrimary ? base.rgb : baseBorder.rgb;
-            fillAlpha = u_alpha;
+            vec3 patternColor = isPrimary ? base.rgb : baseBorder.rgb;
+            // Blend territory fill on top of terrain
+            fillColor = mix(baseTerrainColor, patternColor, u_alpha);
           }
         }
 
-        vec3 contestedFillColor = fillColor;
-        float contestedFillAlpha = fillAlpha;
+        vec3 color = fillColor;
         bool useContestedFill = false;
         if (contested && latestOwner != 0u) {
           useContestedFill = true;
@@ -3003,26 +3169,24 @@ export class TerritoryWebGLRenderer {
           }
           float strength = contestStrength(contestId);
           float noise = blueNoise(texCoord);
-          contestedFillColor = noise < strength ? latestOwnerBase : defenderBase;
-          contestedFillAlpha = u_alpha;
+          vec3 contestColor = noise < strength ? latestOwnerBase : defenderBase;
+          // Blend contested fill on top of terrain
+          color = mix(baseTerrainColor, contestColor, u_alpha);
         }
 
-        vec3 color = useContestedFill ? contestedFillColor : fillColor;
-        float a = useContestedFill ? contestedFillAlpha : fillAlpha;
-
         if (!smoothActive && isBorder && owner != 0u) {
-          color = borderColor;
-          a = borderAlpha;
+          // Blend border on top of terrain
+          color = mix(baseTerrainColor, borderColor, borderAlpha);
         }
 
         if (smoothActive) {
-          vec3 oldColor = vec3(0.0);
-          float oldAlpha = 0.0;
+          // Compute old color blended on terrain
+          vec3 oldColor = baseTerrainColor;
           if (oldOwner == 0u) {
             if (hasFallout) {
-              oldColor = u_fallout.rgb;
-              oldAlpha = u_alpha;
+              oldColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
             }
+            // Otherwise oldColor is already baseTerrainColor
           } else {
             vec4 oldBase = texelFetch(u_palette, ivec2(int(oldOwner) * 2, 0), 0);
             vec4 oldBorder = texelFetch(
@@ -3031,23 +3195,24 @@ export class TerritoryWebGLRenderer {
               0
             );
             bool oldPrimary = patternIsPrimary(oldOwner, texCoord);
-            oldColor = oldPrimary ? oldBase.rgb : oldBorder.rgb;
-            oldAlpha = u_alpha;
+            vec3 oldPatternColor = oldPrimary ? oldBase.rgb : oldBorder.rgb;
+            oldColor = mix(baseTerrainColor, oldPatternColor, u_alpha);
           }
 
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
-          float oldDistance =
-            seedOld.x < 0.0 ? 1e6 : length(seedOld - mapCoord);
+          float oldDistance = seedOld.x < 0.0
+            ? 1e6
+            : max(length(seedOld - mapCoord) - 0.5, 0.0);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
-          float newDistance =
-            seedNew.x < 0.0 ? 1e6 : length(seedNew - mapCoord);
+          float newDistance = seedNew.x < 0.0
+            ? 1e6
+            : max(length(seedNew - mapCoord) - 0.5, 0.0);
           float maxDistance = max(oldDistance + newDistance, 0.001);
           float edge = u_smoothProgress * maxDistance;
           float phi = oldDistance - edge;
 
           float showNew = step(phi, 0.0);
           color = mix(oldColor, color, showNew);
-          a = mix(oldAlpha, a, showNew);
 
           const float FRONT_HALF_WIDTH = 0.5;
           float distToFront = abs(phi);
@@ -3083,30 +3248,24 @@ export class TerritoryWebGLRenderer {
                 }
               }
               bColor = applyDefended(bColor, isDefended, texCoord);
-              color = mix(color, bColor, frontBandAlpha);
-              a = mix(a, borderBase.a, frontBandAlpha);
+              // Blend border on top (borders are opaque)
+              color = mix(color, bColor, frontBandAlpha * borderBase.a);
             }
           }
         }
 
         bool pendingOwnerChange = latestOwner != owner;
         if (pendingOwnerChange && !useContestedFill && !u_alternativeView) {
-          vec3 hintColor = vec3(1.0);
+          vec3 hintColor = baseTerrainColor;
           if (latestOwner != 0u) {
-            hintColor = texelFetch(
+            vec3 latestColor = texelFetch(
               u_palette,
               ivec2(int(latestOwner) * 2, 0),
               0
             ).rgb;
+            hintColor = mix(baseTerrainColor, latestColor, u_alpha * 0.12);
           }
-          const float HINT_ALPHA_RATIO = 0.12;
-          float hintAlpha = u_alpha * HINT_ALPHA_RATIO;
-          if (a < hintAlpha) {
-            a = hintAlpha;
-            color = hintColor;
-          } else {
-            color = mix(color, hintColor, 0.08);
-          }
+          color = mix(color, hintColor, 0.5);
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
@@ -3117,7 +3276,8 @@ export class TerritoryWebGLRenderer {
           color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
         }
 
-        outColor = vec4(color * a, a);
+        // Output fully opaque since we render terrain as background
+        outColor = vec4(color, 1.0);
       }
     `;
 

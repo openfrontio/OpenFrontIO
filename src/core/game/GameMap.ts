@@ -30,6 +30,7 @@ export interface GameMap {
   isDefended(ref: TileRef): boolean;
   setDefended(ref: TileRef, value: boolean): void;
   tileStateView(): Uint16Array;
+  terrainView(): Uint8Array;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
@@ -229,6 +230,10 @@ export class GameMapImpl implements GameMap {
 
   tileStateView(): Uint16Array {
     return this.state;
+  }
+
+  terrainView(): Uint8Array {
+    return this.terrain;
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
