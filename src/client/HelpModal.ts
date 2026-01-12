@@ -49,10 +49,23 @@ export class HelpModal extends BaseModal {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      boatAttack: "KeyB",
+      groundAttack: "KeyG",
+      swapDirection: "KeyU",
       shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       resetGfx: "KeyR",
+      buildCity: "Digit1",
+      buildFactory: "Digit2",
+      buildPort: "Digit3",
+      buildDefensePost: "Digit4",
+      buildMissileSilo: "Digit5",
+      buildSamLauncher: "Digit6",
+      buildWarship: "Digit7",
+      buildAtomBomb: "Digit8",
+      buildHydrogenBomb: "Digit9",
+      buildMIRV: "Digit0",
       ...saved,
     };
   }
@@ -191,7 +204,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey("KeyU")}
+                      ${this.renderKey(keybinds.swapDirection)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.bomb_direction")}
@@ -325,6 +338,22 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_ratio_change")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.boatAttack)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_boat_attack")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 pl-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.groundAttack)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_ground_attack")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
@@ -833,6 +862,11 @@ export class HelpModal extends BaseModal {
                       ${translateText("help_modal.build_icon")}
                     </th>
                     <th
+                      class="py-3 text-left text-xs font-bold uppercase tracking-wider text-blue-300 w-[10%]"
+                    >
+                      ${translateText("help_modal.table_key")}
+                    </th>
+                    <th
                       class="py-3 text-left text-xs font-bold uppercase tracking-wider text-blue-300"
                     >
                       ${translateText("help_modal.build_desc")}
@@ -850,6 +884,9 @@ export class HelpModal extends BaseModal {
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildCity)}
+                    </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
                     >
@@ -865,6 +902,9 @@ export class HelpModal extends BaseModal {
                         src="/images/ShieldIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
+                    </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildDefensePost)}
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -882,6 +922,9 @@ export class HelpModal extends BaseModal {
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildPort)}
+                    </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
                     >
@@ -897,6 +940,9 @@ export class HelpModal extends BaseModal {
                         src="/images/FactoryIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
+                    </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildFactory)}
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -914,6 +960,9 @@ export class HelpModal extends BaseModal {
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildWarship)}
+                    </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
                     >
@@ -929,6 +978,9 @@ export class HelpModal extends BaseModal {
                         src="/images/MissileSiloIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
+                    </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildMissileSilo)}
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -946,6 +998,9 @@ export class HelpModal extends BaseModal {
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildSamLauncher)}
+                    </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
                     >
@@ -961,6 +1016,9 @@ export class HelpModal extends BaseModal {
                         src="/images/NukeIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
+                    </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildAtomBomb)}
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
@@ -978,6 +1036,9 @@ export class HelpModal extends BaseModal {
                         class="w-8 h-8 scale-75 origin-left"
                       />
                     </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildHydrogenBomb)}
+                    </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
                     >
@@ -993,6 +1054,9 @@ export class HelpModal extends BaseModal {
                         src="/images/MIRVIcon.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
+                    </td>
+                    <td class="py-3 border-b border-white/5">
+                      ${this.renderKey(keybinds.buildMIRV)}
                     </td>
                     <td
                       class="py-3 border-b border-white/5 text-white/60 text-sm"
