@@ -1,12 +1,14 @@
+// Connected Component Labeling using flood-fill
+
 import { GameMap, TileRef } from "../../game/GameMap";
 
-const LAND_MARKER = 0xff; // Must fit in Uint8Array
+export const LAND_MARKER = 0xff; // Must fit in Uint8Array
 
 /**
- * Manages water component identification using flood-fill.
- * Pre-allocates buffers and provides explicit initialization.
+ * Connected component labeling for grid-based maps.
+ * Identifies isolated regions using scan-line flood-fill.
  */
-export class WaterComponents {
+export class ConnectedComponents {
   private readonly width: number;
   private readonly height: number;
   private readonly numTiles: number;
