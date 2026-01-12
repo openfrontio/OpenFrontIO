@@ -3,9 +3,9 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 
-const config = getServerConfigFromServer();
+const config = getServerConfig();
 
 export function getOtelResource() {
   return resourceFromAttributes({

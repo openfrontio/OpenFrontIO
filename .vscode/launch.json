@@ -22,7 +22,7 @@
         "${workspaceFolder}/src/server/Server.ts"
       ],
       "env": {
-        "GAME_ENV": "dev"
+        "GAME_ENV": "Dev"
       },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

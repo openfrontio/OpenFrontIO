@@ -3,7 +3,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -735,7 +735,7 @@ class Client {
       this.gameStop();
       document.body.classList.remove("in-game");
     }
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
 
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
@@ -895,7 +895,7 @@ class Client {
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
   ): Promise<string | null> {
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
     if (
       config.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
@@ -955,7 +955,7 @@ async function getTurnstileToken(): Promise<{
     throw new Error("Failed to load Turnstile script");
   }
 
-  const config = await getServerConfigFromClient();
+  const config = getServerConfig();
   const widgetId = window.turnstile.render("#turnstile-container", {
     sitekey: config.turnstileSiteKey(),
     size: "normal",

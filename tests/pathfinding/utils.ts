@@ -1,5 +1,6 @@
 import fs from "fs";
 import path, { dirname } from "path";
+import { GameEnv } from "src/core/configuration/Config";
 import { fileURLToPath } from "url";
 import {
   Difficulty,
@@ -248,7 +249,6 @@ export async function setupFromPath(
 
   // Configure the game
   const config = new TestConfig(
-    new (await import("../util/TestServerConfig")).TestServerConfig(),
     {
       gameMap: GameMapType.Asia,
       gameMapSize: GameMapSize.Normal,
@@ -265,6 +265,7 @@ export async function setupFromPath(
       randomSpawn: false,
       ...gameConfig,
     },
+    GameEnv.Dev,
     new UserSettings(),
     false,
   );

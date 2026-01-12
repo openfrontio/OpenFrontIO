@@ -244,11 +244,15 @@ export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
-    private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
+    private _gameEnv: GameEnv,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
   ) {}
+
+  env(): GameEnv {
+    return this._gameEnv;
+  }
 
   stripePublishableKey(): string {
     return Env.STRIPE_PUBLISHABLE_KEY ?? "";
@@ -273,10 +277,6 @@ export class DefaultConfig implements Config {
 
   gameConfig(): GameConfig {
     return this._gameConfig;
-  }
-
-  serverConfig(): ServerConfig {
-    return this._serverConfig;
   }
 
   userSettings(): UserSettings {

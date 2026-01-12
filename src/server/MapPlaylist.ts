@@ -1,4 +1,4 @@
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -17,7 +17,7 @@ import { logger } from "./Logger";
 
 const log = logger.child({});
 
-const config = getServerConfigFromServer();
+const config = getServerConfig();
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.

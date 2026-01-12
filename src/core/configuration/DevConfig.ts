@@ -1,6 +1,6 @@
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
-import { GameEnv, ServerConfig } from "./Config";
+import { GameEnv } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
@@ -49,11 +49,11 @@ export class DevServerConfig extends DefaultServerConfig {
 
 export class DevConfig extends DefaultConfig {
   constructor(
-    sc: ServerConfig,
     gc: GameConfig,
+    gameEnv: GameEnv,
     us: UserSettings | null,
     isReplay: boolean,
   ) {
-    super(sc, gc, us, isReplay);
+    super(gc, gameEnv, us, isReplay);
   }
 }

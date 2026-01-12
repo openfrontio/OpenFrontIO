@@ -1,7 +1,7 @@
 import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -1156,7 +1156,7 @@ export class HostLobbyModal extends BaseModal {
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -1178,7 +1178,7 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async pollPlayers() {
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
     fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
       method: "GET",
       headers: {
@@ -1231,7 +1231,7 @@ export class HostLobbyModal extends BaseModal {
 }
 
 async function createLobby(creatorClientID: string): Promise<GameInfo> {
-  const config = await getServerConfigFromClient();
+  const config = getServerConfig();
   try {
     const id = generateID();
     const response = await fetch(

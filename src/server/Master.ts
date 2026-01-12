@@ -6,13 +6,13 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
-const config = getServerConfigFromServer();
+const config = getServerConfig();
 const playlist = new MapPlaylist();
 const readyWorkers = new Set();
 
@@ -202,14 +202,6 @@ export async function startMaster() {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 }
-
-app.get("/api/env", async (req, res) => {
-  const envConfig = {
-    game_env: process.env.GAME_ENV,
-  };
-  if (!envConfig.game_env) return res.sendStatus(500);
-  res.json(envConfig);
-});
 
 // Add lobbies endpoint to list public games for this worker
 app.get("/api/public_lobbies", async (req, res) => {

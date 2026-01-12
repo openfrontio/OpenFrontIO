@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { GameEnv } from "src/core/configuration/Config";
 import {
   Difficulty,
   Game,
@@ -18,7 +19,6 @@ import {
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
-import { TestServerConfig } from "./TestServerConfig";
 
 export async function setup(
   mapName: string,
@@ -54,7 +54,6 @@ export async function setup(
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
   // Configure the game
-  const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
@@ -72,8 +71,8 @@ export async function setup(
     ..._gameConfig,
   };
   const config = new ConfigClass(
-    serverConfig,
     gameConfig,
+    GameEnv.Dev,
     new UserSettings(),
     false,
   );

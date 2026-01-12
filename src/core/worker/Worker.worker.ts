@@ -43,6 +43,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         gameRunner = createGameRunner(
           message.gameStartInfo,
+          message.env,
           message.clientID,
           mapLoader,
           gameUpdate,

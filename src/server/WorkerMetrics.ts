@@ -4,7 +4,7 @@ import {
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
 import * as dotenv from "dotenv";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
 
@@ -12,7 +12,7 @@ dotenv.config();
 
 export function initWorkerMetrics(gameManager: GameManager): void {
   // Get server configuration
-  const config = getServerConfigFromServer();
+  const config = getServerConfig();
 
   // Create resource with worker information
   const resource = getOtelResource();

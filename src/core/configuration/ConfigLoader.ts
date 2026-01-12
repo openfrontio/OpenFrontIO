@@ -7,56 +7,34 @@ import { Env } from "./Env";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
 
-export let cachedSC: ServerConfig | null = null;
-
-export async function getConfig(
+export function getConfig(
   gameConfig: GameConfig,
+  gameEnv: GameEnv,
   userSettings: UserSettings | null,
   isReplay: boolean = false,
-): Promise<Config> {
-  const sc = await getServerConfigFromClient();
-  switch (sc.env()) {
+): Config {
+  switch (gameEnv) {
     case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings, isReplay);
-    case GameEnv.Preprod:
+      return new DevConfig(gameConfig, gameEnv, userSettings, isReplay);
+    case GameEnv.Staging:
     case GameEnv.Prod:
       console.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
+      return new DefaultConfig(gameConfig, gameEnv, userSettings, isReplay);
     default:
       throw Error(`unsupported server configuration: ${Env.GAME_ENV}`);
   }
 }
-export async function getServerConfigFromClient(): Promise<ServerConfig> {
-  if (cachedSC) {
-    return cachedSC;
-  }
-  const response = await fetch("/api/env");
 
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
-    );
-  }
-  const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
-
-  cachedSC = getServerConfig(config.game_env);
-  return cachedSC;
-}
-export function getServerConfigFromServer(): ServerConfig {
+export function getServerConfig(): ServerConfig {
   const gameEnv = Env.GAME_ENV;
-  return getServerConfig(gameEnv);
-}
-export function getServerConfig(gameEnv: string) {
   switch (gameEnv) {
-    case "dev":
+    case GameEnv.Dev:
       console.log("using dev server config");
       return new DevServerConfig();
-    case "staging":
+    case GameEnv.Staging:
       console.log("using preprod server config");
       return preprodConfig;
-    case "prod":
+    case GameEnv.Prod:
       console.log("using prod server config");
       return prodConfig;
     default:
