@@ -3073,9 +3073,10 @@ export class TerritoryWebGLRenderer {
         vec3 baseTerrainColor = terrainColor(terrain);
 
         if (u_alternativeView) {
-          // Start with terrain as base
+          // Alt view: terrain + borders only, no territory fill
           vec3 color = baseTerrainColor;
-          if (owner != 0u) {
+          if (owner != 0u && isBorder) {
+            // Only draw borders, not territory fill
             uint relationAlt = relationCode(owner, uint(u_viewerId));
             vec4 altColor = u_altNeutral;
             if (isSelf(relationAlt)) {
@@ -3085,9 +3086,7 @@ export class TerritoryWebGLRenderer {
             } else if (isEmbargo(relationAlt)) {
               altColor = u_altEnemy;
             }
-            // Blend territory on top of terrain, borders fully opaque
-            float territoryAlpha = isBorder ? 1.0 : u_alpha;
-            color = mix(baseTerrainColor, altColor.rgb, territoryAlpha);
+            color = altColor.rgb;
           }
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
