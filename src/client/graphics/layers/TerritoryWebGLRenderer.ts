@@ -156,6 +156,8 @@ export class TerritoryWebGLRenderer {
   // Defaults are overridden by setHoverHighlightOptions() from TerritoryLayer.
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
+  private hoverStartTime = 0;
+  private static readonly HOVER_DURATION_MS = 5000;
   private animationStartTime = Date.now();
   private contestNow = 0;
   private contestDurationTicks = 0;
@@ -1243,7 +1245,10 @@ export class TerritoryWebGLRenderer {
 
   setHoveredPlayerId(playerSmallId: number | null) {
     const encoded = playerSmallId ?? -1;
-    this.hoveredPlayerId = encoded;
+    if (encoded !== this.hoveredPlayerId) {
+      this.hoveredPlayerId = encoded;
+      this.hoverStartTime = encoded >= 0 ? Date.now() : 0;
+    }
   }
 
   setHoverHighlightOptions(options: HoverHighlightOptions) {
@@ -1715,7 +1720,15 @@ export class TerritoryWebGLRenderer {
       gl.uniform1i(this.uniforms.alternativeView, this.alternativeView ? 1 : 0);
     }
     if (this.uniforms.hoveredPlayerId) {
-      gl.uniform1f(this.uniforms.hoveredPlayerId, this.hoveredPlayerId);
+      // Disable highlight after 5 seconds
+      const now = Date.now();
+      const elapsed = now - this.hoverStartTime;
+      const activeHoverId =
+        this.hoveredPlayerId >= 0 &&
+        elapsed < TerritoryWebGLRenderer.HOVER_DURATION_MS
+          ? this.hoveredPlayerId
+          : -1;
+      gl.uniform1f(this.uniforms.hoveredPlayerId, activeHoverId);
     }
     if (this.uniforms.hoverHighlightStrength) {
       gl.uniform1f(
