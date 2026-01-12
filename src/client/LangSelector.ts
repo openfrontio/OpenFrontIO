@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
+import { formatDebugTranslation } from "./Utils";
 
 import en from "../../resources/lang/en.json";
 import metadata from "../../resources/lang/metadata.json";
@@ -103,6 +104,12 @@ export class LangSelector extends LitElement {
     if (!lang) return {};
     const cached = this.languageCache.get(lang);
     if (cached) return cached;
+
+    if (lang === "debug") {
+      const empty: Record<string, string> = {};
+      this.languageCache.set(lang, empty);
+      return empty;
+    }
 
     if (lang === "en") {
       const flat = flattenTranslations(en);
@@ -213,11 +220,11 @@ export class LangSelector extends LitElement {
       "o-modal",
       "o-button",
       "territory-patterns-modal",
+      "pattern-input",
       "fluent-slider",
       "news-modal",
       "news-button",
       "account-modal",
-      "keybinds-modal",
       "stats-modal",
       "flag-input-modal",
       "flag-input",
@@ -236,6 +243,27 @@ export class LangSelector extends LitElement {
       element.textContent = text;
     });
 
+    const applyAttributeTranslation = (
+      dataAttr: string,
+      targetAttr: string,
+    ): void => {
+      document.querySelectorAll(`[${dataAttr}]`).forEach((element) => {
+        const key = element.getAttribute(dataAttr);
+        if (key === null) return;
+        const text = this.translateText(key);
+        if (text === null) {
+          console.warn(`Translation key not found: ${key}`);
+          return;
+        }
+        element.setAttribute(targetAttr, text);
+      });
+    };
+
+    applyAttributeTranslation("data-i18n-title", "title");
+    applyAttributeTranslation("data-i18n-alt", "alt");
+    applyAttributeTranslation("data-i18n-aria-label", "aria-label");
+    applyAttributeTranslation("data-i18n-placeholder", "placeholder");
+
     components.forEach((tag) => {
       document.querySelectorAll(tag).forEach((el) => {
         if (typeof (el as any).requestUpdate === "function") {
@@ -249,6 +277,10 @@ export class LangSelector extends LitElement {
     key: string,
     params: Record<string, string | number> = {},
   ): string {
+    if (this.currentLang === "debug") {
+      return formatDebugTranslation(key, params);
+    }
+
     let text: string | undefined;
     if (this.translations && key in this.translations) {
       text = this.translations[key];

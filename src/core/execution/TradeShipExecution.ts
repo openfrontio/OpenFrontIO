@@ -8,7 +8,8 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
+import { PathFinding } from "../pathfinding/PathFinder";
+import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -16,7 +17,7 @@ export class TradeShipExecution implements Execution {
   private mg: Game;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: PathFinder;
+  private pathFinder: SteppingPathFinder<TileRef>;
   private tilesTraveled = 0;
 
   constructor(
@@ -27,7 +28,7 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinders.Water(mg);
+    this.pathFinder = PathFinding.Water(mg);
   }
 
   tick(ticks: number): void {
@@ -142,10 +143,14 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        "events_display.received_gold_from_captured_ship",
         MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          name: this.origOwner.displayName(),
+        },
       );
       // Record stats
       this.mg
@@ -155,16 +160,24 @@ export class TradeShipExecution implements Execution {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
+        "events_display.received_gold_from_trade",
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this._dstPort.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          name: this.srcPort.owner().displayName(),
+        },
       );
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
+        "events_display.received_gold_from_trade",
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this.srcPort.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          name: this._dstPort.owner().displayName(),
+        },
       );
       // Record stats
       this.mg
