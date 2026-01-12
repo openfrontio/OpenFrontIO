@@ -114,7 +114,7 @@ export enum GameMapType {
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
   Didier = "Didier",
-  DidierFrance = "Didier (France)",
+  DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
 }
 

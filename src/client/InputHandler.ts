@@ -185,7 +185,7 @@ export class InputHandler {
             }
 
             // Map invalid values to undefined (filtered later)
-            if (typeof val !== "string" || val === "Null") {
+            if (typeof val !== "string") {
               return [k, undefined];
             }
             return [k, val];

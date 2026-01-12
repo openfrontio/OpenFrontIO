@@ -1,6 +1,6 @@
 import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
-import { LangSelector } from "./LangSelector";
+import type { LangSelector } from "./LangSelector";
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
@@ -59,6 +59,12 @@ export function renderNumber(
   } else {
     return Math.floor(num).toString();
   }
+}
+
+export function formatPercentage(value: number): string {
+  const perc = value * 100;
+  if (Number.isNaN(perc)) return "0%";
+  return perc.toFixed(1) + "%";
 }
 
 /**
@@ -144,6 +150,18 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
+export function formatDebugTranslation(
+  key: string,
+  params: Record<string, string | number>,
+): string {
+  const entries = Object.entries(params);
+  if (entries.length === 0) return key;
+  const serializedParams = entries
+    .map(([paramKey, value]) => `${paramKey}=${String(value)}`)
+    .join(",");
+  return `${key}::${serializedParams}`;
+}
+
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
@@ -156,6 +174,10 @@ export const translateText = (
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
+  }
+
+  if (langSelector.currentLang === "debug") {
+    return formatDebugTranslation(key, params);
   }
 
   if (
@@ -367,6 +389,32 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
   if (imgRatio !== null) {
     self.svgAspectRatioCache.set(src, imgRatio);
     return imgRatio;
+  }
+
+  return null;
+}
+
+export function getDiscordAvatarUrl(user: {
+  id: string;
+  avatar: string | null;
+  discriminator?: string;
+}): string | null {
+  if (user.avatar) {
+    // - id is a Discord numeric string
+    // - avatar is a hash, optionally prefixed with "a_" for animated avatars
+    const validId = /^\d+$/.test(user.id);
+    const validAvatar =
+      /^[a-f0-9]+$/.test(user.avatar) || /^a_[a-f0-9]+$/.test(user.avatar);
+
+    if (validId && validAvatar) {
+      const extension = user.avatar.startsWith("a_") ? "gif" : "png";
+      return `https://cdn.discordapp.com/avatars/${encodeURIComponent(user.id)}/${encodeURIComponent(user.avatar)}.${extension}?size=64`;
+    }
+  }
+
+  if (user.discriminator !== undefined) {
+    const idx = Number(user.discriminator) % 5;
+    return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
   }
 
   return null;

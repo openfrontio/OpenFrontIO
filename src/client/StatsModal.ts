@@ -372,7 +372,7 @@ export class StatsModal extends BaseModal {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10"
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
         <div

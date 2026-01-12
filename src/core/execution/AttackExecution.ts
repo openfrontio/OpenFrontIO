@@ -192,9 +192,11 @@ export class AttackExecution implements Execution {
     const deaths = this.attack.troops() * (malusPercent / 100);
     if (deaths) {
       this.mg.displayMessage(
-        `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+        "events_display.attack_cancelled_retreat",
         MessageType.ATTACK_CANCELLED,
         this._owner.id(),
+        undefined,
+        { troops: renderTroops(deaths) },
       );
     }
     if (this.removeTroops === false && this.sourceTile === null) {
