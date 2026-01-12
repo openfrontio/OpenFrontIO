@@ -135,7 +135,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     isCompactMap?: boolean,
   ): Promise<number> {
     const landTiles = await getMapLandTiles(map);
-    const [l, m, s] = this.calculatePlayerCounts(landTiles);
+    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
@@ -168,14 +168,22 @@ export abstract class DefaultServerConfig implements ServerConfig {
   /**
    * Calculate player counts from land tiles
    * For every 1,000,000 land tiles, take 50 players
+   * Limit to max 125 players for performance
    * Second value is 75% of calculated value, third is 50%
    * All values are rounded to the nearest 5
    */
-  private calculatePlayerCounts(landTiles: number): [number, number, number] {
+  private calculateMapPlayerCounts(
+    landTiles: number,
+  ): [number, number, number] {
     const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
 
     const base = roundToNearest5((landTiles / 1_000_000) * 50);
-    return [base, roundToNearest5(base * 0.75), roundToNearest5(base * 0.5)];
+    const limitedBase = Math.min(base, 125);
+    return [
+      limitedBase,
+      roundToNearest5(limitedBase * 0.75),
+      roundToNearest5(limitedBase * 0.5),
+    ];
   }
 
   workerIndex(gameID: GameID): number {
@@ -202,7 +210,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     // Maps with smallest player count < 50 don't support compact map in team games
     // The smallest player count is the 3rd number in the player counts array
     const landTiles = await getMapLandTiles(map);
-    const [, , smallest] = this.calculatePlayerCounts(landTiles);
+    const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
     return smallest >= 50;
   }
 }
