@@ -11,6 +11,7 @@ import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { startPolling } from "./PollingLoop";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -160,21 +161,12 @@ export async function startMaster() {
           });
         };
 
-        const runLoop = () => {
-          fetchLobbies()
-            .then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            })
-            .catch((error) => {
-              log.error("Error in check loop:", error);
-            })
-            .finally(() => {
-              setTimeout(runLoop, 100);
-            });
-        };
-        runLoop();
+        startPolling(async () => {
+          const lobbies = await fetchLobbies();
+          if (lobbies === 0) {
+            scheduleLobbies();
+          }
+        }, 100);
       }
     }
   });
