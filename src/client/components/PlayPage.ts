@@ -64,6 +64,11 @@ export class PlayPage extends LitElement {
               show-select-label
               class="aspect-square h-[50px] sm:h-[50px] lg:hidden shrink-0"
             ></pattern-input>
+            <flag-input
+              id="flag-input-mobile"
+              show-select-label
+              class="aspect-square h-[50px] sm:h-[50px] lg:hidden shrink-0"
+            ></flag-input>
           </div>
 
           <!-- Pattern & Flag buttons (Desktop only - separate column) -->
