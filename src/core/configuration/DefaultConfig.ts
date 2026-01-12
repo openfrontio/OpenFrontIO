@@ -1,6 +1,5 @@
 import { JWK } from "jose";
 import { z } from "zod";
-import { getMapLandTiles } from "../../server/MapLandTiles";
 import {
   Difficulty,
   Duos,
@@ -30,6 +29,7 @@ import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
+import { getMapLandTiles } from "./MapLandTiles";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
