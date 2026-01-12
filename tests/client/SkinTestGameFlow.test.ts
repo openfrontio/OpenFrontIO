@@ -132,10 +132,10 @@ describe("Skin test game flow", () => {
 
   it("when a skin-test game ends (win update), it shows the buy modal and purchase calls handlePurchase", async () => {
     // Minimal stubs for runner dependencies.
-    const eventBus = {
-      emit: vi.fn(),
-      on: vi.fn(),
-    } as any;
+    // Use a real EventBus so the modal can subscribe to events.
+    const { EventBus } = await import("../../src/core/EventBus");
+    const eventBus = new EventBus();
+    modal.eventBus = eventBus;
 
     const renderer = {
       initialize: vi.fn(),

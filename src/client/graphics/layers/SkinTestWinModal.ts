@@ -2,14 +2,52 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { handlePurchase } from "../../Cosmetics";
+import { fetchCosmetics, handlePurchase } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../../components/PatternButton";
 import { Layer } from "./Layer";
 
+export class ShowSkinTestModalEvent {
+  constructor(
+    public patternName: string,
+    public colorPalette: ColorPalette | null,
+  ) {}
+}
+
 @customElement("skin-test-win-modal")
 export class SkinTestWinModal extends LitElement implements Layer {
-  public eventBus: EventBus;
+  private _eventBus?: EventBus;
+  public set eventBus(eb: EventBus | undefined) {
+    this._eventBus = eb;
+    if (!this._eventBus) return;
+
+    // Subscribe to show requests and handle fetch/display logic here so
+    // ClientGameRunner doesn't need to know implementation details.
+    this._eventBus.on(
+      ShowSkinTestModalEvent,
+      async (e: ShowSkinTestModalEvent) => {
+        try {
+          const cosmetics = await fetchCosmetics();
+          if (!cosmetics) {
+            console.error("Failed to fetch cosmetics");
+            return;
+          }
+          const pattern = cosmetics.patterns[e.patternName];
+          if (pattern) {
+            this.show(pattern, e.colorPalette ?? null);
+          } else {
+            console.error("Pattern not found in cosmetics:", e.patternName);
+          }
+        } catch (err) {
+          console.error("Error showing skin test modal", err);
+        }
+      },
+    );
+  }
+
+  public get eventBus(): EventBus | undefined {
+    return this._eventBus;
+  }
 
   @state()
   isVisible = false;

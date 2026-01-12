@@ -27,7 +27,6 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { getPersistentID } from "./Auth";
-import { fetchCosmetics } from "./Cosmetics";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -51,7 +50,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import { SkinTestWinModal } from "./graphics/layers/SkinTestWinModal";
+import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
 import SoundManager from "./sound/SoundManager";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
@@ -265,43 +264,20 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private async showSkinTestModal() {
+  private showSkinTestModal() {
     // Stop the game
     this.isActive = false;
-
-    const modal = document.querySelector(
-      "skin-test-win-modal",
-    ) as SkinTestWinModal;
-    if (!modal || !(modal instanceof SkinTestWinModal)) {
-      console.error("SkinTestWinModal not found");
-      return;
-    }
 
     if (!this.myPlayer?.cosmetics?.pattern) {
       console.error("No pattern found on player", this.myPlayer?.cosmetics);
       return;
     }
 
-    try {
-      const cosmetics = await fetchCosmetics();
-      if (!cosmetics) {
-        console.error("Failed to fetch cosmetics");
-        return;
-      }
+    const patternName = this.myPlayer.cosmetics.pattern.name;
+    const colorPalette = this.myPlayer.cosmetics.pattern.colorPalette ?? null;
 
-      const patternName = this.myPlayer.cosmetics.pattern.name;
-      const pattern = cosmetics.patterns[patternName];
-      if (pattern) {
-        modal.show(
-          pattern,
-          this.myPlayer.cosmetics.pattern.colorPalette ?? null,
-        );
-      } else {
-        console.error("Pattern not found in cosmetics:", patternName);
-      }
-    } catch (e) {
-      console.error("Error showing skin test modal", e);
-    }
+    // Emit an event and let the modal listen and handle fetching/displaying
+    this.eventBus.emit(new ShowSkinTestModalEvent(patternName, colorPalette));
   }
 
   private async saveGame(update: WinUpdate) {
