@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
-import { NavMesh } from "../pathfinding/navmesh/NavMesh";
+import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
+import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
@@ -114,7 +115,7 @@ export enum GameMapType {
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
   Didier = "Didier",
-  DidierFrance = "Didier (France)",
+  DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
 }
 
@@ -802,7 +803,10 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
-  navMesh(): NavMesh | null;
+  miniWaterHPA(): PathFinder<number> | null;
+  miniWaterGraph(): AbstractGraph | null;
+  getWaterComponent(tile: TileRef): number | null;
+  hasWaterComponent(tile: TileRef, component: number): boolean;
 }
 
 export interface PlayerActions {

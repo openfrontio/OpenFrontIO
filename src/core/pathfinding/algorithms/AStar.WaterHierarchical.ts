@@ -1,0 +1,562 @@
+import { GameMap, TileRef } from "../../game/GameMap";
+import { PathFinder } from "../types";
+import { AbstractGraphAStar } from "./AStar.AbstractGraph";
+import { AStarBounded } from "./AStar.Bounded";
+import { AbstractGraph, AbstractNode } from "./AbstractGraph";
+import { BFSGrid } from "./BFS.Grid";
+import { LAND_MARKER } from "./ConnectedComponents";
+
+type PathDebugInfo = {
+  nodePath: TileRef[] | null;
+  initialPath: TileRef[] | null;
+  graph: {
+    clusterSize: number;
+    nodes: Array<{ id: number; tile: TileRef }>;
+    edges: Array<{
+      id: number;
+      nodeA: number;
+      nodeB: number;
+      from: TileRef;
+      to: TileRef;
+      cost: number;
+    }>;
+  };
+  timings: { [key: string]: number };
+};
+
+export class AStarWaterHierarchical implements PathFinder<number> {
+  private tileBFS: BFSGrid;
+  private abstractAStar: AbstractGraphAStar;
+  private localAStar: AStarBounded;
+  private localAStarMultiCluster: AStarBounded;
+  private sourceResolver: SourceResolver;
+
+  public debugInfo: PathDebugInfo | null = null;
+  public debugMode: boolean = false;
+
+  constructor(
+    private map: GameMap,
+    private graph: AbstractGraph,
+    private options: {
+      cachePaths?: boolean;
+    } = {},
+  ) {
+    // BFS for nearest node search
+    this.tileBFS = new BFSGrid(map.width() * map.height());
+
+    const clusterSize = graph.clusterSize;
+
+    // AbstractGraphAStar for abstract graph routing
+    this.abstractAStar = new AbstractGraphAStar(this.graph);
+
+    // BoundedAStar for cluster-bounded local pathfinding
+    const maxLocalNodes = clusterSize * clusterSize;
+    this.localAStar = new AStarBounded(map, maxLocalNodes);
+
+    // BoundedAStar for multi-cluster (3x3) local pathfinding
+    const multiClusterSize = clusterSize * 3;
+    const maxMultiClusterNodes = multiClusterSize * multiClusterSize;
+    this.localAStarMultiCluster = new AStarBounded(map, maxMultiClusterNodes);
+
+    // SourceResolver for multi-source search
+    this.sourceResolver = new SourceResolver(this.map, this.graph);
+  }
+
+  findPath(from: number | number[], to: number): number[] | null {
+    if (Array.isArray(from)) {
+      return this.findPathMultiSource(from as TileRef[], to as TileRef);
+    }
+
+    return this.findPathSingle(from as TileRef, to as TileRef, this.debugMode);
+  }
+
+  private findPathMultiSource(
+    sources: TileRef[],
+    target: TileRef,
+  ): TileRef[] | null {
+    // 1. Resolve target to abstract node
+    const targetNode = this.sourceResolver.resolveTarget(target);
+    if (!targetNode) return null;
+
+    // 2. Map sources → abstract nodes (cheap O(1) cluster lookup per source)
+    const nodeToSource = this.sourceResolver.resolveSourcesToNodes(sources);
+    if (nodeToSource.size === 0) return null;
+
+    // 3. Run multi-source A* on abstract graph
+    const nodeIds = [...nodeToSource.keys()];
+    const nodePath = this.abstractAStar.findPath(nodeIds, targetNode.id);
+    if (!nodePath) return null;
+
+    // 4. Get winning source tile (nodePath[0] is winning start node)
+    const winningSource = nodeToSource.get(nodePath[0])!;
+
+    // 5. Run full single-source from winner
+    return this.findPathSingle(winningSource, target);
+  }
+
+  findPathSingle(
+    from: TileRef,
+    to: TileRef,
+    debug: boolean = false,
+  ): TileRef[] | null {
+    if (debug) {
+      const allEdges: Array<{
+        id: number;
+        nodeA: number;
+        nodeB: number;
+        from: TileRef;
+        to: TileRef;
+        cost: number;
+      }> = [];
+
+      for (let edgeId = 0; edgeId < this.graph.edgeCount; edgeId++) {
+        const edge = this.graph.getEdge(edgeId);
+        if (!edge) continue;
+
+        const nodeA = this.graph.getNode(edge.nodeA);
+        const nodeB = this.graph.getNode(edge.nodeB);
+        if (!nodeA || !nodeB) continue;
+
+        allEdges.push({
+          id: edge.id,
+          nodeA: edge.nodeA,
+          nodeB: edge.nodeB,
+          from: nodeA.tile,
+          to: nodeB.tile,
+          cost: edge.cost,
+        });
+      }
+
+      this.debugInfo = {
+        nodePath: null,
+        initialPath: null,
+        graph: {
+          clusterSize: this.graph.clusterSize,
+          nodes: this.graph
+            .getAllNodes()
+            .map((node) => ({ id: node.id, tile: node.tile })),
+          edges: allEdges,
+        },
+        timings: {
+          total: 0,
+        },
+      };
+    }
+
+    const dist = this.map.manhattanDist(from, to);
+
+    // Early exit for very short distances
+    if (dist <= this.graph.clusterSize) {
+      performance.mark("hpa:findPath:earlyExitLocalPath:start");
+      const startX = this.map.x(from);
+      const startY = this.map.y(from);
+      const clusterX = Math.floor(startX / this.graph.clusterSize);
+      const clusterY = Math.floor(startY / this.graph.clusterSize);
+      const localPath = this.findLocalPath(from, to, clusterX, clusterY, true);
+      performance.mark("hpa:findPath:earlyExitLocalPath:end");
+      const measure = performance.measure(
+        "hpa:findPath:earlyExitLocalPath",
+        "hpa:findPath:earlyExitLocalPath:start",
+        "hpa:findPath:earlyExitLocalPath:end",
+      );
+
+      if (debug) {
+        this.debugInfo!.timings.earlyExitLocalPath = measure.duration;
+        this.debugInfo!.timings.total += measure.duration;
+      }
+
+      if (localPath) {
+        if (debug) {
+          console.log(
+            `[DEBUG] Direct local path found for dist=${dist}, length=${localPath.length}`,
+          );
+        }
+        return localPath;
+      }
+
+      if (debug) {
+        console.log(
+          `[DEBUG] Direct path failed for dist=${dist}, falling back to abstract graph`,
+        );
+      }
+    }
+
+    performance.mark("hpa:findPath:findNodes:start");
+    const startNode = this.findNearestNode(from);
+    const endNode = this.findNearestNode(to);
+    performance.mark("hpa:findPath:findNodes:end");
+    const findNodesMeasure = performance.measure(
+      "hpa:findPath:findNodes",
+      "hpa:findPath:findNodes:start",
+      "hpa:findPath:findNodes:end",
+    );
+
+    if (debug) {
+      this.debugInfo!.timings.findNodes = findNodesMeasure.duration;
+      this.debugInfo!.timings.total += findNodesMeasure.duration;
+    }
+
+    if (!startNode) {
+      if (debug) {
+        console.log(
+          `[DEBUG] Cannot find start node for (${this.map.x(from)}, ${this.map.y(from)})`,
+        );
+      }
+      return null;
+    }
+
+    if (!endNode) {
+      if (debug) {
+        console.log(
+          `[DEBUG] Cannot find end node for (${this.map.x(to)}, ${this.map.y(to)})`,
+        );
+      }
+      return null;
+    }
+
+    if (startNode.id === endNode.id) {
+      if (debug) {
+        console.log(
+          `[DEBUG] Start and end nodes are the same (ID=${startNode.id}), finding local path with multi-cluster search`,
+        );
+      }
+
+      performance.mark("hpa:findPath:sameNodeLocalPath:start");
+      const clusterX = Math.floor(startNode.x / this.graph.clusterSize);
+      const clusterY = Math.floor(startNode.y / this.graph.clusterSize);
+      const path = this.findLocalPath(from, to, clusterX, clusterY, true);
+      performance.mark("hpa:findPath:sameNodeLocalPath:end");
+      const sameNodeMeasure = performance.measure(
+        "hpa:findPath:sameNodeLocalPath",
+        "hpa:findPath:sameNodeLocalPath:start",
+        "hpa:findPath:sameNodeLocalPath:end",
+      );
+
+      if (debug) {
+        this.debugInfo!.timings.sameNodeLocalPath = sameNodeMeasure.duration;
+        this.debugInfo!.timings.total += sameNodeMeasure.duration;
+      }
+
+      return path;
+    }
+
+    performance.mark("hpa:findPath:findAbstractPath:start");
+    const nodePath = this.findAbstractPath(startNode.id, endNode.id);
+    performance.mark("hpa:findPath:findAbstractPath:end");
+    const findAbstractPathMeasure = performance.measure(
+      "hpa:findPath:findAbstractPath",
+      "hpa:findPath:findAbstractPath:start",
+      "hpa:findPath:findAbstractPath:end",
+    );
+
+    if (debug) {
+      this.debugInfo!.timings.findAbstractPath =
+        findAbstractPathMeasure.duration;
+      this.debugInfo!.timings.total += findAbstractPathMeasure.duration;
+
+      this.debugInfo!.nodePath = nodePath
+        ? nodePath
+            .map((nodeId) => {
+              const node = this.graph.getNode(nodeId);
+              return node ? node.tile : -1;
+            })
+            .filter((tile) => tile !== -1)
+        : null;
+    }
+
+    if (!nodePath) {
+      if (debug) {
+        console.log(
+          `[DEBUG] No abstract path between nodes ${startNode.id} and ${endNode.id}`,
+        );
+      }
+      return null;
+    }
+
+    if (debug) {
+      console.log(`[DEBUG] Abstract path found: ${nodePath.length} waypoints`);
+    }
+
+    const initialPath: TileRef[] = [];
+
+    performance.mark("hpa:findPath:buildInitialPath:start");
+
+    // 1. Find path from start to first node
+    const firstNode = this.graph.getNode(nodePath[0])!;
+    const firstNodeTile = firstNode.tile;
+
+    const startX = this.map.x(from);
+    const startY = this.map.y(from);
+    const startClusterX = Math.floor(startX / this.graph.clusterSize);
+    const startClusterY = Math.floor(startY / this.graph.clusterSize);
+    const startSegment = this.findLocalPath(
+      from,
+      firstNodeTile,
+      startClusterX,
+      startClusterY,
+    );
+
+    if (!startSegment) {
+      return null;
+    }
+
+    initialPath.push(...startSegment);
+
+    // 2. Build path through abstract nodes
+    for (let i = 0; i < nodePath.length - 1; i++) {
+      const fromNodeId = nodePath[i];
+      const toNodeId = nodePath[i + 1];
+
+      const edge = this.graph.getEdgeBetween(fromNodeId, toNodeId);
+      if (!edge) {
+        return null;
+      }
+
+      const fromNode = this.graph.getNode(fromNodeId)!;
+      const toNode = this.graph.getNode(toNodeId)!;
+      const fromTile = fromNode.tile;
+      const toTile = toNode.tile;
+
+      // Check path cache (stored on graph, shared across all instances)
+      // Cache is direction-aware: A→B and B→A are cached separately
+      if (this.options.cachePaths) {
+        const cachedPath = this.graph.getCachedPath(edge.id, fromNodeId);
+        if (cachedPath && cachedPath.length > 0) {
+          // Path is cached for this exact direction, use as-is
+          initialPath.push(...cachedPath.slice(1));
+          continue;
+        }
+      }
+
+      const segmentPath = this.findLocalPath(
+        fromTile,
+        toTile,
+        edge.clusterX,
+        edge.clusterY,
+      );
+
+      if (!segmentPath) {
+        return null;
+      }
+
+      initialPath.push(...segmentPath.slice(1));
+
+      // Cache the path for this direction
+      if (this.options.cachePaths) {
+        this.graph.setCachedPath(edge.id, fromNodeId, segmentPath);
+      }
+    }
+
+    // 3. Find path from last node to end
+    const lastNode = this.graph.getNode(nodePath[nodePath.length - 1])!;
+    const lastNodeTile = lastNode.tile;
+
+    const endX = this.map.x(to);
+    const endY = this.map.y(to);
+    const endClusterX = Math.floor(endX / this.graph.clusterSize);
+    const endClusterY = Math.floor(endY / this.graph.clusterSize);
+    const endSegment = this.findLocalPath(
+      lastNodeTile,
+      to,
+      endClusterX,
+      endClusterY,
+    );
+
+    if (!endSegment) {
+      return null;
+    }
+
+    initialPath.push(...endSegment.slice(1));
+
+    performance.mark("hpa:findPath:buildInitialPath:end");
+    const buildInitialPathMeasure = performance.measure(
+      "hpa:findPath:buildInitialPath",
+      "hpa:findPath:buildInitialPath:start",
+      "hpa:findPath:buildInitialPath:end",
+    );
+
+    if (debug) {
+      this.debugInfo!.timings.buildInitialPath =
+        buildInitialPathMeasure.duration;
+      this.debugInfo!.timings.total += buildInitialPathMeasure.duration;
+      this.debugInfo!.initialPath = initialPath;
+      console.log(`[DEBUG] Initial path: ${initialPath.length} tiles`);
+    }
+
+    // Smoothing moved to SmoothingTransformer - return raw path
+    return initialPath;
+  }
+
+  private findNearestNode(tile: TileRef): AbstractNode | null {
+    const x = this.map.x(tile);
+    const y = this.map.y(tile);
+
+    const clusterX = Math.floor(x / this.graph.clusterSize);
+    const clusterY = Math.floor(y / this.graph.clusterSize);
+
+    const clusterSize = this.graph.clusterSize;
+    const minX = clusterX * clusterSize;
+    const minY = clusterY * clusterSize;
+    const maxX = Math.min(this.map.width() - 1, minX + clusterSize - 1);
+    const maxY = Math.min(this.map.height() - 1, minY + clusterSize - 1);
+
+    const cluster = this.graph.getCluster(clusterX, clusterY);
+    if (!cluster || cluster.nodeIds.length === 0) {
+      return null;
+    }
+
+    const candidateNodes = cluster.nodeIds.map((id) => this.graph.getNode(id)!);
+    const maxDistance = clusterSize * clusterSize;
+
+    return this.tileBFS.search(
+      this.map.width(),
+      this.map.height(),
+      tile,
+      maxDistance,
+      (t: TileRef) => this.graph.getComponentId(t) !== LAND_MARKER,
+      (t: TileRef, _dist: number) => {
+        const tileX = this.map.x(t);
+        const tileY = this.map.y(t);
+
+        for (const node of candidateNodes) {
+          if (node.x === tileX && node.y === tileY) {
+            return node;
+          }
+        }
+
+        if (tileX < minX || tileX > maxX || tileY < minY || tileY > maxY) {
+          return null;
+        }
+      },
+    );
+  }
+
+  private findAbstractPath(
+    fromNodeId: number,
+    toNodeId: number,
+  ): number[] | null {
+    return this.abstractAStar.findPath(fromNodeId, toNodeId);
+  }
+
+  private findLocalPath(
+    from: TileRef,
+    to: TileRef,
+    clusterX: number,
+    clusterY: number,
+    multiCluster: boolean = false,
+  ): TileRef[] | null {
+    // Calculate cluster bounds
+    const clusterSize = this.graph.clusterSize;
+
+    let minX: number;
+    let minY: number;
+    let maxX: number;
+    let maxY: number;
+
+    if (multiCluster) {
+      // 3×3 clusters centered on the starting cluster
+      minX = Math.max(0, (clusterX - 1) * clusterSize);
+      minY = Math.max(0, (clusterY - 1) * clusterSize);
+      maxX = Math.min(this.map.width() - 1, (clusterX + 2) * clusterSize - 1);
+      maxY = Math.min(this.map.height() - 1, (clusterY + 2) * clusterSize - 1);
+    } else {
+      minX = clusterX * clusterSize;
+      minY = clusterY * clusterSize;
+      maxX = Math.min(this.map.width() - 1, minX + clusterSize - 1);
+      maxY = Math.min(this.map.height() - 1, minY + clusterSize - 1);
+    }
+
+    // Choose the appropriate BoundedAStar based on search area
+    const selectedAStar = multiCluster
+      ? this.localAStarMultiCluster
+      : this.localAStar;
+
+    // Run BoundedAStar on bounded region - works directly on map coords
+    const path = selectedAStar.searchBounded(from, to, {
+      minX,
+      maxX,
+      minY,
+      maxY,
+    });
+
+    if (!path || path.length === 0) {
+      return null;
+    }
+
+    // Fix endpoints: BoundedAStar clamps tiles to bounds, but node tiles may be
+    // just outside cluster bounds. Ensure path starts/ends at exact requested tiles.
+    if (path[0] !== from) {
+      path.unshift(from);
+    }
+    if (path[path.length - 1] !== to) {
+      path.push(to);
+    }
+
+    return path;
+  }
+}
+
+// Helper class for resolving tiles to abstract nodes
+// Assumes tiles are already water and component-filtered (by transformer pipeline)
+class SourceResolver {
+  constructor(
+    private map: GameMap,
+    private graph: AbstractGraph,
+  ) {}
+
+  // Resolves target to its abstract node
+  resolveTarget(target: TileRef): AbstractNode | null {
+    return this.getClusterNode(target);
+  }
+
+  // Maps sources → abstract nodes, returns Map<nodeId, sourceTile>
+  resolveSourcesToNodes(sources: TileRef[]): Map<number, TileRef> {
+    const nodeToSource = new Map<number, TileRef>();
+    const nodeToDist = new Map<number, number>();
+
+    for (const source of sources) {
+      const node = this.getClusterNode(source);
+      if (node === null) continue;
+
+      const x = this.map.x(source);
+      const y = this.map.y(source);
+      const dist = Math.abs(node.x - x) + Math.abs(node.y - y);
+
+      // Keep closest source per node
+      const prevDist = nodeToDist.get(node.id);
+      if (prevDist === undefined || dist < prevDist) {
+        nodeToSource.set(node.id, source);
+        nodeToDist.set(node.id, dist);
+      }
+    }
+
+    return nodeToSource;
+  }
+
+  private getClusterNode(tile: TileRef): AbstractNode | null {
+    const x = this.map.x(tile);
+    const y = this.map.y(tile);
+    const clusterX = Math.floor(x / this.graph.clusterSize);
+    const clusterY = Math.floor(y / this.graph.clusterSize);
+
+    const cluster = this.graph.getCluster(clusterX, clusterY);
+    if (!cluster || cluster.nodeIds.length === 0) return null;
+
+    // Return closest node to tile
+    let bestNode: AbstractNode | null = null;
+    let bestDist = Infinity;
+
+    for (const nodeId of cluster.nodeIds) {
+      const node = this.graph.getNode(nodeId);
+      if (!node) continue;
+
+      const dist = Math.abs(node.x - x) + Math.abs(node.y - y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestNode = node;
+      }
+    }
+
+    return bestNode;
+  }
+}
