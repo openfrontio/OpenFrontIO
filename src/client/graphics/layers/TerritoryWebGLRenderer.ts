@@ -3209,7 +3209,7 @@ export class TerritoryWebGLRenderer {
 
         if (smoothActive) {
           // DEBUG: uncomment to visualize tiles in smooth mode
-           color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return;
+           //color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return;
           
           // Compute old color blended on terrain
           vec3 oldColor = baseTerrainColor;
