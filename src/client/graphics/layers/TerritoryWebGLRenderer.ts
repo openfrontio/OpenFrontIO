@@ -2530,8 +2530,12 @@ export class TerritoryWebGLRenderer {
       out vec2 outSeed;
 
       vec2 seedAt(ivec2 texCoord) {
+        // texCoord is in state-texture space (Y=0 at top)
+        // JFA texture was written at fragCoord positions (Y=0 at bottom)
+        // Need to flip back to read the correct row
+        ivec2 jfaCoord = ivec2(texCoord.x, int(u_resolution.y) - 1 - texCoord.y);
         ivec2 clamped = clamp(
-          texCoord,
+          jfaCoord,
           ivec2(0, 0),
           ivec2(int(u_resolution.x) - 1, int(u_resolution.y) - 1)
         );
@@ -2870,35 +2874,29 @@ export class TerritoryWebGLRenderer {
       }
 
       vec2 jfaSeedOldAtTex(ivec2 texCoord) {
-        // JFA was written with Y-flipped coords, so flip when reading
+        // JFA texture was written with fragCoord (bottom-left origin), but we're reading with
+        // texCoord (top-left origin, same as state texture). Need to flip Y to match.
+        // JFA row 0 = fragCoord.y=0 = stateTexCoord.y=height-1 = bottom of map
+        // To read data for texCoord.y=0 (top), we need JFA row height-1
         ivec2 flipped = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
         ivec2 clamped = clamp(
           flipped,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        vec2 seed = texelFetch(u_jfaSeedsOld, clamped, 0).rg;
-        // Also flip the seed Y coordinate back to map space
-        if (seed.x >= 0.0) {
-          seed.y = u_mapResolution.y - seed.y;
-        }
-        return seed;
+        return texelFetch(u_jfaSeedsOld, clamped, 0).rg;
       }
 
       vec2 jfaSeedNewAtTex(ivec2 texCoord) {
-        // JFA was written with Y-flipped coords, so flip when reading
+        // JFA texture was written with fragCoord (bottom-left origin), but we're reading with
+        // texCoord (top-left origin, same as state texture). Need to flip Y to match.
         ivec2 flipped = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
         ivec2 clamped = clamp(
           flipped,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        vec2 seed = texelFetch(u_jfaSeedsNew, clamped, 0).rg;
-        // Also flip the seed Y coordinate back to map space
-        if (seed.x >= 0.0) {
-          seed.y = u_mapResolution.y - seed.y;
-        }
-        return seed;
+        return texelFetch(u_jfaSeedsNew, clamped, 0).rg;
       }
 
       uvec2 contestOwnersAtTex(ivec2 texCoord) {
@@ -3208,8 +3206,12 @@ export class TerritoryWebGLRenderer {
         }
 
         if (smoothActive) {
-          // DEBUG: uncomment to visualize tiles in smooth mode
-           //color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return;
+          // DEBUG: uncomment to visualize issues
+           color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return; // magenta = smoothActive
+          
+          vec2 dbgSeedOld = jfaSeedOldAtTex(texCoord);
+          vec2 dbgSeedNew = jfaSeedNewAtTex(texCoord);
+          // color = vec3(dbgSeedOld.x >= 0.0 ? 0.0 : 1.0, dbgSeedNew.x >= 0.0 ? 0.0 : 1.0, 0.0); outColor = vec4(color, 1.0); return; // red=no old, green=no new, yellow=neither, black=both valid
           
           // Compute old color blended on terrain
           vec3 oldColor = baseTerrainColor;
@@ -3230,59 +3232,41 @@ export class TerritoryWebGLRenderer {
             oldColor = mix(baseTerrainColor, oldPatternColor, u_alpha);
           }
 
-          // Simple per-tile linear sweep - GPU efficient, no JFA distance needed
-          // Use JFA seeds only to determine sweep direction
+          // JFA-based smooth interpolation at pixel resolution
+          // Seeds are at tile resolution, but distance is computed at pixel resolution
+          // This gives smooth movement because distance(mapCoord, seed) varies smoothly
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
           
-          // Determine sweep direction: from old territory toward new
-          vec2 sweepDir = vec2(1.0, 0.0); // default: left to right
-          if (seedOld.x >= 0.0 && seedNew.x >= 0.0) {
-            vec2 dir = seedNew - seedOld;
-            if (length(dir) > 0.01) {
-              sweepDir = normalize(dir);
-            }
-          } else if (seedNew.x >= 0.0) {
-            // Expanding into unowned - sweep from new border inward
-            vec2 dir = mapCoord - seedNew;
-            if (length(dir) > 0.01) {
-              sweepDir = normalize(dir);
-            }
-          } else if (seedOld.x >= 0.0) {
-            // Losing territory - sweep from old border outward
-            vec2 dir = seedOld - mapCoord;
-            if (length(dir) > 0.01) {
-              sweepDir = normalize(dir);
-            }
-          }
+          bool hasOldSeed = seedOld.x >= 0.0;
+          bool hasNewSeed = seedNew.x >= 0.0;
           
-          // Position within tile (0-1)
-          vec2 tilePos = fract(mapCoord);
-          vec2 tileCenter = vec2(0.5, 0.5);
+          // Compute distances at pixel (view) resolution for smooth movement
+          float distOld = hasOldSeed ? distance(mapCoord, seedOld) : 1000.0;
+          float distNew = hasNewSeed ? distance(mapCoord, seedNew) : 1000.0;
           
-          // Project tile position onto sweep direction
-          // At progress=0: front is at the "old" edge (dot = -0.5)
-          // At progress=1: front is at the "new" edge (dot = +0.5)
-          float posAlongSweep = dot(tilePos - tileCenter, sweepDir); // -0.5 to +0.5
-          float frontPos = u_smoothProgress - 0.5; // -0.5 to +0.5
-          float distToFront = posAlongSweep - frontPos;
+          // Interpolate: at progress=0, phi=distOld (show old)
+          //              at progress=1, phi=-distNew (show new)
+          // Border is where phi ≈ 0
+          float phi = mix(distOld, -distNew, u_smoothProgress);
           
-          // Smooth blend over ~1 pixel in screen space
+          // Smooth blend over ~2 pixels in screen space
           float pixelInTiles = 1.0 / u_viewScale;
-          float showNew = smoothstep(-pixelInTiles, pixelInTiles, -distToFront);
+          float showNew = smoothstep(-pixelInTiles, pixelInTiles, -phi);
           color = mix(oldColor, color, showNew);
           
-          // Draw border at front - width in screen pixels
+          // Draw border at the moving front (where phi ≈ 0)
           const float BORDER_PIXELS = 1.5;
           float borderHalfWidth = BORDER_PIXELS / u_viewScale;
-          float absDist = abs(distToFront);
-          float aa = max(fwidth(distToFront), 0.001);
+          float absPhi = abs(phi);
+          float aa = max(fwidth(phi), 0.001);
           float frontBandAlpha =
-            1.0 - smoothstep(borderHalfWidth - aa, borderHalfWidth + aa, absDist);
+            1.0 - smoothstep(borderHalfWidth - aa, borderHalfWidth + aa, absPhi);
           
           if (frontBandAlpha > 0.0) {
-            uint borderOwner = distToFront <= 0.0 ? owner : oldOwner;
-            uint otherOwner = distToFront <= 0.0 ? oldOwner : owner;
+            // phi < 0 means we're on new side, phi > 0 means old side
+            uint borderOwner = phi <= 0.0 ? owner : oldOwner;
+            uint otherOwner = phi <= 0.0 ? oldOwner : owner;
             if (borderOwner == 0u) {
               borderOwner = otherOwner;
               otherOwner = 0u;
