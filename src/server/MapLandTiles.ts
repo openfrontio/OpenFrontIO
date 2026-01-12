@@ -11,7 +11,7 @@ function getMapLoader(): GameMapLoader {
 }
 
 // Gets the number of land tiles for a map
-// BinaryLoaderGameMapLoader already caches maps, so no need for additional caching here.
+// FetchGameMapLoader already caches maps, so no need for additional caching here.
 export async function getMapLandTiles(map: GameMapType): Promise<number> {
   try {
     const loader = getMapLoader();

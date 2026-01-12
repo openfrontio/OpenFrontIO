@@ -178,7 +178,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
 
     const base = roundToNearest5((landTiles / 1_000_000) * 50);
-    const limitedBase = Math.min(base, 125);
+    const limitedBase = Math.min(Math.max(base, 5), 125);
     return [
       limitedBase,
       roundToNearest5(limitedBase * 0.75),
