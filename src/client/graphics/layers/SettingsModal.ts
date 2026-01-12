@@ -187,7 +187,7 @@ export class SettingsModal extends LitElement implements Layer {
 
     return html`
       <div
-        class="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
+        class="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
