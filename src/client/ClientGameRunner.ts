@@ -268,6 +268,8 @@ export class ClientGameRunner {
     // Stop the game
     this.isActive = false;
 
+    this.myPlayer ??= this.gameView.playerByClientID(this.lobby.clientID);
+
     if (!this.myPlayer?.cosmetics?.pattern) {
       console.error("No pattern found on player", this.myPlayer?.cosmetics);
       return;
