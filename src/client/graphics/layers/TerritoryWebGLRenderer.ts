@@ -3204,9 +3204,10 @@ export class TerritoryWebGLRenderer {
           bool hasOldSeed = seedOld.x >= 0.0;
           bool hasNewSeed = seedNew.x >= 0.0;
           
-          // If neither seed is valid, this tile is far from any change - skip smooth logic
-          if (!hasOldSeed && !hasNewSeed) {
-            // Just use the current color, no animation needed
+          // If either seed is invalid, we can't compute meaningful distances
+          // for smooth animation - just use the current color
+          if (!hasOldSeed || !hasNewSeed) {
+            // Skip smooth animation - show current state
           } else {
             float oldDistance = hasOldSeed
               ? max(length(seedOld - mapCoord) - 0.5, 0.0)
