@@ -3206,12 +3206,9 @@ export class TerritoryWebGLRenderer {
         }
 
         if (smoothActive) {
-          // DEBUG: uncomment to visualize issues
-           color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return; // magenta = smoothActive
-          
-          vec2 dbgSeedOld = jfaSeedOldAtTex(texCoord);
-          vec2 dbgSeedNew = jfaSeedNewAtTex(texCoord);
-          // color = vec3(dbgSeedOld.x >= 0.0 ? 0.0 : 1.0, dbgSeedNew.x >= 0.0 ? 0.0 : 1.0, 0.0); outColor = vec4(color, 1.0); return; // red=no old, green=no new, yellow=neither, black=both valid
+          // DEBUG: uncomment ONE line to visualize issues
+          // color = vec3(1.0, 0.0, 1.0); outColor = vec4(color, 1.0); return; // magenta = smoothActive tiles
+          // vec2 ds = jfaSeedOldAtTex(texCoord); color = vec3(ds.x >= 0.0 ? 0.0 : 1.0, jfaSeedNewAtTex(texCoord).x >= 0.0 ? 0.0 : 1.0, 0.0); outColor = vec4(color, 1.0); return; // seed validity
           
           // Compute old color blended on terrain
           vec3 oldColor = baseTerrainColor;
@@ -3232,41 +3229,40 @@ export class TerritoryWebGLRenderer {
             oldColor = mix(baseTerrainColor, oldPatternColor, u_alpha);
           }
 
-          // JFA-based smooth interpolation at pixel resolution
-          // Seeds are at tile resolution, but distance is computed at pixel resolution
-          // This gives smooth movement because distance(mapCoord, seed) varies smoothly
+          // JFA-based animation with tile-sized pixelated look
+          // Movement is pixel-smooth but edges remain hard/blocky like stable borders
           vec2 seedOld = jfaSeedOldAtTex(texCoord);
           vec2 seedNew = jfaSeedNewAtTex(texCoord);
           
           bool hasOldSeed = seedOld.x >= 0.0;
           bool hasNewSeed = seedNew.x >= 0.0;
           
-          // Compute distances at pixel (view) resolution for smooth movement
+          // Compute distances at pixel resolution for smooth movement
           float distOld = hasOldSeed ? distance(mapCoord, seedOld) : 1000.0;
           float distNew = hasNewSeed ? distance(mapCoord, seedNew) : 1000.0;
           
-          // Interpolate: at progress=0, phi=distOld (show old)
-          //              at progress=1, phi=-distNew (show new)
-          // Border is where phi ≈ 0
-          float phi = mix(distOld, -distNew, u_smoothProgress);
+          // phi interpolates: at progress=0 show old, at progress=1 show new
+          // Front should move FROM old border TOWARD new border (expansion direction)
+          // phi > 0 means "new territory", phi < 0 means "old territory"
+          float phi = mix(-distNew, distOld, u_smoothProgress);
           
-          // Smooth blend over ~2 pixels in screen space
-          float pixelInTiles = 1.0 / u_viewScale;
-          float showNew = smoothstep(-pixelInTiles, pixelInTiles, -phi);
-          color = mix(oldColor, color, showNew);
+          // DEBUG: visualize phi values (green=old side, red=new side, white=front)
+          float phiVis = clamp(phi * 0.2 + 0.5, 0.0, 1.0); color = vec3(phiVis, 1.0 - phiVis, abs(phi) < 0.5 ? 1.0 : 0.0); outColor = vec4(color, 1.0); return;
           
-          // Draw border at the moving front (where phi ≈ 0)
-          const float BORDER_PIXELS = 1.5;
-          float borderHalfWidth = BORDER_PIXELS / u_viewScale;
-          float absPhi = abs(phi);
-          float aa = max(fwidth(phi), 0.001);
-          float frontBandAlpha =
-            1.0 - smoothstep(borderHalfWidth - aa, borderHalfWidth + aa, absPhi);
+          // Hard threshold - no blending, preserves pixelated tile look
+          // phi > 0 means show new, phi < 0 means show old
+          bool showNew = phi > 0.0;
+          color = showNew ? color : oldColor;
           
-          if (frontBandAlpha > 0.0) {
-            // phi < 0 means we're on new side, phi > 0 means old side
-            uint borderOwner = phi <= 0.0 ? owner : oldOwner;
-            uint otherOwner = phi <= 0.0 ? oldOwner : owner;
+          // Border at the moving front - 1 tile wide (0.5 on each side), like stable borders
+          const float BORDER_HALF_WIDTH = 0.5; // tiles
+          bool isFrontBorder = abs(phi) < BORDER_HALF_WIDTH;
+          
+          if (isFrontBorder) {
+            // Determine which owner's border to draw based on which side we're on
+            // phi > 0 = new side, phi < 0 = old side
+            uint borderOwner = phi > 0.0 ? owner : oldOwner;
+            uint otherOwner = phi > 0.0 ? oldOwner : owner;
             if (borderOwner == 0u) {
               borderOwner = otherOwner;
               otherOwner = 0u;
@@ -3293,7 +3289,8 @@ export class TerritoryWebGLRenderer {
                 }
               }
               bColor = applyDefended(bColor, isDefended, texCoord);
-              color = mix(color, bColor, frontBandAlpha * borderBase.a);
+              // Hard border, no alpha blending - matches stable border look
+              color = bColor;
             }
           }
         }
