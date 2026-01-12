@@ -145,6 +145,10 @@
   ],
   "misc": [
     {
+      "key": "discord",
+      "requiresPlayer": false
+    },
+    {
       "key": "go",
       "requiresPlayer": false
     },
