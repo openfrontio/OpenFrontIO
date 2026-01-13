@@ -28,6 +28,7 @@ export class TerritoryWebGLRenderer {
   public readonly canvas: HTMLCanvasElement;
 
   private contestEnabled = false;
+  private contestPatternMode: 0 | 1 | 2 = 0; // 0=blueNoise(strength), 1=checkerboard(50/50), 2=bayer4x4(strength)
 
   private readonly gl: WebGL2RenderingContext | null;
   private readonly program: WebGLProgram | null;
@@ -94,6 +95,7 @@ export class TerritoryWebGLRenderer {
     relations: WebGLUniformLocation | null;
     patterns: WebGLUniformLocation | null;
     contestEnabled: WebGLUniformLocation | null;
+    contestPatternMode: WebGLUniformLocation | null;
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
@@ -258,6 +260,7 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         contestEnabled: null,
+        contestPatternMode: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -351,6 +354,7 @@ export class TerritoryWebGLRenderer {
         relations: null,
         patterns: null,
         contestEnabled: null,
+        contestPatternMode: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -445,6 +449,10 @@ export class TerritoryWebGLRenderer {
       relations: gl.getUniformLocation(this.program, "u_relations"),
       patterns: gl.getUniformLocation(this.program, "u_patterns"),
       contestEnabled: gl.getUniformLocation(this.program, "u_contestEnabled"),
+      contestPatternMode: gl.getUniformLocation(
+        this.program,
+        "u_contestPatternMode",
+      ),
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
       contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
@@ -1284,6 +1292,12 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  setContestPatternMode(mode: "blueNoise" | "checkerboard" | "bayer4x4") {
+    if (mode === "checkerboard") this.contestPatternMode = 1;
+    else if (mode === "bayer4x4") this.contestPatternMode = 2;
+    else this.contestPatternMode = 0;
+  }
+
   markTile(tile: TileRef) {
     if (this.needsFullUpload) {
       return;
@@ -1756,6 +1770,9 @@ export class TerritoryWebGLRenderer {
     }
     if (this.uniforms.contestEnabled) {
       gl.uniform1i(this.uniforms.contestEnabled, this.contestEnabled ? 1 : 0);
+    }
+    if (this.uniforms.contestPatternMode) {
+      gl.uniform1i(this.uniforms.contestPatternMode, this.contestPatternMode);
     }
     if (this.uniforms.contestNow) {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
@@ -2713,6 +2730,7 @@ export class TerritoryWebGLRenderer {
 	      uniform usampler2D u_relations;
 	      uniform usampler2D u_patterns;
 	      uniform bool u_contestEnabled;
+        uniform int u_contestPatternMode; // 0=blueNoise(strength), 1=checkerboard(50/50), 2=bayer4x4(strength)
 	      uniform usampler2D u_contestOwners;
 	      uniform usampler2D u_contestIds;
 	      uniform usampler2D u_contestTimes;
@@ -2932,6 +2950,47 @@ export class TerritoryWebGLRenderer {
         vec2 p = vec2(texCoord);
         float x = fract(0.06711056 * p.x + 0.00583715 * p.y);
         return fract(52.9829189 * x);
+      }
+
+      float bayer4x4(ivec2 texCoord) {
+        // Classic 4x4 Bayer matrix values 0..15 mapped to (0.5/16 .. 15.5/16)
+        int x = texCoord.x & 3;
+        int y = texCoord.y & 3;
+        int idx = (y << 2) | x;
+        int v = 0;
+        // Row-major:
+        //  0  8  2 10
+        // 12  4 14  6
+        //  3 11  1  9
+        // 15  7 13  5
+        if (idx == 0) v = 0;
+        else if (idx == 1) v = 8;
+        else if (idx == 2) v = 2;
+        else if (idx == 3) v = 10;
+        else if (idx == 4) v = 12;
+        else if (idx == 5) v = 4;
+        else if (idx == 6) v = 14;
+        else if (idx == 7) v = 6;
+        else if (idx == 8) v = 3;
+        else if (idx == 9) v = 11;
+        else if (idx == 10) v = 1;
+        else if (idx == 11) v = 9;
+        else if (idx == 12) v = 15;
+        else if (idx == 13) v = 7;
+        else if (idx == 14) v = 13;
+        else v = 5;
+        return (float(v) + 0.5) / 16.0;
+      }
+
+      bool contestPickAttacker(ivec2 texCoord, float strength) {
+        if (u_contestPatternMode == 1) {
+          // Checkerboard is always 50/50 (ignores strength)
+          return ((texCoord.x + texCoord.y) & 1) == 0;
+        }
+        if (u_contestPatternMode == 2) {
+          return bayer4x4(texCoord) < strength;
+        }
+        return blueNoise(texCoord) < strength;
       }
 
       uint relationCode(uint owner, uint other) {
@@ -3193,8 +3252,8 @@ export class TerritoryWebGLRenderer {
             defenderBase = defenderColor.rgb;
           }
           float strength = contestStrength(contestId);
-          float noise = blueNoise(texCoord);
-          vec3 contestColor = noise < strength ? latestOwnerBase : defenderBase;
+          bool pickAttacker = contestPickAttacker(texCoord, strength);
+          vec3 contestColor = pickAttacker ? latestOwnerBase : defenderBase;
           // Blend contested fill on top of terrain
           color = mix(baseTerrainColor, contestColor, u_alpha);
         }
