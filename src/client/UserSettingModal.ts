@@ -398,7 +398,7 @@ export class UserSettingModal extends BaseModal {
             title: translateText("user_setting.title"),
             onBack: this.close,
             ariaLabel: translateText("common.back"),
-            showDivider: false,
+            showDivider: true,
           })}
 
           <div class="hidden md:flex items-center gap-2 justify-center mt-4">
