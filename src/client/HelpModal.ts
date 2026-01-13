@@ -4,6 +4,7 @@ import { translateText } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/Maps";
+import { modalHeader } from "./components/ui/ModalHeader";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -49,6 +50,7 @@ export class HelpModal extends BaseModal {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      swapDirection: "KeyU",
       shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
@@ -101,37 +103,11 @@ export class HelpModal extends BaseModal {
           ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
-        <div
-          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("main.instructions")}
-            </span>
-          </div>
-        </div>
+        ${modalHeader({
+          title: translateText("main.instructions"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
 
         <div
           class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
@@ -206,7 +182,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey("KeyU")}
+                      ${this.renderKey(keybinds.swapDirection)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.bomb_direction")}

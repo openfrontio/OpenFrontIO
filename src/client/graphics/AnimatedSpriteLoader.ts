@@ -5,11 +5,6 @@ import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import miniFire from "../../../resources/sprites/minifire.png";
 import nuke from "../../../resources/sprites/nukeExplosion.png";
-import conquestChampagne from "../../../resources/sprites/nyeve/conquest.png";
-import nukeEve from "../../../resources/sprites/nyeve/firework.png";
-import nukeEveCyan from "../../../resources/sprites/nyeve/firework_cyan.png";
-import nukeEveRed from "../../../resources/sprites/nyeve/firework_red.png";
-import nukeEveYellow from "../../../resources/sprites/nyeve/firework_yellow.png";
 import SAMExplosion from "../../../resources/sprites/samExplosion.png";
 import sinkingShip from "../../../resources/sprites/sinkingShip.png";
 import miniSmoke from "../../../resources/sprites/smoke.png";
@@ -139,51 +134,6 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 10,
     originY: 16,
-  },
-  [FxType.ConquestChampagne]: {
-    url: conquestChampagne,
-    frameWidth: 28,
-    frameCount: 8,
-    frameDuration: 90,
-    looping: false,
-    originX: 14,
-    originY: 23,
-  },
-  [FxType.FireworkAll]: {
-    url: nukeEve,
-    frameWidth: 60,
-    frameCount: 15,
-    frameDuration: 90,
-    looping: false,
-    originX: 30,
-    originY: 30,
-  },
-  [FxType.FireworkRed]: {
-    url: nukeEveRed,
-    frameWidth: 30,
-    frameCount: 9,
-    frameDuration: 100,
-    looping: false,
-    originX: 15,
-    originY: 20,
-  },
-  [FxType.FireworkCyan]: {
-    url: nukeEveCyan,
-    frameWidth: 30,
-    frameCount: 13,
-    frameDuration: 100,
-    looping: false,
-    originX: 15,
-    originY: 20,
-  },
-  [FxType.FireworkYellow]: {
-    url: nukeEveYellow,
-    frameWidth: 30,
-    frameCount: 15,
-    frameDuration: 100,
-    looping: false,
-    originX: 15,
-    originY: 20,
   },
 };
 

@@ -497,7 +497,7 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      const gameConfig = playlist.gameConfig();
+      const gameConfig = await playlist.gameConfig();
       gameConfig.gameMapSize = GameMapSize.Compact;
       const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
