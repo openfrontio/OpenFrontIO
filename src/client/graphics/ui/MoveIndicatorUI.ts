@@ -26,7 +26,13 @@ export class MoveIndicatorUI implements UIElement {
 
     const t = this.lifeTime / this.duration;
     const alpha = 1 - t; // fade out
-    const radius = this.startRadius * (1 - t * 0.7); // converge inward
+
+    // Scale with zoom level (same pattern as NavalTarget)
+    const transformScale = this.transformHandler.scale;
+    const scale = transformScale > 10 ? 1 + (transformScale - 10) / 10 : 1;
+
+    const radius = this.startRadius * scale * (1 - t * 0.7); // converge inward
+    const chevronSize = this.chevronSize * scale;
 
     // Get screen coordinates
     const screenPos = this.transformHandler.worldToScreenCoordinates(this.cell);
@@ -35,15 +41,15 @@ export class MoveIndicatorUI implements UIElement {
 
     ctx.save();
     ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * scale;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
     // draw 4 chevrons pointing inward
-    this.drawChevron(ctx, centerX, centerY - radius, 0); // top
-    this.drawChevron(ctx, centerX, centerY + radius, Math.PI); // bottom
-    this.drawChevron(ctx, centerX - radius, centerY, -Math.PI / 2); // left
-    this.drawChevron(ctx, centerX + radius, centerY, Math.PI / 2); // right
+    this.drawChevron(ctx, centerX, centerY - radius, 0, chevronSize); // top
+    this.drawChevron(ctx, centerX, centerY + radius, Math.PI, chevronSize); // bottom
+    this.drawChevron(ctx, centerX - radius, centerY, -Math.PI / 2, chevronSize); // left
+    this.drawChevron(ctx, centerX + radius, centerY, Math.PI / 2, chevronSize); // right
 
     ctx.restore();
     return true;
@@ -54,14 +60,15 @@ export class MoveIndicatorUI implements UIElement {
     x: number,
     y: number,
     rotation: number,
+    chevronSize: number,
   ) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation);
     ctx.beginPath();
-    ctx.moveTo(-this.chevronSize, -this.chevronSize * 0.6);
-    ctx.lineTo(0, this.chevronSize * 0.4);
-    ctx.lineTo(this.chevronSize, -this.chevronSize * 0.6);
+    ctx.moveTo(-chevronSize, -chevronSize * 0.6);
+    ctx.lineTo(0, chevronSize * 0.4);
+    ctx.lineTo(chevronSize, -chevronSize * 0.6);
     ctx.stroke();
     ctx.restore();
   }
