@@ -1,5 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { Env } from "src/core/configuration/Env";
 import { copyToClipboard, translateText } from "../client/Utils";
 import {
   ClientInfo,
@@ -8,7 +9,7 @@ import {
   GameRecordSchema,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { GameMode } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
@@ -511,7 +512,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
@@ -548,22 +549,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private async checkArchivedGame(
     lobbyId: string,
   ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
-    const archivePromise = fetch(`${getApiBase()}/game/${lobbyId}`, {
+    const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
-    const gitCommitPromise = fetch(`/commit.txt`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-cache",
-    });
-
-    const [archiveResponse, gitCommitResponse] = await Promise.all([
-      archivePromise,
-      gitCommitPromise,
-    ]);
 
     if (archiveResponse.status === 404) {
       return "not_found";
@@ -578,16 +569,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    let myGitCommit = "";
-    if (gitCommitResponse.status === 404) {
-      // commit.txt is not found when running locally
-      myGitCommit = "DEV";
-    } else if (gitCommitResponse.status === 200) {
-      myGitCommit = (await gitCommitResponse.text()).trim();
-    } else {
-      console.error("Error getting git commit:", gitCommitResponse.status);
-      return "error";
-    }
+    const myGitCommit = Env.GIT_COMMIT;
 
     // Allow DEV to join games created with a different version for debugging.
     if (myGitCommit !== "DEV" && parsed.data.gitCommit !== myGitCommit) {
@@ -616,7 +598,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private async pollPlayers() {
     const lobbyId = this.currentLobbyId;
     if (!lobbyId) return;
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
 
     fetch(`/${config.workerPath(lobbyId)}/api/game/${lobbyId}`, {
       method: "GET",

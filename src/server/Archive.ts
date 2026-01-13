@@ -1,5 +1,5 @@
 import z from "zod";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import {
   GameID,
   GameRecord,
@@ -10,7 +10,7 @@ import {
 import { replacer } from "../core/Util";
 import { logger } from "./Logger";
 
-const config = getServerConfigFromServer();
+const config = getServerConfig();
 
 const log = logger.child({ component: "Archive" });
 

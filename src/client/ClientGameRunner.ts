@@ -1,3 +1,4 @@
+import { Env } from "src/core/configuration/Env";
 import { translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
@@ -182,8 +183,9 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
-  const config = await getConfig(
+  const config = getConfig(
     lobbyConfig.gameStartInfo.config,
+    Env.GAME_ENV,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
   );
@@ -200,6 +202,7 @@ async function createClientGame(
   }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
+    Env.GAME_ENV,
     lobbyConfig.clientID,
   );
   await worker.initialize();

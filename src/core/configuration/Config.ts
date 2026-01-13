@@ -22,7 +22,7 @@ import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
-  Preprod,
+  Staging,
   Prod,
 }
 
@@ -68,8 +68,8 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
+  env(): GameEnv;
   spawnImmunityDuration(): Tick;
-  serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
   theme(): Theme;
   percentageTilesOwnedToWin(): number;

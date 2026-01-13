@@ -1,4 +1,5 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
+import { GameEnv } from "./configuration/Config";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -34,11 +35,12 @@ import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
+  env: GameEnv,
   clientID: ClientID,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  const config = getConfig(gameStart.config, env, null, false);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,

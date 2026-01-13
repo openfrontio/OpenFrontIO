@@ -1,5 +1,6 @@
 import cluster from "cluster";
 import * as dotenv from "dotenv";
+import { getServerConfig } from "src/core/configuration/ConfigLoader";
 import { startMaster } from "./Master";
 import { startWorker } from "./Worker";
 
@@ -8,6 +9,7 @@ dotenv.config();
 
 // Main entry point of the application
 async function main() {
+  getServerConfig();
   // Check if this is the primary (master) process
   if (cluster.isPrimary) {
     console.log("Starting master process...");

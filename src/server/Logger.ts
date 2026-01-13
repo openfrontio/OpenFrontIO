@@ -7,11 +7,11 @@ import {
 import { OpenTelemetryTransportV3 } from "@opentelemetry/winston-transport";
 import * as dotenv from "dotenv";
 import winston from "winston";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { getOtelResource } from "./OtelResource";
 dotenv.config();
 
-const config = getServerConfigFromServer();
+const config = getServerConfig();
 
 const resource = getOtelResource();
 

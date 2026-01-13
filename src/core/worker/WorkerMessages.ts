@@ -1,3 +1,4 @@
+import { GameEnv } from "../configuration/Config";
 import {
   PlayerActions,
   PlayerBorderTiles,
@@ -39,6 +40,7 @@ export interface HeartbeatMessage extends BaseWorkerMessage {
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
+  env: GameEnv;
   clientID: ClientID;
 }
 

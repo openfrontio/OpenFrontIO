@@ -1,3 +1,4 @@
+import { GameEnv } from "../configuration/Config";
 import {
   Cell,
   PlayerActions,
@@ -21,6 +22,7 @@ export class WorkerClient {
 
   constructor(
     private gameStartInfo: GameStartInfo,
+    private env: GameEnv,
     private clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url), {
@@ -71,6 +73,7 @@ export class WorkerClient {
         type: "init",
         id: messageId,
         gameStartInfo: this.gameStartInfo,
+        env: this.env,
         clientID: this.clientID,
       });
 

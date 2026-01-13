@@ -56,7 +56,11 @@ export default defineConfig(({ mode }) => {
         template: "index.html",
         inject: {
           data: {
-            // In case we need to inject variables into HTML
+            serverConfig: JSON.stringify({
+              gameEnv: isProduction ? env.GAME_ENV : "Dev",
+              numWorkers: isProduction ? parseInt(env.NUM_WORKERS, 10) : 2,
+              gitCommit: isProduction ? env.GIT_COMMIT : "DEV",
+            }),
           },
         },
       }),
@@ -70,19 +74,6 @@ export default defineConfig(({ mode }) => {
       }),
       tailwindcss(),
     ],
-
-    define: {
-      "process.env.WEBSOCKET_URL": JSON.stringify(
-        isProduction ? "" : "localhost:3000",
-      ),
-      "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
-      "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
-      "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
-        env.STRIPE_PUBLISHABLE_KEY,
-      ),
-      "process.env.API_DOMAIN": JSON.stringify(env.API_DOMAIN),
-      // Add other process.env variables if needed, OR migrate code to import.meta.env
-    },
 
     build: {
       outDir: "static", // Webpack outputs to 'static', assuming we want to keep this.

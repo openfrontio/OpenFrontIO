@@ -1,5 +1,6 @@
 // Minimal test maps for pathfinding unit tests
 
+import { GameEnv } from "src/core/configuration/Config";
 import {
   Difficulty,
   Game,
@@ -12,7 +13,6 @@ import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
 import { GameMapImpl } from "../../../src/core/game/GameMap";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { TestConfig } from "../../util/TestConfig";
-import { TestServerConfig } from "../../util/TestServerConfig";
 
 export const W = "W"; // Water
 export const L = "L"; // Land
@@ -130,7 +130,6 @@ export function createGame(data: TestMapData): Game {
     miniNumLand,
   );
 
-  const serverConfig = new TestServerConfig();
   const gameConfig = {
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
@@ -148,8 +147,8 @@ export function createGame(data: TestMapData): Game {
     randomSpawn: false,
   };
   const config = new TestConfig(
-    serverConfig,
     gameConfig,
+    GameEnv.Dev,
     new UserSettings(),
     false,
   );

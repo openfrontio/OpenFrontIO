@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getServerConfig } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
 import { getUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
@@ -143,7 +143,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private async connect() {
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
 
     this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
     this.socket.onopen = async () => {
@@ -222,7 +222,7 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
-    const config = await getServerConfigFromClient();
+    const config = getServerConfig();
     const url = `/${config.workerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
