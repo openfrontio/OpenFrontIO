@@ -207,6 +207,7 @@ export async function startMaster() {
     const newWorker = cluster.fork({
       WORKER_ID: workerId,
       ADMIN_TOKEN,
+      INSTANCE_ID,
     });
 
     log.info(
