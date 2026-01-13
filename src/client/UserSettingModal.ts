@@ -8,6 +8,7 @@ import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./FlagInputModal";
 
 interface FlagInputModalElement extends HTMLElement {
@@ -394,40 +395,17 @@ export class UserSettingModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
-          class="relative flex flex-col mb-6 border-b border-white/10 pb-4 shrink-0 p-6"
+          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
         >
-          <div class="flex items-center gap-4 flex-1 flex-wrap">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-all hyphens-auto min-w-0"
-            >
-              ${translateText("user_setting.title")}
-            </span>
-          </div>
+          ${modalHeader({
+            title: translateText("user_setting.title"),
+            onBack: this.close,
+            ariaLabel: translateText("common.back"),
+            showDivider: true,
+          })}
 
           <div class="hidden md:flex items-center gap-2 justify-center mt-4">
             <button
@@ -452,7 +430,7 @@ export class UserSettingModal extends BaseModal {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
+          class="pt-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
         >
           <div class="flex flex-col gap-2">${activeContent}</div>
         </div>
