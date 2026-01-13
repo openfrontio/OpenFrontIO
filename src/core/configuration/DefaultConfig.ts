@@ -2,22 +2,16 @@ import { JWK } from "jose";
 import { z } from "zod";
 import {
   Difficulty,
-  Duos,
   Game,
-  GameMapType,
   GameMode,
   GameType,
   Gold,
-  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
-  PublicGameModifiers,
-  Quads,
   TerrainType,
   TerraNullius,
   Tick,
-  Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -29,7 +23,6 @@ import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
-import { getMapLandTiles } from "./MapLandTiles";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
@@ -128,64 +121,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
 
-  async lobbyMaxPlayers(
-    map: GameMapType,
-    mode: GameMode,
-    numPlayerTeams: TeamCountConfig | undefined,
-    isCompactMap?: boolean,
-  ): Promise<number> {
-    const landTiles = await getMapLandTiles(map);
-    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
-    const r = Math.random();
-    const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
-    // Apply compact map 75% player reduction
-    if (isCompactMap) {
-      p = Math.max(3, Math.floor(p * 0.25));
-    }
-    if (numPlayerTeams === undefined) return p;
-    switch (numPlayerTeams) {
-      case Duos:
-        p -= p % 2;
-        break;
-      case Trios:
-        p -= p % 3;
-        break;
-      case Quads:
-        p -= p % 4;
-        break;
-      case HumansVsNations:
-        // Half the slots are for humans, the other half will get filled with nations
-        p = Math.floor(p / 2);
-        break;
-      default:
-        p -= p % numPlayerTeams;
-        break;
-    }
-    return p;
-  }
-
-  /**
-   * Calculate player counts from land tiles
-   * For every 1,000,000 land tiles, take 50 players
-   * Limit to max 125 players for performance
-   * Second value is 75% of calculated value, third is 50%
-   * All values are rounded to the nearest 5
-   */
-  private calculateMapPlayerCounts(
-    landTiles: number,
-  ): [number, number, number] {
-    const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
-
-    const base = roundToNearest5((landTiles / 1_000_000) * 50);
-    const limitedBase = Math.min(Math.max(base, 5), 125);
-    return [
-      limitedBase,
-      roundToNearest5(limitedBase * 0.75),
-      roundToNearest5(limitedBase * 0.5),
-    ];
-  }
-
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
   }
@@ -197,21 +132,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
-  }
-
-  getRandomPublicGameModifiers(): PublicGameModifiers {
-    return {
-      isRandomSpawn: Math.random() < 0.1, // 10% chance
-      isCompact: Math.random() < 0.05, // 5% chance
-    };
-  }
-
-  async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
-    // Maps with smallest player count < 50 don't support compact map in team games
-    // The smallest player count is the 3rd number in the player counts array
-    const landTiles = await getMapLandTiles(map);
-    const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
-    return smallest >= 50;
   }
 }
 
