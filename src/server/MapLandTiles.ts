@@ -1,8 +1,11 @@
 import { FetchGameMapLoader } from "src/core/game/FetchGameMapLoader";
 import { GameMapType } from "src/core/game/Game";
 import { GameMapLoader } from "src/core/game/GameMapLoader";
+import { logger } from "./Logger";
 
 let mapLoader: GameMapLoader | null = null;
+
+const log = logger.child({ component: "MapLandTiles" });
 
 // Gets or creates the map loader, uses FetchGameMapLoader pointing to the master server.
 function getMapLoader(): GameMapLoader {
@@ -19,7 +22,7 @@ export async function getMapLandTiles(map: GameMapType): Promise<number> {
     const manifest = await mapData.manifest();
     return manifest.map.num_land_tiles;
   } catch (error) {
-    console.error(`Failed to load manifest for ${map}:`, error);
+    log.error(`Failed to load manifest for ${map}: ${error}`, { map });
     return 1_000_000; // Default fallback
   }
 }
