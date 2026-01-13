@@ -82,6 +82,14 @@ export class TerritoryLayer implements Layer {
   private interpolationDelayMs = 100;
   private lastInterpolationPair: "prevCurrent" | "olderPrev" = "prevCurrent";
 
+  // Runtime debug controls (UI)
+  private tripleBufferEnabled = true;
+  private interpolationDelayMode: "ema" | "fixed50" | "fixed100" | "fixed200" =
+    "ema";
+  private tickIntervalEmaMs = 0;
+  private readonly TICK_INTERVAL_EMA_ALPHA = 0.2;
+  private smoothingDebugUi: HTMLDivElement | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
@@ -127,13 +135,27 @@ export class TerritoryLayer implements Layer {
       this.tickTimeMsPrev = this.tickTimeMsCurrent;
       this.tickTimeMsCurrent = now;
 
-      // Keep interpolation continuous across variable tick rates by rendering ~one tick "behind".
-      // With a fixed 100ms delay, slow tick rates (e.g. 0.5x) reach progress=1 early and then
-      // plateau until the next tick, which looks like motion stops.
       const lastInterval = this.tickTimeMsCurrent - this.tickTimeMsPrev;
       if (lastInterval > 0) {
-        // Clamp to avoid extreme latency or instability if tick timing spikes.
-        this.interpolationDelayMs = Math.max(50, Math.min(1500, lastInterval));
+        // Track tick interval EMA for stable delay at variable speeds.
+        this.tickIntervalEmaMs =
+          this.tickIntervalEmaMs <= 0
+            ? lastInterval
+            : this.tickIntervalEmaMs * (1 - this.TICK_INTERVAL_EMA_ALPHA) +
+              lastInterval * this.TICK_INTERVAL_EMA_ALPHA;
+
+        // Choose delay mode.
+        if (this.interpolationDelayMode === "fixed50") {
+          this.interpolationDelayMs = 50;
+        } else if (this.interpolationDelayMode === "fixed100") {
+          this.interpolationDelayMs = 100;
+        } else if (this.interpolationDelayMode === "fixed200") {
+          this.interpolationDelayMs = 200;
+        } else {
+          // "ema": render roughly one tick behind using the raw EMA interval.
+          // Do not clamp in EMA mode (debug requested).
+          this.interpolationDelayMs = this.tickIntervalEmaMs;
+        }
       }
 
       if (this.territoryRenderer) {
@@ -379,6 +401,177 @@ export class TerritoryLayer implements Layer {
       );
     });
     this.redraw();
+    this.ensureSmoothingDebugUi();
+  }
+
+  private ensureSmoothingDebugUi() {
+    if (!DEBUG_TERRITORY_OVERLAY) return;
+    if (this.smoothingDebugUi) return;
+
+    const root = document.createElement("div");
+    root.style.position = "fixed";
+    root.style.right = "10px";
+    root.style.top = "10px";
+    root.style.zIndex = "9999";
+    root.style.background = "rgba(0, 0, 0, 0.6)";
+    root.style.color = "rgba(255, 255, 255, 0.92)";
+    root.style.padding = "8px 10px";
+    root.style.borderRadius = "8px";
+    root.style.font = "12px monospace";
+    root.style.userSelect = "none";
+    root.style.touchAction = "none";
+
+    const title = document.createElement("div");
+    title.textContent = "Territory smoothing";
+    title.style.fontWeight = "700";
+    title.style.marginBottom = "6px";
+    title.style.cursor = "move";
+    root.appendChild(title);
+
+    // Restore last position (if any)
+    const POS_KEY = "debug.territorySmoothingPanelPos.v1";
+    try {
+      const raw = localStorage.getItem(POS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { left: number; top: number };
+        if (
+          typeof parsed?.left === "number" &&
+          typeof parsed?.top === "number" &&
+          Number.isFinite(parsed.left) &&
+          Number.isFinite(parsed.top)
+        ) {
+          root.style.left = `${parsed.left}px`;
+          root.style.top = `${parsed.top}px`;
+          root.style.right = "auto";
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Make draggable via title bar
+    let dragging = false;
+    let dragDx = 0;
+    let dragDy = 0;
+    const clampPos = (left: number, top: number) => {
+      const maxLeft = Math.max(0, window.innerWidth - root.offsetWidth);
+      const maxTop = Math.max(0, window.innerHeight - root.offsetHeight);
+      return {
+        left: Math.max(0, Math.min(maxLeft, left)),
+        top: Math.max(0, Math.min(maxTop, top)),
+      };
+    };
+
+    title.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      title.setPointerCapture(e.pointerId);
+      const rect = root.getBoundingClientRect();
+      dragDx = e.clientX - rect.left;
+      dragDy = e.clientY - rect.top;
+      // Switch to explicit left/top positioning
+      root.style.left = `${rect.left}px`;
+      root.style.top = `${rect.top}px`;
+      root.style.right = "auto";
+    });
+
+    title.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const next = clampPos(e.clientX - dragDx, e.clientY - dragDy);
+      root.style.left = `${next.left}px`;
+      root.style.top = `${next.top}px`;
+      try {
+        localStorage.setItem(POS_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    });
+
+    const endDrag = (e: PointerEvent) => {
+      if (!dragging) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = false;
+      try {
+        title.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    };
+    title.addEventListener("pointerup", endDrag);
+    title.addEventListener("pointercancel", endDrag);
+
+    const tripleRow = document.createElement("label");
+    tripleRow.style.display = "flex";
+    tripleRow.style.alignItems = "center";
+    tripleRow.style.gap = "6px";
+    tripleRow.style.marginBottom = "6px";
+
+    const tripleCheckbox = document.createElement("input");
+    tripleCheckbox.type = "checkbox";
+    tripleCheckbox.checked = this.tripleBufferEnabled;
+    tripleCheckbox.addEventListener("change", () => {
+      this.tripleBufferEnabled = tripleCheckbox.checked;
+    });
+
+    const tripleText = document.createElement("span");
+    tripleText.textContent = "triple buffer (olderPrev)";
+    tripleRow.appendChild(tripleCheckbox);
+    tripleRow.appendChild(tripleText);
+    root.appendChild(tripleRow);
+
+    const modeRow = document.createElement("label");
+    modeRow.style.display = "flex";
+    modeRow.style.alignItems = "center";
+    modeRow.style.gap = "6px";
+    modeRow.style.marginBottom = "6px";
+
+    const modeText = document.createElement("span");
+    modeText.textContent = "delay mode:";
+
+    const modeSelect = document.createElement("select");
+    modeSelect.style.font = "12px monospace";
+    modeSelect.style.background = "rgba(0,0,0,0.35)";
+    modeSelect.style.color = "rgba(255,255,255,0.92)";
+    modeSelect.style.border = "1px solid rgba(255,255,255,0.2)";
+    modeSelect.style.borderRadius = "4px";
+    modeSelect.style.padding = "2px 4px";
+
+    const modes: Array<"ema" | "fixed200" | "fixed100" | "fixed50"> = [
+      "ema",
+      "fixed200",
+      "fixed100",
+      "fixed50",
+    ];
+    for (const m of modes) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      modeSelect.appendChild(opt);
+    }
+    modeSelect.value = this.interpolationDelayMode;
+    modeSelect.addEventListener("change", () => {
+      const v = modeSelect.value as typeof this.interpolationDelayMode;
+      this.interpolationDelayMode = v;
+      // Apply immediately using current EMA if available, otherwise fall back to existing delay.
+      if (v === "fixed50") this.interpolationDelayMs = 50;
+      else if (v === "fixed100") this.interpolationDelayMs = 100;
+      else if (v === "fixed200") this.interpolationDelayMs = 200;
+      else if (this.tickIntervalEmaMs > 0) {
+        // "ema": do not clamp (debug requested)
+        this.interpolationDelayMs = this.tickIntervalEmaMs;
+      }
+    });
+
+    modeRow.appendChild(modeText);
+    modeRow.appendChild(modeSelect);
+    root.appendChild(modeRow);
+
+    document.body.appendChild(root);
+    this.smoothingDebugUi = root;
   }
 
   onMouseOver(event: MouseOverEvent) {
@@ -641,7 +834,11 @@ export class TerritoryLayer implements Layer {
     let fromTime = this.tickTimeMsPrev;
     let toTime = this.tickTimeMsCurrent;
 
-    if (this.tickTimeMsOlder > 0 && renderTime < this.tickTimeMsPrev) {
+    if (
+      this.tripleBufferEnabled &&
+      this.tickTimeMsOlder > 0 &&
+      renderTime < this.tickTimeMsPrev
+    ) {
       pair = "olderPrev";
       fromTime = this.tickTimeMsOlder;
       toTime = this.tickTimeMsPrev;
@@ -1170,6 +1367,8 @@ export class TerritoryLayer implements Layer {
       `smooth: ${stats.smoothEnabled ? "on" : "off"} ${stats.smoothProgress.toFixed(2)} pair ${this.lastInterpolationPair}`,
       `tick: ${this.tickNumberCurrent ?? "-"} prev ${this.tickNumberPrev ?? "-"}`,
       `delayMs: ${this.interpolationDelayMs.toFixed(0)}`,
+      `tripleBuf: ${this.tripleBufferEnabled ? "on" : "off"}`,
+      `delayMode: ${this.interpolationDelayMode}${this.interpolationDelayMode === "ema" ? ` (ema=${this.tickIntervalEmaMs.toFixed(0)}ms)` : ""}`,
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
       `contests: ${this.contestEnabled ? "on" : "off"} comps ${this.contestComponents.size}`,
