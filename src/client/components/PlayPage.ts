@@ -18,7 +18,7 @@ export class PlayPage extends LitElement {
         <!-- Header / Identity Section -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
           <div
-            class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-blue-500/20 relative z-20 text-sm sm:text-base shrink-0"
+            class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl relative z-20 text-sm sm:text-base shrink-0"
           >
             <!-- Flag -->
             <div
@@ -27,7 +27,7 @@ export class PlayPage extends LitElement {
               <!-- Hamburger (Mobile) -->
               <button
                 id="hamburger-btn"
-                class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 border border-blue-400/20 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
+                class="lg:hidden flex w-full h-full bg-slate-800/40 text-white/90 hover:bg-slate-700/40 p-0 rounded-md items-center justify-center cursor-pointer transition-all duration-200"
                 data-i18n-aria-label="main.menu"
                 aria-expanded="false"
                 aria-controls="sidebar-menu"
@@ -99,10 +99,10 @@ export class PlayPage extends LitElement {
               class="group relative isolate flex flex-col w-full h-40 lg:h-96 overflow-hidden rounded-2xl transition-all duration-300"
             >
               <div
-                class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-blue-400/10 overflow-hidden"
+                class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl overflow-hidden"
               >
                 <div
-                  class="py-2 bg-blue-900/20 border-b border-blue-400/10 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
+                  class="py-2 bg-blue-900/20 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
                   data-i18n="host_modal.label"
                 ></div>
                 <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
@@ -141,7 +141,7 @@ export class PlayPage extends LitElement {
             <!-- Not Logged In Button -->
             <button
               id="matchmaking-button-logged-out"
-              class="w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 overflow-hidden relative cursor-pointer"
+              class="w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
             >
               <span
                 class="relative z-10 text-2xl"
@@ -152,7 +152,7 @@ export class PlayPage extends LitElement {
             <!-- Logged In Button -->
             <button
               id="matchmaking-button"
-              class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center border border-purple-500/30 group overflow-hidden relative"
+              class="hidden w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
               data-i18n-title="matchmaking_modal.title"
             >
               <span
