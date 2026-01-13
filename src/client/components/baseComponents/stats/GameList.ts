@@ -45,7 +45,10 @@ export class GameList extends LitElement {
                 class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-3"
               >
                 <div class="flex items-center gap-4">
-                  <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                  <button
+                    class="p-2 bg-blue-500/20 rounded-lg text-blue-400"
+                    @click=${() => this.onViewGame?.(game.gameId)}
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       class="w-5 h-5"
@@ -59,7 +62,7 @@ export class GameList extends LitElement {
                       <circle cx="12" cy="12" r="10"></circle>
                       <polygon points="10 8 16 12 10 16 10 8"></polygon>
                     </svg>
-                  </div>
+                  </button>
                   <div>
                     <div class="text-sm font-bold text-white tracking-wide">
                       ${new Date(game.start).toLocaleDateString()}

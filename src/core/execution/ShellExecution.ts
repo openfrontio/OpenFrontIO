@@ -1,11 +1,12 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { AirPathFinder } from "../pathfinding/PathFinding";
+import { PathFinding } from "../pathfinding/PathFinder";
+import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 
 export class ShellExecution implements Execution {
   private active = true;
-  private pathFinder: AirPathFinder;
+  private pathFinder: SteppingPathFinder<TileRef>;
   private shell: Unit | undefined;
   private mg: Game;
   private destroyAtTick: number = -1;
@@ -19,7 +20,7 @@ export class ShellExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
+    this.pathFinder = PathFinding.Air(mg);
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
   }
@@ -45,18 +46,18 @@ export class ShellExecution implements Execution {
     }
 
     for (let i = 0; i < 3; i++) {
-      const result = this.pathFinder.nextTile(
+      const result = this.pathFinder.next(
         this.shell.tile(),
         this.target.tile(),
       );
-      if (result === true) {
+      if (result.status === PathStatus.COMPLETE) {
         this.active = false;
         this.target.modifyHealth(-this.effectOnTarget(), this._owner);
         this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
-      } else {
-        this.shell.move(result);
+      } else if (result.status === PathStatus.NEXT) {
+        this.shell.move(result.node);
       }
     }
   }

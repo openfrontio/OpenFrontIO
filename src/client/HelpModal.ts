@@ -98,10 +98,12 @@ export class HelpModal extends BaseModal {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
-        <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
+        <div
+          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
+        >
           <div class="flex items-center gap-4 flex-1">
             <button
               @click=${this.close}
@@ -132,41 +134,54 @@ export class HelpModal extends BaseModal {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-4 space-y-8 mr-1"
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
+            [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
+            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
+            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
+            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
+            [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
+            [&_li]:text-gray-300 [&_li]:leading-relaxed
+            [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
+            scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
           <!-- Hotkeys Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-blue-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                <path d="M6 8h.001"></path>
+                <path d="M10 8h.001"></path>
+                <path d="M14 8h.001"></path>
+                <path d="M18 8h.001"></path>
+                <path d="M6 12h.001"></path>
+                <path d="M10 12h.001"></path>
+                <path d="M14 12h.001"></path>
+                <path d="M18 12h.001"></path>
+                <path d="M6 16h12"></path>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("help_modal.hotkeys")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
           <section
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
           >
-            <div class="p-4 bg-white/5 border-b border-white/5">
-              <h2
-                class="text-lg font-bold text-white flex items-center gap-2 uppercase tracking-wide"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5 text-blue-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                  <path d="M6 8h.001"></path>
-                  <path d="M10 8h.001"></path>
-                  <path d="M14 8h.001"></path>
-                  <path d="M18 8h.001"></path>
-                  <path d="M6 12h.001"></path>
-                  <path d="M10 12h.001"></path>
-                  <path d="M14 12h.001"></path>
-                  <path d="M18 12h.001"></path>
-                  <path d="M6 16h12"></path>
-                </svg>
-                ${translateText("help_modal.hotkeys")}
-              </h2>
-            </div>
-            <div class="p-4 overflow-x-auto">
+            <div class="pt-2 pb-4 px-4 overflow-x-auto">
               <table class="w-full text-sm border-separate border-spacing-y-1">
                 <thead>
                   <tr
@@ -700,7 +715,7 @@ export class HelpModal extends BaseModal {
                     </li>
                     <li class="flex items-center gap-3">
                       <img
-                        src="/images/TargetIcon.svg"
+                        src="/images/TargetIconWhite.svg"
                         class="w-8 h-8 scale-75 origin-left"
                       />
                       <span>${translateText("help_modal.info_target")}</span>
