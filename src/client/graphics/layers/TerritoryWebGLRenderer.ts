@@ -29,6 +29,10 @@ export class TerritoryWebGLRenderer {
 
   private contestEnabled = false;
   private contestPatternMode: 0 | 1 | 2 = 0; // 0=blueNoise(strength), 1=checkerboard(50/50), 2=bayer4x4(strength)
+  private debugDisableStaticBorders = false;
+  private debugDisableAllBorders = false;
+  private seedSamplingMode: 0 | 1 | 2 = 1; // 0=none(single texel), 1=2x2, 2=3x3
+  private debugStripeFixedColors = false; // Use fixed debug colors for moving stripe
 
   private readonly gl: WebGL2RenderingContext | null;
   private readonly program: WebGLProgram | null;
@@ -96,6 +100,10 @@ export class TerritoryWebGLRenderer {
     patterns: WebGLUniformLocation | null;
     contestEnabled: WebGLUniformLocation | null;
     contestPatternMode: WebGLUniformLocation | null;
+    debugDisableStaticBorders: WebGLUniformLocation | null;
+    debugDisableAllBorders: WebGLUniformLocation | null;
+    seedSamplingMode: WebGLUniformLocation | null;
+    debugStripeFixedColors: WebGLUniformLocation | null;
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
@@ -261,6 +269,10 @@ export class TerritoryWebGLRenderer {
         patterns: null,
         contestEnabled: null,
         contestPatternMode: null,
+        debugDisableStaticBorders: null,
+        debugDisableAllBorders: null,
+        seedSamplingMode: null,
+        debugStripeFixedColors: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -355,6 +367,10 @@ export class TerritoryWebGLRenderer {
         patterns: null,
         contestEnabled: null,
         contestPatternMode: null,
+        debugDisableStaticBorders: null,
+        debugDisableAllBorders: null,
+        seedSamplingMode: null,
+        debugStripeFixedColors: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -452,6 +468,22 @@ export class TerritoryWebGLRenderer {
       contestPatternMode: gl.getUniformLocation(
         this.program,
         "u_contestPatternMode",
+      ),
+      debugDisableStaticBorders: gl.getUniformLocation(
+        this.program,
+        "u_debugDisableStaticBorders",
+      ),
+      debugDisableAllBorders: gl.getUniformLocation(
+        this.program,
+        "u_debugDisableAllBorders",
+      ),
+      seedSamplingMode: gl.getUniformLocation(
+        this.program,
+        "u_seedSamplingMode",
+      ),
+      debugStripeFixedColors: gl.getUniformLocation(
+        this.program,
+        "u_debugStripeFixedColors",
       ),
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
@@ -1298,6 +1330,22 @@ export class TerritoryWebGLRenderer {
     else this.contestPatternMode = 0;
   }
 
+  setDebugDisableStaticBorders(disabled: boolean) {
+    this.debugDisableStaticBorders = disabled;
+  }
+
+  setDebugDisableAllBorders(disabled: boolean) {
+    this.debugDisableAllBorders = disabled;
+  }
+
+  setSeedSamplingMode(mode: "none" | "2x2" | "3x3") {
+    this.seedSamplingMode = mode === "none" ? 0 : mode === "2x2" ? 1 : 2;
+  }
+
+  setDebugStripeFixedColors(enabled: boolean) {
+    this.debugStripeFixedColors = enabled;
+  }
+
   markTile(tile: TileRef) {
     if (this.needsFullUpload) {
       return;
@@ -1773,6 +1821,27 @@ export class TerritoryWebGLRenderer {
     }
     if (this.uniforms.contestPatternMode) {
       gl.uniform1i(this.uniforms.contestPatternMode, this.contestPatternMode);
+    }
+    if (this.uniforms.debugDisableStaticBorders) {
+      gl.uniform1i(
+        this.uniforms.debugDisableStaticBorders,
+        this.debugDisableStaticBorders ? 1 : 0,
+      );
+    }
+    if (this.uniforms.debugDisableAllBorders) {
+      gl.uniform1i(
+        this.uniforms.debugDisableAllBorders,
+        this.debugDisableAllBorders ? 1 : 0,
+      );
+    }
+    if (this.uniforms.seedSamplingMode) {
+      gl.uniform1i(this.uniforms.seedSamplingMode, this.seedSamplingMode);
+    }
+    if (this.uniforms.debugStripeFixedColors) {
+      gl.uniform1i(
+        this.uniforms.debugStripeFixedColors,
+        this.debugStripeFixedColors ? 1 : 0,
+      );
     }
     if (this.uniforms.contestNow) {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
@@ -2479,18 +2548,26 @@ export class TerritoryWebGLRenderer {
 
         uint owner = ownerAt(texCoord);
         bool isBorder = false;
+        vec2 edgeDir = vec2(0.0);
         uint nOwner = ownerAt(texCoord + ivec2(1, 0));
-        isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner) { isBorder = true; edgeDir += vec2(1.0, 0.0); }
         nOwner = ownerAt(texCoord + ivec2(-1, 0));
-        isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner) { isBorder = true; edgeDir += vec2(-1.0, 0.0); }
         nOwner = ownerAt(texCoord + ivec2(0, 1));
-        isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner) { isBorder = true; edgeDir += vec2(0.0, 1.0); }
         nOwner = ownerAt(texCoord + ivec2(0, -1));
-        isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner) { isBorder = true; edgeDir += vec2(0.0, -1.0); }
 
-	        // Seed in map-space at the *tile center* so we can later interpret the
-	        // boundary as half a tile away (distance-to-edge = distance-to-center - 0.5).
-	        outSeed = isBorder ? (vec2(texCoord) + vec2(0.5)) : vec2(-1.0, -1.0);
+        vec2 edgeOffset = vec2(
+          edgeDir.x == 0.0 ? 0.0 : (edgeDir.x > 0.0 ? 0.5 : -0.5),
+          edgeDir.y == 0.0 ? 0.0 : (edgeDir.y > 0.0 ? 0.5 : -0.5)
+        );
+
+	        // Seed at the border edge (tile center +/- 0.5) so the front can move
+	        // even when the border tile itself stays the same.
+	        outSeed = isBorder
+            ? (vec2(texCoord) + vec2(0.5) + edgeOffset)
+            : vec2(-1.0, -1.0);
 	      }
 	    `;
 
@@ -2731,6 +2808,10 @@ export class TerritoryWebGLRenderer {
 	      uniform usampler2D u_patterns;
 	      uniform bool u_contestEnabled;
         uniform int u_contestPatternMode; // 0=blueNoise(strength), 1=checkerboard(50/50), 2=bayer4x4(strength)
+        uniform bool u_debugDisableStaticBorders;
+        uniform bool u_debugDisableAllBorders;
+        uniform int u_seedSamplingMode; // 0=none(single texel), 1=2x2, 2=3x3
+        uniform bool u_debugStripeFixedColors; // Use fixed debug colors for moving stripe
 	      uniform usampler2D u_contestOwners;
 	      uniform usampler2D u_contestIds;
 	      uniform usampler2D u_contestTimes;
@@ -2768,13 +2849,17 @@ export class TerritoryWebGLRenderer {
 
       out vec4 outColor;
 
-      uint ownerAtTex(ivec2 texCoord) {
+      uint stateAtTex(ivec2 texCoord) {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        return texelFetch(u_state, clamped, 0).r & 0xFFFu;
+        return texelFetch(u_state, clamped, 0).r;
+      }
+
+      uint ownerAtTex(ivec2 texCoord) {
+        return stateAtTex(texCoord) & 0xFFFu;
       }
 
       // Terrain bit layout: bit7=land, bit6=shoreline, bit5=ocean, bits0-4=magnitude
@@ -2881,13 +2966,17 @@ export class TerritoryWebGLRenderer {
         }
       }
 
-      uint prevOwnerAtTex(ivec2 texCoord) {
+      uint prevStateAtTex(ivec2 texCoord) {
         ivec2 clamped = clamp(
           texCoord,
           ivec2(0, 0),
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
-        return texelFetch(u_prevOwner, clamped, 0).r & 0xFFFu;
+        return texelFetch(u_prevOwner, clamped, 0).r;
+      }
+
+      uint prevOwnerAtTex(ivec2 texCoord) {
+        return prevStateAtTex(texCoord) & 0xFFFu;
       }
 
       vec2 jfaSeedOldAtTex(ivec2 texCoord) {
@@ -2914,6 +3003,59 @@ export class TerritoryWebGLRenderer {
           ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
         );
         return texelFetch(u_jfaSeedsNew, clamped, 0).rg;
+      }
+
+      // Best-of-NxN seed sampling to reduce tile-boundary discontinuities.
+      // Returns the seed (from OLD JFA) that is closest to mapCoord.
+      vec2 bestSeedOld(vec2 mapCoord) {
+        ivec2 base = ivec2(floor(mapCoord));
+        float bestDist = 1e9;
+        vec2 bestSeed = vec2(-1.0);
+        
+        int radius = u_seedSamplingMode == 2 ? 1 : 0; // 3x3 vs 2x2
+        int end = u_seedSamplingMode == 2 ? 2 : 2;    // 3x3: -1..+1, 2x2: 0..+1
+        int start = u_seedSamplingMode == 2 ? -1 : 0;
+        
+        for (int dy = start; dy < end; dy++) {
+          for (int dx = start; dx < end; dx++) {
+            ivec2 sampleTex = base + ivec2(dx, dy);
+            vec2 seed = jfaSeedOldAtTex(sampleTex);
+            if (seed.x >= 0.0) {
+              float d = distance(mapCoord, seed);
+              if (d < bestDist) {
+                bestDist = d;
+                bestSeed = seed;
+              }
+            }
+          }
+        }
+        return bestSeed;
+      }
+
+      // Best-of-NxN seed sampling for NEW JFA.
+      vec2 bestSeedNew(vec2 mapCoord) {
+        ivec2 base = ivec2(floor(mapCoord));
+        float bestDist = 1e9;
+        vec2 bestSeed = vec2(-1.0);
+        
+        int radius = u_seedSamplingMode == 2 ? 1 : 0;
+        int end = u_seedSamplingMode == 2 ? 2 : 2;
+        int start = u_seedSamplingMode == 2 ? -1 : 0;
+        
+        for (int dy = start; dy < end; dy++) {
+          for (int dx = start; dx < end; dx++) {
+            ivec2 sampleTex = base + ivec2(dx, dy);
+            vec2 seed = jfaSeedNewAtTex(sampleTex);
+            if (seed.x >= 0.0) {
+              float d = distance(mapCoord, seed);
+              if (d < bestDist) {
+                bestDist = d;
+                bestSeed = seed;
+              }
+            }
+          }
+        }
+        return bestSeed;
       }
 
       uvec2 contestOwnersAtTex(ivec2 texCoord) {
@@ -3053,7 +3195,22 @@ export class TerritoryWebGLRenderer {
         return color * (isLightTile ? LIGHT_FACTOR : DARK_FACTOR);
       }
 
-	      void main() {
+      vec3 applyBorderTint(vec3 color, bool hasFriendly, bool hasEmbargo) {
+        const float BORDER_TINT_RATIO = 0.35;
+        const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+        const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+        if (hasFriendly) {
+          color = color * (1.0 - BORDER_TINT_RATIO) +
+                  FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+        }
+        if (hasEmbargo) {
+          color = color * (1.0 - BORDER_TINT_RATIO) +
+                  EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+        }
+        return color;
+      }
+
+      void main() {
 	        // gl_FragCoord.xy is already at pixel center (0.5, 0.5 ...).
 	        // Use the pixel center to avoid half-pixel snapping/offset artifacts,
 	        // especially noticeable on the interpolated JFA border/front.
@@ -3076,21 +3233,38 @@ export class TerritoryWebGLRenderer {
         // Original ivec2(mapCoord) is equivalent but less explicit.
         ivec2 texCoord = ivec2(mapCoord);
 
-        uint state = texelFetch(u_state, texCoord, 0).r;
+        uint state = stateAtTex(texCoord);
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u;
         bool isDefended = (state & 0x1000u) != 0u;
         uint latestState = texelFetch(u_latestState, texCoord, 0).r;
         uint latestOwner = latestState & 0xFFFu;
-        uint oldOwner = prevOwnerAtTex(texCoord);
+        uint oldState = prevStateAtTex(texCoord);
+        uint oldOwner = oldState & 0xFFFu;
+        bool oldHasFallout = (oldState & 0x2000u) != 0u;
+        bool oldIsDefended = (oldState & 0x1000u) != 0u;
         // ChangeMask was written with Y-flipped coords, so flip when reading
         ivec2 changeMaskCoord = ivec2(texCoord.x, int(u_mapResolution.y) - 1 - texCoord.y);
         uint changeMask = texelFetch(u_changeMask, changeMaskCoord, 0).r;
+ 
+        // Expand the animation region by 1 tile (halo) so the *outer* border edge can move smoothly.
+        // If we only animate "changed" tiles, the leading edge stays pinned to tile coordinates because
+        // neighbor pixels are still rendered from the static FROM snapshot.
+        uint affectedMask = changeMask;
+        ivec2 cm;
+        cm = ivec2(clamp(texCoord.x + 1, 0, int(u_mapResolution.x) - 1), texCoord.y);
+        affectedMask |= texelFetch(u_changeMask, ivec2(cm.x, int(u_mapResolution.y) - 1 - cm.y), 0).r;
+        cm = ivec2(clamp(texCoord.x - 1, 0, int(u_mapResolution.x) - 1), texCoord.y);
+        affectedMask |= texelFetch(u_changeMask, ivec2(cm.x, int(u_mapResolution.y) - 1 - cm.y), 0).r;
+        cm = ivec2(texCoord.x, clamp(texCoord.y + 1, 0, int(u_mapResolution.y) - 1));
+        affectedMask |= texelFetch(u_changeMask, ivec2(cm.x, int(u_mapResolution.y) - 1 - cm.y), 0).r;
+        cm = ivec2(texCoord.x, clamp(texCoord.y - 1, 0, int(u_mapResolution.y) - 1));
+        affectedMask |= texelFetch(u_changeMask, ivec2(cm.x, int(u_mapResolution.y) - 1 - cm.y), 0).r;
 	        bool smoothActive = u_smoothEnabled &&
 	          u_smoothProgress < 1.0 &&
 	          !u_alternativeView &&
 	          u_jfaAvailable &&
-	          changeMask != 0u;
+	          affectedMask != 0u;
 
 	        uint contestIdRaw = 0u;
 	        const uint CONTEST_ID_MASK = 0x7FFFu;
@@ -3160,7 +3334,7 @@ export class TerritoryWebGLRenderer {
         if (u_alternativeView) {
           // Alt view: terrain + borders only, no territory fill
           vec3 color = baseTerrainColor;
-          if (owner != 0u && isBorder) {
+          if (!u_debugDisableAllBorders && !u_debugDisableStaticBorders && owner != 0u && isBorder) {
             // Only draw borders, not territory fill
             uint relationAlt = relationCode(owner, uint(u_viewerId));
             vec4 altColor = u_altNeutral;
@@ -3207,29 +3381,19 @@ export class TerritoryWebGLRenderer {
           );
           ownerBase = base.rgb;
           ownerBorder = baseBorder;
+          bool isPrimary = patternIsPrimary(owner, texCoord);
+          vec3 patternColor = isPrimary ? base.rgb : baseBorder.rgb;
+          // Blend territory fill on top of terrain
+          fillColor = mix(baseTerrainColor, patternColor, u_alpha);
+
           if (isBorder && !smoothActive) {
-            vec3 bColor = baseBorder.rgb;
-
-            const float BORDER_TINT_RATIO = 0.35;
-            const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-            const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-
-            if (hasFriendlyRelation) {
-              bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
-                      FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-            }
-            if (hasEmbargoRelation) {
-              bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
-                      EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-            }
-
+            vec3 bColor = applyBorderTint(
+              baseBorder.rgb,
+              hasFriendlyRelation,
+              hasEmbargoRelation
+            );
             borderColor = applyDefended(bColor, isDefended, texCoord);
             borderAlpha = baseBorder.a;
-          } else {
-            bool isPrimary = patternIsPrimary(owner, texCoord);
-            vec3 patternColor = isPrimary ? base.rgb : baseBorder.rgb;
-            // Blend territory fill on top of terrain
-            fillColor = mix(baseTerrainColor, patternColor, u_alpha);
           }
         }
 
@@ -3258,9 +3422,9 @@ export class TerritoryWebGLRenderer {
           color = mix(baseTerrainColor, contestColor, u_alpha);
         }
 
-        if (!smoothActive && isBorder && owner != 0u) {
-          // Blend border on top of terrain
-          color = mix(baseTerrainColor, borderColor, borderAlpha);
+        if (!u_debugDisableAllBorders && !u_debugDisableStaticBorders && !smoothActive && isBorder && owner != 0u) {
+          // Blend border on top of the current fill
+          color = mix(color, borderColor, borderAlpha);
         }
 
         if (smoothActive) {
@@ -3271,7 +3435,7 @@ export class TerritoryWebGLRenderer {
           // Compute old color blended on terrain
           vec3 oldColor = baseTerrainColor;
           if (oldOwner == 0u) {
-            if (hasFallout) {
+            if (oldHasFallout) {
               oldColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
             }
             // Otherwise oldColor is already baseTerrainColor
@@ -3289,8 +3453,17 @@ export class TerritoryWebGLRenderer {
 
           // JFA-based animation with tile-sized pixelated look
           // Movement is pixel-smooth but edges remain hard/blocky like stable borders
-          vec2 seedOld = jfaSeedOldAtTex(texCoord);
-          vec2 seedNew = jfaSeedNewAtTex(texCoord);
+          // Use best-of-NxN seed sampling when enabled to reduce tile-boundary discontinuities.
+          // Use seeds picked at the TILE CENTER to avoid seed flipping inside a tile
+          // (which can cause direction/timing glitches). Distances still use mapCoord
+          // for smooth within-tile variation.
+          vec2 tileCenter = floor(mapCoord) + 0.5;
+          vec2 seedOld = u_seedSamplingMode == 0
+            ? jfaSeedOldAtTex(texCoord)
+            : bestSeedOld(tileCenter);
+          vec2 seedNew = u_seedSamplingMode == 0
+            ? jfaSeedNewAtTex(texCoord)
+            : bestSeedNew(tileCenter);
           
           bool hasOldSeed = seedOld.x >= 0.0;
           bool hasNewSeed = seedNew.x >= 0.0;
@@ -3309,8 +3482,8 @@ export class TerritoryWebGLRenderer {
           float t = clamp(u_smoothProgress, 0.0, 1.0);
 
           // --- Old layer (FROM snapshot), at texCoord ---
-          uint fromState = texelFetch(u_prevOwner, texCoord, 0).r;
-          uint fromOwner = fromState & 0xFFFu;
+          uint fromState = oldState;
+          uint fromOwner = oldOwner;
 
           // Fill for FROM owner
           vec3 fromColor = baseTerrainColor;
@@ -3324,7 +3497,7 @@ export class TerritoryWebGLRenderer {
             bool fromPrimary = patternIsPrimary(fromOwner, texCoord);
             vec3 fromPatternColor = fromPrimary ? fromBase.rgb : fromBorderBase.rgb;
             fromColor = mix(baseTerrainColor, fromPatternColor, u_alpha);
-          } else if (hasFallout) {
+          } else if (oldHasFallout) {
             // preserve fallout tint when unowned
             fromColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
           }
@@ -3342,104 +3515,208 @@ export class TerritoryWebGLRenderer {
           nFrom = texelFetch(u_prevOwner, texCoord + ivec2(0, -1), 0).r & 0xFFFu;
           if (nFrom != fromOwner) { fromIsBorder = true; if (nFrom != 0u) fromOther = nFrom; }
 
-          if (fromIsBorder && fromOwner != 0u) {
+          if (!u_debugDisableAllBorders && !u_debugDisableStaticBorders && fromIsBorder && fromOwner != 0u) {
             vec4 borderBase = texelFetch(u_palette, ivec2(int(fromOwner) * 2 + 1, 0), 0);
-            vec3 bColor = borderBase.rgb;
+            bool fromFriendly = false;
+            bool fromEmbargo = false;
             if (fromOther != 0u) {
               uint rel = relationCode(fromOwner, fromOther);
-              const float BORDER_TINT_RATIO = 0.35;
-              const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-              const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-              if (isFriendly(rel)) {
-                bColor = bColor * (1.0 - BORDER_TINT_RATIO) + FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-              }
-              if (isEmbargo(rel)) {
-                bColor = bColor * (1.0 - BORDER_TINT_RATIO) + EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-              }
+              fromFriendly = isFriendly(rel);
+              fromEmbargo = isEmbargo(rel);
             }
-            bColor = applyDefended(bColor, isDefended, texCoord);
+            vec3 bColor = applyBorderTint(
+              borderBase.rgb,
+              fromFriendly,
+              fromEmbargo
+            );
+            bColor = applyDefended(bColor, oldIsDefended, texCoord);
             fromColor = bColor;
           }
 
           // Start with FROM layer
           color = fromColor;
 
-          // Only slide in NEW layer where the pair's change mask says "changed".
-          if (changeMask != 0u) {
-            // Displacement from old border to new border (old -> new).
-            vec2 disp = vec2(0.0);
-            if (hasOldSeed && hasNewSeed) {
-              disp = seedNew - seedOld;
-            } else if (hasOldSeed) {
-              // Fallback: move along gradient away from old seed
-              vec2 away = mapCoord - seedOld;
-              float d = length(away);
-              if (d > 0.1) {
-                disp = normalize(away) * min(d, 2.0);
-              }
-            }
+          // Draw a *constant-width* moving border stripe between the FROM and TO snapshots.
+          // Use a planar front (not radial) that moves coherently across tiles based on
+          // the displacement direction from old->new seeds.
+          if (affectedMask != 0u && hasOldSeed && hasNewSeed) {
+            vec2 disp = seedNew - seedOld;
+            float dispLen = length(disp);
+            if (dispLen > 1e-4) {
+              vec2 dir = disp / dispLen;
 
-            // New layer starts shifted "ahead" (in direction of expansion) and slides back into place.
-            // This makes the new border advance smoothly without sampling future snapshots.
-            vec2 sampleCoord = mapCoord + (1.0 - t) * disp;
-            ivec2 toTex = ivec2(sampleCoord);
-            toTex = clamp(
-              toTex,
-              ivec2(0),
-              ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1)
-            );
+              // Project mapCoord onto the displacement direction, measured from seedOld.
+              // This gives us a global coordinate along the motion axis.
+              // At t=0, front should be near seedOld (s ≈ 0).
+              // At t=1, front should be near seedNew (s ≈ dispLen).
+              float s = dot(mapCoord - seedOld, dir);
 
-            uint toState = texelFetch(u_state, toTex, 0).r;
-            uint toOwner = toState & 0xFFFu;
-
-            vec3 toColor = baseTerrainColor;
-            if (toOwner != 0u) {
-              vec4 toBase = texelFetch(u_palette, ivec2(int(toOwner) * 2, 0), 0);
-              vec4 toBorderBase = texelFetch(
-                u_palette,
-                ivec2(int(toOwner) * 2 + 1, 0),
-                0
-              );
-              bool toPrimary = patternIsPrimary(toOwner, toTex);
-              vec3 toPatternColor = toPrimary ? toBase.rgb : toBorderBase.rgb;
-              toColor = mix(baseTerrainColor, toPatternColor, u_alpha);
-            } else if (hasFallout) {
-              toColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
-            }
-
-            bool toIsBorder = false;
-            uint toOther = 0u;
-            uint nTo;
-            nTo = texelFetch(u_state, toTex + ivec2(1, 0), 0).r & 0xFFFu;
-            if (nTo != toOwner) { toIsBorder = true; if (nTo != 0u) toOther = nTo; }
-            nTo = texelFetch(u_state, toTex + ivec2(-1, 0), 0).r & 0xFFFu;
-            if (nTo != toOwner) { toIsBorder = true; if (nTo != 0u) toOther = nTo; }
-            nTo = texelFetch(u_state, toTex + ivec2(0, 1), 0).r & 0xFFFu;
-            if (nTo != toOwner) { toIsBorder = true; if (nTo != 0u) toOther = nTo; }
-            nTo = texelFetch(u_state, toTex + ivec2(0, -1), 0).r & 0xFFFu;
-            if (nTo != toOwner) { toIsBorder = true; if (nTo != 0u) toOther = nTo; }
-
-            if (toIsBorder && toOwner != 0u) {
-              vec4 borderBase = texelFetch(u_palette, ivec2(int(toOwner) * 2 + 1, 0), 0);
-              vec3 bColor = borderBase.rgb;
-              if (toOther != 0u) {
-                uint rel = relationCode(toOwner, toOther);
-                const float BORDER_TINT_RATIO = 0.35;
-                const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-                const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-                if (isFriendly(rel)) {
-                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) + FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+              // Front position moves from old border to new border along the motion axis.
+              // Seeds are placed at border edges, so no extra offset is needed.
+              float frontPos = t * dispLen;
+              
+              // Signed distance from the moving front plane.
+              // Positive means the front has passed this point (new territory side).
+              float frontDist = frontPos - s;
+              
+              // Compute the sliding position: sample owners at the position where the front currently is.
+              // This ensures owner checks happen at the sliding position, not static.
+              vec2 slideOffsetFront = (frontPos - s) * dir; // Offset from current position to front position
+              vec2 slideCoordFront = mapCoord + slideOffsetFront;
+              ivec2 slideTexFront = clamp(ivec2(slideCoordFront), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              
+              // Sample owners at the sliding position
+              uint slideState = texelFetch(u_state, slideTexFront, 0).r;
+              uint slideOwner = slideState & 0xFFFu;
+              bool slideHasFallout = (slideState & 0x2000u) != 0u;
+              bool slideIsDefended = (slideState & 0x1000u) != 0u;
+              
+              // Check if we're on a border at the sliding position (this is where the border currently is)
+              bool slideIsBorder = false;
+              bool slideHasFriendly = false;
+              bool slideHasEmbargo = false;
+              uint slideOther = 0u;
+              uint nSlide;
+              ivec2 nSlideTex;
+              nSlideTex = clamp(slideTexFront + ivec2(1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nSlide = texelFetch(u_state, nSlideTex, 0).r & 0xFFFu;
+              if (nSlide != slideOwner) { slideIsBorder = true; if (nSlide != 0u) { slideOther = nSlide; uint rel = relationCode(slideOwner, nSlide); slideHasFriendly = slideHasFriendly || isFriendly(rel); slideHasEmbargo = slideHasEmbargo || isEmbargo(rel); } }
+              nSlideTex = clamp(slideTexFront + ivec2(-1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nSlide = texelFetch(u_state, nSlideTex, 0).r & 0xFFFu;
+              if (nSlide != slideOwner) { slideIsBorder = true; if (nSlide != 0u) { slideOther = nSlide; uint rel = relationCode(slideOwner, nSlide); slideHasFriendly = slideHasFriendly || isFriendly(rel); slideHasEmbargo = slideHasEmbargo || isEmbargo(rel); } }
+              nSlideTex = clamp(slideTexFront + ivec2(0, 1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nSlide = texelFetch(u_state, nSlideTex, 0).r & 0xFFFu;
+              if (nSlide != slideOwner) { slideIsBorder = true; if (nSlide != 0u) { slideOther = nSlide; uint rel = relationCode(slideOwner, nSlide); slideHasFriendly = slideHasFriendly || isFriendly(rel); slideHasEmbargo = slideHasEmbargo || isEmbargo(rel); } }
+              nSlideTex = clamp(slideTexFront + ivec2(0, -1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nSlide = texelFetch(u_state, nSlideTex, 0).r & 0xFFFu;
+              if (nSlide != slideOwner) { slideIsBorder = true; if (nSlide != 0u) { slideOther = nSlide; uint rel = relationCode(slideOwner, nSlide); slideHasFriendly = slideHasFriendly || isFriendly(rel); slideHasEmbargo = slideHasEmbargo || isEmbargo(rel); } }
+              
+              // Check if we're on a border in the FROM state (retreating side)
+              uint fromSlideState = prevStateAtTex(slideTexFront);
+              uint fromSlideOwner = fromSlideState & 0xFFFu;
+              bool fromSlideDefended = (fromSlideState & 0x1000u) != 0u;
+              bool fromIsBorderAtSlide = false;
+              uint fromOtherAtSlide = 0u;
+              uint nFromSlide;
+              ivec2 nFromSlideTex;
+              nFromSlideTex = clamp(slideTexFront + ivec2(1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nFromSlide = texelFetch(u_prevOwner, nFromSlideTex, 0).r & 0xFFFu;
+              if (nFromSlide != fromSlideOwner) { fromIsBorderAtSlide = true; if (nFromSlide != 0u) fromOtherAtSlide = nFromSlide; }
+              nFromSlideTex = clamp(slideTexFront + ivec2(-1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nFromSlide = texelFetch(u_prevOwner, nFromSlideTex, 0).r & 0xFFFu;
+              if (nFromSlide != fromSlideOwner) { fromIsBorderAtSlide = true; if (nFromSlide != 0u) fromOtherAtSlide = nFromSlide; }
+              nFromSlideTex = clamp(slideTexFront + ivec2(0, 1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nFromSlide = texelFetch(u_prevOwner, nFromSlideTex, 0).r & 0xFFFu;
+              if (nFromSlide != fromSlideOwner) { fromIsBorderAtSlide = true; if (nFromSlide != 0u) fromOtherAtSlide = nFromSlide; }
+              nFromSlideTex = clamp(slideTexFront + ivec2(0, -1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+              nFromSlide = texelFetch(u_prevOwner, nFromSlideTex, 0).r & 0xFFFu;
+              if (nFromSlide != fromSlideOwner) { fromIsBorderAtSlide = true; if (nFromSlide != 0u) fromOtherAtSlide = nFromSlide; }
+              
+              // Draw border stripe: check both expanding (TO) and retreating (FROM) sides
+              float stripeWidth = u_debugDisableAllBorders ? 0.0 : 0.5;
+              bool isStripe = abs(frontDist) <= stripeWidth;
+              bool drawExpandingBorder =
+                isStripe && slideIsBorder && slideOwner != 0u && frontDist > 0.0;
+              bool drawRetreatingBorder =
+                isStripe && fromIsBorderAtSlide && fromSlideOwner != 0u && frontDist <= 0.0;
+              
+              if (!u_debugDisableAllBorders && (drawExpandingBorder || drawRetreatingBorder)) {
+                uint stripeOwner = drawExpandingBorder ? slideOwner : fromSlideOwner;
+                uint stripeOther = drawExpandingBorder ? slideOther : fromOtherAtSlide;
+                
+                if (u_debugStripeFixedColors) {
+                  // Debug mode: Use fixed colors
+                  if (drawExpandingBorder) {
+                    // Expanding: bright red
+                    color = vec3(1.0, float(stripeOwner) / 255.0, 0.0);
+                  } else {
+                    // Retreating: bright blue
+                    color = vec3(0.0, float(stripeOwner) / 255.0, 1.0);
+                  }
+                } else {
+                  // Normal mode: Use actual border colors
+                  if (stripeOwner != 0u) {
+                    vec4 borderBase = texelFetch(
+                      u_palette,
+                      ivec2(int(stripeOwner) * 2 + 1, 0),
+                      0
+                    );
+                    bool stripeFriendly = false;
+                    bool stripeEmbargo = false;
+                    if (stripeOther != 0u) {
+                      uint rel = relationCode(stripeOwner, stripeOther);
+                      stripeFriendly = isFriendly(rel);
+                      stripeEmbargo = isEmbargo(rel);
+                    }
+                    bool stripeDefended = drawExpandingBorder
+                      ? slideIsDefended
+                      : fromSlideDefended;
+                    vec3 bColor = applyBorderTint(
+                      borderBase.rgb,
+                      stripeFriendly,
+                      stripeEmbargo
+                    );
+                    bColor = applyDefended(bColor, stripeDefended, slideTexFront);
+                    color = bColor;
+                  }
                 }
-                if (isEmbargo(rel)) {
-                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) + EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-                }
-              }
-              bColor = applyDefended(bColor, isDefended, toTex);
-              toColor = bColor;
-            }
+              } else if (frontDist > stripeWidth) {
+                // Front has passed; show the new fill/border at the shifted position
+                vec2 slideCoordFill = mapCoord - dir * (dispLen * (1.0 - t));
+                ivec2 slideTexFill = clamp(ivec2(slideCoordFill), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
 
-            // Overwrite (no blending)
-            color = toColor;
+                uint fillState = texelFetch(u_state, slideTexFill, 0).r;
+                uint fillOwner = fillState & 0xFFFu;
+                bool fillHasFallout = (fillState & 0x2000u) != 0u;
+                bool fillIsDefended = (fillState & 0x1000u) != 0u;
+
+                bool fillIsBorder = false;
+                bool fillHasFriendly = false;
+                bool fillHasEmbargo = false;
+                uint fillOther = 0u;
+                uint nFill;
+                ivec2 nFillTex;
+                nFillTex = clamp(slideTexFill + ivec2(1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+                nFill = texelFetch(u_state, nFillTex, 0).r & 0xFFFu;
+                if (nFill != fillOwner) { fillIsBorder = true; if (nFill != 0u) { fillOther = nFill; uint rel = relationCode(fillOwner, nFill); fillHasFriendly = fillHasFriendly || isFriendly(rel); fillHasEmbargo = fillHasEmbargo || isEmbargo(rel); } }
+                nFillTex = clamp(slideTexFill + ivec2(-1, 0), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+                nFill = texelFetch(u_state, nFillTex, 0).r & 0xFFFu;
+                if (nFill != fillOwner) { fillIsBorder = true; if (nFill != 0u) { fillOther = nFill; uint rel = relationCode(fillOwner, nFill); fillHasFriendly = fillHasFriendly || isFriendly(rel); fillHasEmbargo = fillHasEmbargo || isEmbargo(rel); } }
+                nFillTex = clamp(slideTexFill + ivec2(0, 1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+                nFill = texelFetch(u_state, nFillTex, 0).r & 0xFFFu;
+                if (nFill != fillOwner) { fillIsBorder = true; if (nFill != 0u) { fillOther = nFill; uint rel = relationCode(fillOwner, nFill); fillHasFriendly = fillHasFriendly || isFriendly(rel); fillHasEmbargo = fillHasEmbargo || isEmbargo(rel); } }
+                nFillTex = clamp(slideTexFill + ivec2(0, -1), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
+                nFill = texelFetch(u_state, nFillTex, 0).r & 0xFFFu;
+                if (nFill != fillOwner) { fillIsBorder = true; if (nFill != 0u) { fillOther = nFill; uint rel = relationCode(fillOwner, nFill); fillHasFriendly = fillHasFriendly || isFriendly(rel); fillHasEmbargo = fillHasEmbargo || isEmbargo(rel); } }
+
+                vec3 toColor = baseTerrainColor;
+                if (fillOwner != 0u) {
+                  vec4 toBase = texelFetch(u_palette, ivec2(int(fillOwner) * 2, 0), 0);
+                  vec4 toBorderBase = texelFetch(
+                    u_palette,
+                    ivec2(int(fillOwner) * 2 + 1, 0),
+                    0
+                  );
+                  bool toPrimary = patternIsPrimary(fillOwner, slideTexFill);
+                  vec3 toPatternColor = toPrimary ? toBase.rgb : toBorderBase.rgb;
+                  toColor = mix(baseTerrainColor, toPatternColor, u_alpha);
+                  if (!u_debugDisableAllBorders && !u_debugDisableStaticBorders && fillIsBorder) {
+                    vec3 bColor = applyBorderTint(
+                      toBorderBase.rgb,
+                      fillHasFriendly,
+                      fillHasEmbargo
+                    );
+                    bColor = applyDefended(bColor, fillIsDefended, slideTexFill);
+                    toColor = bColor;
+                  }
+                } else if (fillHasFallout) {
+                  toColor = mix(baseTerrainColor, u_fallout.rgb, u_alpha);
+                }
+
+                color = toColor;
+              }
+              // If frontDist < -stripeWidth, we're ahead of the front, so keep fromColor (already set).
+            }
           }
           
         }
