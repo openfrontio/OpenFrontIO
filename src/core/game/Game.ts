@@ -254,6 +254,8 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.Factory,
 ]);
 
+export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+
 export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
 }
@@ -759,6 +761,14 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean;
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit) => boolean,
     playerId?: PlayerID,
     includeUnderConstruction?: boolean,
   ): boolean;
