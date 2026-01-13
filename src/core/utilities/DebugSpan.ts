@@ -141,8 +141,10 @@ export const DebugSpan = {
   getLastSpan(name?: string): Span | undefined {
     if (!isEnabled()) return;
 
+    globalThis.__DEBUG_SPANS__ = globalThis.__DEBUG_SPANS__ ?? [];
+
     if (name) {
-      for (let i = globalThis.__DEBUG_SPANS__?.length - 1 || 0; i >= 0; i--) {
+      for (let i = globalThis.__DEBUG_SPANS__.length - 1 || 0; i >= 0; i--) {
         const span = globalThis.__DEBUG_SPANS__[i];
         if (span.name === name) {
           return span;
@@ -152,7 +154,6 @@ export const DebugSpan = {
       return undefined;
     }
 
-    globalThis.__DEBUG_SPANS__ = globalThis.__DEBUG_SPANS__ ?? [];
     return globalThis.__DEBUG_SPANS__[globalThis.__DEBUG_SPANS__.length - 1];
   },
 };

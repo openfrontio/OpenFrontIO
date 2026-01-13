@@ -827,7 +827,7 @@ function updateTimingsPanel(result) {
   const earlyExitEl = document.getElementById("timingEarlyExit");
   const earlyExitValueEl = document.getElementById("timingEarlyExitValue");
   earlyExitEl.style.display = "flex";
-  const earlyExitTime = timings["hpa:findPathSingle:earlyExit"];
+  const earlyExitTime = timings["earlyExit"];
   if (earlyExitTime !== undefined) {
     earlyExitValueEl.textContent = `${earlyExitTime.toFixed(2)}ms`;
     earlyExitValueEl.style.color = "#f5f5f5";
@@ -840,7 +840,7 @@ function updateTimingsPanel(result) {
   const findNodesEl = document.getElementById("timingFindNodes");
   const findNodesValueEl = document.getElementById("timingFindNodesValue");
   findNodesEl.style.display = "flex";
-  const nodeLookupTime = timings["hpa:findPathSingle:nodeLookup"];
+  const nodeLookupTime = timings["nodeLookup"];
   if (nodeLookupTime !== undefined) {
     findNodesValueEl.textContent = `${nodeLookupTime.toFixed(2)}ms`;
     findNodesValueEl.style.color = "#f5f5f5";
@@ -855,7 +855,7 @@ function updateTimingsPanel(result) {
     "timingAbstractPathValue",
   );
   abstractPathEl.style.display = "flex";
-  const abstractPathTime = timings["hpa:findPathSingle:abstractPath"];
+  const abstractPathTime = timings["abstractPath"];
   if (abstractPathTime !== undefined) {
     abstractPathValueEl.textContent = `${abstractPathTime.toFixed(2)}ms`;
     abstractPathValueEl.style.color = "#f5f5f5";
@@ -868,7 +868,7 @@ function updateTimingsPanel(result) {
   const initialPathEl = document.getElementById("timingInitialPath");
   const initialPathValueEl = document.getElementById("timingInitialPathValue");
   initialPathEl.style.display = "flex";
-  const initialPathTime = timings["hpa:findPathSingle:initialPath"];
+  const initialPathTime = timings["initialPath"];
   if (initialPathTime !== undefined) {
     initialPathValueEl.textContent = `${initialPathTime.toFixed(2)}ms`;
     initialPathValueEl.style.color = "#f5f5f5";

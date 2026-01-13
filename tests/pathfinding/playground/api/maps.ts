@@ -111,7 +111,7 @@ export function listMaps(): MapInfo[] {
  */
 function extractGraphBuildData(): GraphBuildData | null {
   const span = DebugSpan.getLastSpan();
-  if (!span || span.name !== "abstractGraph:build") {
+  if (!span || span.name !== "AbstractGraphBuilder:build") {
     return null;
   }
 
