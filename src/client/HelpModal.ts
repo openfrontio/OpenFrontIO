@@ -1,5 +1,5 @@
 import { html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -8,95 +8,23 @@ import { modalHeader } from "./components/ui/ModalHeader";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
-  @state() private keybinds: Record<string, string> = this.getKeybinds();
-
-  private isKeybindObject(v: unknown): v is { value: string } {
-    return (
-      typeof v === "object" &&
-      v !== null &&
-      "value" in v &&
-      typeof (v as any).value === "string"
-    );
-  }
-
-  private getKeybinds(): Record<string, string> {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            if (this.isKeybindObject(v)) return [k, v.value];
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
-          })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
+  private openSettingsModal = () => {
+    const settingsModal = document.querySelector("user-setting") as {
+      open?: () => void;
+      openKeybindsTab?: () => void;
+    } | null;
+    if (settingsModal?.openKeybindsTab) {
+      settingsModal.openKeybindsTab();
+      return;
     }
-
-    const isMac = /Mac/.test(navigator.userAgent);
-    return {
-      toggleView: "Space",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      swapDirection: "KeyU",
-      shiftKey: "ShiftLeft",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      resetGfx: "KeyR",
-      ...saved,
-    };
-  }
-
-  private getKeyLabel(code: string): string {
-    if (!code) return "";
-
-    const specialLabels: Record<string, string> = {
-      ShiftLeft: "⇧ Shift",
-      ShiftRight: "⇧ Shift",
-      ControlLeft: "Ctrl",
-      ControlRight: "Ctrl",
-      AltLeft: "Alt",
-      AltRight: "Alt",
-      MetaLeft: "⌘",
-      MetaRight: "⌘",
-      Space: "Space",
-      ArrowUp: "↑",
-      ArrowDown: "↓",
-      ArrowLeft: "←",
-      ArrowRight: "→",
-    };
-
-    if (specialLabels[code]) return specialLabels[code];
-    if (code.startsWith("Key") && code.length === 4) return code.slice(3);
-    if (code.startsWith("Digit")) return code.slice(5);
-    if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
-
-    return code;
-  }
-
-  private renderKey(code: string) {
-    const label = this.getKeyLabel(code);
-    return html`<span
-      class="inline-block min-w-[32px] text-center px-2 py-1 rounded bg-[#2a2a2a] border-b-2 border-[#1a1a1a] text-white font-mono text-xs font-bold mx-0.5"
-      >${label}</span
-    >`;
-  }
+    if (settingsModal?.open) {
+      settingsModal.open();
+      return;
+    }
+    window.showPage?.("page-settings");
+  };
 
   render() {
-    const keybinds = this.keybinds;
-
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
@@ -120,7 +48,7 @@ export class HelpModal extends BaseModal {
             [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
             scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
-          <!-- Hotkeys Section -->
+          <!-- Keybinds Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
               <svg
@@ -148,205 +76,28 @@ export class HelpModal extends BaseModal {
             <h3
               class="text-xl font-bold uppercase tracking-widest text-white/90"
             >
-              ${translateText("help_modal.hotkeys")}
+              ${translateText("help_modal.keybinds_title")}
             </h3>
             <div
               class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
             ></div>
           </div>
           <section
-            class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
+            class="bg-black/20 rounded-xl border border-white/10 p-6 flex flex-col gap-3 hover:bg-white/5 transition-colors"
           >
-            <div class="pt-2 pb-4 px-4 overflow-x-auto">
-              <table class="w-full text-sm border-separate border-spacing-y-1">
-                <thead>
-                  <tr
-                    class="text-white/40 text-xs uppercase tracking-wider text-left"
-                  >
-                    <th class="pb-2 pl-4">
-                      ${translateText("help_modal.table_key")}
-                    </th>
-                    <th class="pb-2">
-                      ${translateText("help_modal.table_action")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="text-white/80">
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey(keybinds.toggleView)}
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_alt_view")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey(keybinds.swapDirection)}
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.bomb_direction")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.shiftKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_attack_altclick")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.modifierKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_build")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_emote")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey(keybinds.centerCamera)}
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_center")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="flex flex-wrap gap-2">
-                        ${this.renderKey(keybinds.zoomOut)}
-                        ${this.renderKey(keybinds.zoomIn)}
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_zoom")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="flex flex-wrap gap-1 max-w-[200px]">
-                        ${this.renderKey(keybinds.moveUp)}
-                        ${this.renderKey(keybinds.moveLeft)}
-                        ${this.renderKey(keybinds.moveDown)}
-                        ${this.renderKey(keybinds.moveRight)}
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_move_camera")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="flex flex-wrap gap-2">
-                        ${this.renderKey(keybinds.attackRatioDown)}
-                        ${this.renderKey(keybinds.attackRatioUp)}
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_ratio_change")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.shiftKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div class="flex items-center gap-1">
-                          <div
-                            class="w-5 h-8 border border-white/40 rounded-full relative"
-                          >
-                            <div
-                              class="w-0.5 h-2 bg-red-400 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                            ></div>
-                          </div>
-                          <div class="flex flex-col text-[10px] text-white/50">
-                            <span>↑</span>
-                            <span>↓</span>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_ratio_change")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        ${this.renderKey(keybinds.resetGfx)}
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_reset_gfx")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 pl-4 border-b border-white/5">
-                      <div
-                        class="w-5 h-8 border border-white/40 rounded-full relative"
-                      >
-                        <div
-                          class="w-0.5 h-2 bg-red-400 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                        ></div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_auto_upgrade")}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <p class="text-white/70 text-sm leading-relaxed mb-2">
+              ${translateText("help_modal.keybinds_desc")}
+            </p>
+            <p class="text-white/60 text-sm leading-relaxed">
+              ${translateText("help_modal.keybinds_hint")}
+            </p>
+            <button
+              type="button"
+              class="mt-2 inline-flex items-center gap-2 self-start px-4 py-2 text-xs font-bold uppercase tracking-wider text-blue-200 bg-blue-500/10 border border-blue-500/40 rounded-lg hover:bg-blue-500/20 hover:text-blue-100 transition-colors"
+              @click=${this.openSettingsModal}
+            >
+              ${translateText("help_modal.keybinds_button")}
+            </button>
           </section>
 
           <!-- UI Interface Section -->
@@ -1135,9 +886,5 @@ export class HelpModal extends BaseModal {
         ${content}
       </o-modal>
     `;
-  }
-
-  protected onOpen(): void {
-    this.keybinds = this.getKeybinds();
   }
 }

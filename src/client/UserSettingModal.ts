@@ -949,4 +949,9 @@ export class UserSettingModal extends BaseModal {
   public open() {
     super.open();
   }
+
+  public openKeybindsTab() {
+    this.activeTab = "keybinds";
+    this.open();
+  }
 }
