@@ -89,6 +89,8 @@ export class TerritoryLayer implements Layer {
   private tickIntervalEmaMs = 0;
   private readonly TICK_INTERVAL_EMA_ALPHA = 0.2;
   private smoothingDebugUi: HTMLDivElement | null = null;
+  private contestedPatternMode: "blueNoise" | "checkerboard" | "bayer4x4" =
+    "blueNoise";
 
   constructor(
     private game: GameView,
@@ -570,6 +572,80 @@ export class TerritoryLayer implements Layer {
     modeRow.appendChild(modeSelect);
     root.appendChild(modeRow);
 
+    // Contested drawing controls
+    const contestedRow = document.createElement("label");
+    contestedRow.style.display = "flex";
+    contestedRow.style.alignItems = "center";
+    contestedRow.style.gap = "6px";
+    contestedRow.style.marginBottom = "6px";
+
+    const contestedCheckbox = document.createElement("input");
+    contestedCheckbox.type = "checkbox";
+    contestedCheckbox.checked = this.contestEnabled;
+    contestedCheckbox.addEventListener("change", () => {
+      const enabled = contestedCheckbox.checked;
+      this.contestEnabled = enabled;
+      this.contestTileCount = 0;
+      this.contestActive = false;
+      if (enabled) {
+        this.ensureContestScratch();
+        this.syncContestStateToRenderer();
+      } else {
+        this.contestComponents.clear();
+      }
+      this.territoryRenderer?.setContestEnabled(enabled);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    const contestedText = document.createElement("span");
+    contestedText.textContent = "contested draw";
+    contestedRow.appendChild(contestedCheckbox);
+    contestedRow.appendChild(contestedText);
+    root.appendChild(contestedRow);
+
+    const contestedModeRow = document.createElement("label");
+    contestedModeRow.style.display = "flex";
+    contestedModeRow.style.alignItems = "center";
+    contestedModeRow.style.gap = "6px";
+    contestedModeRow.style.marginBottom = "0px";
+
+    const contestedModeText = document.createElement("span");
+    contestedModeText.textContent = "contested pattern:";
+
+    const contestedModeSelect = document.createElement("select");
+    contestedModeSelect.style.font = "12px monospace";
+    contestedModeSelect.style.background = "rgba(0,0,0,0.35)";
+    contestedModeSelect.style.color = "rgba(255,255,255,0.92)";
+    contestedModeSelect.style.border = "1px solid rgba(255,255,255,0.2)";
+    contestedModeSelect.style.borderRadius = "4px";
+    contestedModeSelect.style.padding = "2px 4px";
+
+    const contestedModes: Array<"blueNoise" | "checkerboard" | "bayer4x4"> = [
+      "blueNoise",
+      "checkerboard",
+      "bayer4x4",
+    ];
+    for (const m of contestedModes) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      contestedModeSelect.appendChild(opt);
+    }
+    contestedModeSelect.value = this.contestedPatternMode;
+    contestedModeSelect.addEventListener("change", () => {
+      const v = contestedModeSelect.value as
+        | "blueNoise"
+        | "checkerboard"
+        | "bayer4x4";
+      this.contestedPatternMode = v;
+      this.territoryRenderer?.setContestPatternMode(v);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    contestedModeRow.appendChild(contestedModeText);
+    contestedModeRow.appendChild(contestedModeSelect);
+    root.appendChild(contestedModeRow);
+
     document.body.appendChild(root);
     this.smoothingDebugUi = root;
   }
@@ -646,6 +722,7 @@ export class TerritoryLayer implements Layer {
 
     this.territoryRenderer = renderer;
     this.territoryRenderer.setContestEnabled(this.contestEnabled);
+    this.territoryRenderer.setContestPatternMode(this.contestedPatternMode);
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
@@ -1372,6 +1449,7 @@ export class TerritoryLayer implements Layer {
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
       `contests: ${this.contestEnabled ? "on" : "off"} comps ${this.contestComponents.size}`,
+      `contestPattern: ${this.contestedPatternMode}`,
       `contestTiles: ${this.contestTileCount}`,
       `contestTicks: ${this.contestDurationTicks}`,
       `hovered: ${stats.hoveredPlayerId}`,
