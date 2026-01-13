@@ -40,36 +40,42 @@ export class MoveIndicatorUI implements UIElement {
     const centerY = screenPos.y;
 
     ctx.save();
-    ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "#ff0000";
     ctx.lineWidth = 2 * scale;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // draw 4 chevrons pointing inward
-    this.drawChevron(ctx, centerX, centerY - radius, 0, chevronSize); // top
-    this.drawChevron(ctx, centerX, centerY + radius, Math.PI, chevronSize); // bottom
-    this.drawChevron(ctx, centerX - radius, centerY, -Math.PI / 2, chevronSize); // left
-    this.drawChevron(ctx, centerX + radius, centerY, Math.PI / 2, chevronSize); // right
+    // pre calculation of offsets
+    const tipOffset = chevronSize * 0.4;
+    const wingOffset = chevronSize * 0.6;
+    const width = chevronSize;
+
+    ctx.beginPath();
+
+    // Top (pointing down)
+    ctx.moveTo(centerX - width, centerY - radius - wingOffset);
+    ctx.lineTo(centerX, centerY - radius + tipOffset);
+    ctx.lineTo(centerX + width, centerY - radius - wingOffset);
+
+    // Bottom (pointing up)
+    ctx.moveTo(centerX - width, centerY + radius + wingOffset);
+    ctx.lineTo(centerX, centerY + radius - tipOffset);
+    ctx.lineTo(centerX + width, centerY + radius + wingOffset);
+
+    // Left (pointing right)
+    ctx.moveTo(centerX - radius - wingOffset, centerY - width);
+    ctx.lineTo(centerX - radius + tipOffset, centerY);
+    ctx.lineTo(centerX - radius - wingOffset, centerY + width);
+
+    // Right (pointing left)
+    ctx.moveTo(centerX + radius + wingOffset, centerY - width);
+    ctx.lineTo(centerX + radius - tipOffset, centerY);
+    ctx.lineTo(centerX + radius + wingOffset, centerY + width);
+
+    ctx.stroke();
 
     ctx.restore();
     return true;
-  }
-
-  private drawChevron(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    rotation: number,
-    chevronSize: number,
-  ) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rotation);
-    ctx.beginPath();
-    ctx.moveTo(-chevronSize, -chevronSize * 0.6);
-    ctx.lineTo(0, chevronSize * 0.4);
-    ctx.lineTo(chevronSize, -chevronSize * 0.6);
-    ctx.stroke();
-    ctx.restore();
   }
 }
