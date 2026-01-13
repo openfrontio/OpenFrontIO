@@ -638,7 +638,9 @@ export class TerritoryLayer implements Layer {
       toTime = this.tickTimeMsPrev;
     }
 
-    const denom = Math.max(1, Math.min(250, toTime - fromTime));
+    // Use the real tick interval so interpolation duration scales with tick speed.
+    // The previous 250ms cap caused slow tick speeds (e.g. 0.5x) to finish animations early.
+    const denom = Math.max(1, toTime - fromTime);
     const progress = Math.max(0, Math.min(1, (renderTime - fromTime) / denom));
 
     this.lastInterpolationPair = pair;
