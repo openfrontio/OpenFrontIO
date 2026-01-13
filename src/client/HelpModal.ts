@@ -49,6 +49,7 @@ export class HelpModal extends BaseModal {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      swapDirection: "KeyU",
       shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
@@ -206,7 +207,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey("KeyU")}
+                      ${this.renderKey(keybinds.swapDirection)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.bomb_direction")}
