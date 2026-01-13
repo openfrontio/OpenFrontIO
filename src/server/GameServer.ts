@@ -471,14 +471,28 @@ export class GameServer {
       }
     });
     client.ws.on("close", () => {
-      this.log.info("client disconnected", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
-      });
-      this.activeClients = this.activeClients.filter(
-        (c) => c.clientID !== client.clientID,
-      );
+  this.log.info("client disconnected", {
+    clientID: client.clientID,
+    persistentID: client.persistentID,
+  });
+
+  this.activeClients = this.activeClients.filter(
+    (c) => c.clientID !== client.clientID,
+  );
+
+  // 🔴 If lobby owner leaves a private game, shut it down immediately
+  if (
+    client.clientID === this.lobbyCreatorID &&
+    this.gameConfig.gameType !== GameType.Public
+  ) {
+    this.log.info("Lobby creator left private game, shutting down game", {
+      gameID: this.id,
+      creatorID: client.clientID,
     });
+    this.end();
+  }
+});
+
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
