@@ -18,7 +18,7 @@ export class PlayPage extends LitElement {
         <!-- Header / Identity Section -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
           <div
-            class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-blue-500/20 relative z-20 text-sm sm:text-base shrink-0"
+            class="lg:col-span-9 flex flex-row flex-nowrap gap-x-2 h-[60px] items-center bg-slate-900/80 backdrop-blur-md p-3 rounded-xl relative z-20 text-sm sm:text-base shrink-0"
           >
             <!-- Flag -->
             <div
