@@ -4,6 +4,7 @@ import {
   isStructureType,
   MessageType,
   Player,
+  StructureTypes,
   TerraNullius,
   TrajectoryTile,
   Unit,
@@ -85,7 +86,6 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
-    const outer2 = magnitude.outer * magnitude.outer;
 
     // Use shared utility to compute weighted tile counts per player
     const blastCounts = computeNukeBlastCounts({
@@ -105,16 +105,16 @@ export class NukeExecution implements Execution {
     }
 
     // Also check if any allied structures would be destroyed
+    const outer2 = magnitude.outer * magnitude.outer;
     this.mg
-      .units()
+      .nearbyUnits(this.dst, magnitude.outer, [...StructureTypes])
       .filter(
-        (unit) =>
-          isStructureType(unit.type()) &&
-          this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2 &&
+        ({ unit, distSquared }) =>
+          distSquared < outer2 &&
           unit.owner().isPlayer() &&
           this.player.isAlliedWith(unit.owner()),
       )
-      .forEach((unit) =>
+      .forEach(({ unit }) =>
         playersToBreakAllianceWith.add(unit.owner().smallID()),
       );
 

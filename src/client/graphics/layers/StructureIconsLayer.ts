@@ -274,12 +274,11 @@ export class StructureIconsLayer implements Layer {
       const allies = myPlayer.allies();
       if (allies.length > 0) {
         targetingAlly = wouldNukeBreakAlliance({
-          gm: this.game,
+          game: this.game,
           targetTile: tileRef,
           magnitude: this.game.config().nukeMagnitudes(nukeType),
           allySmallIds: new Set(allies.map((a) => a.smallID())),
           threshold: this.game.config().nukeAllianceBreakThreshold(),
-          units: this.game.units(),
         });
       }
     }

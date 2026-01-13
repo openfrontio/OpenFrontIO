@@ -1,7 +1,7 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, isStructureType, Player } from "../game/Game";
+import { Game, Player, StructureTypes } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
-import { UnitView } from "../game/GameView";
+import { GameView } from "../game/GameView";
 
 export interface NukeBlastParams {
   gm: GameMap;
@@ -35,10 +35,12 @@ export function computeNukeBlastCounts(
   return counts;
 }
 
-export interface NukeAllianceCheckParams extends NukeBlastParams {
+export interface NukeAllianceCheckParams {
+  game: GameView;
+  targetTile: TileRef;
+  magnitude: NukeMagnitude;
   allySmallIds: Set<number>;
   threshold: number;
-  units: UnitView[];
 }
 
 // Checks if nuking this tile would break an alliance.
@@ -48,21 +50,19 @@ export interface NukeAllianceCheckParams extends NukeBlastParams {
 export function wouldNukeBreakAlliance(
   params: NukeAllianceCheckParams,
 ): boolean {
-  const { gm, targetTile, magnitude, allySmallIds, threshold, units } = params;
+  const { game, targetTile, magnitude, allySmallIds, threshold } = params;
 
   if (allySmallIds.size === 0) {
     return false;
   }
 
-  const outer2 = magnitude.outer * magnitude.outer;
-
   // Check if any allied structure would be destroyed
-  const wouldDestroyAlliedStructure = units.some(
+  const wouldDestroyAlliedStructure = game.anyUnitNearby(
+    targetTile,
+    magnitude.outer,
+    StructureTypes,
     (unit) =>
-      isStructureType(unit.type()) &&
-      gm.euclideanDistSquared(targetTile, unit.tile()) < outer2 &&
-      unit.owner().isPlayer() &&
-      allySmallIds.has(unit.owner().smallID()),
+      unit.owner().isPlayer() && allySmallIds.has(unit.owner().smallID()),
   );
   if (wouldDestroyAlliedStructure) return true;
 
@@ -71,20 +71,24 @@ export function wouldNukeBreakAlliance(
 
   let result = false;
 
-  gm.circleSearch(targetTile, magnitude.outer, (tile: TileRef, d2: number) => {
-    const ownerSmallId = gm.ownerID(tile);
-    if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
-      const weight = d2 <= inner2 ? 1 : 0.5;
-      const newCount = (allyTileCounts.get(ownerSmallId) ?? 0) + weight;
-      allyTileCounts.set(ownerSmallId, newCount);
+  game.circleSearch(
+    targetTile,
+    magnitude.outer,
+    (tile: TileRef, d2: number) => {
+      const ownerSmallId = game.ownerID(tile);
+      if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
+        const weight = d2 <= inner2 ? 1 : 0.5;
+        const newCount = (allyTileCounts.get(ownerSmallId) ?? 0) + weight;
+        allyTileCounts.set(ownerSmallId, newCount);
 
-      if (newCount > threshold) {
-        result = true;
-        return false; // Found one! Stop searching.
+        if (newCount > threshold) {
+          result = true;
+          return false; // Found one! Stop searching.
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    },
+  );
 
   return result;
 }
