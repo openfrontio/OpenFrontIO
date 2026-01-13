@@ -72,7 +72,7 @@ export class NukeExecution implements Execution {
 
   /**
    * Break alliances with players significantly affected by the nuke strike.
-   * Uses weighted tile counting (inner=1, outer=0.5).
+   * Uses weighted tile counting (inner=1, outer=0.5) OR if any allied structure would be destroyed.
    */
   private maybeBreakAlliances() {
     if (this.nuke === null) {
@@ -85,6 +85,7 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
+    const outer2 = magnitude.outer * magnitude.outer;
 
     // Use shared utility to compute weighted tile counts per player
     const blastCounts = computeNukeBlastCounts({
@@ -93,29 +94,49 @@ export class NukeExecution implements Execution {
       magnitude,
     });
 
+    // Collect all players that should have alliance broken:
+    // either exceeds tile threshold OR has a structure in blast radius
+    const playersToBreakAllianceWith = new Set<number>();
+
     for (const [playerSmallId, totalWeight] of blastCounts) {
       if (totalWeight > threshold) {
-        const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
-        if (!attackedPlayer.isPlayer()) {
-          continue;
-        }
+        playersToBreakAllianceWith.add(playerSmallId);
+      }
+    }
 
-        // Resolves exploit of alliance breaking in which a pending alliance request
-        // was accepted in the middle of a missile attack.
-        const allianceRequest = attackedPlayer
-          .incomingAllianceRequests()
-          .find((ar) => ar.requestor() === this.player);
-        if (allianceRequest) {
-          allianceRequest.reject();
+    // Also check if any allied structures would be destroyed
+    for (const unit of this.mg.units()) {
+      if (isStructureType(unit.type())) {
+        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
+          const owner = unit.owner();
+          if (owner.isPlayer() && this.player.isAlliedWith(owner)) {
+            playersToBreakAllianceWith.add(owner.smallID());
+          }
         }
+      }
+    }
 
-        const alliance = this.player.allianceWith(attackedPlayer);
-        if (alliance !== null) {
-          this.player.breakAlliance(alliance);
-        }
-        if (attackedPlayer !== this.player) {
-          attackedPlayer.updateRelation(this.player, -100);
-        }
+    for (const playerSmallId of playersToBreakAllianceWith) {
+      const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
+      if (!attackedPlayer.isPlayer()) {
+        continue;
+      }
+
+      // Resolves exploit of alliance breaking in which a pending alliance request
+      // was accepted in the middle of a missile attack.
+      const allianceRequest = attackedPlayer
+        .incomingAllianceRequests()
+        .find((ar) => ar.requestor() === this.player);
+      if (allianceRequest) {
+        allianceRequest.reject();
+      }
+
+      const alliance = this.player.allianceWith(attackedPlayer);
+      if (alliance !== null) {
+        this.player.breakAlliance(alliance);
+      }
+      if (attackedPlayer !== this.player) {
+        attackedPlayer.updateRelation(this.player, -100);
       }
     }
   }

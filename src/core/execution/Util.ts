@@ -1,6 +1,7 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player } from "../game/Game";
+import { Game, isStructureType, Player } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+import { UnitView } from "../game/GameView";
 
 export interface NukeBlastParams {
   gm: GameMap;
@@ -37,16 +38,34 @@ export function computeNukeBlastCounts(
 export interface NukeAllianceCheckParams extends NukeBlastParams {
   allySmallIds: Set<number>;
   threshold: number;
+  units: UnitView[];
 }
 
 // Checks if nuking this tile would break an alliance.
+// Returns true if either:
+// 1. The weighted tile count for any ally exceeds the threshold
+// 2. Any allied structure would be destroyed
 export function wouldNukeBreakAlliance(
   params: NukeAllianceCheckParams,
 ): boolean {
-  const { gm, targetTile, magnitude, allySmallIds, threshold } = params;
+  const { gm, targetTile, magnitude, allySmallIds, threshold, units } = params;
 
   if (allySmallIds.size === 0) {
     return false;
+  }
+
+  const outer2 = magnitude.outer * magnitude.outer;
+
+  // Check if any allied structure would be destroyed
+  for (const unit of units) {
+    if (isStructureType(unit.type())) {
+      if (gm.euclideanDistSquared(targetTile, unit.tile()) < outer2) {
+        const owner = unit.owner();
+        if (owner.isPlayer() && allySmallIds.has(owner.smallID())) {
+          return true; // Allied structure would be destroyed
+        }
+      }
+    }
   }
 
   const inner2 = magnitude.inner * magnitude.inner;

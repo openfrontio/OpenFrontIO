@@ -279,6 +279,7 @@ export class StructureIconsLayer implements Layer {
           magnitude: this.game.config().nukeMagnitudes(nukeType),
           allySmallIds: new Set(allies.map((a) => a.smallID())),
           threshold: this.game.config().nukeAllianceBreakThreshold(),
+          units: this.game.units(),
         });
       }
     }
