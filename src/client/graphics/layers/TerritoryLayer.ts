@@ -127,6 +127,15 @@ export class TerritoryLayer implements Layer {
       this.tickTimeMsPrev = this.tickTimeMsCurrent;
       this.tickTimeMsCurrent = now;
 
+      // Keep interpolation continuous across variable tick rates by rendering ~one tick "behind".
+      // With a fixed 100ms delay, slow tick rates (e.g. 0.5x) reach progress=1 early and then
+      // plateau until the next tick, which looks like motion stops.
+      const lastInterval = this.tickTimeMsCurrent - this.tickTimeMsPrev;
+      if (lastInterval > 0) {
+        // Clamp to avoid extreme latency or instability if tick timing spikes.
+        this.interpolationDelayMs = Math.max(50, Math.min(1500, lastInterval));
+      }
+
       if (this.territoryRenderer) {
         this.tickSnapshotPending = true;
       }
