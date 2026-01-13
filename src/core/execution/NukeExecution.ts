@@ -105,14 +105,11 @@ export class NukeExecution implements Execution {
     }
 
     // Also check if any allied structures would be destroyed
-    const outer2 = magnitude.outer * magnitude.outer;
     this.mg
       .nearbyUnits(this.dst, magnitude.outer, [...StructureTypes])
       .filter(
-        ({ unit, distSquared }) =>
-          distSquared < outer2 &&
-          unit.owner().isPlayer() &&
-          this.player.isAlliedWith(unit.owner()),
+        ({ unit }) =>
+          unit.owner().isPlayer() && this.player.isAlliedWith(unit.owner()),
       )
       .forEach(({ unit }) =>
         playersToBreakAllianceWith.add(unit.owner().smallID()),
