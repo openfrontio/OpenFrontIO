@@ -2529,11 +2529,10 @@ export class TerritoryWebGLRenderer {
 
       out vec2 outSeed;
 
-      vec2 seedAt(ivec2 texCoord) {
-        // texCoord is in state-texture space (Y=0 at top)
-        // JFA texture was written at fragCoord positions (Y=0 at bottom)
-        // Need to flip back to read the correct row
-        ivec2 jfaCoord = ivec2(texCoord.x, int(u_resolution.y) - 1 - texCoord.y);
+      vec2 seedAt(ivec2 coord) {
+        // coord is in texCoord space (Y-flipped from fragCoord)
+        // JFA texture was written at fragCoord positions, so flip back
+        ivec2 jfaCoord = ivec2(coord.x, int(u_resolution.y) - 1 - coord.y);
         ivec2 clamped = clamp(
           jfaCoord,
           ivec2(0, 0),
@@ -3237,61 +3236,79 @@ export class TerritoryWebGLRenderer {
           bool hasOldSeed = seedOld.x >= 0.0;
           bool hasNewSeed = seedNew.x >= 0.0;
           
-          // Compute distances at pixel resolution for smooth movement
-          float distOld = hasOldSeed ? distance(mapCoord, seedOld) : 1000.0;
-          float distNew = hasNewSeed ? distance(mapCoord, seedNew) : 1000.0;
+          // OFFSET-BASED ANIMATION:
+          // The new territory "slides in" from the old border position
+          // At progress=0: sample from old border position (offset = displacement)
+          // At progress=1: sample from true position (offset = 0)
           
-          // phi interpolates: at progress=0 show old, at progress=1 show new
-          // Front should move FROM old border TOWARD new border (expansion direction)
-          // phi > 0 means "new territory", phi < 0 means "old territory"
-          float phi = mix(-distNew, distOld, u_smoothProgress);
-          
-          // DEBUG: visualize phi values (green=old side, red=new side, white=front)
-          float phiVis = clamp(phi * 0.2 + 0.5, 0.0, 1.0); color = vec3(phiVis, 1.0 - phiVis, abs(phi) < 0.5 ? 1.0 : 0.0); outColor = vec4(color, 1.0); return;
-          
-          // Hard threshold - no blending, preserves pixelated tile look
-          // phi > 0 means show new, phi < 0 means show old
-          bool showNew = phi > 0.0;
-          color = showNew ? color : oldColor;
-          
-          // Border at the moving front - 1 tile wide (0.5 on each side), like stable borders
-          const float BORDER_HALF_WIDTH = 0.5; // tiles
-          bool isFrontBorder = abs(phi) < BORDER_HALF_WIDTH;
-          
-          if (isFrontBorder) {
-            // Determine which owner's border to draw based on which side we're on
-            // phi > 0 = new side, phi < 0 = old side
-            uint borderOwner = phi > 0.0 ? owner : oldOwner;
-            uint otherOwner = phi > 0.0 ? oldOwner : owner;
-            if (borderOwner == 0u) {
-              borderOwner = otherOwner;
-              otherOwner = 0u;
+          // Displacement vector: from old border to new border (or approximated from seeds)
+          vec2 displacement = vec2(0.0);
+          if (hasOldSeed && hasNewSeed) {
+            // Approximate displacement as direction from old seed to current position
+            // scaled by how much the border moved (new seed vs old seed)
+            displacement = seedOld - seedNew;
+          } else if (hasNewSeed) {
+            // Expanding into unowned: displacement from new border inward
+            vec2 toCenter = mapCoord - seedNew;
+            float dist = length(toCenter);
+            if (dist > 0.1) {
+              displacement = normalize(toCenter) * min(dist, 2.0);
             }
-            if (borderOwner != 0u) {
-              vec4 borderBase = texelFetch(
-                u_palette,
-                ivec2(int(borderOwner) * 2 + 1, 0),
-                0
-              );
-              vec3 bColor = borderBase.rgb;
-              if (otherOwner != 0u) {
-                uint rel = relationCode(borderOwner, otherOwner);
-                const float BORDER_TINT_RATIO = 0.35;
-                const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
-                const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
-                if (isFriendly(rel)) {
-                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
-                          FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-                }
-                if (isEmbargo(rel)) {
-                  bColor = bColor * (1.0 - BORDER_TINT_RATIO) +
-                          EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
-                }
+          }
+          
+          // Offset decreases from full displacement to 0 as progress goes 0→1
+          float invProgress = 1.0 - u_smoothProgress;
+          vec2 offset = displacement * invProgress;
+          
+          // Sample at offset position for the NEW state rendering
+          vec2 offsetMapCoord = mapCoord + offset;
+          ivec2 offsetTexCoord = ivec2(offsetMapCoord);
+          
+          // Get owner at offset position (this is what we'll render)
+          uint offsetOwner = ownerAtTex(offsetTexCoord);
+          
+          // Render using the NEW owner's appearance, but at the offset position
+          // This makes the new territory "slide in" from the old position
+          if (offsetOwner == 0u) {
+            color = baseTerrainColor;
+          } else {
+            vec4 offBase = texelFetch(u_palette, ivec2(int(offsetOwner) * 2, 0), 0);
+            vec4 offBorder = texelFetch(u_palette, ivec2(int(offsetOwner) * 2 + 1, 0), 0);
+            bool offPrimary = patternIsPrimary(offsetOwner, offsetTexCoord);
+            vec3 offPatternColor = offPrimary ? offBase.rgb : offBorder.rgb;
+            color = mix(baseTerrainColor, offPatternColor, u_alpha);
+          }
+          
+          // Border: check neighbors at offset position (same logic as stable borders)
+          bool isBorderAtOffset = false;
+          uint otherOwnerAtOffset = 0u;
+          uint nOwner;
+          nOwner = ownerAtTex(offsetTexCoord + ivec2(1, 0));
+          if (nOwner != offsetOwner) { isBorderAtOffset = true; if (nOwner != 0u) otherOwnerAtOffset = nOwner; }
+          nOwner = ownerAtTex(offsetTexCoord + ivec2(-1, 0));
+          if (nOwner != offsetOwner) { isBorderAtOffset = true; if (nOwner != 0u) otherOwnerAtOffset = nOwner; }
+          nOwner = ownerAtTex(offsetTexCoord + ivec2(0, 1));
+          if (nOwner != offsetOwner) { isBorderAtOffset = true; if (nOwner != 0u) otherOwnerAtOffset = nOwner; }
+          nOwner = ownerAtTex(offsetTexCoord + ivec2(0, -1));
+          if (nOwner != offsetOwner) { isBorderAtOffset = true; if (nOwner != 0u) otherOwnerAtOffset = nOwner; }
+          
+          if (isBorderAtOffset && offsetOwner != 0u) {
+            vec4 borderBase = texelFetch(u_palette, ivec2(int(offsetOwner) * 2 + 1, 0), 0);
+            vec3 bColor = borderBase.rgb;
+            if (otherOwnerAtOffset != 0u) {
+              uint rel = relationCode(offsetOwner, otherOwnerAtOffset);
+              const float BORDER_TINT_RATIO = 0.35;
+              const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0);
+              const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);
+              if (isFriendly(rel)) {
+                bColor = bColor * (1.0 - BORDER_TINT_RATIO) + FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
               }
-              bColor = applyDefended(bColor, isDefended, texCoord);
-              // Hard border, no alpha blending - matches stable border look
-              color = bColor;
+              if (isEmbargo(rel)) {
+                bColor = bColor * (1.0 - BORDER_TINT_RATIO) + EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+              }
             }
+            bColor = applyDefended(bColor, isDefended, offsetTexCoord);
+            color = bColor;
           }
         }
 
