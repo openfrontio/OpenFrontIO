@@ -145,7 +145,7 @@ export class HelpModal extends BaseModal {
             scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
           <!-- Hotkeys Section -->
-          <div class="flex items-center gap-3 mb-6">
+          <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +181,7 @@ export class HelpModal extends BaseModal {
           <section
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
           >
-            <div class="p-4 overflow-x-auto">
+            <div class="pt-2 pb-4 px-4 overflow-x-auto">
               <table class="w-full text-sm border-separate border-spacing-y-1">
                 <thead>
                   <tr
