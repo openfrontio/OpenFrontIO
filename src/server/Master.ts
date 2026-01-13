@@ -35,7 +35,8 @@ app.use(async (req, res, next) => {
     try {
       await renderHtml(res, path.join(__dirname, "../../static/index.html"));
     } catch (error) {
-      next();
+      log.error("Error rendering index.html:", error);
+      res.status(500).send("Internal Server Error");
     }
   } else {
     next();
@@ -58,7 +59,6 @@ app.use(
     },
   }),
 );
-app.use(express.json());
 
 app.set("trust proxy", 3);
 app.use(
