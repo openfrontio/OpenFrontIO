@@ -721,8 +721,33 @@ export class GameView implements GameMap {
     searchRange: number,
     type: UnitType,
     playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
   ) {
-    return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
+    return this.unitGrid.hasUnitNearby(
+      tile,
+      searchRange,
+      type,
+      playerId,
+      includeUnderConstruction,
+    );
+  }
+
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: UnitView) => boolean,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean {
+    return this.unitGrid.anyUnitNearby(
+      tile,
+      searchRange,
+      types,
+      predicate,
+      playerId,
+      includeUnderConstruction,
+    );
   }
 
   myClientID(): ClientID {

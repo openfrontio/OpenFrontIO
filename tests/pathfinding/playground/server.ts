@@ -6,19 +6,8 @@ import {
   clearCache as clearMapCache,
   getMapMetadata,
   listMaps,
-  setConfig,
 } from "./api/maps.js";
 import { clearAdapterCaches, computePath } from "./api/pathfinding.js";
-
-// Parse command-line arguments
-const args = process.argv.slice(2);
-const noCache = args.includes("--no-cache");
-
-// Configure map loading
-if (noCache) {
-  setConfig({ cachePaths: false });
-  console.log("Path caching disabled (--no-cache)");
-}
 
 const app = express();
 const PORT = process.env.PORT ?? 5555;
@@ -202,9 +191,6 @@ app.listen(PORT, () => {
 ╚════════════════════════════════════════════════════════════╝
 
 Server running at: http://localhost:${PORT}
-
-Configuration:
-  - Path caching: ${noCache ? "disabled" : "enabled"}
 
 Press Ctrl+C to stop
   `);
