@@ -93,6 +93,8 @@ export class TerritoryLayer implements Layer {
     "blueNoise";
   private debugDisableStaticBorders = false;
   private debugDisableAllBorders = false;
+  private motionMode: "euclidean" | "axisSnap" | "manhattan" | "chebyshev" =
+    "euclidean";
   private seedSamplingMode: "none" | "2x2" | "3x3" = "2x2";
   private debugStripeFixedColors = false;
 
@@ -732,6 +734,48 @@ export class TerritoryLayer implements Layer {
     seedSamplingRow.appendChild(seedSamplingSelect);
     root.appendChild(seedSamplingRow);
 
+    // Motion mode dropdown
+    const motionModeRow = document.createElement("label");
+    motionModeRow.style.display = "flex";
+    motionModeRow.style.alignItems = "center";
+    motionModeRow.style.gap = "6px";
+    motionModeRow.style.marginTop = "6px";
+
+    const motionModeText = document.createElement("span");
+    motionModeText.textContent = "motion mode";
+
+    const motionModeSelect = document.createElement("select");
+    motionModeSelect.style.background = "rgba(0,0,0,0.5)";
+    motionModeSelect.style.color = "#fff";
+    motionModeSelect.style.border = "1px solid rgba(255,255,255,0.2)";
+    motionModeSelect.style.borderRadius = "4px";
+    motionModeSelect.style.padding = "2px 4px";
+
+    const motionModes: Array<
+      "euclidean" | "axisSnap" | "manhattan" | "chebyshev"
+    > = ["euclidean", "axisSnap", "manhattan", "chebyshev"];
+    for (const m of motionModes) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      motionModeSelect.appendChild(opt);
+    }
+    motionModeSelect.value = this.motionMode;
+    motionModeSelect.addEventListener("change", () => {
+      const v = motionModeSelect.value as
+        | "euclidean"
+        | "axisSnap"
+        | "manhattan"
+        | "chebyshev";
+      this.motionMode = v;
+      this.territoryRenderer?.setMotionMode(v);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    motionModeRow.appendChild(motionModeText);
+    motionModeRow.appendChild(motionModeSelect);
+    root.appendChild(motionModeRow);
+
     // Debug: fixed stripe colors
     const stripeColorsRow = document.createElement("label");
     stripeColorsRow.style.display = "flex";
@@ -840,6 +884,7 @@ export class TerritoryLayer implements Layer {
       this.debugDisableAllBorders,
     );
     this.territoryRenderer.setSeedSamplingMode(this.seedSamplingMode);
+    this.territoryRenderer.setMotionMode(this.motionMode);
     this.territoryRenderer.setDebugStripeFixedColors(
       this.debugStripeFixedColors,
     );
@@ -1564,6 +1609,7 @@ export class TerritoryLayer implements Layer {
       `smooth: ${stats.smoothEnabled ? "on" : "off"} ${stats.smoothProgress.toFixed(2)} pair ${this.lastInterpolationPair}`,
       `tick: ${this.tickNumberCurrent ?? "-"} prev ${this.tickNumberPrev ?? "-"}`,
       `delayMs: ${this.interpolationDelayMs.toFixed(0)}`,
+      `motionMode: ${this.motionMode}`,
       `tripleBuf: ${this.tripleBufferEnabled ? "on" : "off"}`,
       `delayMode: ${this.interpolationDelayMode}${this.interpolationDelayMode === "ema" ? ` (ema=${this.tickIntervalEmaMs.toFixed(0)}ms)` : ""}`,
       `smoothPrereq: prevCopy ${stats.prevStateCopySupported ? "yes" : "no"}`,

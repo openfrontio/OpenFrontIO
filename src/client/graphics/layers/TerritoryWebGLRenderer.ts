@@ -33,6 +33,7 @@ export class TerritoryWebGLRenderer {
   private debugDisableAllBorders = false;
   private seedSamplingMode: 0 | 1 | 2 = 1; // 0=none(single texel), 1=2x2, 2=3x3
   private debugStripeFixedColors = false; // Use fixed debug colors for moving stripe
+  private motionMode: 0 | 1 | 2 | 3 = 0; // 0=euclidean, 1=axisSnap, 2=manhattan, 3=chebyshev
 
   private readonly gl: WebGL2RenderingContext | null;
   private readonly program: WebGLProgram | null;
@@ -104,6 +105,7 @@ export class TerritoryWebGLRenderer {
     debugDisableAllBorders: WebGLUniformLocation | null;
     seedSamplingMode: WebGLUniformLocation | null;
     debugStripeFixedColors: WebGLUniformLocation | null;
+    motionMode: WebGLUniformLocation | null;
     contestOwners: WebGLUniformLocation | null;
     contestIds: WebGLUniformLocation | null;
     contestTimes: WebGLUniformLocation | null;
@@ -273,6 +275,7 @@ export class TerritoryWebGLRenderer {
         debugDisableAllBorders: null,
         seedSamplingMode: null,
         debugStripeFixedColors: null,
+        motionMode: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -371,6 +374,7 @@ export class TerritoryWebGLRenderer {
         debugDisableAllBorders: null,
         seedSamplingMode: null,
         debugStripeFixedColors: null,
+        motionMode: null,
         contestOwners: null,
         contestIds: null,
         contestTimes: null,
@@ -485,6 +489,7 @@ export class TerritoryWebGLRenderer {
         this.program,
         "u_debugStripeFixedColors",
       ),
+      motionMode: gl.getUniformLocation(this.program, "u_motionMode"),
       contestOwners: gl.getUniformLocation(this.program, "u_contestOwners"),
       contestIds: gl.getUniformLocation(this.program, "u_contestIds"),
       contestTimes: gl.getUniformLocation(this.program, "u_contestTimes"),
@@ -1346,6 +1351,13 @@ export class TerritoryWebGLRenderer {
     this.debugStripeFixedColors = enabled;
   }
 
+  setMotionMode(mode: "euclidean" | "axisSnap" | "manhattan" | "chebyshev") {
+    if (mode === "axisSnap") this.motionMode = 1;
+    else if (mode === "manhattan") this.motionMode = 2;
+    else if (mode === "chebyshev") this.motionMode = 3;
+    else this.motionMode = 0;
+  }
+
   markTile(tile: TileRef) {
     if (this.needsFullUpload) {
       return;
@@ -1842,6 +1854,9 @@ export class TerritoryWebGLRenderer {
         this.uniforms.debugStripeFixedColors,
         this.debugStripeFixedColors ? 1 : 0,
       );
+    }
+    if (this.uniforms.motionMode) {
+      gl.uniform1i(this.uniforms.motionMode, this.motionMode);
     }
     if (this.uniforms.contestNow) {
       gl.uniform1i(this.uniforms.contestNow, this.contestNow);
@@ -2812,6 +2827,7 @@ export class TerritoryWebGLRenderer {
         uniform bool u_debugDisableAllBorders;
         uniform int u_seedSamplingMode; // 0=none(single texel), 1=2x2, 2=3x3
         uniform bool u_debugStripeFixedColors; // Use fixed debug colors for moving stripe
+        uniform int u_motionMode; // 0=euclidean, 1=axisSnap, 2=manhattan, 3=chebyshev
 	      uniform usampler2D u_contestOwners;
 	      uniform usampler2D u_contestIds;
 	      uniform usampler2D u_contestTimes;
@@ -3541,19 +3557,66 @@ export class TerritoryWebGLRenderer {
           // the displacement direction from old->new seeds.
           if (affectedMask != 0u && hasOldSeed && hasNewSeed) {
             vec2 disp = seedNew - seedOld;
+            vec2 absDisp = abs(disp);
+            vec2 dispSign = vec2(disp.x >= 0.0 ? 1.0 : -1.0, disp.y >= 0.0 ? 1.0 : -1.0);
             float dispLen = length(disp);
             if (dispLen > 1e-4) {
-              vec2 dir = disp / dispLen;
+              vec2 dir = vec2(1.0, 0.0);
+              vec2 frontOrigin = seedOld;
+              float frontPos = 0.0;
+              vec2 shift = vec2(0.0);
 
-              // Project mapCoord onto the displacement direction, measured from seedOld.
+              if (u_motionMode == 1) {
+                bool xDom = absDisp.x >= absDisp.y;
+                dir = xDom ? vec2(dispSign.x, 0.0) : vec2(0.0, dispSign.y);
+                float len = xDom ? absDisp.x : absDisp.y;
+                frontOrigin = seedOld;
+                frontPos = t * len;
+                shift = dir * (len * (1.0 - t));
+              } else if (u_motionMode == 2) {
+                bool xDom = absDisp.x >= absDisp.y;
+                vec2 axisX = vec2(dispSign.x, 0.0);
+                vec2 axisY = vec2(0.0, dispSign.y);
+                vec2 axis1 = xDom ? axisX : axisY;
+                vec2 axis2 = xDom ? axisY : axisX;
+                float len1 = xDom ? absDisp.x : absDisp.y;
+                float len2 = xDom ? absDisp.y : absDisp.x;
+                float total = len1 + len2;
+                float split = total > 1e-4 ? len1 / total : 0.5;
+                if (t <= split) {
+                  float t1 = split > 1e-4 ? t / split : 1.0;
+                  dir = axis1;
+                  frontOrigin = seedOld;
+                  frontPos = t1 * len1;
+                  shift = axis1 * (len1 * (1.0 - t1)) + axis2 * len2;
+                } else {
+                  float t2 = (t - split) / max(1.0 - split, 1e-4);
+                  dir = axis2;
+                  frontOrigin = seedOld + axis1 * len1;
+                  frontPos = t2 * len2;
+                  shift = axis2 * (len2 * (1.0 - t2));
+                }
+              } else if (u_motionMode == 3) {
+                float maxAbs = max(absDisp.x, absDisp.y);
+                float p = t * maxAbs;
+                vec2 remaining = max(absDisp - vec2(p), vec2(0.0));
+                shift = dispSign * remaining;
+                bool xDom = absDisp.x >= absDisp.y;
+                dir = xDom ? vec2(dispSign.x, 0.0) : vec2(0.0, dispSign.y);
+                frontOrigin = seedOld;
+                frontPos = t * maxAbs;
+              } else {
+                dir = disp / dispLen;
+                frontOrigin = seedOld;
+                frontPos = t * dispLen;
+                shift = disp * (1.0 - t);
+              }
+
+              // Project mapCoord onto the displacement direction, measured from frontOrigin.
               // This gives us a global coordinate along the motion axis.
-              // At t=0, front should be near seedOld (s ≈ 0).
-              // At t=1, front should be near seedNew (s ≈ dispLen).
-              float s = dot(mapCoord - seedOld, dir);
-
-              // Front position moves from old border to new border along the motion axis.
-              // Seeds are placed at border edges, so no extra offset is needed.
-              float frontPos = t * dispLen;
+              // At t=0, front should be near frontOrigin (s ~ 0).
+              // At t=1, front should be near frontOrigin + dir * frontPos.
+              float s = dot(mapCoord - frontOrigin, dir);
               
               // Signed distance from the moving front plane.
               // Positive means the front has passed this point (new territory side).
@@ -3662,7 +3725,7 @@ export class TerritoryWebGLRenderer {
                 }
               } else if (frontDist > stripeWidth) {
                 // Front has passed; show the new fill/border at the shifted position
-                vec2 slideCoordFill = mapCoord - dir * (dispLen * (1.0 - t));
+                vec2 slideCoordFill = mapCoord - shift;
                 ivec2 slideTexFill = clamp(ivec2(slideCoordFill), ivec2(0), ivec2(int(u_mapResolution.x) - 1, int(u_mapResolution.y) - 1));
 
                 uint fillState = texelFetch(u_state, slideTexFill, 0).r;
