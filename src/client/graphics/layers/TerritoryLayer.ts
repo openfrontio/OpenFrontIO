@@ -91,6 +91,10 @@ export class TerritoryLayer implements Layer {
   private smoothingDebugUi: HTMLDivElement | null = null;
   private contestedPatternMode: "blueNoise" | "checkerboard" | "bayer4x4" =
     "blueNoise";
+  private debugDisableStaticBorders = false;
+  private debugDisableAllBorders = false;
+  private seedSamplingMode: "none" | "2x2" | "3x3" = "2x2";
+  private debugStripeFixedColors = false;
 
   constructor(
     private game: GameView,
@@ -646,6 +650,112 @@ export class TerritoryLayer implements Layer {
     contestedModeRow.appendChild(contestedModeSelect);
     root.appendChild(contestedModeRow);
 
+    // Debug: hide all borders
+    const allBordersRow = document.createElement("label");
+    allBordersRow.style.display = "flex";
+    allBordersRow.style.alignItems = "center";
+    allBordersRow.style.gap = "6px";
+    allBordersRow.style.marginTop = "6px";
+
+    const allBordersCheckbox = document.createElement("input");
+    allBordersCheckbox.type = "checkbox";
+    allBordersCheckbox.checked = this.debugDisableAllBorders;
+    allBordersCheckbox.addEventListener("change", () => {
+      const disabled = allBordersCheckbox.checked;
+      this.debugDisableAllBorders = disabled;
+      this.territoryRenderer?.setDebugDisableAllBorders(disabled);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    const allBordersText = document.createElement("span");
+    allBordersText.textContent = "hide all borders";
+    allBordersRow.appendChild(allBordersCheckbox);
+    allBordersRow.appendChild(allBordersText);
+    root.appendChild(allBordersRow);
+
+    // Debug: hide non-smoothed (static) borders
+    const staticBordersRow = document.createElement("label");
+    staticBordersRow.style.display = "flex";
+    staticBordersRow.style.alignItems = "center";
+    staticBordersRow.style.gap = "6px";
+    staticBordersRow.style.marginTop = "6px";
+
+    const staticBordersCheckbox = document.createElement("input");
+    staticBordersCheckbox.type = "checkbox";
+    staticBordersCheckbox.checked = this.debugDisableStaticBorders;
+    staticBordersCheckbox.addEventListener("change", () => {
+      const disabled = staticBordersCheckbox.checked;
+      this.debugDisableStaticBorders = disabled;
+      this.territoryRenderer?.setDebugDisableStaticBorders(disabled);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    const staticBordersText = document.createElement("span");
+    staticBordersText.textContent = "hide static borders";
+    staticBordersRow.appendChild(staticBordersCheckbox);
+    staticBordersRow.appendChild(staticBordersText);
+    root.appendChild(staticBordersRow);
+
+    // Seed sampling mode dropdown (none / 2x2 / 3x3)
+    const seedSamplingRow = document.createElement("label");
+    seedSamplingRow.style.display = "flex";
+    seedSamplingRow.style.alignItems = "center";
+    seedSamplingRow.style.gap = "6px";
+    seedSamplingRow.style.marginTop = "6px";
+
+    const seedSamplingText = document.createElement("span");
+    seedSamplingText.textContent = "seed sampling";
+
+    const seedSamplingSelect = document.createElement("select");
+    seedSamplingSelect.style.background = "rgba(0,0,0,0.5)";
+    seedSamplingSelect.style.color = "#fff";
+    seedSamplingSelect.style.border = "1px solid rgba(255,255,255,0.2)";
+    seedSamplingSelect.style.borderRadius = "4px";
+    seedSamplingSelect.style.padding = "2px 4px";
+
+    const seedModes: Array<"none" | "2x2" | "3x3"> = ["none", "2x2", "3x3"];
+    for (const m of seedModes) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      seedSamplingSelect.appendChild(opt);
+    }
+    seedSamplingSelect.value = this.seedSamplingMode;
+    seedSamplingSelect.addEventListener("change", () => {
+      const v = seedSamplingSelect.value as "none" | "2x2" | "3x3";
+      this.seedSamplingMode = v;
+      this.territoryRenderer?.setSeedSamplingMode(v);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    seedSamplingRow.appendChild(seedSamplingText);
+    seedSamplingRow.appendChild(seedSamplingSelect);
+    root.appendChild(seedSamplingRow);
+
+    // Debug: fixed stripe colors
+    const stripeColorsRow = document.createElement("label");
+    stripeColorsRow.style.display = "flex";
+    stripeColorsRow.style.alignItems = "center";
+    stripeColorsRow.style.gap = "6px";
+    stripeColorsRow.style.marginTop = "6px";
+
+    const stripeColorsCheckbox = document.createElement("input");
+    stripeColorsCheckbox.type = "checkbox";
+    stripeColorsCheckbox.checked = this.debugStripeFixedColors;
+    stripeColorsCheckbox.addEventListener("change", () => {
+      const enabled = stripeColorsCheckbox.checked;
+      this.debugStripeFixedColors = enabled;
+      this.territoryRenderer?.setDebugStripeFixedColors(enabled);
+      this.territoryRenderer?.markAllDirty();
+    });
+
+    const stripeColorsText = document.createElement("span");
+    stripeColorsText.textContent =
+      "fixed stripe colors (red=expand, blue=retreat, green=owner)";
+    stripeColorsRow.appendChild(stripeColorsCheckbox);
+    stripeColorsRow.appendChild(stripeColorsText);
+    root.appendChild(stripeColorsRow);
+
     document.body.appendChild(root);
     this.smoothingDebugUi = root;
   }
@@ -723,6 +833,16 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer = renderer;
     this.territoryRenderer.setContestEnabled(this.contestEnabled);
     this.territoryRenderer.setContestPatternMode(this.contestedPatternMode);
+    this.territoryRenderer.setDebugDisableStaticBorders(
+      this.debugDisableStaticBorders,
+    );
+    this.territoryRenderer.setDebugDisableAllBorders(
+      this.debugDisableAllBorders,
+    );
+    this.territoryRenderer.setSeedSamplingMode(this.seedSamplingMode);
+    this.territoryRenderer.setDebugStripeFixedColors(
+      this.debugStripeFixedColors,
+    );
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
@@ -1450,6 +1570,8 @@ export class TerritoryLayer implements Layer {
       `jfa: ${jfaStatus} dirty ${stats.jfaDirty ? "yes" : "no"}`,
       `contests: ${this.contestEnabled ? "on" : "off"} comps ${this.contestComponents.size}`,
       `contestPattern: ${this.contestedPatternMode}`,
+      `hideAllBorders: ${this.debugDisableAllBorders ? "yes" : "no"}`,
+      `hideStaticBorders: ${this.debugDisableStaticBorders ? "yes" : "no"}`,
       `contestTiles: ${this.contestTileCount}`,
       `contestTicks: ${this.contestDurationTicks}`,
       `hovered: ${stats.hoveredPlayerId}`,
