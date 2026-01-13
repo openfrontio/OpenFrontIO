@@ -1,5 +1,4 @@
 import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import {
   ConquestUpdate,
@@ -27,11 +26,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
 
-  // added eventBus to listen MoveWarshipIntentEvent
-  constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-  ) {
+  constructor(private game: GameView) {
     this.theme = this.game.config().theme();
   }
 
@@ -240,7 +235,6 @@ export class FxLayer implements Layer {
 
   async init() {
     this.redraw();
-
     try {
       this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
       console.log("FX sprites loaded successfully");
