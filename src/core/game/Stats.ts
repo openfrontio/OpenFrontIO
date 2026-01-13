@@ -101,4 +101,10 @@ export interface Stats {
 
   // player was killed (0 tiles)
   playerKilled(player: Player, tick: number): void;
+
+  // Player's train arrives at own station, earning gold
+  trainSelfTrade(player: Player, gold: number | bigint): void;
+
+  // Another player's train arrives at station
+  trainExternalTrade(player: Player, goldPlayer: number | bigint);
 }

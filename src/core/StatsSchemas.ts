@@ -78,6 +78,8 @@ export const GOLD_INDEX_WORK = 0; // Gold earned by workers
 export const GOLD_INDEX_WAR = 1; // Gold earned by conquering players
 export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
 export const GOLD_INDEX_STEAL = 3; // Gold earned by capturing trade ships
+export const GOLD_INDEX_TRAIN_SELF = 4; // Gold earned by own trains
+export const GOLD_INDEX_TRAIN_OTHER = 4; // Gold earned by other players trains
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0; // Structures and warships built
