@@ -88,9 +88,6 @@ export class HelpModal extends BaseModal {
             <p class="text-white/70 text-sm leading-relaxed mb-2">
               ${translateText("help_modal.keybinds_desc")}
             </p>
-            <p class="text-white/60 text-sm leading-relaxed">
-              ${translateText("help_modal.keybinds_hint")}
-            </p>
             <button
               type="button"
               class="mt-2 inline-flex items-center gap-2 self-start px-4 py-2 text-xs font-bold uppercase tracking-wider text-blue-200 bg-blue-500/10 border border-blue-500/40 rounded-lg hover:bg-blue-500/20 hover:text-blue-100 transition-colors"

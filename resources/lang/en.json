@@ -60,8 +60,7 @@
   "help_modal": {
     "hotkeys": "Hotkeys",
     "keybinds_title": "Keybinds",
-    "keybinds_desc": "Keybinds live in Settings so you can customize your controls.",
-    "keybinds_hint": "Use the button below to view a list of all available keybinds.",
+    "keybinds_desc": "Keybinds are customisable and are found in the settings.",
     "keybinds_button": "Open Keybind Settings",
     "table_key": "Key",
     "table_action": "Action",
