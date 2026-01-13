@@ -8,11 +8,9 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
-import { MoveWarshipIntentEvent } from "../../Transport";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
-import { MoveIndicatorFx } from "../fx/MoveIndicatorFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
@@ -242,13 +240,6 @@ export class FxLayer implements Layer {
 
   async init() {
     this.redraw();
-
-    // listening for warship move clicks for MoveIndicatorFx
-    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
-      const x = this.game.x(e.tile);
-      const y = this.game.y(e.tile);
-      this.allFx.push(new MoveIndicatorFx(x, y));
-    });
 
     try {
       this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
