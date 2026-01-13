@@ -105,10 +105,8 @@ The country will need to be added to `../src/client/data/countries.json`
 
 Using the `name` from your json:
 
-- Add to the MapDescription `../src/client/components/Maps.ts`
-- Add to the numPlayersConfig `../src/core/configuration/DefaultConfig.ts`
-- Add to the mapCategories `../src/core/game/Game.ts`
-- Add to the map playlist `../src/server/MapPlaylist.ts`
+- Add to GameMapType and mapCategories in `../src/core/game/Game.ts`
+- Add to the map playlist in `../src/server/MapPlaylist.ts`
 - Add to the `map` translation object in `../resources/lang/en.json`
 
 ## Notes

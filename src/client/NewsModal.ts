@@ -5,6 +5,7 @@ import version from "resources/version.txt?raw";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import { modalHeader } from "./components/ui/ModalHeader";
 import changelog from "/changelog.md?url";
 import megaphone from "/images/Megaphone.svg?url";
 
@@ -21,39 +22,13 @@ export class NewsModal extends BaseModal {
           ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
+        ${modalHeader({
+          title: translateText("news.title"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
         <div
-          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("news.title")}
-            </span>
-          </div>
-        </div>
-        <div
-          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
+          class="pt-2 prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
             [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
             [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
             [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
