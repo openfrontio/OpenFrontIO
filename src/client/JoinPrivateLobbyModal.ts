@@ -17,7 +17,12 @@ import { JoinLobbyEvent } from "./Main";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/LobbyTeamView";
-import { modalHeader } from "./components/ui/ModalHeader";
+import { renderLobbyIdBox } from "./components/ui/LobbyIdBox";
+import {
+  lobbyModalShell,
+  renderLobbyFooterButton,
+} from "./components/ui/LobbyModalShell";
+import { renderLobbyPlayerList } from "./components/ui/LobbyPlayerList";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
@@ -40,198 +45,102 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   render() {
+    const hasJoinedPlayers = this.hasJoined && this.players.length > 0;
+    const headerRightContent = this.hasJoined
+      ? renderLobbyIdBox({
+          lobbyId: this.currentLobbyId,
+          isVisible: this.lobbyIdVisible,
+          copySuccess: this.copySuccess,
+          onToggleVisibility: () => {
+            this.lobbyIdVisible = !this.lobbyIdVisible;
+            this.requestUpdate();
+          },
+          onCopy: this.copyToClipboard,
+          toggleTitle: translateText("user_setting.toggle_visibility"),
+          copyTitle: translateText("common.click_to_copy"),
+          copiedLabel: translateText("common.copied"),
+        })
+      : undefined;
+
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
-        ${modalHeader({
-          title: translateText("private_lobby.title"),
-          onBack: this.closeAndLeave,
-          ariaLabel: translateText("common.close"),
-          rightContent: this.hasJoined
-            ? html`
-                <!-- Lobby ID Box -->
-                <div
-                  class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
+      <div class="space-y-4">
+        ${!this.hasJoined
+          ? html`<div class="flex flex-col gap-3">
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="lobbyIdInput"
+                  placeholder=${translateText("private_lobby.enter_id")}
+                  @keyup=${this.handleChange}
+                  class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
+                />
+                <button
+                  @click=${this.pasteFromClipboard}
+                  class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
+                  title=${translateText("common.paste")}
                 >
-                  <button
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title="${translateText("user_setting.toggle_visibility")}"
+                  <svg
+                    class="text-white/60 group-hover:text-white transition-colors"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 32 32"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    ${this.lobbyIdVisible
-                      ? html`<svg
-                          viewBox="0 0 512 512"
-                          height="16px"
-                          width="16px"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                          ></path>
-                        </svg>`
-                      : html`<svg
-                          viewBox="0 0 512 512"
-                          height="16px"
-                          width="16px"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="32"
-                          ></path>
-                          <path
-                            d="M144 256l224 0"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="32"
-                            stroke-linecap="round"
-                          ></path>
-                        </svg>`}
-                  </button>
-                  <div
-                    @click=${this.copyToClipboard}
-                    @dblclick=${(e: Event) => {
-                      (e.currentTarget as HTMLElement).classList.add(
-                        "select-all",
-                      );
-                    }}
-                    @mouseleave=${(e: Event) => {
-                      (e.currentTarget as HTMLElement).classList.remove(
-                        "select-all",
-                      );
-                    }}
-                    class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
-                    title="${translateText("common.click_to_copy")}"
-                  >
-                    ${this.copySuccess
-                      ? translateText("common.copied")
-                      : this.lobbyIdVisible
-                        ? this.currentLobbyId
-                        : "••••••••"}
-                  </div>
-                  <button
-                    @click=${this.copyToClipboard}
-                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title="${translateText("common.click_to_copy")}"
-                    aria-label="${translateText("common.click_to_copy")}"
-                    type="button"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              `
-            : undefined,
-        })}
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
-          ${!this.hasJoined
-            ? html`<div class="flex flex-col gap-3">
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="lobbyIdInput"
-                    placeholder=${translateText("private_lobby.enter_id")}
-                    @keyup=${this.handleChange}
-                    class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
-                  />
-                  <button
-                    @click=${this.pasteFromClipboard}
-                    class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
-                    title=${translateText("common.paste")}
-                  >
-                    <svg
-                      class="text-white/60 group-hover:text-white transition-colors"
-                      stroke="currentColor"
-                      fill="currentColor"
-                      stroke-width="0"
-                      viewBox="0 0 32 32"
-                      height="18px"
-                      width="18px"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
-                      ></path>
-                    </svg>
-                  </button>
-                </div>
-                <o-button
-                  title=${translateText("private_lobby.join_lobby")}
-                  block
-                  @click=${this.joinLobby}
-                ></o-button>
-              </div>`
-            : ""}
-          ${this.renderGameConfig()}
-          ${this.hasJoined && this.players.length > 0
-            ? html`
-                <div class="mt-6 border-t border-white/10 pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                    >
-                      ${this.players.length}
-                      ${this.players.length === 1
-                        ? translateText("private_lobby.player")
-                        : translateText("private_lobby.players")}
-                    </div>
-                  </div>
-
-                  <lobby-team-view
-                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                    .clients=${this.players}
-                    .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  ></lobby-team-view>
-                </div>
-              `
-            : ""}
-        </div>
-
-        ${this.hasJoined && this.players.length > 0
-          ? html` <div
-              class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
-            >
-              <button
-                class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-                disabled
-              >
-                ${translateText("private_lobby.joined_waiting")}
-              </button>
+                    <path
+                      d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+              <o-button
+                title=${translateText("private_lobby.join_lobby")}
+                block
+                @click=${this.joinLobby}
+              ></o-button>
             </div>`
+          : ""}
+        ${this.renderGameConfig()}
+        ${hasJoinedPlayers
+          ? renderLobbyPlayerList({
+              count: {
+                value: this.players.length,
+                singularKey: "private_lobby.player",
+                pluralKey: "private_lobby.players",
+              },
+              teamList: {
+                gameMode: this.gameConfig?.gameMode ?? GameMode.FFA,
+                clients: this.players,
+                lobbyCreatorClientID: this.lobbyCreatorClientID,
+                teamCount: this.gameConfig?.playerTeams ?? 2,
+              },
+              wrapperClassName: "mt-6 border-t border-white/10 pt-6",
+            })
           : ""}
       </div>
     `;
 
-    if (this.inline) {
-      return content;
-    }
+    const footer = hasJoinedPlayers
+      ? renderLobbyFooterButton({
+          label: translateText("private_lobby.joined_waiting"),
+          disabled: true,
+        })
+      : undefined;
 
-    return html`
-      <o-modal
-        ?hideHeader=${true}
-        ?hideCloseButton=${true}
-        ?inline=${this.inline}
-      >
-        ${content}
-      </o-modal>
-    `;
+    return lobbyModalShell({
+      header: {
+        title: translateText("private_lobby.title"),
+        onBack: this.closeAndLeave,
+        ariaLabel: translateText("common.close"),
+        rightContent: headerRightContent,
+      },
+      content,
+      footer,
+      inline: this.inline,
+      contentClassName: "space-y-4",
+    });
   }
 
   private renderConfigItem(

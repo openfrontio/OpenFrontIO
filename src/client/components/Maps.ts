@@ -4,6 +4,31 @@ import { Difficulty, GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
+export const MAP_CARD_CLASS_BASE =
+  "w-full h-full p-3 flex flex-col items-center justify-between rounded-xl " +
+  "border cursor-pointer transition-all duration-200 gap-3 group";
+export const MAP_CARD_CLASS_SELECTED =
+  "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
+export const MAP_CARD_CLASS_IDLE =
+  "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 " +
+  "hover:-translate-y-1 active:scale-95";
+export const MAP_CARD_PREVIEW_CLASS_BASE =
+  "w-full aspect-[2/1] transition-transform duration-200 rounded-lg " +
+  "flex items-center justify-center";
+export const MAP_CARD_PREVIEW_CLASS_LOADING =
+  "bg-black/20 text-white/40 text-xs font-bold uppercase tracking-wider " +
+  "animate-pulse";
+export const MAP_CARD_PREVIEW_CLASS_ERROR =
+  "bg-red-500/10 text-red-400 text-xs font-bold uppercase tracking-wider";
+export const MAP_CARD_IMAGE_WRAPPER_CLASS =
+  "w-full aspect-[2/1] relative overflow-hidden rounded-lg bg-black/20";
+export const MAP_CARD_IMAGE_CLASS_BASE =
+  "w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-100";
+export const MAP_CARD_LABEL_CLASS =
+  "text-xs font-bold text-white uppercase tracking-wider text-center " +
+  "leading-tight break-words hyphens-auto";
+export const MAP_CARD_MEDALS_CLASS = "flex gap-1 justify-center w-full";
+
 @customElement("map-display")
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
@@ -24,11 +49,19 @@ export class MapDisplay extends LitElement {
     this.loadMapData();
   }
 
+  updated(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has("mapKey")) {
+      this.loadMapData();
+    }
+  }
+
   private async loadMapData() {
     if (!this.mapKey) return;
 
     try {
       this.isLoading = true;
+      this.mapWebpPath = null;
+      this.mapName = null;
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
@@ -40,62 +73,67 @@ export class MapDisplay extends LitElement {
     }
   }
 
-  private handleKeydown(event: KeyboardEvent) {
-    // Trigger the same activation logic as click when Enter or Space is pressed
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      // Dispatch a click event to maintain compatibility with parent click handlers
-      (event.target as HTMLElement).click();
+  private getDisplayLabel(): string {
+    if (this.translation) {
+      return this.translation;
     }
+    if (this.mapName) {
+      return this.mapName;
+    }
+    return this.mapKey;
+  }
+
+  private getCardClass(): string {
+    return `${MAP_CARD_CLASS_BASE} ${
+      this.selected ? MAP_CARD_CLASS_SELECTED : MAP_CARD_CLASS_IDLE
+    }`;
+  }
+
+  private renderPreview(): ReturnType<typeof html> {
+    if (this.isLoading) {
+      return html`<div
+        class="${MAP_CARD_PREVIEW_CLASS_BASE} ${MAP_CARD_PREVIEW_CLASS_LOADING}"
+      >
+        ${translateText("map_component.loading")}
+      </div>`;
+    }
+
+    if (this.mapWebpPath) {
+      return html`<div class="${MAP_CARD_IMAGE_WRAPPER_CLASS}">
+        <img
+          src="${this.mapWebpPath}"
+          alt="${this.getDisplayLabel()}"
+          class="${MAP_CARD_IMAGE_CLASS_BASE} ${this.selected
+            ? "opacity-100"
+            : "opacity-80"}"
+        />
+      </div>`;
+    }
+
+    return html`<div
+      class="${MAP_CARD_PREVIEW_CLASS_BASE} ${MAP_CARD_PREVIEW_CLASS_ERROR}"
+    >
+      ${translateText("map_component.error")}
+    </div>`;
   }
 
   render() {
+    const label = this.getDisplayLabel();
     return html`
-      <div
-        role="button"
-        tabindex="0"
-        aria-selected="${this.selected}"
-        aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
-        @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
-          .selected
-          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 active:scale-95"}"
+      <button
+        type="button"
+        aria-pressed="${this.selected}"
+        aria-label="${label}"
+        class="${this.getCardClass()}"
       >
-        ${this.isLoading
-          ? html`<div
-              class="w-full aspect-[2/1] text-white/40 transition-transform duration-200 rounded-lg bg-black/20 text-xs font-bold uppercase tracking-wider flex items-center justify-center animate-pulse"
-            >
-              ${translateText("map_component.loading")}
-            </div>`
-          : this.mapWebpPath
-            ? html`<div
-                class="w-full aspect-[2/1] relative overflow-hidden rounded-lg bg-black/20"
-              >
-                <img
-                  src="${this.mapWebpPath}"
-                  alt="${this.translation || this.mapName}"
-                  class="w-full h-full object-cover ${this.selected
-                    ? "opacity-100"
-                    : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
-                />
-              </div>`
-            : html`<div
-                class="w-full aspect-[2/1] text-red-400 transition-transform duration-200 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
-              >
-                ${translateText("map_component.error")}
-              </div>`}
+        ${this.renderPreview()}
         ${this.showMedals
-          ? html`<div class="flex gap-1 justify-center w-full">
+          ? html`<div class="${MAP_CARD_MEDALS_CLASS}">
               ${this.renderMedals()}
             </div>`
           : null}
-        <div
-          class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight break-words hyphens-auto"
-        >
-          ${this.translation || this.mapName}
-        </div>
-      </div>
+        <div class="${MAP_CARD_LABEL_CLASS}">${label}</div>
+      </button>
     `;
   }
 
