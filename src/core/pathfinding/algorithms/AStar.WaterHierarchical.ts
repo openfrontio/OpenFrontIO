@@ -1,38 +1,18 @@
 import { GameMap, TileRef } from "../../game/GameMap";
+import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
 import { AbstractGraphAStar } from "./AStar.AbstractGraph";
-import { AStarBounded } from "./AStar.Bounded";
+import { AStarWaterBounded } from "./AStar.WaterBounded";
 import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
 import { LAND_MARKER } from "./ConnectedComponents";
 
-type PathDebugInfo = {
-  nodePath: TileRef[] | null;
-  initialPath: TileRef[] | null;
-  graph: {
-    clusterSize: number;
-    nodes: Array<{ id: number; tile: TileRef }>;
-    edges: Array<{
-      id: number;
-      nodeA: number;
-      nodeB: number;
-      from: TileRef;
-      to: TileRef;
-      cost: number;
-    }>;
-  };
-  timings: { [key: string]: number };
-};
-
 export class AStarWaterHierarchical implements PathFinder<number> {
   private tileBFS: BFSGrid;
   private abstractAStar: AbstractGraphAStar;
-  private localAStar: AStarBounded;
-  private localAStarMultiCluster: AStarBounded;
+  private localAStar: AStarWaterBounded;
+  private localAStarMultiCluster: AStarWaterBounded;
   private sourceResolver: SourceResolver;
-
-  public debugInfo: PathDebugInfo | null = null;
-  public debugMode: boolean = false;
 
   constructor(
     private map: GameMap,
@@ -51,23 +31,31 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     // BoundedAStar for cluster-bounded local pathfinding
     const maxLocalNodes = clusterSize * clusterSize;
-    this.localAStar = new AStarBounded(map, maxLocalNodes);
+    this.localAStar = new AStarWaterBounded(map, maxLocalNodes);
 
     // BoundedAStar for multi-cluster (3x3) local pathfinding
     const multiClusterSize = clusterSize * 3;
     const maxMultiClusterNodes = multiClusterSize * multiClusterSize;
-    this.localAStarMultiCluster = new AStarBounded(map, maxMultiClusterNodes);
+    this.localAStarMultiCluster = new AStarWaterBounded(
+      map,
+      maxMultiClusterNodes,
+    );
 
     // SourceResolver for multi-source search
     this.sourceResolver = new SourceResolver(this.map, this.graph);
   }
 
   findPath(from: number | number[], to: number): number[] | null {
-    if (Array.isArray(from)) {
-      return this.findPathMultiSource(from as TileRef[], to as TileRef);
-    }
+    return DebugSpan.wrap("AStar.WaterHierarchical:findPath", () => {
+      DebugSpan.set("$to", () => to);
+      DebugSpan.set("$from", () => from);
 
-    return this.findPathSingle(from as TileRef, to as TileRef, this.debugMode);
+      if (Array.isArray(from)) {
+        return this.findPathMultiSource(from as TileRef[], to as TileRef);
+      }
+
+      return this.findPathSingle(from as TileRef, to as TileRef);
+    });
   }
 
   private findPathMultiSource(
@@ -94,192 +82,66 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     return this.findPathSingle(winningSource, target);
   }
 
-  findPathSingle(
-    from: TileRef,
-    to: TileRef,
-    debug: boolean = false,
-  ): TileRef[] | null {
-    if (debug) {
-      const allEdges: Array<{
-        id: number;
-        nodeA: number;
-        nodeB: number;
-        from: TileRef;
-        to: TileRef;
-        cost: number;
-      }> = [];
-
-      for (let edgeId = 0; edgeId < this.graph.edgeCount; edgeId++) {
-        const edge = this.graph.getEdge(edgeId);
-        if (!edge) continue;
-
-        const nodeA = this.graph.getNode(edge.nodeA);
-        const nodeB = this.graph.getNode(edge.nodeB);
-        if (!nodeA || !nodeB) continue;
-
-        allEdges.push({
-          id: edge.id,
-          nodeA: edge.nodeA,
-          nodeB: edge.nodeB,
-          from: nodeA.tile,
-          to: nodeB.tile,
-          cost: edge.cost,
-        });
-      }
-
-      this.debugInfo = {
-        nodePath: null,
-        initialPath: null,
-        graph: {
-          clusterSize: this.graph.clusterSize,
-          nodes: this.graph
-            .getAllNodes()
-            .map((node) => ({ id: node.id, tile: node.tile })),
-          edges: allEdges,
-        },
-        timings: {
-          total: 0,
-        },
-      };
-    }
-
+  findPathSingle(from: TileRef, to: TileRef): TileRef[] | null {
     const dist = this.map.manhattanDist(from, to);
 
     // Early exit for very short distances
     if (dist <= this.graph.clusterSize) {
-      performance.mark("hpa:findPath:earlyExitLocalPath:start");
+      DebugSpan.start("earlyExit");
       const startX = this.map.x(from);
       const startY = this.map.y(from);
       const clusterX = Math.floor(startX / this.graph.clusterSize);
       const clusterY = Math.floor(startY / this.graph.clusterSize);
       const localPath = this.findLocalPath(from, to, clusterX, clusterY, true);
-      performance.mark("hpa:findPath:earlyExitLocalPath:end");
-      const measure = performance.measure(
-        "hpa:findPath:earlyExitLocalPath",
-        "hpa:findPath:earlyExitLocalPath:start",
-        "hpa:findPath:earlyExitLocalPath:end",
-      );
-
-      if (debug) {
-        this.debugInfo!.timings.earlyExitLocalPath = measure.duration;
-        this.debugInfo!.timings.total += measure.duration;
-      }
+      DebugSpan.end();
 
       if (localPath) {
-        if (debug) {
-          console.log(
-            `[DEBUG] Direct local path found for dist=${dist}, length=${localPath.length}`,
-          );
-        }
         return localPath;
       }
-
-      if (debug) {
-        console.log(
-          `[DEBUG] Direct path failed for dist=${dist}, falling back to abstract graph`,
-        );
-      }
     }
 
-    performance.mark("hpa:findPath:findNodes:start");
+    DebugSpan.start("nodeLookup");
     const startNode = this.findNearestNode(from);
     const endNode = this.findNearestNode(to);
-    performance.mark("hpa:findPath:findNodes:end");
-    const findNodesMeasure = performance.measure(
-      "hpa:findPath:findNodes",
-      "hpa:findPath:findNodes:start",
-      "hpa:findPath:findNodes:end",
-    );
-
-    if (debug) {
-      this.debugInfo!.timings.findNodes = findNodesMeasure.duration;
-      this.debugInfo!.timings.total += findNodesMeasure.duration;
-    }
+    DebugSpan.end();
 
     if (!startNode) {
-      if (debug) {
-        console.log(
-          `[DEBUG] Cannot find start node for (${this.map.x(from)}, ${this.map.y(from)})`,
-        );
-      }
       return null;
     }
 
     if (!endNode) {
-      if (debug) {
-        console.log(
-          `[DEBUG] Cannot find end node for (${this.map.x(to)}, ${this.map.y(to)})`,
-        );
-      }
       return null;
     }
 
     if (startNode.id === endNode.id) {
-      if (debug) {
-        console.log(
-          `[DEBUG] Start and end nodes are the same (ID=${startNode.id}), finding local path with multi-cluster search`,
-        );
-      }
-
-      performance.mark("hpa:findPath:sameNodeLocalPath:start");
+      DebugSpan.start("sameNodeLocalPath");
       const clusterX = Math.floor(startNode.x / this.graph.clusterSize);
       const clusterY = Math.floor(startNode.y / this.graph.clusterSize);
       const path = this.findLocalPath(from, to, clusterX, clusterY, true);
-      performance.mark("hpa:findPath:sameNodeLocalPath:end");
-      const sameNodeMeasure = performance.measure(
-        "hpa:findPath:sameNodeLocalPath",
-        "hpa:findPath:sameNodeLocalPath:start",
-        "hpa:findPath:sameNodeLocalPath:end",
-      );
-
-      if (debug) {
-        this.debugInfo!.timings.sameNodeLocalPath = sameNodeMeasure.duration;
-        this.debugInfo!.timings.total += sameNodeMeasure.duration;
-      }
-
+      DebugSpan.end();
       return path;
     }
 
-    performance.mark("hpa:findPath:findAbstractPath:start");
+    DebugSpan.start("abstractPath");
     const nodePath = this.findAbstractPath(startNode.id, endNode.id);
-    performance.mark("hpa:findPath:findAbstractPath:end");
-    const findAbstractPathMeasure = performance.measure(
-      "hpa:findPath:findAbstractPath",
-      "hpa:findPath:findAbstractPath:start",
-      "hpa:findPath:findAbstractPath:end",
-    );
-
-    if (debug) {
-      this.debugInfo!.timings.findAbstractPath =
-        findAbstractPathMeasure.duration;
-      this.debugInfo!.timings.total += findAbstractPathMeasure.duration;
-
-      this.debugInfo!.nodePath = nodePath
-        ? nodePath
-            .map((nodeId) => {
-              const node = this.graph.getNode(nodeId);
-              return node ? node.tile : -1;
-            })
-            .filter((tile) => tile !== -1)
-        : null;
-    }
+    DebugSpan.end();
 
     if (!nodePath) {
-      if (debug) {
-        console.log(
-          `[DEBUG] No abstract path between nodes ${startNode.id} and ${endNode.id}`,
-        );
-      }
       return null;
     }
 
-    if (debug) {
-      console.log(`[DEBUG] Abstract path found: ${nodePath.length} waypoints`);
-    }
+    DebugSpan.set("nodePath", () =>
+      nodePath
+        .map((nodeId) => {
+          const node = this.graph.getNode(nodeId);
+          return node ? node.tile : -1;
+        })
+        .filter((tile) => tile !== -1),
+    );
 
     const initialPath: TileRef[] = [];
 
-    performance.mark("hpa:findPath:buildInitialPath:start");
+    DebugSpan.start("initialPath");
 
     // 1. Find path from start to first node
     const firstNode = this.graph.getNode(nodePath[0])!;
@@ -324,6 +186,10 @@ export class AStarWaterHierarchical implements PathFinder<number> {
         if (cachedPath && cachedPath.length > 0) {
           // Path is cached for this exact direction, use as-is
           initialPath.push(...cachedPath.slice(1));
+          DebugSpan.set(
+            "$cachedSegmentsUsed",
+            (prev) => ((prev as number) ?? 0) + 1,
+          );
           continue;
         }
       }
@@ -368,20 +234,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     initialPath.push(...endSegment.slice(1));
 
-    performance.mark("hpa:findPath:buildInitialPath:end");
-    const buildInitialPathMeasure = performance.measure(
-      "hpa:findPath:buildInitialPath",
-      "hpa:findPath:buildInitialPath:start",
-      "hpa:findPath:buildInitialPath:end",
-    );
-
-    if (debug) {
-      this.debugInfo!.timings.buildInitialPath =
-        buildInitialPathMeasure.duration;
-      this.debugInfo!.timings.total += buildInitialPathMeasure.duration;
-      this.debugInfo!.initialPath = initialPath;
-      console.log(`[DEBUG] Initial path: ${initialPath.length} tiles`);
-    }
+    DebugSpan.set("initialPath", () => initialPath);
 
     // Smoothing moved to SmoothingTransformer - return raw path
     return initialPath;

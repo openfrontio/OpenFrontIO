@@ -3,6 +3,16 @@ import { PathFinder } from "../types";
 import { BucketQueue } from "./PriorityQueue";
 
 const LAND_BIT = 7;
+const MAGNITUDE_MASK = 0x1f;
+const COST_SCALE = 100;
+const BASE_COST = 1 * COST_SCALE;
+
+// Prefer magnitude 3-10 (3-10 tiles from shore)
+function getMagnitudePenalty(magnitude: number): number {
+  if (magnitude < 3) return 3 * COST_SCALE; // too close to shore
+  if (magnitude <= 10) return 0; // sweet spot
+  return 1 * COST_SCALE; // deep water, slight penalty
+}
 
 export interface BoundedAStarConfig {
   heuristicWeight?: number;
@@ -16,7 +26,7 @@ export interface SearchBounds {
   maxY: number;
 }
 
-export class AStarBounded implements PathFinder<number> {
+export class AStarWaterBounded implements PathFinder<number> {
   private stamp = 1;
 
   private readonly closedStamp: Uint32Array;
@@ -36,7 +46,7 @@ export class AStarBounded implements PathFinder<number> {
   ) {
     this.terrain = (map as any).terrain as Uint8Array;
     this.mapWidth = map.width();
-    this.heuristicWeight = config?.heuristicWeight ?? 1;
+    this.heuristicWeight = config?.heuristicWeight ?? 3;
     this.maxIterations = config?.maxIterations ?? 100_000;
 
     this.closedStamp = new Uint32Array(maxSearchArea);
@@ -45,7 +55,9 @@ export class AStarBounded implements PathFinder<number> {
     this.cameFrom = new Int32Array(maxSearchArea);
 
     const maxDim = Math.ceil(Math.sqrt(maxSearchArea));
-    const maxF = this.heuristicWeight * maxDim * 2;
+    // Account for scaled costs + tie-breaker headroom
+    const maxF =
+      (this.heuristicWeight + 1) * BASE_COST * maxDim * 2 + COST_SCALE * maxDim;
     this.queue = new BucketQueue(maxF);
   }
 
@@ -133,6 +145,24 @@ export class AStarBounded implements PathFinder<number> {
 
     queue.clear();
     const starts = Array.isArray(start) ? start : [start];
+
+    // For cross-product tie-breaker (prefer diagonal paths)
+    const s0 = starts[0];
+    const startX = s0 % mapWidth;
+    const startY = (s0 / mapWidth) | 0;
+    const dxGoal = goalX - startX;
+    const dyGoal = goalY - startY;
+    // Normalization factor to keep tie-breaker small (< COST_SCALE)
+    const crossNorm = Math.max(1, Math.abs(dxGoal) + Math.abs(dyGoal));
+
+    // Cross-product tie-breaker: measures deviation from start-goal line
+    const crossTieBreaker = (nx: number, ny: number): number => {
+      const dxN = nx - goalX;
+      const dyN = ny - goalY;
+      const cross = Math.abs(dxGoal * dyN - dyGoal * dxN);
+      return Math.floor((cross * (COST_SCALE - 1)) / crossNorm / crossNorm);
+    };
+
     for (const s of starts) {
       const startLocal = toLocal(s, true);
       if (startLocal < 0 || startLocal >= numLocalNodes) {
@@ -143,7 +173,8 @@ export class AStarBounded implements PathFinder<number> {
       cameFrom[startLocal] = -1;
       const sx = s % mapWidth;
       const sy = (s / mapWidth) | 0;
-      const h = weight * (Math.abs(sx - goalX) + Math.abs(sy - goalY));
+      const h =
+        weight * BASE_COST * (Math.abs(sx - goalX) + Math.abs(sy - goalY));
       queue.push(startLocal, h);
     }
 
@@ -164,7 +195,6 @@ export class AStarBounded implements PathFinder<number> {
       }
 
       const currentG = gScore[currentLocal];
-      const tentativeG = currentG + 1;
 
       // Convert to global coords for neighbor calculation
       const current = toGlobal(currentLocal);
@@ -174,10 +204,14 @@ export class AStarBounded implements PathFinder<number> {
       if (currentY > minY) {
         const neighbor = current - mapWidth;
         const neighborLocal = currentLocal - boundsWidth;
+        const neighborTerrain = terrain[neighbor];
         if (
           closedStamp[neighborLocal] !== stamp &&
-          (neighbor === goal || (terrain[neighbor] & landMask) === 0)
+          (neighbor === goal || (neighborTerrain & landMask) === 0)
         ) {
+          const magnitude = neighborTerrain & MAGNITUDE_MASK;
+          const cost = BASE_COST + getMagnitudePenalty(magnitude);
+          const tentativeG = currentG + cost;
           if (
             gScoreStamp[neighborLocal] !== stamp ||
             tentativeG < gScore[neighborLocal]
@@ -185,10 +219,12 @@ export class AStarBounded implements PathFinder<number> {
             cameFrom[neighborLocal] = currentLocal;
             gScore[neighborLocal] = tentativeG;
             gScoreStamp[neighborLocal] = stamp;
-            const f =
-              tentativeG +
+            const ny = currentY - 1;
+            const h =
               weight *
-                (Math.abs(currentX - goalX) + Math.abs(currentY - 1 - goalY));
+              BASE_COST *
+              (Math.abs(currentX - goalX) + Math.abs(ny - goalY));
+            const f = tentativeG + h + crossTieBreaker(currentX, ny);
             queue.push(neighborLocal, f);
           }
         }
@@ -197,10 +233,14 @@ export class AStarBounded implements PathFinder<number> {
       if (currentY < maxY) {
         const neighbor = current + mapWidth;
         const neighborLocal = currentLocal + boundsWidth;
+        const neighborTerrain = terrain[neighbor];
         if (
           closedStamp[neighborLocal] !== stamp &&
-          (neighbor === goal || (terrain[neighbor] & landMask) === 0)
+          (neighbor === goal || (neighborTerrain & landMask) === 0)
         ) {
+          const magnitude = neighborTerrain & MAGNITUDE_MASK;
+          const cost = BASE_COST + getMagnitudePenalty(magnitude);
+          const tentativeG = currentG + cost;
           if (
             gScoreStamp[neighborLocal] !== stamp ||
             tentativeG < gScore[neighborLocal]
@@ -208,10 +248,12 @@ export class AStarBounded implements PathFinder<number> {
             cameFrom[neighborLocal] = currentLocal;
             gScore[neighborLocal] = tentativeG;
             gScoreStamp[neighborLocal] = stamp;
-            const f =
-              tentativeG +
+            const ny = currentY + 1;
+            const h =
               weight *
-                (Math.abs(currentX - goalX) + Math.abs(currentY + 1 - goalY));
+              BASE_COST *
+              (Math.abs(currentX - goalX) + Math.abs(ny - goalY));
+            const f = tentativeG + h + crossTieBreaker(currentX, ny);
             queue.push(neighborLocal, f);
           }
         }
@@ -220,10 +262,14 @@ export class AStarBounded implements PathFinder<number> {
       if (currentX > minX) {
         const neighbor = current - 1;
         const neighborLocal = currentLocal - 1;
+        const neighborTerrain = terrain[neighbor];
         if (
           closedStamp[neighborLocal] !== stamp &&
-          (neighbor === goal || (terrain[neighbor] & landMask) === 0)
+          (neighbor === goal || (neighborTerrain & landMask) === 0)
         ) {
+          const magnitude = neighborTerrain & MAGNITUDE_MASK;
+          const cost = BASE_COST + getMagnitudePenalty(magnitude);
+          const tentativeG = currentG + cost;
           if (
             gScoreStamp[neighborLocal] !== stamp ||
             tentativeG < gScore[neighborLocal]
@@ -231,10 +277,12 @@ export class AStarBounded implements PathFinder<number> {
             cameFrom[neighborLocal] = currentLocal;
             gScore[neighborLocal] = tentativeG;
             gScoreStamp[neighborLocal] = stamp;
-            const f =
-              tentativeG +
+            const nx = currentX - 1;
+            const h =
               weight *
-                (Math.abs(currentX - 1 - goalX) + Math.abs(currentY - goalY));
+              BASE_COST *
+              (Math.abs(nx - goalX) + Math.abs(currentY - goalY));
+            const f = tentativeG + h + crossTieBreaker(nx, currentY);
             queue.push(neighborLocal, f);
           }
         }
@@ -243,10 +291,14 @@ export class AStarBounded implements PathFinder<number> {
       if (currentX < maxX) {
         const neighbor = current + 1;
         const neighborLocal = currentLocal + 1;
+        const neighborTerrain = terrain[neighbor];
         if (
           closedStamp[neighborLocal] !== stamp &&
-          (neighbor === goal || (terrain[neighbor] & landMask) === 0)
+          (neighbor === goal || (neighborTerrain & landMask) === 0)
         ) {
+          const magnitude = neighborTerrain & MAGNITUDE_MASK;
+          const cost = BASE_COST + getMagnitudePenalty(magnitude);
+          const tentativeG = currentG + cost;
           if (
             gScoreStamp[neighborLocal] !== stamp ||
             tentativeG < gScore[neighborLocal]
@@ -254,10 +306,12 @@ export class AStarBounded implements PathFinder<number> {
             cameFrom[neighborLocal] = currentLocal;
             gScore[neighborLocal] = tentativeG;
             gScoreStamp[neighborLocal] = stamp;
-            const f =
-              tentativeG +
+            const nx = currentX + 1;
+            const h =
               weight *
-                (Math.abs(currentX + 1 - goalX) + Math.abs(currentY - goalY));
+              BASE_COST *
+              (Math.abs(nx - goalX) + Math.abs(currentY - goalY));
+            const f = tentativeG + h + crossTieBreaker(nx, currentY);
             queue.push(neighborLocal, f);
           }
         }
