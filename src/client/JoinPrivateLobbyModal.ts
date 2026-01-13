@@ -548,22 +548,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private async checkArchivedGame(
     lobbyId: string,
   ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
-    const archivePromise = fetch(`${getApiBase()}/game/${lobbyId}`, {
+    const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
-    const gitCommitPromise = fetch(`/commit.txt`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-cache",
-    });
-
-    const [archiveResponse, gitCommitResponse] = await Promise.all([
-      archivePromise,
-      gitCommitPromise,
-    ]);
 
     if (archiveResponse.status === 404) {
       return "not_found";
@@ -578,19 +568,11 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    let myGitCommit = "";
-    if (gitCommitResponse.status === 404) {
-      // commit.txt is not found when running locally
-      myGitCommit = "DEV";
-    } else if (gitCommitResponse.status === 200) {
-      myGitCommit = (await gitCommitResponse.text()).trim();
-    } else {
-      console.error("Error getting git commit:", gitCommitResponse.status);
-      return "error";
-    }
-
     // Allow DEV to join games created with a different version for debugging.
-    if (myGitCommit !== "DEV" && parsed.data.gitCommit !== myGitCommit) {
+    if (
+      window.GIT_COMMIT !== "DEV" &&
+      parsed.data.gitCommit !== window.GIT_COMMIT
+    ) {
       const safeLobbyId = this.sanitizeForLog(lobbyId);
       console.warn(
         `Git commit hash mismatch for game ${safeLobbyId}`,

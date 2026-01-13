@@ -479,6 +479,7 @@ async function pollLobby(gm: GameManager) {
         id: workerId,
         gameId: gameId,
         ccu: gm.activeClients(),
+        instanceId: process.env.INSTANCE_ID,
       }),
       signal: controller.signal,
     });

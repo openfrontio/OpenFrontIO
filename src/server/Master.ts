@@ -1,11 +1,14 @@
 import cluster from "cluster";
 import crypto from "crypto";
+import ejs from "ejs";
 import express from "express";
 import rateLimit from "express-rate-limit";
+import fs from "fs/promises";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -23,23 +26,28 @@ const log = logger.child({ comp: "m" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 app.use(express.json());
+
+// Middleware to handle HTML files with EJS templating
+app.use(async (req, res, next) => {
+  if (req.path === "/") {
+    try {
+      await renderHtml(res, path.join(__dirname, "../../static/index.html"));
+    } catch (error) {
+      next();
+    }
+  } else {
+    next();
+  }
+});
+
 app.use(
   express.static(path.join(__dirname, "../../static"), {
     maxAge: "1y", // Set max-age to 1 year for all static assets
     setHeaders: (res, path) => {
       // You can conditionally set different cache times based on file types
-      if (path.endsWith(".html")) {
-        // Set HTML files to no-cache to ensure Express doesn't send 304s
-        res.setHeader(
-          "Cache-Control",
-          "no-store, no-cache, must-revalidate, proxy-revalidate",
-        );
-        res.setHeader("Pragma", "no-cache");
-        res.setHeader("Expires", "0");
-        // Prevent conditional requests
-        res.setHeader("ETag", "");
-      } else if (path.match(/\.(js|css|svg)$/)) {
+      if (path.match(/\.(js|css|svg)$/)) {
         // JS, CSS, SVG get long cache with immutable
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       } else if (path.match(/\.(bin|dat|exe|dll|so|dylib)$/)) {
@@ -133,11 +141,20 @@ export async function startMaster() {
   const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
   process.env.ADMIN_TOKEN = ADMIN_TOKEN;
 
+  const INSTANCE_ID =
+    config.env() === GameEnv.Dev
+      ? "DEV_ID"
+      : crypto.randomBytes(4).toString("hex");
+  process.env.INSTANCE_ID = INSTANCE_ID;
+
+  log.info(`Instance ID: ${INSTANCE_ID}`);
+
   // Fork workers
   for (let i = 0; i < config.numWorkers(); i++) {
     const worker = cluster.fork({
       WORKER_ID: i,
       ADMIN_TOKEN,
+      INSTANCE_ID,
     });
 
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
@@ -321,6 +338,34 @@ async function schedulePublicGame(playlist: MapPlaylist) {
 }
 
 // SPA fallback route
-app.get("*", function (req, res) {
-  res.sendFile(path.join(__dirname, "../../static/index.html"));
+app.get("*", async function (_req, res) {
+  try {
+    const htmlPath = path.join(__dirname, "../../static/index.html");
+    await renderHtml(res, htmlPath);
+  } catch (error) {
+    log.error("Error rendering SPA fallback:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
+
+// Helper function to render HTML with EJS templating
+async function renderHtml(
+  res: express.Response,
+  htmlPath: string,
+): Promise<void> {
+  const htmlContent = await fs.readFile(htmlPath, "utf-8");
+  const rendered = ejs.render(htmlContent, {
+    gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
+    instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
+  });
+
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate",
+  );
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("ETag", "");
+  res.setHeader("Content-Type", "text/html");
+  res.send(rendered);
+}
