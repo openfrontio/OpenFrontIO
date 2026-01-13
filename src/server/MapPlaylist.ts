@@ -1,4 +1,3 @@
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -8,16 +7,16 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
+  PublicGameModifiers,
   Quads,
   Trios,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
+import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
-
-const config = getServerConfigFromServer();
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
@@ -88,13 +87,13 @@ export class MapPlaylist {
 
   constructor(private disableTeams: boolean = false) {}
 
-  public gameConfig(): GameConfig {
+  public async gameConfig(): Promise<GameConfig> {
     const { map, mode } = this.getNextMap();
 
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    let { isCompact, isRandomSpawn } = config.getRandomPublicGameModifiers();
+    let { isCompact, isRandomSpawn } = this.getRandomPublicGameModifiers();
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
@@ -106,8 +105,11 @@ export class MapPlaylist {
     }
 
     // Maps with smallest player count < 50 don't support compact map in team games
-    // The smallest player count is the 3rd number in numPlayersConfig
-    if (mode === GameMode.Team && !config.supportsCompactMapForTeams(map)) {
+    // The smallest player count is the 3rd number in the player counts array
+    if (
+      mode === GameMode.Team &&
+      !(await this.supportsCompactMapForTeams(map))
+    ) {
       isCompact = false;
     }
 
@@ -116,7 +118,7 @@ export class MapPlaylist {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
+      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: { isCompact, isRandomSpawn },
@@ -139,10 +141,6 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getTeamCount(): TeamCountConfig {
-    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
-  }
-
   private getNextMap(): MapWithMode {
     if (this.mapsPlaylist.length === 0) {
       const numAttempts = 10000;
@@ -156,6 +154,83 @@ export class MapPlaylist {
     }
     // Even if it failed, playlist will be partially populated.
     return this.mapsPlaylist.shift()!;
+  }
+
+  private getTeamCount(): TeamCountConfig {
+    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
+  }
+
+  private getRandomPublicGameModifiers(): PublicGameModifiers {
+    return {
+      isRandomSpawn: Math.random() < 0.1, // 10% chance
+      isCompact: Math.random() < 0.05, // 5% chance
+    };
+  }
+
+  private async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
+    // Maps with smallest player count < 50 don't support compact map in team games
+    // The smallest player count is the 3rd number in the player counts array
+    const landTiles = await getMapLandTiles(map);
+    const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
+    return smallest >= 50;
+  }
+
+  private async lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
+  ): Promise<number> {
+    const landTiles = await getMapLandTiles(map);
+    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
+    const r = Math.random();
+    const base = r < 0.3 ? l : r < 0.6 ? m : s;
+    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    // Apply compact map 75% player reduction
+    if (isCompactMap) {
+      p = Math.max(3, Math.floor(p * 0.25));
+    }
+    if (numPlayerTeams === undefined) return p;
+    switch (numPlayerTeams) {
+      case Duos:
+        p -= p % 2;
+        break;
+      case Trios:
+        p -= p % 3;
+        break;
+      case Quads:
+        p -= p % 4;
+        break;
+      case HumansVsNations:
+        // Half the slots are for humans, the other half will get filled with nations
+        p = Math.floor(p / 2);
+        break;
+      default:
+        p -= p % numPlayerTeams;
+        break;
+    }
+    return p;
+  }
+
+  /**
+   * Calculate player counts from land tiles
+   * For every 1,000,000 land tiles, take 50 players
+   * Limit to max 125 players for performance
+   * Second value is 75% of calculated value, third is 50%
+   * All values are rounded to the nearest 5
+   */
+  private calculateMapPlayerCounts(
+    landTiles: number,
+  ): [number, number, number] {
+    const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
+
+    const base = roundToNearest5((landTiles / 1_000_000) * 50);
+    const limitedBase = Math.min(Math.max(base, 5), 125);
+    return [
+      limitedBase,
+      roundToNearest5(limitedBase * 0.75),
+      roundToNearest5(limitedBase * 0.5),
+    ];
   }
 
   private shuffleMapsPlaylist(): boolean {

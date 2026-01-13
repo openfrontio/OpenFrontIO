@@ -8,12 +8,16 @@ import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./FlagInputModal";
 
 interface FlagInputModalElement extends HTMLElement {
   open(): void;
   returnTo?: string;
 }
+
+const isMac =
+  typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
@@ -31,6 +35,7 @@ const DefaultKeybinds: Record<string, string> = {
   attackRatioUp: "KeyY",
   boatAttack: "KeyB",
   groundAttack: "KeyG",
+  swapDirection: "KeyU",
   zoomOut: "KeyQ",
   zoomIn: "KeyE",
   centerCamera: "KeyC",
@@ -38,6 +43,8 @@ const DefaultKeybinds: Record<string, string> = {
   moveLeft: "KeyA",
   moveDown: "KeyS",
   moveRight: "KeyD",
+  modifierKey: isMac ? "MetaLeft" : "ControlLeft",
+  altKey: "AltLeft",
 };
 
 @customElement("user-setting")
@@ -388,40 +395,17 @@ export class UserSettingModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <div
-          class="relative flex flex-col mb-6 border-b border-white/10 pb-4 shrink-0 p-6"
+          class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
         >
-          <div class="flex items-center gap-4 flex-1 flex-wrap">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-all hyphens-auto min-w-0"
-            >
-              ${translateText("user_setting.title")}
-            </span>
-          </div>
+          ${modalHeader({
+            title: translateText("user_setting.title"),
+            onBack: this.close,
+            ariaLabel: translateText("common.back"),
+            showDivider: true,
+          })}
 
           <div class="hidden md:flex items-center gap-2 justify-center mt-4">
             <button
@@ -446,7 +430,7 @@ export class UserSettingModal extends BaseModal {
         </div>
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
+          class="pt-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
         >
           <div class="flex flex-col gap-2">${activeContent}</div>
         </div>
@@ -600,6 +584,32 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
+        ${translateText("user_setting.menu_shortcuts")}
+      </h2>
+
+      <setting-keybind
+        action="modifierKey"
+        label=${translateText("user_setting.build_menu_modifier")}
+        description=${translateText("user_setting.build_menu_modifier_desc")}
+        .defaultKey=${DefaultKeybinds.modifierKey}
+        .value=${this.getKeyValue("modifierKey")}
+        .display=${this.getKeyChar("modifierKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="altKey"
+        label=${translateText("user_setting.emoji_menu_modifier")}
+        description=${translateText("user_setting.emoji_menu_modifier_desc")}
+        .defaultKey=${DefaultKeybinds.altKey}
+        .value=${this.getKeyValue("altKey")}
+        .display=${this.getKeyChar("altKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.attack_ratio_controls")}
       </h2>
 
@@ -646,6 +656,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="KeyG"
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="swapDirection"
+        label=${translateText("user_setting.swap_direction")}
+        description=${translateText("user_setting.swap_direction_desc")}
+        .defaultKey=${DefaultKeybinds.swapDirection}
+        .value=${this.getKeyValue("swapDirection")}
+        .display=${this.getKeyChar("swapDirection")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
