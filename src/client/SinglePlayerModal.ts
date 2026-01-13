@@ -25,6 +25,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/Maps";
+import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
@@ -132,36 +133,11 @@ export class SinglePlayerModal extends BaseModal {
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
         <!-- Header -->
-        <div
-          class="flex items-center pb-2 border-b border-white/10 gap-4 shrink-0 px-6 pt-6"
-        >
-          <button
-            @click=${this.close}
-            class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
-            aria-label="${translateText("common.back")}"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest flex-1 break-words hyphens-auto"
-          >
-            ${translateText("main.solo") || "Solo"}
-          </span>
-
-          ${hasLinkedAccount(this.userMeResponse)
+        ${modalHeader({
+          title: translateText("main.solo") || "Solo",
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+          rightContent: hasLinkedAccount(this.userMeResponse)
             ? html`<button
                 @click=${this.toggleAchievements}
                 class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
@@ -181,8 +157,8 @@ export class SinglePlayerModal extends BaseModal {
                   >${translateText("single_modal.toggle_achievements")}</span
                 >
               </button>`
-            : this.renderNotLoggedInBanner()}
-        </div>
+            : this.renderNotLoggedInBanner(),
+        })}
 
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 mr-1">
