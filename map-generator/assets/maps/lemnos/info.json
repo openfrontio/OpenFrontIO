@@ -3,48 +3,48 @@
   "nations": [
     {
       "coordinates": [550, 317],
-      "name": "Gomati",
-      "flag": ""
+      "flag": "",
+      "name": "Gomati"
     },
     {
       "coordinates": [1371, 254],
-      "name": "Zematas",
-      "flag": ""
+      "flag": "",
+      "name": "Zematas"
     },
     {
       "coordinates": [1096, 605],
-      "name": "Kotsinas",
-      "flag": ""
+      "flag": "",
+      "name": "Kotsinas"
     },
     {
       "coordinates": [518, 894],
-      "name": "Evgatis",
-      "flag": ""
+      "flag": "",
+      "name": "Evgatis"
     },
     {
       "coordinates": [250, 879],
-      "name": "Kavala",
-      "flag": ""
+      "flag": "",
+      "name": "Kavala"
     },
     {
       "coordinates": [814, 460],
-      "name": "Atsiki",
-      "flag": ""
+      "flag": "",
+      "name": "Atsiki"
     },
     {
       "coordinates": [474, 542],
-      "name": "Sardes",
-      "flag": ""
+      "flag": "",
+      "name": "Sardes"
     },
     {
       "coordinates": [691, 755],
-      "name": "Portianou",
-      "flag": ""
+      "flag": "",
+      "name": "Portianou"
     },
     {
-      "coordinates": [1074, 913],
-      "name": "Pyrgos",
-      "flag": ""
+      "coordinates": [1177, 975],
+      "flag": "",
+      "name": "Pyrgos"
     }
   ]
 }
