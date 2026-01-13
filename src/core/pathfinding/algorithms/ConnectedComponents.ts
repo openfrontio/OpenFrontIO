@@ -29,7 +29,7 @@ export class ConnectedComponents {
   }
 
   initialize(): void {
-    DebugSpan.start("connectedComponents:initialize");
+    DebugSpan.start("ConnectedComponents:initialize");
     let ids: Uint8Array | Uint16Array = this.createPrefilledIds();
 
     let nextId = 0;

@@ -225,7 +225,7 @@ export class AbstractGraphBuilder {
   }
 
   build(): AbstractGraph {
-    DebugSpan.start("abstractGraph:build");
+    DebugSpan.start("AbstractGraphBuilder:build");
 
     this.graph = new AbstractGraph(
       this.clusterSize,
@@ -245,7 +245,7 @@ export class AbstractGraphBuilder {
     }
 
     // Find nodes (gateways) at cluster boundaries
-    DebugSpan.start("abstractGraph:build:nodes");
+    DebugSpan.start("nodes");
     for (let cy = 0; cy < this.clustersY; cy++) {
       for (let cx = 0; cx < this.clustersX; cx++) {
         this.processCluster(cx, cy);
@@ -254,7 +254,7 @@ export class AbstractGraphBuilder {
     DebugSpan.end();
 
     // Build edges between nodes in same cluster
-    DebugSpan.start("abstractGraph:build:edges");
+    DebugSpan.start("edges");
     for (let cy = 0; cy < this.clustersY; cy++) {
       for (let cx = 0; cx < this.clustersX; cx++) {
         const cluster = this.graph.getCluster(cx, cy);
@@ -262,20 +262,21 @@ export class AbstractGraphBuilder {
         this.buildClusterConnections(cx, cy);
       }
     }
-    DebugSpan.end(); // abstractGraph:build:edges
+    DebugSpan.end();
 
     DebugSpan.set("nodes", () => this.graph.getAllNodes());
     DebugSpan.set("edges", () => this.graph.getAllEdges());
     DebugSpan.set("nodesCount", () => this.graph.nodeCount);
     DebugSpan.set("edgesCount", () => this.graph.edgeCount);
     DebugSpan.set("clustersCount", () => this.clustersX * this.clustersY);
-    DebugSpan.end(); // abstractGraph:build
 
     // Initialize path cache after all edges are built
     this.graph._initPathCache();
 
     // Store water components for componentId lookups
     this.graph.setWaterComponents(this.waterComponents);
+
+    DebugSpan.end(); // AbstractGraphBuilder:build
 
     return this.graph;
   }

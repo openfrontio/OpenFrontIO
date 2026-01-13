@@ -46,7 +46,10 @@ export class AStarWaterHierarchical implements PathFinder<number> {
   }
 
   findPath(from: number | number[], to: number): number[] | null {
-    return DebugSpan.wrap("hpa:findPath", () => {
+    return DebugSpan.wrap("AStar.WaterHierarchical:findPath", () => {
+      DebugSpan.set("$to", () => to);
+      DebugSpan.set("$from", () => from);
+
       if (Array.isArray(from)) {
         return this.findPathMultiSource(from as TileRef[], to as TileRef);
       }
@@ -84,7 +87,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     // Early exit for very short distances
     if (dist <= this.graph.clusterSize) {
-      DebugSpan.start("hpa:findPathSingle:earlyExit");
+      DebugSpan.start("earlyExit");
       const startX = this.map.x(from);
       const startY = this.map.y(from);
       const clusterX = Math.floor(startX / this.graph.clusterSize);
@@ -97,7 +100,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       }
     }
 
-    DebugSpan.start("hpa:findPathSingle:nodeLookup");
+    DebugSpan.start("nodeLookup");
     const startNode = this.findNearestNode(from);
     const endNode = this.findNearestNode(to);
     DebugSpan.end();
@@ -111,15 +114,15 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     }
 
     if (startNode.id === endNode.id) {
-      DebugSpan.start("hpa:findPathSingle:sameNodeLocalPath");
+      DebugSpan.start("sameNodeLocalPath");
       const clusterX = Math.floor(startNode.x / this.graph.clusterSize);
       const clusterY = Math.floor(startNode.y / this.graph.clusterSize);
       const path = this.findLocalPath(from, to, clusterX, clusterY, true);
-      DebugSpan.end("hpa:findPathSingle");
+      DebugSpan.end();
       return path;
     }
 
-    DebugSpan.start("hpa:findPathSingle:abstractPath");
+    DebugSpan.start("abstractPath");
     const nodePath = this.findAbstractPath(startNode.id, endNode.id);
     DebugSpan.end();
 
@@ -138,7 +141,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     const initialPath: TileRef[] = [];
 
-    DebugSpan.start("hpa:findPathSingle:initialPath");
+    DebugSpan.start("initialPath");
 
     // 1. Find path from start to first node
     const firstNode = this.graph.getNode(nodePath[0])!;
@@ -184,7 +187,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
           // Path is cached for this exact direction, use as-is
           initialPath.push(...cachedPath.slice(1));
           DebugSpan.set(
-            "cachedSegmentsUsed",
+            "$cachedSegmentsUsed",
             (prev) => ((prev as number) ?? 0) + 1,
           );
           continue;
