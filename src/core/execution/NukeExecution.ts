@@ -105,16 +105,18 @@ export class NukeExecution implements Execution {
     }
 
     // Also check if any allied structures would be destroyed
-    for (const unit of this.mg.units()) {
-      if (isStructureType(unit.type())) {
-        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          const owner = unit.owner();
-          if (owner.isPlayer() && this.player.isAlliedWith(owner)) {
-            playersToBreakAllianceWith.add(owner.smallID());
-          }
-        }
-      }
-    }
+    this.mg
+      .units()
+      .filter(
+        (unit) =>
+          isStructureType(unit.type()) &&
+          this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2 &&
+          unit.owner().isPlayer() &&
+          this.player.isAlliedWith(unit.owner()),
+      )
+      .forEach((unit) =>
+        playersToBreakAllianceWith.add(unit.owner().smallID()),
+      );
 
     for (const playerSmallId of playersToBreakAllianceWith) {
       const attackedPlayer = this.mg.playerBySmallID(playerSmallId);

@@ -57,16 +57,14 @@ export function wouldNukeBreakAlliance(
   const outer2 = magnitude.outer * magnitude.outer;
 
   // Check if any allied structure would be destroyed
-  for (const unit of units) {
-    if (isStructureType(unit.type())) {
-      if (gm.euclideanDistSquared(targetTile, unit.tile()) < outer2) {
-        const owner = unit.owner();
-        if (owner.isPlayer() && allySmallIds.has(owner.smallID())) {
-          return true; // Allied structure would be destroyed
-        }
-      }
-    }
-  }
+  const wouldDestroyAlliedStructure = units.some(
+    (unit) =>
+      isStructureType(unit.type()) &&
+      gm.euclideanDistSquared(targetTile, unit.tile()) < outer2 &&
+      unit.owner().isPlayer() &&
+      allySmallIds.has(unit.owner().smallID()),
+  );
+  if (wouldDestroyAlliedStructure) return true;
 
   const inner2 = magnitude.inner * magnitude.inner;
   const allyTileCounts = new Map<number, number>();
