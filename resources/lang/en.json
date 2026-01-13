@@ -235,7 +235,7 @@
     "pirate": "Pirate",
     "conquered": "Conquered",
     "loading_game_info": "Loading game stats",
-    "no_winner": "This game ended with no winner"
+    "no_winner": "This game ended with no winner (or a Nation won)"
   },
   "map": {
     "map": "Map",
