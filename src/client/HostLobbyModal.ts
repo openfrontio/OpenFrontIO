@@ -980,6 +980,7 @@ export class HostLobbyModal extends BaseModal {
     this.instantBuild = false;
     this.randomSpawn = false;
     this.compactMap = false;
+    this.chatEnabled = false;
     this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
