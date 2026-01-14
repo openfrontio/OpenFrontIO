@@ -16,9 +16,4 @@ export enum FxType {
   UnderConstruction = "UnderConstruction",
   Dust = "Dust",
   Conquest = "Conquest",
-  FireworkAll = "FireworkAll",
-  FireworkRed = "FireworkRed",
-  FireworkYellow = "FireworkYellow",
-  FireworkCyan = "FireworkCyan",
-  ConquestChampagne = "ConquestChampagne",
 }

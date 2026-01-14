@@ -8,6 +8,7 @@ import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
+import { modalHeader } from "./components/ui/ModalHeader";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
@@ -51,37 +52,11 @@ export class MatchmakingModal extends BaseModal {
           ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
-        <div
-          class="flex items-center mb-4 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("matchmaking_modal.title")}
-            </span>
-          </div>
-        </div>
+        ${modalHeader({
+          title: translateText("matchmaking_modal.title"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
         <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
           ${eloDisplay} ${this.renderInner()}
         </div>
@@ -145,7 +120,9 @@ export class MatchmakingModal extends BaseModal {
   private async connect() {
     const config = await getServerConfigFromClient();
 
-    this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
+    this.socket = new WebSocket(
+      `${config.jwtIssuer()}/matchmaking/join?instance_id=${window.INSTANCE_ID}`,
+    );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
       setTimeout(() => {
@@ -206,7 +183,7 @@ export class MatchmakingModal extends BaseModal {
     this.connected = false;
     this.gameID = null;
     this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
+    this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
   }
 
   protected onClose(): void {

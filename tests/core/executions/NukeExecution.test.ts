@@ -125,4 +125,36 @@ describe("NukeExecution", () => {
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
   });
+
+  test("nuke should break alliance when destroying ally's building even with few tiles", async () => {
+    const req = player.createAllianceRequest(otherPlayer);
+    req!.accept();
+
+    expect(player.isAlliedWith(otherPlayer)).toBe(true);
+
+    player.conquer(game.ref(1, 1));
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    // Give the other player just a few tiles (below the threshold of 5)
+    // and build a port on one of them
+    otherPlayer.conquer(game.ref(50, 50));
+    otherPlayer.conquer(game.ref(51, 50));
+    otherPlayer.conquer(game.ref(50, 51));
+    otherPlayer.buildUnit(UnitType.Port, game.ref(50, 50), {});
+
+    expect(otherPlayer.units(UnitType.Port)).toHaveLength(1);
+
+    // Nuke targeting the ally's port - this should break alliance
+    // even though the tile count is below threshold
+    game.addExecution(
+      new NukeExecution(UnitType.AtomBomb, player, game.ref(50, 50), null),
+    );
+
+    game.executeNextTick(); // init
+    game.executeNextTick(); // exec
+
+    // Alliance should be broken because we're destroying ally's building
+    expect(player.isTraitor()).toBe(true);
+    expect(player.isAlliedWith(otherPlayer)).toBe(false);
+  });
 });

@@ -10,7 +10,7 @@ import {
   GameType,
   PlayerInfo,
 } from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
+import { createGame, GameImpl } from "../../src/core/game/GameImpl";
 import { TileRef } from "../../src/core/game/GameMap";
 import {
   genTerrainFromBin,
@@ -90,16 +90,24 @@ export function getAdapter(
       // Recreate AStarWaterHierarchical without cache, this approach was chosen
       // over adding cache toggles to the existing game instance
       // to avoid adding side effect from benchmark to the game
-      const graph = game.miniWaterGraph();
-      if (!graph) {
-        throw new Error("miniWaterGraph not available");
-      }
-      const hpa = new AStarWaterHierarchical(game.miniMap(), graph, {
-        cachePaths: false,
-      });
-      (game as any)._miniWaterHPA = hpa;
 
-      return PathFinding.Water(game);
+      const originalGame = game as any;
+      const clonedGame = new GameImpl(
+        originalGame._humans,
+        originalGame._nations,
+        originalGame._map,
+        originalGame.miniGameMap,
+        originalGame._config,
+        originalGame._stats,
+      );
+
+      (clonedGame as any)._miniWaterHPA = new AStarWaterHierarchical(
+        clonedGame.miniMap(),
+        (clonedGame as any)._miniWaterGraph!,
+        { cachePaths: false },
+      );
+
+      return PathFinding.Water(clonedGame);
     }
     case "hpa.cached":
       return PathFinding.Water(game);
