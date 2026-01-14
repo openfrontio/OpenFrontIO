@@ -506,25 +506,10 @@ async function startMatchmakingPolling(gm: GameManager) {
           id: workerId,
           gameId: gameId,
           ccu: gm.activeClients(),
+          instanceId: process.env.INSTANCE_ID,
         }),
         signal: controller.signal,
       });
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
-      },
-      body: JSON.stringify({
-        id: workerId,
-        gameId: gameId,
-        ccu: gm.activeClients(),
-        instanceId: process.env.INSTANCE_ID,
-      }),
-      signal: controller.signal,
-    });
 
       clearTimeout(timeoutId);
 
@@ -539,8 +524,7 @@ async function startMatchmakingPolling(gm: GameManager) {
       log.info(`Lobby poll successful:`, data);
 
       if (data.assignment) {
-        const gameConfig = await playlist.gameConfig();
-        gameConfig.gameMapSize = GameMapSize.Compact;
+        const gameConfig = playlist.get1v1Config();
         const game = gm.createGame(gameId, gameConfig);
         setTimeout(() => {
           // Wait a few seconds to allow clients to connect.
@@ -550,17 +534,6 @@ async function startMatchmakingPolling(gm: GameManager) {
       }
     } catch (error) {
       log.error(`Error polling lobby:`, error);
-    const data = await response.json();
-    log.info(`Lobby poll successful:`, data);
-
-    if (data.assignment) {
-      const gameConfig = playlist.get1v1Config();
-      const game = gm.createGame(gameId, gameConfig);
-      setTimeout(() => {
-        // Wait a few seconds to allow clients to connect.
-        console.log(`Starting game ${gameId}`);
-        game.start();
-      }, 5000);
     }
   }, 5000 + Math.random() * 1000);
 }
