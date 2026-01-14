@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameMapSize, GameType } from "../core/game/Game";
+import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
@@ -497,8 +497,7 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      const gameConfig = await playlist.gameConfig();
-      gameConfig.gameMapSize = GameMapSize.Compact;
+      const gameConfig = playlist.get1v1Config();
       const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.

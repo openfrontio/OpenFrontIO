@@ -195,6 +195,11 @@ export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
+
+export enum RankedType {
+  OneVOne = "1v1",
+}
+
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
 
