@@ -8,6 +8,7 @@ import {
   MIN_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 const usernameKey: string = "username";
 
@@ -39,7 +40,7 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    const stored = this.getStoredUsername();
+    const stored = this.getUsername();
     this.parseAndSetUsername(stored);
   }
 
@@ -161,7 +162,14 @@ export class UsernameInput extends LitElement {
     }
   }
 
-  private getStoredUsername(): string {
+  private getUsername(): string {
+    crazyGamesSDK.getUsername().then((username) => {
+      if (username) {
+        this.baseUsername = username;
+        this.requestUpdate();
+      }
+      return null;
+    });
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
       return storedUsername;

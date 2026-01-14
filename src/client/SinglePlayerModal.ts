@@ -27,6 +27,7 @@ import "./components/FluentSlider";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -838,6 +839,8 @@ export class SinglePlayerModal extends BaseModal {
       : null;
 
     const selectedColor = this.userSettings.getSelectedColor();
+
+    await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
