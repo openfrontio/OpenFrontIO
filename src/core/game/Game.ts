@@ -195,6 +195,11 @@ export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
+
+export enum RankedType {
+  OneVOne = "1v1",
+}
+
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
 
@@ -253,6 +258,8 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.Port,
   UnitType.Factory,
 ]);
+
+export const StructureTypes: readonly UnitType[] = [..._structureTypes];
 
 export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
@@ -759,6 +766,14 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean;
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit) => boolean,
     playerId?: PlayerID,
     includeUnderConstruction?: boolean,
   ): boolean;

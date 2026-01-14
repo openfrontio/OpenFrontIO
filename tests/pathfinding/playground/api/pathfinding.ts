@@ -1,13 +1,7 @@
 import { TileRef } from "../../../../src/core/game/GameMap.js";
-import { AStarWaterHierarchical } from "../../../../src/core/pathfinding/algorithms/AStar.WaterHierarchical.js";
-import { BresenhamSmoothingTransformer } from "../../../../src/core/pathfinding/smoothing/BresenhamPathSmoother.js";
-import { ComponentCheckTransformer } from "../../../../src/core/pathfinding/transformers/ComponentCheckTransformer.js";
-import { MiniMapTransformer } from "../../../../src/core/pathfinding/transformers/MiniMapTransformer.js";
-import { ShoreCoercingTransformer } from "../../../../src/core/pathfinding/transformers/ShoreCoercingTransformer.js";
-import {
-  PathFinder,
-  SteppingPathFinder,
-} from "../../../../src/core/pathfinding/types.js";
+import { PathFinding } from "../../../../src/core/pathfinding/PathFinder.js";
+import { SteppingPathFinder } from "../../../../src/core/pathfinding/types.js";
+import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
 import { getAdapter } from "../../utils.js";
 import { COMPARISON_ADAPTERS, loadMap } from "./maps.js";
 
@@ -19,6 +13,7 @@ interface PrimaryResult {
   debug: {
     nodePath: Array<[number, number]> | null;
     initialPath: Array<[number, number]> | null;
+    cachedSegmentsUsed: number | null;
     timings: Record<string, number>;
   };
 }
@@ -73,63 +68,54 @@ function pathToCoords(
 }
 
 /**
- * Build the full transformer chain like PathFinding.Water() does
+ * Extract timings from DebugSpan hierarchy
+ * Flattens nested spans into { spanName: duration } format
  */
-function buildWrappedPathFinder(
-  hpaStar: AStarWaterHierarchical,
-  game: any,
-  graph: any,
-): PathFinder<TileRef> {
-  const miniMap = game.miniMap();
-  const componentCheckFn = (t: TileRef) => graph.getComponentId(t);
+function extractTimings(span: {
+  name: string;
+  duration?: number;
+  children: any[];
+}): Record<string, number> {
+  const timings: Record<string, number> = {};
 
-  // Chain: hpaStar -> ComponentCheck -> Bresenham -> ShoreCoercing -> MiniMap
-  const withComponentCheck = new ComponentCheckTransformer(
-    hpaStar,
-    componentCheckFn,
-  );
-  const withSmoothing = new BresenhamSmoothingTransformer(
-    withComponentCheck,
-    miniMap,
-  );
-  const withShoreCoercing = new ShoreCoercingTransformer(
-    withSmoothing,
-    miniMap,
-  );
-  const withMiniMap = new MiniMapTransformer(withShoreCoercing, game, miniMap);
+  if (span.duration !== undefined) {
+    timings[span.name] = span.duration;
+  }
 
-  return withMiniMap;
+  for (const child of span.children) {
+    Object.assign(timings, extractTimings(child));
+  }
+
+  return timings;
 }
 
 /**
- * Compute primary path using AStarWaterHierarchical with debug info
- * Uses the same transformer chain as PathFinding.Water()
+ * Compute primary path using PathFinding.Water with debug info
  */
 function computePrimaryPath(
-  hpaStar: AStarWaterHierarchical,
   game: any,
-  graph: any,
   fromRef: TileRef,
   toRef: TileRef,
 ): PrimaryResult {
   const miniMap = game.miniMap();
 
-  // Build wrapped pathfinder with all transformers
-  const wrappedPf = buildWrappedPathFinder(hpaStar, game, graph);
+  // Use standard PathFinding.Water
+  const pf = PathFinding.Water(game);
 
-  // Enable debug mode to capture internal state
-  hpaStar.debugMode = true;
+  // Enable DebugSpan to capture internal state
+  DebugSpan.enable();
 
-  const start = performance.now();
-  const path = wrappedPf.findPath(fromRef, toRef);
-  const time = performance.now() - start;
+  const path = pf.findPath(fromRef, toRef);
 
-  const debugInfo = hpaStar.debugInfo;
+  // Get span data and disable
+  const span = DebugSpan.getLastSpan();
+  DebugSpan.disable();
 
   // Convert node path (miniMap coords) to full map coords
   let nodePath: Array<[number, number]> | null = null;
-  if (debugInfo?.nodePath) {
-    nodePath = debugInfo.nodePath.map((tile: TileRef) => {
+  const spanNodePath = span?.data?.nodePath as TileRef[] | undefined;
+  if (spanNodePath) {
+    nodePath = spanNodePath.map((tile: TileRef) => {
       const x = miniMap.x(tile) * 2;
       const y = miniMap.y(tile) * 2;
       return [x, y] as [number, number];
@@ -138,22 +124,32 @@ function computePrimaryPath(
 
   // Convert initialPath (miniMap TileRefs) to full map coords
   let initialPath: Array<[number, number]> | null = null;
-  if (debugInfo?.initialPath) {
-    initialPath = debugInfo.initialPath.map((tile: TileRef) => {
+  const spanInitialPath = span?.data?.initialPath as TileRef[] | undefined;
+  if (spanInitialPath) {
+    initialPath = spanInitialPath.map((tile: TileRef) => {
       const x = miniMap.x(tile) * 2;
       const y = miniMap.y(tile) * 2;
       return [x, y] as [number, number];
     });
   }
 
+  let cachedSegmentsUsed: number | null = null;
+  if (span?.data?.cachedSegmentsUsed !== undefined) {
+    cachedSegmentsUsed = span.data.cachedSegmentsUsed as number;
+  }
+
+  // Extract timings from span hierarchy
+  const timings = span ? extractTimings(span) : {};
+
   return {
     path: pathToCoords(path, game),
     length: path ? path.length : 0,
-    time,
+    time: timings["hpa:findPath"] || 0,
     debug: {
       nodePath,
       initialPath,
-      timings: debugInfo?.timings ?? {},
+      cachedSegmentsUsed,
+      timings,
     },
   };
 }
@@ -189,8 +185,7 @@ export async function computePath(
   to: [number, number],
   options: { adapters?: string[] } = {},
 ): Promise<PathfindResult> {
-  const { game, hpaStar } = await loadMap(mapName);
-  const graph = game.miniWaterGraph();
+  const { game } = await loadMap(mapName);
 
   // Convert coordinates to TileRefs
   const fromRef = game.ref(from[0], from[1]);
@@ -204,8 +199,8 @@ export async function computePath(
     throw new Error(`End point (${to[0]}, ${to[1]}) is not water`);
   }
 
-  // Compute primary path (HPA* with debug)
-  const primary = computePrimaryPath(hpaStar, game, graph, fromRef, toRef);
+  // Compute primary path (PathFinding.Water with debug)
+  const primary = computePrimaryPath(game, fromRef, toRef);
 
   // Compute comparison paths
   const selectedAdapters = options.adapters ?? COMPARISON_ADAPTERS;
