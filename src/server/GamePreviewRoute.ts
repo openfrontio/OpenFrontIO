@@ -14,6 +14,7 @@ import {
   ExternalGameInfo,
   ExternalGameInfoSchema,
 } from "./GamePreviewBuilder";
+import { renderHtmlContent, setHtmlNoCacheHeaders } from "./RenderHtml";
 
 const requestOrigin = (req: Request, config: ServerConfig): string => {
   const protoHeader = (req.headers["x-forwarded-proto"] as string) ?? "";
@@ -121,7 +122,7 @@ export function registerGamePreviewRoute(opts: {
       }
 
       if (filePath) {
-        const html = await fsPromises.readFile(filePath, "utf-8");
+        const html = await renderHtmlContent(filePath);
         const root = parse(html);
         const head = root.querySelector("head");
         if (head) {
@@ -145,7 +146,8 @@ export function registerGamePreviewRoute(opts: {
           );
         }
 
-        return res.status(200).type("html").send(root.toString());
+        setHtmlNoCacheHeaders(res);
+        return res.status(200).send(root.toString());
       }
 
       // Fallback to JSON if HTML file not found
