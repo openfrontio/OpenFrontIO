@@ -73,7 +73,7 @@ export class OModal extends LitElement {
         ? html`
             <aside
               class="${backdropClass}"
-              @click=${this.inline ? null : this.close}
+              @click=${this.inline ? null : () => this.close()}
             >
               <div
                 @click=${(e: Event) => e.stopPropagation()}
@@ -83,7 +83,7 @@ export class OModal extends LitElement {
                   ? html``
                   : html`<div
                       class="absolute top-4 right-4 z-10 text-white cursor-pointer"
-                      @click=${this.close}
+                      @click=${() => this.close()}
                     >
                       ✕
                     </div>`}
