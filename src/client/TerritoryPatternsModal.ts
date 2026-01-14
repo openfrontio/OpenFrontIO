@@ -174,8 +174,8 @@ export class TerritoryPatternsModal extends BaseModal {
     }
 
     return html`
-      <div class="flex flex-col gap-4">
-        <div class="flex justify-center">
+      <div class="flex flex-col">
+        <div class="pt-4 flex justify-center">
           ${hasLinkedAccount(this.userMeResponse)
             ? this.renderMySkinsButton()
             : html``}

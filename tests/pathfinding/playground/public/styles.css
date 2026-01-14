@@ -522,6 +522,10 @@ canvas {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.comparison-row.active .comp-name {
+  color: #fff;
+}
+
 .comparison-row:last-child {
   border-bottom: none;
 }

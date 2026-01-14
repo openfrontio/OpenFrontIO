@@ -120,7 +120,9 @@ export class MatchmakingModal extends BaseModal {
   private async connect() {
     const config = await getServerConfigFromClient();
 
-    this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
+    this.socket = new WebSocket(
+      `${config.jwtIssuer()}/matchmaking/join?instance_id=${window.INSTANCE_ID}`,
+    );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
       setTimeout(() => {
@@ -181,7 +183,7 @@ export class MatchmakingModal extends BaseModal {
     this.connected = false;
     this.gameID = null;
     this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
+    this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
   }
 
   protected onClose(): void {

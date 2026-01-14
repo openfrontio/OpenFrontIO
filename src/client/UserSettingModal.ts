@@ -430,7 +430,7 @@ export class UserSettingModal extends BaseModal {
         </div>
 
         <div
-          class="pt-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
+          class="pt-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
         >
           <div class="flex flex-col gap-2">${activeContent}</div>
         </div>

@@ -1,4 +1,5 @@
 import { GameMap } from "../../game/GameMap";
+import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
 import { AStar, AStarAdapter } from "./AStar";
 
@@ -11,7 +12,9 @@ export class AStarRail implements PathFinder<number> {
   }
 
   findPath(from: number | number[], to: number): number[] | null {
-    return this.aStar.findPath(from, to);
+    return DebugSpan.wrap("AStar.Rail:findPath", () =>
+      this.aStar.findPath(from, to),
+    );
   }
 }
 

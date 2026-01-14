@@ -13,6 +13,8 @@ import {
   BOMB_INDEX_LAUNCH,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
   NukeType,
@@ -272,6 +274,14 @@ export class StatsImpl implements Stats {
 
   playerKilled(player: Player, tick: number): void {
     this._addPlayerKilled(player, tick);
+  }
+
+  trainSelfTrade(player: Player, gold: BigIntLike): void {
+    this._addGold(player, GOLD_INDEX_TRAIN_SELF, gold);
+  }
+
+  trainExternalTrade(player: Player, gold: BigIntLike): void {
+    this._addGold(player, GOLD_INDEX_TRAIN_OTHER, gold);
   }
 
   lobbyFillTime(fillTimeMs: number): void {}

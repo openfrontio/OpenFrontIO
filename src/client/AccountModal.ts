@@ -5,6 +5,7 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -198,7 +199,7 @@ export class AccountModal extends BaseModal {
             </h3>
             <game-list
               .games=${this.recentGames}
-              .onViewGame=${(id: string) => this.viewGame(id)}
+              .onViewGame=${(id: string) => void this.viewGame(id)}
             ></game-list>
           </div>
         </div>
@@ -229,15 +230,16 @@ export class AccountModal extends BaseModal {
     return html``;
   }
 
-  private viewGame(gameId: string): void {
+  private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const path = location.pathname;
-    const { search } = location;
-    const hash = `#join=${encodeURIComponent(gameId)}`;
-    const newUrl = `${path}${search}${hash}`;
+    const config = await getServerConfigFromClient();
+    const encodedGameId = encodeURIComponent(gameId);
+    const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    window.dispatchEvent(
+      new CustomEvent("join-changed", { detail: { gameId: encodedGameId } }),
+    );
   }
 
   private renderLogoutButton(): TemplateResult {
