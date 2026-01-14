@@ -147,9 +147,9 @@ export class PatternButton extends LitElement {
           </div>
         </button>
 
-        <div class="w-full mt-2">
-          ${this.requiresPurchase && this.pattern?.product
-            ? html`
+        ${this.requiresPurchase && this.pattern?.product
+          ? html`
+              <div class="w-full mt-2">
                 <button
                   class="w-full px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-all duration-200
                    hover:bg-green-500/30 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)]"
@@ -170,10 +170,10 @@ export class PatternButton extends LitElement {
                         ${translateText("skin_test_modal.test_skin")}
                       </button>
                     `
-                  : html``}
-              `
-            : html`<div class="h-[34px]"></div>`}
-        </div>
+                  : null}
+              </div>
+            `
+          : null}
       </div>
     `;
   }
