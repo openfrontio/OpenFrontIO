@@ -9,6 +9,7 @@ import {
   HumansVsNations,
   PublicGameModifiers,
   Quads,
+  RankedType,
   Trios,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
@@ -136,6 +137,40 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 5 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
+  public get1v1Config(): GameConfig {
+    const ffaMaps = [
+      GameMapType.Iceland,
+      GameMapType.World,
+      GameMapType.EuropeClassic,
+      GameMapType.Australia,
+      GameMapType.FaroeIslands,
+      GameMapType.Pangaea,
+      GameMapType.Italia,
+      GameMapType.FalklandIslands,
+      GameMapType.Sierpinski,
+    ];
+    return {
+      donateGold: false,
+      donateTroops: false,
+      gameMap: ffaMaps[Math.floor(Math.random() * ffaMaps.length)],
+      maxPlayers: 2,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Compact,
+      difficulty: Difficulty.Easy,
+      rankedType: RankedType.OneVOne,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: 10, // 10 minutes
+      instantBuild: false,
+      randomSpawn: false,
+      disableNations: false,
+      gameMode: GameMode.FFA,
+      bots: 100,
       spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
