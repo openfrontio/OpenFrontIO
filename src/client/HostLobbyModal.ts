@@ -21,6 +21,7 @@ import {
   GameConfig,
   GameInfo,
   TeamCountConfig,
+  isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -61,6 +62,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
+  @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
@@ -73,6 +75,8 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
+
+  private leaveLobbyOnClose = true;
 
   private renderOptionToggle(
     labelKey: string,
@@ -100,6 +104,28 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
+  private getRandomString(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    return Array.from(
+      { length: 5 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join("");
+  }
+
+  private async buildLobbyUrl(): Promise<string> {
+    const config = await getServerConfigFromClient();
+    return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+  }
+
+  private async constructUrl(): Promise<string> {
+    this.lobbyUrlSuffix = this.getRandomString();
+    return await this.buildLobbyUrl();
+  }
+
+  private updateHistory(url: string): void {
+    history.replaceState(null, "", url);
+  }
+
   render() {
     const content = html`
       <div
@@ -109,7 +135,7 @@ export class HostLobbyModal extends BaseModal {
         ${modalHeader({
           title: translateText("host_modal.title"),
           onBack: () => {
-            this.leaveLobby();
+            this.leaveLobbyOnClose = true;
             this.close();
           },
           ariaLabel: translateText("common.back"),
@@ -821,9 +847,14 @@ export class HostLobbyModal extends BaseModal {
     );
 
     createLobby(this.lobbyCreatorClientID)
-      .then((lobby) => {
+      .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
+        if (!isValidGameID(this.lobbyId)) {
+          throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
+        }
         crazyGamesSDK.showInviteButton(this.lobbyId);
+        const url = await this.constructUrl();
+        this.updateHistory(url);
       })
       .then(() => {
         this.dispatchEvent(
@@ -895,6 +926,10 @@ export class HostLobbyModal extends BaseModal {
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
+    if (this.leaveLobbyOnClose) {
+      this.leaveLobby();
+      this.updateHistory("/"); // Reset URL to base
+    }
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
@@ -933,6 +968,8 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = "";
     this.lobbyIdVisible = true;
     this.nationCount = 0;
+
+    this.leaveLobbyOnClose = true;
   }
 
   private async handleSelectRandomMap() {
@@ -1075,6 +1112,8 @@ export class HostLobbyModal extends BaseModal {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
+    const url = await this.constructUrl();
+    this.updateHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
@@ -1134,6 +1173,10 @@ export class HostLobbyModal extends BaseModal {
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+
+    // If the modal closes as part of starting the game, do not leave the lobby
+    this.leaveLobbyOnClose = false;
+
     const config = await getServerConfigFromClient();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
@@ -1144,12 +1187,17 @@ export class HostLobbyModal extends BaseModal {
         },
       },
     );
+
+    if (!response.ok) {
+      this.leaveLobbyOnClose = true;
+    }
     return response;
   }
 
   private async copyToClipboard() {
+    const url = await this.buildLobbyUrl();
     await copyToClipboard(
-      `${location.origin}/#join=${this.lobbyId}`,
+      url,
       () => (this.copySuccess = true),
       () => (this.copySuccess = false),
     );
