@@ -60,9 +60,9 @@ export class RankingHeader extends LitElement {
       case RankType.TrainTrade:
         return html`
           <div class="flex justify-between sm:px-17.5 w-full">
-            ${this.renderMultipleChoiceHeaderButton("🚂", RankType.NavalTrade)}
+            ${this.renderMultipleChoiceHeaderButton("🚂", RankType.TrainTrade)}
             /
-            ${this.renderMultipleChoiceHeaderButton("🚢", RankType.TrainTrade)}
+            ${this.renderMultipleChoiceHeaderButton("🚢", RankType.NavalTrade)}
           </div>
         `;
       case RankType.ConqueredGold:
