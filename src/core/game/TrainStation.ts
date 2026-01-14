@@ -12,11 +12,7 @@ interface TrainStopHandler {
   onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution): void;
 }
 
-/**
- * All stop handlers share the same logic for the time being
- * Behavior to be defined
- */
-class CityStopHandler implements TrainStopHandler {
+class TradeStationStopHandler implements TrainStopHandler {
   onStop(
     mg: Game,
     station: TrainStation,
@@ -24,31 +20,14 @@ class CityStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const gold = mg.config().trainGold(rel(trainOwner, stationOwner));
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
+      stationOwner.addGold(gold, station.tile());
+      mg.stats().trainExternalTrade(trainOwner, gold);
     }
-    trainOwner.addGold(goldBonus, station.tile());
-  }
-}
-
-class PortStopHandler implements TrainStopHandler {
-  constructor(private random: PseudoRandom) {}
-  onStop(
-    mg: Game,
-    station: TrainStation,
-    trainExecution: TrainExecution,
-  ): void {
-    const stationOwner = station.unit.owner();
-    const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
-
-    trainOwner.addGold(goldBonus, station.tile());
-    // Share revenue with the station owner if it's not the current player
-    if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
-    }
+    trainOwner.addGold(gold, station.tile());
+    mg.stats().trainSelfTrade(trainOwner, gold);
   }
 }
 
@@ -64,8 +43,8 @@ export function createTrainStopHandlers(
   random: PseudoRandom,
 ): Partial<Record<UnitType, TrainStopHandler>> {
   return {
-    [UnitType.City]: new CityStopHandler(),
-    [UnitType.Port]: new PortStopHandler(random),
+    [UnitType.City]: new TradeStationStopHandler(),
+    [UnitType.Port]: new TradeStationStopHandler(),
     [UnitType.Factory]: new FactoryStopHandler(),
   };
 }
