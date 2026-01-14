@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameMapSize, GameType } from "../core/game/Game";
+import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
@@ -21,6 +21,7 @@ import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
+import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
@@ -94,7 +95,22 @@ export async function startWorker() {
   app.set("trust proxy", 3);
   app.use(compression());
   app.use(express.json());
+
+  // Configure MIME types for webp files
+  express.static.mime.define({ "image/webp": ["webp"] });
+
   app.use(express.static(path.join(__dirname, "../../out")));
+  app.use(
+    "/maps",
+    express.static(path.join(__dirname, "../../static/maps"), {
+      maxAge: "1y",
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".webp")) {
+          res.setHeader("Content-Type", "image/webp");
+        }
+      },
+    }),
+  );
   app.use(
     rateLimit({
       windowMs: 1000, // 1 second
@@ -185,6 +201,15 @@ export async function startWorker() {
       return res.status(404).json({ error: "Game not found" });
     }
     res.json(game.gameInfo());
+  });
+
+  registerGamePreviewRoute({
+    app,
+    gm,
+    config,
+    workerId,
+    log,
+    baseDir: __dirname,
   });
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
@@ -479,6 +504,7 @@ async function pollLobby(gm: GameManager) {
         id: workerId,
         gameId: gameId,
         ccu: gm.activeClients(),
+        instanceId: process.env.INSTANCE_ID,
       }),
       signal: controller.signal,
     });
@@ -496,8 +522,7 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
-      const gameConfig = playlist.gameConfig();
-      gameConfig.gameMapSize = GameMapSize.Compact;
+      const gameConfig = playlist.get1v1Config();
       const game = gm.createGame(gameId, gameConfig);
       setTimeout(() => {
         // Wait a few seconds to allow clients to connect.

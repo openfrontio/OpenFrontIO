@@ -3,6 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import {
   ClientInfo,
+  GAME_ID_REGEX,
   GameConfig,
   GameInfo,
   GameRecordSchema,
@@ -16,6 +17,7 @@ import { JoinLobbyEvent } from "./Main";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/LobbyTeamView";
+import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
@@ -31,6 +33,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private playersInterval: NodeJS.Timeout | null = null;
   private userSettings: UserSettings = new UserSettings();
 
+  private leaveLobbyOnClose = true;
+
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
   }
@@ -40,125 +44,100 @@ export class JoinPrivateLobbyModal extends BaseModal {
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
-        <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.closeAndLeave}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label=${translateText("common.close")}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("private_lobby.title")}
-            </span>
-          </div>
-
-          <!-- Lobby ID Box -->
-          ${this.hasJoined
-            ? html`<div
-                class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-              >
-                <button
-                  @click=${() => {
-                    this.lobbyIdVisible = !this.lobbyIdVisible;
-                    this.requestUpdate();
-                  }}
-                  class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                  title=${translateText("toggle_visibility")}
-                >
-                  ${this.lobbyIdVisible
-                    ? html`<svg
-                        viewBox="0 0 512 512"
-                        height="16px"
-                        width="16px"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                        ></path>
-                      </svg>`
-                    : html`<svg
-                        viewBox="0 0 512 512"
-                        height="16px"
-                        width="16px"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="32"
-                        ></path>
-                        <path
-                          d="M144 256l224 0"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="32"
-                          stroke-linecap="round"
-                        ></path>
-                      </svg>`}
-                </button>
+        ${modalHeader({
+          title: translateText("private_lobby.title"),
+          onBack: this.closeAndLeave,
+          ariaLabel: translateText("common.close"),
+          rightContent: this.hasJoined
+            ? html`
+                <!-- Lobby ID Box -->
                 <div
-                  @click=${this.copyToClipboard}
-                  @dblclick=${(e: Event) => {
-                    (e.currentTarget as HTMLElement).classList.add(
-                      "select-all",
-                    );
-                  }}
-                  @mouseleave=${(e: Event) => {
-                    (e.currentTarget as HTMLElement).classList.remove(
-                      "select-all",
-                    );
-                  }}
-                  class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
-                  title="${translateText("common.click_to_copy")}"
+                  class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
                 >
-                  ${this.copySuccess
-                    ? translateText("common.copied")
-                    : this.lobbyIdVisible
-                      ? this.currentLobbyId
-                      : "••••••••"}
-                </div>
-                <button
-                  @click=${this.copyToClipboard}
-                  class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                  title="${translateText("common.click_to_copy")}"
-                  aria-label="${translateText("common.click_to_copy")}"
-                  type="button"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    height="16px"
-                    width="16px"
-                    fill="currentColor"
-                    aria-hidden="true"
+                  <button
+                    @click=${() => {
+                      this.lobbyIdVisible = !this.lobbyIdVisible;
+                      this.requestUpdate();
+                    }}
+                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                    title="${translateText("user_setting.toggle_visibility")}"
                   >
-                    <path
-                      d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                    />
-                  </svg>
-                </button>
-              </div>`
-            : ""}
-        </div>
+                    ${this.lobbyIdVisible
+                      ? html`<svg
+                          viewBox="0 0 512 512"
+                          height="16px"
+                          width="16px"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                          ></path>
+                        </svg>`
+                      : html`<svg
+                          viewBox="0 0 512 512"
+                          height="16px"
+                          width="16px"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="32"
+                          ></path>
+                          <path
+                            d="M144 256l224 0"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="32"
+                            stroke-linecap="round"
+                          ></path>
+                        </svg>`}
+                  </button>
+                  <div
+                    @click=${this.copyToClipboard}
+                    @dblclick=${(e: Event) => {
+                      (e.currentTarget as HTMLElement).classList.add(
+                        "select-all",
+                      );
+                    }}
+                    @mouseleave=${(e: Event) => {
+                      (e.currentTarget as HTMLElement).classList.remove(
+                        "select-all",
+                      );
+                    }}
+                    class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
+                    title="${translateText("common.click_to_copy")}"
+                  >
+                    ${this.copySuccess
+                      ? translateText("common.copied")
+                      : this.lobbyIdVisible
+                        ? this.currentLobbyId
+                        : "••••••••"}
+                  </div>
+                  <button
+                    @click=${this.copyToClipboard}
+                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                    title="${translateText("common.click_to_copy")}"
+                    aria-label="${translateText("common.click_to_copy")}"
+                    type="button"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      height="16px"
+                      width="16px"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              `
+            : undefined,
+        })}
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${!this.hasJoined
             ? html`<div class="flex flex-col gap-3">
@@ -378,21 +357,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
   }
 
-  protected onClose(): void {
-    if (this.lobbyIdInput) this.lobbyIdInput.value = "";
-    this.currentLobbyId = "";
-    this.gameConfig = null;
-    this.players = [];
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
+  private leaveLobby() {
+    if (!this.currentLobbyId || !this.hasJoined) {
+      return;
     }
-  }
-
-  public closeAndLeave() {
-    this.close();
-    this.hasJoined = false;
-    this.message = "";
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
         detail: { lobby: this.currentLobbyId },
@@ -402,16 +370,43 @@ export class JoinPrivateLobbyModal extends BaseModal {
     );
   }
 
+  protected onClose(): void {
+    if (this.lobbyIdInput) this.lobbyIdInput.value = "";
+    this.gameConfig = null;
+    this.players = [];
+    if (this.playersInterval) {
+      clearInterval(this.playersInterval);
+      this.playersInterval = null;
+    }
+    if (this.leaveLobbyOnClose) {
+      this.leaveLobby();
+      // Reset URL to base when modal closes
+      history.replaceState(null, "", window.location.origin + "/");
+    }
+
+    this.hasJoined = false;
+    this.message = "";
+    this.currentLobbyId = "";
+
+    this.leaveLobbyOnClose = true;
+  }
+
+  public closeAndLeave() {
+    this.leaveLobbyOnClose = true;
+    this.close();
+  }
+
   private async copyToClipboard() {
+    const config = await getServerConfigFromClient();
     await copyToClipboard(
-      `${location.origin}/#join=${this.currentLobbyId}`,
+      `${location.origin}/${config.workerPath(this.currentLobbyId)}/game/${this.currentLobbyId}`,
       () => (this.copySuccess = true),
       () => (this.copySuccess = false),
     );
   }
 
   private isValidLobbyId(value: string): boolean {
-    return /^[a-zA-Z0-9]{8}$/.test(value);
+    return GAME_ID_REGEX.test(value);
   }
 
   private normalizeLobbyId(input: string): string | null {
@@ -427,16 +422,19 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   private extractLobbyIdFromUrl(input: string): string {
-    if (input.startsWith("http")) {
-      if (input.includes("#join=")) {
-        const params = new URLSearchParams(input.split("#")[1]);
-        return params.get("join") ?? input;
-      } else if (input.includes("join/")) {
-        return input.split("join/")[1];
-      } else {
-        return input;
-      }
-    } else {
+    if (!input.startsWith("http")) {
+      return input;
+    }
+
+    try {
+      const url = new URL(input);
+      const match = url.pathname.match(/game\/([^/]+)/);
+      const candidate = match?.[1];
+      if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;
+
+      return input;
+    } catch (error) {
+      console.warn("Failed to parse lobby URL", error);
       return input;
     }
   }
@@ -526,6 +524,9 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.message = "";
       this.hasJoined = true;
 
+      // If the modal closes as part of joining the game, do not leave the lobby
+      this.leaveLobbyOnClose = false;
+
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
@@ -548,22 +549,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private async checkArchivedGame(
     lobbyId: string,
   ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
-    const archivePromise = fetch(`${getApiBase()}/game/${lobbyId}`, {
+    const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
-    const gitCommitPromise = fetch(`/commit.txt`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-cache",
-    });
-
-    const [archiveResponse, gitCommitResponse] = await Promise.all([
-      archivePromise,
-      gitCommitPromise,
-    ]);
 
     if (archiveResponse.status === 404) {
       return "not_found";
@@ -578,19 +569,11 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    let myGitCommit = "";
-    if (gitCommitResponse.status === 404) {
-      // commit.txt is not found when running locally
-      myGitCommit = "DEV";
-    } else if (gitCommitResponse.status === 200) {
-      myGitCommit = (await gitCommitResponse.text()).trim();
-    } else {
-      console.error("Error getting git commit:", gitCommitResponse.status);
-      return "error";
-    }
-
     // Allow DEV to join games created with a different version for debugging.
-    if (myGitCommit !== "DEV" && parsed.data.gitCommit !== myGitCommit) {
+    if (
+      window.GIT_COMMIT !== "DEV" &&
+      parsed.data.gitCommit !== window.GIT_COMMIT
+    ) {
       const safeLobbyId = this.sanitizeForLog(lobbyId);
       console.warn(
         `Git commit hash mismatch for game ${safeLobbyId}`,

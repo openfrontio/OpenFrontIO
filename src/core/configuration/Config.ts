@@ -2,12 +2,9 @@ import { Colord } from "colord";
 import { JWK } from "jose";
 import {
   Game,
-  GameMapType,
-  GameMode,
   Gold,
   Player,
   PlayerInfo,
-  PublicGameModifiers,
   Team,
   TerraNullius,
   Tick,
@@ -31,12 +28,6 @@ export interface ServerConfig {
   turnstileSecretKey(): string;
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(
-    map: GameMapType,
-    mode: GameMode,
-    numPlayerTeams: TeamCountConfig | undefined,
-    isCompactMap?: boolean,
-  ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -58,8 +49,6 @@ export interface ServerConfig {
   subdomain(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
-  getRandomPublicGameModifiers(): PublicGameModifiers;
-  supportsCompactMapForTeams(map: GameMapType): boolean;
 }
 
 export interface NukeMagnitude {
