@@ -40,6 +40,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  ReceiveLobbyChatEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -187,16 +188,12 @@ export function joinLobby(
         console.error("Malformed lobby_chat message:", message);
         return;
       }
-      document.dispatchEvent(
-        new CustomEvent("lobby-chat:message", {
-          detail: {
-            username: message.username,
-            isHost: message.isHost,
-            text: message.text,
-          },
-          bubbles: true,
-          composed: true,
-        }),
+      eventBus.emit(
+        new ReceiveLobbyChatEvent(
+          message.username,
+          message.isHost,
+          message.text,
+        ),
       );
     }
   };

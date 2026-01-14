@@ -182,6 +182,15 @@ export class SendLobbyChatEvent implements GameEvent {
   constructor(public readonly text: string) {}
 }
 
+// Event: receive a lobby chat message
+export class ReceiveLobbyChatEvent implements GameEvent {
+  constructor(
+    public readonly username: string,
+    public readonly isHost: boolean,
+    public readonly text: string,
+  ) {}
+}
+
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }

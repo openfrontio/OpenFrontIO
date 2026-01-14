@@ -2,21 +2,13 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../client/Utils";
 import { EventBus } from "../../core/EventBus";
-import { SendLobbyChatEvent } from "../Transport";
+import { ReceiveLobbyChatEvent, SendLobbyChatEvent } from "../Transport";
 
 interface ChatMessage {
   username: string;
   isHost: boolean;
   text: string;
 }
-
-type LobbyChatMessageEvent = CustomEvent<{
-  username: string;
-  isHost: boolean;
-  text: string;
-}>;
-
-type EventBusReadyEvent = CustomEvent<void>;
 
 @customElement("lobby-chat-panel")
 export class LobbyChatPanel extends LitElement {
@@ -28,54 +20,40 @@ export class LobbyChatPanel extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener(
-      "lobby-chat:message",
-      this.onIncoming as EventListener,
-    );
     const globalBus = window.__eventBus;
     if (globalBus) {
       this.bus = globalBus;
+      this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
     }
     this.username = window.__username ?? null;
-    document.addEventListener(
-      "event-bus:ready",
-      this.onBusReady as EventListener,
-    );
   }
 
   disconnectedCallback(): void {
-    document.removeEventListener(
-      "lobby-chat:message",
-      this.onIncoming as EventListener,
-    );
-    document.removeEventListener(
-      "event-bus:ready",
-      this.onBusReady as EventListener,
-    );
+    if (this.bus) {
+      this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
+    }
     super.disconnectedCallback();
   }
 
   setEventBus(bus: EventBus) {
+    // Remove old listener if exists
+    if (this.bus) {
+      this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
+    }
     this.bus = bus;
+    this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
   }
 
-  private onIncoming = async (e: LobbyChatMessageEvent) => {
-    const { username, isHost, text } = e.detail;
-    this.messages = [...this.messages, { username, isHost, text }];
+  private onIncoming = async (e: ReceiveLobbyChatEvent) => {
+    this.messages = [
+      ...this.messages,
+      { username: e.username, isHost: e.isHost, text: e.text },
+    ];
     await this.updateComplete;
     const container = this.renderRoot.querySelector(
       ".lcp-messages",
     ) as HTMLElement | null;
     if (container) container.scrollTop = container.scrollHeight;
-  };
-
-  private onBusReady = (_e: EventBusReadyEvent) => {
-    const globalBus = window.__eventBus;
-    if (globalBus) {
-      this.bus = globalBus;
-      this.requestUpdate();
-    }
-    this.username ??= window.__username ?? null;
   };
 
   private get canSend(): boolean {
@@ -106,23 +84,30 @@ export class LobbyChatPanel extends LitElement {
 
   render() {
     return html`
-      <div class="lcp-container">
-        <div class="lcp-messages" role="log" aria-live="polite">
+      <div class="flex flex-col gap-2 max-h-60 w-full">
+        <div
+          class="overflow-y-auto border border-white/10 rounded-lg p-2 h-[150px] min-h-[120px] bg-black/50 text-white/80 flex flex-col gap-1.5 touch-auto sm:max-h-[200px] sm:h-[120px] sm:min-h-[100px]"
+          role="log"
+          aria-live="polite"
+        >
           ${this.messages.map((m) => {
             const displayName = m.isHost ? `${m.username} (Host)` : m.username;
             const isLocal =
               this.username !== null && m.username === this.username;
             const msgClass = isLocal
-              ? "lcp-msg lcp-msg--local"
-              : "lcp-msg lcp-msg--remote";
+              ? "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-end text-right bg-[rgba(36,59,85,0.7)] sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]"
+              : "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-start text-left bg-black/60 sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]";
             return html`<div class="${msgClass}">
-              <span class="lcp-sender">${displayName}:</span> ${m.text}
+              <span class="text-green-400 mr-1 font-medium"
+                >${displayName}:</span
+              >
+              ${m.text}
             </div>`;
           })}
         </div>
-        <div class="lcp-input-row">
+        <div class="flex gap-2 flex-nowrap">
           <input
-            class="lcp-input"
+            class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-base text-black bg-white/90 border border-white/20 focus:outline-none focus:border-blue-500/50 focus:bg-white sm:py-2 sm:px-2.5"
             type="text"
             maxlength="300"
             .value=${this.inputText}
@@ -139,7 +124,7 @@ export class LobbyChatPanel extends LitElement {
             aria-label=${translateText("lobby_chat.placeholder")}
           />
           <button
-            class="lcp-send"
+            class="rounded-lg px-4 py-2.5 text-sm font-semibold bg-blue-600/80 text-white border-none cursor-pointer whitespace-nowrap min-w-[60px] transition-all hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed sm:px-3 sm:py-2 sm:min-w-[50px]"
             @click=${() => this.sendMessage()}
             ?disabled=${!this.canSend}
           >
@@ -153,122 +138,4 @@ export class LobbyChatPanel extends LitElement {
   createRenderRoot() {
     return this;
   }
-}
-
-if (!document.head.querySelector("#lcp-styles")) {
-  const style = document.createElement("style");
-  style.id = "lcp-styles";
-  style.textContent = `
-  .lcp-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 240px;
-    width: 100%;
-  }
-  .lcp-messages {
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 8px;
-    height: 150px;
-    min-height: 120px;
-    background: rgba(0, 0, 0, 0.5);
-    color: #ddd;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .lcp-msg {
-    font-size: 0.85rem;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.6);
-    max-width: 85%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-  .lcp-msg--local {
-    align-self: flex-end;
-    text-align: right;
-    background: rgba(36, 59, 85, 0.7);
-  }
-  .lcp-msg--remote {
-    align-self: flex-start;
-    text-align: left;
-    background: rgba(0, 0, 0, 0.6);
-  }
-  .lcp-sender {
-    color: #9ae6b4;
-    margin-right: 4px;
-    font-weight: 500;
-  }
-  .lcp-input-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: nowrap;
-  }
-  .lcp-input {
-    flex: 1;
-    min-width: 0;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 16px;
-    color: #000;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .lcp-input:focus {
-    outline: none;
-    border-color: rgba(59, 130, 246, 0.5);
-    background: #fff;
-  }
-  .lcp-send {
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    background: rgba(59, 130, 246, 0.8);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    white-space: nowrap;
-    min-width: 60px;
-    transition: background 0.2s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .lcp-send:hover {
-    background: rgba(59, 130, 246, 1);
-  }
-  .lcp-send:active {
-    background: rgba(37, 99, 235, 1);
-    transform: scale(0.98);
-  }
-  @media (max-width: 640px) {
-    .lcp-container {
-      max-height: 200px;
-    }
-    .lcp-messages {
-      height: 120px;
-      min-height: 100px;
-      padding: 6px;
-    }
-    .lcp-msg {
-      font-size: 0.8rem;
-      padding: 6px 10px;
-      max-width: 90%;
-    }
-    .lcp-input {
-      padding: 8px 10px;
-    }
-    .lcp-send {
-      padding: 8px 12px;
-      min-width: 50px;
-    }
-  }
-`;
-  document.head.appendChild(style);
 }
