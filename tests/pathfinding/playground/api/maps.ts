@@ -2,35 +2,39 @@ import { readdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Game } from "../../../../src/core/game/Game.js";
-import { TileRef } from "../../../../src/core/game/GameMap.js";
-import { NavMesh } from "../../../../src/core/pathfinding/navmesh/NavMesh.js";
+import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
 import { setupFromPath } from "../../utils.js";
+
+// Available comparison adapters
+// Note: "hpa.cached" runs same algorithm without debug overhead for fair timing comparison
+export const COMPARISON_ADAPTERS = [
+  "hpa.cached",
+  "hpa",
+  "a.baseline",
+  "a.generic",
+  "a.full",
+];
 
 export interface MapInfo {
   name: string;
   displayName: string;
 }
 
+export interface GraphBuildData {
+  nodes: any[];
+  edges: any[];
+  nodesCount: number;
+  edgesCount: number;
+  clustersCount: number;
+  buildTime: number;
+}
+
 export interface MapCache {
   game: Game;
-  navMesh: NavMesh;
+  graphBuildData: GraphBuildData | null;
 }
 
 const cache = new Map<string, MapCache>();
-
-/**
- * Global configuration for map loading
- */
-let config = {
-  cachePaths: true,
-};
-
-/**
- * Set configuration options
- */
-export function setConfig(options: { cachePaths?: boolean }) {
-  config = { ...config, ...options };
-}
 
 /**
  * Get the resources/maps directory path
@@ -103,6 +107,25 @@ export function listMaps(): MapInfo[] {
 }
 
 /**
+ * Extract graph build data from DebugSpan
+ */
+function extractGraphBuildData(): GraphBuildData | null {
+  const span = DebugSpan.getLastSpan();
+  if (!span || span.name !== "AbstractGraphBuilder:build") {
+    return null;
+  }
+
+  return {
+    nodes: (span.data.nodes as any[]) || [],
+    edges: (span.data.edges as any[]) || [],
+    nodesCount: (span.data.nodesCount as number) || 0,
+    edgesCount: (span.data.edgesCount as number) || 0,
+    clustersCount: (span.data.clustersCount as number) || 0,
+    buildTime: span.duration || 0,
+  };
+}
+
+/**
  * Load a map from cache or disk
  */
 export async function loadMap(mapName: string): Promise<MapCache> {
@@ -113,14 +136,17 @@ export async function loadMap(mapName: string): Promise<MapCache> {
 
   const mapsDir = getMapsDirectory();
 
+  // Enable DebugSpan to capture graph build data
+  DebugSpan.enable();
+
   // Use the existing setupFromPath utility to load the map
-  const game = await setupFromPath(mapsDir, mapName);
+  const game = await setupFromPath(mapsDir, mapName, { disableNavMesh: false });
 
-  // Initialize NavMesh
-  const navMesh = new NavMesh(game, { cachePaths: config.cachePaths });
-  navMesh.initialize();
+  // Capture graph build data from DebugSpan
+  const graphBuildData = extractGraphBuildData();
+  DebugSpan.disable();
 
-  const cacheEntry: MapCache = { game, navMesh };
+  const cacheEntry: MapCache = { game, graphBuildData };
 
   // Store in cache
   cache.set(mapName, cacheEntry);
@@ -132,7 +158,7 @@ export async function loadMap(mapName: string): Promise<MapCache> {
  * Get map metadata for client
  */
 export async function getMapMetadata(mapName: string) {
-  const { game, navMesh } = await loadMap(mapName);
+  const { game, graphBuildData } = await loadMap(mapName);
 
   // Extract map data
   const mapData: number[] = [];
@@ -143,65 +169,83 @@ export async function getMapMetadata(mapName: string) {
     }
   }
 
-  // Extract static graph data from NavMesh
+  const graph = game.miniWaterGraph();
   const miniMap = game.miniMap();
-  const navMeshGraph = (navMesh as any).graph;
+  const clusterSize = graph?.clusterSize ?? 0;
 
-  // Convert gateways from Map to array
-  const gatewaysArray = Array.from(navMeshGraph.gateways.values());
-  const allGateways = gatewaysArray.map((gw: any) => ({
-    id: gw.id,
-    x: miniMap.x(gw.tile),
-    y: miniMap.y(gw.tile),
-  }));
+  // Use graphBuildData from DebugSpan if available, otherwise fall back to direct access
+  let allNodes: Array<{ id: number; x: number; y: number }>;
+  let edges: Array<{
+    fromId: number;
+    toId: number;
+    from: number[];
+    to: number[];
+    cost: number;
+  }>;
 
-  // Create a lookup map from gateway ID to gateway for edge conversion
-  const gatewayById = new Map(gatewaysArray.map((gw: any) => [gw.id, gw]));
+  if (graphBuildData) {
+    // Convert nodes from DebugSpan data (AbstractNode format)
+    allNodes = graphBuildData.nodes.map((node: any) => ({
+      id: node.id,
+      x: miniMap.x(node.tile),
+      y: miniMap.y(node.tile),
+    }));
 
-  // Convert edges from Map<gatewayId, Edge[]> to flat array
-  // The edges Map has gateway IDs as keys, and arrays of edges as values
-  const allEdges: any[] = [];
-  for (const edgeArray of navMeshGraph.edges.values()) {
-    allEdges.push(...edgeArray);
-  }
-
-  // Deduplicate edges (they're bidirectional, so each edge appears twice)
-  const seenEdges = new Set<string>();
-  const edges = allEdges
-    .filter((edge: any) => {
-      const edgeKey =
-        edge.from < edge.to
-          ? `${edge.from}-${edge.to}`
-          : `${edge.to}-${edge.from}`;
-      if (seenEdges.has(edgeKey)) return false;
-      seenEdges.add(edgeKey);
-      return true;
-    })
-    .map((edge: any) => {
-      const fromGateway = gatewayById.get(edge.from);
-      const toGateway = gatewayById.get(edge.to);
-
+    // Convert edges from DebugSpan data (AbstractEdge format)
+    edges = graphBuildData.edges.map((edge: any) => {
+      const nodeA = graphBuildData.nodes.find((n: any) => n.id === edge.nodeA);
+      const nodeB = graphBuildData.nodes.find((n: any) => n.id === edge.nodeB);
       return {
-        fromId: edge.from,
-        toId: edge.to,
-        from: fromGateway
-          ? [miniMap.x(fromGateway.tile) * 2, miniMap.y(fromGateway.tile) * 2]
+        fromId: edge.nodeA,
+        toId: edge.nodeB,
+        from: nodeA
+          ? [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2]
           : [0, 0],
-        to: toGateway
-          ? [miniMap.x(toGateway.tile) * 2, miniMap.y(toGateway.tile) * 2]
+        to: nodeB
+          ? [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2]
           : [0, 0],
         cost: edge.cost,
-        path: edge.path
-          ? edge.path.map((tile: TileRef) => [game.x(tile), game.y(tile)])
-          : null,
       };
     });
 
-  console.log(
-    `Map ${mapName}: ${allGateways.length} gateways, ${edges.length} edges`,
-  );
+    console.log(
+      `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges (from DebugSpan, built in ${graphBuildData.buildTime.toFixed(2)}ms)`,
+    );
+  } else if (graph) {
+    // Fallback: extract directly from graph
+    allNodes = graph.getAllNodes().map((node: any) => ({
+      id: node.id,
+      x: miniMap.x(node.tile),
+      y: miniMap.y(node.tile),
+    }));
 
-  const sectorSize = navMeshGraph.sectorSize;
+    edges = [];
+    for (let i = 0; i < graph.edgeCount; i++) {
+      const edge = graph.getEdge(i);
+      if (!edge) continue;
+
+      const nodeA = graph.getNode(edge.nodeA);
+      const nodeB = graph.getNode(edge.nodeB);
+      if (!nodeA || !nodeB) continue;
+
+      edges.push({
+        fromId: edge.nodeA,
+        toId: edge.nodeB,
+        from: [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2],
+        to: [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2],
+        cost: edge.cost,
+      });
+    }
+
+    console.log(
+      `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges (fallback)`,
+    );
+  } else {
+    // No graph available
+    allNodes = [];
+    edges = [];
+    console.log(`Map ${mapName}: no graph available`);
+  }
 
   return {
     name: mapName,
@@ -209,10 +253,12 @@ export async function getMapMetadata(mapName: string) {
     height: game.height(),
     mapData,
     graphDebug: {
-      allGateways,
+      allNodes,
       edges,
-      sectorSize,
+      clusterSize,
+      buildTime: graphBuildData?.buildTime,
     },
+    adapters: COMPARISON_ADAPTERS,
   };
 }
 

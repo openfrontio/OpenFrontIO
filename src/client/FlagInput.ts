@@ -1,5 +1,5 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
 import { FlagSchema } from "../core/Schemas";
 import { translateText } from "./Utils";
@@ -10,7 +10,12 @@ const flagKey: string = "flag";
 export class FlagInput extends LitElement {
   @state() public flag: string = "";
 
-  static styles = css``;
+  @property({ type: Boolean, attribute: "show-select-label" })
+  public showSelectLabel: boolean = false;
+
+  private isDefaultFlagValue(flag: string): boolean {
+    return !flag || flag === "xx";
+  }
 
   public getCurrentFlag(): string {
     return this.flag;
@@ -42,6 +47,17 @@ export class FlagInput extends LitElement {
     }
   };
 
+  private onInputClick(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.dispatchEvent(
+      new CustomEvent("flag-input-click", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.flag = this.getStoredFlag();
@@ -59,18 +75,30 @@ export class FlagInput extends LitElement {
   }
 
   render() {
+    const isDefaultFlag = this.isDefaultFlagValue(this.flag);
+    const showSelect = this.showSelectLabel && isDefaultFlag;
+    const buttonTitle = showSelect
+      ? translateText("flag_input.title")
+      : translateText("flag_input.button_title");
+
     return html`
       <button
-        id="flag-input_"
-        class="flag-btn m-0 border-0 bg-transparent hover:bg-white/10 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-colors duration-200"
-        style="padding: 0 !important;"
-        title=${translateText("flag_input.button_title")}
+        id="flag-input"
+        class="flag-btn p-0! m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
+        title=${buttonTitle}
+        @click=${this.onInputClick}
       >
         <span
           id="flag-preview"
-          class="w-full h-full overflow-hidden"
-          style="display:block;"
+          class=${showSelect ? "hidden" : "w-full h-full overflow-hidden"}
         ></span>
+        ${showSelect
+          ? html`<span
+              class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full text-center px-1"
+            >
+              ${translateText("flag_input.title")}
+            </span>`
+          : null}
       </button>
     `;
   }
@@ -80,6 +108,11 @@ export class FlagInput extends LitElement {
       "#flag-preview",
     ) as HTMLElement;
     if (!preview) return;
+
+    if (this.showSelectLabel && this.isDefaultFlagValue(this.flag)) {
+      preview.innerHTML = "";
+      return;
+    }
 
     preview.innerHTML = "";
 

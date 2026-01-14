@@ -52,7 +52,7 @@ export class SettingToggle extends LitElement {
             @change=${this.handleChange}
           />
           <span
-            class="absolute inset-0 bg-black/40 border border-white/10 transition-all duration-300 rounded-full
+            class="absolute inset-0 bg-black/60 border border-white/10 transition-all duration-300 rounded-full
             before:absolute before:content-[''] before:h-5 before:w-5 before:left-[3px] before:top-[3px]
             before:bg-white/40 before:transition-all before:duration-300 before:rounded-full before:shadow-sm hover:before:bg-white/60
             peer-checked:bg-blue-600 peer-checked:border-blue-500 peer-checked:before:translate-x-[24px] peer-checked:before:bg-white"

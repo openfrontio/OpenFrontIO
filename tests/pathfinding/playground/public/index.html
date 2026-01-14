@@ -129,13 +129,13 @@
         <button class="toggle-button" id="showInitialPath" data-active="false">
           Initial Path
         </button>
-        <button class="toggle-button" id="showUsedGateways" data-active="false">
-          Used Gateways
+        <button class="toggle-button" id="showUsedNodes" data-active="false">
+          Used Nodes
         </button>
       </div>
       <div class="debug-panel-row">
-        <button class="toggle-button" id="showGateways" data-active="false">
-          Gateways
+        <button class="toggle-button" id="showNodes" data-active="false">
+          Nodes
         </button>
         <button class="toggle-button" id="showSectorGrid" data-active="false">
           Sectors
@@ -166,31 +166,31 @@
         <div class="timing-label">
           <button
             class="refresh-icon"
-            id="refreshNavMesh"
-            title="Recompute NavMesh path"
+            id="refreshHpa"
+            title="Recompute HPA* path"
           >
             <span>↻</span>
           </button>
-          NavMesh <span class="timing-label-detail" id="navMeshTiles"></span>
+          HPA* <span class="timing-label-detail" id="hpaTiles"></span>
         </div>
-        <div class="timing-value-large" id="navMeshTime">—</div>
+        <div class="timing-value-large" id="hpaTime">—</div>
 
         <div class="timing-breakdown" id="timingBreakdown">
           <div class="timing-item" id="timingEarlyExit" style="display: none">
             <span class="timing-name">Early Exit:</span>
             <span class="timing-value" id="timingEarlyExitValue">—</span>
           </div>
+          <div class="timing-item" id="timingFindNodes" style="display: none">
+            <span class="timing-name">Find Nodes:</span>
+            <span class="timing-value" id="timingFindNodesValue">—</span>
+          </div>
           <div
             class="timing-item"
-            id="timingFindGateways"
+            id="timingAbstractPath"
             style="display: none"
           >
-            <span class="timing-name">Find Gateways:</span>
-            <span class="timing-value" id="timingFindGatewaysValue">—</span>
-          </div>
-          <div class="timing-item" id="timingGatewayPath" style="display: none">
-            <span class="timing-name">Gateway Path:</span>
-            <span class="timing-value" id="timingGatewayPathValue">—</span>
+            <span class="timing-name">Abstract Path:</span>
+            <span class="timing-value" id="timingAbstractPathValue">—</span>
           </div>
           <div class="timing-item" id="timingInitialPath" style="display: none">
             <span class="timing-name">Initial Path:</span>
@@ -203,38 +203,9 @@
         </div>
       </div>
 
-      <div class="timing-section" id="pfMiniRequestSection">
-        <button
-          id="requestPfMini"
-          class="timing-button"
-          title="PathFinder.Mini is slow (50-1800ms per path). Click to compare."
-          disabled
-        >
-          Request PathFinder.Mini
-        </button>
-      </div>
-
-      <div
-        class="timing-section"
-        id="pfMiniTimingSection"
-        style="display: none"
-      >
-        <div class="timing-label">
-          <button
-            class="refresh-icon"
-            id="refreshPfMini"
-            title="Recompute PF.Mini path"
-          >
-            <span>↻</span>
-          </button>
-          PF.Mini <span class="timing-label-detail" id="pfMiniTiles"></span>
-        </div>
-        <div class="timing-value-large" id="pfMiniTime">—</div>
-      </div>
-
-      <div class="timing-section" id="speedupSection" style="display: none">
-        <div class="timing-label">Speedup</div>
-        <div class="timing-value-speedup" id="speedupValue">—</div>
+      <div class="timing-section" id="comparisonsSection" style="display: none">
+        <div class="timing-label">Comparisons</div>
+        <div id="comparisonsContainer"></div>
       </div>
     </div>
 
@@ -256,13 +227,9 @@
           ></div>
           <span>End Point</span>
         </div>
-        <div class="legend-item" id="pfMiniLegend" style="display: none">
-          <div class="legend-color" style="background: #ffaa00"></div>
-          <span>PathFinder.Mini</span>
-        </div>
         <div class="legend-item">
           <div class="legend-color" style="background: #00ffff"></div>
-          <span>NavMesh</span>
+          <span>HPA*</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background: #ff00ff"></div>
@@ -273,7 +240,7 @@
             class="legend-color"
             style="background: #ffff00; height: 8px"
           ></div>
-          <span>Used Gateways</span>
+          <span>Used Nodes</span>
         </div>
         <div class="legend-item">
           <div
@@ -285,7 +252,7 @@
               border-radius: 50%;
             "
           ></div>
-          <span>Gateways</span>
+          <span>Nodes</span>
         </div>
         <div class="legend-item">
           <div

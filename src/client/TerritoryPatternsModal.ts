@@ -1,5 +1,5 @@
 import type { TemplateResult } from "lit";
-import { html, render } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
@@ -9,7 +9,7 @@ import { hasLinkedAccount } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { renderPatternPreview } from "./components/PatternButton";
+import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
   handlePurchase,
@@ -85,64 +85,37 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private renderTabNavigation(): TemplateResult {
     return html`
-      <div
-        class="relative flex flex-col mb-6 border-b border-white/10 pb-4 shrink-0"
-      >
-        <div class="flex items-center gap-4 mb-4">
-          <button
-            @click=${this.close}
-            class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shrink-0"
-            aria-label="${translateText("common.back")}"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <span
-            class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-          >
-            ${translateText("territory_patterns.title")}
-          </span>
-
-          ${!hasLinkedAccount(this.userMeResponse)
-            ? html`<div class="ml-auto flex items-center">
-                ${this.renderNotLoggedInWarning()}
-              </div>`
-            : html``}
-        </div>
-
+      ${modalHeader({
+        title: translateText("territory_patterns.title"),
+        onBack: this.close,
+        ariaLabel: translateText("common.back"),
+        rightContent: !hasLinkedAccount(this.userMeResponse)
+          ? html`<div class="flex items-center">
+              ${this.renderNotLoggedInWarning()}
+            </div>`
+          : undefined,
+      })}
+      <!-- TEMP DISABlE TAB SWITCHING
         <div class="flex items-center gap-2 justify-center">
           <button
             class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-              .activeTab === "patterns"
-              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-              : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
+        .activeTab === "patterns"
+        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+        : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
             @click=${() => (this.activeTab = "patterns")}
           >
             ${translateText("territory_patterns.title")}
           </button>
           <button
             class="px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest ${this
-              .activeTab === "colors"
-              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-              : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
+        .activeTab === "colors"
+        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+        : "text-white/40 hover:text-white hover:bg-white/5 border border-transparent"}"
             @click=${() => (this.activeTab = "colors")}
           >
             ${translateText("territory_patterns.colors")}
           </button>
-        </div>
-      </div>
+          TEMP DISABlE TAB SWITCHING -->
     `;
   }
 
@@ -201,8 +174,8 @@ export class TerritoryPatternsModal extends BaseModal {
     }
 
     return html`
-      <div class="flex flex-col gap-4">
-        <div class="flex justify-center">
+      <div class="flex flex-col">
+        <div class="pt-4 flex justify-center">
           ${hasLinkedAccount(this.userMeResponse)
             ? this.renderMySkinsButton()
             : html``}
@@ -279,7 +252,9 @@ export class TerritoryPatternsModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
+          : ""}"
       >
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
@@ -391,6 +366,7 @@ export class TerritoryPatternsModal extends BaseModal {
     this.selectedColor = hexCode;
     this.userSettings.setSelectedColor(hexCode);
     this.refresh();
+    this.dispatchEvent(new CustomEvent("pattern-selected", { bubbles: true }));
     this.close();
   }
 
@@ -408,34 +384,6 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   public async refresh() {
-    this.requestUpdate();
-
-    const preview = this.selectedColor
-      ? this.renderColorPreview(this.selectedColor, 48, 48)
-      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
-
-    if (
-      this.previewButton === null ||
-      !document.body.contains(this.previewButton)
-    ) {
-      this.previewButton = document.getElementById(
-        "territory-patterns-input-preview-button",
-      );
-    }
-
-    if (this.previewButton === null) return;
-
-    // Check if the element is still in the DOM to avoid lit-html errors
-    if (!document.body.contains(this.previewButton)) {
-      console.warn(
-        "TerritoryPatternsModal: previewButton is disconnected from DOM, skipping render",
-      );
-      return;
-    }
-
-    // Clear and re-render using Lit
-    render(preview, this.previewButton);
-    this.previewButton.style.padding = "4px";
     this.requestUpdate();
   }
 }

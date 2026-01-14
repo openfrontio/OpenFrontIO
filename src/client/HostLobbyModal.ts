@@ -21,6 +21,7 @@ import {
   GameConfig,
   GameInfo,
   TeamCountConfig,
+  isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -29,6 +30,7 @@ import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyTeamView";
 import "./components/Maps";
+import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -37,7 +39,7 @@ import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -60,6 +62,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
+  @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
@@ -72,6 +75,8 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
+
+  private leaveLobbyOnClose = true;
 
   private renderOptionToggle(
     labelKey: string,
@@ -99,111 +104,129 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
+  private getRandomString(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    return Array.from(
+      { length: 5 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join("");
+  }
+
+  private async buildLobbyUrl(): Promise<string> {
+    const config = await getServerConfigFromClient();
+    return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
+  }
+
+  private async constructUrl(): Promise<string> {
+    this.lobbyUrlSuffix = this.getRandomString();
+    return await this.buildLobbyUrl();
+  }
+
+  private updateHistory(url: string): void {
+    history.replaceState(null, "", url);
+  }
+
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         <!-- Header -->
-        <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${() => {
-                this.leaveLobby();
-                this.close();
-              }}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
+        ${modalHeader({
+          title: translateText("host_modal.title"),
+          onBack: () => {
+            this.leaveLobbyOnClose = true;
+            this.close();
+          },
+          ariaLabel: translateText("common.back"),
+          rightContent: html`
+            <!-- Lobby ID Box -->
+            <div
+              class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <button
+                @click=${() => {
+                  this.lobbyIdVisible = !this.lobbyIdVisible;
+                  this.requestUpdate();
+                }}
+                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                title="${translateText("user_setting.toggle_visibility")}"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("host_modal.title")}
-            </span>
-          </div>
-
-          <!-- Lobby ID Box -->
-          <div
-            class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-          >
-            <button
-              @click=${() => {
-                this.lobbyIdVisible = !this.lobbyIdVisible;
-                this.requestUpdate();
-              }}
-              class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title="Toggle Visibility"
-            >
-              ${this.lobbyIdVisible
-                ? html`<svg
-                    viewBox="0 0 512 512"
-                    height="16px"
-                    width="16px"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                    ></path>
-                  </svg>`
-                : html`<svg
-                    viewBox="0 0 512 512"
-                    height="16px"
-                    width="16px"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                    ></path>
-                    <path
-                      d="M144 256l224 0"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                      stroke-linecap="round"
-                    ></path>
-                  </svg>`}
-            </button>
-            <button
-              @click=${this.copyToClipboard}
-              @dblclick=${(e: Event) => {
-                (e.currentTarget as HTMLElement).classList.add("select-all");
-              }}
-              @mouseleave=${(e: Event) => {
-                (e.currentTarget as HTMLElement).classList.remove("select-all");
-              }}
-              class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
-              title="${translateText("common.click_to_copy")}"
-              aria-label="${translateText("common.click_to_copy")}"
-              type="button"
-            >
-              ${this.copySuccess
-                ? translateText("common.copied")
-                : this.lobbyIdVisible
-                  ? this.lobbyId
-                  : "••••••••"}
-            </button>
-          </div>
-        </div>
+                ${this.lobbyIdVisible
+                  ? html`<svg
+                      viewBox="0 0 512 512"
+                      height="16px"
+                      width="16px"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                      ></path>
+                    </svg>`
+                  : html`<svg
+                      viewBox="0 0 512 512"
+                      height="16px"
+                      width="16px"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="32"
+                      ></path>
+                      <path
+                        d="M144 256l224 0"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="32"
+                        stroke-linecap="round"
+                      ></path>
+                    </svg>`}
+              </button>
+              <button
+                @click=${this.copyToClipboard}
+                @dblclick=${(e: Event) => {
+                  (e.currentTarget as HTMLElement).classList.add("select-all");
+                }}
+                @mouseleave=${(e: Event) => {
+                  (e.currentTarget as HTMLElement).classList.remove(
+                    "select-all",
+                  );
+                }}
+                class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
+                title="${translateText("common.click_to_copy")}"
+                aria-label="${translateText("common.click_to_copy")}"
+                type="button"
+              >
+                ${this.copySuccess
+                  ? translateText("common.copied")
+                  : this.lobbyIdVisible
+                    ? this.lobbyId
+                    : "••••••••"}
+              </button>
+              <button
+                @click=${this.copyToClipboard}
+                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                title="${translateText("common.click_to_copy")}"
+                aria-label="${translateText("common.click_to_copy")}"
+                type="button"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  height="16px"
+                  width="16px"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+                  />
+                </svg>
+              </button>
+            </div>
+          `,
+        })}
 
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
@@ -614,7 +637,7 @@ export class HostLobbyModal extends BaseModal {
                           min="0"
                           max="120"
                           .value=${String(this.maxTimerValue ?? 0)}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleMaxTimerValueChanges}
                           @keydown=${this.handleMaxTimerValueKeyDown}
@@ -694,7 +717,7 @@ export class HostLobbyModal extends BaseModal {
                           .value=${String(
                             this.spawnImmunityDurationMinutes ?? 0,
                           )}
-                          class="w-full text-center rounded bg-black/40 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                           @click=${(e: Event) => e.stopPropagation()}
                           @input=${this.handleSpawnImmunityDurationInput}
                           @keydown=${this.handleSpawnImmunityDurationKeyDown}
@@ -824,9 +847,14 @@ export class HostLobbyModal extends BaseModal {
     );
 
     createLobby(this.lobbyCreatorClientID)
-      .then((lobby) => {
+      .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
+        if (!isValidGameID(this.lobbyId)) {
+          throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
+        }
         crazyGamesSDK.showInviteButton(this.lobbyId);
+        const url = await this.constructUrl();
+        this.updateHistory(url);
       })
       .then(() => {
         this.dispatchEvent(
@@ -898,6 +926,10 @@ export class HostLobbyModal extends BaseModal {
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
+    if (this.leaveLobbyOnClose) {
+      this.leaveLobby();
+      this.updateHistory("/"); // Reset URL to base
+    }
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
@@ -912,7 +944,7 @@ export class HostLobbyModal extends BaseModal {
 
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Medium;
+    this.selectedDifficulty = Difficulty.Easy;
     this.disableNations = false;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
@@ -936,6 +968,8 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = "";
     this.lobbyIdVisible = true;
     this.nationCount = 0;
+
+    this.leaveLobbyOnClose = true;
   }
 
   private async handleSelectRandomMap() {
@@ -1024,6 +1058,11 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
+    if (val && this.bots === 400) {
+      this.bots = 100;
+    } else if (!val && this.bots === 100) {
+      this.bots = 400;
+    }
     this.putGameConfig();
   };
 
@@ -1078,6 +1117,8 @@ export class HostLobbyModal extends BaseModal {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
+    const url = await this.constructUrl();
+    this.updateHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
@@ -1137,6 +1178,10 @@ export class HostLobbyModal extends BaseModal {
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+
+    // If the modal closes as part of starting the game, do not leave the lobby
+    this.leaveLobbyOnClose = false;
+
     const config = await getServerConfigFromClient();
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
@@ -1147,12 +1192,17 @@ export class HostLobbyModal extends BaseModal {
         },
       },
     );
+
+    if (!response.ok) {
+      this.leaveLobbyOnClose = true;
+    }
     return response;
   }
 
   private async copyToClipboard() {
+    const url = await this.buildLobbyUrl();
     await copyToClipboard(
-      `${location.origin}/#join=${this.lobbyId}`,
+      url,
       () => (this.copySuccess = true),
       () => (this.copySuccess = false),
     );
