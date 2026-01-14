@@ -12,7 +12,6 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
-
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
