@@ -307,6 +307,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
         this._title = translateText("win_modal.nation_won", {
@@ -336,6 +337,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       }
     });

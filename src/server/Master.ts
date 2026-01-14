@@ -1,9 +1,7 @@
 import cluster from "cluster";
 import crypto from "crypto";
-import ejs from "ejs";
 import express from "express";
 import rateLimit from "express-rate-limit";
-import fs from "fs/promises";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,6 +12,8 @@ import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { startPolling } from "./PollingLoop";
+import { renderHtml } from "./RenderHtml";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -177,15 +177,12 @@ export async function startMaster() {
           });
         };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+        startPolling(async () => {
+          const lobbies = await fetchLobbies();
+          if (lobbies === 0) {
+            scheduleLobbies();
+          }
+        }, 100);
       }
     }
   });
@@ -348,25 +345,3 @@ app.get("*", async function (_req, res) {
     res.status(500).send("Internal Server Error");
   }
 });
-
-// Helper function to render HTML with EJS templating
-async function renderHtml(
-  res: express.Response,
-  htmlPath: string,
-): Promise<void> {
-  const htmlContent = await fs.readFile(htmlPath, "utf-8");
-  const rendered = ejs.render(htmlContent, {
-    gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
-    instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
-  });
-
-  res.setHeader(
-    "Cache-Control",
-    "no-store, no-cache, must-revalidate, proxy-revalidate",
-  );
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
-  res.setHeader("ETag", "");
-  res.setHeader("Content-Type", "text/html");
-  res.send(rendered);
-}

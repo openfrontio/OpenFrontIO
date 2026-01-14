@@ -3,6 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import {
   ClientInfo,
+  GAME_ID_REGEX,
   GameConfig,
   GameInfo,
   GameRecordSchema,
@@ -31,6 +32,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
 
   private playersInterval: NodeJS.Timeout | null = null;
   private userSettings: UserSettings = new UserSettings();
+
+  private leaveLobbyOnClose = true;
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -354,21 +357,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
   }
 
-  protected onClose(): void {
-    if (this.lobbyIdInput) this.lobbyIdInput.value = "";
-    this.currentLobbyId = "";
-    this.gameConfig = null;
-    this.players = [];
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
+  private leaveLobby() {
+    if (!this.currentLobbyId || !this.hasJoined) {
+      return;
     }
-  }
-
-  public closeAndLeave() {
-    this.close();
-    this.hasJoined = false;
-    this.message = "";
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
         detail: { lobby: this.currentLobbyId },
@@ -378,16 +370,43 @@ export class JoinPrivateLobbyModal extends BaseModal {
     );
   }
 
+  protected onClose(): void {
+    if (this.lobbyIdInput) this.lobbyIdInput.value = "";
+    this.gameConfig = null;
+    this.players = [];
+    if (this.playersInterval) {
+      clearInterval(this.playersInterval);
+      this.playersInterval = null;
+    }
+    if (this.leaveLobbyOnClose) {
+      this.leaveLobby();
+      // Reset URL to base when modal closes
+      history.replaceState(null, "", window.location.origin + "/");
+    }
+
+    this.hasJoined = false;
+    this.message = "";
+    this.currentLobbyId = "";
+
+    this.leaveLobbyOnClose = true;
+  }
+
+  public closeAndLeave() {
+    this.leaveLobbyOnClose = true;
+    this.close();
+  }
+
   private async copyToClipboard() {
+    const config = await getServerConfigFromClient();
     await copyToClipboard(
-      `${location.origin}/#join=${this.currentLobbyId}`,
+      `${location.origin}/${config.workerPath(this.currentLobbyId)}/game/${this.currentLobbyId}`,
       () => (this.copySuccess = true),
       () => (this.copySuccess = false),
     );
   }
 
   private isValidLobbyId(value: string): boolean {
-    return /^[a-zA-Z0-9]{8}$/.test(value);
+    return GAME_ID_REGEX.test(value);
   }
 
   private normalizeLobbyId(input: string): string | null {
@@ -403,16 +422,19 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   private extractLobbyIdFromUrl(input: string): string {
-    if (input.startsWith("http")) {
-      if (input.includes("#join=")) {
-        const params = new URLSearchParams(input.split("#")[1]);
-        return params.get("join") ?? input;
-      } else if (input.includes("join/")) {
-        return input.split("join/")[1];
-      } else {
-        return input;
-      }
-    } else {
+    if (!input.startsWith("http")) {
+      return input;
+    }
+
+    try {
+      const url = new URL(input);
+      const match = url.pathname.match(/game\/([^/]+)/);
+      const candidate = match?.[1];
+      if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;
+
+      return input;
+    } catch (error) {
+      console.warn("Failed to parse lobby URL", error);
       return input;
     }
   }
@@ -501,6 +523,9 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.showMessage(translateText("private_lobby.joined_waiting"));
       this.message = "";
       this.hasJoined = true;
+
+      // If the modal closes as part of joining the game, do not leave the lobby
+      this.leaveLobbyOnClose = false;
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {

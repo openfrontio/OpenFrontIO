@@ -1,7 +1,7 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -193,6 +193,7 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "join-changed": CustomEvent;
   }
 }
 
@@ -608,6 +609,7 @@ class Client {
       onHashUpdate();
     });
     window.addEventListener("hashchange", onHashUpdate);
+    window.addEventListener("join-changed", onHashUpdate);
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
@@ -633,7 +635,7 @@ class Client {
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
-      if (lobbyId && ID.safeParse(lobbyId).success) {
+      if (lobbyId && GAME_ID_REGEX.test(lobbyId)) {
         window.showPage?.("page-join-private-lobby");
         this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
@@ -709,14 +711,16 @@ class Client {
       return;
     }
 
-    // Fallback to hash-based join for non-CrazyGames environments
-    if (decodedHash.startsWith("#join=")) {
-      const lobbyId = decodedHash.substring(6); // Remove "#join="
-      if (lobbyId && ID.safeParse(lobbyId).success) {
-        window.showPage?.("page-join-private-lobby");
-        this.joinModal?.open(lobbyId);
-        console.log(`joining lobby ${lobbyId}`);
-      }
+    const pathMatch = window.location.pathname.match(
+      /^\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    const lobbyId =
+      pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
+    if (lobbyId) {
+      window.showPage?.("page-join-private-lobby");
+      this.joinModal.open(lobbyId);
+      console.log(`joining lobby ${lobbyId}`);
+      return;
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
@@ -739,6 +743,7 @@ class Client {
       document.body.classList.remove("in-game");
     }
     const config = await getServerConfigFromClient();
+    this.updateJoinUrlForShare(lobby.gameID, config);
 
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
@@ -780,15 +785,16 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
+          "game-top-bar",
           "help-modal",
           "user-setting",
-
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
           "flag-input-modal",
+          "account-button",
+          "stats-button",
           "token-login",
-
           "matchmaking-modal",
           "lang-selector",
         ].forEach((tag) => {
@@ -819,7 +825,7 @@ class Client {
         this.gutterAds.hide();
       },
       () => {
-        this.joinModal?.close();
+        this.joinModal.close();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
@@ -835,9 +841,25 @@ class Client {
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
         }
-        history.pushState(null, "", `#join=${lobby.gameID}`);
+        history.pushState(
+          null,
+          "",
+          `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+        );
       },
     );
+  }
+
+  private updateJoinUrlForShare(
+    lobbyId: string,
+    config: Awaited<ReturnType<typeof getServerConfigFromClient>>,
+  ) {
+    const targetUrl = `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+    const currentUrl = window.location.pathname;
+
+    if (currentUrl !== targetUrl) {
+      history.replaceState(null, "", targetUrl);
+    }
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {

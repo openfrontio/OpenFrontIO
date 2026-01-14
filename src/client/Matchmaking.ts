@@ -183,7 +183,7 @@ export class MatchmakingModal extends BaseModal {
     this.connected = false;
     this.gameID = null;
     this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
+    this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
   }
 
   protected onClose(): void {
