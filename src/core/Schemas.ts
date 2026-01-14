@@ -16,6 +16,7 @@ import {
   GameType,
   HumansVsNations,
   Quads,
+  RankedType,
   Trios,
   UnitType,
 } from "./game/Game";
@@ -183,6 +184,7 @@ export const GameConfigSchema = z.object({
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
+  rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   publicGameModifiers: z
     .object({
@@ -198,11 +200,10 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
-  maxTimerValue: z.number().int().min(1).max(120).optional(),
+  maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  isOneVOne: z.boolean().optional(),
 });
 
 export const TeamSchema = z.string();
