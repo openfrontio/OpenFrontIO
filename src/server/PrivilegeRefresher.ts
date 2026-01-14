@@ -1,12 +1,12 @@
 import { base64url } from "jose";
 import { Logger } from "winston";
 import { CosmeticsSchema } from "../core/CosmeticSchemas";
+import { startPolling } from "./PollingLoop";
 import {
   FailOpenPrivilegeChecker,
   PrivilegeChecker,
   PrivilegeCheckerImpl,
 } from "./Privilege";
-import { startPolling } from "./PollingLoop";
 
 // Refreshes the privilege checker every 5 minutes.
 // WARNING: This fails open if cosmetics.json is not available.
