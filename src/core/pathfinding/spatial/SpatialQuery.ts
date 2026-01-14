@@ -85,6 +85,35 @@ export class SpatialQuery {
     if (shores.length === 0) return null;
 
     const path = PathFinding.Water(gm).findPath(shores, target);
-    return path?.[0] ?? null;
+    if (!path || path.length === 0) return null;
+
+    return this.refineStartTile(path, shores, gm);
+  }
+
+  private refineStartTile(
+    path: TileRef[],
+    shores: TileRef[],
+    gm: Game,
+  ): TileRef {
+    const CANDIDATE_RADIUS = 10;
+    const WAYPOINT_DIST = 20;
+
+    const bestTile = path[0];
+    const map = gm.map();
+
+    const candidates = shores.filter(
+      (s) => map.manhattanDist(s, bestTile) <= CANDIDATE_RADIUS,
+    );
+
+    if (candidates.length <= 1) return bestTile;
+
+    const waypointIdx = Math.min(WAYPOINT_DIST, path.length - 1);
+    const waypoint = path[waypointIdx];
+
+    const refinedPath = PathFinding.WaterSimple(gm).findPath(
+      candidates,
+      waypoint,
+    );
+    return refinedPath?.[0] ?? bestTile;
   }
 }
