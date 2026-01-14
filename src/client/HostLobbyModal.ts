@@ -40,7 +40,7 @@ import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -964,7 +964,7 @@ export class HostLobbyModal extends BaseModal {
 
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Medium;
+    this.selectedDifficulty = Difficulty.Easy;
     this.disableNations = false;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
@@ -1078,6 +1078,11 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
+    if (val && this.bots === 400) {
+      this.bots = 100;
+    } else if (!val && this.bots === 100) {
+      this.bots = 400;
+    }
     this.putGameConfig();
   };
 

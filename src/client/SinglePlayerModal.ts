@@ -36,7 +36,7 @@ import randomMap from "/images/RandomMap.webp?url";
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private disableNations: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -509,7 +509,14 @@ export class SinglePlayerModal extends BaseModal {
                 ${this.renderOptionToggle(
                   "single_modal.compact_map",
                   this.compactMap,
-                  (val) => (this.compactMap = val),
+                  (val) => {
+                    this.compactMap = val;
+                    if (val && this.bots === 400) {
+                      this.bots = 100;
+                    } else if (!val && this.bots === 100) {
+                      this.bots = 400;
+                    }
+                  },
                 )}
 
                 <!-- Toggle with input support for Max Timer -->
@@ -693,7 +700,7 @@ export class SinglePlayerModal extends BaseModal {
   protected onClose(): void {
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Medium;
+    this.selectedDifficulty = Difficulty.Easy;
     this.gameMode = GameMode.FFA;
     this.useRandomMap = false;
     this.disableNations = false;
