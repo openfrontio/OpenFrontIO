@@ -859,6 +859,19 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
+  updated(changedProperties: Map<string, unknown>): void {
+    super.updated(changedProperties);
+    // When chatEnabled changes to true, ensure the chat panel has access to the event bus
+    if (changedProperties.has("chatEnabled") && this.chatEnabled) {
+      this.updateComplete.then(() => {
+        const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+        if (chatPanel && window.__eventBus) {
+          (chatPanel as any).setEventBus(window.__eventBus);
+        }
+      });
+    }
+  }
+
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
     this.lobbyIdVisible = this.userSettings.get(
@@ -1246,6 +1259,10 @@ export class HostLobbyModal extends BaseModal {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.clients = data.clients ?? [];
+        // Sync chat enabled state from server
+        if (data.gameConfig?.chatEnabled !== undefined) {
+          this.chatEnabled = data.gameConfig.chatEnabled;
+        }
       });
   }
 
