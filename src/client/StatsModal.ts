@@ -196,7 +196,7 @@ export class StatsModal extends BaseModal {
     const maxGames = Math.max(...clans.map((c) => c.games), 1);
 
     return html`
-      <div class="w-full pt-2">
+      <div class="w-full pt-6">
         <div
           class="overflow-x-auto rounded-xl border border-white/5 bg-black/20"
         >
