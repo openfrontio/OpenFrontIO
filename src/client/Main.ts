@@ -1,7 +1,7 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -12,10 +12,9 @@ import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameInfoModal } from "./GameInfoModal";
 import { GameStartingModal } from "./GameStartingModal";
@@ -26,10 +25,12 @@ import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
-import { LanguageModal } from "./LanguageModal";
+import { initLayout } from "./Layout";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
+import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -43,22 +44,124 @@ import {
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { incrementGamesPlayed, isInIframe } from "./Utils";
+import {
+  getDiscordAvatarUrl,
+  incrementGamesPlayed,
+  isInIframe,
+  translateText,
+} from "./Utils";
+import "./components/DesktopNavBar";
+import "./components/Footer";
+import "./components/MainLayout";
+import "./components/MobileNavBar";
+import "./components/PlayPage";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
-import "./styles/components/button.css";
-import "./styles/components/controls.css";
-import "./styles/components/modal.css";
-import "./styles/components/setting.css";
-import "./styles/core/flag-animation.css";
 import "./styles/core/typography.css";
 import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 import "./styles/modal/chat.css";
+
+function updateAccountNavButton(userMeResponse: UserMeResponse | false) {
+  const button = document.getElementById("nav-account-button");
+  if (!button) return;
+
+  const avatarEl = document.getElementById("nav-account-avatar") as
+    | (HTMLImageElement & { _navToken?: symbol })
+    | null;
+  const personIconEl = document.getElementById(
+    "nav-account-person-icon",
+  ) as SVGElement | null;
+  const emailBadgeEl = document.getElementById(
+    "nav-account-email-badge",
+  ) as HTMLElement | null;
+  const signInTextEl = document.getElementById(
+    "nav-account-signin-text",
+  ) as HTMLSpanElement | null;
+
+  // Unique token for this update call
+  const navToken = Symbol();
+  if (avatarEl) avatarEl._navToken = navToken;
+
+  const showAvatar = (src: string, alt?: string) => {
+    if (avatarEl) {
+      avatarEl.alt = alt ?? translateText("main.discord_avatar_alt");
+      // If the avatar fails to load (bad URL / CDN issue / offline), fall back
+      // to the default sign-in UI instead of leaving a broken image.
+      avatarEl.onerror = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
+        avatarEl.src = "";
+        // If the user is still logged in via email, show the email badge state.
+        const email =
+          userMeResponse !== false ? userMeResponse.user.email : undefined;
+        if (email) {
+          showEmailLoggedIn();
+        } else {
+          showSignIn();
+        }
+      };
+      avatarEl.onload = () => {
+        // Only handle if this is the latest update
+        if (avatarEl._navToken !== navToken) return;
+        // Clear error handler after a successful load.
+        avatarEl.onerror = null;
+      };
+      avatarEl.src = src;
+      avatarEl.classList.remove("hidden");
+    }
+    personIconEl?.classList.add("hidden");
+    emailBadgeEl?.classList.add("hidden");
+    signInTextEl?.classList.add("hidden");
+    button?.classList.remove("border", "border-white/20");
+  };
+
+  const showSignIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.add("hidden");
+    signInTextEl?.classList.remove("hidden");
+    // Restore border when showing signin state
+    button?.classList.add("border", "border-white/20");
+  };
+
+  const showEmailLoggedIn = () => {
+    avatarEl?.classList.add("hidden");
+    personIconEl?.classList.remove("hidden");
+    emailBadgeEl?.classList.remove("hidden");
+    signInTextEl?.classList.add("hidden");
+    button?.classList.add("border", "border-white/20");
+  };
+
+  const discord =
+    userMeResponse !== false ? userMeResponse.user.discord : undefined;
+  if (discord && avatarEl) {
+    const avatarAlt = translateText("main.user_avatar_alt", {
+      username: discord.username,
+    });
+    const url = getDiscordAvatarUrl(discord);
+    if (url) {
+      showAvatar(url, avatarAlt);
+      return;
+    }
+  }
+
+  const email =
+    userMeResponse !== false ? userMeResponse.user.email : undefined;
+  if (email) {
+    showEmailLoggedIn();
+    return;
+  }
+
+  showSignIn();
+}
+
 declare global {
   interface Window {
+    GIT_COMMIT: string;
+    INSTANCE_ID: string;
     turnstile: any;
     enableAds: boolean;
     PageOS: {
@@ -83,12 +186,14 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
+    showPage?: (pageId: string) => void;
   }
 
   // Extend the global interfaces to include your custom events
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "join-changed": CustomEvent;
   }
 }
 
@@ -108,7 +213,6 @@ class Client {
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
-  private darkModeButton: DarkModeButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
@@ -132,37 +236,33 @@ class Client {
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
 
-    const gameVersion = document.getElementById(
-      "game-version",
-    ) as HTMLDivElement;
-    if (!gameVersion) {
+    // Wait for components to render before setting version
+    await customElements.whenDefined("mobile-nav-bar");
+    await customElements.whenDefined("desktop-nav-bar");
+
+    const versionElements = document.querySelectorAll(
+      "#game-version, .game-version-display",
+    );
+    if (versionElements.length === 0) {
       console.warn("Game version element not found");
+    } else {
+      const trimmed = version.trim();
+      const displayVersion = trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+      versionElements.forEach((el) => {
+        el.textContent = displayVersion;
+      });
     }
-    gameVersion.innerText = version;
 
     const langSelector = document.querySelector(
       "lang-selector",
     ) as LangSelector;
-    const languageModal = document.querySelector(
-      "language-modal",
-    ) as LanguageModal;
     if (!langSelector) {
       console.warn("Lang selector element not found");
-    }
-    if (!languageModal) {
-      console.warn("Language modal element not found");
     }
 
     this.flagInput = document.querySelector("flag-input") as FlagInput;
     if (!this.flagInput) {
       console.warn("Flag input element not found");
-    }
-
-    this.darkModeButton = document.querySelector(
-      "dark-mode-button",
-    ) as DarkModeButton;
-    if (!this.darkModeButton) {
-      console.warn("Dark mode button element not found");
     }
 
     this.usernameInput = document.querySelector(
@@ -206,7 +306,17 @@ class Client {
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        spModal.open();
+        window.showPage?.("page-single-player");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
@@ -219,10 +329,13 @@ class Client {
       console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
-    if (helpButton === null) throw new Error("Missing help-button");
-    helpButton.addEventListener("click", () => {
-      hlpModal.open();
-    });
+    if (helpButton) {
+      helpButton.addEventListener("click", () => {
+        if (hlpModal && hlpModal instanceof HelpModal) {
+          hlpModal.open();
+        }
+      });
+    }
 
     const flagInputModal = document.querySelector(
       "flag-input-modal",
@@ -231,13 +344,16 @@ class Client {
       console.warn("Flag input modal element not found");
     }
 
-    const flgInput = document.getElementById("flag-input_");
-    if (flgInput === null) throw new Error("Missing flag-input_");
-    flgInput.addEventListener("click", () => {
-      flagInputModal.open();
+    // Attach listener to any flag-input component (desktop or potentially others)
+    document.querySelectorAll("flag-input").forEach((flagInput) => {
+      flagInput.addEventListener("flag-input-click", () => {
+        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
+          flagInputModal.open();
+        }
+      });
     });
 
-    this.patternsModal = document.querySelector(
+    this.patternsModal = document.getElementById(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
     if (
@@ -246,11 +362,27 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    const patternButton = document.getElementById(
-      "territory-patterns-input-preview-button",
-    );
-    if (isInIframe() && patternButton) {
-      patternButton.style.display = "none";
+
+    // Attach listener to any pattern-input component
+    document.querySelectorAll("pattern-input").forEach((patternInput) => {
+      patternInput.addEventListener("pattern-input-click", () => {
+        // Open the Store page which contains the patterns UI
+        window.showPage?.("page-item-store");
+        const skinStoreModal = document.getElementById(
+          "page-item-store",
+        ) as HTMLElement & { open?: (opts: any) => void };
+        if (skinStoreModal) {
+          skinStoreModal.classList.remove("hidden");
+          if (typeof skinStoreModal.open === "function") {
+            skinStoreModal.open({ showOnlyOwned: true });
+          }
+        }
+      });
+    });
+
+    if (isInIframe()) {
+      const mobilePat = document.getElementById("pattern-input-mobile");
+      if (mobilePat) mobilePat.style.display = "none";
     }
 
     if (
@@ -259,12 +391,25 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
-    if (patternButton === null)
-      throw new Error("territory-patterns-input-preview-button");
-    this.patternsModal.previewButton = patternButton;
+
+    // We no longer need to manually manage the preview button as PatternInput handles it component-side.
+    // However, we still want to ensure the modal can be opened.
+    // The setupPatternInput above handles the click event for the new buttons.
+
     this.patternsModal.refresh();
-    patternButton.addEventListener("click", () => {
-      this.patternsModal.open();
+
+    // Listen for pattern selection to update any other listeners if needed,
+    // though PatternInput handles its own updates via window event.
+    this.patternsModal.addEventListener("pattern-selected", () => {
+      // PatternInput components will update themselves.
+    });
+
+    window.addEventListener("showPage", (e: any) => {
+      if (typeof e?.detail === "string" && e.detail === "page-play") {
+        setTimeout(() => {
+          this.patternsModal.refresh();
+        }, 50);
+      }
     });
 
     this.tokenLoginModal = document.querySelector(
@@ -286,8 +431,57 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
+    const matchmakingButton = document.getElementById("matchmaking-button");
+    const matchmakingButtonLoggedOut = document.getElementById(
+      "matchmaking-button-logged-out",
+    );
+
+    const updateMatchmakingButton = (loggedIn: boolean) => {
+      if (!loggedIn) {
+        matchmakingButton?.classList.add("hidden");
+        matchmakingButtonLoggedOut?.classList.remove("hidden");
+      } else {
+        matchmakingButton?.classList.remove("hidden");
+        matchmakingButtonLoggedOut?.classList.add("hidden");
+      }
+    };
+
+    if (matchmakingButton) {
+      matchmakingButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-matchmaking");
+          this.publicLobby.leaveLobby();
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    }
+
+    if (matchmakingButtonLoggedOut) {
+      matchmakingButtonLoggedOut.addEventListener("click", () => {
+        window.showPage?.("page-account");
+      });
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      // Check if user has actual authentication (discord or email), not just a publicId
+      const loggedIn =
+        userMeResponse !== false &&
+        userMeResponse !== null &&
+        typeof userMeResponse === "object" &&
+        userMeResponse.user &&
+        (userMeResponse.user.discord !== undefined ||
+          userMeResponse.user.email !== undefined);
+      updateMatchmakingButton(loggedIn);
+      updateAccountNavButton(userMeResponse);
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -323,7 +517,9 @@ class Client {
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
-        settingsModal.open();
+        if (settingsModal && settingsModal instanceof UserSettingModal) {
+          settingsModal.open();
+        }
       });
 
     const hostModal = document.querySelector(
@@ -336,8 +532,18 @@ class Client {
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        hostModal.open();
+        window.showPage?.("page-host-lobby");
         this.publicLobby.leaveLobby();
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
@@ -354,7 +560,17 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        this.joinModal.open();
+        window.showPage?.("page-join-private-lobby");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
       }
     });
 
@@ -367,9 +583,17 @@ class Client {
     // Attempt to join lobby
     this.handleUrl();
 
+    let preventHashUpdate = false;
+
     const onHashUpdate = () => {
+      // Prevent double-handling when both popstate and hashchange fire
+      if (preventHashUpdate) {
+        preventHashUpdate = false;
+        return;
+      }
+
       // Reset the UI to its initial state
-      this.joinModal.close();
+      this.joinModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -379,8 +603,12 @@ class Client {
     };
 
     // Handle browser navigation & manual hash edits
-    window.addEventListener("popstate", onHashUpdate);
+    window.addEventListener("popstate", () => {
+      preventHashUpdate = true;
+      onHashUpdate();
+    });
     window.addEventListener("hashchange", onHashUpdate);
+    window.addEventListener("join-changed", onHashUpdate);
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
@@ -406,8 +634,9 @@ class Client {
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
-      if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
+      if (lobbyId && GAME_ID_REGEX.test(lobbyId)) {
+        window.showPage?.("page-join-private-lobby");
+        this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -481,19 +710,22 @@ class Client {
       return;
     }
 
-    // Fallback to hash-based join for non-CrazyGames environments
-    if (decodedHash.startsWith("#join=")) {
-      const lobbyId = decodedHash.substring(6); // Remove "#join="
-      if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
-        console.log(`joining lobby ${lobbyId}`);
-      }
+    const pathMatch = window.location.pathname.match(
+      /^\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    const lobbyId =
+      pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
+    if (lobbyId) {
+      window.showPage?.("page-join-private-lobby");
+      this.joinModal.open(lobbyId);
+      console.log(`joining lobby ${lobbyId}`);
+      return;
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.patternsModal.open(affiliateCode);
+        this.patternsModal?.open(affiliateCode);
       }
     }
     if (decodedHash.startsWith("#refresh")) {
@@ -507,8 +739,10 @@ class Client {
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop();
+      document.body.classList.remove("in-game");
     }
     const config = await getServerConfigFromClient();
+    this.updateJoinUrlForShare(lobby.gameID, config);
 
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
@@ -599,14 +833,31 @@ class Client {
 
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
+        document.body.classList.add("in-game");
 
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
           history.replaceState(null, "", window.location.origin + "#refresh");
         }
-        history.pushState(null, "", `#join=${lobby.gameID}`);
+        history.pushState(
+          null,
+          "",
+          `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
+        );
       },
     );
+  }
+
+  private updateJoinUrlForShare(
+    lobbyId: string,
+    config: Awaited<ReturnType<typeof getServerConfigFromClient>>,
+  ) {
+    const targetUrl = `/${config.workerPath(lobbyId)}/game/${lobbyId}`;
+    const currentUrl = window.location.pathname;
+
+    if (currentUrl !== targetUrl) {
+      history.replaceState(null, "", targetUrl);
+    }
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
@@ -616,6 +867,8 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+
+    document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
 
@@ -699,9 +952,17 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
+const bootstrap = () => {
+  initLayout();
   new Client().initialize();
-});
+  initNavigation();
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
+}
 
 async function getTurnstileToken(): Promise<{
   token: string;

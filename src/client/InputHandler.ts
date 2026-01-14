@@ -176,13 +176,21 @@ export class InputHandler {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            if (v && typeof v === "object" && "value" in (v as any)) {
-              return [k, (v as any).value as string];
+            // Extract value from nested object or plain string
+            let val: unknown;
+            if (v && typeof v === "object" && "value" in v) {
+              val = (v as { value: unknown }).value;
+            } else {
+              val = v;
             }
-            if (typeof v === "string") return [k, v];
-            return [k, undefined];
+
+            // Map invalid values to undefined (filtered later)
+            if (typeof val !== "string") {
+              return [k, undefined];
+            }
+            return [k, val];
           })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+          .filter(([, v]) => typeof v === "string"),
       ) as Record<string, string>;
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);
@@ -352,7 +360,8 @@ export class InputHandler {
         this.eventBus.emit(new AlternateViewEvent(false));
       }
 
-      if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
+      const resetKey = this.keybinds.resetGfx ?? "KeyR";
+      if (e.code === resetKey && this.isAltKeyHeld(e)) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
@@ -627,19 +636,63 @@ export class InputHandler {
 
   isModifierKeyPressed(event: PointerEvent): boolean {
     return (
-      (this.keybinds.modifierKey === "AltLeft" && event.altKey) ||
-      (this.keybinds.modifierKey === "ControlLeft" && event.ctrlKey) ||
-      (this.keybinds.modifierKey === "ShiftLeft" && event.shiftKey) ||
-      (this.keybinds.modifierKey === "MetaLeft" && event.metaKey)
+      ((this.keybinds.modifierKey === "AltLeft" ||
+        this.keybinds.modifierKey === "AltRight") &&
+        event.altKey) ||
+      ((this.keybinds.modifierKey === "ControlLeft" ||
+        this.keybinds.modifierKey === "ControlRight") &&
+        event.ctrlKey) ||
+      ((this.keybinds.modifierKey === "ShiftLeft" ||
+        this.keybinds.modifierKey === "ShiftRight") &&
+        event.shiftKey) ||
+      ((this.keybinds.modifierKey === "MetaLeft" ||
+        this.keybinds.modifierKey === "MetaRight") &&
+        event.metaKey)
     );
+  }
+
+  private isAltKeyHeld(event: KeyboardEvent): boolean {
+    if (
+      this.keybinds.altKey === "AltLeft" ||
+      this.keybinds.altKey === "AltRight"
+    ) {
+      return event.altKey && !event.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ControlLeft" ||
+      this.keybinds.altKey === "ControlRight"
+    ) {
+      return event.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ShiftLeft" ||
+      this.keybinds.altKey === "ShiftRight"
+    ) {
+      return event.shiftKey;
+    }
+    if (
+      this.keybinds.altKey === "MetaLeft" ||
+      this.keybinds.altKey === "MetaRight"
+    ) {
+      return event.metaKey;
+    }
+    return false;
   }
 
   isAltKeyPressed(event: PointerEvent): boolean {
     return (
-      (this.keybinds.altKey === "AltLeft" && event.altKey) ||
-      (this.keybinds.altKey === "ControlLeft" && event.ctrlKey) ||
-      (this.keybinds.altKey === "ShiftLeft" && event.shiftKey) ||
-      (this.keybinds.altKey === "MetaLeft" && event.metaKey)
+      ((this.keybinds.altKey === "AltLeft" ||
+        this.keybinds.altKey === "AltRight") &&
+        event.altKey) ||
+      ((this.keybinds.altKey === "ControlLeft" ||
+        this.keybinds.altKey === "ControlRight") &&
+        event.ctrlKey) ||
+      ((this.keybinds.altKey === "ShiftLeft" ||
+        this.keybinds.altKey === "ShiftRight") &&
+        event.shiftKey) ||
+      ((this.keybinds.altKey === "MetaLeft" ||
+        this.keybinds.altKey === "MetaRight") &&
+        event.metaKey)
     );
   }
 }

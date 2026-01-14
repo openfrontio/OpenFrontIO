@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "back": "Back",
     "available": "Available",
     "preset_max": "Max",
     "summary_send": "Send",
@@ -17,27 +18,42 @@
     "cap_tooltip": "Recipient’s remaining capacity",
     "target_dead": "Target eliminated",
     "target_dead_note": "You can't send resources to an eliminated player.",
-    "none": "None"
+    "none": "None",
+    "copied": "Copied!",
+    "click_to_copy": "Click to copy"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
     "join_discord": "Discord",
     "login_discord": "Login with Discord",
+    "sign_in": "Sign in",
+    "discord_avatar_alt": "Discord profile avatar",
+    "user_avatar_alt": "{username}'s avatar",
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
     "log_out": "Log out",
-    "create_lobby": "Create Lobby",
-    "join_lobby": "Join Lobby",
-    "single_player": "Single Player",
+    "create": "Create Lobby",
+    "join": "Join Lobby",
+    "solo": "Solo",
     "instructions": "Instructions",
     "game_info": "Game info",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
-    "reddit": "Reddit"
+    "copyright": "© OpenFront™ and Contributors",
+    "reddit": "Reddit",
+    "play": "Play",
+    "news": "News",
+    "store": "Store",
+    "settings": "Settings",
+    "keys": "Keys",
+    "stats": "Stats",
+    "account": "Account",
+    "help": "Help",
+    "menu": "Menu",
+    "pick_pattern": "Pick a pattern!"
   },
   "news": {
-    "see_all_releases": "See all releases",
     "github_link": "on GitHub",
     "title": "Release Notes"
   },
@@ -136,10 +152,11 @@
     "bomb_direction": "Atom / Hydrogen bomb arc direction"
   },
   "single_modal": {
-    "title": "Single Player",
+    "title": "Solo",
     "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
     "toggle_achievements": "Toggle achievements",
+    "sign_in_for_achievements": "Sign in for achievements",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -150,6 +167,8 @@
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
+    "max_timer_placeholder": "Mins",
+    "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
@@ -161,11 +180,17 @@
   },
   "account_modal": {
     "title": "Account",
+    "connected_as": "Connected as",
+    "stats_overview": "Stats Overview",
+    "link_discord": "Link Discord Account",
+    "log_out": "Log Out",
+    "sign_in_desc": "Sign in to save your stats and progress",
+    "or": "OR",
+    "email_placeholder": "Enter your email address",
+    "get_magic_link": "Get Magic Link",
     "linked_account": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
-    "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}",
-    "player_id": "Player ID: {id}",
     "not_found": "Not Found",
     "clear_session": "Clear Session",
     "failed_to_send_recovery_email": "Failed to send recovery email",
@@ -177,6 +202,7 @@
     "loading": "Loading...",
     "error": "Error loading clan stats",
     "no_stats": "No clan stats available",
+    "no_data_yet": "No Data Yet",
     "clan": "Clan",
     "games": "Games",
     "win_score": "Win Score",
@@ -184,7 +210,9 @@
     "loss_score": "Loss Score",
     "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
     "win_loss_ratio": "Win/Loss",
-    "rank": "Rank"
+    "ratio": "Ratio",
+    "rank": "Rank",
+    "try_again": "Try Again"
   },
   "game_info_modal": {
     "title": "Game info",
@@ -207,7 +235,7 @@
     "pirate": "Pirate",
     "conquered": "Conquered",
     "loading_game_info": "Loading game stats",
-    "no_winner": "This game ended with no winner"
+    "no_winner": "This game ended with no winner (or a Nation won)"
   },
   "map": {
     "map": "Map",
@@ -233,7 +261,7 @@
     "betweentwoseas": "Between Two Seas",
     "faroeislands": "Faroe Islands",
     "deglaciatedantarctica": "Deglaciated Antarctica",
-    "europeclassic": "Europe (classic)",
+    "europeclassic": "Europe (Classic)",
     "falklandislands": "Falkland Islands",
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
@@ -252,19 +280,24 @@
     "svalmel": "Svalmel",
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
+    "sierpinski": "Sierpinski",
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
     "surrounded": "Surrounded",
     "didier": "Didier",
+    "didierfrance": "Didier (France)",
     "amazonriver": "Amazon River"
   },
   "map_categories": {
     "continental": "Continental",
     "regional": "Regional",
-    "fantasy": "Other"
+    "fantasy": "Other",
+    "special": "Special",
+    "arcade": "Arcade"
   },
   "map_component": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "error": "Error"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -275,39 +308,47 @@
     "checking": "Checking lobby...",
     "not_found": "Lobby not found. Please check the ID and try again.",
     "error": "An error occurred. Please try again or contact support.",
-    "joined_waiting": "Joined successfully! Waiting for game to start...",
-    "version_mismatch": "This game was created with a different version. Cannot join."
+    "joined_waiting": "Lobby joined! Waiting for host to start...",
+    "version_mismatch": "This game was created with a different version. Cannot join.",
+    "disabled_units": "Disabled Units"
   },
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "{team_count} of 2 (Duos)",
-    "teams_Trios": "{team_count} of 3 (Trios)",
-    "teams_Quads": "{team_count} of 4 (Quads)",
+    "teams_Duos": "{team_count} teams of 2 (Duos)",
+    "teams_Trios": "{team_count} teams of 3 (Trios)",
+    "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
-    "players_per_team": "of {num}"
+    "players_per_team": "of {num}",
+    "started": "Started"
   },
   "matchmaking_modal": {
-    "title": "Matchmaking",
+    "title": "1v1 Ranked Matchmaking (ALPHA)",
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
-    "waiting_for_game": "Waiting for game to start..."
+    "waiting_for_game": "Waiting for game to start...",
+    "elo": "Your ELO: {elo}"
   },
   "username": {
     "enter_username": "Enter your username",
     "not_string": "Username must be a string.",
     "too_short": "Username must be at least {min} characters long.",
     "too_long": "Username must not exceed {max} characters.",
-    "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, and [square brackets]."
+    "invalid_chars": "Username can only contain letters, numbers, spaces, and underscores.",
+    "tag": "TAG",
+    "tag_too_short": "Clan tag must be 2-5 alphanumeric characters.",
+    "tag_invalid_chars": "Clan tag can only contain letters and numbers."
   },
   "host_modal": {
-    "title": "Private Lobby",
+    "title": "Create Private Lobby",
+    "label": "Private",
     "mode": "Mode",
     "team_count": "Number of Teams",
+    "team_type": "Team Type",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
@@ -315,6 +356,7 @@
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
+    "mins_placeholder": "Mins",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "donate_gold": "Donate gold",
@@ -336,7 +378,8 @@
     "remove_player": "Remove {username}",
     "teams_Duos": "Duos (teams of 2)",
     "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)"
+    "teams_Quads": "Quads (teams of 4)",
+    "teams_Humans Vs Nations": "Humans vs Nations"
   },
   "team_colors": {
     "red": "Red",
@@ -384,7 +427,7 @@
     "factory": "Factory"
   },
   "user_setting": {
-    "title": "User Settings",
+    "title": "Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
     "dark_mode_label": "Dark Mode",
@@ -403,6 +446,7 @@
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
     "lobby_id_visibility_label": "Hidden Lobby IDs",
     "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
+    "toggle_visibility": "Toggle Visibility",
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_menu": "Left Click Menu",
@@ -416,6 +460,7 @@
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
     "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
+    "press_a_key": "Press a key",
     "view_options": "View Options",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
@@ -440,6 +485,11 @@
     "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
     "build_mirv": "Build MIRV",
     "build_mirv_desc": "Build a MIRV under your cursor.",
+    "menu_shortcuts": "Menu Shortcuts",
+    "build_menu_modifier": "Build Menu Modifier",
+    "build_menu_modifier_desc": "Hold this key while clicking to open the build menu.",
+    "emoji_menu_modifier": "Emoji Menu Modifier",
+    "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
@@ -450,6 +500,8 @@
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "swap_direction": "Swap Rocket Direction",
+    "swap_direction_desc": "Toggle rocket launch direction (up/down).",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",
@@ -474,7 +526,8 @@
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
     "background_music_volume": "Background Music Volume",
-    "sound_effects_volume": "Sound Effects Volume"
+    "sound_effects_volume": "Sound Effects Volume",
+    "keybind_conflict_error": "The key {key} is already bound to another action."
   },
   "chat": {
     "title": "Quick Chat",
@@ -587,6 +640,7 @@
     "other_team": "{team} team has won!",
     "you_won": "You Won!",
     "other_won": "{player} has won!",
+    "nation_won": "Nation {nation} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
     "spectate": "Spectate",
@@ -662,7 +716,20 @@
     "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "ignore": "Ignore",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
-    "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends"
+    "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
+    "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
+    "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
+    "received_gold_from_trade": "Received {gold} gold from trade with {name}",
+    "missile_intercepted": "Missile intercepted {unit}",
+    "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
+    "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "received_troops_from_player": "Received {troops} troops from {name}",
+    "sent_gold_to_player": "Sent {gold} gold to {name}",
+    "received_gold_from_player": "Received {gold} gold from {name}",
+    "unit_captured_by_enemy": "Your {unit} was captured by {name}",
+    "captured_enemy_unit": "Captured {unit} from {name}",
+    "unit_destroyed": "Your {unit} was destroyed",
+    "no_boats_available": "No boats available, max {max}"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -775,6 +842,7 @@
     "colors": "Colors",
     "purchase": "Purchase",
     "show_only_owned": "My Skins",
+    "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
     "blocked": {
       "login": "You must be logged in to access this skin.",
@@ -782,7 +850,9 @@
     },
     "pattern": {
       "default": "Default"
-    }
+    },
+    "select_skin": "Select Skin",
+    "selected": "selected"
   },
   "flag_input": {
     "title": "Select Flag",
@@ -853,7 +923,7 @@
     "mode": "Mode",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team",
-    "view": "View",
+    "replay": "Replay",
     "details": "Details",
     "ranking": "Ranking",
     "started": "Started",
@@ -864,13 +934,20 @@
   "player_stats_tree": {
     "public": "Public",
     "private": "Private",
-    "singleplayer": "Single Player",
+    "singleplayer": "Solo",
     "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
-    "mode_team": "Team"
+    "mode_team": "Team",
+    "no_stats": "No stats recorded for this selection."
+  },
+  "matchmaking_button": {
+    "play_ranked": "1v1 Ranked Matchmaking",
+    "description": "(ALPHA)",
+    "login_required": "Login to play ranked!",
+    "must_login": "You must be logged in to play ranked matchmaking."
   }
 }

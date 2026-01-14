@@ -5,7 +5,6 @@ import {
   Duos,
   GameMapType,
   GameMode,
-  hasUnusualThumbnailSize,
   HumansVsNations,
   PublicGameModifiers,
   Quads,
@@ -27,7 +26,7 @@ export class PublicLobby extends LitElement {
 
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 750;
+  private debounceDelay: number = 150;
   private lobbyIDToStart = new Map<GameID, number>();
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
@@ -120,78 +119,130 @@ export class PublicLobby extends LitElement {
     );
 
     const mapImageSrc = this.mapImages.get(lobby.gameID);
-    const isUnusualThumbnailSize = hasUnusualThumbnailSize(
-      lobby.gameConfig.gameMap,
-    );
 
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] ${this
           .isLobbyHighlighted
-          ? "bg-linear-to-r via-none from-green-600 to-green-500"
-          : "bg-linear-to-r via-none from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
-          .isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
+          ? "ring-2 ring-blue-600 scale-[1.01] opacity-70"
+          : "hover:scale-[1.01]"} active:scale-[0.98] ${this.isButtonDebounced
+          ? "cursor-not-allowed"
           : ""}"
       >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10 mask-[linear-gradient(to_left,transparent,#fff)] ${isUnusualThumbnailSize
-                ? "object-cover object-center"
-                : ""}"
-            />`
-          : html`<div
-              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
-            ></div>`}
-        <div
-          class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
-        >
-          <div>
-            <div class="text-lg md:text-2xl font-semibold">
-              ${this.currLobby
-                ? isStarting
-                  ? html`${translateText("public_lobby.starting_game")}`
-                  : html`${translateText("public_lobby.waiting_for_players")}
-                    ${[0, 1, 2]
-                      .map((i) => (i === this.joiningDotIndex ? "•" : "·"))
-                      .join("")}`
-                : translateText("public_lobby.join")}
-            </div>
-            <div
-              class="text-md font-medium text-white-400 flex flex-wrap justify-end items-center gap-1"
-            >
-              <span
-                class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
-                  ? "text-green-600"
-                  : "text-blue-600"} bg-white rounded-xs px-1"
-                >${fullModeLabel}</span
-              >
-              ${modifierLabel.map(
-                (label) =>
-                  html`<span
-                    class="text-sm whitespace-nowrap ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-xs px-1"
-                    >${label}</span
-                  >`,
-              )}
-              <span class="whitespace-nowrap"
-                >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-                )}</span
-              >
-            </div>
+        <div class="font-sans w-full h-full flex flex-col">
+          <!-- Main card gradient - stops before text -->
+          <div class="absolute inset-0 pointer-events-none z-10"></div>
+
+          <!-- Map Image Area with gradient overlay -->
+          <div class="flex-1 w-full relative overflow-hidden">
+            ${mapImageSrc
+              ? html`<img
+                  src="${mapImageSrc}"
+                  alt="${lobby.gameConfig.gameMap}"
+                  class="absolute inset-0 w-full h-full object-cover object-center z-10"
+                />`
+              : ""}
+            <!-- Vignette overlay for dark edges -->
+            <div class="pointer-events-none absolute inset-0 z-20"></div>
           </div>
 
-          <div>
-            <div class="text-md font-medium text-blue-100">
-              ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
+          <!-- Mode Badge in top left -->
+          ${fullModeLabel
+            ? html`<span
+                class="absolute top-4 left-4 px-4 py-1 rounded font-bold text-sm lg:text-base uppercase tracking-widest z-30 bg-slate-800 text-white ring-1 ring-white/10 shadow-sm"
+              >
+                ${fullModeLabel}
+              </span>`
+            : ""}
+
+          <!-- Timer in top right -->
+          ${timeRemaining > 0
+            ? html`
+                <span
+                  class="absolute top-4 right-4 px-4 py-1 rounded font-bold text-sm lg:text-base tracking-widest z-30 bg-blue-600 text-white"
+                >
+                  ${timeDisplay}
+                </span>
+              `
+            : html`<span
+                class="absolute top-4 right-4 px-4 py-1 rounded font-bold text-sm lg:text-base uppercase tracking-widest z-30 bg-green-600 text-white"
+              >
+                ${translateText("public_lobby.started")}
+              </span>`}
+
+          <!-- Content Banner -->
+          <div class="absolute bottom-0 left-0 right-0 z-20">
+            <!-- Modifier badges placed just above the gradient overlay -->
+            ${modifierLabel.length > 0
+              ? html`<div
+                  class="absolute -top-8 left-4 z-30 flex gap-2 flex-wrap"
+                >
+                  ${modifierLabel.map(
+                    (label) => html`
+                      <span
+                        class="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide bg-purple-600 text-white"
+                      >
+                        ${label}
+                      </span>
+                    `,
+                  )}
+                </div>`
+              : html``}
+
+            <!-- Gradient overlay for text area - adds extra darkening -->
+            <div
+              class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90 pointer-events-none"
+            ></div>
+
+            <div class="relative p-6 flex flex-col gap-2 text-left">
+              <!-- Header row: Status/Join on left, Player Count on right -->
+              <div class="flex items-center justify-between w-full">
+                <div class="text-base uppercase tracking-widest text-white">
+                  ${this.currLobby
+                    ? isStarting
+                      ? html`<span class="text-green-400 animate-pulse"
+                          >${translateText("public_lobby.starting_game")}</span
+                        >`
+                      : html`<span class="text-orange-400"
+                          >${translateText("public_lobby.waiting_for_players")}
+                          ${[0, 1, 2]
+                            .map((i) =>
+                              i === this.joiningDotIndex ? "•" : "·",
+                            )
+                            .join("")}</span
+                        >`
+                    : html`${translateText("public_lobby.join")}`}
+                </div>
+
+                <div class="flex items-center gap-2 text-white z-30">
+                  <span class="text-base font-bold uppercase tracking-widest"
+                    >${lobby.numClients}/${lobby.gameConfig.maxPlayers}</span
+                  >
+                  <svg
+                    class="w-5 h-5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Map Name - Full Width -->
+              <div
+                class="text-2xl lg:text-3xl font-bold text-white leading-none uppercase tracking-widest w-full"
+              >
+                ${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+                )}
+              </div>
+
+              <!-- modifiers moved above gradient overlay -->
             </div>
-            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
           </div>
         </div>
       </button>
@@ -335,6 +386,25 @@ export class PublicLobby extends LitElement {
     }, this.debounceDelay);
 
     if (this.currLobby === null) {
+      // Validate username only when joining a new lobby
+      const usernameInput = document.querySelector("username-input") as any;
+      if (
+        usernameInput &&
+        typeof usernameInput.isValid === "function" &&
+        !usernameInput.isValid()
+      ) {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: usernameInput.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+        return;
+      }
+
       this.isLobbyHighlighted = true;
       this.currLobby = lobby;
       this.startJoiningAnimation();

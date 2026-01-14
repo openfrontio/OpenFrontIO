@@ -1,32 +1,13 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { DiscordUser } from "../../../../core/ApiSchemas";
-import { translateText } from "../../../Utils";
+import { getDiscordAvatarUrl, translateText } from "../../../Utils";
 
 @customElement("discord-user-header")
 export class DiscordUserHeader extends LitElement {
-  static styles = css`
-    .wrap {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .avatarFrame {
-      padding: 3px;
-      border-radius: 9999px;
-      background: #6b7280; /* bg-gray-500 */
-    }
-    .avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 9999px;
-      display: block;
-    }
-    .name {
-      font-weight: 600;
-      color: white;
-    }
-  `;
+  createRenderRoot() {
+    return this;
+  }
 
   @state() private _data: DiscordUser | null = null;
 
@@ -42,15 +23,7 @@ export class DiscordUserHeader extends LitElement {
   private get avatarUrl(): string | null {
     const u = this._data;
     if (!u) return null;
-    if (u.avatar) {
-      const ext = u.avatar.startsWith("a_") ? "gif" : "png";
-      return `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${ext}`;
-    }
-    if (u.discriminator !== undefined) {
-      const idx = Number(u.discriminator) % 5;
-      return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
-    }
-    return null;
+    return getDiscordAvatarUrl(u);
   }
 
   private get discordDisplayName(): string {
@@ -59,19 +32,19 @@ export class DiscordUserHeader extends LitElement {
 
   render() {
     return html`
-      <div class="wrap">
+      <div class="flex items-center gap-2">
         ${this.avatarUrl
           ? html`
-              <div class="avatarFrame">
+              <div class="p-[3px] rounded-full bg-gray-500">
                 <img
-                  class="avatar"
+                  class="w-12 h-12 rounded-full block"
                   src="${this.avatarUrl}"
                   alt="${translateText("discord_user_header.avatar_alt")}"
                 />
               </div>
             `
           : null}
-        <span class="name">${this.discordDisplayName}</span>
+        <span class="font-semibold text-white">${this.discordDisplayName}</span>
       </div>
     `;
   }

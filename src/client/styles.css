@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
 
 @theme {
@@ -38,29 +39,41 @@
   }
 }
 
+/* Ensure the main page never scrolls; modals handle internal scrolling */
+html {
+  height: 100%; /* Fallback */
+  height: 100dvh;
+}
+
+body {
+  height: 100%;
+  overflow: hidden !important;
+  /* Safe area padding for notched devices */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Add custom scrollbar styles */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .hide-scrollbar {
@@ -374,102 +387,6 @@ label.option-card:hover {
   background-color: white;
   width: 32px;
   height: 32px;
-}
-
-#helpModal .city-icon {
-  mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
-}
-
-#helpModal .factory-icon {
-  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .defense-post-icon {
-  mask: url("../../resources/images/ShieldIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .port-icon {
-  mask: url("../../resources/images/PortIcon.svg") no-repeat center / cover;
-}
-
-#helpModal .warship-icon {
-  mask: url("../../resources/images/BattleshipIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .missile-silo-icon {
-  mask: url("../../resources/images/MissileSiloIconWhite.svg") no-repeat
-    center / cover;
-}
-
-#helpModal .sam-launcher-icon {
-  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
-    center / cover;
-}
-
-#helpModal .atom-bomb-icon {
-  mask: url("../../resources/images/NukeIconWhite.svg") no-repeat center / cover;
-}
-
-#helpModal .hydrogen-bomb-icon {
-  mask: url("../../resources/images/MushroomCloudIconWhite.svg") no-repeat
-    center / cover;
-}
-
-#helpModal .mirv-icon {
-  mask: url("../../resources/images/MIRVIcon.svg") no-repeat center / cover;
-}
-
-#helpModal .chat-icon {
-  mask: url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
-}
-
-#helpModal .target-icon {
-  mask: url("../../resources/images/TargetIcon.svg") no-repeat center / cover;
-}
-
-#helpModal .alliance-icon {
-  mask: url("../../resources/images/AllianceIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .emoji-icon {
-  mask: url("../../resources/images/EmojiIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .betray-icon {
-  mask: url("../../resources/images/TraitorIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .donate-icon {
-  mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
-    center / cover;
-}
-
-#helpModal .donate-gold-icon {
-  mask: url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .build-icon {
-  mask: url("../../resources/images/BuildIconWhite.svg") no-repeat center /
-    cover;
-}
-
-#helpModal .info-icon {
-  mask: url("../../resources/images/InfoIcon.svg") no-repeat center / cover;
-}
-
-#helpModal .boat-icon {
-  mask: url("../../resources/images/BoatIcon.svg") no-repeat center / cover;
-}
-
-#helpModal .cancel-icon {
-  mask: url("../../resources/images/XIcon.svg") no-repeat center / cover;
 }
 
 @media screen and (max-width: 768px) {

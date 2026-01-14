@@ -11,8 +11,8 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinding } from "../pathfinding/PathFinder";
+import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -33,7 +33,7 @@ export class TransportShipExecution implements Execution {
 
   private boat: Unit;
 
-  private pathFinder: PathFinder;
+  private pathFinder: SteppingPathFinder<TileRef>;
 
   private originalOwner: Player;
 
@@ -70,16 +70,18 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathFinder = PathFinding.Water(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
       mg.config().boatMaxNumber()
     ) {
       mg.displayMessage(
-        `No boats available, max ${mg.config().boatMaxNumber()}`,
+        "events_display.no_boats_available",
         MessageType.ATTACK_FAILED,
         this.attacker.id(),
+        undefined,
+        { max: mg.config().boatMaxNumber() },
       );
       this.active = false;
       return;
@@ -141,13 +143,8 @@ export class TransportShipExecution implements Execution {
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
+      targetTile: this.dst ?? undefined,
     });
-
-    if (this.dst !== null) {
-      this.boat.setTargetTile(this.dst);
-    } else {
-      this.boat.setTargetTile(undefined);
-    }
 
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
@@ -224,9 +221,9 @@ export class TransportShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
-    switch (result.type) {
-      case PathFindResultType.Completed:
+    const result = this.pathFinder.next(this.boat.tile(), this.dst);
+    switch (result.status) {
+      case PathStatus.COMPLETE:
         if (this.mg.owner(this.dst) === this.attacker) {
           const deaths = this.boat.troops() * (malusForRetreat / 100);
           const survivors = this.boat.troops() - deaths;
@@ -240,9 +237,11 @@ export class TransportShipExecution implements Execution {
             .boatArriveTroops(this.attacker, this.target, survivors);
           if (deaths) {
             this.mg.displayMessage(
-              `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+              "events_display.attack_cancelled_retreat",
               MessageType.ATTACK_CANCELLED,
               this.attacker.id(),
+              undefined,
+              { troops: renderTroops(deaths) },
             );
           }
           return;
@@ -269,18 +268,23 @@ export class TransportShipExecution implements Execution {
           .stats()
           .boatArriveTroops(this.attacker, this.target, this.boat.troops());
         return;
-      case PathFindResultType.NextTile:
+      case PathStatus.NEXT:
         this.boat.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case PathStatus.PENDING:
         break;
-      case PathFindResultType.PathNotFound:
+      case PathStatus.NOT_FOUND: {
         // TODO: add to poisoned port list
-        console.warn(`path not found to dst`);
+        const map = this.mg.map();
+        const boatTile = this.boat.tile();
+        console.warn(
+          `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.targetID}`,
+        );
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;
         return;
+      }
     }
   }
 
