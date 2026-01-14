@@ -143,7 +143,7 @@ export class TransportShipExecution implements Execution {
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
       troops: this.startTroops,
-      targetTile: this.dst,
+      targetTile: this.dst ?? undefined,
     });
 
     // Notify the target player about the incoming naval invasion
