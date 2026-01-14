@@ -36,17 +36,17 @@ export class RankingHeader extends LitElement {
       case RankType.MIRV:
         return html`
           <div class="flex justify-between sm:px-17.5 w-full">
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.atoms"),
               RankType.Atoms,
             )}
             /
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.hydros"),
               RankType.Hydros,
             )}
             /
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.mirv"),
               RankType.MIRV,
             )}
@@ -56,10 +56,15 @@ export class RankingHeader extends LitElement {
         return html`<div class="w-full">
           ${translateText("game_info_modal.all_gold")}
         </div>`;
-      case RankType.TradedGold:
-        return html`<div class="w-full">
-          ${translateText("game_info_modal.trade")}
-        </div>`;
+      case RankType.NavalTrade:
+      case RankType.TrainTrade:
+        return html`
+          <div class="flex justify-between sm:px-17.5 w-full">
+            ${this.renderMultipleChoiceHeaderButton("🚂", RankType.NavalTrade)}
+            /
+            ${this.renderMultipleChoiceHeaderButton("🚢", RankType.TrainTrade)}
+          </div>
+        `;
       case RankType.ConqueredGold:
         return html`<div class="w-full">
           ${translateText("game_info_modal.conquest_gold")}
@@ -74,13 +79,13 @@ export class RankingHeader extends LitElement {
     }
   }
 
-  private renderBombHeaderButton(label: string, type: RankType) {
+  private renderMultipleChoiceHeaderButton(label: string, type: RankType) {
     return html`
       <button
         @click=${() => this.onSort(type)}
         class="${this.rankType === type
           ? "border-b-2 border-b-white"
-          : nothing}"
+          : nothing} h-[28px]"
       >
         ${label}
       </button>
