@@ -65,7 +65,7 @@ export class GameManager {
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
         difficulty: Difficulty.Medium,
-        chatEnabled: false,
+        chatEnabled: true,
         disableNations: false,
         infiniteGold: false,
         infiniteTroops: false,
