@@ -228,6 +228,7 @@ export class LangSelector extends LitElement {
       "stats-modal",
       "flag-input-modal",
       "flag-input",
+      "token-login",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
