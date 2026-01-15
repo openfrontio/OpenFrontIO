@@ -1,3 +1,4 @@
+import { Theme } from "../../../core/configuration/Config";
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -27,6 +28,7 @@ interface SamInfo {
  * Layer responsible for rendering SAM launcher defense radii
  */
 export class SAMRadiusLayer implements Layer {
+  private readonly theme: Theme;
   private readonly samLaunchers: Map<number, SamInfo> = new Map(); // Track SAM launcher IDs -> SAM info
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
@@ -51,7 +53,9 @@ export class SAMRadiusLayer implements Layer {
     private readonly game: GameView,
     private readonly eventBus: EventBus,
     private readonly uiState: UIState,
-  ) {}
+  ) {
+    this.theme = game.config().theme();
+  }
 
   init() {
     // Listen for game updates to detect SAM launcher changes
@@ -75,7 +79,7 @@ export class SAMRadiusLayer implements Layer {
         const unit = this.game.unit(update.id);
         if (unit && unit.type() === UnitType.SAMLauncher) {
           if (this.hasChanged(unit)) {
-            this.needsRedraw = true; // A SAM changed: radiuses shall be recomputed when necessary
+            this.needsRedraw = true; // A SAM changed: radii shall be recomputed when necessary
             break;
           }
         }
@@ -95,7 +99,7 @@ export class SAMRadiusLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.visible) {
       if (this.needsRedraw) {
-        // SAM changed: the radiuses needs to be updated
+        // SAM changed: the radii needs to be updated
         this.computeCircleUnions();
         this.needsRedraw = false;
       }
@@ -146,7 +150,8 @@ export class SAMRadiusLayer implements Layer {
     );
 
     // Collect radius data
-    const radiuses = samLaunchers.map((sam) => {
+
+    return samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {
         x: this.game.x(tile),
@@ -156,7 +161,6 @@ export class SAMRadiusLayer implements Layer {
         arcs: [],
       };
     });
-    return radiuses;
   }
 
   private computeUncoveredArcIntervals(a: SAMRadius, circles: SAMRadius[]) {
@@ -266,9 +270,9 @@ export class SAMRadiusLayer implements Layer {
 
   private drawArcSegments(ctx: CanvasRenderingContext2D, a: SAMRadius) {
     const outlineColor = "rgba(0, 0, 0, 1)";
-    const lineColorSelf = "rgba(0, 255, 0, 1)";
-    const lineColorEnemy = "rgba(255, 0, 0, 1)";
-    const lineColorFriend = "rgba(255, 255, 0, 1)";
+    const lineColorSelf = this.theme.selfColor().toRgbString();
+    const lineColorEnemy = this.theme.enemyColor().toRgbString();
+    const lineColorFriend = this.theme.allyColor().toRgbString();
     const extraOutlineWidth = 1; // adds onto below
     const lineWidth = 3;
     const lineDash = [12, 6];
