@@ -5,10 +5,19 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-const GRID_COLUMNS = 10;
-const GRID_ROWS = 10;
-const GRID_LABELS = "ABCDEFGHIJ";
+const BASE_CELL_COUNT = 10;
 const LABEL_PADDING = 8;
+const LABEL_BG_PADDING = 4;
+
+const toAlphaLabel = (index: number): string => {
+  let value = index;
+  let label = "";
+  do {
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+  return label;
+};
 
 export class CoordinateGridLayer implements Layer {
   private isVisible = false;
@@ -36,18 +45,26 @@ export class CoordinateGridLayer implements Layer {
     const height = this.game.height();
     if (width <= 0 || height <= 0) return;
 
-    const cellWidth = width / GRID_COLUMNS;
-    const cellHeight = height / GRID_ROWS;
+    let cellSize = Math.min(width, height) / BASE_CELL_COUNT;
+    let rows = Math.max(1, Math.round(height / cellSize));
+    let cols = Math.max(1, Math.round(width / cellSize));
+    cellSize = Math.min(width / cols, height / rows);
+    rows = Math.max(1, Math.round(height / cellSize));
+    cols = Math.max(1, Math.round(width / cellSize));
+
+    const cellWidth = cellSize;
+    const cellHeight = cellSize;
     const canvasWidth = context.canvas.width;
     const canvasHeight = context.canvas.height;
 
     context.save();
-    context.strokeStyle = "rgba(255, 255, 255, 0.18)";
-    context.lineWidth = 1;
+    context.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    context.lineWidth = 1.25;
     context.beginPath();
 
-    for (let col = 0; col <= GRID_COLUMNS; col++) {
+    for (let col = 0; col <= cols; col++) {
       const worldX = col * cellWidth;
+      if (worldX > width) break;
       const screenX = this.transformHandler.worldToScreenCoordinates(
         new Cell(worldX, 0),
       ).x;
@@ -56,8 +73,9 @@ export class CoordinateGridLayer implements Layer {
       context.lineTo(screenX, canvasHeight);
     }
 
-    for (let row = 0; row <= GRID_ROWS; row++) {
+    for (let row = 0; row <= rows; row++) {
       const worldY = row * cellHeight;
+      if (worldY > height) break;
       const screenY = this.transformHandler.worldToScreenCoordinates(
         new Cell(0, worldY),
       ).y;
@@ -68,30 +86,61 @@ export class CoordinateGridLayer implements Layer {
 
     context.stroke();
 
-    context.fillStyle = "rgba(255, 255, 255, 0.9)";
     context.font = "12px monospace";
-    context.textAlign = "center";
-    context.textBaseline = "top";
 
-    for (let col = 0; col < GRID_COLUMNS; col++) {
+    const drawLabel = (
+      text: string,
+      x: number,
+      y: number,
+      align: CanvasTextAlign,
+      baseline: CanvasTextBaseline,
+    ) => {
+      context.textAlign = align;
+      context.textBaseline = baseline;
+      const metrics = context.measureText(text);
+      const textWidth = metrics.width;
+      const textHeight =
+        (metrics.actualBoundingBoxAscent ?? 8) +
+        (metrics.actualBoundingBoxDescent ?? 4);
+
+      let rectX = x;
+      let rectY = y;
+
+      if (align === "center") rectX -= textWidth / 2;
+      if (align === "right") rectX -= textWidth;
+      if (baseline === "middle") rectY -= textHeight / 2;
+      if (baseline === "bottom") rectY -= textHeight;
+
+      context.fillStyle = "rgba(0, 0, 0, 0.55)";
+      context.fillRect(
+        rectX - LABEL_BG_PADDING,
+        rectY - LABEL_BG_PADDING,
+        textWidth + LABEL_BG_PADDING * 2,
+        textHeight + LABEL_BG_PADDING * 2,
+      );
+
+      context.fillStyle = "rgba(255, 255, 255, 0.95)";
+      context.fillText(text, x, y);
+    };
+
+    for (let col = 0; col < cols; col++) {
       const centerX = (col + 0.5) * cellWidth;
+      if (centerX > width) break;
       const screenX = this.transformHandler.worldToScreenCoordinates(
         new Cell(centerX, 0),
       ).x;
       if (screenX < 0 || screenX > canvasWidth) continue;
-      context.fillText(String(col + 1), screenX, LABEL_PADDING);
+      drawLabel(String(col + 1), screenX, LABEL_PADDING, "center", "top");
     }
 
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-
-    for (let row = 0; row < GRID_ROWS; row++) {
+    for (let row = 0; row < rows; row++) {
       const centerY = (row + 0.5) * cellHeight;
+      if (centerY > height) break;
       const screenY = this.transformHandler.worldToScreenCoordinates(
         new Cell(0, centerY),
       ).y;
       if (screenY < 0 || screenY > canvasHeight) continue;
-      context.fillText(GRID_LABELS[row], LABEL_PADDING, screenY);
+      drawLabel(toAlphaLabel(row), LABEL_PADDING, screenY, "left", "middle");
     }
 
     context.restore();
