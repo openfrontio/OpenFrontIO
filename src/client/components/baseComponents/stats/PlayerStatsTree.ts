@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
 import {
+  Difficulty,
   GameMode,
   GameType,
   isDifficulty,
@@ -18,6 +19,19 @@ export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
   @state() selectedType: GameType = GameType.Public;
   @state() selectedMode: GameMode = GameMode.FFA;
+  @state() selectedDifficulty: Difficulty = Difficulty.Medium;
+
+  private get typeNode() {
+    return this.statsTree?.[this.selectedType];
+  }
+
+  private get modeNode() {
+    return this.typeNode?.[this.selectedMode];
+  }
+
+  private get shouldMergeDifficulties() {
+    return this.selectedType === GameType.Public;
+  }
 
   private get availableTypes(): GameType[] {
     if (!this.statsTree) return [];
@@ -25,9 +39,13 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableModes(): GameMode[] {
-    const typeNode = this.statsTree?.[this.selectedType];
-    if (!typeNode) return [];
-    return Object.keys(typeNode).filter(isGameMode);
+    if (!this.typeNode) return [];
+    return Object.keys(this.typeNode).filter(isGameMode);
+  }
+
+  private get availableDifficulties(): Difficulty[] {
+    if (!this.modeNode) return [];
+    return Object.keys(this.modeNode).filter(isDifficulty);
   }
 
   private labelForMode(m: GameMode) {
@@ -40,50 +58,74 @@ export class PlayerStatsTreeView extends LitElement {
     return this;
   }
 
-  private getMergedLeaf(): PlayerStatsLeaf | null {
-    const typeNode = this.statsTree?.[this.selectedType];
-    if (!typeNode) return null;
-    const modeNode = typeNode[this.selectedMode];
+  private getSelectedLeaf(): PlayerStatsLeaf | null {
+    const modeNode = this.modeNode;
     if (!modeNode) return null;
+
+    if (!this.shouldMergeDifficulties) {
+      return modeNode[this.selectedDifficulty] ?? null;
+    }
+
     const diffKeys = Object.keys(modeNode).filter(isDifficulty);
     if (!diffKeys.length) return null;
 
-    let wins = 0n;
-    let losses = 0n;
-    let total = 0n;
-    let stats: PlayerStats | undefined;
-
-    diffKeys.forEach((diffKey) => {
+    return diffKeys.reduce<PlayerStatsLeaf | null>((merged, diffKey) => {
       const leaf = modeNode[diffKey];
-      if (!leaf) return;
-      wins += leaf.wins;
-      losses += leaf.losses;
-      total += leaf.total;
-      stats = this.mergeStats(stats, leaf.stats);
-    });
-
-    return { wins, losses, total, stats };
+      if (!leaf) return merged;
+      if (!merged) {
+        return {
+          wins: leaf.wins,
+          losses: leaf.losses,
+          total: leaf.total,
+          stats: this.cloneStats(leaf.stats),
+        };
+      }
+      return {
+        wins: merged.wins + leaf.wins,
+        losses: merged.losses + leaf.losses,
+        total: merged.total + leaf.total,
+        stats: this.mergeStats(merged.stats, leaf.stats),
+      };
+    }, null);
   }
 
-  private getDisplayedStats(): PlayerStats | null {
-    const leaf = this.getMergedLeaf();
-    if (!leaf || !leaf.stats) return null;
-    return leaf.stats;
+  private syncSelection() {
+    const types = this.availableTypes;
+    if (types.length && !types.includes(this.selectedType)) {
+      this.selectedType = types[0];
+    }
+    const modes = this.availableModes;
+    if (modes.length && !modes.includes(this.selectedMode)) {
+      this.selectedMode = modes[0];
+    }
+    const diffs = this.availableDifficulties;
+    if (
+      !this.shouldMergeDifficulties &&
+      diffs.length &&
+      !diffs.includes(this.selectedDifficulty)
+    ) {
+      this.selectedDifficulty = diffs[0];
+    }
+    return { types, modes, diffs };
   }
 
   private setGameType(t: GameType) {
     if (this.selectedType === t) return;
     this.selectedType = t;
-    const modes = this.availableModes;
-    if (!modes.includes(this.selectedMode)) {
-      this.selectedMode = modes[0] ?? this.selectedMode;
-    }
+    this.syncSelection();
     this.requestUpdate();
   }
 
   private setMode(m: GameMode) {
     if (this.selectedMode === m) return;
     this.selectedMode = m;
+    this.syncSelection();
+    this.requestUpdate();
+  }
+
+  private setDifficulty(d: Difficulty) {
+    if (this.selectedDifficulty === d) return;
+    this.selectedDifficulty = d;
     this.requestUpdate();
   }
 
@@ -162,16 +204,8 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   render() {
-    const types = this.availableTypes;
-    if (types.length && !types.includes(this.selectedType)) {
-      this.selectedType = types[0];
-    }
-    const modes = this.availableModes;
-    if (modes.length && !modes.includes(this.selectedMode)) {
-      this.selectedMode = modes[0];
-    }
-
-    const leaf = this.getMergedLeaf();
+    const { types, modes, diffs } = this.syncSelection();
+    const leaf = this.getSelectedLeaf();
     const wlr = leaf
       ? leaf.losses === 0n
         ? Number(leaf.wins)
@@ -227,6 +261,27 @@ export class PlayerStatsTreeView extends LitElement {
                   )}
                 </div>`
               : html``}
+
+            <!-- Difficulty selector -->
+            ${!this.shouldMergeDifficulties && diffs.length
+              ? html`<div
+                  class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
+                >
+                  ${diffs.map(
+                    (d) =>
+                      html` <button
+                        class="text-xs px-3 py-1 rounded-sm transition-colors ${this
+                          .selectedDifficulty === d
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-gray-400 hover:text-white"}"
+                        @click=${() => this.setDifficulty(d)}
+                        title=${translateText("difficulty.difficulty")}
+                      >
+                        ${translateText(`difficulty.${d.toLowerCase()}`)}
+                      </button>`,
+                  )}
+                </div>`
+              : html``}
           </div>
         </div>
 
@@ -250,7 +305,7 @@ export class PlayerStatsTreeView extends LitElement {
 
                 <div class="border-t border-white/10 pt-6">
                   <player-stats-table
-                    .stats=${this.getDisplayedStats()}
+                    .stats=${leaf?.stats ?? null}
                   ></player-stats-table>
                 </div>
               </div>
