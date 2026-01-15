@@ -605,10 +605,10 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                       @mouseleave=${() => this.closePopup()}
                     >
                         <div class="popup-player-name">${indicator.playerName}</div>
-                        <div class="countdown-seconds">${remainingSeconds}s remaining</div>
+                        <div class="countdown-seconds">${translateText("events_display.seconds_remaining", { seconds: remainingSeconds })}</div>
                         ${indicator.type === "renewal" && indicator.otherPlayerWantsRenewal
-                          ? html`<div class="other-wants-label">✓ Wants to renew!</div>`
-                          : ''}
+                          ? html`<div class="other-wants-label">${translateText("events_display.wants_to_renew")}</div>`
+                          : ''}}
                       <div class="popup-type-label">
                         ${indicator.type === "request"
                           ? translateText("events_display.request_alliance", {
