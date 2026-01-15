@@ -32,7 +32,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private lobbyIdVisible: boolean = true;
   @state() private copySuccess: boolean = false;
   @state() private currentLobbyId: string = "";
-  @state() private chatEnabled: boolean = false;
+  @state() private chatEnabled: boolean = true;
   @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
 
@@ -726,7 +726,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
         this.players = data.clients ?? [];
         if (data.gameConfig) {
           this.gameConfig = data.gameConfig;
-          this.chatEnabled = data.gameConfig.chatEnabled ?? false;
         }
       })
       .catch((error) => {

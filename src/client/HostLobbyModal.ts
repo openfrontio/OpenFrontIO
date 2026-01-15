@@ -2,6 +2,7 @@ import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -35,6 +36,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { ReceiveLobbyChatEvent } from "./Transport";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
@@ -61,7 +63,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
-  @state() private chatEnabled: boolean = false;
+  @state() private chatEnabled: boolean = true;
+  @state() private chatVisible: boolean = true;
+  @state() private hasUnreadMessages: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private lobbyUrlSuffix = "";
@@ -77,8 +81,31 @@ export class HostLobbyModal extends BaseModal {
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
+  private eventBus: EventBus | null = null;
 
   private leaveLobbyOnClose = true;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.eventBus = window.__eventBus ?? null;
+    if (this.eventBus) {
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.eventBus) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+    }
+    super.disconnectedCallback();
+  }
+
+  private onChatMessage = (event: ReceiveLobbyChatEvent) => {
+    // Only set unread if chat is hidden
+    if (!this.chatVisible && this.chatEnabled) {
+      this.hasUnreadMessages = true;
+    }
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -584,11 +611,6 @@ export class HostLobbyModal extends BaseModal {
                   this.compactMap,
                   this.handleCompactMapChange,
                 )}
-                ${this.renderOptionToggle(
-                  "lobby_chat.enable",
-                  this.chatEnabled,
-                  this.handleChatEnabledChange,
-                )}
 
                 <!-- Max Timer -->
                 <div
@@ -802,6 +824,50 @@ export class HostLobbyModal extends BaseModal {
                 </div>
               </div>
 
+              <div class="flex justify-between items-center mb-4">
+                <div
+                  class="text-xs font-bold text-white/40 uppercase tracking-widest"
+                >
+                  <!-- Spacer -->
+                </div>
+                <button
+                  @click=${() => {
+                    this.chatVisible = !this.chatVisible;
+                    this.userSettings.toggleLobbyChatVisibility();
+                    // Clear unread indicator when opening chat
+                    if (this.chatVisible) {
+                      this.hasUnreadMessages = false;
+                    }
+                  }}
+                  class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
+                    .chatVisible
+                    ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                    : "bg-white/5 text-white/60 hover:bg-white/10"}"
+                  title="${translateText(
+                    this.chatVisible ? "lobby_chat.hide" : "lobby_chat.show",
+                  )}"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    height="14px"
+                    width="14px"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                    />
+                  </svg>
+                  ${translateText(
+                    this.chatVisible ? "lobby_chat.hide" : "lobby_chat.show",
+                  )}
+                  ${!this.chatVisible && this.hasUnreadMessages
+                    ? html`<span
+                        class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
+                      ></span>`
+                    : ""}
+                </button>
+              </div>
+
               <lobby-team-view
                 class="block rounded-lg border border-white/10 bg-white/5 p-2"
                 .gameMode=${this.gameMode}
@@ -812,18 +878,17 @@ export class HostLobbyModal extends BaseModal {
                 .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
               ></lobby-team-view>
 
-              ${this.chatEnabled
-                ? html`
-                    <div
-                      class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5"
-                    >
-                      <div class="text-sm font-semibold text-white/80 mb-2">
-                        ${translateText("lobby_chat.title")}
-                      </div>
-                      <lobby-chat-panel></lobby-chat-panel>
-                    </div>
-                  `
-                : ""}
+              <div
+                class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
+                  .chatVisible
+                  ? ""
+                  : "hidden"}"
+              >
+                <div class="text-sm font-semibold text-white/80 mb-2">
+                  ${translateText("lobby_chat.title")}
+                </div>
+                <lobby-chat-panel></lobby-chat-panel>
+              </div>
             </div>
           </div>
         </div>
@@ -861,14 +926,35 @@ export class HostLobbyModal extends BaseModal {
 
   updated(changedProperties: Map<string, unknown>): void {
     super.updated(changedProperties);
-    // When chatEnabled changes to true, ensure the chat panel has access to the event bus
-    if (changedProperties.has("chatEnabled") && this.chatEnabled) {
+
+    // Initialize chat visibility from user settings on first update (host should start open)
+    if (!changedProperties.has("chatVisible")) {
+      // For host, we want it open by default (true), but respect user setting if they've changed it
+      const savedVisibility = this.userSettings.get(
+        "settings.lobbyChatVisibility",
+        true,
+      );
+      this.chatVisible = savedVisibility;
+    }
+
+    // When chatEnabled or chatVisible changes, ensure the chat panel has access to the event bus
+    if (
+      (changedProperties.has("chatEnabled") ||
+        changedProperties.has("chatVisible")) &&
+      this.chatEnabled
+    ) {
       this.updateComplete.then(() => {
         const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
         if (chatPanel && window.__eventBus) {
           (chatPanel as any).setEventBus(window.__eventBus);
         }
       });
+    }
+
+    // Set up event listener for unread messages when event bus becomes available
+    if (window.__eventBus && !this.eventBus) {
+      this.eventBus = window.__eventBus;
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
     }
   }
 
@@ -993,7 +1079,6 @@ export class HostLobbyModal extends BaseModal {
     this.instantBuild = false;
     this.randomSpawn = false;
     this.compactMap = false;
-    this.chatEnabled = false;
     this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
@@ -1097,11 +1182,6 @@ export class HostLobbyModal extends BaseModal {
     } else if (!val && this.bots === 100) {
       this.bots = 400;
     }
-    this.putGameConfig();
-  };
-
-  private handleChatEnabledChange = (val: boolean) => {
-    this.chatEnabled = val;
     this.putGameConfig();
   };
 
@@ -1259,10 +1339,6 @@ export class HostLobbyModal extends BaseModal {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.clients = data.clients ?? [];
-        // Sync chat enabled state from server
-        if (data.gameConfig?.chatEnabled !== undefined) {
-          this.chatEnabled = data.gameConfig.chatEnabled;
-        }
       });
   }
 
