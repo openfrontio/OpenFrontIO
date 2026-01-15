@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../client/Utils";
 import { EventBus } from "../../core/EventBus";
 import { ReceiveLobbyChatEvent, SendLobbyChatEvent } from "../Transport";
@@ -16,23 +16,24 @@ export class LobbyChatPanel extends LitElement {
   @state() private inputText: string = "";
   @state() private isUserScrolled: boolean = false;
 
-  private bus: EventBus | null = null;
-  private username: string | null = null;
+  @property({ type: Object })
+  eventBus: EventBus | null = null;
+
+  @property({ type: String })
+  username: string | null = null;
+
   private messageContainer: HTMLElement | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    const globalBus = window.__eventBus;
-    if (globalBus) {
-      this.bus = globalBus;
-      this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
+    if (this.eventBus) {
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onIncoming);
     }
-    this.username = window.__username ?? null;
   }
 
   disconnectedCallback(): void {
-    if (this.bus) {
-      this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
+    if (this.eventBus) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onIncoming);
     }
     if (this.messageContainer) {
       this.messageContainer.removeEventListener("scroll", this.onScroll);
@@ -40,15 +41,16 @@ export class LobbyChatPanel extends LitElement {
     super.disconnectedCallback();
   }
 
-  setEventBus(bus: EventBus) {
-    if (this.bus) {
-      this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
+  updated(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has("eventBus")) {
+      const oldBus = changedProperties.get("eventBus") as EventBus | null;
+      if (oldBus) {
+        oldBus.off(ReceiveLobbyChatEvent, this.onIncoming);
+      }
+      if (this.eventBus) {
+        this.eventBus.on(ReceiveLobbyChatEvent, this.onIncoming);
+      }
     }
-    this.bus = bus;
-    this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
-    this.username = window.__username ?? null;
-    // Trigger re-render to update translations and button state
-    this.requestUpdate();
   }
 
   clearMessages() {
@@ -95,30 +97,17 @@ export class LobbyChatPanel extends LitElement {
   }
 
   private get canSend(): boolean {
-    return this.bus !== null || window.__eventBus !== null;
+    return this.eventBus !== null;
   }
 
   private sendMessage() {
     const text = this.inputText.trim();
-    if (!text) return;
-
-    if (!this.bus) {
-      const globalBus = window.__eventBus;
-      if (globalBus) {
-        this.bus = globalBus;
-        this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
-        this.username = window.__username ?? null;
-        // Trigger re-render to update button state
-        this.requestUpdate();
-      }
-    }
-
-    if (!this.bus) {
+    if (!text || !this.eventBus) {
       return;
     }
 
     const capped = text.slice(0, 300);
-    this.bus.emit(new SendLobbyChatEvent(capped));
+    this.eventBus.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
 
     this.updateComplete.then(() => {
@@ -144,9 +133,8 @@ export class LobbyChatPanel extends LitElement {
         >
           ${this.messages.map((m) => {
             const displayName = m.isHost ? `${m.username} (Host)` : m.username;
-            const currentUsername = window.__username ?? this.username;
             const isLocal =
-              currentUsername !== null && m.username === currentUsername;
+              this.username !== null && m.username === this.username;
             const msgClass = isLocal
               ? "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-end text-right bg-[rgba(36,59,85,0.7)] sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]"
               : "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-start text-left bg-black/60 sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]";

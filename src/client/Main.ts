@@ -748,6 +748,17 @@ class Client {
       await fetchCosmetics(),
     );
 
+    const username = this.usernameInput?.getCurrentUsername() ?? "";
+
+    // Set eventBus and username on modals
+    const hostModal = document.querySelector("host-lobby-modal") as any;
+    if (hostModal && hostModal.setEventBusAndUsername) {
+      hostModal.setEventBusAndUsername(this.eventBus, username);
+    }
+    if (this.joinModal && (this.joinModal as any).setEventBusAndUsername) {
+      (this.joinModal as any).setEventBusAndUsername(this.eventBus, username);
+    }
+
     this.gameStop = joinLobby(
       this.eventBus,
       {
@@ -763,7 +774,7 @@ class Client {
               : this.flagInput.getCurrentFlag(),
         },
         turnstileToken: await this.getTurnstileToken(lobby),
-        playerName: this.usernameInput?.getCurrentUsername() ?? "",
+        playerName: username,
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,

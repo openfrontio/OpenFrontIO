@@ -7,7 +7,7 @@ import {
   GameStartInfo,
   PlayerCosmeticRefs,
   PlayerRecord,
-  ServerLobbyChatMessage,
+  ServerLobbyChatSchema,
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
@@ -66,18 +66,6 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
-function isValidLobbyChatMessage(
-  message: ServerMessage,
-): message is ServerLobbyChatMessage {
-  if (message.type !== "lobby_chat") return false;
-  const candidate = message as Record<string, unknown>;
-  return (
-    typeof candidate.username === "string" &&
-    typeof candidate.isHost === "boolean" &&
-    typeof candidate.text === "string"
-  );
-}
-
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
@@ -86,12 +74,6 @@ export function joinLobby(
 ): () => void {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
-  );
-
-  window.__eventBus = eventBus;
-  window.__username = lobbyConfig.playerName;
-  document.dispatchEvent(
-    new CustomEvent("event-bus:ready", { bubbles: true, composed: true }),
   );
 
   const userSettings: UserSettings = new UserSettings();
@@ -114,6 +96,23 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    // Validate and handle lobby chat messages
+    if (message.type === "lobby_chat") {
+      const parseResult = ServerLobbyChatSchema.safeParse(message);
+      if (parseResult.success) {
+        eventBus.emit(
+          new ReceiveLobbyChatEvent(
+            parseResult.data.username,
+            parseResult.data.isHost,
+            parseResult.data.text,
+          ),
+        );
+      } else {
+        console.error("Invalid lobby chat message:", parseResult.error);
+      }
+      return;
+    }
+
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
@@ -182,19 +181,6 @@ export function joinLobby(
           "error_modal.connection_error",
         );
       }
-    }
-    if (message.type === "lobby_chat") {
-      if (!isValidLobbyChatMessage(message)) {
-        console.error("Malformed lobby_chat message:", message);
-        return;
-      }
-      eventBus.emit(
-        new ReceiveLobbyChatEvent(
-          message.username,
-          message.isHost,
-          message.text,
-        ),
-      );
     }
   };
   transport.connect(onconnect, onmessage);
