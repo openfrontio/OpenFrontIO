@@ -866,7 +866,6 @@ export class HostLobbyModal extends BaseModal {
                 <button
                   @click=${() => {
                     this.chatVisible = !this.chatVisible;
-                    this.userSettings.toggleLobbyChatVisibility();
                     // Clear unread indicator when opening chat
                     if (this.chatVisible) {
                       this.hasUnreadMessages = false;
@@ -958,10 +957,8 @@ export class HostLobbyModal extends BaseModal {
   }
 
   firstUpdated(): void {
-    this.chatVisible = this.userSettings.get(
-      "settings.lobbyChatVisibility",
-      true,
-    );
+    // Always start with chat hidden
+    this.chatVisible = false;
 
     this.updateComplete.then(() => {
       const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
@@ -1104,6 +1101,14 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = "";
     this.lobbyIdVisible = true;
     this.nationCount = 0;
+
+    // Reset chat state
+    this.chatVisible = false;
+    this.hasUnreadMessages = false;
+    const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+    if (chatPanel) {
+      (chatPanel as any).clearMessages();
+    }
 
     this.leaveLobbyOnClose = true;
   }

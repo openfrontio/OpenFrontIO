@@ -97,7 +97,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
   };
 
   firstUpdated(): void {
-    this.chatVisible = this.userSettings.lobbyChatVisibility();
+    // Always start with chat hidden
+    this.chatVisible = false;
 
     this.updateComplete.then(() => {
       const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
@@ -272,7 +273,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     <button
                       @click=${() => {
                         this.chatVisible = !this.chatVisible;
-                        this.userSettings.toggleLobbyChatVisibility();
                         // Clear unread indicator when opening chat
                         if (this.chatVisible) {
                           this.hasUnreadMessages = false;
@@ -518,6 +518,14 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+
+    // Reset chat state
+    this.chatVisible = false;
+    this.hasUnreadMessages = false;
+    const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+    if (chatPanel) {
+      (chatPanel as any).clearMessages();
+    }
 
     this.leaveLobbyOnClose = true;
   }

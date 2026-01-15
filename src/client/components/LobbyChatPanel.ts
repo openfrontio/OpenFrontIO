@@ -51,6 +51,12 @@ export class LobbyChatPanel extends LitElement {
     this.requestUpdate();
   }
 
+  clearMessages() {
+    this.messages = [];
+    this.inputText = "";
+    this.isUserScrolled = false;
+  }
+
   private onIncoming = async (e: ReceiveLobbyChatEvent) => {
     this.messages = [
       ...this.messages,
