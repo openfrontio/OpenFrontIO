@@ -113,7 +113,7 @@ export class NukeExecution implements Execution {
         .find((ar) => ar.requestor() === this.player);
       if (outgoingAllianceRequest) {
         outgoingAllianceRequest.reject();
-        return;
+        continue;
       }
 
       const alliance = this.player.allianceWith(attackedPlayer);
