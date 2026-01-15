@@ -107,9 +107,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
     });
 
     // Setup chat panel if event bus is already available
-    if (window.__eventBus && !this.eventBus) {
-      this.eventBus = window.__eventBus;
+    if (window.__eventBus && !this.isSubscribedToChatEvent) {
+      this.eventBus ??= window.__eventBus;
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = true;
     }
   }
 
