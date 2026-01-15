@@ -7,8 +7,10 @@ const economyRankings = new Set([
   RankType.TotalGold,
   RankType.StolenGold,
   RankType.ConqueredGold,
-  RankType.TradedGold,
+  RankType.NavalTrade,
+  RankType.TrainTrade,
 ]);
+const tradeRankings = new Set([RankType.NavalTrade, RankType.TrainTrade]);
 const bombRankings = new Set([RankType.Atoms, RankType.Hydros, RankType.MIRV]);
 const warRankings = new Set([
   RankType.Conquests,
@@ -18,6 +20,7 @@ const warRankings = new Set([
 ]);
 
 const isEconomyRanking = (t: RankType) => economyRankings.has(t);
+const isTradeRanking = (t: RankType) => tradeRankings.has(t);
 const isBombRanking = (t: RankType) => bombRankings.has(t);
 const isWarRanking = (t: RankType) => warRankings.has(t);
 
@@ -87,7 +90,6 @@ export class RankingControls extends LitElement {
     if (!isEconomyRanking(this.rankType)) return "";
 
     const econButtons = [
-      [RankType.TradedGold, "game_info_modal.trade"],
       [RankType.StolenGold, "game_info_modal.pirate"],
       [RankType.ConqueredGold, "game_info_modal.conquered"],
       [RankType.TotalGold, "game_info_modal.total_gold"],
@@ -95,6 +97,11 @@ export class RankingControls extends LitElement {
 
     return html`
       <div class="flex justify-center gap-3 pb-1">
+        ${this.renderSubButton(
+          RankType.NavalTrade,
+          isTradeRanking(this.rankType),
+          "game_info_modal.trade",
+        )}
         ${econButtons.map(([type, label]) =>
           this.renderSubButton(type as RankType, this.rankType === type, label),
         )}
