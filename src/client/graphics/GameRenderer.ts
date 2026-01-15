@@ -264,13 +264,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(
-      game,
-      eventBus,
-      transformHandler,
-      uiState,
-      nukeRenderUtilLayer,
-    ),
+    new NukeTrajectoryPreviewLayer(game, nukeRenderUtilLayer),
     new StructureIconsLayer(
       game,
       eventBus,
