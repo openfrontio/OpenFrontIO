@@ -26,27 +26,62 @@ export class TokenLoginModal extends LitElement {
     super();
   }
 
+  createRenderRoot() {
+    return this;
+  }
+
   render() {
     return html`
       <o-modal
         id="token-login-modal"
         title="${translateText("token_login_modal.title")}"
       >
-        ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
+        <div
+          class="flex flex-col gap-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+        >
+          ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
+        </div>
       </o-modal>
     `;
   }
 
   private loggingIn() {
-    return html` <p>${translateText("token_login_modal.logging_in")}</p> `;
+    return html`
+      <div class="flex items-center gap-4">
+        <div
+          class="w-12 h-12 rounded-full border border-blue-400/40 bg-blue-500/10 flex items-center justify-center"
+        >
+          <div
+            class="w-6 h-6 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"
+          ></div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="text-lg font-semibold text-white">
+            ${translateText("token_login_modal.logging_in")}
+          </p>
+          <div class="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+            <div class="h-full w-1/2 bg-blue-400/80 animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   private loginSuccess(email: string) {
-    return html`<p>
-      ${translateText("token_login_modal.success", {
-        email,
-      })}
-    </p> `;
+    return html`
+      <div class="flex items-center gap-4">
+        <div
+          class="w-12 h-12 rounded-full border border-emerald-400/40 bg-emerald-500/10 flex items-center justify-center"
+        >
+          <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+        </div>
+        <p class="text-base text-white/90">
+          ${translateText("token_login_modal.success", {
+            email,
+          })}
+        </p>
+      </div>
+    `;
   }
 
   public async open(token: string) {
