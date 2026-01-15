@@ -687,7 +687,7 @@ class Client {
           // in case it is unset during reload.
           this.userSettings.setSelectedPatternName(patternName);
         });
-        this.tokenLoginModal.open(token);
+        this.tokenLoginModal.openWithToken(token);
       } else {
         alertAndStrip(`purchase succeeded: ${patternName}`);
         this.patternsModal.refresh();
@@ -706,7 +706,7 @@ class Client {
       }
 
       strip();
-      this.tokenLoginModal.open(token);
+      this.tokenLoginModal.openWithToken(token);
       return;
     }
 
