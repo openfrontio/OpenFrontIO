@@ -28,8 +28,6 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
-  SendAllianceExtensionIntentEvent,
-  SendAllianceReplyIntentEvent,
   SendAttackIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -82,8 +80,6 @@ export class EventsDisplay extends LitElement implements Layer {
   private active: boolean = false;
   private events: GameEvent[] = [];
 
-  // allianceID -> last checked at tick
-  private alliancesCheckedAt = new Map<number, Tick>();
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
@@ -283,63 +279,7 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private checkForAllianceExpirations() {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer?.isAlive()) return;
-
-    for (const alliance of myPlayer.alliances()) {
-      if (
-        alliance.expiresAt >
-        this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
-      ) {
-        continue;
-      }
-
-      if (
-        (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
-        this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
-      ) {
-        // We've already displayed a message for this alliance.
-        continue;
-      }
-
-      this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
-
-      const other = this.game.player(alliance.other) as PlayerView;
-      if (!other.isAlive()) continue;
-
-      this.addEvent({
-        description: translateText("events_display.about_to_expire", {
-          name: other.name(),
-        }),
-        type: MessageType.RENEW_ALLIANCE,
-        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
-        buttons: [
-          {
-            text: translateText("events_display.focus"),
-            className: "btn-gray",
-            action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
-            preventClose: true,
-          },
-          {
-            text: translateText("events_display.renew_alliance", {
-              name: other.name(),
-            }),
-            className: "btn",
-            action: () =>
-              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
-          },
-          {
-            text: translateText("events_display.ignore"),
-            className: "btn-info",
-            action: () => {},
-          },
-        ],
-        highlight: true,
-        createdAt: this.game.ticks(),
-        focusID: other.smallID(),
-        allianceID: alliance.id,
-      });
-    }
+    // Alliance expirations/renewals are now handled by AllianceRequestPanel
   }
 
   private addEvent(event: GameEvent) {
@@ -465,57 +405,8 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   onAllianceRequestEvent(update: AllianceRequestUpdate) {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.recipientID !== myPlayer.smallID()) {
-      return;
-    }
-
-    const requestor = this.game.playerBySmallID(
-      update.requestorID,
-    ) as PlayerView;
-    const recipient = this.game.playerBySmallID(
-      update.recipientID,
-    ) as PlayerView;
-
-    this.addEvent({
-      description: translateText("events_display.request_alliance", {
-        name: requestor.name(),
-      }),
-      buttons: [
-        {
-          text: translateText("events_display.focus"),
-          className: "btn-gray",
-          action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
-          preventClose: true,
-        },
-        {
-          text: translateText("events_display.accept_alliance"),
-          className: "btn",
-          action: () =>
-            this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, true),
-            ),
-        },
-        {
-          text: translateText("events_display.reject_alliance"),
-          className: "btn-info",
-          action: () =>
-            this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, false),
-            ),
-        },
-      ],
-      highlight: true,
-      type: MessageType.ALLIANCE_REQUEST,
-      createdAt: this.game.ticks(),
-      priority: 0,
-      duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
-      shouldDelete: (game) => {
-        // Recipient sent a separate request, so they became allied without the recipient responding.
-        return requestor.isAlliedWith(recipient);
-      },
-      focusID: update.requestorID,
-    });
+    // Alliance requests are now handled by AllianceRequestPanel
+    // This handler is kept to maintain the event filtering for the reply event
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {

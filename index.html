@@ -241,14 +241,18 @@
     <div
       class="left-0 bottom-0 sm:left-4 sm:bottom-4 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px] fixed pointer-events-none"
     >
-      <div
-        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end pointer-events-none"
-      >
-        <chat-display></chat-display>
-        <events-display></events-display>
-      </div>
       <div>
         <control-panel></control-panel>
+      </div>
+    </div>
+
+    <div
+      class="fixed right-0 bottom-0 sm:right-4 sm:bottom-4 z-50 flex flex-row items-end pointer-events-none"
+    >
+      <alliance-request-panel></alliance-request-panel>
+      <div class="flex flex-col items-end">
+        <chat-display></chat-display>
+        <events-display></events-display>
       </div>
     </div>
 
