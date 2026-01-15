@@ -71,19 +71,14 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.chatVisible = this.userSettings.lobbyChatVisibility();
     }
 
-    // When chatEnabled or chatVisible changes, ensure the chat panel has access to the event bus
-    if (
-      (changedProperties.has("chatEnabled") ||
-        changedProperties.has("chatVisible")) &&
-      this.chatEnabled
-    ) {
-      this.updateComplete.then(() => {
-        const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
-        if (chatPanel && window.__eventBus) {
-          (chatPanel as any).setEventBus(window.__eventBus);
-        }
-      });
-    }
+    // Always ensure the chat panel has access to the event bus when it exists
+    // This handles both initial render and when the event bus becomes available
+    this.updateComplete.then(() => {
+      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+      if (chatPanel && window.__eventBus) {
+        (chatPanel as any).setEventBus(window.__eventBus);
+      }
+    });
 
     // Set up event listener for unread messages when event bus becomes available
     if (window.__eventBus && !this.eventBus) {
