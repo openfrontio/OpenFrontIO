@@ -1,5 +1,5 @@
 import Benchmark from "benchmark";
-import { simpleHash, within, manhattanDistWrapped } from "../../src/core/Util";
+import { manhattanDistWrapped, simpleHash, within } from "../../src/core/Util";
 import { Cell } from "../../src/core/game/Game";
 
 const c1 = new Cell(10, 10);

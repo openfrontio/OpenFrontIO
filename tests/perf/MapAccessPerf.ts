@@ -39,11 +39,11 @@ new Benchmark.Suite()
     }
   })
   .add("GameMap.neighbors()", () => {
-     // Test neighbor lookup cost
-     for (let i = 0; i < 1000; i++) {
-        const ref = (Math.random() * size) | 0;
-        map.neighbors(ref);
-     }
+    // Test neighbor lookup cost
+    for (let i = 0; i < 1000; i++) {
+      const ref = (Math.random() * size) | 0;
+      map.neighbors(ref);
+    }
   })
   .on("cycle", (event: any) => {
     results.push(String(event.target));

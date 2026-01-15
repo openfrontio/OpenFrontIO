@@ -27,8 +27,8 @@ botExec.init(game);
 // Prepare the bot state (spawn it)
 botPlayer.setSpawnTile(game.ref(50, 50));
 // Give it some territory so it has something to think about
-for(let i=0; i<100; i++) {
-    game.map().setOwnerID(game.ref(50+i, 50), botPlayer.smallID());
+for (let i = 0; i < 100; i++) {
+  game.map().setOwnerID(game.ref(50 + i, 50), botPlayer.smallID());
 }
 
 const results: string[] = [];

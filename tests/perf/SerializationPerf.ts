@@ -1,18 +1,17 @@
 import Benchmark from "benchmark";
-import { GameUpdate, GameUpdateType } from "../../src/core/game/GameUpdates";
-import { TileUpdate } from "../../src/core/game/GameMap";
 import { PlayerID } from "../../src/core/game/Game";
+import { GameUpdate, GameUpdateType } from "../../src/core/game/GameUpdates";
 
 // Create a large batch of updates to simulate a busy tick
 const updates: GameUpdate[] = [];
 
 // 1. Tile Updates (Bulk)
 for (let i = 0; i < 1000; i++) {
-  // Simulate TileUpdateWrapper structure if it exists, or just raw tile updates if they are handled differently. 
-  // Looking at GameUpdates.ts, TileUpdateWrapper isn't fully defined in the snippet I saw, 
+  // Simulate TileUpdateWrapper structure if it exists, or just raw tile updates if they are handled differently.
+  // Looking at GameUpdates.ts, TileUpdateWrapper isn't fully defined in the snippet I saw,
   // but let's assume standard object structure for benchmark.
   // Actually, let's use valid update types we saw.
-  
+
   // TargetPlayerUpdate
   updates.push({
     type: GameUpdateType.TargetPlayer,
@@ -24,7 +23,7 @@ for (let i = 0; i < 1000; i++) {
 // 2. Unit Updates
 for (let i = 0; i < 500; i++) {
   // Mock UnitUpdate
-   updates.push({
+  updates.push({
     type: GameUpdateType.Unit,
     id: i,
     tile: i,
