@@ -42,6 +42,8 @@ export class LobbyChatPanel extends LitElement {
     }
     this.bus = bus;
     this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
+    // Update username when event bus is set
+    this.username = window.__username ?? null;
   }
 
   private onIncoming = async (e: ReceiveLobbyChatEvent) => {
@@ -92,8 +94,9 @@ export class LobbyChatPanel extends LitElement {
         >
           ${this.messages.map((m) => {
             const displayName = m.isHost ? `${m.username} (Host)` : m.username;
+            const currentUsername = window.__username ?? this.username;
             const isLocal =
-              this.username !== null && m.username === this.username;
+              currentUsername !== null && m.username === currentUsername;
             const msgClass = isLocal
               ? "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-end text-right bg-[rgba(36,59,85,0.7)] sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]"
               : "text-sm px-3 py-2 rounded-xl max-w-[85%] break-words self-start text-left bg-black/60 sm:text-xs sm:px-2.5 sm:py-1.5 sm:max-w-[90%]";
