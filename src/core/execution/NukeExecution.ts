@@ -93,6 +93,13 @@ export class NukeExecution implements Execution {
       threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });
 
+    // Automatically reject incoming alliance requests.
+    for (const incoming of this.player.incomingAllianceRequests()) {
+      if (playersToBreakAllianceWith.has(incoming.requestor().smallID())) {
+        incoming.reject();
+      }
+    }
+
     for (const playerSmallId of playersToBreakAllianceWith) {
       const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
       if (!attackedPlayer.isPlayer()) {
@@ -101,11 +108,12 @@ export class NukeExecution implements Execution {
 
       // Resolves exploit of alliance breaking in which a pending alliance request
       // was accepted in the middle of a missile attack.
-      const allianceRequest = attackedPlayer
+      const outgoingAllianceRequest = attackedPlayer
         .incomingAllianceRequests()
         .find((ar) => ar.requestor() === this.player);
-      if (allianceRequest) {
-        allianceRequest.reject();
+      if (outgoingAllianceRequest) {
+        outgoingAllianceRequest.reject();
+        return;
       }
 
       const alliance = this.player.allianceWith(attackedPlayer);

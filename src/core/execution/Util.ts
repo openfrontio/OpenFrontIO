@@ -93,19 +93,17 @@ export function wouldNukeBreakAlliance(
   return result;
 }
 
-// Same as wouldNukeBreakAlliance(), but takes time to find every alliance breakage
-// and put them all in a list.
+// Same as wouldNukeBreakAlliance(), but takes time to find every player
+// that would be "angered" from this nuke.
+// This includes unallied players!
 export function listNukeBreakAlliance(
   params: NukeAllianceCheckParams,
 ): Set<number> {
-  const { game, targetTile, magnitude, allySmallIds, threshold } = params;
+  const { game, targetTile, magnitude, threshold } = params;
 
   // Collect all players that should have alliance broken:
   // either exceeds tile threshold OR has a structure in blast radius
   const playersToBreakAllianceWith = new Set<number>();
-  if (allySmallIds.size === 0) {
-    return playersToBreakAllianceWith;
-  }
 
   // compute tile breakage threshold
   const blastCounts = computeNukeBlastCounts({
@@ -122,10 +120,6 @@ export function listNukeBreakAlliance(
   // Also check if any allied structures would be destroyed
   game
     .nearbyUnits(targetTile, magnitude.outer, [...StructureTypes])
-    .filter(
-      ({ unit }) =>
-        unit.owner().isPlayer() && allySmallIds.has(unit.owner().smallID()),
-    )
     .forEach(({ unit }) =>
       playersToBreakAllianceWith.add(unit.owner().smallID()),
     );
