@@ -84,6 +84,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
         }
       });
     }
+
+    // Set up event listener for unread messages when event bus becomes available
+    if (window.__eventBus && !this.eventBus) {
+      this.eventBus = window.__eventBus;
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+    }
   }
 
   render() {
