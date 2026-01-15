@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
 import {
@@ -89,7 +89,7 @@ export class PlayerStatsTreeView extends LitElement {
     }, null);
   }
 
-  private syncSelection() {
+  private syncSelection(): void {
     const types = this.availableTypes;
     if (types.length && !types.includes(this.selectedType)) {
       this.selectedType = types[0];
@@ -106,20 +106,28 @@ export class PlayerStatsTreeView extends LitElement {
     ) {
       this.selectedDifficulty = diffs[0];
     }
-    return { types, modes, diffs };
+  }
+
+  protected willUpdate(changedProperties: PropertyValues) {
+    if (
+      changedProperties.has("statsTree") ||
+      changedProperties.has("selectedType") ||
+      changedProperties.has("selectedMode") ||
+      changedProperties.has("selectedDifficulty")
+    ) {
+      this.syncSelection();
+    }
   }
 
   private setGameType(t: GameType) {
     if (this.selectedType === t) return;
     this.selectedType = t;
-    this.syncSelection();
     this.requestUpdate();
   }
 
   private setMode(m: GameMode) {
     if (this.selectedMode === m) return;
     this.selectedMode = m;
-    this.syncSelection();
     this.requestUpdate();
   }
 
@@ -204,7 +212,9 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   render() {
-    const { types, modes, diffs } = this.syncSelection();
+    const types = this.availableTypes;
+    const modes = this.availableModes;
+    const diffs = this.availableDifficulties;
     const leaf = this.getSelectedLeaf();
     const wlr = leaf
       ? leaf.losses === 0n
