@@ -621,7 +621,9 @@
     "title": "Lobby Chat",
     "placeholder": "Type a message...",
     "enable": "Enable Lobby Chat",
-    "send": "Send"
+    "send": "Send",
+    "show": "Show Chat",
+    "hide": "Hide Chat"
   },
   "build_menu": {
     "desc": {

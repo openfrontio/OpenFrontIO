@@ -53,6 +53,10 @@ export class UserSettings {
     return this.get("settings.lobbyIdVisibility", true);
   }
 
+  lobbyChatVisibility() {
+    return this.get("settings.lobbyChatVisibility", false);
+  }
+
   fxLayer() {
     return this.get("settings.specialEffects", true);
   }
@@ -110,6 +114,10 @@ export class UserSettings {
 
   toggleLobbyIdVisibility() {
     this.set("settings.lobbyIdVisibility", !this.lobbyIdVisibility());
+  }
+
+  toggleLobbyChatVisibility() {
+    this.set("settings.lobbyChatVisibility", !this.lobbyChatVisibility());
   }
 
   toggleFxLayer() {
