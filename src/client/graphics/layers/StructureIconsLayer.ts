@@ -55,7 +55,7 @@ class StructureRenderInfo {
     public dotContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
-  ) { }
+  ) {}
 }
 
 export class StructureIconsLayer implements Layer {
@@ -455,11 +455,16 @@ export class StructureIconsLayer implements Layer {
 
     const delay = Math.max(
       this.MIN_REPEAT_DELAY_MS,
-      this.INITIAL_REPEAT_DELAY_MS - this.repeatCount * this.REPEAT_ACCELERATION_MS,
+      this.INITIAL_REPEAT_DELAY_MS -
+        this.repeatCount * this.REPEAT_ACCELERATION_MS,
     );
 
     this.repeatTimer = setTimeout(() => {
-      if (this.isMouseDown && this.repeatBuildType && this.repeatTileRef !== null) {
+      if (
+        this.isMouseDown &&
+        this.repeatBuildType &&
+        this.repeatTileRef !== null
+      ) {
         this.placeStructureAtCurrentTile();
       }
     }, delay);
@@ -480,11 +485,11 @@ export class StructureIconsLayer implements Layer {
         if (rect) {
           const currentTile = this.transformHandler.screenToWorldCoordinates(
             this.mousePos.x - rect.left,
-            this.mousePos.y - rect.top
+            this.mousePos.y - rect.top,
           );
           const currentRef = this.game.ref(currentTile.x, currentTile.y);
           // Check against startRef (where mouse started)
-          // If building snapped (repeatTileRef changed), we still want to allow holding 
+          // If building snapped (repeatTileRef changed), we still want to allow holding
           // on the original mouse tile (startTileRef).
           if (this.startTileRef !== null && currentRef !== this.startTileRef) {
             this.stopRepeat();
@@ -492,26 +497,39 @@ export class StructureIconsLayer implements Layer {
           }
         }
 
-        const buildableUnit = actions.buildableUnits.find((bu) => bu.type === unitType);
+        const buildableUnit = actions.buildableUnits.find(
+          (bu) => bu.type === unitType,
+        );
         if (!buildableUnit) {
           // Do nothing, retry later
         } else {
           if (buildableUnit.canUpgrade !== false) {
             this.eventBus.emit(
-              new SendUpgradeStructureIntentEvent(buildableUnit.canUpgrade, unitType),
+              new SendUpgradeStructureIntentEvent(
+                buildableUnit.canUpgrade,
+                unitType,
+              ),
             );
           } else if (buildableUnit.canBuild !== false) {
             // Fix: If this is the first placement, update our lock to the actual tile
             // the game decided to build on (handles snapping, e.g., Ports on coast)
-            if (this.repeatCount === 0 && typeof buildableUnit.canBuild === "number") {
+            if (
+              this.repeatCount === 0 &&
+              typeof buildableUnit.canBuild === "number"
+            ) {
               this.repeatTileRef = buildableUnit.canBuild;
             }
             const rocketDirectionUp =
-              unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+              unitType === UnitType.AtomBomb ||
+              unitType === UnitType.HydrogenBomb
                 ? this.uiState.rocketDirectionUp
                 : undefined;
             this.eventBus.emit(
-              new BuildUnitIntentEvent(unitType, buildableUnit.canBuild, rocketDirectionUp),
+              new BuildUnitIntentEvent(
+                unitType,
+                buildableUnit.canBuild,
+                rocketDirectionUp,
+              ),
             );
           }
         }
@@ -828,9 +846,9 @@ export class StructureIconsLayer implements Layer {
           Math.max(
             1,
             scale /
-            (target === render.levelContainer
-              ? LEVEL_SCALE_FACTOR
-              : ICON_SCALE_FACTOR_ZOOMED_IN),
+              (target === render.levelContainer
+                ? LEVEL_SCALE_FACTOR
+                : ICON_SCALE_FACTOR_ZOOMED_IN),
           ),
         );
       } else if (scale > DOTS_ZOOM_THRESHOLD) {

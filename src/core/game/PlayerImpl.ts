@@ -59,7 +59,7 @@ class Donation {
   constructor(
     public readonly recipient: Player,
     public readonly tick: Tick,
-  ) { }
+  ) {}
 }
 
 export class PlayerImpl implements Player {
@@ -173,7 +173,7 @@ export class PlayerImpl implements Player {
             hasExtensionRequest:
               a.expiresAt() <=
               this.mg.ticks() +
-              this.mg.config().allianceExtensionPromptOffset(),
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -1162,9 +1162,11 @@ export class PlayerImpl implements Player {
     );
   }
   toString(): string {
-    return `Player:{name:${this.info().name},clientID:${this.info().clientID
-      },isAlive:${this.isAlive()},troops:${this._troops
-      },numTileOwned:${this.numTilesOwned()}}]`;
+    return `Player:{name:${this.info().name},clientID:${
+      this.info().clientID
+    },isAlive:${this.isAlive()},troops:${
+      this._troops
+    },numTileOwned:${this.numTilesOwned()}}]`;
   }
 
   public playerProfile(): PlayerProfile {
