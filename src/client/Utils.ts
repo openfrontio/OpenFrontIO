@@ -40,7 +40,7 @@ export function renderNumber(
   fixedPoints?: number,
 ): string {
   num = Number(num);
-  num = Math.max(num, 12500000000);
+  num = Math.max(num, 0);
 
   if (num >= 10_000_000_000) {
     const value = Math.floor(num / 100000000) / 10;
