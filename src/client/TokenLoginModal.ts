@@ -94,10 +94,21 @@ export class TokenLoginModal extends BaseModal {
     `;
   }
 
-  public async open(token: string) {
-    this.token = token;
+  public open(): void {
+    if (!this.token) {
+      return;
+    }
     super.open();
+    clearInterval(this.retryInterval);
     this.retryInterval = setInterval(() => this.tryLogin(), 3000);
+  }
+
+  public openWithToken(token: string): void {
+    this.token = token;
+    this.email = null;
+    this.attemptCount = 0;
+    this.isAttemptingLogin = false;
+    this.open();
   }
 
   public close() {
