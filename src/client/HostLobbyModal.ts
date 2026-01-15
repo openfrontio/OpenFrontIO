@@ -63,7 +63,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
-  @state() private chatVisible: boolean = true;
+  @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -83,6 +83,7 @@ export class HostLobbyModal extends BaseModal {
   private eventBus: EventBus | null = null;
 
   private leaveLobbyOnClose = true;
+  private eventBusReadyHandler: (() => void) | null = null;
 
   connectedCallback() {
     super.connectedCallback();
@@ -90,13 +91,34 @@ export class HostLobbyModal extends BaseModal {
     if (this.eventBus) {
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
     }
+
+    // Listen for event-bus:ready to setup chat panel
+    this.eventBusReadyHandler = () => {
+      this.setupChatPanel();
+    };
+    document.addEventListener("event-bus:ready", this.eventBusReadyHandler);
   }
 
   disconnectedCallback() {
     if (this.eventBus) {
       this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
     }
+    if (this.eventBusReadyHandler) {
+      document.removeEventListener(
+        "event-bus:ready",
+        this.eventBusReadyHandler,
+      );
+    }
     super.disconnectedCallback();
+  }
+
+  private setupChatPanel() {
+    this.updateComplete.then(() => {
+      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+      if (chatPanel && window.__eventBus) {
+        (chatPanel as any).setEventBus(window.__eventBus);
+      }
+    });
   }
 
   private onChatMessage = (event: ReceiveLobbyChatEvent) => {

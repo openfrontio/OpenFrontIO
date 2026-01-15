@@ -47,6 +47,8 @@ export class LobbyChatPanel extends LitElement {
     this.bus = bus;
     this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
     this.username = window.__username ?? null;
+    // Trigger re-render to update translations and button state
+    this.requestUpdate();
   }
 
   private onIncoming = async (e: ReceiveLobbyChatEvent) => {
@@ -87,7 +89,7 @@ export class LobbyChatPanel extends LitElement {
   }
 
   private get canSend(): boolean {
-    return this.bus !== null;
+    return this.bus !== null || window.__eventBus !== null;
   }
 
   private sendMessage() {
@@ -100,6 +102,8 @@ export class LobbyChatPanel extends LitElement {
         this.bus = globalBus;
         this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
         this.username = window.__username ?? null;
+        // Trigger re-render to update button state
+        this.requestUpdate();
       }
     }
 
