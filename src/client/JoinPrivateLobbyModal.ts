@@ -1,6 +1,7 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { copyToClipboard, translateText } from "../client/Utils";
+import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -14,6 +15,7 @@ import { GameMode } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { ReceiveLobbyChatEvent } from "./Transport";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/LobbyChatPanel";
@@ -32,11 +34,35 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private currentLobbyId: string = "";
   @state() private chatEnabled: boolean = false;
   @state() private chatVisible: boolean = false;
+  @state() private hasUnreadMessages: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   private userSettings: UserSettings = new UserSettings();
+  private eventBus: EventBus | null = null;
 
   private leaveLobbyOnClose = true;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.eventBus = window.__eventBus ?? null;
+    if (this.eventBus) {
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.eventBus) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+    }
+    super.disconnectedCallback();
+  }
+
+  private onChatMessage = (event: ReceiveLobbyChatEvent) => {
+    // Only set unread if chat is hidden
+    if (!this.chatVisible && this.chatEnabled) {
+      this.hasUnreadMessages = true;
+    }
+  };
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -203,8 +229,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
                             @click=${() => {
                               this.chatVisible = !this.chatVisible;
                               this.userSettings.toggleLobbyChatVisibility();
+                              // Clear unread indicator when opening chat
+                              if (this.chatVisible) {
+                                this.hasUnreadMessages = false;
+                              }
                             }}
-                            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
+                            class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
                               .chatVisible
                               ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
                               : "bg-white/5 text-white/60 hover:bg-white/10"}"
@@ -229,6 +259,11 @@ export class JoinPrivateLobbyModal extends BaseModal {
                                 ? "lobby_chat.hide"
                                 : "lobby_chat.show",
                             )}
+                            ${!this.chatVisible && this.hasUnreadMessages
+                              ? html`<span
+                                  class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
+                                ></span>`
+                              : ""}
                           </button>
                         `
                       : ""}
@@ -242,10 +277,13 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     .teamCount=${this.gameConfig?.playerTeams ?? 2}
                   ></lobby-team-view>
 
-                  ${this.chatEnabled && this.chatVisible
+                  ${this.chatEnabled
                     ? html`
                         <div
-                          class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5"
+                          class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
+                            .chatVisible
+                            ? ""
+                            : "hidden"}"
                         >
                           <div class="text-sm font-semibold text-white/80 mb-2">
                             ${translateText("lobby_chat.title")}
