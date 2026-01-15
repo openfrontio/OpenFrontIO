@@ -17,6 +17,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,
+  MouseDownEvent,
   MouseMoveEvent,
   MouseUpEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
@@ -54,7 +55,7 @@ class StructureRenderInfo {
     public dotContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
-  ) {}
+  ) { }
 }
 
 export class StructureIconsLayer implements Layer {
@@ -94,6 +95,17 @@ export class StructureIconsLayer implements Layer {
   ]);
   private lastGhostQueryAt: number;
   potentialUpgrade: StructureRenderInfo | undefined;
+
+  // Progressive building placement state
+  private isMouseDown: boolean = false;
+  private repeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private repeatCount: number = 0;
+  private repeatBuildType: UnitType | null = null; // Store the type we're repeat-placing
+  private repeatTileRef: number | null = null; // Store the tile where we're placing (for upgrades)
+  private startTileRef: number | null = null; // Store the initial mouse tile
+  private readonly INITIAL_REPEAT_DELAY_MS = 1000;
+  private readonly MIN_REPEAT_DELAY_MS = 400;
+  private readonly REPEAT_ACCELERATION_MS = 150;
 
   constructor(
     private game: GameView,
@@ -171,7 +183,9 @@ export class StructureIconsLayer implements Layer {
     );
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
-    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+    // Handle mouse down to start progressive placement
+    this.eventBus.on(MouseDownEvent, (e) => this.onMouseDown(e));
+    this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
 
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
@@ -376,42 +390,171 @@ export class StructureIconsLayer implements Layer {
       .fill({ color: 0x000000, alpha: 0.65 });
   }
 
-  private createStructure(e: MouseUpEvent) {
+  /**
+   * Check if a unit type is a weapon (nukes) that should NOT support
+   * progressive/repeat placement to prevent accidental mass launches.
+   */
+  private isWeaponType(type: UnitType): boolean {
+    return (
+      type === UnitType.AtomBomb ||
+      type === UnitType.HydrogenBomb ||
+      type === UnitType.MIRV
+    );
+  }
+
+  private onMouseDown(e: MouseDownEvent) {
     if (!this.ghostUnit) return;
-    if (
-      this.ghostUnit.buildableUnit.canBuild === false &&
-      this.ghostUnit.buildableUnit.canUpgrade === false
-    ) {
-      this.removeGhostStructure();
-      return;
-    }
+
+    this.repeatBuildType = this.ghostUnit.buildableUnit.type;
+    this.isMouseDown = true;
+    this.repeatCount = 0;
+
     const rect = this.transformHandler.boundingRect();
-    if (!rect) return;
-    const x = e.x - rect.left;
-    const y = e.y - rect.top;
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
-    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          this.ghostUnit.buildableUnit.canUpgrade,
-          this.ghostUnit.buildableUnit.type,
-        ),
-      );
-    } else if (this.ghostUnit.buildableUnit.canBuild) {
-      const unitType = this.ghostUnit.buildableUnit.type;
-      const rocketDirectionUp =
-        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
-          ? this.uiState.rocketDirectionUp
-          : undefined;
-      this.eventBus.emit(
-        new BuildUnitIntentEvent(
-          unitType,
-          this.game.ref(tile.x, tile.y),
-          rocketDirectionUp,
-        ),
-      );
+    if (rect) {
+      const x = e.x - rect.left;
+      const y = e.y - rect.top;
+      const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+      if (this.game.isValidCoord(tile.x, tile.y)) {
+        this.repeatTileRef = this.game.ref(tile.x, tile.y);
+        this.startTileRef = this.repeatTileRef;
+      }
     }
-    this.removeGhostStructure();
+
+    this.placeStructureAtCurrentTile();
+  }
+
+  /**
+   * Handle mouse up event - stop progressive placement and clear ghost.
+   */
+  private onMouseUp(e: MouseUpEvent) {
+    const wasMouseDown = this.isMouseDown;
+    this.isMouseDown = false;
+    this.clearRepeatTimer();
+    this.repeatCount = 0;
+    this.repeatBuildType = null;
+    this.repeatTileRef = null;
+    this.startTileRef = null;
+
+    if (wasMouseDown && this.ghostUnit) {
+      this.removeGhostStructure();
+    }
+  }
+
+  /**
+   * Clear the repeat timer if active.
+   */
+  private clearRepeatTimer() {
+    if (this.repeatTimer !== null) {
+      clearTimeout(this.repeatTimer);
+      this.repeatTimer = null;
+    }
+  }
+
+  private scheduleNextPlacement() {
+    if (!this.isMouseDown || !this.repeatBuildType) return;
+
+    const delay = Math.max(
+      this.MIN_REPEAT_DELAY_MS,
+      this.INITIAL_REPEAT_DELAY_MS - this.repeatCount * this.REPEAT_ACCELERATION_MS,
+    );
+
+    this.repeatTimer = setTimeout(() => {
+      if (this.isMouseDown && this.repeatBuildType && this.repeatTileRef !== null) {
+        this.placeStructureAtCurrentTile();
+      }
+    }, delay);
+  }
+
+  private placeStructureAtCurrentTile() {
+    const unitType = this.repeatBuildType;
+    const tileRef = this.repeatTileRef;
+    if (!unitType || tileRef === null) return;
+
+    this.game
+      .myPlayer()
+      ?.actions(tileRef)
+      .then((actions) => {
+        if (!this.isMouseDown || this.repeatBuildType !== unitType) return;
+
+        const rect = this.transformHandler.boundingRect();
+        if (rect) {
+          const currentTile = this.transformHandler.screenToWorldCoordinates(
+            this.mousePos.x - rect.left,
+            this.mousePos.y - rect.top
+          );
+          const currentRef = this.game.ref(currentTile.x, currentTile.y);
+          // Check against startRef (where mouse started)
+          // If building snapped (repeatTileRef changed), we still want to allow holding 
+          // on the original mouse tile (startTileRef).
+          if (this.startTileRef !== null && currentRef !== this.startTileRef) {
+            this.stopRepeat();
+            return;
+          }
+        }
+
+        const buildableUnit = actions.buildableUnits.find((bu) => bu.type === unitType);
+        if (!buildableUnit) {
+          // Do nothing, retry later
+        } else {
+          if (buildableUnit.canUpgrade !== false) {
+            this.eventBus.emit(
+              new SendUpgradeStructureIntentEvent(buildableUnit.canUpgrade, unitType),
+            );
+          } else if (buildableUnit.canBuild !== false) {
+            // Fix: If this is the first placement, update our lock to the actual tile
+            // the game decided to build on (handles snapping, e.g., Ports on coast)
+            if (this.repeatCount === 0 && typeof buildableUnit.canBuild === "number") {
+              this.repeatTileRef = buildableUnit.canBuild;
+            }
+            const rocketDirectionUp =
+              unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+                ? this.uiState.rocketDirectionUp
+                : undefined;
+            this.eventBus.emit(
+              new BuildUnitIntentEvent(unitType, buildableUnit.canBuild, rocketDirectionUp),
+            );
+          }
+        }
+
+        if (this.isWeaponType(unitType)) {
+          this.stopRepeat();
+          return;
+        }
+
+        this.repeatCount++;
+        if (this.isMouseDown) {
+          this.scheduleNextPlacement();
+        }
+      });
+  }
+
+  /**
+   * Stop repeat placement and optionally clear ghost.
+   */
+  private stopRepeat() {
+    this.isMouseDown = false;
+    this.clearRepeatTimer();
+    this.repeatBuildType = null;
+    this.repeatTileRef = null;
+    if (this.ghostUnit) {
+      this.removeGhostStructure();
+    }
+  }
+
+  /**
+   * @deprecated Legacy method - placement now handled by placeStructureAtCurrentTile.
+   */
+  private placeStructureAtPosition(screenX: number, screenY: number) {
+    // Redirects to new method for any external callers
+    this.placeStructureAtCurrentTile();
+  }
+
+  /**
+   * @deprecated Use placeStructureAtPosition() instead. Kept for backwards compatibility.
+   */
+  private createStructure(e: MouseUpEvent) {
+    // This method is now handled by onMouseUp and placeStructureAtPosition
+    // Kept empty for potential external callers
   }
 
   private moveGhost(e: MouseMoveEvent) {
@@ -422,8 +565,17 @@ export class StructureIconsLayer implements Layer {
     const rect = this.transformHandler.boundingRect();
     if (!rect) return;
 
-    const localX = e.x - rect.left;
-    const localY = e.y - rect.top;
+    let localX = e.x - rect.left;
+    let localY = e.y - rect.top;
+
+    if (this.isMouseDown && this.repeatTileRef !== null) {
+      const ref = this.repeatTileRef;
+      const cell = new Cell(this.game.x(ref), this.game.y(ref));
+      const screen = this.transformHandler.worldToScreenCoordinates(cell);
+      localX = screen.x - rect.left;
+      localY = screen.y - rect.top;
+    }
+
     this.ghostUnit.container.position.set(localX, localY);
     this.ghostUnit.range?.position.set(localX, localY);
   }
@@ -676,9 +828,9 @@ export class StructureIconsLayer implements Layer {
           Math.max(
             1,
             scale /
-              (target === render.levelContainer
-                ? LEVEL_SCALE_FACTOR
-                : ICON_SCALE_FACTOR_ZOOMED_IN),
+            (target === render.levelContainer
+              ? LEVEL_SCALE_FACTOR
+              : ICON_SCALE_FACTOR_ZOOMED_IN),
           ),
         );
       } else if (scale > DOTS_ZOOM_THRESHOLD) {
