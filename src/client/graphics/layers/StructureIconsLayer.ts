@@ -55,7 +55,7 @@ class StructureRenderInfo {
     public dotContainer: PIXI.Container,
     public level: number = 0,
     public underConstruction: boolean = true,
-  ) {}
+  ) { }
 }
 
 export class StructureIconsLayer implements Layer {
@@ -456,7 +456,7 @@ export class StructureIconsLayer implements Layer {
     const delay = Math.max(
       this.MIN_REPEAT_DELAY_MS,
       this.INITIAL_REPEAT_DELAY_MS -
-        this.repeatCount * this.REPEAT_ACCELERATION_MS,
+      this.repeatCount * this.REPEAT_ACCELERATION_MS,
     );
 
     this.repeatTimer = setTimeout(() => {
@@ -487,6 +487,12 @@ export class StructureIconsLayer implements Layer {
             this.mousePos.x - rect.left,
             this.mousePos.y - rect.top,
           );
+
+          if (!this.game.isValidCoord(currentTile.x, currentTile.y)) {
+            this.stopRepeat();
+            return;
+          }
+
           const currentRef = this.game.ref(currentTile.x, currentTile.y);
           // Check against startRef (where mouse started)
           // If building snapped (repeatTileRef changed), we still want to allow holding
@@ -521,7 +527,7 @@ export class StructureIconsLayer implements Layer {
             }
             const rocketDirectionUp =
               unitType === UnitType.AtomBomb ||
-              unitType === UnitType.HydrogenBomb
+                unitType === UnitType.HydrogenBomb
                 ? this.uiState.rocketDirectionUp
                 : undefined;
             this.eventBus.emit(
@@ -846,9 +852,9 @@ export class StructureIconsLayer implements Layer {
           Math.max(
             1,
             scale /
-              (target === render.levelContainer
-                ? LEVEL_SCALE_FACTOR
-                : ICON_SCALE_FACTOR_ZOOMED_IN),
+            (target === render.levelContainer
+              ? LEVEL_SCALE_FACTOR
+              : ICON_SCALE_FACTOR_ZOOMED_IN),
           ),
         );
       } else if (scale > DOTS_ZOOM_THRESHOLD) {
