@@ -212,7 +212,6 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
-  private preventHashUpdate: boolean = false;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -587,12 +586,7 @@ class Client {
     this.handleUrl();
 
     const onHashUpdate = () => {
-      // Prevent double-handling when both popstate and hashchange fire
-      if (this.preventHashUpdate) {
-        this.preventHashUpdate = false;
-
-        return;
-      }
+      console.debug("onHashUpdate");
 
       // Reset the UI to its initial state
       this.joinModal?.close();
@@ -605,29 +599,39 @@ class Client {
     };
 
     const onPopState = () => {
-      this.preventHashUpdate = true;
+      console.debug("onPopState");
+      if (this.currentUrl !== null && this.gameStop !== null) {
+        console.info("Game is active");
 
-      if (this.currentUrl !== null && this.gameStop && !this.gameStop()) {
-        console.info("Player is active, ask before leaving game");
+        if (!this.gameStop()) {
+          console.info("Player is active, ask before leaving game");
 
-        const isConfirmed = confirm(
-          translateText("help_modal.exit_confirmation"),
-        );
-
-        if (!isConfirmed) {
-          console.debug(
-            "Player denied leaving game, restore navigator history",
+          const isConfirmed = confirm(
+            translateText("help_modal.exit_confirmation"),
           );
 
-          // Rollback navigator history
-          history.pushState(null, "", this.currentUrl);
-          return;
+          if (!isConfirmed) {
+            console.debug(
+              "Player denied leaving game, restore navigator history",
+            );
+
+            // Rollback navigator history
+            history.pushState(null, "", this.currentUrl);
+            return;
+          }
         }
+
+        console.info("Player is not active, leave the game immediately");
+
+        crazyGamesSDK.gameplayStop().then(() => {
+          // redirect to the home page
+          window.location.href = "/";
+        });
+      } else {
+        console.info("Game not active, handle hash update");
+
+        onHashUpdate();
       }
-
-      console.info("Player not active, handle hash update");
-
-      onHashUpdate();
     };
 
     // Handle browser navigation & manual hash edits
