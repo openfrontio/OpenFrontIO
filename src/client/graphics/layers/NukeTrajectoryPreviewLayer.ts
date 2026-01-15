@@ -1,5 +1,4 @@
 import { EventBus } from "../../../core/EventBus";
-import { listNukeBreakAlliance } from "../../../core/execution/Util";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
@@ -12,6 +11,7 @@ import {
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import { NukeRenderUtilLayer } from "./NukeRenderUtilLayer";
 
 /**
  * Layer responsible for rendering the nuke trajectory preview line
@@ -30,10 +30,11 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private cachedSpawnTile: TileRef | null = null;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
-    private uiState: UIState,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
+    private readonly uiState: UIState,
+    private readonly nukeRenderUtilLayer: NukeRenderUtilLayer,
   ) {}
 
   shouldTransform(): boolean {
@@ -259,18 +260,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         break;
       }
     }
-    const playersToBreakAllianceWith = listNukeBreakAlliance({
-      game: this.game,
-      targetTile,
-      magnitude: this.game.config().nukeMagnitudes(ghostStructure),
-      allySmallIds: new Set(
-        this.game
-          .myPlayer()
-          ?.allies()
-          .map((a) => a.smallID()),
-      ),
-      threshold: this.game.config().nukeAllianceBreakThreshold(),
-    });
+    const stressedPlayers =
+      this.nukeRenderUtilLayer.getAllianceStressedPlayers();
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
     // Check trajectory
@@ -284,7 +275,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         if (
           sam.unit.owner().isMe() ||
           (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
-            !playersToBreakAllianceWith.has(sam.unit.owner().smallID()))
+            !stressedPlayers.has(sam.unit.owner().smallID()))
         ) {
           continue;
         }

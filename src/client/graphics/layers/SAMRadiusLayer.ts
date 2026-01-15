@@ -10,6 +10,7 @@ import type {
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import { NukeRenderUtilLayer } from "./NukeRenderUtilLayer";
 
 type Interval = [number, number];
 interface SAMRadius {
@@ -53,6 +54,7 @@ export class SAMRadiusLayer implements Layer {
     private readonly game: GameView,
     private readonly eventBus: EventBus,
     private readonly uiState: UIState,
+    private readonly nukeRenderUtilLayer: NukeRenderUtilLayer,
   ) {
     this.theme = game.config().theme();
   }
@@ -273,6 +275,7 @@ export class SAMRadiusLayer implements Layer {
     const lineColorSelf = this.theme.selfColor().toRgbString();
     const lineColorEnemy = this.theme.enemyColor().toRgbString();
     const lineColorFriend = this.theme.allyColor().toRgbString();
+    const lineColorStressed = "rgba(255, 128, 0, 1)";
     const extraOutlineWidth = 1; // adds onto below
     const lineWidth = 3;
     const lineDash = [12, 6];
@@ -299,7 +302,15 @@ export class SAMRadiusLayer implements Layer {
       if (a.owner.isMe()) {
         ctx.strokeStyle = lineColorSelf;
       } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
-        ctx.strokeStyle = lineColorFriend;
+        if (
+          this.nukeRenderUtilLayer
+            .getAllianceStressedPlayers()
+            .has(a.owner.smallID())
+        ) {
+          ctx.strokeStyle = lineColorStressed;
+        } else {
+          ctx.strokeStyle = lineColorFriend;
+        }
       } else {
         ctx.strokeStyle = lineColorEnemy;
       }

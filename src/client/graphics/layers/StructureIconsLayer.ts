@@ -4,7 +4,6 @@ import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
@@ -29,6 +28,7 @@ import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import { NukeRenderUtilLayer } from "./NukeRenderUtilLayer";
 import {
   DOTS_ZOOM_THRESHOLD,
   ICON_SCALE_FACTOR_ZOOMED_IN,
@@ -100,6 +100,7 @@ export class StructureIconsLayer implements Layer {
     private eventBus: EventBus,
     public uiState: UIState,
     private transformHandler: TransformHandler,
+    private readonly nukeRenderUtilLayer: NukeRenderUtilLayer,
   ) {
     this.theme = game.config().theme();
     this.factory = new SpriteFactory(
@@ -261,7 +262,6 @@ export class StructureIconsLayer implements Layer {
     }
 
     // Check if targeting an ally (for nuke warning visual)
-    // Uses shared logic with NukeExecution.maybeBreakAlliances()
     let targetingAlly = false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
@@ -273,13 +273,12 @@ export class StructureIconsLayer implements Layer {
       // Only check if player has allies
       const allies = myPlayer.allies();
       if (allies.length > 0) {
-        targetingAlly = wouldNukeBreakAlliance({
-          game: this.game,
-          targetTile: tileRef,
-          magnitude: this.game.config().nukeMagnitudes(nukeType),
-          allySmallIds: new Set(allies.map((a) => a.smallID())),
-          threshold: this.game.config().nukeAllianceBreakThreshold(),
-        });
+        targetingAlly =
+          allies.filter((p) =>
+            this.nukeRenderUtilLayer
+              .getAllianceStressedPlayers()
+              .has(p.smallID()),
+          ).length !== 0;
       }
     }
 
