@@ -8,9 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
-import { PathStatus } from "../pathfinding/types";
+import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
@@ -32,12 +30,11 @@ export class MirvExecution implements Execution {
 
   private random: PseudoRandom;
 
-  private pathFinder: ParabolaUniversalPathFinder;
+  private pathFinder: ParabolaPathFinder;
 
   private targetPlayer: Player | TerraNullius;
 
   private separateDst: TileRef;
-  private spawnTile: TileRef;
 
   private speed: number = -1;
 
@@ -49,11 +46,9 @@ export class MirvExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
+    this.pathFinder = new ParabolaPathFinder(mg);
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-    });
 
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
@@ -75,7 +70,6 @@ export class MirvExecution implements Execution {
         this.active = false;
         return;
       }
-      this.spawnTile = spawn;
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
       });
@@ -85,6 +79,7 @@ export class MirvExecution implements Execution {
       );
       const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
+      this.pathFinder.computeControlPoints(spawn, this.separateDst);
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
@@ -95,19 +90,15 @@ export class MirvExecution implements Execution {
       );
     }
 
-    const result = this.pathFinder.next(
-      this.spawnTile,
-      this.separateDst,
-      this.speed,
-    );
-    if (result.status === PathStatus.COMPLETE) {
+    const result = this.pathFinder.nextTile(this.speed);
+    if (result === true) {
       this.separate();
       this.active = false;
       // Record stats
       this.mg.stats().bombLand(this.player, this.targetPlayer, UnitType.MIRV);
       return;
-    } else if (result.status === PathStatus.NEXT) {
-      this.nuke.move(result.node);
+    } else {
+      this.nuke.move(result);
     }
   }
 

@@ -94,6 +94,8 @@ const numPlayersConfig = {
   [GameMapType.DidierFrance]: [100, 70, 50],
   [GameMapType.AmazonRiver]: [50, 40, 30],
   [GameMapType.Sierpinski]: [20, 15, 10],
+  [GameMapType.ObstacleTest]: [30, 20, 10],
+  [GameMapType.RomanEmpire]: [100, 70, 50],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {

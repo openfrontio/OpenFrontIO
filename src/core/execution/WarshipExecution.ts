@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinding } from "../pathfinding/PathFinder";
-import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
+import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -17,7 +16,7 @@ export class WarshipExecution implements Execution {
   private random: PseudoRandom;
   private warship: Unit;
   private mg: Game;
-  private pathfinder: SteppingPathFinder<TileRef>;
+  private pathfinder: PathFinder;
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
@@ -27,7 +26,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinding.Water(mg);
+    this.pathfinder = PathFinders.Water(mg);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -194,10 +193,9 @@ export class WarshipExecution implements Execution {
         case PathStatus.PENDING:
           this.warship.touch();
           break;
-        case PathStatus.NOT_FOUND: {
+        case PathStatus.NOT_FOUND:
           console.log(`path not found to target`);
           break;
-        }
       }
     }
   }
@@ -225,10 +223,10 @@ export class WarshipExecution implements Execution {
       case PathStatus.PENDING:
         this.warship.touch();
         return;
-      case PathStatus.NOT_FOUND: {
-        console.log(`path not found to target`);
+      case PathStatus.NOT_FOUND:
+        console.warn(`path not found to target tile`);
+        this.warship.setTargetTile(undefined);
         break;
-      }
     }
   }
 
@@ -245,10 +243,6 @@ export class WarshipExecution implements Execution {
     const maxAttemptBeforeExpand: number = 500;
     let attempts: number = 0;
     let expandCount: number = 0;
-
-    // Get warship's water component for connectivity check
-    const warshipComponent = this.mg.getWaterComponent(this.warship.tile());
-
     while (expandCount < 3) {
       const x =
         this.mg.x(this.warship.patrolTile()!) +
@@ -263,20 +257,6 @@ export class WarshipExecution implements Execution {
       if (
         !this.mg.isOcean(tile) ||
         (!allowShoreline && this.mg.isShoreline(tile))
-      ) {
-        attempts++;
-        if (attempts === maxAttemptBeforeExpand) {
-          expandCount++;
-          attempts = 0;
-          warshipPatrolRange =
-            warshipPatrolRange + Math.floor(warshipPatrolRange / 2);
-        }
-        continue;
-      }
-      // Check water component connectivity
-      if (
-        warshipComponent !== null &&
-        !this.mg.hasWaterComponent(tile, warshipComponent)
       ) {
         attempts++;
         if (attempts === maxAttemptBeforeExpand) {

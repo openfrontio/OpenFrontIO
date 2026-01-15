@@ -1259,6 +1259,6 @@ export class PlayerImpl implements Player {
   }
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
-    return bestShoreDeploymentSource(this.mg, this, targetTile) ?? false;
+    return bestShoreDeploymentSource(this.mg, this, targetTile);
   }
 }

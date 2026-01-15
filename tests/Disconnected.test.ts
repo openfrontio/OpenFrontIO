@@ -383,7 +383,6 @@ describe("Disconnected", () => {
       player1.conquer(game.map().ref(coastX, 4));
       player2.conquer(game.map().ref(coastX, 1));
 
-      // Use a far destination so boat is still in transit after attack completes
       const enemyShoreTile = game.map().ref(coastX, 15);
 
       game.addExecution(

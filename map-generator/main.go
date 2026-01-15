@@ -67,12 +67,14 @@ var maps = []struct {
 	{Name: "didier"},
 	{Name: "didierfrance"},
 	{Name: "amazonriver"},
+	{Name: "romanempire"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
 	{Name: "plains", IsTest: true},
 	{Name: "giantworldmap", IsTest: true},
 	{Name: "world", IsTest: true},
+	{Name: "obstacletest", IsTest: true},
 }
 
 // outputMapDir returns the absolute path to the directory where generated map files should be written.
@@ -172,6 +174,15 @@ func processMap(name string, isTest bool) error {
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "map16x.bin"), result.Map16x.Data, 0644); err != nil {
 		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+	}
+	if err := os.WriteFile(filepath.Join(mapDir, "obstacles.bin"), result.Obstacles.Data, 0644); err != nil {
+		return fmt.Errorf("failed to write obstacle data for %s: %w", name, err)
+	}
+	if err := os.WriteFile(filepath.Join(mapDir, "obstacles4x.bin"), result.Obs4x.Data, 0644); err != nil {
+		return fmt.Errorf("failed to write obstacle data for %s: %w", name, err)
+	}
+	if err := os.WriteFile(filepath.Join(mapDir, "obstacles16x.bin"), result.Obs16x.Data, 0644); err != nil {
+		return fmt.Errorf("failed to write obstacle data for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {
 		return fmt.Errorf("failed to write thumbnail for %s: %w", name, err)

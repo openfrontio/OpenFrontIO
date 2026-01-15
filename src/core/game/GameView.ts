@@ -837,6 +837,9 @@ export class GameView implements GameMap {
   isShoreline(ref: TileRef): boolean {
     return this._map.isShoreline(ref);
   }
+  isObstacle(ref: TileRef): boolean {
+    return this._map.isObstacle(ref);
+  }
   magnitude(ref: TileRef): number {
     return this._map.magnitude(ref);
   }

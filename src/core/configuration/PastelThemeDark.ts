@@ -57,6 +57,8 @@ export class PastelThemeDark extends PastelTheme {
           g: 180 + mag / 2,
           b: 180 + mag / 2,
         });
+      case TerrainType.Obstacle:
+        return this.backgroundColor();
     }
   }
 }

@@ -1,6 +1,5 @@
 import { Config } from "../configuration/Config";
-import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
-import { PathFinder } from "../pathfinding/types";
+import { NavMesh } from "../pathfinding/navmesh/NavMesh";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
@@ -117,6 +116,8 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  ObstacleTest = "Obstacle Test",
+  RomanEmpire = "Roman Empire",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -137,6 +138,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Asia,
     GameMapType.Africa,
     GameMapType.Oceania,
+    GameMapType.RomanEmpire
   ],
   regional: [
     GameMapType.BritanniaClassic,
@@ -175,11 +177,13 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+
   ],
   arcade: [
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
+    GameMapType.ObstacleTest
   ],
 };
 
@@ -378,6 +382,7 @@ export enum TerrainType {
   Mountain,
   Lake,
   Ocean,
+  Obstacle,
 }
 
 export enum PlayerType {
@@ -803,10 +808,7 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
-  miniWaterHPA(): PathFinder<number> | null;
-  miniWaterGraph(): AbstractGraph | null;
-  getWaterComponent(tile: TileRef): number | null;
-  hasWaterComponent(tile: TileRef, component: number): boolean;
+  navMesh(): NavMesh | null;
 }
 
 export interface PlayerActions {

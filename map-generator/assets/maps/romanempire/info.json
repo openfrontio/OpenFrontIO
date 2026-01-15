@@ -1,0 +1,165 @@
+{
+  "name": "Roman Empire",
+  "nations": [
+    {
+      "coordinates": [
+        1940,
+        357
+      ],
+      "name": "Russia",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [
+        516,
+        1214
+      ],
+      "name": "Algeria",
+      "flag": "dz"
+    },
+    {
+      "coordinates": [
+        1544,
+        389
+      ],
+      "name": "Ukraine",
+      "flag": "ua"
+    },
+    {
+      "coordinates": [
+        1692,
+        906
+      ],
+      "name": "Turkey",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [
+        459,
+        503
+      ],
+      "name": "France",
+      "flag": "xx"
+    },
+    {
+      "coordinates": [
+        916,
+        1303
+      ],
+      "name": "Libya",
+      "flag": "ly"
+    },
+    {
+      "coordinates": [
+        774,
+        253
+      ],
+      "name": "Germany",
+      "flag": "de"
+    },
+    {
+      "coordinates": [
+        250,
+        858
+      ],
+      "name": "Spain",
+      "flag": "es"
+    },
+    {
+      "coordinates": [
+        1098,
+        206
+      ],
+      "name": "Poland",
+      "flag": "pl"
+    },
+    {
+      "coordinates": [
+        848,
+        726
+      ],
+      "name": "Italy",
+      "flag": "it"
+    },
+    {
+      "coordinates": [
+        143,
+        1240
+      ],
+      "name": "Morocco",
+      "flag": "ma"
+    },
+    {
+      "coordinates": [
+        1433,
+        127
+      ],
+      "name": "Belarus",
+      "flag": "by"
+    },
+    {
+      "coordinates": [
+        1452,
+        1337
+      ],
+      "name": "Egypt",
+      "flag": "eg"
+    },
+    {
+      "coordinates": [
+        1286,
+        551
+      ],
+      "name": "Romania",
+      "flag": "ro"
+    },
+    {
+      "coordinates": [
+        334,
+        165
+      ],
+      "name": "United Kingdom",
+      "flag": "gb"
+    },
+    {
+      "coordinates": [
+        1877,
+        1327
+      ],
+      "name": "Saudi Arabia",
+      "flag": "sa"
+    },
+    {
+      "coordinates": [
+        1824,
+        1101
+      ],
+      "name": "Syria",
+      "flag": "sy"
+    },
+    {
+      "coordinates": [
+        1936,
+        1146
+      ],
+      "name": "Iraq",
+      "flag": "iq"
+    },
+    {
+      "coordinates": [
+        708,
+        1147
+      ],
+      "name": "Tunisia",
+      "flag": "tn"
+    },
+    {
+      "coordinates": [
+        1195,
+        902
+      ],
+      "name": "Greece",
+      "flag": "gr"
+    }
+  ]
+}

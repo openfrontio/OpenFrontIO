@@ -37,6 +37,7 @@ type TerrainType int
 const (
 	Land TerrainType = iota
 	Water
+	Obstacle
 )
 
 // Terrain represents the properties of a single map tile.
@@ -54,6 +55,9 @@ type MapResult struct {
 	Map       MapInfo
 	Map4x     MapInfo
 	Map16x    MapInfo
+	Obstacles MapMask
+	Obs4x     MapMask
+	Obs16x    MapMask
 }
 
 // MapInfo contains the serialized map data and metadata for a specific scale.
@@ -62,6 +66,13 @@ type MapInfo struct {
 	Width        int
 	Height       int
 	NumLandTiles int
+}
+
+// MapMask contains serialized map mask data.
+type MapMask struct {
+	Data   []byte
+	Width  int
+	Height int
 }
 
 // GeneratorArgs defines the input parameters for the map generation process.
@@ -86,6 +97,7 @@ type GeneratorArgs struct {
 // | :----------------- | :-------------- | :----------------- | :------------------------------- |
 // | **Alpha < 20**     | Water           | Distance to Land\* | Transparent pixels become water. |
 // | **Blue = 106**     | Water           | Distance to Land\* | Specific key color for water.    |
+// | **RGB = 0,0,0**    | Obstacle        | 0                  | Unplayable, non-water tile.      |
 // | **Blue < 140**     | Land (Plains)   | 0                  | Clamped to minimum magnitude.    |
 // | **Blue 140 - 158** | Land (Plains)   | 0 - 9              | 					 					 					 		|
 // | **Blue 159 - 178** | Land (Highland) | 10 - 19            | 					 					 					 		|
@@ -118,14 +130,19 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	// Process each pixel
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
-			_, _, b, a := img.At(x, y).RGBA()
+			r, g, b, a := img.At(x, y).RGBA()
 			// Convert from 16-bit to 8-bit values
+			red := uint8(r >> 8)
+			green := uint8(g >> 8)
 			alpha := uint8(a >> 8)
 			blue := uint8(b >> 8)
 
 			if alpha < 20 || blue == 106 {
 				// Transparent or specific blue value = water
 				terrain[x][y] = Terrain{Type: Water}
+			} else if red == 0 && green == 0 && blue == 0 {
+				// Solid black = obstacle (impassable)
+				terrain[x][y] = Terrain{Type: Obstacle}
 			} else {
 				// Land
 				terrain[x][y] = Terrain{Type: Land}
@@ -159,6 +176,9 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	mapData, mapNumLandTiles := packTerrain(terrain)
 	mapData4x, numLandTiles4x := packTerrain(terrain4x)
 	mapData16x, numLandTiles16x := packTerrain(terrain16x)
+	obstacles := packObstacleMask(terrain)
+	obstacles4x := packObstacleMask(terrain4x)
+	obstacles16x := packObstacleMask(terrain16x)
 
 	return MapResult{
 		Map: MapInfo{
@@ -178,6 +198,21 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 			Width:        width / 4,
 			Height:       height / 4,
 			NumLandTiles: numLandTiles16x,
+		},
+		Obstacles: MapMask{
+			Data:   obstacles,
+			Width:  width,
+			Height: height,
+		},
+		Obs4x: MapMask{
+			Data:   obstacles4x,
+			Width:  width / 2,
+			Height: height / 2,
+		},
+		Obs16x: MapMask{
+			Data:   obstacles16x,
+			Width:  width / 4,
+			Height: height / 4,
 		},
 		Thumbnail: webp,
 	}, nil
@@ -207,8 +242,9 @@ func convertToWebP(thumb ThumbData) ([]byte, error) {
 
 // createMiniMap downscales the terrain grid by half.
 // It maps 2x2 blocks of input tiles to a single output tile.
-// The logic prioritizes Water: if any of the 4 source tiles is Water,
-// the resulting mini-map tile becomes Water.
+// The logic prioritizes obstacles, then Water: if any of the 4 source tiles is
+// Obstacle, the resulting mini-map tile becomes Obstacle. Otherwise, if any of
+// the 4 tiles is Water, the resulting mini-map tile becomes Water.
 func createMiniMap(tm [][]Terrain) [][]Terrain {
 	width := len(tm)
 	height := len(tm[0])
@@ -227,8 +263,13 @@ func createMiniMap(tm [][]Terrain) [][]Terrain {
 			miniY := y / 2
 
 			if miniX < miniWidth && miniY < miniHeight {
+				if tm[x][y].Type == Obstacle {
+					miniMap[miniX][miniY] = tm[x][y]
+					continue
+				}
 				// If any of the 4 tiles has water, mini tile is water
-				if miniMap[miniX][miniY].Type != Water {
+				if miniMap[miniX][miniY].Type != Water &&
+					miniMap[miniX][miniY].Type != Obstacle {
 					miniMap[miniX][miniY] = tm[x][y]
 				}
 			}
@@ -261,7 +302,7 @@ func processShore(terrain [][]Terrain) []Coord {
 						break
 					}
 				}
-			} else {
+			} else if tile.Type == Water {
 				// Water tile adjacent to land is shoreline
 				for _, n := range neighbors {
 					if n.Type == Land {
@@ -557,6 +598,24 @@ func packTerrain(terrain [][]Terrain) (data []byte, numLandTiles int) {
 	return packedData, numLandTiles
 }
 
+// packObstacleMask serializes obstacle tiles into a byte slice.
+// Each byte represents a single tile with value 1 for obstacle, 0 otherwise.
+func packObstacleMask(terrain [][]Terrain) []byte {
+	width := len(terrain)
+	height := len(terrain[0])
+	packedData := make([]byte, width*height)
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			if terrain[x][y].Type == Obstacle {
+				packedData[y*width+x] = 1
+			}
+		}
+	}
+
+	return packedData
+}
+
 // createMapThumbnail generates an RGBA image representation of the terrain.
 // It scales the map dimensions based on the provided quality factor.
 // Each pixel's color is determined by the terrain type and magnitude via getThumbnailColor.
@@ -611,6 +670,9 @@ type RGBA struct {
 //   - Highlands (Mag 10-19): `rgb(220, 203, 158)` - `rgb(238, 221, 176)`
 //   - Mountains (Mag >= 20): `rgb(240, 240, 240)` - `rgb(245, 245, 245)`
 func getThumbnailColor(t Terrain) RGBA {
+	if t.Type == Obstacle {
+		return RGBA{R: 0, G: 0, B: 0, A: 255}
+	}
 	if t.Type == Water {
 		// Shoreline water
 		if t.Shoreline {

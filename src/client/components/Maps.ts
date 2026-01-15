@@ -52,6 +52,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Didier: "Didier",
   DidierFrance: "Didier (France)",
   AmazonRiver: "Amazon River",
+  ObstacleTest: "Obstacle Test",
+  RomanEmpire: "Roman Empire",
 };
 
 @customElement("map-display")

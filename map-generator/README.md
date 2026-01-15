@@ -3,6 +3,7 @@
 This is a go-based tool to generate map files for OpenFront.
 
 The map generator reads PNG files and converts pixels into terrain based primarily on the **Blue** channel.
+Pixels with **RGB 0,0,0** are treated as **Obstacle** tiles (impassable, rendered black).
 Because only blue values are used, grayscale and other formats are fully supported. Many maps in `assets/maps/<mapname>` are grayscale.
 
 Additional Guides, Tutorials, Scripts, Resources, and Third Party Unofficial Applications can be found on

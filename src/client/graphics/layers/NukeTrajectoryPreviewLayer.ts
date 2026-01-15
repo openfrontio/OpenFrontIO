@@ -2,7 +2,7 @@ import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
-import { UniversalPathFinding } from "../../../core/pathfinding/PathFinder";
+import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
 import {
   GhostStructureChangedEvent,
   MouseMoveEvent,
@@ -211,16 +211,20 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
-    // Calculate trajectory using ParabolaUniversalPathFinder with cached spawn tile
+    // Calculate trajectory using ParabolaPathFinder with cached spawn tile
+    const pathFinder = new ParabolaPathFinder(this.game);
     const speed = this.game.config().defaultNukeSpeed();
-    const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: speed,
-      distanceBasedHeight: true, // AtomBomb/HydrogenBomb use distance-based height
-      directionUp: this.uiState.rocketDirectionUp,
-    });
+    const distanceBasedHeight = true; // AtomBomb/HydrogenBomb use distance-based height
 
-    this.trajectoryPoints =
-      pathFinder.findPath(this.cachedSpawnTile, targetTile) ?? [];
+    pathFinder.computeControlPoints(
+      this.cachedSpawnTile,
+      targetTile,
+      speed,
+      distanceBasedHeight,
+      this.uiState.rocketDirectionUp,
+    );
+
+    this.trajectoryPoints = pathFinder.allTiles();
 
     // NOTE: This is a lot to do in the rendering method, naive
     // But trajectory is already calculated here and needed for prediction.

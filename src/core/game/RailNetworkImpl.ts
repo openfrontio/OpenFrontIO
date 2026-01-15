@@ -1,10 +1,12 @@
 import { RailroadExecution } from "../execution/RailroadExecution";
-import { PathFinding } from "../pathfinding/PathFinder";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
+import { SerialAStar } from "../pathfinding/SerialAStar";
 import { Game, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
-import { Cluster, TrainStation } from "./TrainStation";
+import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
 
 /**
  * The Stations handle their own neighbors so the graph is naturally traversable,
@@ -16,23 +18,16 @@ export interface StationManager {
   removeStation(station: TrainStation): void;
   findStation(unit: Unit): TrainStation | null;
   getAll(): Set<TrainStation>;
-  getById(id: number): TrainStation | undefined;
-  count(): number;
 }
 
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
-  private stationsById: (TrainStation | undefined)[] = [];
-  private nextId = 0;
 
   addStation(station: TrainStation) {
-    station.id = this.nextId++;
-    this.stationsById[station.id] = station;
     this.stations.add(station);
   }
 
   removeStation(station: TrainStation) {
-    this.stationsById[station.id] = undefined;
     this.stations.delete(station);
   }
 
@@ -46,14 +41,6 @@ export class StationManagerImpl implements StationManager {
   getAll(): Set<TrainStation> {
     return this.stations;
   }
-
-  getById(id: number): TrainStation | undefined {
-    return this.stationsById[id];
-  }
-
-  count(): number {
-    return this.nextId;
-  }
 }
 
 export interface RailPathFinderService {
@@ -65,11 +52,32 @@ class RailPathFinderServiceImpl implements RailPathFinderService {
   constructor(private game: Game) {}
 
   findTilePath(from: TileRef, to: TileRef): TileRef[] {
-    return PathFinding.Rail(this.game).findPath(from, to) ?? [];
+    const astar = new MiniAStar(
+      this.game.map(),
+      this.game.miniMap(),
+      from,
+      to,
+      5000,
+      20,
+      false,
+      3,
+    );
+    return astar.compute() === PathFindResultType.Completed
+      ? astar.reconstructPath()
+      : [];
   }
 
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[] {
-    return PathFinding.Stations(this.game).findPath(from, to) ?? [];
+    const stationAStar = new SerialAStar(
+      from,
+      to,
+      5000,
+      20,
+      new TrainStationMapAdapter(this.game),
+    );
+    return stationAStar.compute() === PathFindResultType.Completed
+      ? stationAStar.reconstructPath()
+      : [];
   }
 }
 
@@ -84,26 +92,22 @@ export class RailNetworkImpl implements RailNetwork {
 
   constructor(
     private game: Game,
-    private _stationManager: StationManager,
+    private stationManager: StationManager,
     private pathService: RailPathFinderService,
   ) {}
 
-  stationManager(): StationManager {
-    return this._stationManager;
-  }
-
   connectStation(station: TrainStation) {
-    this._stationManager.addStation(station);
+    this.stationManager.addStation(station);
     this.connectToNearbyStations(station);
   }
 
   removeStation(unit: Unit): void {
-    const station = this._stationManager.findStation(unit);
+    const station = this.stationManager.findStation(unit);
     if (!station) return;
 
     const neighbors = station.neighbors();
     this.disconnectFromNetwork(station);
-    this._stationManager.removeStation(station);
+    this.stationManager.removeStation(station);
 
     const cluster = station.getCluster();
     if (!cluster) return;
@@ -138,7 +142,7 @@ export class RailNetworkImpl implements RailNetwork {
 
     for (const neighbor of neighbors) {
       if (neighbor.unit === station.unit) continue;
-      const neighborStation = this._stationManager.findStation(neighbor.unit);
+      const neighborStation = this.stationManager.findStation(neighbor.unit);
       if (!neighborStation) continue;
 
       const distanceToStation = this.distanceFrom(

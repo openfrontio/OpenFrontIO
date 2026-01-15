@@ -286,7 +286,9 @@
     "surrounded": "Surrounded",
     "didier": "Didier",
     "didierfrance": "Didier (France)",
-    "amazonriver": "Amazon River"
+    "amazonriver": "Amazon River",
+    "obstacletest": "Obstacle Test",
+    "romanempire": "Roman Empire"
   },
   "map_categories": {
     "continental": "Continental",

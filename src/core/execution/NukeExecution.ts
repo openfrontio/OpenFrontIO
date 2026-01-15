@@ -10,9 +10,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { UniversalPathFinding } from "../pathfinding/PathFinder";
-import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
-import { PathStatus } from "../pathfinding/types";
+import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
 import { computeNukeBlastCounts } from "./Util";
@@ -24,7 +22,7 @@ export class NukeExecution implements Execution {
   private mg: Game;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-  private pathFinder: ParabolaUniversalPathFinder;
+  private pathFinder: ParabolaPathFinder;
 
   constructor(
     private nukeType: NukeType,
@@ -41,11 +39,7 @@ export class NukeExecution implements Execution {
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
-    this.pathFinder = UniversalPathFinding.Parabola(mg, {
-      increment: this.speed,
-      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
-      directionUp: this.rocketDirectionUp,
-    });
+    this.pathFinder = new ParabolaPathFinder(mg);
   }
 
   public target(): Player | TerraNullius {
@@ -129,6 +123,13 @@ export class NukeExecution implements Execution {
         return;
       }
       this.src = spawn;
+      this.pathFinder.computeControlPoints(
+        spawn,
+        this.dst,
+        this.speed,
+        this.nukeType !== UnitType.MIRVWarhead,
+        this.rocketDirectionUp,
+      );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
@@ -185,13 +186,13 @@ export class NukeExecution implements Execution {
     }
 
     // Move to next tile
-    const result = this.pathFinder.next(this.src!, this.dst, this.speed);
-    if (result.status === PathStatus.COMPLETE) {
+    const nextTile = this.pathFinder.nextTile(this.speed);
+    if (nextTile === true) {
       this.detonate();
       return;
-    } else if (result.status === PathStatus.NEXT) {
+    } else {
       this.updateNukeTargetable();
-      this.nuke.move(result.node);
+      this.nuke.move(nextTile);
       // Update index so SAM can interpolate future position
       this.nuke.setTrajectoryIndex(this.pathFinder.currentIndex());
     }
@@ -205,7 +206,7 @@ export class NukeExecution implements Execution {
     const trajectoryTiles: TrajectoryTile[] = [];
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
-    const allTiles = this.pathFinder.findPath(this.src!, target) ?? [];
+    const allTiles: TileRef[] = this.pathFinder.allTiles();
     for (const tile of allTiles) {
       trajectoryTiles.push({
         tile,

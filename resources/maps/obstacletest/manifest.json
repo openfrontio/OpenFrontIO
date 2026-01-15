@@ -1,0 +1,276 @@
+{
+  "map": {
+    "height": 604,
+    "num_land_tiles": 443708,
+    "width": 1476
+  },
+  "map16x": {
+    "height": 151,
+    "num_land_tiles": 27123,
+    "width": 369
+  },
+  "map4x": {
+    "height": 302,
+    "num_land_tiles": 110034,
+    "width": 738
+  },
+  "name": "Oceania",
+  "nations": [
+    {
+      "coordinates": [
+        718,
+        738
+      ],
+      "flag": "au",
+      "name": "Australia"
+    },
+    {
+      "coordinates": [
+        1050,
+        809
+      ],
+      "flag": "nz",
+      "name": "New Zealand"
+    },
+    {
+      "coordinates": [
+        436,
+        407
+      ],
+      "flag": "tl",
+      "name": "Timor-Leste"
+    },
+    {
+      "coordinates": [
+        182,
+        378
+      ],
+      "flag": "id",
+      "name": "Indonesia"
+    },
+    {
+      "coordinates": [
+        292,
+        243
+      ],
+      "flag": "bn",
+      "name": "Brunei Darussalam"
+    },
+    {
+      "coordinates": [
+        152,
+        282
+      ],
+      "flag": "sg",
+      "name": "Singapore"
+    },
+    {
+      "coordinates": [
+        120,
+        261
+      ],
+      "flag": "my",
+      "name": "Malaysia"
+    },
+    {
+      "coordinates": [
+        106,
+        129
+      ],
+      "flag": "th",
+      "name": "Thailand"
+    },
+    {
+      "coordinates": [
+        51,
+        42
+      ],
+      "flag": "mm",
+      "name": "Myanmar"
+    },
+    {
+      "coordinates": [
+        158,
+        162
+      ],
+      "flag": "kh",
+      "name": "Cambodia"
+    },
+    {
+      "coordinates": [
+        182,
+        43
+      ],
+      "flag": "vn",
+      "name": "Vietnam"
+    },
+    {
+      "coordinates": [
+        143,
+        37
+      ],
+      "flag": "la",
+      "name": "Lao PDR"
+    },
+    {
+      "coordinates": [
+        278,
+        18
+      ],
+      "flag": "hk",
+      "name": "Hong Kong"
+    },
+    {
+      "coordinates": [
+        359,
+        1
+      ],
+      "flag": "tw",
+      "name": "Taiwan, Province of China"
+    },
+    {
+      "coordinates": [
+        366,
+        119
+      ],
+      "flag": "ph",
+      "name": "Philippines"
+    },
+    {
+      "coordinates": [
+        536,
+        207
+      ],
+      "flag": "pw",
+      "name": "Palau"
+    },
+    {
+      "coordinates": [
+        834,
+        215
+      ],
+      "flag": "fm",
+      "name": "Micronesia"
+    },
+    {
+      "coordinates": [
+        664,
+        113
+      ],
+      "flag": "gu",
+      "name": "Guam"
+    },
+    {
+      "coordinates": [
+        1042,
+        317
+      ],
+      "flag": "mh",
+      "name": "Marshall Islands"
+    },
+    {
+      "coordinates": [
+        799,
+        385
+      ],
+      "flag": "pg",
+      "name": "Papua New Guinea"
+    },
+    {
+      "coordinates": [
+        862,
+        442
+      ],
+      "flag": "sb",
+      "name": "Solomon Islands"
+    },
+    {
+      "coordinates": [
+        945,
+        497
+      ],
+      "flag": "vu",
+      "name": "Vanuatu"
+    },
+    {
+      "coordinates": [
+        930,
+        574
+      ],
+      "flag": "nc",
+      "name": "New Caledonia"
+    },
+    {
+      "coordinates": [
+        1085,
+        526
+      ],
+      "flag": "fj",
+      "name": "Fiji"
+    },
+    {
+      "coordinates": [
+        1169,
+        568
+      ],
+      "flag": "to",
+      "name": "Tonga"
+    },
+    {
+      "coordinates": [
+        1236,
+        541
+      ],
+      "flag": "nu",
+      "name": "Niue"
+    },
+    {
+      "coordinates": [
+        1204,
+        473
+      ],
+      "flag": "ws",
+      "name": "Samoa"
+    },
+    {
+      "coordinates": [
+        1491,
+        523
+      ],
+      "flag": "ck",
+      "name": "Cook Islands"
+    },
+    {
+      "coordinates": [
+        1623,
+        424
+      ],
+      "flag": "pf",
+      "name": "French Polynesia"
+    },
+    {
+      "coordinates": [
+        1393,
+        278
+      ],
+      "flag": "ki",
+      "name": "Kiribati"
+    },
+    {
+      "coordinates": [
+        1420,
+        56
+      ],
+      "flag": "us",
+      "name": "United States"
+    },
+    {
+      "coordinates": [
+        1996,
+        644
+      ],
+      "flag": "cl",
+      "name": "Chile"
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "map": {
+    "height": 1428,
+    "num_land_tiles": 851570,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 357,
+    "num_land_tiles": 50562,
+    "width": 500
+  },
+  "map4x": {
+    "height": 714,
+    "num_land_tiles": 209127,
+    "width": 1000
+  },
+  "name": "Roman Empire",
+  "nations": [
+    {
+      "coordinates": [
+        1940,
+        357
+      ],
+      "flag": "ru",
+      "name": "Russia"
+    },
+    {
+      "coordinates": [
+        516,
+        1214
+      ],
+      "flag": "dz",
+      "name": "Algeria"
+    },
+    {
+      "coordinates": [
+        1544,
+        389
+      ],
+      "flag": "ua",
+      "name": "Ukraine"
+    },
+    {
+      "coordinates": [
+        1692,
+        906
+      ],
+      "flag": "tr",
+      "name": "Turkey"
+    },
+    {
+      "coordinates": [
+        459,
+        503
+      ],
+      "flag": "xx",
+      "name": "France"
+    },
+    {
+      "coordinates": [
+        916,
+        1303
+      ],
+      "flag": "ly",
+      "name": "Libya"
+    },
+    {
+      "coordinates": [
+        774,
+        253
+      ],
+      "flag": "de",
+      "name": "Germany"
+    },
+    {
+      "coordinates": [
+        250,
+        858
+      ],
+      "flag": "es",
+      "name": "Spain"
+    },
+    {
+      "coordinates": [
+        1098,
+        206
+      ],
+      "flag": "pl",
+      "name": "Poland"
+    },
+    {
+      "coordinates": [
+        848,
+        726
+      ],
+      "flag": "it",
+      "name": "Italy"
+    },
+    {
+      "coordinates": [
+        143,
+        1240
+      ],
+      "flag": "ma",
+      "name": "Morocco"
+    },
+    {
+      "coordinates": [
+        1433,
+        127
+      ],
+      "flag": "by",
+      "name": "Belarus"
+    },
+    {
+      "coordinates": [
+        1452,
+        1337
+      ],
+      "flag": "eg",
+      "name": "Egypt"
+    },
+    {
+      "coordinates": [
+        1286,
+        551
+      ],
+      "flag": "ro",
+      "name": "Romania"
+    },
+    {
+      "coordinates": [
+        334,
+        165
+      ],
+      "flag": "gb",
+      "name": "United Kingdom"
+    },
+    {
+      "coordinates": [
+        1877,
+        1327
+      ],
+      "flag": "sa",
+      "name": "Saudi Arabia"
+    },
+    {
+      "coordinates": [
+        1824,
+        1101
+      ],
+      "flag": "sy",
+      "name": "Syria"
+    },
+    {
+      "coordinates": [
+        1936,
+        1146
+      ],
+      "flag": "iq",
+      "name": "Iraq"
+    },
+    {
+      "coordinates": [
+        708,
+        1147
+      ],
+      "flag": "tn",
+      "name": "Tunisia"
+    },
+    {
+      "coordinates": [
+        1195,
+        902
+      ],
+      "flag": "gr",
+      "name": "Greece"
+    }
+  ]
+}

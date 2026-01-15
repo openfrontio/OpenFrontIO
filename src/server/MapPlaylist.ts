@@ -63,6 +63,8 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Surrounded: 4,
   DidierFrance: 1,
   AmazonRiver: 3,
+  ObstacleTest: 2,
+  RomanEmpire: 5,
 };
 
 interface MapWithMode {

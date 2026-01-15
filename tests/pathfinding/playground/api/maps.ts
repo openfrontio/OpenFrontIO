@@ -2,12 +2,9 @@ import { readdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Game } from "../../../../src/core/game/Game.js";
-import { AStarWaterHierarchical } from "../../../../src/core/pathfinding/algorithms/AStar.WaterHierarchical.js";
+import { TileRef } from "../../../../src/core/game/GameMap.js";
+import { NavMesh } from "../../../../src/core/pathfinding/navmesh/NavMesh.js";
 import { setupFromPath } from "../../utils.js";
-
-// Available comparison adapters
-// Note: "hpa" runs same algorithm without debug overhead for fair timing comparison
-export const COMPARISON_ADAPTERS = ["hpa", "a.baseline", "a.generic", "a.full"];
 
 export interface MapInfo {
   name: string;
@@ -16,7 +13,7 @@ export interface MapInfo {
 
 export interface MapCache {
   game: Game;
-  hpaStar: AStarWaterHierarchical;
+  navMesh: NavMesh;
 }
 
 const cache = new Map<string, MapCache>();
@@ -117,20 +114,13 @@ export async function loadMap(mapName: string): Promise<MapCache> {
   const mapsDir = getMapsDirectory();
 
   // Use the existing setupFromPath utility to load the map
-  const game = await setupFromPath(mapsDir, mapName, { disableNavMesh: false });
+  const game = await setupFromPath(mapsDir, mapName);
 
-  // Get pre-built graph from game
-  const graph = game.miniWaterGraph();
-  if (!graph) {
-    throw new Error(`No water graph available for map: ${mapName}`);
-  }
+  // Initialize NavMesh
+  const navMesh = new NavMesh(game, { cachePaths: config.cachePaths });
+  navMesh.initialize();
 
-  // Initialize AStarWaterHierarchical with minimap and graph
-  const hpaStar = new AStarWaterHierarchical(game.miniMap(), graph, {
-    cachePaths: config.cachePaths,
-  });
-
-  const cacheEntry: MapCache = { game, hpaStar };
+  const cacheEntry: MapCache = { game, navMesh };
 
   // Store in cache
   cache.set(mapName, cacheEntry);
@@ -142,7 +132,7 @@ export async function loadMap(mapName: string): Promise<MapCache> {
  * Get map metadata for client
  */
 export async function getMapMetadata(mapName: string) {
-  const { game, hpaStar } = await loadMap(mapName);
+  const { game, navMesh } = await loadMap(mapName);
 
   // Extract map data
   const mapData: number[] = [];
@@ -153,48 +143,65 @@ export async function getMapMetadata(mapName: string) {
     }
   }
 
-  // Extract static graph data from GameMapHPAStar
-  // Access internal graph via type casting (test code only)
-  const graph = (hpaStar as any).graph;
+  // Extract static graph data from NavMesh
   const miniMap = game.miniMap();
+  const navMeshGraph = (navMesh as any).graph;
 
-  // Convert nodes to client format
-  const allNodes = graph.getAllNodes().map((node: any) => ({
-    id: node.id,
-    x: miniMap.x(node.tile),
-    y: miniMap.y(node.tile),
+  // Convert gateways from Map to array
+  const gatewaysArray = Array.from(navMeshGraph.gateways.values());
+  const allGateways = gatewaysArray.map((gw: any) => ({
+    id: gw.id,
+    x: miniMap.x(gw.tile),
+    y: miniMap.y(gw.tile),
   }));
 
-  // Convert edges to client format
-  const edges: Array<{
-    fromId: number;
-    toId: number;
-    from: number[];
-    to: number[];
-    cost: number;
-  }> = [];
-  for (let i = 0; i < graph.edgeCount; i++) {
-    const edge = graph.getEdge(i);
-    if (!edge) continue;
+  // Create a lookup map from gateway ID to gateway for edge conversion
+  const gatewayById = new Map(gatewaysArray.map((gw: any) => [gw.id, gw]));
 
-    const nodeA = graph.getNode(edge.nodeA);
-    const nodeB = graph.getNode(edge.nodeB);
-    if (!nodeA || !nodeB) continue;
-
-    edges.push({
-      fromId: edge.nodeA,
-      toId: edge.nodeB,
-      from: [miniMap.x(nodeA.tile) * 2, miniMap.y(nodeA.tile) * 2],
-      to: [miniMap.x(nodeB.tile) * 2, miniMap.y(nodeB.tile) * 2],
-      cost: edge.cost,
-    });
+  // Convert edges from Map<gatewayId, Edge[]> to flat array
+  // The edges Map has gateway IDs as keys, and arrays of edges as values
+  const allEdges: any[] = [];
+  for (const edgeArray of navMeshGraph.edges.values()) {
+    allEdges.push(...edgeArray);
   }
 
+  // Deduplicate edges (they're bidirectional, so each edge appears twice)
+  const seenEdges = new Set<string>();
+  const edges = allEdges
+    .filter((edge: any) => {
+      const edgeKey =
+        edge.from < edge.to
+          ? `${edge.from}-${edge.to}`
+          : `${edge.to}-${edge.from}`;
+      if (seenEdges.has(edgeKey)) return false;
+      seenEdges.add(edgeKey);
+      return true;
+    })
+    .map((edge: any) => {
+      const fromGateway = gatewayById.get(edge.from);
+      const toGateway = gatewayById.get(edge.to);
+
+      return {
+        fromId: edge.from,
+        toId: edge.to,
+        from: fromGateway
+          ? [miniMap.x(fromGateway.tile) * 2, miniMap.y(fromGateway.tile) * 2]
+          : [0, 0],
+        to: toGateway
+          ? [miniMap.x(toGateway.tile) * 2, miniMap.y(toGateway.tile) * 2]
+          : [0, 0],
+        cost: edge.cost,
+        path: edge.path
+          ? edge.path.map((tile: TileRef) => [game.x(tile), game.y(tile)])
+          : null,
+      };
+    });
+
   console.log(
-    `Map ${mapName}: ${allNodes.length} nodes, ${edges.length} edges`,
+    `Map ${mapName}: ${allGateways.length} gateways, ${edges.length} edges`,
   );
 
-  const clusterSize = graph.clusterSize;
+  const sectorSize = navMeshGraph.sectorSize;
 
   return {
     name: mapName,
@@ -202,11 +209,10 @@ export async function getMapMetadata(mapName: string) {
     height: game.height(),
     mapData,
     graphDebug: {
-      allNodes,
+      allGateways,
       edges,
-      clusterSize,
+      sectorSize,
     },
-    adapters: COMPARISON_ADAPTERS,
   };
 }
 

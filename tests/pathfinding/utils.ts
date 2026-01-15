@@ -17,19 +17,10 @@ import {
   MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
-import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
-import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
-import { PathFinding } from "../../src/core/pathfinding/PathFinder";
-import { PathFinderBuilder } from "../../src/core/pathfinding/PathFinderBuilder";
-import { StepperConfig } from "../../src/core/pathfinding/PathFinderStepper";
-import { MiniMapTransformer } from "../../src/core/pathfinding/transformers/MiniMapTransformer";
-import {
-  PathStatus,
-  SteppingPathFinder,
-} from "../../src/core/pathfinding/types";
+import { NavMesh } from "../../src/core/pathfinding/navmesh/NavMesh";
+import { PathFinder, PathFinders } from "../../src/core/pathfinding/PathFinder";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "../util/TestConfig";
-
 export type BenchmarkRoute = {
   name: string;
   from: TileRef;
@@ -51,58 +42,25 @@ export type BenchmarkSummary = {
   avgTime: number;
 };
 
-function tileStepperConfig(game: Game): StepperConfig<TileRef> {
-  return {
-    equals: (a, b) => a === b,
-    distance: (a, b) => game.manhattanDist(a, b),
-    preCheck: (from, to) =>
-      typeof from !== "number" ||
-      typeof to !== "number" ||
-      !game.isValidRef(from) ||
-      !game.isValidRef(to)
-        ? { status: PathStatus.NOT_FOUND }
-        : null,
-  };
-}
-
-export function getAdapter(
-  game: Game,
-  name: string,
-): SteppingPathFinder<TileRef> {
+export function getAdapter(game: Game, name: string): PathFinder {
   switch (name) {
-    case "a.baseline": {
-      return PathFinderBuilder.create(new AStarWater(game.miniMap()))
-        .wrap((pf) => new MiniMapTransformer(pf, game, game.miniMap()))
-        .buildWithStepper(tileStepperConfig(game));
-    }
-    case "a.generic": {
-      // Same as baseline - uses AStarWater on minimap
-      return PathFinderBuilder.create(new AStarWater(game.miniMap()))
-        .wrap((pf) => new MiniMapTransformer(pf, game, game.miniMap()))
-        .buildWithStepper(tileStepperConfig(game));
-    }
-    case "a.full": {
-      return PathFinderBuilder.create(
-        new AStarWater(game.map()),
-      ).buildWithStepper(tileStepperConfig(game));
-    }
+    case "legacy":
+      return PathFinders.WaterLegacy(game, {
+        iterations: 500_000,
+        maxTries: 50,
+      });
     case "hpa": {
-      // Recreate AStarWaterHierarchical without cache, this approach was chosen
+      // Recreate NavMesh without cache, this approach was chosen
       // over adding cache toggles to the existing game instance
       // to avoid adding side effect from benchmark to the game
-      const graph = game.miniWaterGraph();
-      if (!graph) {
-        throw new Error("miniWaterGraph not available");
-      }
-      const hpa = new AStarWaterHierarchical(game.miniMap(), graph, {
-        cachePaths: false,
-      });
-      (game as any)._miniWaterHPA = hpa;
+      const navMesh = new NavMesh(game, { cachePaths: false });
+      navMesh.initialize();
+      (game as any)._navMesh = navMesh;
 
-      return PathFinding.Water(game);
+      return PathFinders.Water(game);
     }
     case "hpa.cached":
-      return PathFinding.Water(game);
+      return PathFinders.Water(game);
     default:
       throw new Error(`Unknown pathfinding adapter: ${name}`);
   }
@@ -144,7 +102,7 @@ export async function getScenario(
 }
 
 export function measurePathLength(
-  adapter: SteppingPathFinder<TileRef>,
+  adapter: PathFinder,
   route: BenchmarkRoute,
 ): number | null {
   const path = adapter.findPath(route.from, route.to);
@@ -159,7 +117,7 @@ export function measureTime<T>(fn: () => T): { result: T; time: number } {
 }
 
 export function measureExecutionTime(
-  adapter: SteppingPathFinder<TileRef>,
+  adapter: PathFinder,
   route: BenchmarkRoute,
   executions: number = 1,
 ): number | null {
