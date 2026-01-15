@@ -1,6 +1,7 @@
 import { base64url } from "jose";
 import { Logger } from "winston";
 import { CosmeticsSchema } from "../core/CosmeticSchemas";
+import { startPolling } from "./PollingLoop";
 import {
   FailOpenPrivilegeChecker,
   PrivilegeChecker,
@@ -28,12 +29,7 @@ export class PrivilegeRefresher {
     this.log.info(
       `Starting privilege refresher with interval ${this.refreshInterval}`,
     );
-    // Add some jitter to the initial load and the interval.
-    setTimeout(() => this.loadPrivilegeChecker(), Math.random() * 1000);
-    setInterval(
-      () => this.loadPrivilegeChecker(),
-      this.refreshInterval + Math.random() * 1000,
-    );
+    startPolling(() => this.loadPrivilegeChecker(), this.refreshInterval);
   }
 
   public get(): PrivilegeChecker {

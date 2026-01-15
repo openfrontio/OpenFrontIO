@@ -28,7 +28,7 @@ export class NewsModal extends BaseModal {
           ariaLabel: translateText("common.back"),
         })}
         <div
-          class="pt-2 prose prose-invert prose-sm max-w-none overflow-y-auto px-6 pb-6 mr-1
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 py-3 mr-1
             [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
             [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
             [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200

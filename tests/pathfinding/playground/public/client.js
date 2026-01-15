@@ -20,6 +20,7 @@ const state = {
 
 // Colors for comparison paths
 const COMPARISON_COLORS = {
+  "hpa.cached": "#00ffff", // cyan
   hpa: "#ff8800", // orange
   "a.baseline": "#ff00ff", // magenta
   "a.generic": "#88ff00", // lime
@@ -814,20 +815,6 @@ function updatePathInfo(result) {
 function updateTimingsPanel(result) {
   const primary = result.primary;
   const timings = primary && primary.debug ? primary.debug.timings : {};
-
-  // Use timings.total (excludes debug overhead) instead of raw time
-  const hpaTime = timings.total || 0;
-
-  // Show HPA* time and path length (or 0.00 in light gray if no data)
-  const hpaTimeEl = document.getElementById("hpaTime");
-  if (hpaTime > 0) {
-    hpaTimeEl.textContent = `${hpaTime.toFixed(2)}ms`;
-    hpaTimeEl.classList.remove("faded");
-  } else {
-    hpaTimeEl.textContent = "0.00ms";
-    hpaTimeEl.classList.add("faded");
-  }
-
   const hpaTilesEl = document.getElementById("hpaTiles");
   if (primary && primary.length > 0) {
     hpaTilesEl.textContent = `- ${primary.length} tiles`;
@@ -840,8 +827,9 @@ function updateTimingsPanel(result) {
   const earlyExitEl = document.getElementById("timingEarlyExit");
   const earlyExitValueEl = document.getElementById("timingEarlyExitValue");
   earlyExitEl.style.display = "flex";
-  if (timings.earlyExitLocalPath !== undefined) {
-    earlyExitValueEl.textContent = `${timings.earlyExitLocalPath.toFixed(2)}ms`;
+  const earlyExitTime = timings["earlyExit"];
+  if (earlyExitTime !== undefined) {
+    earlyExitValueEl.textContent = `${earlyExitTime.toFixed(2)}ms`;
     earlyExitValueEl.style.color = "#f5f5f5";
   } else {
     earlyExitValueEl.textContent = "—";
@@ -852,8 +840,9 @@ function updateTimingsPanel(result) {
   const findNodesEl = document.getElementById("timingFindNodes");
   const findNodesValueEl = document.getElementById("timingFindNodesValue");
   findNodesEl.style.display = "flex";
-  if (timings.findNodes !== undefined) {
-    findNodesValueEl.textContent = `${timings.findNodes.toFixed(2)}ms`;
+  const nodeLookupTime = timings["nodeLookup"];
+  if (nodeLookupTime !== undefined) {
+    findNodesValueEl.textContent = `${nodeLookupTime.toFixed(2)}ms`;
     findNodesValueEl.style.color = "#f5f5f5";
   } else {
     findNodesValueEl.textContent = "—";
@@ -866,8 +855,9 @@ function updateTimingsPanel(result) {
     "timingAbstractPathValue",
   );
   abstractPathEl.style.display = "flex";
-  if (timings.findAbstractPath !== undefined) {
-    abstractPathValueEl.textContent = `${timings.findAbstractPath.toFixed(2)}ms`;
+  const abstractPathTime = timings["abstractPath"];
+  if (abstractPathTime !== undefined) {
+    abstractPathValueEl.textContent = `${abstractPathTime.toFixed(2)}ms`;
     abstractPathValueEl.style.color = "#f5f5f5";
   } else {
     abstractPathValueEl.textContent = "—";
@@ -878,12 +868,26 @@ function updateTimingsPanel(result) {
   const initialPathEl = document.getElementById("timingInitialPath");
   const initialPathValueEl = document.getElementById("timingInitialPathValue");
   initialPathEl.style.display = "flex";
-  if (timings.buildInitialPath !== undefined) {
-    initialPathValueEl.textContent = `${timings.buildInitialPath.toFixed(2)}ms`;
+  const initialPathTime = timings["initialPath"];
+  if (initialPathTime !== undefined) {
+    initialPathValueEl.textContent = `${initialPathTime.toFixed(2)}ms`;
     initialPathValueEl.style.color = "#f5f5f5";
   } else {
     initialPathValueEl.textContent = "—";
     initialPathValueEl.style.color = "#666";
+  }
+
+  // Smooth Path
+  const smoothPathEl = document.getElementById("timingSmoothPath");
+  const smoothPathValueEl = document.getElementById("timingSmoothPathValue");
+  smoothPathEl.style.display = "flex";
+  const smoothPathTime = timings["smoothingTransformer"];
+  if (smoothPathTime !== undefined) {
+    smoothPathValueEl.textContent = `${smoothPathTime.toFixed(2)}ms`;
+    smoothPathValueEl.style.color = "#f5f5f5";
+  } else {
+    smoothPathValueEl.textContent = "—";
+    smoothPathValueEl.style.color = "#666";
   }
 
   // Show comparisons section
@@ -903,6 +907,23 @@ function updateTimingsPanel(result) {
     for (const comp of result.comparisons) {
       compMap[comp.adapter] = comp;
     }
+  }
+
+  // Use total span time from DebugSpan
+  let hpaTime = timings["findPath"] || 0;
+
+  if (compMap["hpa.cached"]) {
+    hpaTime = compMap["hpa.cached"].time;
+  }
+
+  // Show HPA* time and path length (or 0.00 in light gray if no data)
+  const hpaTimeEl = document.getElementById("hpaTime");
+  if (hpaTime > 0) {
+    hpaTimeEl.textContent = `${hpaTime.toFixed(2)}ms`;
+    hpaTimeEl.classList.remove("faded");
+  } else {
+    hpaTimeEl.textContent = "0.00ms";
+    hpaTimeEl.classList.add("faded");
   }
 
   // Find fastest time overall (including HPA*) when we have data

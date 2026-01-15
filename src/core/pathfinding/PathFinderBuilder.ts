@@ -1,3 +1,4 @@
+import { DebugSpan } from "../utilities/DebugSpan";
 import { PathFinderStepper, StepperConfig } from "./PathFinderStepper";
 import { PathFinder, SteppingPathFinder } from "./types";
 
@@ -27,10 +28,17 @@ export class PathFinderBuilder<T> {
   }
 
   build(): PathFinder<T> {
-    return this.wrappers.reduce(
+    const pathFinder = this.wrappers.reduce(
       (pf, wrapper) => wrapper(pf),
       this.core as PathFinder<T>,
     );
+
+    const _findPath = pathFinder.findPath;
+    pathFinder.findPath = function (from: T | T[], to: T): T[] | null {
+      return DebugSpan.wrap("findPath", () => _findPath.call(this, from, to));
+    };
+
+    return pathFinder;
   }
 
   /**

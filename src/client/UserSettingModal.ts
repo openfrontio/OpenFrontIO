@@ -16,6 +16,9 @@ interface FlagInputModalElement extends HTMLElement {
   returnTo?: string;
 }
 
+const isMac =
+  typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
   buildCity: "Digit1",
@@ -32,6 +35,7 @@ const DefaultKeybinds: Record<string, string> = {
   attackRatioUp: "KeyY",
   boatAttack: "KeyB",
   groundAttack: "KeyG",
+  swapDirection: "KeyU",
   zoomOut: "KeyQ",
   zoomIn: "KeyE",
   centerCamera: "KeyC",
@@ -39,6 +43,8 @@ const DefaultKeybinds: Record<string, string> = {
   moveLeft: "KeyA",
   moveDown: "KeyS",
   moveRight: "KeyD",
+  modifierKey: isMac ? "MetaLeft" : "ControlLeft",
+  altKey: "AltLeft",
 };
 
 @customElement("user-setting")
@@ -424,7 +430,7 @@ export class UserSettingModal extends BaseModal {
         </div>
 
         <div
-          class="pt-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
+          class="pt-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent px-6 pb-6 mr-1"
         >
           <div class="flex flex-col gap-2">${activeContent}</div>
         </div>
@@ -578,6 +584,32 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
+        ${translateText("user_setting.menu_shortcuts")}
+      </h2>
+
+      <setting-keybind
+        action="modifierKey"
+        label=${translateText("user_setting.build_menu_modifier")}
+        description=${translateText("user_setting.build_menu_modifier_desc")}
+        .defaultKey=${DefaultKeybinds.modifierKey}
+        .value=${this.getKeyValue("modifierKey")}
+        .display=${this.getKeyChar("modifierKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="altKey"
+        label=${translateText("user_setting.emoji_menu_modifier")}
+        description=${translateText("user_setting.emoji_menu_modifier_desc")}
+        .defaultKey=${DefaultKeybinds.altKey}
+        .value=${this.getKeyValue("altKey")}
+        .display=${this.getKeyChar("altKey")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
         ${translateText("user_setting.attack_ratio_controls")}
       </h2>
 
@@ -624,6 +656,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="KeyG"
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="swapDirection"
+        label=${translateText("user_setting.swap_direction")}
+        description=${translateText("user_setting.swap_direction_desc")}
+        .defaultKey=${DefaultKeybinds.swapDirection}
+        .value=${this.getKeyValue("swapDirection")}
+        .display=${this.getKeyChar("swapDirection")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
