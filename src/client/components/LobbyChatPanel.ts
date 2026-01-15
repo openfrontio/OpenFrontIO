@@ -41,13 +41,11 @@ export class LobbyChatPanel extends LitElement {
   }
 
   setEventBus(bus: EventBus) {
-    // Remove old listener if exists
     if (this.bus) {
       this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
     }
     this.bus = bus;
     this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
-    // Update username when event bus is set
     this.username = window.__username ?? null;
   }
 
@@ -60,7 +58,6 @@ export class LobbyChatPanel extends LitElement {
     const container = this.renderRoot.querySelector(
       ".lcp-messages",
     ) as HTMLElement | null;
-    // Only auto-scroll if user hasn't manually scrolled up
     if (container && !this.isUserScrolled) {
       container.scrollTop = container.scrollHeight;
     }
@@ -70,7 +67,6 @@ export class LobbyChatPanel extends LitElement {
     const container = this.messageContainer;
     if (!container) return;
 
-    // Check if user is scrolled to bottom (within 50px threshold)
     const isAtBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight <
       50;
@@ -82,7 +78,6 @@ export class LobbyChatPanel extends LitElement {
       ".lcp-messages",
     ) as HTMLElement | null;
     if (container && container !== this.messageContainer) {
-      // Remove old listener if exists
       if (this.messageContainer) {
         this.messageContainer.removeEventListener("scroll", this.onScroll);
       }
@@ -99,19 +94,15 @@ export class LobbyChatPanel extends LitElement {
     const text = this.inputText.trim();
     if (!text) return;
 
-    // Try to get the bus from global if not already set
     if (!this.bus) {
       const globalBus = window.__eventBus;
       if (globalBus) {
         this.bus = globalBus;
-        // Register event listener for incoming messages (same as setEventBus)
         this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
-        // Update username when event bus is set
         this.username = window.__username ?? null;
       }
     }
 
-    // If still no bus, don't clear input - user can retry
     if (!this.bus) {
       return;
     }
@@ -120,7 +111,6 @@ export class LobbyChatPanel extends LitElement {
     this.bus.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
 
-    // Auto-scroll to bottom after sending a message
     this.updateComplete.then(() => {
       const container = this.renderRoot.querySelector(
         ".lcp-messages",
@@ -133,7 +123,6 @@ export class LobbyChatPanel extends LitElement {
   }
 
   render() {
-    // Set up scroll listener after render
     this.updateComplete.then(() => this.setupScrollListener());
 
     return html`
