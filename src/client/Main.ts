@@ -586,8 +586,6 @@ class Client {
     this.handleUrl();
 
     const onHashUpdate = () => {
-      console.debug("onHashUpdate");
-
       // Reset the UI to its initial state
       this.joinModal?.close();
       if (this.gameStop !== null) {
@@ -599,7 +597,6 @@ class Client {
     };
 
     const onPopState = () => {
-      console.debug("onPopState");
       if (this.currentUrl !== null && this.gameStop !== null) {
         console.info("Game is active");
 
@@ -611,10 +608,6 @@ class Client {
           );
 
           if (!isConfirmed) {
-            console.debug(
-              "Player denied leaving game, restore navigator history",
-            );
-
             // Rollback navigator history
             history.pushState(null, "", this.currentUrl);
             return;
