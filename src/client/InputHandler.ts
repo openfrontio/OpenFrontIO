@@ -285,6 +285,11 @@ export class InputHandler {
         this.eventBus.emit(new DragEvent(deltaX, deltaY));
       }
 
+      // Guard against window not being defined (e.g., in test environment)
+      if (typeof window === "undefined") {
+        return;
+      }
+
       const cx = window.innerWidth / 2;
       const cy = window.innerHeight / 2;
 
