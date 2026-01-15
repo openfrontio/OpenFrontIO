@@ -923,33 +923,22 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
-  updated(changedProperties: Map<string, unknown>): void {
-    super.updated(changedProperties);
+  firstUpdated(): void {
+    this.chatVisible = this.userSettings.get(
+      "settings.lobbyChatVisibility",
+      true,
+    );
 
-    // Initialize chat visibility from user settings on first update (host should start open)
-    if (!changedProperties.has("chatVisible")) {
-      // For host, we want it open by default (true), but respect user setting if they've changed it
-      const savedVisibility = this.userSettings.get(
-        "settings.lobbyChatVisibility",
-        true,
-      );
-      this.chatVisible = savedVisibility;
-    }
-
-    // Always ensure the chat panel has access to the event bus when it exists
-    // This handles both initial render and when the event bus becomes available
     this.updateComplete.then(() => {
       const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
       if (chatPanel && window.__eventBus) {
         (chatPanel as any).setEventBus(window.__eventBus);
       }
     });
+  }
 
-    // Set up event listener for unread messages when event bus becomes available
-    if (window.__eventBus && !this.eventBus) {
-      this.eventBus = window.__eventBus;
-      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
-    }
+  updated(changedProperties: Map<string, unknown>): void {
+    super.updated(changedProperties);
   }
 
   protected onOpen(): void {

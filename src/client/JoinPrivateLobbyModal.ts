@@ -57,21 +57,14 @@ export class JoinPrivateLobbyModal extends BaseModal {
   }
 
   private onChatMessage = (event: ReceiveLobbyChatEvent) => {
-    // Only set unread if chat is hidden
     if (!this.chatVisible) {
       this.hasUnreadMessages = true;
     }
   };
 
-  updated(changedProperties: Map<string | number | symbol, unknown>) {
-    super.updated(changedProperties);
-    // Initialize chat visibility from user settings on first update
-    if (!changedProperties.has("chatVisible")) {
-      this.chatVisible = this.userSettings.lobbyChatVisibility();
-    }
+  firstUpdated(): void {
+    this.chatVisible = this.userSettings.lobbyChatVisibility();
 
-    // Always ensure the chat panel has access to the event bus when it exists
-    // This handles both initial render and when the event bus becomes available
     this.updateComplete.then(() => {
       const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
       if (chatPanel && window.__eventBus) {
@@ -79,11 +72,14 @@ export class JoinPrivateLobbyModal extends BaseModal {
       }
     });
 
-    // Set up event listener for unread messages when event bus becomes available
     if (window.__eventBus && !this.eventBus) {
       this.eventBus = window.__eventBus;
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
     }
+  }
+
+  updated(changedProperties: Map<string | number | symbol, unknown>) {
+    super.updated(changedProperties);
   }
 
   render() {
