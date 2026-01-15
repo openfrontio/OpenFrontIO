@@ -70,6 +70,20 @@ export class JoinPrivateLobbyModal extends BaseModal {
     if (!changedProperties.has("chatVisible")) {
       this.chatVisible = this.userSettings.lobbyChatVisibility();
     }
+
+    // When chatEnabled or chatVisible changes, ensure the chat panel has access to the event bus
+    if (
+      (changedProperties.has("chatEnabled") ||
+        changedProperties.has("chatVisible")) &&
+      this.chatEnabled
+    ) {
+      this.updateComplete.then(() => {
+        const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+        if (chatPanel && window.__eventBus) {
+          (chatPanel as any).setEventBus(window.__eventBus);
+        }
+      });
+    }
   }
 
   render() {
