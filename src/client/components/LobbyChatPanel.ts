@@ -14,9 +14,11 @@ interface ChatMessage {
 export class LobbyChatPanel extends LitElement {
   @state() private messages: ChatMessage[] = [];
   @state() private inputText: string = "";
+  @state() private isUserScrolled: boolean = false;
 
   private bus: EventBus | null = null;
   private username: string | null = null;
+  private messageContainer: HTMLElement | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -31,6 +33,9 @@ export class LobbyChatPanel extends LitElement {
   disconnectedCallback(): void {
     if (this.bus) {
       this.bus.off(ReceiveLobbyChatEvent, this.onIncoming);
+    }
+    if (this.messageContainer) {
+      this.messageContainer.removeEventListener("scroll", this.onScroll);
     }
     super.disconnectedCallback();
   }
@@ -55,8 +60,36 @@ export class LobbyChatPanel extends LitElement {
     const container = this.renderRoot.querySelector(
       ".lcp-messages",
     ) as HTMLElement | null;
-    if (container) container.scrollTop = container.scrollHeight;
+    // Only auto-scroll if user hasn't manually scrolled up
+    if (container && !this.isUserScrolled) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
+
+  private onScroll = () => {
+    const container = this.messageContainer;
+    if (!container) return;
+
+    // Check if user is scrolled to bottom (within 50px threshold)
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      50;
+    this.isUserScrolled = !isAtBottom;
+  };
+
+  private setupScrollListener() {
+    const container = this.renderRoot.querySelector(
+      ".lcp-messages",
+    ) as HTMLElement | null;
+    if (container && container !== this.messageContainer) {
+      // Remove old listener if exists
+      if (this.messageContainer) {
+        this.messageContainer.removeEventListener("scroll", this.onScroll);
+      }
+      this.messageContainer = container;
+      this.messageContainer.addEventListener("scroll", this.onScroll);
+    }
+  }
 
   private get canSend(): boolean {
     return this.bus !== null;
@@ -82,13 +115,27 @@ export class LobbyChatPanel extends LitElement {
     const capped = text.slice(0, 300);
     this.bus.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
+
+    // Auto-scroll to bottom after sending a message
+    this.updateComplete.then(() => {
+      const container = this.renderRoot.querySelector(
+        ".lcp-messages",
+      ) as HTMLElement | null;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+        this.isUserScrolled = false;
+      }
+    });
   }
 
   render() {
+    // Set up scroll listener after render
+    this.updateComplete.then(() => this.setupScrollListener());
+
     return html`
-      <div class="flex flex-col gap-2 max-h-60 w-full">
+      <div class="flex flex-col gap-2 w-full">
         <div
-          class="overflow-y-auto border border-white/10 rounded-lg p-2 h-[150px] min-h-[120px] bg-black/50 text-white/80 flex flex-col gap-1.5 touch-auto sm:max-h-[200px] sm:h-[120px] sm:min-h-[100px]"
+          class="lcp-messages overflow-y-auto border border-white/10 rounded-lg p-2 h-[300px] min-h-[250px] bg-black/50 text-white/80 flex flex-col gap-1.5 touch-auto sm:h-[200px] sm:min-h-[150px]"
           role="log"
           aria-live="polite"
         >
