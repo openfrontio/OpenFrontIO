@@ -15,8 +15,8 @@ for (let i = 0; i < 1000; i++) {
   // TargetPlayerUpdate
   updates.push({
     type: GameUpdateType.TargetPlayer,
-    id: i,
-    target: "p2" as PlayerID,
+    playerID: i,
+    targetID: i + 1,
   });
 }
 
