@@ -104,6 +104,10 @@ export class LobbyChatPanel extends LitElement {
       const globalBus = window.__eventBus;
       if (globalBus) {
         this.bus = globalBus;
+        // Register event listener for incoming messages (same as setEventBus)
+        this.bus.on(ReceiveLobbyChatEvent, this.onIncoming);
+        // Update username when event bus is set
+        this.username = window.__username ?? null;
       }
     }
 
