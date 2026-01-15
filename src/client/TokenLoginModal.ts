@@ -24,7 +24,7 @@ export class TokenLoginModal extends BaseModal {
   }
 
   render() {
-    const title = this.resolveText("token_login_modal.title", "Logging in...");
+    const title = translateText("token_login_modal.title");
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
@@ -60,10 +60,7 @@ export class TokenLoginModal extends BaseModal {
   }
 
   private loggingIn() {
-    const loggingText = this.resolveText(
-      "token_login_modal.logging_in",
-      "Logging in...",
-    );
+    const loggingText = translateText("token_login_modal.logging_in");
     return html`
       <div class="flex items-center gap-4">
         <div
@@ -84,13 +81,7 @@ export class TokenLoginModal extends BaseModal {
   }
 
   private loginSuccess(email: string) {
-    const successText = translateText("token_login_modal.success", {
-      email,
-    });
-    const resolvedText =
-      successText === "token_login_modal.success"
-        ? `Successfully logged in as ${email}!`
-        : successText;
+    const successText = translateText("token_login_modal.success", { email });
     return html`
       <div class="flex items-center gap-4">
         <div
@@ -98,7 +89,7 @@ export class TokenLoginModal extends BaseModal {
         >
           <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
         </div>
-        <p class="text-base text-white/90">${resolvedText}</p>
+        <p class="text-base text-white/90">${successText}</p>
       </div>
     `;
   }
@@ -115,11 +106,6 @@ export class TokenLoginModal extends BaseModal {
     this.attemptCount = 0;
     super.close();
     this.isAttemptingLogin = false;
-  }
-
-  private resolveText(key: string, fallback: string) {
-    const value = translateText(key);
-    return value === key ? fallback : value;
   }
 
   private async tryLogin() {
