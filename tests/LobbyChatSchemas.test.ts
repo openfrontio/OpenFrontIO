@@ -5,7 +5,7 @@ import {
 } from "../src/core/Schemas";
 
 describe("Lobby Chat Schemas", () => {
-  test("GameConfigSchema applies default chatEnabled false", () => {
+  test("GameConfigSchema parses valid config", () => {
     const cfg = GameConfigSchema.parse({
       gameMap: "World",
       difficulty: "Medium",
@@ -21,7 +21,8 @@ describe("Lobby Chat Schemas", () => {
       instantBuild: false,
       randomSpawn: false,
     } as any);
-    expect(cfg.chatEnabled).toBe(false);
+    expect(cfg.gameMap).toBe("World");
+    expect(cfg.bots).toBe(0);
   });
 
   test("ClientLobbyChatSchema valid message", () => {

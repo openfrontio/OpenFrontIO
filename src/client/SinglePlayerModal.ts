@@ -867,7 +867,6 @@ export class SinglePlayerModal extends BaseModal {
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
-              chatEnabled: false,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               maxTimerValue: finalMaxTimerValue,

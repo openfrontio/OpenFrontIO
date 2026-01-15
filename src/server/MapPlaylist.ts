@@ -127,7 +127,6 @@ export class MapPlaylist {
         playerTeams === HumansVsNations
           ? Difficulty.Impossible
           : Difficulty.Easy,
-      chatEnabled: false,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -163,7 +162,6 @@ export class MapPlaylist {
       gameMapSize: GameMapSize.Compact,
       difficulty: Difficulty.Easy,
       rankedType: RankedType.OneVOne,
-      chatEnabled: false,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: 10, // 10 minutes

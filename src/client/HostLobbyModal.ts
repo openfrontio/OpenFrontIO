@@ -63,7 +63,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
-  @state() private chatEnabled: boolean = true;
   @state() private chatVisible: boolean = true;
   @state() private hasUnreadMessages: boolean = false;
   @state() private lobbyId = "";
@@ -102,7 +101,7 @@ export class HostLobbyModal extends BaseModal {
 
   private onChatMessage = (event: ReceiveLobbyChatEvent) => {
     // Only set unread if chat is hidden
-    if (!this.chatVisible && this.chatEnabled) {
+    if (!this.chatVisible) {
       this.hasUnreadMessages = true;
     }
   };
@@ -1263,7 +1262,6 @@ export class HostLobbyModal extends BaseModal {
               : {
                   disableNations: this.disableNations,
                 }),
-            chatEnabled: this.chatEnabled,
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
           } satisfies Partial<GameConfig>,

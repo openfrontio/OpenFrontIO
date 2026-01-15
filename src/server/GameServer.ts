@@ -121,12 +121,6 @@ export class GameServer {
     if (gameConfig.randomSpawn !== undefined) {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
-    if (gameConfig.chatEnabled !== undefined) {
-      // Enforce: public lobbies cannot enable chat
-      this.gameConfig.chatEnabled = this.isPublic()
-        ? false
-        : gameConfig.chatEnabled;
-    }
     if (gameConfig.spawnImmunityDuration !== undefined) {
       this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
     }
@@ -449,9 +443,6 @@ export class GameServer {
           }
           case "lobby_chat": {
             if (this.phase() !== GamePhase.Lobby) {
-              return;
-            }
-            if (!this.gameConfig.chatEnabled) {
               return;
             }
             const isHost = client.clientID === this.lobbyCreatorID;

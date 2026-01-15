@@ -146,7 +146,6 @@ export function createGame(data: TestMapData): Game {
     instantBuild: false,
     disableNavMesh: false,
     randomSpawn: false,
-    chatEnabled: true,
   };
   const config = new TestConfig(
     serverConfig,

@@ -27,7 +27,6 @@ describe("Ranking class", () => {
     gameMapSize: GameMapSize.Normal,
     disableNations: true,
     bots: 0,
-    chatEnabled: false,
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,

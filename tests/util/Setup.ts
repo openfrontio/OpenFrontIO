@@ -61,7 +61,6 @@ export async function setup(
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
-    chatEnabled: false,
     disableNations: false,
     donateGold: false,
     donateTroops: false,
