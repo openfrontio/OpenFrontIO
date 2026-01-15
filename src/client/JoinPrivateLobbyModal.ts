@@ -40,20 +40,54 @@ export class JoinPrivateLobbyModal extends BaseModal {
   private eventBus: EventBus | null = null;
 
   private leaveLobbyOnClose = true;
+  private eventBusReadyHandler: (() => void) | null = null;
+  private isSubscribedToChatEvent = false;
 
   connectedCallback() {
     super.connectedCallback();
     this.eventBus = window.__eventBus ?? null;
-    if (this.eventBus) {
+    if (this.eventBus && !this.isSubscribedToChatEvent) {
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = true;
     }
+
+    // Listen for event-bus:ready to setup chat panel
+    this.eventBusReadyHandler = () => {
+      this.setupChatPanel();
+    };
+    document.addEventListener("event-bus:ready", this.eventBusReadyHandler);
   }
 
   disconnectedCallback() {
-    if (this.eventBus) {
+    if (this.eventBus && this.isSubscribedToChatEvent) {
       this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = false;
+    }
+    if (this.eventBusReadyHandler) {
+      document.removeEventListener(
+        "event-bus:ready",
+        this.eventBusReadyHandler,
+      );
     }
     super.disconnectedCallback();
+  }
+
+  private setupChatPanel() {
+    this.updateComplete.then(() => {
+      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+      if (chatPanel && window.__eventBus) {
+        (chatPanel as any).setEventBus(window.__eventBus);
+      }
+
+      // Ensure the JoinPrivateLobbyModal's event listener is connected when EventBus arrives late
+      if (window.__eventBus && !this.isSubscribedToChatEvent) {
+        // Set eventBus reference if not already set
+        this.eventBus ??= window.__eventBus;
+        // Subscribe to chat events
+        this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+        this.isSubscribedToChatEvent = true;
+      }
+    });
   }
 
   private onChatMessage = (event: ReceiveLobbyChatEvent) => {
@@ -72,6 +106,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       }
     });
 
+    // Setup chat panel if event bus is already available
     if (window.__eventBus && !this.eventBus) {
       this.eventBus = window.__eventBus;
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
