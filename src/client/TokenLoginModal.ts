@@ -1,17 +1,14 @@
-import { html, LitElement } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { html } from "lit";
+import { customElement } from "lit/decorators.js";
 import { tempTokenLogin } from "./Auth";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
+import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
 @customElement("token-login")
-export class TokenLoginModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
-
+export class TokenLoginModal extends BaseModal {
   private isAttemptingLogin = false;
 
   private retryInterval: NodeJS.Timeout | undefined = undefined;
@@ -26,26 +23,47 @@ export class TokenLoginModal extends LitElement {
     super();
   }
 
-  createRenderRoot() {
-    return this;
-  }
-
   render() {
+    const title = this.resolveText("token_login_modal.title", "Logging in...");
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
+          : ""}"
+      >
+        ${modalHeader({
+          title,
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+        })}
+        <div class="flex-1 flex flex-col gap-4 p-6">
+          ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         id="token-login-modal"
-        title="${translateText("token_login_modal.title")}"
+        title="${title}"
+        hideHeader
+        hideCloseButton
+        maxWidth="620px"
       >
-        <div
-          class="flex flex-col gap-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
-        >
-          ${this.email ? this.loginSuccess(this.email) : this.loggingIn()}
-        </div>
+        ${content}
       </o-modal>
     `;
   }
 
   private loggingIn() {
+    const loggingText = this.resolveText(
+      "token_login_modal.logging_in",
+      "Logging in...",
+    );
     return html`
       <div class="flex items-center gap-4">
         <div
@@ -56,9 +74,7 @@ export class TokenLoginModal extends LitElement {
           ></div>
         </div>
         <div class="flex flex-col gap-2">
-          <p class="text-lg font-semibold text-white">
-            ${translateText("token_login_modal.logging_in")}
-          </p>
+          <p class="text-lg font-semibold text-white">${loggingText}</p>
           <div class="h-1 w-full bg-white/10 rounded-full overflow-hidden">
             <div class="h-full w-1/2 bg-blue-400/80 animate-pulse"></div>
           </div>
@@ -68,6 +84,13 @@ export class TokenLoginModal extends LitElement {
   }
 
   private loginSuccess(email: string) {
+    const successText = translateText("token_login_modal.success", {
+      email,
+    });
+    const resolvedText =
+      successText === "token_login_modal.success"
+        ? `Successfully logged in as ${email}!`
+        : successText;
     return html`
       <div class="flex items-center gap-4">
         <div
@@ -75,18 +98,14 @@ export class TokenLoginModal extends LitElement {
         >
           <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
         </div>
-        <p class="text-base text-white/90">
-          ${translateText("token_login_modal.success", {
-            email,
-          })}
-        </p>
+        <p class="text-base text-white/90">${resolvedText}</p>
       </div>
     `;
   }
 
   public async open(token: string) {
     this.token = token;
-    this.modalEl?.open();
+    super.open();
     this.retryInterval = setInterval(() => this.tryLogin(), 3000);
   }
 
@@ -94,8 +113,13 @@ export class TokenLoginModal extends LitElement {
     this.token = null;
     clearInterval(this.retryInterval);
     this.attemptCount = 0;
-    this.modalEl?.close();
+    super.close();
     this.isAttemptingLogin = false;
+  }
+
+  private resolveText(key: string, fallback: string) {
+    const value = translateText(key);
+    return value === key ? fallback : value;
   }
 
   private async tryLogin() {

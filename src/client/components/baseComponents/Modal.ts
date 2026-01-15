@@ -25,6 +25,9 @@ export class OModal extends LitElement {
   @property({ type: Boolean })
   public hideHeader = false;
 
+  @property({ type: String })
+  public maxWidth = "";
+
   public onClose?: () => void;
 
   public open() {
@@ -67,6 +70,8 @@ export class OModal extends LitElement {
       : `relative flex flex-col w-[90%] min-w-[400px] max-w-[900px] m-8 rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-h-[calc(100vh-4rem)] ${
           this.alwaysMaximized ? "h-auto" : ""
         }`;
+    const wrapperStyle =
+      !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
     return html`
       ${this.isModalOpen
@@ -78,6 +83,7 @@ export class OModal extends LitElement {
               <div
                 @click=${(e: Event) => e.stopPropagation()}
                 class="${wrapperClass}"
+                style="${wrapperStyle}"
               >
                 ${this.inline || this.hideCloseButton
                   ? html``
