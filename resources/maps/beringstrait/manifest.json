@@ -1,0 +1,36 @@
+{
+  "map": {
+    "height": 916,
+    "num_land_tiles": 596318,
+    "width": 1500
+  },
+  "map16x": {
+    "height": 229,
+    "num_land_tiles": 35567,
+    "width": 375
+  },
+  "map4x": {
+    "height": 458,
+    "num_land_tiles": 146741,
+    "width": 750
+  },
+  "name": "BeringStrait",
+  "nations": [
+    {
+      "coordinates": [
+        1297,
+        287
+      ],
+      "flag": "us",
+      "name": "Alaska"
+    },
+    {
+      "coordinates": [
+        186,
+        427
+      ],
+      "flag": "ru",
+      "name": "Russia"
+    }
+  ]
+}
