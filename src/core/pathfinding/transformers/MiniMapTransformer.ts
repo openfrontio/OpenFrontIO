@@ -10,44 +10,46 @@ export class MiniMapTransformer implements PathFinder<number> {
   ) {}
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
-    // Convert inputs to minimap coords, mapping shore land to adjacent water
     const fromArray = Array.isArray(from) ? from : [from];
     const miniFromSet = new Set<number>();
+
+    // Map world tiles to valid minimap water tiles
     for (const f of fromArray) {
       miniFromSet.add(this.getMiniLocation(f));
     }
     const miniFrom = Array.from(miniFromSet);
     const miniTo = this.getMiniLocation(to);
 
-    // Run Pathfinding on Minimap
     const path = this.inner.findPath(
       miniFrom.length === 1 ? miniFrom[0] : miniFrom,
       miniTo,
     );
     if (!path || path.length === 0) return null;
 
-    // Convert back to World Cells
     const cellTo = new Cell(this.map.x(to), this.map.y(to));
     const cellPath = path.map(
       (ref) => new Cell(this.miniMap.x(ref), this.miniMap.y(ref)),
     );
     const upscaledPath = this.upscalePath(cellPath);
 
-    // Select best Start Tile
     let cellFrom: Cell | undefined;
     if (Array.isArray(from) && upscaledPath.length > 0) {
       const anchor = upscaledPath[0];
+      const anchorX = anchor.x + 0.5;
+      const anchorY = anchor.y + 0.5;
+
       let minScore = Infinity;
 
       for (const f of from) {
         const fx = this.map.x(f);
         const fy = this.map.y(f);
 
-        // Score = Distance to Target + (0.1 * Distance to Path Start)
-        // Heavily favors target proximity, uses path start as a weak tie-breaker.
+        // Score favors target proximity (Weight 1.0)
+        // Uses path anchor distance as a weak tie-breaker (Weight 0.1)
+        // No hard distance limit to allow optimal tile selection along the coast.
         const distTarget = Math.abs(fx - cellTo.x) + Math.abs(fy - cellTo.y);
-        const distAnchor =
-          Math.abs(fx - (anchor.x + 0.5)) + Math.abs(fy - (anchor.y + 0.5));
+        const distAnchor = Math.abs(fx - anchorX) + Math.abs(fy - anchorY);
+
         const score = distTarget + distAnchor * 0.1;
 
         if (score < minScore) {
@@ -64,12 +66,22 @@ export class MiniMapTransformer implements PathFinder<number> {
     );
   }
 
-  // Helper: Gets minimap ref, checking adjacent water if tile is land
+  // Helper: Gets minimap ref, ensuring it registers as water on the minimap
   private getMiniLocation(tile: TileRef): number {
-    if (this.map.isWater(tile)) return this.toMini(tile);
-    for (const n of this.map.neighbors(tile)) {
-      if (this.map.isWater(n)) return this.toMini(n);
+    // 1. Try the tile itself (must be water in world AND minimap)
+    if (this.map.isWater(tile)) {
+      const mini = this.toMini(tile);
+      if (this.miniMap.isWater(mini)) return mini;
     }
+
+    // 2. Try neighbors (fixes shore dropout and resolution artifacts)
+    for (const n of this.map.neighbors(tile)) {
+      if (this.map.isWater(n)) {
+        const mini = this.toMini(n);
+        if (this.miniMap.isWater(mini)) return mini;
+      }
+    }
+
     return this.toMini(tile);
   }
 
