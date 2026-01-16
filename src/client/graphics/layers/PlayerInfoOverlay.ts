@@ -7,10 +7,8 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-  Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
@@ -20,6 +18,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { getHoverInfo } from "../HoverInfo";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -33,26 +32,6 @@ import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import soldierIcon from "/images/SoldierIcon.svg?url";
-
-function euclideanDistWorld(
-  coord: { x: number; y: number },
-  tileRef: TileRef,
-  game: GameView,
-): number {
-  const x = game.x(tileRef);
-  const y = game.y(tileRef);
-  const dx = coord.x - x;
-  const dy = coord.y - y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    const distA = euclideanDistWorld(coord, a.tile(), game);
-    const distB = euclideanDistWorld(coord, b.tile(), game);
-    return distA - distB;
-  };
-}
 
 @customElement("player-info-overlay")
 export class PlayerInfoOverlay extends LitElement implements Layer {
@@ -73,6 +52,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   @state()
   private unit: UnitView | null = null;
+
+  @state()
+  private isWilderness: boolean = false;
+
+  @state()
+  private isIrradiatedWilderness: boolean = false;
 
   @state()
   private _isInfoVisible: boolean = false;
@@ -105,36 +90,28 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.setVisible(false);
     this.unit = null;
     this.player = null;
+    this.isWilderness = false;
+    this.isIrradiatedWilderness = false;
   }
 
   public maybeShow(x: number, y: number) {
     this.hide();
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
-    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
-      return;
-    }
+    const info = getHoverInfo(this.game, worldCoord);
 
-    const tile = this.game.ref(worldCoord.x, worldCoord.y);
-    if (!tile) return;
-
-    const owner = this.game.owner(tile);
-
-    if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
+    if (info.player) {
+      this.player = info.player;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
       this.setVisible(true);
-    } else if (!this.game.isLand(tile)) {
-      const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
-        .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
-        .sort(distSortUnitWorld(worldCoord, this.game));
-
-      if (units.length > 0) {
-        this.unit = units[0];
-        this.setVisible(true);
-      }
+    } else if (info.isWilderness || info.isIrradiatedWilderness) {
+      this.isWilderness = info.isWilderness;
+      this.isIrradiatedWilderness = info.isIrradiatedWilderness;
+      this.setVisible(true);
+    } else if (info.unit) {
+      this.unit = info.unit;
+      this.setVisible(true);
     }
   }
 
@@ -458,6 +435,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <div
           class="bg-gray-800/70 backdrop-blur-xs shadow-xs lg:rounded-lg shadow-lg transition-all duration-300 text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
         >
+          ${this.isWilderness || this.isIrradiatedWilderness
+            ? html`<div class="p-2 font-bold">
+                ${translateText(
+                  this.isIrradiatedWilderness
+                    ? "player_info_overlay.irradiated_wilderness_title"
+                    : "player_info_overlay.wilderness_title",
+                )}
+              </div>`
+            : ""}
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>

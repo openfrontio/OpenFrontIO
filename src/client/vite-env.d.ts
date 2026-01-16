@@ -44,3 +44,8 @@ declare module "*.svg?url" {
   const svgUrl: string;
   export default svgUrl;
 }
+
+declare module "*.wgsl?raw" {
+  const content: string;
+  export default content;
+}
