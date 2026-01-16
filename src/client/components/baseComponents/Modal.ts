@@ -95,7 +95,7 @@ export class OModal extends LitElement {
                     </div>`}
                 ${!this.hideHeader && this.title
                   ? html`<div
-                      class="px-[1.4rem] py-[1rem] pt-0 text-2xl font-bold text-white"
+                      class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
                     >
                       ${this.title}
                     </div>`
