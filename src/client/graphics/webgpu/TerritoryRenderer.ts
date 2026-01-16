@@ -316,9 +316,6 @@ export class TerritoryRenderer {
     // Upload palette if needed
     this.resources.uploadPalette();
 
-    // Upload terrain params if needed (theme changed)
-    this.resources.uploadTerrainParams();
-
     // Upload defense posts if needed (tracks if it was dirty before upload)
     const wasDefensePostsDirty = (this.resources as any)
       .needsDefensePostsUpload;
