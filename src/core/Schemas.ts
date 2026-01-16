@@ -193,6 +193,7 @@ export const GameConfigSchema = z.object({
     .object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
+      startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
   disableNations: z.boolean(),
@@ -207,6 +208,8 @@ export const GameConfigSchema = z.object({
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  goldMultiplier: z.number().min(0.1).max(1000).optional(),
+  startingGold: z.number().int().min(0).max(1000000000).optional(),
 });
 
 export const TeamSchema = z.string();
