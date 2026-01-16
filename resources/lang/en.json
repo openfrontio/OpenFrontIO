@@ -707,6 +707,8 @@
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
     "alliance_rejected": "rejected",
+    "alliance_nukes_destroyed_outgoing": "{count, plural, one {# nuke launched toward {name} was destroyed due to the alliance} other {# nukes launched toward {name} were destroyed due to the alliance}}",
+    "alliance_nukes_destroyed_incoming": "{count, plural, one {# nuke launched by {name} was destroyed due to the alliance} other {# nukes launched by {name} were destroyed due to the alliance}}",
     "duration_second": "1 second",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "duration_seconds_plural": "{seconds} seconds",
