@@ -39,6 +39,7 @@ export interface NukeAllianceCheckParams {
   game: Game | GameView;
   targetTile: TileRef;
   magnitude: NukeMagnitude;
+  playerID: number;
   allySmallIds: Set<number>;
   threshold: number;
 }
@@ -99,7 +100,7 @@ export function wouldNukeBreakAlliance(
 export function listNukeBreakAlliance(
   params: NukeAllianceCheckParams,
 ): Set<number> {
-  const { game, targetTile, magnitude, threshold } = params;
+  const { game, targetTile, playerID, magnitude, threshold } = params;
 
   // Collect all players that should have alliance broken:
   // either exceeds tile threshold OR has a structure in blast radius
@@ -112,6 +113,9 @@ export function listNukeBreakAlliance(
     magnitude,
   });
   for (const [playerSmallId, totalWeight] of blastCounts) {
+    if (playerID === playerSmallId) {
+      continue;
+    }
     if (totalWeight > threshold) {
       playersToBreakAllianceWith.add(playerSmallId);
     }
@@ -120,9 +124,11 @@ export function listNukeBreakAlliance(
   // Also check if any allied structures would be destroyed
   game
     .nearbyUnits(targetTile, magnitude.outer, [...StructureTypes])
-    .forEach(({ unit }) =>
-      playersToBreakAllianceWith.add(unit.owner().smallID()),
-    );
+    .forEach(({ unit }) => {
+      if (playerID !== unit.owner().smallID()) {
+        playersToBreakAllianceWith.add(unit.owner().smallID());
+      }
+    });
 
   return playersToBreakAllianceWith;
 }
