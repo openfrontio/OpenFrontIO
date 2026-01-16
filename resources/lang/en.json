@@ -228,6 +228,8 @@
     "total_gold": "Total",
     "all_gold": "All gold",
     "trade": "Trade",
+    "train_trade": "Train",
+    "naval_trade": "Tradeship",
     "conquest_gold": "Conquered player gold",
     "stolen_gold": "Stolen with warships",
     "num_of_conquests": "Number of conquered players",
