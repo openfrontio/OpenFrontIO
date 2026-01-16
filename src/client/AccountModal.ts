@@ -111,7 +111,7 @@ export class AccountModal extends BaseModal {
                 <div class="flex items-center gap-2">
                   <span
                     class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >ID:</span
+                    >${translateText("account_modal.personal_player_id")}</span
                   >
                   <copy-button
                     .lobbyId=${publicId}
