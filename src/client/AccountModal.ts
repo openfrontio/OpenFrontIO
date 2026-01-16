@@ -95,6 +95,8 @@ export class AccountModal extends BaseModal {
   private renderInner() {
     const isLoggedIn = !!this.userMeResponse?.user;
     const title = translateText("account_modal.title");
+    const publicId = this.userMeResponse?.player?.publicId ?? "";
+    const displayId = publicId || translateText("account_modal.not_found");
 
     return html`
       <div
@@ -112,12 +114,9 @@ export class AccountModal extends BaseModal {
                     >ID:</span
                   >
                   <copy-button
-                    .copyText=${this.userMeResponse?.player?.publicId ?? ""}
-                    .displayText=${this.userMeResponse?.player?.publicId ??
-                    translateText("account_modal.not_found")}
-                    .compact=${true}
-                    .showVisibilityToggle=${false}
-                    .showCopyIcon=${false}
+                    .lobbyId=${publicId}
+                    .copyText=${publicId}
+                    .displayText=${displayId}
                   ></copy-button>
                 </div>
               `
