@@ -425,31 +425,14 @@ export class TerritoryRenderer {
       return;
     }
 
-    // Check if terrain needs recomputation (e.g., theme changed)
-    // If so, compute it in the same command buffer before rendering
+    // If terrain needs recomputation, trigger it asynchronously (no blocking)
+    // It will be ready for the next frame, acceptable trade-off for performance
     if (this.terrainComputePass?.needsUpdate()) {
       this.resources.uploadTerrainParams();
-
-      // Use a single encoder to ensure compute completes before render
-      const encoder = this.device.device.createCommandEncoder();
-
-      // Execute terrain compute first
-      this.terrainComputePass.execute(encoder, this.resources);
-
-      // Then execute render passes in the same command buffer
-      // The render pass will rebuild its bind group, which will now use the updated terrain texture
-      const textureView = this.device.context.getCurrentTexture().createView();
-      for (const pass of this.renderPassOrder) {
-        if (!pass.needsUpdate()) {
-          continue;
-        }
-        pass.execute(encoder, this.resources, textureView);
-      }
-
-      // Submit single command buffer with both compute and render
-      // This ensures compute completes before render reads the terrain texture
-      this.device.device.queue.submit([encoder.finish()]);
-      return;
+      const computeEncoder = this.device.device.createCommandEncoder();
+      this.terrainComputePass.execute(computeEncoder, this.resources);
+      this.device.device.queue.submit([computeEncoder.finish()]);
+      // Continue with render - may show stale terrain for one frame, but better performance
     }
 
     const encoder = this.device.device.createCommandEncoder();
