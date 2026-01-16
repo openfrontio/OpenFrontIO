@@ -669,7 +669,7 @@ export class SinglePlayerModal extends BaseModal {
                         type="number"
                         id="gold-multiplier-value"
                         min="0.1"
-                        max="10"
+                        max="1000"
                         step="any"
                         value=${this.goldMultiplierValue ?? ""}
                         class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"

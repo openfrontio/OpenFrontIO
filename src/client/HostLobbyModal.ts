@@ -746,37 +746,26 @@ export class HostLobbyModal extends BaseModal {
 
                 <!-- Gold Multiplier -->
                 <div
+                  role="button"
+                  tabindex="0"
+                  @click=${this.createToggleHandlers(
+                    () => this.goldMultiplier,
+                    (val) => (this.goldMultiplier = val),
+                    () => this.goldMultiplierValue,
+                    (val) => (this.goldMultiplierValue = val),
+                    2,
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.goldMultiplier,
+                    (val) => (this.goldMultiplier = val),
+                    () => this.goldMultiplierValue,
+                    (val) => (this.goldMultiplierValue = val),
+                    2,
+                  ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .goldMultiplier
                     ? "bg-blue-500/20 border-blue-500/50"
                     : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                  @click=${(e: Event) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    this.goldMultiplier = !this.goldMultiplier;
-                    if (!this.goldMultiplier) {
-                      this.goldMultiplierValue = undefined;
-                    } else {
-                      if (
-                        !this.goldMultiplierValue ||
-                        this.goldMultiplierValue <= 0
-                      ) {
-                        this.goldMultiplierValue = 2;
-                      }
-                      setTimeout(() => {
-                        const input = this.renderRoot.querySelector(
-                          "#gold-multiplier-value",
-                        ) as HTMLInputElement;
-                        if (input) {
-                          input.focus();
-                          input.select();
-                        }
-                      }, 0);
-                    }
-                  }}
                 >
                   <div class="flex items-center justify-center w-full mt-1">
                     <div
@@ -807,7 +796,7 @@ export class HostLobbyModal extends BaseModal {
                         type="number"
                         id="gold-multiplier-value"
                         min="0.1"
-                        max="10"
+                        max="1000"
                         step="any"
                         value=${this.goldMultiplierValue ?? ""}
                         class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
@@ -833,37 +822,26 @@ export class HostLobbyModal extends BaseModal {
 
                 <!-- Starting Gold -->
                 <div
+                  role="button"
+                  tabindex="0"
+                  @click=${this.createToggleHandlers(
+                    () => this.startingGold,
+                    (val) => (this.startingGold = val),
+                    () => this.startingGoldValue,
+                    (val) => (this.startingGoldValue = val),
+                    5000000,
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.startingGold,
+                    (val) => (this.startingGold = val),
+                    () => this.startingGoldValue,
+                    (val) => (this.startingGoldValue = val),
+                    5000000,
+                  ).keydown}
                   class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
                     .startingGold
                     ? "bg-blue-500/20 border-blue-500/50"
                     : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                  @click=${(e: Event) => {
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
-                    this.startingGold = !this.startingGold;
-                    if (!this.startingGold) {
-                      this.startingGoldValue = undefined;
-                    } else {
-                      if (
-                        !this.startingGoldValue ||
-                        this.startingGoldValue < 0
-                      ) {
-                        this.startingGoldValue = 5000000;
-                      }
-                      setTimeout(() => {
-                        const input = this.renderRoot.querySelector(
-                          "#starting-gold-value",
-                        ) as HTMLInputElement;
-                        if (input) {
-                          input.focus();
-                          input.select();
-                        }
-                      }, 0);
-                    }
-                  }}
                 >
                   <div class="flex items-center justify-center w-full mt-1">
                     <div
@@ -1234,6 +1212,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.goldMultiplierValue = value;
     }
+    this.putGameConfig();
   }
 
   private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
@@ -1252,6 +1231,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.startingGoldValue = value;
     }
+    this.putGameConfig();
   }
 
   private handleRandomSpawnChange = (val: boolean) => {
