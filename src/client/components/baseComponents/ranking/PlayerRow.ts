@@ -33,7 +33,7 @@ export class PlayerRow extends LitElement {
           : visibleBorder
             ? "border-white/5"
             : "border-transparent"}
-           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 flex justify-between items-center border-white/5 hover:bg-white/[0.07] transition-colors duration-150 ease-in-out"
+           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 flex justify-between items-center hover:bg-white/[0.07] transition-colors duration-150 ease-in-out"
       >
         <div
           class="font-bold text-right w-7.5 text-lg text-white absolute -left-10"
@@ -206,7 +206,7 @@ export class PlayerRow extends LitElement {
           </div>
         </div>
 
-        <div class="flex gap-2 w-50 justify-between items-center w-full">
+        <div class="flex gap-2 justify-between items-center w-full">
           <div class="rounded-md text-sm leading-[1.9rem] text-center w-full">
             ${this.renderAllTrades()}
           </div>
