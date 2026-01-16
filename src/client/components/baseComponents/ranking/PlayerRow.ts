@@ -1,5 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import {
+  GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
+} from "src/core/StatsSchemas";
 import { renderNumber } from "../../../Utils";
 import { PlayerInfo, RankType } from "./GameInfoRanking";
 
@@ -67,10 +72,12 @@ export class PlayerRow extends LitElement {
       case RankType.MIRV:
         return this.renderBombScore();
       case RankType.TotalGold:
-      case RankType.TradedGold:
       case RankType.ConqueredGold:
       case RankType.StolenGold:
         return this.renderGoldScore();
+      case RankType.NavalTrade:
+      case RankType.TrainTrade:
+        return this.renderTradeScore();
       default:
         return html``;
     }
@@ -109,14 +116,15 @@ export class PlayerRow extends LitElement {
       </div>
     `;
   }
-  private renderBombType(value: number, highlight: boolean) {
+
+  private renderMultiScoreType(value: number, highlight: boolean) {
     return html`
       <div
         class="${highlight
           ? "font-bold text-[18px]"
-          : ""} min-w-7.5 sm:min-w-15 inline-block text-center"
+          : "leading-[24px]"} min-w-7.5 sm:min-w-15 inline-block text-center"
       >
-        ${value}
+        ${renderNumber(value)}
       </div>
     `;
   }
@@ -124,17 +132,17 @@ export class PlayerRow extends LitElement {
   private renderAllBombs() {
     return html`
       <div class="flex justify-between text-sm sm:pr-20">
-        ${this.renderBombType(
+        ${this.renderMultiScoreType(
           this.player.atoms,
           this.rankType === RankType.Atoms,
         )}
         /
-        ${this.renderBombType(
+        ${this.renderMultiScoreType(
           this.player.hydros,
           this.rankType === RankType.Hydros,
         )}
         /
-        ${this.renderBombType(
+        ${this.renderMultiScoreType(
           this.player.mirv,
           this.rankType === RankType.MIRV,
         )}
@@ -142,9 +150,28 @@ export class PlayerRow extends LitElement {
     `;
   }
 
+  private renderAllTrades() {
+    const navalTrade = this.player.gold[GOLD_INDEX_TRADE] ?? 0n;
+    const ownTrainTrade = this.player.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
+    const otherTrainTrade = this.player.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
+    return html`
+      <div class="flex justify-between text-sm align-baseline">
+        ${this.renderMultiScoreType(
+          Number(navalTrade),
+          this.rankType === RankType.NavalTrade,
+        )}
+        /
+        ${this.renderMultiScoreType(
+          Number(ownTrainTrade + otherTrainTrade),
+          this.rankType === RankType.TrainTrade,
+        )}
+      </div>
+    `;
+  }
+
   private renderBombScore() {
     return html`
-      <div class="flex gap-3 items-center w-full">
+      <div class="flex gap-3 items-center align-baseline w-full">
         ${this.renderPlayerIcon()}
         <div class="flex flex-col sm:flex-row gap-1 text-left w-full">
           ${this.renderPlayerName()} ${this.renderAllBombs()}
@@ -157,17 +184,34 @@ export class PlayerRow extends LitElement {
     return html`
       <div class="flex gap-3 items-center">
         ${this.renderPlayerIcon()}
-        <div class="text-left w-31.25 sm:w-62.5">
-          ${this.renderPlayerName()}
-        </div>
+        <div class="text-left w-31.25 sm:w-50">${this.renderPlayerName()}</div>
       </div>
+
       <div class="flex gap-2">
         <div
-          class="font-bold rounded-md w-15 shrink-0 h-7.5 text-sm sm:w-25 sm:h-7.5 leading-[1.9rem] text-center"
+          class="font-bold rounded-md w-15 shrink-0 text-sm sm:w-25 leading-[1.9rem] text-center"
         >
           ${renderNumber(this.score)}
         </div>
         <img src="/images/GoldCoinIcon.svg" class="size-3.5 sm:size-5 m-auto" />
+      </div>
+    `;
+  }
+
+  private renderTradeScore() {
+    return html`
+      <div class="flex gap-3 items-center">
+        ${this.renderPlayerIcon()}
+        <div class="text-left w-31.25 sm:w-50">${this.renderPlayerName()}</div>
+      </div>
+
+      <div class="flex gap-2 w-50 justify-between items-center">
+        <div
+          class="font-bold rounded-md w-15 shrink-0 text-sm sm:w-25 leading-[1.9rem] text-center"
+        >
+          ${this.renderAllTrades()}
+        </div>
+        <img src="/images/GoldCoinIcon.svg" class="w-5 size-3.5 sm:size-5" />
       </div>
     `;
   }
