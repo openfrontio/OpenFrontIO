@@ -1,0 +1,80 @@
+{
+  "map": {
+    "height": 612,
+    "num_land_tiles": 387974,
+    "width": 1000
+  },
+  "map16x": {
+    "height": 153,
+    "num_land_tiles": 22991,
+    "width": 250
+  },
+  "map4x": {
+    "height": 306,
+    "num_land_tiles": 95321,
+    "width": 500
+  },
+  "name": "Bosphorus Straits",
+  "nations": [
+    {
+      "coordinates": [520, 300],
+      "flag": "tr",
+      "name": "Istanbul"
+    },
+    {
+      "coordinates": [360, 280],
+      "flag": "tr",
+      "name": "Thrace"
+    },
+    {
+      "coordinates": [220, 260],
+      "flag": "tr",
+      "name": "Edirne"
+    },
+    {
+      "coordinates": [650, 360],
+      "flag": "tr",
+      "name": "Bursa"
+    },
+    {
+      "coordinates": [690, 290],
+      "flag": "tr",
+      "name": "Izmit"
+    },
+    {
+      "coordinates": [430, 430],
+      "flag": "tr",
+      "name": "Canakkale"
+    },
+    {
+      "coordinates": [320, 330],
+      "flag": "tr",
+      "name": "Tekirdag"
+    },
+    {
+      "coordinates": [610, 320],
+      "flag": "tr",
+      "name": "Yalova"
+    },
+    {
+      "coordinates": [720, 260],
+      "flag": "tr",
+      "name": "Kocaeli"
+    },
+    {
+      "coordinates": [160, 120],
+      "flag": "bg",
+      "name": "Varna"
+    },
+    {
+      "coordinates": [220, 150],
+      "flag": "bg",
+      "name": "Burgas"
+    },
+    {
+      "coordinates": [820, 470],
+      "flag": "gr",
+      "name": "Aegean Isles"
+    }
+  ]
+}

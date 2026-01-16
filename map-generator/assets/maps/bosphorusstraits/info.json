@@ -1,0 +1,65 @@
+{
+  "name": "Bosphorus Straits",
+  "nations": [
+    {
+      "coordinates": [520, 300],
+      "name": "Istanbul",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [360, 280],
+      "name": "Thrace",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [220, 260],
+      "name": "Edirne",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [650, 360],
+      "name": "Bursa",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [690, 290],
+      "name": "Izmit",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [430, 430],
+      "name": "Canakkale",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [320, 330],
+      "name": "Tekirdag",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [610, 320],
+      "name": "Yalova",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [720, 260],
+      "name": "Kocaeli",
+      "flag": "tr"
+    },
+    {
+      "coordinates": [160, 120],
+      "name": "Varna",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [220, 150],
+      "name": "Burgas",
+      "flag": "bg"
+    },
+    {
+      "coordinates": [820, 470],
+      "name": "Aegean Isles",
+      "flag": "gr"
+    }
+  ]
+}
