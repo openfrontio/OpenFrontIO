@@ -48,6 +48,7 @@
     "settings": "Settings",
     "keys": "Keys",
     "stats": "Stats",
+    "leaderboard": "Leaderboard",
     "account": "Account",
     "help": "Help",
     "menu": "Menu",
@@ -196,14 +197,16 @@
     "failed_to_send_recovery_email": "Failed to send recovery email",
     "enter_email_address": "Please enter an email address"
   },
-  "stats_modal": {
-    "title": "Stats",
+  "leaderboard_modal": {
+    "title": "Leaderboard",
     "clan_stats": "Clan Stats",
+    "player_stats": "1v1 Ranked Stats",
     "loading": "Loading...",
-    "error": "Error loading clan stats",
-    "no_stats": "No clan stats available",
+    "error": "Error loading leaderboard",
+    "no_stats": "No stats available",
     "no_data_yet": "No Data Yet",
     "clan": "Clan",
+    "player": "Player",
     "games": "Games",
     "win_score": "Win Score",
     "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",

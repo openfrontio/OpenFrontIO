@@ -225,7 +225,7 @@ export class LangSelector extends LitElement {
       "news-modal",
       "news-button",
       "account-modal",
-      "stats-modal",
+      "leaderboard-modal",
       "flag-input-modal",
       "flag-input",
       "token-login",
