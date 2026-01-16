@@ -1,4 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/core/configuration/ConfigLoader", () => ({
+  getServerConfigFromServer: () => ({
+    otelEnabled: () => false,
+    otelAuthHeader: () => "",
+    otelEndpoint: () => "",
+    env: () => 0, // GameEnv.Dev
+  }),
+  getServerConfig: () => ({
+    otelEnabled: () => false,
+  }),
+}));
+
+vi.mock("../../src/core/Schemas", async () => {
+  const actual = (await vi.importActual("../../src/core/Schemas")) as any;
+  return {
+    ...actual,
+    GameStartInfoSchema: {
+      safeParse: (data: any) => ({ success: true, data: data }),
+    },
+    ServerPrestartMessageSchema: {
+      safeParse: (data: any) => ({ success: true, data: data }),
+    },
+  };
+});
+
 import { GameEnv } from "../../src/core/configuration/Config";
 import { GameType } from "../../src/core/game/Game";
 import { GameServer } from "../../src/server/GameServer";
