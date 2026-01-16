@@ -995,6 +995,9 @@ export class GameImpl implements Game {
   tileStateView(): Uint16Array {
     return this._map.tileStateView();
   }
+  terrainDataView(): Uint8Array {
+    return this._map.terrainDataView();
+  }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
   }

@@ -20,12 +20,14 @@ export class GroundTruthData {
   // Textures
   public readonly stateTexture: GPUTexture;
   public readonly terrainTexture: GPUTexture;
+  public readonly terrainDataTexture: GPUTexture;
   public readonly paletteTexture: GPUTexture;
   public readonly defendedTexture: GPUTexture;
 
   // Buffers
   public readonly uniformBuffer: GPUBuffer;
   public readonly defenseParamsBuffer: GPUBuffer;
+  public readonly terrainParamsBuffer: GPUBuffer;
   public updatesBuffer: GPUBuffer | null = null;
   public defensePostsBuffer: GPUBuffer | null = null;
 
@@ -41,8 +43,11 @@ export class GroundTruthData {
   private readonly mapWidth: number;
   private readonly mapHeight: number;
   private readonly state: Uint16Array;
+  private readonly terrainData: Uint8Array;
   private needsStateUpload = true;
   private needsPaletteUpload = true;
+  private needsTerrainDataUpload = true;
+  private needsTerrainParamsUpload = true;
   private paletteWidth = 1;
   private defensePostsCount = 0;
   private needsDefensePostsUpload = true;
@@ -50,6 +55,7 @@ export class GroundTruthData {
   // Uniform data arrays
   private readonly uniformData = new Float32Array(12);
   private readonly defenseParamsData = new Uint32Array(4);
+  private readonly terrainParamsData = new Float32Array(24); // 6 vec4f: shore, water, shorelineWater, plainsBase, highlandBase, mountainBase
 
   // View state (updated by renderer)
   private viewWidth = 1;
@@ -70,10 +76,12 @@ export class GroundTruthData {
     private readonly game: GameView,
     private readonly theme: Theme,
     state: Uint16Array,
+    terrainData: Uint8Array,
     mapWidth: number,
     mapHeight: number,
   ) {
     this.state = state;
+    this.terrainData = terrainData;
     this.mapWidth = mapWidth;
     this.mapHeight = mapHeight;
 
@@ -94,6 +102,12 @@ export class GroundTruthData {
     // Defense params: 4x u32 = 16 bytes
     this.defenseParamsBuffer = device.createBuffer({
       size: 16,
+      usage: UNIFORM | COPY_DST_BUF,
+    });
+
+    // Terrain params: 6x vec4f = 96 bytes (shore, water, shorelineWater, plainsBase, highlandBase, mountainBase)
+    this.terrainParamsBuffer = device.createBuffer({
+      size: 96,
       usage: UNIFORM | COPY_DST_BUF,
     });
 
@@ -118,10 +132,17 @@ export class GroundTruthData {
       usage: COPY_DST_TEX | TEXTURE_BINDING,
     });
 
-    // Terrain texture (rgba8unorm)
+    // Terrain texture (rgba8unorm) - output of terrain compute shader
     this.terrainTexture = device.createTexture({
       size: { width: mapWidth, height: mapHeight },
       format: "rgba8unorm",
+      usage: COPY_DST_TEX | TEXTURE_BINDING | STORAGE_BINDING,
+    });
+
+    // Terrain data texture (r8uint) - input terrain data (read-only in compute shader)
+    this.terrainDataTexture = device.createTexture({
+      size: { width: mapWidth, height: mapHeight },
+      format: "r8uint",
       usage: COPY_DST_TEX | TEXTURE_BINDING,
     });
   }
@@ -137,6 +158,7 @@ export class GroundTruthData {
       game,
       theme,
       state,
+      game.terrainDataView(),
       game.width(),
       game.height(),
     );
@@ -212,6 +234,9 @@ export class GroundTruthData {
     }
   }
 
+  /**
+   * @deprecated Use terrain compute shader instead. This method is kept for fallback.
+   */
   uploadTerrain(): void {
     const bytesPerRow = this.mapWidth * 4;
     const paddedBytesPerRow = align(bytesPerRow, 256);
@@ -239,6 +264,204 @@ export class GroundTruthData {
         { width: this.mapWidth, height: 1, depthOrArrayLayers: 1 },
       );
     }
+  }
+
+  uploadTerrainData(): void {
+    if (!this.needsTerrainDataUpload) {
+      return;
+    }
+    this.needsTerrainDataUpload = false;
+
+    const bytesPerRow = this.mapWidth;
+    const paddedBytesPerRow = align(bytesPerRow, 256);
+
+    if (paddedBytesPerRow === bytesPerRow) {
+      // Direct upload if already aligned
+      this.device.queue.writeTexture(
+        { texture: this.terrainDataTexture },
+        this.terrainData,
+        { bytesPerRow, rowsPerImage: this.mapHeight },
+        {
+          width: this.mapWidth,
+          height: this.mapHeight,
+          depthOrArrayLayers: 1,
+        },
+      );
+    } else {
+      // Row-by-row upload with padding
+      const row = new Uint8Array(paddedBytesPerRow);
+      for (let y = 0; y < this.mapHeight; y++) {
+        row.fill(0);
+        const start = y * this.mapWidth;
+        row.set(this.terrainData.subarray(start, start + this.mapWidth), 0);
+        this.device.queue.writeTexture(
+          { texture: this.terrainDataTexture, origin: { x: 0, y } },
+          row,
+          { bytesPerRow: paddedBytesPerRow, rowsPerImage: 1 },
+          { width: this.mapWidth, height: 1, depthOrArrayLayers: 1 },
+        );
+      }
+    }
+  }
+
+  uploadTerrainParams(): void {
+    if (!this.needsTerrainParamsUpload) {
+      return;
+    }
+    this.needsTerrainParamsUpload = false;
+
+    // Sample theme colors by finding representative tiles
+    // We'll search for a shore tile, water tile, and compute base terrain colors
+    let shoreColor = { r: 204, g: 203, b: 158, a: 255 }; // Default pastel
+    let waterColor = { r: 70, g: 132, b: 180, a: 255 }; // Default pastel
+    let shorelineWaterColor = { r: 100, g: 143, b: 255, a: 255 }; // Default pastel
+
+    // Find a shore tile (land adjacent to water)
+    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+      if (this.game.isShore(i)) {
+        const color = this.theme.terrainColor(this.game, i);
+        shoreColor = color.rgba;
+        break;
+      }
+    }
+
+    // Find a deep water tile (magnitude > 5) and shoreline water
+    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+      if (this.game.isWater(i)) {
+        if (this.game.isShoreline(i)) {
+          const color = this.theme.terrainColor(this.game, i);
+          shorelineWaterColor = color.rgba;
+        } else if (this.game.magnitude(i) > 5) {
+          const color = this.theme.terrainColor(this.game, i);
+          waterColor = color.rgba;
+        }
+        if (waterColor.r !== 70 || shorelineWaterColor.r !== 100) {
+          // Found both, can break
+          if (this.game.isShoreline(i) && this.game.magnitude(i) > 5) {
+            break;
+          }
+        }
+      }
+    }
+
+    // Compute terrain base colors by sampling at magnitude 0, 10, 20
+    // Find a plains tile (magnitude < 10, land, not shore)
+    let plainsColor = { r: 190, g: 220, b: 138, a: 255 };
+    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+      if (
+        this.game.isLand(i) &&
+        !this.game.isShore(i) &&
+        this.game.magnitude(i) < 10
+      ) {
+        const color = this.theme.terrainColor(this.game, i);
+        plainsColor = color.rgba;
+        break;
+      }
+    }
+
+    // Find a highland tile at magnitude 10 (for accurate formula computation)
+    let highlandColor = { r: 200, g: 183, b: 138, a: 255 };
+    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+      if (
+        this.game.isLand(i) &&
+        !this.game.isShore(i) &&
+        this.game.magnitude(i) === 10
+      ) {
+        const color = this.theme.terrainColor(this.game, i);
+        highlandColor = color.rgba;
+        break;
+      }
+    }
+    // If no mag 10 found, try any highland tile
+    if (highlandColor.r === 200 && highlandColor.g === 183) {
+      for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+        if (
+          this.game.isLand(i) &&
+          !this.game.isShore(i) &&
+          this.game.magnitude(i) >= 10 &&
+          this.game.magnitude(i) < 20
+        ) {
+          const color = this.theme.terrainColor(this.game, i);
+          highlandColor = color.rgba;
+          break;
+        }
+      }
+    }
+
+    // Store colors as vec4f (RGBA normalized to 0-1)
+    // Index 0-3: shore color
+    this.terrainParamsData[0] = shoreColor.r / 255;
+    this.terrainParamsData[1] = shoreColor.g / 255;
+    this.terrainParamsData[2] = shoreColor.b / 255;
+    this.terrainParamsData[3] = 1.0;
+
+    // Index 4-7: water base color
+    this.terrainParamsData[4] = waterColor.r / 255;
+    this.terrainParamsData[5] = waterColor.g / 255;
+    this.terrainParamsData[6] = waterColor.b / 255;
+    this.terrainParamsData[7] = 1.0;
+
+    // Index 8-11: shoreline water color
+    this.terrainParamsData[8] = shorelineWaterColor.r / 255;
+    this.terrainParamsData[9] = shorelineWaterColor.g / 255;
+    this.terrainParamsData[10] = shorelineWaterColor.b / 255;
+    this.terrainParamsData[11] = 1.0;
+
+    // Find a mountain tile at magnitude 20 (for accurate formula computation)
+    let mountainColor = { r: 230, g: 230, b: 230, a: 255 };
+    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+      if (
+        this.game.isLand(i) &&
+        !this.game.isShore(i) &&
+        this.game.magnitude(i) === 20
+      ) {
+        const color = this.theme.terrainColor(this.game, i);
+        mountainColor = color.rgba;
+        break;
+      }
+    }
+    // If no mag 20 found, try any mountain tile
+    if (mountainColor.r === 230 && mountainColor.g === 230) {
+      for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
+        if (
+          this.game.isLand(i) &&
+          !this.game.isShore(i) &&
+          this.game.magnitude(i) >= 20
+        ) {
+          const color = this.theme.terrainColor(this.game, i);
+          mountainColor = color.rgba;
+          break;
+        }
+      }
+    }
+
+    // Index 12-15: plains base color (magnitude 0)
+    this.terrainParamsData[12] = plainsColor.r / 255;
+    this.terrainParamsData[13] = plainsColor.g / 255;
+    this.terrainParamsData[14] = plainsColor.b / 255;
+    this.terrainParamsData[15] = 1.0;
+
+    // Index 16-19: highland base color (magnitude 10)
+    this.terrainParamsData[16] = highlandColor.r / 255;
+    this.terrainParamsData[17] = highlandColor.g / 255;
+    this.terrainParamsData[18] = highlandColor.b / 255;
+    this.terrainParamsData[19] = 1.0;
+
+    // Index 20-23: mountain base color (magnitude 20)
+    this.terrainParamsData[20] = mountainColor.r / 255;
+    this.terrainParamsData[21] = mountainColor.g / 255;
+    this.terrainParamsData[22] = mountainColor.b / 255;
+    this.terrainParamsData[23] = 1.0;
+
+    this.device.queue.writeBuffer(
+      this.terrainParamsBuffer,
+      0,
+      this.terrainParamsData,
+    );
+  }
+
+  markTerrainParamsDirty(): void {
+    this.needsTerrainParamsUpload = true;
   }
 
   uploadPalette(): boolean {
