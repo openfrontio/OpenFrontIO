@@ -17,18 +17,12 @@
   "name": "BeringStrait",
   "nations": [
     {
-      "coordinates": [
-        1297,
-        287
-      ],
+      "coordinates": [1297, 287],
       "flag": "us",
       "name": "Alaska"
     },
     {
-      "coordinates": [
-        186,
-        427
-      ],
+      "coordinates": [186, 427],
       "flag": "ru",
       "name": "Russia"
     }
