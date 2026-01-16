@@ -6,7 +6,7 @@ struct Update {
 @group(0) @binding(0) var<storage, read> updates: array<Update>;
 @group(0) @binding(1) var stateTex: texture_storage_2d<r32uint, write>;
 
-@compute @workgroup_size(1)
+@compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let idx = globalId.x;
   if (idx >= arrayLength(&updates)) {

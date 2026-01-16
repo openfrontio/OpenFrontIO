@@ -101,7 +101,9 @@ export class StateUpdatePass implements ComputePass {
       const pass = encoder.beginComputePass();
       pass.setPipeline(this.pipeline);
       pass.setBindGroup(0, this.bindGroup);
-      pass.dispatchWorkgroups(numUpdates);
+      // Dispatch with workgroup_size(64), so divide by 64 and round up
+      const workgroupCount = Math.ceil(numUpdates / 64);
+      pass.dispatchWorkgroups(workgroupCount);
       pass.end();
     }
 
