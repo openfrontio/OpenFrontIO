@@ -119,7 +119,7 @@ export class SpatialQuery {
     const MAX_WAYPOINT_DIST = 200;
     const PADDING = 10;
 
-    if (path.length < MIN_WAYPOINT_DIST) {
+    if (path.length <= MIN_WAYPOINT_DIST) {
       return path[0];
     }
 
