@@ -10,57 +10,74 @@ export class MiniMapTransformer implements PathFinder<number> {
   ) {}
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
-    // Convert game coords → minimap coords (supports multi-source)
+    // Convert inputs to minimap coords, mapping shore land to adjacent water
     const fromArray = Array.isArray(from) ? from : [from];
-    const miniFromArray = fromArray.map((f) =>
-      this.miniMap.ref(
-        Math.floor(this.map.x(f) / 2),
-        Math.floor(this.map.y(f) / 2),
-      ),
-    );
-    const miniFrom =
-      miniFromArray.length === 1 ? miniFromArray[0] : miniFromArray;
-
-    const miniTo = this.miniMap.ref(
-      Math.floor(this.map.x(to) / 2),
-      Math.floor(this.map.y(to) / 2),
-    );
-
-    // Search on minimap
-    const path = this.inner.findPath(miniFrom, miniTo);
-    if (!path || path.length === 0) {
-      return null;
+    const miniFromSet = new Set<number>();
+    for (const f of fromArray) {
+      miniFromSet.add(this.getMiniLocation(f));
     }
+    const miniFrom = Array.from(miniFromSet);
+    const miniTo = this.getMiniLocation(to);
 
-    // Convert minimap TileRefs → Cells
+    // Run Pathfinding on Minimap
+    const path = this.inner.findPath(
+      miniFrom.length === 1 ? miniFrom[0] : miniFrom,
+      miniTo,
+    );
+    if (!path || path.length === 0) return null;
+
+    // Convert back to World Cells
+    const cellTo = new Cell(this.map.x(to), this.map.y(to));
     const cellPath = path.map(
       (ref) => new Cell(this.miniMap.x(ref), this.miniMap.y(ref)),
     );
-
-    // For multi-source, find closest source to path start
     const upscaledPath = this.upscalePath(cellPath);
+
+    // Select best Start Tile
     let cellFrom: Cell | undefined;
-    if (Array.isArray(from)) {
-      if (upscaledPath.length > 0) {
-        const pathStart = upscaledPath[0];
-        let minDist = Infinity;
-        for (const f of from) {
-          const fx = this.map.x(f);
-          const fy = this.map.y(f);
-          const dist = Math.abs(fx - pathStart.x) + Math.abs(fy - pathStart.y);
-          if (dist < minDist) {
-            minDist = dist;
-            cellFrom = new Cell(fx, fy);
-          }
+    if (Array.isArray(from) && upscaledPath.length > 0) {
+      const anchor = upscaledPath[0];
+      let minScore = Infinity;
+
+      for (const f of from) {
+        const fx = this.map.x(f);
+        const fy = this.map.y(f);
+
+        // Score = Distance to Target + (0.1 * Distance to Path Start)
+        // Heavily favors target proximity, uses path start as a weak tie-breaker.
+        const distTarget = Math.abs(fx - cellTo.x) + Math.abs(fy - cellTo.y);
+        const distAnchor =
+          Math.abs(fx - (anchor.x + 0.5)) + Math.abs(fy - (anchor.y + 0.5));
+        const score = distTarget + distAnchor * 0.1;
+
+        if (score < minScore) {
+          minScore = score;
+          cellFrom = new Cell(fx, fy);
         }
       }
-    } else {
+    } else if (!Array.isArray(from)) {
       cellFrom = new Cell(this.map.x(from), this.map.y(from));
     }
-    const cellTo = new Cell(this.map.x(to), this.map.y(to));
-    const upscaled = this.fixExtremes(upscaledPath, cellTo, cellFrom);
 
-    return upscaled.map((c) => this.map.ref(c.x, c.y));
+    return this.fixExtremes(upscaledPath, cellTo, cellFrom).map((c) =>
+      this.map.ref(c.x, c.y),
+    );
+  }
+
+  // Helper: Gets minimap ref, checking adjacent water if tile is land
+  private getMiniLocation(tile: TileRef): number {
+    if (this.map.isWater(tile)) return this.toMini(tile);
+    for (const n of this.map.neighbors(tile)) {
+      if (this.map.isWater(n)) return this.toMini(n);
+    }
+    return this.toMini(tile);
+  }
+
+  private toMini(ref: TileRef): number {
+    return this.miniMap.ref(
+      Math.floor(this.map.x(ref) / 2),
+      Math.floor(this.map.y(ref) / 2),
+    );
   }
 
   private upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
@@ -69,17 +86,14 @@ export class MiniMapTransformer implements PathFinder<number> {
     );
 
     const smoothPath: Cell[] = [];
-
     for (let i = 0; i < scaledPath.length - 1; i++) {
       const current = scaledPath[i];
       const next = scaledPath[i + 1];
-
       smoothPath.push(current);
 
       const dx = next.x - current.x;
       const dy = next.y - current.y;
-      const distance = Math.max(Math.abs(dx), Math.abs(dy));
-      const steps = distance;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
 
       for (let step = 1; step < steps; step++) {
         smoothPath.push(
@@ -90,11 +104,9 @@ export class MiniMapTransformer implements PathFinder<number> {
         );
       }
     }
-
     if (scaledPath.length > 0) {
       smoothPath.push(scaledPath[scaledPath.length - 1]);
     }
-
     return smoothPath;
   }
 
