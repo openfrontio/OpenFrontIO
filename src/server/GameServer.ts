@@ -71,6 +71,8 @@ export class GameServer {
     { winner: ClientSendWinnerMessage; ips: Set<string> }
   > = new Map();
 
+  private _hasEnded = false;
+
   public desyncCount = 0;
 
   constructor(
@@ -532,7 +534,7 @@ export class GameServer {
   }
 
   public start() {
-    if (this._hasStarted) {
+    if (this._hasStarted || this._hasEnded) {
       return;
     }
     this._hasStarted = true;
@@ -635,9 +637,11 @@ export class GameServer {
   }
 
   async end() {
+    this._hasEnded = true;
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);
+      this.endTurnIntervalID = undefined;
     }
     this.websockets.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
