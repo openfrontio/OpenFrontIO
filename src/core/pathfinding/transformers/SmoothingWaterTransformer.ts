@@ -54,6 +54,9 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
       this.refineEndpoints(smoothed),
     );
 
+    // Pass 3: LOS smoothing again (refinement may create new shortcut opportunities)
+    smoothed = DebugSpan.wrap("smoother:los2", () => this.losSmooth(smoothed));
+
     return smoothed;
   }
 
