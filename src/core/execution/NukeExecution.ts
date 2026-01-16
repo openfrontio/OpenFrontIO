@@ -89,6 +89,7 @@ export class NukeExecution implements Execution {
       game: this.mg,
       targetTile: this.dst,
       magnitude,
+      playerID: this.player.smallID(),
       allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
       threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });

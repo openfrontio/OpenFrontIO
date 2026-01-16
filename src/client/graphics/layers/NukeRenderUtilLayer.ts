@@ -36,6 +36,9 @@ export class NukeRenderUtilLayer implements Layer {
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
 
+  // A list of players currently stressed or intercepting the trajectory.
+  private interceptingPlayers = new Set<number>();
+
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
@@ -186,7 +189,7 @@ export class NukeRenderUtilLayer implements Layer {
         break;
       }
     }
-    const stressedPlayers = this.allianceStressedPlayers;
+    this.interceptingPlayers = new Set();
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
     // Check trajectory
@@ -200,7 +203,8 @@ export class NukeRenderUtilLayer implements Layer {
         if (
           sam.unit.owner().isMe() ||
           (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
-            !stressedPlayers.has(sam.unit.owner().smallID()))
+            !this.allianceStressedPlayers.has(sam.unit.owner().smallID()) &&
+            !this.interceptingPlayers.has(sam.unit.owner().smallID()))
         ) {
           continue;
         }
@@ -209,7 +213,7 @@ export class NukeRenderUtilLayer implements Layer {
           this.game.config().samRange(sam.unit.level()) ** 2
         ) {
           this.targetedIndex = i;
-          break;
+          this.interceptingPlayers.add(sam.unit.owner().smallID());
         }
       }
       if (this.targetedIndex !== this.trajectoryPoints.length) break;
@@ -253,6 +257,10 @@ export class NukeRenderUtilLayer implements Layer {
       this.trajectoryPoints = [];
       return;
     }
+    const player = this.game.myPlayer();
+    if (!player) {
+      return;
+    }
 
     // Calculate which players are "stressed" by current nuke placement.
     this.allianceStressedPlayers = listNukeBreakAlliance({
@@ -261,6 +269,7 @@ export class NukeRenderUtilLayer implements Layer {
       magnitude: this.game
         .config()
         .nukeMagnitudes(this.uiState.ghostStructure as UnitType),
+      playerID: player.smallID(),
       allySmallIds: new Set(
         this.game
           .myPlayer()
@@ -278,8 +287,14 @@ export class NukeRenderUtilLayer implements Layer {
     return this.nukeGhostActive;
   }
 
+  // players who are targeted by nuke are stressed
   getAllianceStressedPlayers() {
     return this.allianceStressedPlayers;
+  }
+
+  // players who will shoot the nuke down first are intercepting
+  getInterceptingPlayers() {
+    return this.interceptingPlayers;
   }
 
   getTrajectoryInfo() {

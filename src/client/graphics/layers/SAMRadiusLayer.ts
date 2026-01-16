@@ -1,3 +1,4 @@
+import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
@@ -271,11 +272,12 @@ export class SAMRadiusLayer implements Layer {
   }
 
   private drawArcSegments(ctx: CanvasRenderingContext2D, a: SAMRadius) {
-    const outlineColor = "rgba(0, 0, 0, 1)";
-    const lineColorSelf = this.theme.selfColor().toRgbString();
-    const lineColorEnemy = this.theme.enemyColor().toRgbString();
-    const lineColorFriend = this.theme.allyColor().toRgbString();
-    const lineColorStressed = "rgba(255, 128, 0, 1)";
+    const outlineColor = colord("rgba(0, 0, 0, 1)");
+    const interceptOutlineColor = colord("rgba(255, 255, 255, 1)");
+    const lineColorSelf = this.theme.selfColor();
+    const lineColorEnemy = this.theme.enemyColor();
+    const lineColorFriend = this.theme.allyColor();
+    const lineColorStressed = colord("rgba(255, 128, 0, 1)");
     const extraOutlineWidth = 1; // adds onto below
     const lineWidth = 3;
     const lineDash = [12, 6];
@@ -288,8 +290,29 @@ export class SAMRadiusLayer implements Layer {
       ctx.beginPath();
       ctx.arc(a.x + offsetX, a.y + offsetY, a.r, s, e);
 
+      const nukeMode = this.nukeRenderUtilLayer.isNukeGhostActive();
+      // players who are targeted by nuke are stressed
+      const stressed = this.nukeRenderUtilLayer
+        .getAllianceStressedPlayers()
+        .has(a.owner.smallID());
+      // players who will shoot the nuke down are intercepting
+      const intercepting = this.nukeRenderUtilLayer
+        .getInterceptingPlayers()
+        .has(a.owner.smallID());
+
       // Outline
-      ctx.strokeStyle = outlineColor;
+      if (nukeMode) {
+        if (intercepting) {
+          ctx.strokeStyle = interceptOutlineColor.toRgbString();
+        } else if (stressed) {
+          ctx.strokeStyle = outlineColor.toRgbString();
+        } else {
+          ctx.strokeStyle = outlineColor.alpha(0.3).toRgbString();
+        }
+      } else {
+        ctx.strokeStyle = outlineColor.toRgbString();
+      }
+
       ctx.lineWidth = lineWidth + extraOutlineWidth;
       ctx.setLineDash([
         lineDash[0] + extraOutlineWidth,
@@ -299,20 +322,30 @@ export class SAMRadiusLayer implements Layer {
       ctx.stroke();
 
       // Inline
-      if (a.owner.isMe()) {
-        ctx.strokeStyle = lineColorSelf;
-      } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
-        if (
-          this.nukeRenderUtilLayer
-            .getAllianceStressedPlayers()
-            .has(a.owner.smallID())
-        ) {
-          ctx.strokeStyle = lineColorStressed;
+      if (nukeMode) {
+        if (a.owner.isMe()) {
+          ctx.strokeStyle = lineColorSelf.alpha(0.3).toRgbString();
+        } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+          if (stressed) {
+            ctx.strokeStyle = lineColorStressed.toRgbString();
+          } else {
+            ctx.strokeStyle = lineColorFriend.alpha(0.3).toRgbString();
+          }
         } else {
-          ctx.strokeStyle = lineColorFriend;
+          if (intercepting || stressed) {
+            ctx.strokeStyle = lineColorEnemy.toRgbString();
+          } else {
+            ctx.strokeStyle = lineColorEnemy.alpha(0.3).toRgbString();
+          }
         }
       } else {
-        ctx.strokeStyle = lineColorEnemy;
+        if (a.owner.isMe()) {
+          ctx.strokeStyle = lineColorSelf.toRgbString();
+        } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+          ctx.strokeStyle = lineColorFriend.toRgbString();
+        } else {
+          ctx.strokeStyle = lineColorEnemy.toRgbString();
+        }
       }
 
       ctx.lineWidth = lineWidth;
