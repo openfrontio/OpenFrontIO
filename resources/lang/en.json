@@ -171,7 +171,11 @@
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
-    "start": "Start Game"
+    "start": "Start Game",
+    "gold_multiplier": "Gold multiplier",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "Starting gold",
+    "starting_gold_placeholder": "5000000"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -379,7 +383,11 @@
     "teams_Duos": "Duos (teams of 2)",
     "teams_Trios": "Trios (teams of 3)",
     "teams_Quads": "Quads (teams of 4)",
-    "teams_Humans Vs Nations": "Humans vs Nations"
+    "teams_Humans Vs Nations": "Humans vs Nations",
+    "gold_multiplier": "Gold multiplier",
+    "gold_multiplier_placeholder": "2.0x",
+    "starting_gold": "Starting gold",
+    "starting_gold_placeholder": "5000000"
   },
   "team_colors": {
     "red": "Red",
@@ -409,7 +417,8 @@
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
-    "compact_map": "Compact Map"
+    "compact_map": "Compact Map",
+    "starting_gold": "5M Starting Gold"
   },
   "select_lang": {
     "title": "Select Language"
