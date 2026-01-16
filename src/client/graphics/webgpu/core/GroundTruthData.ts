@@ -310,83 +310,43 @@ export class GroundTruthData {
     }
     this.needsTerrainParamsUpload = false;
 
-    // Sample theme colors by finding representative tiles
-    // We'll search for a shore tile, water tile, and compute base terrain colors
-    let shoreColor = { r: 204, g: 203, b: 158, a: 255 }; // Default pastel
-    let waterColor = { r: 70, g: 132, b: 180, a: 255 }; // Default pastel
-    let shorelineWaterColor = { r: 100, g: 143, b: 255, a: 255 }; // Default pastel
+    // Extract theme colors directly from theme object (much faster than sampling tiles)
+    const themeAny = this.theme as any;
+    const isDark = themeAny.darkShore !== undefined;
 
-    // Find a shore tile (land adjacent to water)
-    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-      if (this.game.isShore(i)) {
-        const color = this.theme.terrainColor(this.game, i);
-        shoreColor = color.rgba;
-        break;
-      }
-    }
+    // Get shore color
+    const shore = isDark ? themeAny.darkShore : themeAny.shore;
+    const shoreColor = shore?.rgba ?? { r: 204, g: 203, b: 158, a: 255 };
 
-    // Find a deep water tile (magnitude > 5) and shoreline water
-    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-      if (this.game.isWater(i)) {
-        if (this.game.isShoreline(i)) {
-          const color = this.theme.terrainColor(this.game, i);
-          shorelineWaterColor = color.rgba;
-        } else if (this.game.magnitude(i) > 5) {
-          const color = this.theme.terrainColor(this.game, i);
-          waterColor = color.rgba;
-        }
-        if (waterColor.r !== 70 || shorelineWaterColor.r !== 100) {
-          // Found both, can break
-          if (this.game.isShoreline(i) && this.game.magnitude(i) > 5) {
-            break;
-          }
-        }
-      }
-    }
+    // Get water colors
+    const water = isDark ? themeAny.darkWater : themeAny.water;
+    const waterColor = water?.rgba ?? { r: 70, g: 132, b: 180, a: 255 };
 
-    // Compute terrain base colors by sampling at magnitude 0, 10, 20
-    // Find a plains tile (magnitude < 10, land, not shore)
-    let plainsColor = { r: 190, g: 220, b: 138, a: 255 };
-    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-      if (
-        this.game.isLand(i) &&
-        !this.game.isShore(i) &&
-        this.game.magnitude(i) < 10
-      ) {
-        const color = this.theme.terrainColor(this.game, i);
-        plainsColor = color.rgba;
-        break;
-      }
-    }
+    const shorelineWater = isDark
+      ? themeAny.darkShorelineWater
+      : themeAny.shorelineWater;
+    const shorelineWaterColor = shorelineWater?.rgba ?? {
+      r: 100,
+      g: 143,
+      b: 255,
+      a: 255,
+    };
 
-    // Find a highland tile at magnitude 10 (for accurate formula computation)
-    let highlandColor = { r: 200, g: 183, b: 138, a: 255 };
-    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-      if (
-        this.game.isLand(i) &&
-        !this.game.isShore(i) &&
-        this.game.magnitude(i) === 10
-      ) {
-        const color = this.theme.terrainColor(this.game, i);
-        highlandColor = color.rgba;
-        break;
-      }
-    }
-    // If no mag 10 found, try any highland tile
-    if (highlandColor.r === 200 && highlandColor.g === 183) {
-      for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-        if (
-          this.game.isLand(i) &&
-          !this.game.isShore(i) &&
-          this.game.magnitude(i) >= 10 &&
-          this.game.magnitude(i) < 20
-        ) {
-          const color = this.theme.terrainColor(this.game, i);
-          highlandColor = color.rgba;
-          break;
-        }
-      }
-    }
+    // Compute terrain base colors from formulas (no tile sampling needed)
+    // Plains at mag 0: rgb(190, 220, 138) for pastel, rgb(140, 170, 88) for dark
+    const plainsColor = isDark
+      ? { r: 140, g: 170, b: 88, a: 255 }
+      : { r: 190, g: 220, b: 138, a: 255 };
+
+    // Highland at mag 10: rgb(220, 203, 158) for pastel, rgb(170, 153, 108) for dark
+    const highlandColor = isDark
+      ? { r: 170, g: 153, b: 108, a: 255 }
+      : { r: 220, g: 203, b: 158, a: 255 };
+
+    // Mountain at mag 20: rgb(240, 240, 240) for pastel, rgb(190, 190, 190) for dark
+    const mountainColor = isDark
+      ? { r: 190, g: 190, b: 190, a: 255 }
+      : { r: 240, g: 240, b: 240, a: 255 };
 
     // Store colors as vec4f (RGBA normalized to 0-1)
     // Index 0-3: shore color
@@ -406,34 +366,6 @@ export class GroundTruthData {
     this.terrainParamsData[9] = shorelineWaterColor.g / 255;
     this.terrainParamsData[10] = shorelineWaterColor.b / 255;
     this.terrainParamsData[11] = 1.0;
-
-    // Find a mountain tile at magnitude 20 (for accurate formula computation)
-    let mountainColor = { r: 230, g: 230, b: 230, a: 255 };
-    for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-      if (
-        this.game.isLand(i) &&
-        !this.game.isShore(i) &&
-        this.game.magnitude(i) === 20
-      ) {
-        const color = this.theme.terrainColor(this.game, i);
-        mountainColor = color.rgba;
-        break;
-      }
-    }
-    // If no mag 20 found, try any mountain tile
-    if (mountainColor.r === 230 && mountainColor.g === 230) {
-      for (let i = 0; i < Math.min(1000, this.mapWidth * this.mapHeight); i++) {
-        if (
-          this.game.isLand(i) &&
-          !this.game.isShore(i) &&
-          this.game.magnitude(i) >= 20
-        ) {
-          const color = this.theme.terrainColor(this.game, i);
-          mountainColor = color.rgba;
-          break;
-        }
-      }
-    }
 
     // Index 12-15: plains base color (magnitude 0)
     this.terrainParamsData[12] = plainsColor.r / 255;
