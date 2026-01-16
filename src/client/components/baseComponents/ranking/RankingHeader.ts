@@ -14,7 +14,7 @@ export class RankingHeader extends LitElement {
   render() {
     return html`
       <li
-        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-1.25 rounded-md flex justify-between items-center"
+        class="text-lg border-white/5 bg-white/[0.02] text-white/60 text-xs uppercase tracking-wider relative pt-2 pb-2 pr-5 pl-5 flex justify-between items-center"
       >
         ${this.renderHeaderContent()}
       </li>
@@ -60,9 +60,15 @@ export class RankingHeader extends LitElement {
       case RankType.TrainTrade:
         return html`
           <div class="flex justify-between sm:px-17.5 w-full">
-            ${this.renderMultipleChoiceHeaderButton("🚂", RankType.TrainTrade)}
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.train_trade"),
+              RankType.TrainTrade,
+            )}
             /
-            ${this.renderMultipleChoiceHeaderButton("🚢", RankType.NavalTrade)}
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.naval_trade"),
+              RankType.NavalTrade,
+            )}
           </div>
         `;
       case RankType.ConqueredGold:
@@ -85,7 +91,7 @@ export class RankingHeader extends LitElement {
         @click=${() => this.onSort(type)}
         class="${this.rankType === type
           ? "border-b-2 border-b-white"
-          : nothing} h-[28px]"
+          : nothing}"
       >
         ${label}
       </button>

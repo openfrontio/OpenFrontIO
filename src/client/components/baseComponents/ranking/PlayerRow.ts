@@ -27,15 +27,13 @@ export class PlayerRow extends LitElement {
     const visibleBorder = player.winner || this.currentPlayer;
     return html`
       <li
-        class="${player.winner
-          ? "bg-linear-to-r via-none from-sky-400 to-blue-700"
-          : "bg-slate-700"} border-2
+        class="${player.winner ? "bg-black/20" : "bg-black/20"} border-b-1
           ${player.winner
-          ? "border-yellow-500"
+          ? "border-yellow-500 border-1 box-content"
           : visibleBorder
-            ? "border-yellow-50"
-            : "border-yellow-50/0"}
-          relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 mb-1.25 rounded-lg flex justify-between items-center hover:bg-slate-500 transition duration-150 ease-in-out"
+            ? "border-white/5"
+            : "border-transparent"}
+           relative pt-1 pb-1 pr-2 pl-2 sm:pl-5 sm:pr-5 flex justify-between items-center hover:bg-white/[0.07] transition-colors duration-150 ease-in-out"
       >
         <div
           class="font-bold text-right w-7.5 text-lg text-white absolute -left-10"
@@ -93,7 +91,7 @@ export class PlayerRow extends LitElement {
       </div>
       <div>
         <div
-          class="font-bold rounded-[50%] size-7.5 leading-[1.6rem] border border-gray-200 text-center bg-white text-black"
+          class="font-bold rounded-[50%] size-7.5 leading-[1.6rem] border border-white/10 text-center bg-white/5 text-white/80"
         >
           ${Number(this.score).toFixed(0)}
         </div>
@@ -106,10 +104,10 @@ export class PlayerRow extends LitElement {
     const width = Math.min(Math.max((this.score / bestScore) * 100, 0), 100);
     return html`
       <div class="w-full pr-2.5 m-auto">
-        <div class="h-1.75 bg-neutral-800 w-full">
+        <div class="h-1.75 bg-white/10 w-full">
           <!-- bar background -->
           <div
-            class="h-1.75 bg-white w-(--width)"
+            class="h-1.75 bg-blue-500/50 w-(--width)"
             style="--width: ${width}%;"
           ></div>
         </div>
@@ -121,8 +119,8 @@ export class PlayerRow extends LitElement {
     return html`
       <div
         class="${highlight
-          ? "font-bold text-[18px]"
-          : "leading-[24px]"} min-w-7.5 sm:min-w-15 inline-block text-center"
+          ? "font-bold text-[18px] text-white/80"
+          : "leading-[24px] text-white/40"} min-w-7.5 sm:min-w-15 inline-block text-center"
       >
         ${renderNumber(value)}
       </div>
@@ -157,13 +155,13 @@ export class PlayerRow extends LitElement {
     return html`
       <div class="flex justify-between text-sm align-baseline">
         ${this.renderMultiScoreType(
-          Number(navalTrade),
-          this.rankType === RankType.NavalTrade,
+          Number(ownTrainTrade + otherTrainTrade),
+          this.rankType === RankType.TrainTrade,
         )}
         /
         ${this.renderMultiScoreType(
-          Number(ownTrainTrade + otherTrainTrade),
-          this.rankType === RankType.TrainTrade,
+          Number(navalTrade),
+          this.rankType === RankType.NavalTrade,
         )}
       </div>
     `;
@@ -189,7 +187,7 @@ export class PlayerRow extends LitElement {
 
       <div class="flex gap-2">
         <div
-          class="font-bold rounded-md w-15 shrink-0 text-sm sm:w-25 leading-[1.9rem] text-center"
+          class="font-bold rounded-md w-15 text-white/80 text-sm sm:w-25 leading-[1.9rem] text-center"
         >
           ${renderNumber(this.score)}
         </div>
@@ -200,18 +198,20 @@ export class PlayerRow extends LitElement {
 
   private renderTradeScore() {
     return html`
-      <div class="flex gap-3 items-center">
-        ${this.renderPlayerIcon()}
-        <div class="text-left w-31.25 sm:w-50">${this.renderPlayerName()}</div>
-      </div>
-
-      <div class="flex gap-2 w-50 justify-between items-center">
-        <div
-          class="font-bold rounded-md w-15 shrink-0 text-sm sm:w-25 leading-[1.9rem] text-center"
-        >
-          ${this.renderAllTrades()}
+      <div class="flex flex-col sm:flex-row gap-1 text-left w-full">
+        <div class="flex gap-3 items-center">
+          ${this.renderPlayerIcon()}
+          <div class="text-left w-31.25 sm:w-50">
+            ${this.renderPlayerName()}
+          </div>
         </div>
-        <img src="/images/GoldCoinIcon.svg" class="w-5 size-3.5 sm:size-5" />
+
+        <div class="flex gap-2 justify-between items-center w-full">
+          <div class="rounded-md text-sm leading-[1.9rem] text-center w-full">
+            ${this.renderAllTrades()}
+          </div>
+          <img src="/images/GoldCoinIcon.svg" class="w-5 size-3.5 sm:size-5" />
+        </div>
       </div>
     `;
   }
@@ -221,7 +221,7 @@ export class PlayerRow extends LitElement {
       <div class="flex gap-1 items-center w-50 shrink-0">
         ${this.player.tag ? this.renderTag(this.player.tag) : ""}
         <div
-          class="text-xs sm:text-sm font-bold text-ellipsis w-37.5 shrink-0 overflow-hidden whitespace-nowrap"
+          class="text-xs sm:text-sm font-bold tracking-wide text-white/80 text-ellipsis w-37.5 shrink-0 overflow-hidden whitespace-nowrap"
         >
           ${this.player.username}
         </div>
@@ -232,7 +232,7 @@ export class PlayerRow extends LitElement {
   private renderTag(tag: string) {
     return html`
       <div
-        class="bg-white text-black rounded-lg sm:rounded-xl border border-gray-200 text-xs leading-3 sm:leading-4.5 text-blue-900 h-3.75 px-1 sm:h-5 sm:px-2 font-bold"
+        class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold text-xs tracking-wide group-hover:bg-blue-500/20 transition-colors"
       >
         ${tag}
       </div>
