@@ -958,7 +958,6 @@ export class GameImpl implements Game {
       playerID: id,
     });
   }
-
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
     this._unitMap.set(u.id(), u);
@@ -1097,6 +1096,12 @@ export class GameImpl implements Game {
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
   }
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+  setDefended(ref: TileRef, value: boolean): void {
+    this._map.setDefended(ref, value);
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }
@@ -1154,6 +1159,9 @@ export class GameImpl implements Game {
   }
   updateTile(tile: TileRef, state: number): boolean {
     return this._map.updateTile(tile, state);
+  }
+  tileStateView(): Uint16Array {
+    return this._map.tileStateView();
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
