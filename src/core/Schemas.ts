@@ -205,8 +205,8 @@ export const GameConfigSchema = z.object({
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  goldMultiplier: z.number().min(0.1).max(1000).optional(), // Multiplier for gold income (0.1x to 10x)
-  startingGold: z.number().int().min(0).max(1000000000).optional(), // Starting gold amount
+  goldMultiplier: z.number().min(0.1).max(1000).optional(),
+  startingGold: z.number().int().min(0).max(1000000000).optional(),
 });
 
 export const TeamSchema = z.string();

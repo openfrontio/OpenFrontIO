@@ -851,7 +851,7 @@ export class HostLobbyModal extends BaseModal {
                         !this.startingGoldValue ||
                         this.startingGoldValue < 0
                       ) {
-                        this.startingGoldValue = 1000000;
+                        this.startingGoldValue = 5000000;
                       }
                       setTimeout(() => {
                         const input = this.renderRoot.querySelector(
@@ -894,8 +894,8 @@ export class HostLobbyModal extends BaseModal {
                         type="number"
                         id="starting-gold-value"
                         min="0"
-                        max="10000000"
-                        step="10000"
+                        max="1000000000"
+                        step="100000"
                         .value=${String(this.startingGoldValue ?? "")}
                         class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
                         aria-label=${translateText(
