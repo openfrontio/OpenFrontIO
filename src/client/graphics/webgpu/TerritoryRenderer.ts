@@ -6,6 +6,7 @@ import { ComputePass } from "./compute/ComputePass";
 import { DefendedClearPass } from "./compute/DefendedClearPass";
 import { DefendedUpdatePass } from "./compute/DefendedUpdatePass";
 import { StateUpdatePass } from "./compute/StateUpdatePass";
+import { TerrainComputePass } from "./compute/TerrainComputePass";
 import { GroundTruthData } from "./core/GroundTruthData";
 import { WebGPUDevice } from "./core/WebGPUDevice";
 import { RenderPass } from "./render/RenderPass";
@@ -37,6 +38,7 @@ export class TerritoryRenderer {
   private renderPassOrder: RenderPass[] = [];
 
   // Pass instances
+  private terrainComputePass: TerrainComputePass | null = null;
   private stateUpdatePass: StateUpdatePass | null = null;
   private defendedClearPass: DefendedClearPass | null = null;
   private defendedUpdatePass: DefendedUpdatePass | null = null;
@@ -99,15 +101,18 @@ export class TerritoryRenderer {
       state,
     );
 
-    // Upload initial terrain texture
-    this.resources.uploadTerrain();
+    // Upload terrain data and params (terrain colors will be computed on GPU)
+    this.resources.uploadTerrainData();
+    this.resources.uploadTerrainParams();
 
-    // Create compute passes
+    // Create compute passes (terrain compute should run first)
+    this.terrainComputePass = new TerrainComputePass();
     this.stateUpdatePass = new StateUpdatePass();
     this.defendedClearPass = new DefendedClearPass();
     this.defendedUpdatePass = new DefendedUpdatePass();
 
     this.computePasses = [
+      this.terrainComputePass,
       this.stateUpdatePass,
       this.defendedClearPass,
       this.defendedUpdatePass,
@@ -255,6 +260,50 @@ export class TerritoryRenderer {
     }
   }
 
+  refreshTerrain(): void {
+    if (!this.resources || !this.device) {
+      return;
+    }
+    this.resources.markTerrainParamsDirty();
+    if (this.terrainComputePass) {
+      this.terrainComputePass.markDirty();
+      // Immediately compute terrain to avoid blank rendering
+      this.computeTerrainImmediate();
+    }
+  }
+
+  /**
+   * Immediately execute terrain compute pass (for theme changes).
+   * This ensures terrain is recomputed before the next render.
+   */
+  private computeTerrainImmediate(): void {
+    if (
+      !this.ready ||
+      !this.device ||
+      !this.resources ||
+      !this.terrainComputePass
+    ) {
+      return;
+    }
+
+    // Upload terrain params if needed
+    this.resources.uploadTerrainParams();
+
+    if (!this.terrainComputePass.needsUpdate()) {
+      return;
+    }
+
+    const encoder = this.device.device.createCommandEncoder();
+    this.terrainComputePass.execute(encoder, this.resources);
+    this.device.device.queue.submit([encoder.finish()]);
+
+    // Rebuild render pass bind group to ensure it uses the updated terrain texture
+    // This will be called again in render(), but doing it here ensures it's ready
+    if (this.territoryRenderPass) {
+      (this.territoryRenderPass as any).rebuildBindGroup?.();
+    }
+  }
+
   /**
    * Perform one simulation tick.
    * Runs compute passes to update ground truth data.
@@ -266,6 +315,9 @@ export class TerritoryRenderer {
 
     // Upload palette if needed
     this.resources.uploadPalette();
+
+    // Upload terrain params if needed (theme changed)
+    this.resources.uploadTerrainParams();
 
     // Upload defense posts if needed (tracks if it was dirty before upload)
     const wasDefensePostsDirty = (this.resources as any)
@@ -279,6 +331,9 @@ export class TerritoryRenderer {
     const numUpdates = this.stateUpdatePass
       ? ((this.stateUpdatePass as any).pendingTiles?.size ?? 0)
       : 0;
+    const needsTerrainCompute = this.terrainComputePass
+      ? this.terrainComputePass.needsUpdate()
+      : false;
     const range = this.game.config().defensePostRange();
     const rangeChanged = range !== this.resources.getLastDefenseRange();
     const countChanged =
@@ -295,6 +350,7 @@ export class TerritoryRenderer {
       (hasPosts && numUpdates > 0);
 
     const needsCompute =
+      needsTerrainCompute === true ||
       numUpdates > 0 ||
       shouldRebuildDefended === true ||
       this.needsDefendedHardClear === true;
@@ -366,6 +422,33 @@ export class TerritoryRenderer {
       !this.resources ||
       !this.territoryRenderPass
     ) {
+      return;
+    }
+
+    // Check if terrain needs recomputation (e.g., theme changed)
+    // If so, compute it in the same command buffer before rendering
+    if (this.terrainComputePass?.needsUpdate()) {
+      this.resources.uploadTerrainParams();
+
+      // Use a single encoder to ensure compute completes before render
+      const encoder = this.device.device.createCommandEncoder();
+
+      // Execute terrain compute first
+      this.terrainComputePass.execute(encoder, this.resources);
+
+      // Then execute render passes in the same command buffer
+      // The render pass will rebuild its bind group, which will now use the updated terrain texture
+      const textureView = this.device.context.getCurrentTexture().createView();
+      for (const pass of this.renderPassOrder) {
+        if (!pass.needsUpdate()) {
+          continue;
+        }
+        pass.execute(encoder, this.resources, textureView);
+      }
+
+      // Submit single command buffer with both compute and render
+      // This ensures compute completes before render reads the terrain texture
+      this.device.device.queue.submit([encoder.finish()]);
       return;
     }
 

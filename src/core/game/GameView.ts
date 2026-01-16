@@ -1332,6 +1332,9 @@ export class GameView implements GameMap {
   tileStateView(): Uint16Array {
     return this._map.tileStateView();
   }
+  terrainDataView(): Uint8Array {
+    return this._map.terrainDataView();
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }
