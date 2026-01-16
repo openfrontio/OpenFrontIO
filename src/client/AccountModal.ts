@@ -13,16 +13,16 @@ import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { copyToClipboard, translateText } from "./Utils";
+import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
-  @state() private showCopied: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -45,17 +45,6 @@ export class AccountModal extends BaseModal {
         this.requestUpdate();
       }
     });
-  }
-
-  private async copyIdToClipboard() {
-    const id = this.userMeResponse?.player?.publicId;
-    if (!id) return;
-
-    await copyToClipboard(
-      id,
-      () => (this.showCopied = true),
-      () => (this.showCopied = false),
-    );
   }
 
   private hasAnyStats(): boolean {
@@ -122,16 +111,14 @@ export class AccountModal extends BaseModal {
                     class="text-xs text-blue-400 font-bold uppercase tracking-wider"
                     >ID:</span
                   >
-                  <button
-                    @click=${this.copyIdToClipboard}
-                    class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                    title="${translateText("common.click_to_copy")}"
-                  >
-                    ${this.showCopied
-                      ? translateText("common.copied")
-                      : (this.userMeResponse?.player?.publicId ??
-                        translateText("account_modal.not_found"))}
-                  </button>
+                  <copy-button
+                    .copyText=${this.userMeResponse?.player?.publicId ?? ""}
+                    .displayText=${this.userMeResponse?.player?.publicId ??
+                    translateText("account_modal.not_found")}
+                    .compact=${true}
+                    .showVisibilityToggle=${false}
+                    .showCopyIcon=${false}
+                  ></copy-button>
                 </div>
               `
             : undefined,
