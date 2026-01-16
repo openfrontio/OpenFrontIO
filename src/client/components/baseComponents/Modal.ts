@@ -63,7 +63,7 @@ export class OModal extends LitElement {
   render() {
     const backdropClass = this.inline
       ? "relative z-10 w-full h-full flex items-stretch bg-transparent"
-      : "fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center overflow-hidden";
+      : "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center overflow-hidden";
 
     const wrapperClass = this.inline
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
