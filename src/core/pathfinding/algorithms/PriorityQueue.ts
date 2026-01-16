@@ -18,7 +18,20 @@ export class MinHeap implements PriorityQueue {
 
   push(node: number, priority: number): void {
     if (this.size >= this.capacity) {
-      throw new Error(`MinHeap capacity exceeded: ${this.capacity}`);
+      console.error(
+        `MinHeap capacity exceeded (${this.capacity}). ` +
+          "Resizing, but this indicates a bug. Please investigate.",
+      );
+
+      this.capacity *= 2;
+
+      const newHeap = new Int32Array(this.capacity);
+      const newPri = new Float32Array(this.capacity);
+      newHeap.set(this.heap);
+      newPri.set(this.priorities);
+
+      this.heap = newHeap;
+      this.priorities = newPri;
     }
 
     let i = this.size++;

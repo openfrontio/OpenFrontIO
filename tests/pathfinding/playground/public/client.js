@@ -906,7 +906,8 @@ function updateTransportTimings(result) {
     hpaTilesEl.textContent = "";
   }
 
-  const totalTime = result.debug?.timings?.closestShoreByWater || 0;
+  const totalTime =
+    result.debug?.timings?.["SpatialQuery.closestShoreByWater"] ?? 0;
   if (totalTime > 0) {
     hpaTimeEl.textContent = `${totalTime.toFixed(2)}ms`;
     hpaTimeEl.classList.remove("faded");
