@@ -62,6 +62,7 @@ export class TerritoryLayer implements Layer {
     const currentTheme = this.game.config().theme();
     if (currentTheme !== this.theme) {
       this.theme = currentTheme;
+      this.territoryRenderer?.refreshTerrain();
       this.redraw();
     }
 
@@ -114,6 +115,14 @@ export class TerritoryLayer implements Layer {
   renderLayer(context: CanvasRenderingContext2D) {
     if (!this.territoryRenderer) {
       return;
+    }
+
+    // Check for theme changes in renderLayer too (for when game is paused)
+    const currentTheme = this.game.config().theme();
+    if (currentTheme !== this.theme) {
+      this.theme = currentTheme;
+      this.territoryRenderer.refreshTerrain();
+      this.redraw();
     }
 
     this.ensureTerritoryCanvasAttached(context.canvas);
