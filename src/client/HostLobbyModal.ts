@@ -14,6 +14,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { getCompactMapNationCount } from "../core/game/NationCreation";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -27,7 +28,7 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/LobbyPlayerView";
+import "./components/LobbyTeamView";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -933,16 +934,33 @@ export class HostLobbyModal extends BaseModal {
             </div>
 
             <!-- Player List -->
-            <lobby-player-view
-              .gameMode=${this.gameMode}
-              .clients=${this.clients}
-              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-              .teamCount=${this.teamCount}
-              .nationCount=${this.nationCount}
-              .disableNations=${this.disableNations}
-              .isCompactMap=${this.compactMap}
-              .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-            ></lobby-player-view>
+            <div class="border-t border-white/10 pt-6">
+              <div class="flex justify-between items-center mb-4">
+                <div
+                  class="text-xs font-bold text-white/40 uppercase tracking-widest"
+                >
+                  ${this.clients.length}
+                  ${this.clients.length === 1
+                    ? translateText("host_modal.player")
+                    : translateText("host_modal.players")}
+                  <span style="margin: 0 8px;">•</span>
+                  ${this.getEffectiveNationCount()}
+                  ${this.getEffectiveNationCount() === 1
+                    ? translateText("host_modal.nation_player")
+                    : translateText("host_modal.nation_players")}
+                </div>
+              </div>
+
+              <lobby-team-view
+                class="block rounded-lg border border-white/10 bg-white/5 p-2"
+                .gameMode=${this.gameMode}
+                .clients=${this.clients}
+                .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                .teamCount=${this.teamCount}
+                .nationCount=${this.getEffectiveNationCount()}
+                .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+              ></lobby-team-view>
+            </div>
           </div>
         </div>
 
@@ -1420,21 +1438,30 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async loadNationCount() {
-    const currentMap = this.selectedMap;
     try {
-      const mapData = this.mapLoader.getMapData(currentMap);
+      const mapData = this.mapLoader.getMapData(this.selectedMap);
       const manifest = await mapData.manifest();
-      // Only update if the map hasn't changed
-      if (this.selectedMap === currentMap) {
-        this.nationCount = manifest.nations.length;
-      }
+      this.nationCount = manifest.nations.length;
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      // Only update if the map hasn't changed
-      if (this.selectedMap === currentMap) {
-        this.nationCount = 0;
-      }
+      this.nationCount = 0;
     }
+  }
+
+  /**
+   * Returns the effective nation count for display purposes.
+   * In HumansVsNations mode, this equals the number of human players.
+   * For compact maps, only 25% of nations are used.
+   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
+   */
+  private getEffectiveNationCount(): number {
+    if (this.disableNations) {
+      return 0;
+    }
+    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
+      return this.clients.length;
+    }
+    return getCompactMapNationCount(this.nationCount, this.compactMap);
   }
 }
 
