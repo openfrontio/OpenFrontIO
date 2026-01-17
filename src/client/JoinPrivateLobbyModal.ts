@@ -625,13 +625,20 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.nationCount = 0;
       return;
     }
+    const currentMap = this.gameConfig.gameMap;
     try {
-      const mapData = this.mapLoader.getMapData(this.gameConfig.gameMap);
+      const mapData = this.mapLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
-      this.nationCount = manifest.nations.length;
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      this.nationCount = 0;
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = 0;
+      }
     }
   }
 }

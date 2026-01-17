@@ -1420,13 +1420,20 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async loadNationCount() {
+    const currentMap = this.selectedMap;
     try {
-      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const mapData = this.mapLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
-      this.nationCount = manifest.nations.length;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      this.nationCount = 0;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = 0;
+      }
     }
   }
 }
