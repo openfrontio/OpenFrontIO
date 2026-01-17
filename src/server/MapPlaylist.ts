@@ -127,7 +127,9 @@ export class MapPlaylist {
       publicGameModifiers: { isCompact, isRandomSpawn, startingGold },
       startingGold,
       difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
+        playerTeams === HumansVsNations
+          ? Difficulty.Impossible
+          : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
