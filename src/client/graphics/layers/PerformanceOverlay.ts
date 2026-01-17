@@ -80,9 +80,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   static styles = css`
     .performance-overlay {
       position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: var(--top, 20px);
+      left: var(--left, 50%);
+      transform: var(--transform, translateX(-50%));
       background: rgba(0, 0, 0, 0.8);
       color: white;
       padding: 8px 16px;
@@ -551,10 +551,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="performance-overlay ${this.isDragging
-          ? "dragging"
-          : ""} transform-none left-(--left) top-(--top)"
-        style="--left: ${this.position.x}; --top: ${this.position.y};"
+        class="performance-overlay ${this.isDragging ? "dragging" : ""}"
+        style="--left: ${this.position.x}px; --top: ${this.position
+          .y}px; --transform: none;"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="reset-button" @click="${this.handleReset}">
