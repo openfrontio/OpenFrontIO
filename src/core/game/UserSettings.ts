@@ -200,6 +200,14 @@ export class UserSettings {
     this.setFloat("settings.backgroundMusicVolume", volume);
   }
 
+  attackRatioIncrement(): number {
+    const increment = Math.round(
+      this.getFloat("settings.attackRatioIncrement", 10),
+    );
+    if (!Number.isFinite(increment) || increment <= 0) return 10;
+    return increment;
+  }
+
   soundEffectsVolume(): number {
     return this.getFloat("settings.soundEffectsVolume", 1);
   }

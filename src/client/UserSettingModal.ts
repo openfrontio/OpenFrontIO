@@ -5,6 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+import "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
@@ -361,6 +362,23 @@ export class UserSettingModal extends BaseModal {
     }
   }
 
+  private changeAttackRatioIncrement(
+    e: CustomEvent<{ value: number | string }>,
+  ) {
+    const rawValue = e.detail?.value;
+    const value =
+      typeof rawValue === "number" ? rawValue : parseInt(String(rawValue), 10);
+    if (!Number.isFinite(value)) {
+      console.warn("Select event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setFloat(
+      "settings.attackRatioIncrement",
+      Math.round(value),
+    );
+    this.requestUpdate();
+  }
+
   private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -616,7 +634,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
-        description=${translateText("user_setting.attack_ratio_down_desc")}
+        description=${translateText("user_setting.attack_ratio_down_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyT"
         .value=${this.getKeyValue("attackRatioDown")}
         .display=${this.getKeyChar("attackRatioDown")}
@@ -626,7 +646,9 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
+        description=${translateText("user_setting.attack_ratio_up_desc", {
+          amount: this.userSettings.attackRatioIncrement(),
+        })}
         defaultKey="KeyY"
         .value=${this.getKeyValue("attackRatioUp")}
         .display=${this.getKeyChar("attackRatioUp")}
@@ -895,6 +917,21 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
+      <!-- ⚔️ Attack Ratio Increment -->
+      <setting-select
+        label=${translateText("user_setting.attack_ratio_increment_label")}
+        description=${translateText("user_setting.attack_ratio_increment_desc")}
+        .options=${[
+          { value: 1, label: "1%" },
+          { value: 2, label: "2%" },
+          { value: 5, label: "5%" },
+          { value: 10, label: "10%" },
+          { value: 20, label: "20%" },
+        ]}
+        .value=${String(this.userSettings.attackRatioIncrement())}
+        @change=${this.changeAttackRatioIncrement}
+      ></setting-select>
+
       ${this.showEasterEggSettings
         ? html`
             <setting-slider
@@ -936,6 +973,57 @@ export class UserSettingModal extends BaseModal {
                 }
               }}
             ></setting-number>
+
+            <setting-select
+              label=${translateText(
+                "user_setting.easter_confidence_in_victory_label",
+              )}
+              description=${translateText(
+                "user_setting.easter_confidence_in_victory_desc",
+              )}
+              .options=${[
+                {
+                  value: 1,
+                  label: translateText(
+                    "user_setting.easter_confidence_in_victory.cautious",
+                  ),
+                },
+                {
+                  value: 2,
+                  label: translateText(
+                    "user_setting.easter_confidence_in_victory.careful",
+                  ),
+                },
+                {
+                  value: 3,
+                  label: translateText(
+                    "user_setting.easter_confidence_in_victory.confident",
+                  ),
+                },
+                {
+                  value: 4,
+                  label: translateText(
+                    "user_setting.easter_confidence_in_victory.bold",
+                  ),
+                },
+                {
+                  value: 5,
+                  label: translateText(
+                    "user_setting.easter_confidence_in_victory.overconfident",
+                  ),
+                },
+              ]}
+              .value=${String(3)}
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (value !== undefined) {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-select>
           `
         : null}
     `;
