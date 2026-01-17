@@ -3,8 +3,8 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { createCanvas } from "../../Utils";
 import { ComputePass } from "./compute/ComputePass";
-import { DefendedClearPass } from "./compute/DefendedClearPass";
-import { DefendedUpdatePass } from "./compute/DefendedUpdatePass";
+import { DefendedStrengthFullPass } from "./compute/DefendedStrengthFullPass";
+import { DefendedStrengthPass } from "./compute/DefendedStrengthPass";
 import { StateUpdatePass } from "./compute/StateUpdatePass";
 import { TerrainComputePass } from "./compute/TerrainComputePass";
 import { GroundTruthData } from "./core/GroundTruthData";
@@ -40,13 +40,10 @@ export class TerritoryRenderer {
   // Pass instances
   private terrainComputePass: TerrainComputePass | null = null;
   private stateUpdatePass: StateUpdatePass | null = null;
-  private defendedClearPass: DefendedClearPass | null = null;
-  private defendedUpdatePass: DefendedUpdatePass | null = null;
+  private defendedStrengthFullPass: DefendedStrengthFullPass | null = null;
+  private defendedStrengthPass: DefendedStrengthPass | null = null;
   private territoryRenderPass: TerritoryRenderPass | null = null;
-
-  // State tracking
-  private needsDefendedRebuild = true;
-  private needsDefendedHardClear = true;
+  private readonly defensePostRange: number;
 
   private constructor(
     private readonly game: GameView,
@@ -56,6 +53,7 @@ export class TerritoryRenderer {
     this.canvas.style.pointerEvents = "none";
     this.canvas.width = 1;
     this.canvas.height = 1;
+    this.defensePostRange = game.config().defensePostRange();
   }
 
   static create(game: GameView, theme: Theme): TerritoryWebGLCreateResult {
@@ -108,14 +106,14 @@ export class TerritoryRenderer {
     // Create compute passes (terrain compute should run first)
     this.terrainComputePass = new TerrainComputePass();
     this.stateUpdatePass = new StateUpdatePass();
-    this.defendedClearPass = new DefendedClearPass();
-    this.defendedUpdatePass = new DefendedUpdatePass();
+    this.defendedStrengthFullPass = new DefendedStrengthFullPass();
+    this.defendedStrengthPass = new DefendedStrengthPass();
 
     this.computePasses = [
       this.terrainComputePass,
       this.stateUpdatePass,
-      this.defendedClearPass,
-      this.defendedUpdatePass,
+      this.defendedStrengthFullPass,
+      this.defendedStrengthPass,
     ];
 
     // Create render passes
@@ -236,10 +234,7 @@ export class TerritoryRenderer {
   }
 
   markAllDirty(): void {
-    this.needsDefendedRebuild = true;
-    if (this.defendedUpdatePass) {
-      this.defendedUpdatePass.markDirty();
-    }
+    this.resources?.markDefensePostsDirty();
   }
 
   refreshPalette(): void {
@@ -254,10 +249,6 @@ export class TerritoryRenderer {
       return;
     }
     this.resources.markDefensePostsDirty();
-    this.needsDefendedRebuild = true;
-    if (this.defendedUpdatePass) {
-      this.defendedUpdatePass.markDirty();
-    }
   }
 
   refreshTerrain(): void {
@@ -313,72 +304,30 @@ export class TerritoryRenderer {
       return;
     }
 
+    if (this.game.config().defensePostRange() !== this.defensePostRange) {
+      throw new Error("defensePostRange changed at runtime; unsupported.");
+    }
+
     // Upload palette if needed
     this.resources.uploadPalette();
 
-    // Upload defense posts if needed
+    // Upload defense posts if needed (also produces defended dirty tiles on changes)
     this.resources.uploadDefensePosts();
 
     // Initial state upload
     this.resources.uploadState();
 
-    // Check if we need to run compute passes
-    const hasStateUpdates = this.stateUpdatePass
-      ? this.stateUpdatePass.needsUpdate()
-      : false;
-    const needsTerrainCompute = this.terrainComputePass
-      ? this.terrainComputePass.needsUpdate()
-      : false;
-    const range = this.game.config().defensePostRange();
-    const rangeChanged = range !== this.resources.getLastDefenseRange();
-    const countChanged =
-      this.resources.getDefensePostsCount() !==
-      this.resources.getLastDefensePostsCount();
-    const hasPosts = this.resources.getDefensePostsCount() > 0;
-
-    // Use explicit boolean checks to satisfy linter (|| is correct for boolean OR)
-    const shouldRebuildDefended =
-      this.needsDefendedRebuild === true ||
-      rangeChanged === true ||
-      countChanged === true ||
-      (hasPosts && hasStateUpdates === true);
-
     const needsCompute =
-      needsTerrainCompute === true ||
-      hasStateUpdates === true ||
-      shouldRebuildDefended === true ||
-      this.needsDefendedHardClear === true;
+      (this.terrainComputePass?.needsUpdate() ?? false) ||
+      (this.stateUpdatePass?.needsUpdate() ?? false) ||
+      (this.defendedStrengthFullPass?.needsUpdate() ?? false) ||
+      (this.defendedStrengthPass?.needsUpdate() ?? false);
 
-    // Update defense params even if we early-out
     if (!needsCompute) {
-      this.resources.writeDefenseParamsBuffer();
-      this.resources.setLastDefenseRange(range);
-      this.resources.setLastDefensePostsCount(
-        this.resources.getDefensePostsCount(),
-      );
       return;
     }
 
     const encoder = this.device.device.createCommandEncoder();
-
-    // Handle defended rebuild (before executing passes)
-    if (shouldRebuildDefended) {
-      // Hard-clear defended texture before restamping. This avoids relying on
-      // epoch-stamping for correctness and prevents transient mismatches where
-      // defended rendering disappears between rebuilds.
-      this.needsDefendedHardClear = true;
-
-      if (this.defendedUpdatePass) {
-        this.defendedUpdatePass.markDirty();
-      }
-
-      this.needsDefendedRebuild = false;
-    }
-
-    // Update hard clear flag for DefendedClearPass
-    if (this.defendedClearPass) {
-      this.defendedClearPass.setNeedsHardClear(this.needsDefendedHardClear);
-    }
 
     // Execute compute passes in dependency order (clear will run before update if needed)
     for (const pass of this.computePassOrder) {
@@ -387,18 +336,6 @@ export class TerritoryRenderer {
       }
       pass.execute(encoder, this.resources);
     }
-
-    // After all passes, update defense params and clear flags
-    this.resources.writeDefenseParamsBuffer();
-    if (this.needsDefendedHardClear && this.defendedClearPass) {
-      this.needsDefendedHardClear = false;
-      this.defendedClearPass.setNeedsHardClear(false);
-    }
-
-    this.resources.setLastDefenseRange(range);
-    this.resources.setLastDefensePostsCount(
-      this.resources.getDefensePostsCount(),
-    );
 
     this.device.device.queue.submit([encoder.finish()]);
   }

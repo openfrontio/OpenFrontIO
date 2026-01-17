@@ -16,28 +16,35 @@ function align(value: number, alignment: number): number {
 export class GroundTruthData {
   public static readonly PALETTE_RESERVED_SLOTS = 10;
   public static readonly PALETTE_FALLOUT_INDEX = 0;
+  private static readonly MAX_OWNER_SLOTS = 0x1000; // ownerId is 12 bits
 
   // Textures
   public readonly stateTexture: GPUTexture;
   public readonly terrainTexture: GPUTexture;
   public readonly terrainDataTexture: GPUTexture;
   public readonly paletteTexture: GPUTexture;
-  public readonly defendedTexture: GPUTexture;
+  public readonly defendedStrengthTexture: GPUTexture;
 
   // Buffers
   public readonly uniformBuffer: GPUBuffer;
-  public readonly defenseParamsBuffer: GPUBuffer;
   public readonly terrainParamsBuffer: GPUBuffer;
+  public readonly stateUpdateParamsBuffer: GPUBuffer;
+  public readonly defendedStrengthParamsBuffer: GPUBuffer;
   public updatesBuffer: GPUBuffer | null = null;
-  public defensePostsBuffer: GPUBuffer | null = null;
+  public readonly defenseOwnerOffsetsBuffer: GPUBuffer;
+  public defensePostsByOwnerBuffer: GPUBuffer;
+  public defendedDirtyTilesBuffer: GPUBuffer;
 
   // Staging arrays for buffer uploads
   private updatesStaging: Uint32Array | null = null;
-  private defensePostsStaging: Uint32Array | null = null;
+  private defenseOwnerOffsetsStaging: Uint32Array;
+  private defensePostsByOwnerStaging: Uint32Array | null = null;
+  private defendedDirtyTilesStaging: Uint32Array | null = null;
 
   // Buffer capacities
   private updatesCapacity = 0;
-  private defensePostsCapacity = 0;
+  private defensePostsByOwnerCapacity = 0;
+  private defendedDirtyTilesCapacity = 0;
 
   // State tracking
   private readonly mapWidth: number;
@@ -49,13 +56,19 @@ export class GroundTruthData {
   private needsTerrainDataUpload = true;
   private needsTerrainParamsUpload = true;
   private paletteWidth = 1;
-  private defensePostsCount = 0;
   private needsDefensePostsUpload = true;
+  private defensePostsTotalCount = 0;
+  private defendedDirtyTilesCount = 0;
+  private needsFullDefendedStrengthRecompute = false;
+  private lastDefensePostKeys = new Set<string>();
+  private defenseCircleRange = -1;
+  private defenseCircleOffsets: Int16Array = new Int16Array(0); // [dx0, dy0, dx1, dy1, ...]
 
   // Uniform data arrays
   private readonly uniformData = new Float32Array(12);
-  private readonly defenseParamsData = new Uint32Array(4);
   private readonly terrainParamsData = new Float32Array(24); // 6 vec4f: shore, water, shorelineWater, plainsBase, highlandBase, mountainBase
+  private readonly stateUpdateParamsData = new Uint32Array(4); // updateCount, range, pad, pad
+  private readonly defendedStrengthParamsData = new Uint32Array(4); // dirtyCount, range, pad, pad
 
   // View state (updated by renderer)
   private viewWidth = 1;
@@ -65,11 +78,6 @@ export class GroundTruthData {
   private viewOffsetY = 0;
   private alternativeView = false;
   private highlightedOwnerId = -1;
-
-  // Defense state
-  private defendedEpoch = 1;
-  private lastDefenseRange = -1;
-  private lastDefensePostsCount = -1;
 
   private constructor(
     private readonly device: GPUDevice,
@@ -99,8 +107,14 @@ export class GroundTruthData {
       usage: UNIFORM | COPY_DST_BUF,
     });
 
-    // Defense params: 4x u32 = 16 bytes
-    this.defenseParamsBuffer = device.createBuffer({
+    // State update params: 4x u32 = 16 bytes
+    this.stateUpdateParamsBuffer = device.createBuffer({
+      size: 16,
+      usage: UNIFORM | COPY_DST_BUF,
+    });
+
+    // Defended strength params: 4x u32 = 16 bytes
+    this.defendedStrengthParamsBuffer = device.createBuffer({
       size: 16,
       usage: UNIFORM | COPY_DST_BUF,
     });
@@ -118,10 +132,10 @@ export class GroundTruthData {
       usage: COPY_DST_TEX | TEXTURE_BINDING | STORAGE_BINDING,
     });
 
-    // Defended texture (r32uint)
-    this.defendedTexture = device.createTexture({
+    // Defended strength texture (rgba8unorm, r channel used)
+    this.defendedStrengthTexture = device.createTexture({
       size: { width: mapWidth, height: mapHeight },
-      format: "r32uint",
+      format: "rgba8unorm",
       usage: TEXTURE_BINDING | STORAGE_BINDING,
     });
 
@@ -144,6 +158,28 @@ export class GroundTruthData {
       size: { width: mapWidth, height: mapHeight },
       format: "r8uint",
       usage: COPY_DST_TEX | TEXTURE_BINDING,
+    });
+
+    const STORAGE = GPUBufferUsage?.STORAGE ?? 0x10;
+
+    // Defense posts data: ownerOffsets[ownerId] = {start, count}, postsByOwner[start..] = {x,y}
+    this.defenseOwnerOffsetsBuffer = device.createBuffer({
+      size: GroundTruthData.MAX_OWNER_SLOTS * 8,
+      usage: STORAGE | COPY_DST_BUF,
+    });
+    this.defenseOwnerOffsetsStaging = new Uint32Array(
+      GroundTruthData.MAX_OWNER_SLOTS * 2,
+    );
+
+    this.defensePostsByOwnerBuffer = device.createBuffer({
+      size: 8,
+      usage: STORAGE | COPY_DST_BUF,
+    });
+
+    // Dirty tile indices to recompute defended strength when posts change
+    this.defendedDirtyTilesBuffer = device.createBuffer({
+      size: 4 * 8,
+      usage: STORAGE | COPY_DST_BUF,
     });
   }
 
@@ -471,30 +507,83 @@ export class GroundTruthData {
     }
     this.needsDefensePostsUpload = false;
 
+    const range = this.game.config().defensePostRange();
     const posts = this.collectDefensePosts();
-    this.defensePostsCount = posts.length;
+    this.defensePostsTotalCount = posts.length;
 
-    if (this.defensePostsCount > 0) {
-      this.ensureDefensePostsBuffer(this.defensePostsCount);
+    // Diff posts to produce dirty tiles for recompute (include removed + added).
+    const nextKeys = new Set<string>();
+    for (const p of posts) {
+      nextKeys.add(`${p.ownerId},${p.x},${p.y}`);
     }
 
-    if (
-      this.defensePostsCount > 0 &&
-      this.defensePostsStaging &&
-      this.defensePostsBuffer
-    ) {
-      for (let i = 0; i < this.defensePostsCount; i++) {
-        const p = posts[i];
-        this.defensePostsStaging[i * 3] = p.x >>> 0;
-        this.defensePostsStaging[i * 3 + 1] = p.y >>> 0;
-        this.defensePostsStaging[i * 3 + 2] = p.ownerId >>> 0;
+    const changedPosts: Array<{ x: number; y: number }> = [];
+    for (const key of this.lastDefensePostKeys) {
+      if (!nextKeys.has(key)) {
+        const [ownerStr, xStr, yStr] = key.split(",");
+        void ownerStr;
+        changedPosts.push({ x: Number(xStr), y: Number(yStr) });
       }
-      this.device.queue.writeBuffer(
-        this.defensePostsBuffer,
-        0,
-        this.defensePostsStaging.subarray(0, this.defensePostsCount * 3),
-      );
     }
+    for (const key of nextKeys) {
+      if (!this.lastDefensePostKeys.has(key)) {
+        const [ownerStr, xStr, yStr] = key.split(",");
+        void ownerStr;
+        changedPosts.push({ x: Number(xStr), y: Number(yStr) });
+      }
+    }
+    this.lastDefensePostKeys = nextKeys;
+
+    // Pack posts by owner into GPU buffers.
+    this.packDefensePostsByOwner(posts);
+
+    // Build dirty tiles around changed posts (so removals clear too).
+    this.buildDefendedDirtyTiles(changedPosts, range);
+  }
+
+  getDefensePostsTotalCount(): number {
+    return this.defensePostsTotalCount;
+  }
+
+  getDefendedDirtyTilesCount(): number {
+    return this.defendedDirtyTilesCount;
+  }
+
+  needsDefendedFullRecompute(): boolean {
+    return this.needsFullDefendedStrengthRecompute;
+  }
+
+  clearDefendedFullRecompute(): void {
+    this.needsFullDefendedStrengthRecompute = false;
+  }
+
+  clearDefendedDirtyTiles(): void {
+    this.defendedDirtyTilesCount = 0;
+  }
+
+  writeStateUpdateParamsBuffer(updateCount: number): void {
+    this.stateUpdateParamsData[0] = updateCount >>> 0;
+    this.stateUpdateParamsData[1] = this.game.config().defensePostRange() >>> 0;
+    this.stateUpdateParamsData[2] = 0;
+    this.stateUpdateParamsData[3] = 0;
+    this.device.queue.writeBuffer(
+      this.stateUpdateParamsBuffer,
+      0,
+      this.stateUpdateParamsData,
+    );
+  }
+
+  writeDefendedStrengthParamsBuffer(dirtyCount: number): void {
+    this.defendedStrengthParamsData[0] = dirtyCount >>> 0;
+    this.defendedStrengthParamsData[1] =
+      this.game.config().defensePostRange() >>> 0;
+    this.defendedStrengthParamsData[2] = 0;
+    this.defendedStrengthParamsData[3] = 0;
+    this.device.queue.writeBuffer(
+      this.defendedStrengthParamsBuffer,
+      0,
+      this.defendedStrengthParamsData,
+    );
   }
 
   private collectDefensePosts(): Array<{
@@ -518,8 +607,11 @@ export class GroundTruthData {
     return posts;
   }
 
-  private ensureDefensePostsBuffer(capacity: number): void {
-    if (this.defensePostsBuffer && capacity <= this.defensePostsCapacity) {
+  private ensureDefensePostsByOwnerBuffer(capacityPosts: number): void {
+    if (
+      this.defensePostsByOwnerBuffer &&
+      capacityPosts <= this.defensePostsByOwnerCapacity
+    ) {
       return;
     }
 
@@ -527,24 +619,182 @@ export class GroundTruthData {
     const STORAGE = GPUBufferUsage?.STORAGE ?? 0x10;
     const COPY_DST_BUF = GPUBufferUsage?.COPY_DST ?? 0x8;
 
-    this.defensePostsCapacity = Math.max(
+    this.defensePostsByOwnerCapacity = Math.max(
       8,
-      Math.pow(2, Math.ceil(Math.log2(Math.max(1, capacity)))),
+      Math.pow(2, Math.ceil(Math.log2(Math.max(1, capacityPosts)))),
     );
 
-    const bytesPerPost = 12; // 3 * u32
-    const bufferSize = this.defensePostsCapacity * bytesPerPost;
+    const bytesPerPost = 8; // 2 * u32 (x,y)
+    const bufferSize = this.defensePostsByOwnerCapacity * bytesPerPost;
 
-    if (this.defensePostsBuffer) {
-      (this.defensePostsBuffer as any).destroy?.();
-    }
-
-    (this as any).defensePostsBuffer = this.device.createBuffer({
+    (this.defensePostsByOwnerBuffer as any).destroy?.();
+    this.defensePostsByOwnerBuffer = this.device.createBuffer({
       size: bufferSize,
       usage: STORAGE | COPY_DST_BUF,
     });
 
-    this.defensePostsStaging = new Uint32Array(this.defensePostsCapacity * 3);
+    this.defensePostsByOwnerStaging = new Uint32Array(
+      this.defensePostsByOwnerCapacity * 2,
+    );
+  }
+
+  private ensureDefendedDirtyTilesBuffer(capacityTiles: number): void {
+    if (
+      this.defendedDirtyTilesBuffer &&
+      capacityTiles <= this.defendedDirtyTilesCapacity
+    ) {
+      return;
+    }
+
+    const GPUBufferUsage = (globalThis as any).GPUBufferUsage;
+    const STORAGE = GPUBufferUsage?.STORAGE ?? 0x10;
+    const COPY_DST_BUF = GPUBufferUsage?.COPY_DST ?? 0x8;
+
+    this.defendedDirtyTilesCapacity = Math.max(
+      256,
+      Math.pow(2, Math.ceil(Math.log2(Math.max(1, capacityTiles)))),
+    );
+
+    const bufferSize = this.defendedDirtyTilesCapacity * 4; // u32 per tile
+
+    (this.defendedDirtyTilesBuffer as any).destroy?.();
+    this.defendedDirtyTilesBuffer = this.device.createBuffer({
+      size: bufferSize,
+      usage: STORAGE | COPY_DST_BUF,
+    });
+
+    this.defendedDirtyTilesStaging = new Uint32Array(
+      this.defendedDirtyTilesCapacity,
+    );
+  }
+
+  private packDefensePostsByOwner(
+    posts: Array<{ x: number; y: number; ownerId: number }>,
+  ): void {
+    // Reset counts
+    this.defenseOwnerOffsetsStaging.fill(0);
+    const counts = new Uint32Array(GroundTruthData.MAX_OWNER_SLOTS);
+    for (const p of posts) {
+      const owner = p.ownerId >>> 0;
+      if (owner === 0 || owner >= GroundTruthData.MAX_OWNER_SLOTS) continue;
+      counts[owner]++;
+    }
+
+    // Prefix sums into offsets (start,count) pairs.
+    let running = 0;
+    for (let owner = 0; owner < GroundTruthData.MAX_OWNER_SLOTS; owner++) {
+      const count = counts[owner];
+      this.defenseOwnerOffsetsStaging[owner * 2] = running;
+      this.defenseOwnerOffsetsStaging[owner * 2 + 1] = count;
+      running += count;
+    }
+
+    this.ensureDefensePostsByOwnerBuffer(running);
+    if (!this.defensePostsByOwnerStaging) {
+      throw new Error("defensePostsByOwnerStaging not allocated");
+    }
+
+    const writeCursor = new Uint32Array(GroundTruthData.MAX_OWNER_SLOTS);
+    for (let owner = 0; owner < GroundTruthData.MAX_OWNER_SLOTS; owner++) {
+      writeCursor[owner] = this.defenseOwnerOffsetsStaging[owner * 2];
+    }
+
+    for (const p of posts) {
+      const owner = p.ownerId >>> 0;
+      if (owner === 0 || owner >= GroundTruthData.MAX_OWNER_SLOTS) continue;
+      const idx = writeCursor[owner]++;
+      this.defensePostsByOwnerStaging[idx * 2] = p.x >>> 0;
+      this.defensePostsByOwnerStaging[idx * 2 + 1] = p.y >>> 0;
+    }
+
+    this.device.queue.writeBuffer(
+      this.defenseOwnerOffsetsBuffer,
+      0,
+      this.defenseOwnerOffsetsStaging,
+    );
+    if (running > 0) {
+      this.device.queue.writeBuffer(
+        this.defensePostsByOwnerBuffer,
+        0,
+        this.defensePostsByOwnerStaging.subarray(0, running * 2),
+      );
+    }
+  }
+
+  private ensureDefenseCircleOffsets(range: number): void {
+    if (range === this.defenseCircleRange) {
+      return;
+    }
+    this.defenseCircleRange = range;
+    if (range <= 0) {
+      this.defenseCircleOffsets = new Int16Array(0);
+      return;
+    }
+
+    const offsets: number[] = [];
+    const r2 = range * range;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        if (dx * dx + dy * dy <= r2) {
+          offsets.push(dx, dy);
+        }
+      }
+    }
+    this.defenseCircleOffsets = new Int16Array(offsets);
+  }
+
+  private buildDefendedDirtyTiles(
+    changedPosts: Array<{ x: number; y: number }>,
+    range: number,
+  ): void {
+    if (changedPosts.length === 0) {
+      this.defendedDirtyTilesCount = 0;
+      this.needsFullDefendedStrengthRecompute = false;
+      return;
+    }
+
+    this.ensureDefenseCircleOffsets(range);
+    const offsets = this.defenseCircleOffsets;
+    const offsetsCount = offsets.length / 2;
+    if (offsetsCount === 0) {
+      this.defendedDirtyTilesCount = 0;
+      this.needsFullDefendedStrengthRecompute = false;
+      return;
+    }
+
+    const worstCase = changedPosts.length * offsetsCount;
+    const mapTiles = this.mapWidth * this.mapHeight;
+    if (worstCase > mapTiles) {
+      this.defendedDirtyTilesCount = 0;
+      this.needsFullDefendedStrengthRecompute = true;
+      return;
+    }
+
+    this.needsFullDefendedStrengthRecompute = false;
+    this.ensureDefendedDirtyTilesBuffer(worstCase);
+    if (!this.defendedDirtyTilesStaging) {
+      throw new Error("defendedDirtyTilesStaging not allocated");
+    }
+
+    let cursor = 0;
+    for (const post of changedPosts) {
+      for (let i = 0; i < offsets.length; i += 2) {
+        const x = post.x + offsets[i];
+        const y = post.y + offsets[i + 1];
+        if (x < 0 || y < 0 || x >= this.mapWidth || y >= this.mapHeight) {
+          continue;
+        }
+        this.defendedDirtyTilesStaging[cursor++] =
+          (y * this.mapWidth + x) >>> 0;
+      }
+    }
+
+    this.defendedDirtyTilesCount = cursor;
+    this.device.queue.writeBuffer(
+      this.defendedDirtyTilesBuffer,
+      0,
+      this.defendedDirtyTilesStaging.subarray(0, cursor),
+    );
   }
 
   ensureUpdatesBuffer(capacity: number): GPUBuffer {
@@ -566,13 +816,14 @@ export class GroundTruthData {
       (this.updatesBuffer as any).destroy?.();
     }
 
-    (this as any).updatesBuffer = this.device.createBuffer({
+    const buffer = this.device.createBuffer({
       size: bufferSize,
       usage: STORAGE | COPY_DST_BUF,
     });
+    (this as any).updatesBuffer = buffer;
 
     this.updatesStaging = new Uint32Array(this.updatesCapacity * 2);
-    return this.updatesBuffer;
+    return buffer;
   }
 
   getUpdatesStaging(): Uint32Array {
@@ -601,53 +852,9 @@ export class GroundTruthData {
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
   }
 
-  writeDefenseParamsBuffer(): void {
-    const range = this.game.config().defensePostRange() >>> 0;
-    this.defenseParamsData[0] = range;
-    this.defenseParamsData[1] = this.defensePostsCount >>> 0;
-    this.defenseParamsData[2] = this.defendedEpoch >>> 0;
-    this.defenseParamsData[3] = 0;
-    this.device.queue.writeBuffer(
-      this.defenseParamsBuffer,
-      0,
-      this.defenseParamsData,
-    );
-  }
-
   // =====================
   // State getters/setters
   // =====================
-
-  getDefendedEpoch(): number {
-    return this.defendedEpoch;
-  }
-
-  incrementDefendedEpoch(): void {
-    this.defendedEpoch = (this.defendedEpoch + 1) >>> 0;
-    if (this.defendedEpoch === 0) {
-      this.defendedEpoch = 1;
-    }
-  }
-
-  getDefensePostsCount(): number {
-    return this.defensePostsCount;
-  }
-
-  getLastDefenseRange(): number {
-    return this.lastDefenseRange;
-  }
-
-  setLastDefenseRange(range: number): void {
-    this.lastDefenseRange = range;
-  }
-
-  getLastDefensePostsCount(): number {
-    return this.lastDefensePostsCount;
-  }
-
-  setLastDefensePostsCount(count: number): void {
-    this.lastDefensePostsCount = count;
-  }
 
   markPaletteDirty(): void {
     this.needsPaletteUpload = true;
