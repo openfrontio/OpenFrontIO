@@ -10,8 +10,7 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
-import { getCompactMapNationCount } from "../core/game/NationCreation";
+import { GameMapSize, GameMode } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
@@ -184,32 +183,17 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ${this.renderGameConfig()}
           ${this.hasJoined && this.players.length > 0
             ? html`
-                <div class="mt-6 border-t border-white/10 pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                    >
-                      ${this.players.length}
-                      ${this.players.length === 1
-                        ? translateText("private_lobby.player")
-                        : translateText("private_lobby.players")}
-                      <span style="margin: 0 8px;">•</span>
-                      ${this.getEffectiveNationCount()}
-                      ${this.getEffectiveNationCount() === 1
-                        ? translateText("host_modal.nation_player")
-                        : translateText("host_modal.nation_players")}
-                    </div>
-                  </div>
-
-                  <lobby-team-view
-                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                    .clients=${this.players}
-                    .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                    .nationCount=${this.getEffectiveNationCount()}
-                  ></lobby-team-view>
-                </div>
+                <lobby-team-view
+                  class="mt-6"
+                  .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                  .clients=${this.players}
+                  .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                  .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                  .nationCount=${this.nationCount}
+                  .disableNations=${this.gameConfig?.disableNations ?? false}
+                  .isCompactMap=${this.gameConfig?.gameMapSize ===
+                  GameMapSize.Compact}
+                ></lobby-team-view>
               `
             : ""}
         </div>
@@ -649,25 +633,5 @@ export class JoinPrivateLobbyModal extends BaseModal {
       console.warn("Failed to load nation count", error);
       this.nationCount = 0;
     }
-  }
-
-  /**
-   * Returns the effective nation count for display purposes.
-   * In HumansVsNations mode, this equals the number of human players.
-   * For compact maps, only 25% of nations are used.
-   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
-   */
-  private getEffectiveNationCount(): number {
-    if (!this.gameConfig || this.gameConfig.disableNations) {
-      return 0;
-    }
-    if (
-      this.gameConfig.gameMode === GameMode.Team &&
-      this.gameConfig.playerTeams === HumansVsNations
-    ) {
-      return this.players.length;
-    }
-    const isCompactMap = this.gameConfig.gameMapSize === GameMapSize.Compact;
-    return getCompactMapNationCount(this.nationCount, isCompactMap);
   }
 }
