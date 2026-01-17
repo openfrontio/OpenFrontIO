@@ -1,18 +1,13 @@
-struct Update {
-  tileIndex: u32,
-  newState: u32,
-};
-
 struct Params {
-  updateCount: u32,
+  dirtyCount: u32,
   range: u32,
   _pad0: u32,
   _pad1: u32,
 };
 
 @group(0) @binding(0) var<uniform> p: Params;
-@group(0) @binding(1) var<storage, read> updates: array<Update>;
-@group(0) @binding(2) var stateTex: texture_storage_2d<r32uint, write>;
+@group(0) @binding(1) var<storage, read> dirtyTiles: array<u32>;
+@group(0) @binding(2) var stateTex: texture_2d<u32>;
 @group(0) @binding(3) var defendedStrengthTex: texture_storage_2d<rgba8unorm, write>;
 @group(0) @binding(4) var<storage, read> ownerOffsets: array<vec2u>;
 @group(0) @binding(5) var<storage, read> postsByOwner: array<vec2u>;
@@ -20,18 +15,18 @@ struct Params {
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let idx = globalId.x;
-  if (idx >= p.updateCount) {
+  if (idx >= p.dirtyCount) {
     return;
   }
-  let update = updates[idx];
+
+  let tileIndex = dirtyTiles[idx];
   let dims = textureDimensions(stateTex);
   let mapWidth = dims.x;
-  let x = i32(update.tileIndex % mapWidth);
-  let y = i32(update.tileIndex / mapWidth);
-  textureStore(stateTex, vec2i(x, y), vec4u(update.newState, 0u, 0u, 0u));
+  let x = i32(tileIndex % mapWidth);
+  let y = i32(tileIndex / mapWidth);
 
-  // Update defended strength for this tile based on the new owner.
-  let owner = update.newState & 0xFFFu;
+  let state = textureLoad(stateTex, vec2i(x, y), 0).x;
+  let owner = state & 0xFFFu;
   let range = i32(p.range);
   if (owner == 0u || range <= 0) {
     textureStore(defendedStrengthTex, vec2i(x, y), vec4f(0.0, 0.0, 0.0, 1.0));
@@ -71,3 +66,4 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let strength = clamp(1.0 - (dist / rx), 0.0, 1.0);
   textureStore(defendedStrengthTex, vec2i(x, y), vec4f(strength, 0.0, 0.0, 1.0));
 }
+

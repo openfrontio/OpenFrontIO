@@ -3,26 +3,26 @@ import { loadShader } from "../core/ShaderLoader";
 import { ComputePass } from "./ComputePass";
 
 /**
- * Compute pass that scatters tile state updates into the state texture.
+ * Recomputes defended strength for a list of dirty tiles.
+ * Dirty tiles are produced when defense posts are added/removed/moved.
  */
-export class StateUpdatePass implements ComputePass {
-  name = "state-update";
-  dependencies: string[] = [];
+export class DefendedStrengthPass implements ComputePass {
+  name = "defended-strength";
+  dependencies: string[] = ["state-update"];
 
   private pipeline: GPUComputePipeline | null = null;
   private bindGroupLayout: GPUBindGroupLayout | null = null;
   private bindGroup: GPUBindGroup | null = null;
   private device: GPUDevice | null = null;
   private resources: GroundTruthData | null = null;
-  private readonly pendingTiles: Set<number> = new Set();
-  private boundUpdatesBuffer: GPUBuffer | null = null;
+  private boundDirtyTilesBuffer: GPUBuffer | null = null;
   private boundPostsByOwnerBuffer: GPUBuffer | null = null;
 
   async init(device: GPUDevice, resources: GroundTruthData): Promise<void> {
     this.device = device;
     this.resources = resources;
 
-    const shaderCode = await loadShader("compute/state-update.wgsl");
+    const shaderCode = await loadShader("compute/defended-strength.wgsl");
     const shaderModule = device.createShaderModule({ code: shaderCode });
 
     this.bindGroupLayout = device.createBindGroupLayout({
@@ -40,7 +40,7 @@ export class StateUpdatePass implements ComputePass {
         {
           binding: 2,
           visibility: 4 /* COMPUTE */,
-          storageTexture: { format: "r32uint" },
+          texture: { sampleType: "uint" },
         },
         {
           binding: 3,
@@ -69,12 +69,10 @@ export class StateUpdatePass implements ComputePass {
         entryPoint: "main",
       },
     });
-
-    this.rebuildBindGroup();
   }
 
   needsUpdate(): boolean {
-    return this.pendingTiles.size > 0;
+    return (this.resources?.getDefendedDirtyTilesCount() ?? 0) > 0;
   }
 
   execute(encoder: GPUCommandEncoder, resources: GroundTruthData): void {
@@ -82,37 +80,18 @@ export class StateUpdatePass implements ComputePass {
       return;
     }
 
-    const numUpdates = this.pendingTiles.size;
-    if (numUpdates === 0) {
+    const dirtyCount = resources.getDefendedDirtyTilesCount();
+    if (dirtyCount === 0) {
       return;
     }
 
-    const updatesBuffer = resources.ensureUpdatesBuffer(numUpdates);
-    resources.writeStateUpdateParamsBuffer(numUpdates);
+    resources.writeDefendedStrengthParamsBuffer(dirtyCount);
 
-    const staging = resources.getUpdatesStaging();
-    const state = resources.getState();
-
-    // Prepare staging data
-    let idx = 0;
-    for (const tile of this.pendingTiles) {
-      const stateValue = state[tile];
-      staging[idx * 2] = tile;
-      staging[idx * 2 + 1] = stateValue;
-      idx++;
-    }
-
-    // Upload to GPU
-    this.device.queue.writeBuffer(
-      updatesBuffer,
-      0,
-      staging.subarray(0, numUpdates * 2),
-    );
-
+    const dirtyTilesBuffer = resources.defendedDirtyTilesBuffer;
     const postsByOwnerBuffer = resources.defensePostsByOwnerBuffer;
     const shouldRebuildBindGroup =
       !this.bindGroup ||
-      this.boundUpdatesBuffer !== updatesBuffer ||
+      this.boundDirtyTilesBuffer !== dirtyTilesBuffer ||
       this.boundPostsByOwnerBuffer !== postsByOwnerBuffer;
 
     if (shouldRebuildBindGroup) {
@@ -126,11 +105,11 @@ export class StateUpdatePass implements ComputePass {
     const pass = encoder.beginComputePass();
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
-    const workgroupCount = Math.ceil(numUpdates / 64);
+    const workgroupCount = Math.ceil(dirtyCount / 64);
     pass.dispatchWorkgroups(workgroupCount);
     pass.end();
 
-    this.pendingTiles.clear();
+    resources.clearDefendedDirtyTiles();
   }
 
   private rebuildBindGroup(): void {
@@ -138,8 +117,8 @@ export class StateUpdatePass implements ComputePass {
       !this.device ||
       !this.bindGroupLayout ||
       !this.resources ||
-      !this.resources.stateUpdateParamsBuffer ||
-      !this.resources.updatesBuffer ||
+      !this.resources.defendedStrengthParamsBuffer ||
+      !this.resources.defendedDirtyTilesBuffer ||
       !this.resources.stateTexture ||
       !this.resources.defendedStrengthTexture ||
       !this.resources.defenseOwnerOffsetsBuffer ||
@@ -154,9 +133,12 @@ export class StateUpdatePass implements ComputePass {
       entries: [
         {
           binding: 0,
-          resource: { buffer: this.resources.stateUpdateParamsBuffer },
+          resource: { buffer: this.resources.defendedStrengthParamsBuffer },
         },
-        { binding: 1, resource: { buffer: this.resources.updatesBuffer } },
+        {
+          binding: 1,
+          resource: { buffer: this.resources.defendedDirtyTilesBuffer },
+        },
         {
           binding: 2,
           resource: this.resources.stateTexture.createView(),
@@ -176,16 +158,11 @@ export class StateUpdatePass implements ComputePass {
       ],
     });
 
-    this.boundUpdatesBuffer = this.resources.updatesBuffer;
+    this.boundDirtyTilesBuffer = this.resources.defendedDirtyTilesBuffer;
     this.boundPostsByOwnerBuffer = this.resources.defensePostsByOwnerBuffer;
   }
 
-  markTile(tile: number): void {
-    this.pendingTiles.add(tile);
-  }
-
   dispose(): void {
-    // Resources are managed by GroundTruthData
     this.pipeline = null;
     this.bindGroupLayout = null;
     this.bindGroup = null;

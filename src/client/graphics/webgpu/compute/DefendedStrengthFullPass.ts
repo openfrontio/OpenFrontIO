@@ -3,10 +3,11 @@ import { loadShader } from "../core/ShaderLoader";
 import { ComputePass } from "./ComputePass";
 
 /**
- * Compute pass that updates the defended texture from defense posts.
+ * Full defended strength recompute across the entire map.
+ * Used on initial upload or when post diffs are too large for a tile list.
  */
-export class DefendedUpdatePass implements ComputePass {
-  name = "defended-update";
+export class DefendedStrengthFullPass implements ComputePass {
+  name = "defended-strength-full";
   dependencies: string[] = ["state-update"];
 
   private pipeline: GPUComputePipeline | null = null;
@@ -14,13 +15,13 @@ export class DefendedUpdatePass implements ComputePass {
   private bindGroup: GPUBindGroup | null = null;
   private device: GPUDevice | null = null;
   private resources: GroundTruthData | null = null;
-  private needsRebuild = true;
+  private boundPostsByOwnerBuffer: GPUBuffer | null = null;
 
   async init(device: GPUDevice, resources: GroundTruthData): Promise<void> {
     this.device = device;
     this.resources = resources;
 
-    const shaderCode = await loadShader("compute/defended-update.wgsl");
+    const shaderCode = await loadShader("compute/defended-strength-full.wgsl");
     const shaderModule = device.createShaderModule({ code: shaderCode });
 
     this.bindGroupLayout = device.createBindGroupLayout({
@@ -33,17 +34,22 @@ export class DefendedUpdatePass implements ComputePass {
         {
           binding: 1,
           visibility: 4 /* COMPUTE */,
-          buffer: { type: "read-only-storage" },
+          texture: { sampleType: "uint" },
         },
         {
           binding: 2,
           visibility: 4 /* COMPUTE */,
-          texture: { sampleType: "uint" },
+          storageTexture: { format: "rgba8unorm" },
         },
         {
           binding: 3,
           visibility: 4 /* COMPUTE */,
-          storageTexture: { format: "r32uint" },
+          buffer: { type: "read-only-storage" },
+        },
+        {
+          binding: 4,
+          visibility: 4 /* COMPUTE */,
+          buffer: { type: "read-only-storage" },
         },
       ],
     });
@@ -60,12 +66,7 @@ export class DefendedUpdatePass implements ComputePass {
   }
 
   needsUpdate(): boolean {
-    if (!this.resources || !this.needsRebuild) {
-      return false;
-    }
-
-    // Only run if we have defense posts
-    return this.resources.getDefensePostsCount() > 0;
+    return this.resources?.needsDefendedFullRecompute() ?? false;
   }
 
   execute(encoder: GPUCommandEncoder, resources: GroundTruthData): void {
@@ -73,38 +74,35 @@ export class DefendedUpdatePass implements ComputePass {
       return;
     }
 
-    const range = resources.getGame().config().defensePostRange();
-    const postsCount = resources.getDefensePostsCount();
-
-    if (postsCount === 0) {
-      this.needsRebuild = false;
+    if (!resources.needsDefendedFullRecompute()) {
       return;
     }
 
-    // Epoch is incremented by orchestrator before this pass runs
-    resources.writeDefenseParamsBuffer();
+    resources.writeDefendedStrengthParamsBuffer(0);
 
-    const oldBuffer = this.resources?.defensePostsBuffer;
-    const bufferChanged = oldBuffer !== resources.defensePostsBuffer;
-
-    if (bufferChanged || !this.bindGroup) {
+    const postsByOwnerBuffer = resources.defensePostsByOwnerBuffer;
+    if (
+      !this.bindGroup ||
+      this.boundPostsByOwnerBuffer !== postsByOwnerBuffer
+    ) {
       this.rebuildBindGroup();
     }
-
     if (!this.bindGroup) {
       return;
     }
 
-    const gridSize = 2 * range + 1;
-    const workgroupCount = Math.ceil(gridSize / 8);
+    const mapWidth = resources.getMapWidth();
+    const mapHeight = resources.getMapHeight();
+    const workgroupCountX = Math.ceil(mapWidth / 8);
+    const workgroupCountY = Math.ceil(mapHeight / 8);
 
     const pass = encoder.beginComputePass();
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
-    pass.dispatchWorkgroups(workgroupCount, workgroupCount, postsCount);
+    pass.dispatchWorkgroups(workgroupCountX, workgroupCountY);
     pass.end();
 
-    this.needsRebuild = false;
+    resources.clearDefendedFullRecompute();
   }
 
   private rebuildBindGroup(): void {
@@ -112,11 +110,11 @@ export class DefendedUpdatePass implements ComputePass {
       !this.device ||
       !this.bindGroupLayout ||
       !this.resources ||
-      !this.resources.defenseParamsBuffer ||
-      !this.resources.defensePostsBuffer ||
+      !this.resources.defendedStrengthParamsBuffer ||
       !this.resources.stateTexture ||
-      !this.resources.defendedTexture ||
-      this.resources.getDefensePostsCount() <= 0
+      !this.resources.defendedStrengthTexture ||
+      !this.resources.defenseOwnerOffsetsBuffer ||
+      !this.resources.defensePostsByOwnerBuffer
     ) {
       this.bindGroup = null;
       return;
@@ -127,26 +125,28 @@ export class DefendedUpdatePass implements ComputePass {
       entries: [
         {
           binding: 0,
-          resource: { buffer: this.resources.defenseParamsBuffer },
+          resource: { buffer: this.resources.defendedStrengthParamsBuffer },
         },
         {
           binding: 1,
-          resource: { buffer: this.resources.defensePostsBuffer },
-        },
-        {
-          binding: 2,
           resource: this.resources.stateTexture.createView(),
         },
         {
+          binding: 2,
+          resource: this.resources.defendedStrengthTexture.createView(),
+        },
+        {
           binding: 3,
-          resource: this.resources.defendedTexture.createView(),
+          resource: { buffer: this.resources.defenseOwnerOffsetsBuffer },
+        },
+        {
+          binding: 4,
+          resource: { buffer: this.resources.defensePostsByOwnerBuffer },
         },
       ],
     });
-  }
 
-  markDirty(): void {
-    this.needsRebuild = true;
+    this.boundPostsByOwnerBuffer = this.resources.defensePostsByOwnerBuffer;
   }
 
   dispose(): void {

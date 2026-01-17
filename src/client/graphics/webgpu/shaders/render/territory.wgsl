@@ -4,19 +4,11 @@ struct Uniforms {
   viewSize_pad: vec4f,                // x=viewW, y=viewH, z/w unused
 };
 
-struct DefenseParams {
-  range: u32,
-  postCount: u32,
-  epoch: u32,
-  _pad: u32,
-};
-
 @group(0) @binding(0) var<uniform> u: Uniforms;
-@group(0) @binding(1) var<uniform> d: DefenseParams;
-@group(0) @binding(2) var stateTex: texture_2d<u32>;
-@group(0) @binding(3) var defendedTex: texture_2d<u32>;
-@group(0) @binding(4) var paletteTex: texture_2d<f32>;
-@group(0) @binding(5) var terrainTex: texture_2d<f32>;
+@group(0) @binding(1) var stateTex: texture_2d<u32>;
+@group(0) @binding(2) var defendedStrengthTex: texture_2d<f32>;
+@group(0) @binding(3) var paletteTex: texture_2d<f32>;
+@group(0) @binding(4) var terrainTex: texture_2d<f32>;
 
 @vertex
 fn vsMain(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
@@ -56,15 +48,17 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let hasFallout = (state & 0x2000u) != 0u;
 
   let terrain = textureLoad(terrainTex, texCoord, 0);
+  let defendedStrength = textureLoad(defendedStrengthTex, texCoord, 0).x;
   var outColor = terrain;
   if (owner != 0u) {
     // Player colors start at index 10
     let c = textureLoad(paletteTex, vec2i(i32(owner) + 10, 0), 0);
-    let defended = textureLoad(defendedTex, texCoord, 0).x == d.epoch;
     var territoryRgb = c.rgb;
-    if (defended) {
-      territoryRgb = mix(territoryRgb, vec3f(1.0, 0.0, 1.0), 0.35);
-    }
+    territoryRgb = mix(
+      territoryRgb,
+      vec3f(1.0, 0.0, 1.0),
+      clamp(0.35 * defendedStrength, 0.0, 0.35),
+    );
     if (hasFallout) {
       // Fallout color is at index 0
       let falloutColor = textureLoad(paletteTex, vec2i(0, 0), 0).rgb;
