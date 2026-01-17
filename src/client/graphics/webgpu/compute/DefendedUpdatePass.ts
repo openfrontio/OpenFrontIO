@@ -87,7 +87,7 @@ export class DefendedUpdatePass implements ComputePass {
     const oldBuffer = this.resources?.defensePostsBuffer;
     const bufferChanged = oldBuffer !== resources.defensePostsBuffer;
 
-    if (bufferChanged) {
+    if (bufferChanged || !this.bindGroup) {
       this.rebuildBindGroup();
     }
 
