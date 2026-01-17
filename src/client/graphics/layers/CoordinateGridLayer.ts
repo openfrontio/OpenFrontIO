@@ -1,6 +1,7 @@
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -44,6 +45,7 @@ export class CoordinateGridLayer implements Layer {
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private userSettings: UserSettings,
   ) {}
 
   init() {
@@ -57,7 +59,7 @@ export class CoordinateGridLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (!this.isVisible) return;
+    if (!this.isVisible || !this.userSettings.coordinateGridEnabled()) return;
 
     const width = this.game.width();
     const height = this.game.height();

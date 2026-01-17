@@ -370,6 +370,13 @@ export class UserSettingModal extends BaseModal {
     console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
   }
 
+  private toggleCoordinateGrid(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.coordinateGridEnabled", enabled);
+  }
+
   private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -873,6 +880,15 @@ export class UserSettingModal extends BaseModal {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 🧭 Coordinate Grid -->
+      <setting-toggle
+        label="${translateText("user_setting.coordinate_grid_label")}"
+        description="${translateText("user_setting.coordinate_grid_desc")}"
+        id="coordinate-grid-toggle"
+        .checked=${this.userSettings.coordinateGridEnabled()}
+        @change=${this.toggleCoordinateGrid}
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->

@@ -454,6 +454,8 @@
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
+    "coordinate_grid_label": "Coordinate Grid",
+    "coordinate_grid_desc": "Show the alphanumeric grid in Alternate View",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
