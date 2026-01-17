@@ -18,9 +18,6 @@ export class AdTimer implements Layer {
     const gameTicks = this.g.ticks() - this.g.config().numSpawnPhaseTurns();
     if (gameTicks > AD_SHOW_TICKS) {
       console.log("destroying sticky ads");
-      window.fusetag?.que?.push(() => {
-        window.fusetag?.destroySticky?.();
-      });
       this.isHidden = true;
       return;
     }
