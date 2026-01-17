@@ -13,6 +13,7 @@ import {
   Team,
   Trios,
 } from "../../core/game/Game";
+import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
@@ -22,7 +23,7 @@ export interface TeamPreviewData {
   players: ClientInfo[];
 }
 
-@customElement("lobby-team-view")
+@customElement("lobby-player-view")
 export class LobbyTeamView extends LitElement {
   @property({ type: String }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Array }) clients: ClientInfo[] = [];
@@ -32,6 +33,8 @@ export class LobbyTeamView extends LitElement {
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
+  @property({ type: Boolean }) disableNations: boolean = false;
+  @property({ type: Boolean }) isCompactMap: boolean = false;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
@@ -52,11 +55,32 @@ export class LobbyTeamView extends LitElement {
   }
 
   render() {
-    return html`<div class="players-list">
-      ${this.gameMode === GameMode.Team
-        ? this.renderTeamMode()
-        : this.renderFreeForAll()}
-    </div>`;
+    return html`
+      <div class="border-t border-white/10 pt-6">
+        <div class="flex justify-between items-center mb-4">
+          <div
+            class="text-xs font-bold text-white/40 uppercase tracking-widest"
+          >
+            ${this.clients.length}
+            ${this.clients.length === 1
+              ? translateText("host_modal.player")
+              : translateText("host_modal.players")}
+            <span style="margin: 0 8px;">•</span>
+            ${this.getEffectiveNationCount()}
+            ${this.getEffectiveNationCount() === 1
+              ? translateText("host_modal.nation_player")
+              : translateText("host_modal.nation_players")}
+          </div>
+        </div>
+        <div
+          class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
+        >
+          ${this.gameMode === GameMode.Team
+            ? this.renderTeamMode()
+            : this.renderFreeForAll()}
+        </div>
+      </div>
+    `;
   }
 
   createRenderRoot() {
@@ -148,14 +172,15 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
+    const effectiveNationCount = this.getEffectiveNationCount();
     const displayCount =
       preview.team === ColoredTeams.Nations
-        ? this.nationCount
+        ? effectiveNationCount
         : preview.players.length;
 
     const maxTeamSize =
       preview.team === ColoredTeams.Nations
-        ? this.nationCount
+        ? effectiveNationCount
         : this.teamMaxSize;
 
     return html`
@@ -307,5 +332,21 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
+  }
+
+  /**
+   * Returns the effective nation count for display purposes.
+   * In HumansVsNations mode, this equals the number of human players.
+   * For compact maps, only 25% of nations are used.
+   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
+   */
+  private getEffectiveNationCount(): number {
+    if (this.disableNations) {
+      return 0;
+    }
+    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
+      return this.clients.length;
+    }
+    return getCompactMapNationCount(this.nationCount, this.isCompactMap);
   }
 }
