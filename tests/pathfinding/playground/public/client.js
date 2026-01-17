@@ -16,6 +16,11 @@ const state = {
   isMapLoading: false, // Loading state for map switching
   isHpaLoading: false, // Separate loading state for HPA*
   activeRefreshButton: null, // Track which refresh button is spinning
+  // Transport Ship mode
+  mode: "pathfinding", // "pathfinding" | "transport"
+  paintedTiles: new Set(), // Set of tile indices (y * width + x)
+  brushSize: 5,
+  transportResult: null, // Result from spatial query
 };
 
 // Colors for comparison paths
@@ -36,6 +41,8 @@ let dragStartX = 0;
 let dragStartY = 0;
 let dragStartPanX = 0;
 let dragStartPanY = 0;
+let isPainting = false;
+let isErasing = false;
 
 let mapCanvas, overlayCanvas, interactiveCanvas;
 let mapCtx, overlayCtx, interactiveCtx;
@@ -203,6 +210,109 @@ function initializeControls() {
   document.getElementById("clearPoints").addEventListener("click", () => {
     clearPoints();
   });
+
+  // Mode switch buttons
+  document.querySelectorAll(".mode-button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const newMode = btn.dataset.mode;
+      if (newMode !== state.mode) {
+        setMode(newMode);
+      }
+    });
+  });
+
+  // Transport controls
+  const brushSizeInput = document.getElementById("brushSize");
+  const brushSizeValue = document.getElementById("brushSizeValue");
+  brushSizeInput.addEventListener("input", (e) => {
+    state.brushSize = parseInt(e.target.value);
+    brushSizeValue.textContent = state.brushSize;
+  });
+
+  document.getElementById("clearTerritory").addEventListener("click", () => {
+    state.paintedTiles.clear();
+    state.transportResult = null;
+    updateTransportInfo();
+    renderInteractive();
+  });
+}
+
+// Set application mode
+function setMode(newMode) {
+  state.mode = newMode;
+
+  // Update UI
+  document.querySelectorAll(".mode-button").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === newMode);
+  });
+
+  const transportControls = document.getElementById("transportControls");
+  const timingsPanel = document.getElementById("timingsPanel");
+  const debugPanel = document.querySelector(".debug-panel");
+
+  if (newMode === "transport") {
+    transportControls.style.display = "block";
+    timingsPanel.style.top = "280px";
+    debugPanel.style.display = "none";
+    setStatus("Paint territory, then click water target");
+  } else {
+    transportControls.style.display = "none";
+    timingsPanel.style.top = "280px";
+    debugPanel.style.display = "flex";
+    if (state.startPoint && state.endPoint) {
+      setStatus("Path computed successfully");
+    } else if (state.startPoint) {
+      setStatus("Click on map to set end point");
+    } else {
+      setStatus("Click on map to set start point");
+    }
+  }
+
+  renderInteractive();
+}
+
+// Update transport info display
+function updateTransportInfo() {
+  const paintedCount = document.getElementById("paintedCount");
+  const shoreCount = document.getElementById("shoreCount");
+
+  paintedCount.textContent = state.paintedTiles.size;
+
+  // Count shore tiles
+  let shores = 0;
+  if (state.mapData) {
+    for (const idx of state.paintedTiles) {
+      if (isLandShore(idx)) {
+        shores++;
+      }
+    }
+  }
+  shoreCount.textContent = shores;
+}
+
+// Check if tile is a land shore (land adjacent to water)
+function isLandShore(tileIdx) {
+  const x = tileIdx % state.mapWidth;
+  const y = Math.floor(tileIdx / state.mapWidth);
+
+  // Must be land
+  if (state.mapData[tileIdx] !== 0) return false;
+
+  // Check 4 neighbors for water
+  const neighbors = [
+    [x - 1, y],
+    [x + 1, y],
+    [x, y - 1],
+    [x, y + 1],
+  ];
+
+  for (const [nx, ny] of neighbors) {
+    if (nx < 0 || nx >= state.mapWidth || ny < 0 || ny >= state.mapHeight)
+      continue;
+    const nIdx = ny * state.mapWidth + nx;
+    if (state.mapData[nIdx] === 1) return true;
+  }
+  return false;
 }
 
 // Helper function to check if mouse is over a start/end point
@@ -250,6 +360,20 @@ function schedulePathRecalc() {
   // If not enough time has passed, skip this call (throttle)
 }
 
+// Throttled spatial query recalculation (max once per 50ms for heavier computation)
+let lastSpatialQueryTime = 0;
+function scheduleSpatialQueryRecalc() {
+  const now = Date.now();
+  const timeSinceLastCall = now - lastSpatialQueryTime;
+
+  if (timeSinceLastCall >= 50) {
+    lastSpatialQueryTime = now;
+    if (state.endPoint && state.paintedTiles.size > 0) {
+      requestSpatialQuery(state.endPoint);
+    }
+  }
+}
+
 // Initialize drag and click controls
 function initializeDragControls() {
   const wrapper = document.getElementById("canvasWrapper");
@@ -260,10 +384,46 @@ function initializeDragControls() {
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
 
-    // Check if clicking on a point
+    // Transport mode: check for dragging end point first, then painting
+    if (state.mode === "transport") {
+      // Check if clicking on end point to drag it
+      const pointAtMouse = getPointAtPosition(canvasX, canvasY);
+      if (pointAtMouse === "end") {
+        draggingPoint = "end";
+        wrapper.style.cursor = "move";
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        return;
+      }
+
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+
+      if (
+        tileX >= 0 &&
+        tileX < state.mapWidth &&
+        tileY >= 0 &&
+        tileY < state.mapHeight
+      ) {
+        const tileIdx = tileY * state.mapWidth + tileX;
+        const isLand = state.mapData[tileIdx] === 0;
+
+        if (isLand) {
+          // Start painting (or erasing with ctrl/right-click)
+          isErasing = e.ctrlKey || e.button === 2;
+          isPainting = true;
+          paintAtPosition(tileX, tileY, isErasing);
+          wrapper.style.cursor = isErasing ? "crosshair" : "pointer";
+          return;
+        }
+      }
+      // Fall through to panning if not on land
+    }
+
+    // Pathfinding mode: check if clicking on a point
     const pointAtMouse = getPointAtPosition(canvasX, canvasY);
 
-    if (pointAtMouse) {
+    if (pointAtMouse && state.mode === "pathfinding") {
       // Start dragging the point
       draggingPoint = pointAtMouse;
       wrapper.style.cursor = "move";
@@ -283,6 +443,53 @@ function initializeDragControls() {
     const rect = wrapper.getBoundingClientRect();
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
+
+    // Transport mode: continue painting
+    if (isPainting && state.mode === "transport") {
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+      paintAtPosition(tileX, tileY, isErasing);
+      return;
+    }
+
+    // Transport mode: dragging end point
+    if (draggingPoint === "end" && state.mode === "transport") {
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+
+      if (
+        tileX >= 0 &&
+        tileX < state.mapWidth &&
+        tileY >= 0 &&
+        tileY < state.mapHeight
+      ) {
+        const tileIndex = tileY * state.mapWidth + tileX;
+        const isWater = state.mapData[tileIndex] === 1;
+
+        if (isWater) {
+          draggingPointPosition = [tileX, tileY];
+          state.endPoint = [tileX, tileY];
+          renderInteractive();
+
+          // Throttled spatial query recomputation
+          if (state.paintedTiles.size > 0) {
+            scheduleSpatialQueryRecalc();
+          }
+        }
+      }
+      return;
+    }
+
+    // Transport mode: check hover over end point
+    if (state.mode === "transport" && !isDragging) {
+      const pointAtMouse = getPointAtPosition(canvasX, canvasY);
+      if (pointAtMouse !== hoveredPoint) {
+        hoveredPoint = pointAtMouse;
+        renderInteractive();
+        wrapper.style.cursor = hoveredPoint ? "move" : "grab";
+      }
+      return;
+    }
 
     if (draggingPoint) {
       // Dragging a start/end point - snap to water tile
@@ -395,6 +602,26 @@ function initializeDragControls() {
     const dx = Math.abs(e.clientX - dragStartX);
     const dy = Math.abs(e.clientY - dragStartY);
 
+    // Transport mode: finish painting
+    if (isPainting) {
+      isPainting = false;
+      isErasing = false;
+      wrapper.style.cursor = "grab";
+      return;
+    }
+
+    // Transport mode: finish dragging end point
+    if (draggingPoint === "end" && state.mode === "transport") {
+      if (state.endPoint && state.paintedTiles.size > 0) {
+        requestSpatialQuery(state.endPoint);
+      }
+      draggingPoint = null;
+      draggingPointPosition = null;
+      renderInteractive();
+      wrapper.style.cursor = "grab";
+      return;
+    }
+
     if (draggingPoint) {
       // Finished dragging a point
       // Request final path update to ensure we have the path for the final position
@@ -408,7 +635,11 @@ function initializeDragControls() {
       updateURLState();
     } else if (isDragging && dx < 5 && dy < 5) {
       // Was panning but didn't move much - treat as click
-      handleMapClick(e);
+      if (state.mode === "transport") {
+        handleTransportClick(e);
+      } else {
+        handleMapClick(e);
+      }
     }
 
     isDragging = false;
@@ -418,13 +649,16 @@ function initializeDragControls() {
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
     const pointAtMouse = getPointAtPosition(canvasX, canvasY);
-    wrapper.style.cursor = pointAtMouse ? "move" : "grab";
+    wrapper.style.cursor =
+      pointAtMouse && state.mode === "pathfinding" ? "move" : "grab";
   });
 
   wrapper.addEventListener("mouseleave", () => {
     isDragging = false;
     draggingPoint = null;
     draggingPointPosition = null;
+    isPainting = false;
+    isErasing = false;
     tooltip.classList.remove("visible");
     wrapper.style.cursor = "grab";
 
@@ -437,6 +671,13 @@ function initializeDragControls() {
     }
   });
 
+  // Prevent context menu on right-click (for erasing)
+  wrapper.addEventListener("contextmenu", (e) => {
+    if (state.mode === "transport") {
+      e.preventDefault();
+    }
+  });
+
   wrapper.addEventListener("wheel", (e) => {
     e.preventDefault();
 
@@ -446,7 +687,7 @@ function initializeDragControls() {
 
     const oldZoom = zoomLevel;
     const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoomLevel = Math.max(0.1, Math.min(5, zoomLevel * zoomDelta));
+    zoomLevel = Math.max(0.1, Math.min(10, zoomLevel * zoomDelta));
 
     panX = mouseX - (mouseX - panX) * (zoomLevel / oldZoom);
     panY = mouseY - (mouseY - panY) * (zoomLevel / oldZoom);
@@ -533,6 +774,155 @@ function clearPoints() {
   hidePathInfo();
   updateURLState(); // Remove points from URL
   renderInteractive();
+}
+
+// Paint tiles in a brush area
+function paintAtPosition(centerX, centerY, erase = false) {
+  const radius = Math.floor(state.brushSize / 2);
+  let changed = false;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const x = centerX + dx;
+      const y = centerY + dy;
+
+      if (x < 0 || x >= state.mapWidth || y < 0 || y >= state.mapHeight)
+        continue;
+
+      const idx = y * state.mapWidth + x;
+      const isLand = state.mapData[idx] === 0;
+
+      if (!isLand) continue;
+
+      if (erase) {
+        if (state.paintedTiles.has(idx)) {
+          state.paintedTiles.delete(idx);
+          changed = true;
+        }
+      } else {
+        if (!state.paintedTiles.has(idx)) {
+          state.paintedTiles.add(idx);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    updateTransportInfo();
+    renderInteractive();
+  }
+}
+
+// Handle clicks in transport mode
+function handleTransportClick(e) {
+  if (!state.currentMap || state.isMapLoading) return;
+
+  const wrapper = document.getElementById("canvasWrapper");
+  const rect = wrapper.getBoundingClientRect();
+
+  const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
+  const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
+  const tileX = Math.floor(canvasX);
+  const tileY = Math.floor(canvasY);
+
+  if (
+    tileX < 0 ||
+    tileX >= state.mapWidth ||
+    tileY < 0 ||
+    tileY >= state.mapHeight
+  ) {
+    return;
+  }
+
+  const idx = tileY * state.mapWidth + tileX;
+  const isWater = state.mapData[idx] === 1;
+
+  if (!isWater) {
+    return;
+  }
+
+  // Clicked on water - run spatial query
+  if (state.paintedTiles.size === 0) {
+    showError("Paint some territory first");
+    return;
+  }
+
+  requestSpatialQuery([tileX, tileY]);
+}
+
+// Request spatial query computation
+async function requestSpatialQuery(target) {
+  setStatus("Computing spatial query...", true);
+
+  try {
+    // Only send shore tiles (land adjacent to water) - much smaller payload
+    const ownedTiles = Array.from(state.paintedTiles).filter((idx) =>
+      isLandShore(idx),
+    );
+
+    const response = await fetch("/api/spatial-query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        map: state.currentMap,
+        ownedTiles,
+        target,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Spatial query failed");
+    }
+
+    const result = await response.json();
+    state.transportResult = result;
+    state.endPoint = target;
+
+    renderInteractive();
+    updateTransportTimings(result);
+
+    if (result.selectedShore) {
+      setStatus(
+        `Shore selected: (${result.selectedShore[0]}, ${result.selectedShore[1]})`,
+      );
+    } else {
+      setStatus("No valid shore found");
+    }
+  } catch (error) {
+    showError(`Spatial query failed: ${error.message}`);
+  }
+}
+
+// Update timings panel for transport mode
+function updateTransportTimings(result) {
+  const hpaTimeEl = document.getElementById("hpaTime");
+  const hpaTilesEl = document.getElementById("hpaTiles");
+
+  if (result.path) {
+    hpaTilesEl.textContent = `- ${result.path.length} tiles`;
+  } else {
+    hpaTilesEl.textContent = "";
+  }
+
+  const totalTime =
+    result.debug?.timings?.["SpatialQuery.closestShoreByWater"] ?? 0;
+  if (totalTime > 0) {
+    hpaTimeEl.textContent = `${totalTime.toFixed(2)}ms`;
+    hpaTimeEl.classList.remove("faded");
+  } else {
+    hpaTimeEl.textContent = "0.00ms";
+    hpaTimeEl.classList.add("faded");
+  }
+
+  // Hide pathfinding-specific timing breakdown in transport mode
+  document.getElementById("timingEarlyExit").style.display = "none";
+  document.getElementById("timingFindNodes").style.display = "none";
+  document.getElementById("timingAbstractPath").style.display = "none";
+  document.getElementById("timingInitialPath").style.display = "none";
+  document.getElementById("timingSmoothPath").style.display = "none";
+  document.getElementById("comparisonsSection").style.display = "none";
 }
 
 // Update transform for pan/zoom
@@ -1164,6 +1554,135 @@ function mapToScreen(mapX, mapY) {
   };
 }
 
+// Render transport mode elements
+function renderTransportMode() {
+  const tileSize = Math.max(1, zoomLevel);
+
+  // Draw painted territory
+  if (state.paintedTiles.size > 0) {
+    interactiveCtx.fillStyle = "rgba(66, 135, 245, 0.5)";
+
+    for (const idx of state.paintedTiles) {
+      const x = idx % state.mapWidth;
+      const y = Math.floor(idx / state.mapWidth);
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw all shore tiles (dark blue squares)
+  if (state.transportResult && state.transportResult.shores) {
+    interactiveCtx.fillStyle = "#2a4a6a";
+
+    for (const [x, y] of state.transportResult.shores) {
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw refinement candidates (muted yellow/gold squares)
+  if (state.transportResult?.debug?.candidates) {
+    interactiveCtx.fillStyle = "rgba(200, 170, 80, 0.7)";
+
+    for (const [x, y] of state.transportResult.debug.candidates) {
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw refined path (magenta)
+  if (state.transportResult?.debug?.refinedPath) {
+    interactiveCtx.strokeStyle = "#ff00ff";
+    interactiveCtx.lineWidth = Math.max(1, zoomLevel * 0.8);
+    interactiveCtx.lineCap = "round";
+    interactiveCtx.lineJoin = "round";
+    interactiveCtx.beginPath();
+
+    for (let i = 0; i < state.transportResult.debug.refinedPath.length; i++) {
+      const [x, y] = state.transportResult.debug.refinedPath[i];
+      const screen = mapToScreen(x + 0.5, y + 0.5);
+      if (i === 0) {
+        interactiveCtx.moveTo(screen.x, screen.y);
+      } else {
+        interactiveCtx.lineTo(screen.x, screen.y);
+      }
+    }
+    interactiveCtx.stroke();
+  }
+
+  // Draw full path (cyan)
+  if (state.transportResult && state.transportResult.path) {
+    interactiveCtx.strokeStyle = "#00ffff";
+    interactiveCtx.lineWidth = Math.max(1, zoomLevel);
+    interactiveCtx.lineCap = "round";
+    interactiveCtx.lineJoin = "round";
+    interactiveCtx.beginPath();
+
+    for (let i = 0; i < state.transportResult.path.length; i++) {
+      const [x, y] = state.transportResult.path[i];
+      const screen = mapToScreen(x + 0.5, y + 0.5);
+      if (i === 0) {
+        interactiveCtx.moveTo(screen.x, screen.y);
+      } else {
+        interactiveCtx.lineTo(screen.x, screen.y);
+      }
+    }
+    interactiveCtx.stroke();
+  }
+
+  // Draw original best tile (orange square) if different from new best
+  if (state.transportResult?.debug?.originalBestTile) {
+    const [ox, oy] = state.transportResult.debug.originalBestTile;
+    const newBest = state.transportResult.debug.newBestTile;
+
+    // Only show if different from new best
+    if (!newBest || ox !== newBest[0] || oy !== newBest[1]) {
+      const screen = mapToScreen(ox, oy);
+      interactiveCtx.fillStyle = "#ff8800";
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw selected shore (green square)
+  if (state.transportResult && state.transportResult.selectedShore) {
+    const [sx, sy] = state.transportResult.selectedShore;
+    const screen = mapToScreen(sx, sy);
+    interactiveCtx.fillStyle = "#44ff44";
+    interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+  }
+
+  // Draw target point (red circle, matching pathfinding mode style)
+  if (state.endPoint) {
+    const markerSize = Math.max(4, 3 * zoomLevel);
+    let mapX, mapY;
+    if (draggingPoint === "end" && draggingPointPosition) {
+      mapX = draggingPointPosition[0] + 0.5;
+      mapY = draggingPointPosition[1] + 0.5;
+    } else {
+      mapX = state.endPoint[0] + 0.5;
+      mapY = state.endPoint[1] + 0.5;
+    }
+
+    const screen = mapToScreen(mapX, mapY);
+
+    // Highlight ring if hovered
+    if (hoveredPoint === "end") {
+      interactiveCtx.strokeStyle = "#ff4444";
+      interactiveCtx.lineWidth = Math.max(2, zoomLevel * 0.5);
+      interactiveCtx.globalAlpha = 0.5;
+      interactiveCtx.beginPath();
+      interactiveCtx.arc(screen.x, screen.y, markerSize + 3, 0, Math.PI * 2);
+      interactiveCtx.stroke();
+      interactiveCtx.globalAlpha = 1.0;
+    }
+
+    interactiveCtx.fillStyle = "#ff4444";
+    interactiveCtx.beginPath();
+    interactiveCtx.arc(screen.x, screen.y, markerSize, 0, Math.PI * 2);
+    interactiveCtx.fill();
+  }
+}
+
 // Render truly interactive/dynamic overlay (paths, points, highlights) at screen coordinates
 function renderInteractive() {
   // Clear viewport-sized canvas (super fast!)
@@ -1177,6 +1696,12 @@ function renderInteractive() {
   if (!state.mapData) return;
 
   const markerSize = Math.max(4, 3 * zoomLevel);
+
+  // Transport mode: render painted territory and results
+  if (state.mode === "transport") {
+    renderTransportMode();
+    return;
+  }
 
   // Check what to show
   const showUsedNodes =

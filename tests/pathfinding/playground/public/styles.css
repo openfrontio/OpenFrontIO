@@ -369,7 +369,7 @@ canvas {
 /* Timings panel (left side) */
 .timings-panel {
   position: fixed;
-  top: 250px;
+  top: 280px;
   left: 20px;
   background: rgba(42, 42, 42, 0.95);
   backdrop-filter: blur(10px);
@@ -857,4 +857,122 @@ button:disabled {
     right: 10px;
     transform: none;
   }
+}
+
+/* Mode switch */
+.mode-switch {
+  display: flex;
+  gap: 0;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #404040;
+}
+
+.mode-button {
+  flex: 1;
+  background: #1a1a1a;
+  color: #888;
+  border: none;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 0;
+}
+
+.mode-button:hover {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+.mode-button.active {
+  background: #0066cc;
+  color: white;
+}
+
+.mode-button.active:hover {
+  background: #0052a3;
+}
+
+/* Transport Ship controls - positioned at bottom left like debug panel */
+.transport-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(42, 42, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 220px;
+}
+
+.transport-control-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.transport-control-row label {
+  font-size: 14px;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.transport-control-row input[type="range"] {
+  flex: 1;
+}
+
+.transport-control-row span {
+  font-size: 14px;
+  color: #e0e0e0;
+  min-width: 24px;
+  text-align: right;
+}
+
+.transport-control-row .clear-button {
+  width: 100%;
+}
+
+.transport-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #404040;
+  font-size: 13px;
+  color: #888;
+}
+
+.transport-info strong {
+  color: #e0e0e0;
+}
+
+.transport-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #404040;
+}
+
+.transport-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.transport-legend-color {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
