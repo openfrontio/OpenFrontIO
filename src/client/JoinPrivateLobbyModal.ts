@@ -55,15 +55,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
       this.isSubscribedToChatEvent = true;
     }
-
-    // Update chat panel
-    this.updateComplete.then(() => {
-      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
-      if (chatPanel) {
-        (chatPanel as any).eventBus = this.eventBus;
-        (chatPanel as any).username = this.username;
-      }
-    });
   }
 
   connectedCallback() {
@@ -87,14 +78,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
   firstUpdated(): void {
     // Always start with chat hidden
     this.chatVisible = false;
-
-    this.updateComplete.then(() => {
-      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
-      if (chatPanel && this.eventBus) {
-        (chatPanel as any).eventBus = this.eventBus;
-        (chatPanel as any).username = this.username;
-      }
-    });
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
@@ -226,7 +209,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     <div class="text-sm font-semibold text-white/80 mb-2">
                       ${translateText("lobby_chat.title")}
                     </div>
-                    <lobby-chat-panel></lobby-chat-panel>
+                    <lobby-chat-panel
+                      .eventBus=${this.eventBus}
+                      .username=${this.username}
+                    ></lobby-chat-panel>
                   </div>
                 </div>
               `
