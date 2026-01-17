@@ -316,18 +316,16 @@ export class TerritoryRenderer {
     // Upload palette if needed
     this.resources.uploadPalette();
 
-    // Upload defense posts if needed (tracks if it was dirty before upload)
-    const wasDefensePostsDirty = (this.resources as any)
-      .needsDefensePostsUpload;
+    // Upload defense posts if needed
     this.resources.uploadDefensePosts();
 
     // Initial state upload
     this.resources.uploadState();
 
     // Check if we need to run compute passes
-    const numUpdates = this.stateUpdatePass
-      ? ((this.stateUpdatePass as any).pendingTiles?.size ?? 0)
-      : 0;
+    const hasStateUpdates = this.stateUpdatePass
+      ? this.stateUpdatePass.needsUpdate()
+      : false;
     const needsTerrainCompute = this.terrainComputePass
       ? this.terrainComputePass.needsUpdate()
       : false;
@@ -341,14 +339,13 @@ export class TerritoryRenderer {
     // Use explicit boolean checks to satisfy linter (|| is correct for boolean OR)
     const shouldRebuildDefended =
       this.needsDefendedRebuild === true ||
-      wasDefensePostsDirty === true ||
       rangeChanged === true ||
       countChanged === true ||
-      (hasPosts && numUpdates > 0);
+      (hasPosts && hasStateUpdates === true);
 
     const needsCompute =
       needsTerrainCompute === true ||
-      numUpdates > 0 ||
+      hasStateUpdates === true ||
       shouldRebuildDefended === true ||
       this.needsDefendedHardClear === true;
 
@@ -366,15 +363,13 @@ export class TerritoryRenderer {
 
     // Handle defended rebuild (before executing passes)
     if (shouldRebuildDefended) {
-      // Increment epoch for this rebuild
-      const epochBefore = this.resources.getDefendedEpoch();
-      this.resources.incrementDefendedEpoch();
-      const epochAfter = this.resources.getDefendedEpoch();
+      // Hard-clear defended texture before restamping. This avoids relying on
+      // epoch-stamping for correctness and prevents transient mismatches where
+      // defended rendering disappears between rebuilds.
+      this.needsDefendedHardClear = true;
 
-      // If epoch wrapped, we need a hard clear
-      if (epochAfter === 0 || epochAfter < epochBefore) {
-        this.needsDefendedHardClear = true;
-        this.resources.incrementDefendedEpoch();
+      if (this.defendedUpdatePass) {
+        this.defendedUpdatePass.markDirty();
       }
 
       this.needsDefendedRebuild = false;
