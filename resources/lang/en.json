@@ -59,6 +59,9 @@
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
+    "keybinds_title": "Keybinds",
+    "keybinds_desc": "Keybinds are customisable and are found in the settings.",
+    "keybinds_button": "Open Keybind Settings",
     "table_key": "Key",
     "table_action": "Action",
     "action_alt_view": "Alternate view (terrain/countries)",
