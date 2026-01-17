@@ -43,7 +43,7 @@ import {
 } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
-import { UsernameInput } from "./UsernameInput";
+import { genAnonUsername, UsernameInput } from "./UsernameInput";
 import {
   getDiscordAvatarUrl,
   incrementGamesPlayed,
@@ -214,6 +214,7 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
 
+  private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
@@ -431,56 +432,8 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
-    const matchmakingButton = document.getElementById("matchmaking-button");
-    const matchmakingButtonLoggedOut = document.getElementById(
-      "matchmaking-button-logged-out",
-    );
-
-    const updateMatchmakingButton = (loggedIn: boolean) => {
-      if (!loggedIn) {
-        matchmakingButton?.classList.add("hidden");
-        matchmakingButtonLoggedOut?.classList.remove("hidden");
-      } else {
-        matchmakingButton?.classList.remove("hidden");
-        matchmakingButtonLoggedOut?.classList.add("hidden");
-      }
-    };
-
-    if (matchmakingButton) {
-      matchmakingButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-matchmaking");
-          this.publicLobby.leaveLobby();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    }
-
-    if (matchmakingButtonLoggedOut) {
-      matchmakingButtonLoggedOut.addEventListener("click", () => {
-        window.showPage?.("page-account");
-      });
-    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      // Check if user has actual authentication (discord or email), not just a publicId
-      const loggedIn =
-        userMeResponse !== false &&
-        userMeResponse !== null &&
-        typeof userMeResponse === "object" &&
-        userMeResponse.user &&
-        (userMeResponse.user.discord !== undefined ||
-          userMeResponse.user.email !== undefined);
-      updateMatchmakingButton(loggedIn);
       updateAccountNavButton(userMeResponse);
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
@@ -522,10 +475,10 @@ class Client {
         }
       });
 
-    const hostModal = document.querySelector(
+    this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+    if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
@@ -641,6 +594,14 @@ class Client {
         return;
       }
     }
+    crazyGamesSDK.isInstantMultiplayer().then((isInstant) => {
+      if (isInstant) {
+        console.log(
+          `CrazyGames: joining instant multiplayer lobby from CrazyGames`,
+        );
+        this.hostModal.open();
+      }
+    });
 
     const strip = () =>
       history.replaceState(
@@ -763,7 +724,8 @@ class Client {
               : this.flagInput.getCurrentFlag(),
         },
         turnstileToken: await this.getTurnstileToken(lobby),
-        playerName: this.usernameInput?.getCurrentUsername() ?? "",
+        playerName:
+          this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -951,11 +913,27 @@ class Client {
   }
 }
 
+// Hide elements with no-crazygames class if on CrazyGames
+const hideCrazyGamesElements = () => {
+  if (crazyGamesSDK.isOnCrazyGames()) {
+    document.querySelectorAll(".no-crazygames").forEach((el) => {
+      (el as HTMLElement).style.display = "none";
+    });
+  }
+};
+
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
   initLayout();
   new Client().initialize();
   initNavigation();
+
+  // Hide elements immediately
+  hideCrazyGamesElements();
+
+  // Also hide elements after a short delay to catch late-rendered components
+  setTimeout(hideCrazyGamesElements, 100);
+  setTimeout(hideCrazyGamesElements, 500);
 };
 
 if (document.readyState === "loading") {

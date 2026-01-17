@@ -105,7 +105,7 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.news"
         ></button>
         <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
+          class="nav-menu-item no-crazygames text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
           data-page="page-item-store"
           data-i18n="main.store"
         ></button>
@@ -127,14 +127,14 @@ export class DesktopNavBar extends LitElement {
         <lang-selector></lang-selector>
         <button
           id="nav-account-button"
-          class="nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
+          class="no-crazygames nav-menu-item relative h-10 rounded-full overflow-hidden flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
           data-page="page-account"
           data-i18n-aria-label="main.account"
           data-i18n-title="main.account"
         >
           <img
             id="nav-account-avatar"
-            class="hidden w-8 h-8 rounded-full object-cover"
+            class="no-crazygames hidden w-8 h-8 rounded-full object-cover"
             alt=""
             data-i18n-alt="main.discord_avatar_alt"
             referrerpolicy="no-referrer"
