@@ -167,7 +167,7 @@ export class PatternButton extends LitElement {
                    hover:bg-blue-500/30 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                         @click=${this.handleTest}
                       >
-                        ${translateText("skin_test_modal.test_skin")}
+                        ${translateText("skin_test_modal.preview_skin")}
                       </button>
                     `
                   : null}

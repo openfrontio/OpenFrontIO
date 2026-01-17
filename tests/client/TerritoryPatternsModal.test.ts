@@ -18,7 +18,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
 }));
 
 // Mock PatternButton to avoid canvas + pattern decoding in JSDOM, while still
-// allowing us to simulate a user clicking the "Test Skin" button.
+// allowing us to simulate a user clicking the "Preview Skin" button.
 vi.mock("../../src/client/components/PatternButton", () => {
   class PatternButton extends HTMLElement {
     private _pattern: any = null;
@@ -66,8 +66,8 @@ vi.mock("../../src/client/components/PatternButton", () => {
       this.innerHTML = "";
       if (this.requiresPurchase && this.onTest && this.pattern) {
         const btn = document.createElement("button");
-        btn.setAttribute("data-testid", "test-skin");
-        btn.textContent = "skin_test_modal.test_skin";
+        btn.setAttribute("data-testid", "preview-skin");
+        btn.textContent = "skin_test_modal.preview_skin";
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           this.onTest?.(this.pattern, this.colorPalette ?? null);
@@ -201,12 +201,12 @@ describe("TerritoryPatternsModal skin button simulation", () => {
     expect(modal.querySelectorAll("pattern-button").length).toBe(3);
   });
 
-  it("clicking 'Test Skin' dispatches a join-lobby event with isSkinTest=true", async () => {
+  it("clicking 'Preview Skin' dispatches a join-lobby event with isSkinTest=true", async () => {
     const joinLobbyHandler = vi.fn();
     modal.addEventListener("join-lobby", joinLobbyHandler as any);
 
     const testBtn = modal.querySelector(
-      'button[data-testid="test-skin"]',
+      'button[data-testid="preview-skin"]',
     ) as HTMLButtonElement | null;
     expect(testBtn).toBeTruthy();
 
