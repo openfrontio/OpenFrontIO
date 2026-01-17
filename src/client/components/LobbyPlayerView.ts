@@ -46,7 +46,9 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
-      changedProperties.has("nationCount")
+      changedProperties.has("nationCount") ||
+      changedProperties.has("disableNations") ||
+      changedProperties.has("isCompactMap")
     ) {
       const teamsList = this.getTeamList();
       this.computeTeamPreview(teamsList);
@@ -237,7 +239,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length + this.nationCount;
+    const playerCount = this.clients.length + this.getEffectiveNationCount();
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -301,7 +303,7 @@ export class LobbyTeamView extends LitElement {
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,
-      this.nationCount,
+      this.getEffectiveNationCount(),
     );
     const buckets = new Map<Team, ClientInfo[]>();
     for (const t of teams) buckets.set(t, []);
@@ -325,7 +327,9 @@ export class LobbyTeamView extends LitElement {
       // Fallback: divide players across teams; guard against 0 and empty lobbies
       this.teamMaxSize = Math.max(
         1,
-        Math.ceil((this.clients.length + this.nationCount) / teams.length),
+        Math.ceil(
+          (this.clients.length + this.getEffectiveNationCount()) / teams.length,
+        ),
       );
     }
     this.teamPreview = teams.map((t) => ({
