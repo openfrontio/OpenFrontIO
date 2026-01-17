@@ -40,6 +40,14 @@ declare module "*.webp" {
   export default webpContent;
 }
 
+declare global {
+  interface Window {
+    __eventBus?: import("../core/EventBus").EventBus;
+    __username?: string;
+  }
+}
+
+export {};
 declare module "*.svg?url" {
   const svgUrl: string;
   export default svgUrl;

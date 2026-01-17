@@ -7,6 +7,7 @@ import {
   GameStartInfo,
   PlayerCosmeticRefs,
   PlayerRecord,
+  ServerLobbyChatSchema,
   ServerMessage,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
@@ -39,6 +40,7 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  ReceiveLobbyChatEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -94,6 +96,23 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    // Validate and handle lobby chat messages
+    if (message.type === "lobby_chat") {
+      const parseResult = ServerLobbyChatSchema.safeParse(message);
+      if (parseResult.success) {
+        eventBus.emit(
+          new ReceiveLobbyChatEvent(
+            parseResult.data.username,
+            parseResult.data.isHost,
+            parseResult.data.text,
+          ),
+        );
+      } else {
+        console.error("Invalid lobby chat message:", parseResult.error);
+      }
+      return;
+    }
+
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,

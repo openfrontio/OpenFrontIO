@@ -15,6 +15,7 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientLobbyChatMessage,
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
@@ -176,6 +177,20 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+// New event: send a basic lobby chat message
+export class SendLobbyChatEvent implements GameEvent {
+  constructor(public readonly text: string) {}
+}
+
+// Event: receive a lobby chat message
+export class ReceiveLobbyChatEvent implements GameEvent {
+  constructor(
+    public readonly username: string,
+    public readonly isHost: boolean,
+    public readonly text: string,
+  ) {}
+}
+
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
   constructor(public readonly config: Partial<GameConfig>) {}
 }
@@ -265,6 +280,7 @@ export class Transport {
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
+    this.eventBus.on(SendLobbyChatEvent, (e) => this.onSendLobbyChat(e));
 
     this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
       this.onSendUpdateGameConfigIntent(e),
@@ -666,6 +682,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       target: event.target,
     });
+  }
+
+  private onSendLobbyChat(event: SendLobbyChatEvent) {
+    this.sendMsg({
+      type: "lobby_chat",
+      text: event.text,
+      clientID: this.lobbyConfig.clientID,
+    } satisfies ClientLobbyChatMessage);
   }
 
   private onSendUpdateGameConfigIntent(event: SendUpdateGameConfigIntentEvent) {

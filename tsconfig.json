@@ -19,11 +19,11 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "strictNullChecks": true,
     "useDefineForClassFields": false,
     "strictPropertyInitialization": false,
-    "skipLibCheck": true,
     "types": ["vitest/globals", "node"]
   },
   "include": [

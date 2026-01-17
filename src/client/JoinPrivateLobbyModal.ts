@@ -1,6 +1,7 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -13,9 +14,11 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { ReceiveLobbyChatEvent } from "./Transport";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
+import "./components/LobbyChatPanel";
 import "./components/LobbyTeamView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
@@ -27,10 +30,55 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
   @state() private currentLobbyId: string = "";
+  @state() private chatVisible: boolean = false;
+  @state() private hasUnreadMessages: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
+  private eventBus: EventBus | null = null;
+  private username: string | null = null;
 
   private leaveLobbyOnClose = true;
+  private isSubscribedToChatEvent = false;
+
+  setEventBusAndUsername(eventBus: EventBus, username: string) {
+    // Unsubscribe from old eventBus if exists
+    if (this.eventBus && this.isSubscribedToChatEvent) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = false;
+    }
+
+    this.eventBus = eventBus;
+    this.username = username;
+
+    // Subscribe to new eventBus
+    if (this.eventBus && !this.isSubscribedToChatEvent) {
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = true;
+    }
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    if (this.eventBus && this.isSubscribedToChatEvent) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = false;
+    }
+    super.disconnectedCallback();
+  }
+
+  private onChatMessage = (event: ReceiveLobbyChatEvent) => {
+    if (!this.chatVisible) {
+      this.hasUnreadMessages = true;
+    }
+  };
+
+  firstUpdated(): void {
+    // Always start with chat hidden
+    this.chatVisible = false;
+  }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -103,6 +151,45 @@ export class JoinPrivateLobbyModal extends BaseModal {
                         ? translateText("private_lobby.player")
                         : translateText("private_lobby.players")}
                     </div>
+                    <button
+                      @click=${() => {
+                        this.chatVisible = !this.chatVisible;
+                        // Clear unread indicator when opening chat
+                        if (this.chatVisible) {
+                          this.hasUnreadMessages = false;
+                        }
+                      }}
+                      class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
+                        .chatVisible
+                        ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                        : "bg-white/5 text-white/60 hover:bg-white/10"}"
+                      title="${translateText(
+                        this.chatVisible
+                          ? "lobby_chat.hide"
+                          : "lobby_chat.show",
+                      )}"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        height="14px"
+                        width="14px"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                        />
+                      </svg>
+                      ${translateText(
+                        this.chatVisible
+                          ? "lobby_chat.hide"
+                          : "lobby_chat.show",
+                      )}
+                      ${!this.chatVisible && this.hasUnreadMessages
+                        ? html`<span
+                            class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
+                          ></span>`
+                        : ""}
+                    </button>
                   </div>
 
                   <lobby-team-view
@@ -112,6 +199,21 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                     .teamCount=${this.gameConfig?.playerTeams ?? 2}
                   ></lobby-team-view>
+
+                  <div
+                    class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
+                      .chatVisible
+                      ? ""
+                      : "hidden"}"
+                  >
+                    <div class="text-sm font-semibold text-white/80 mb-2">
+                      ${translateText("lobby_chat.title")}
+                    </div>
+                    <lobby-chat-panel
+                      .eventBus=${this.eventBus}
+                      .username=${this.username}
+                    ></lobby-chat-panel>
+                  </div>
                 </div>
               `
             : ""}
@@ -296,6 +398,14 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+
+    // Reset chat state
+    this.chatVisible = false;
+    this.hasUnreadMessages = false;
+    const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+    if (chatPanel) {
+      (chatPanel as any).clearMessages();
+    }
 
     this.leaveLobbyOnClose = true;
   }
