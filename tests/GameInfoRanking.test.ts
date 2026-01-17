@@ -13,6 +13,8 @@ import { AnalyticsRecord } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
 } from "../src/core/StatsSchemas";
 
@@ -55,7 +57,7 @@ describe("Ranking class", () => {
             stats: {
               units: { port: [2n, 0n, 0n, 2n] },
               conquests: 5n,
-              gold: [0n, 100n, 20n, 0n], // total 120
+              gold: [0n, 100n, 20n, 0n, 15n, 5n], // total 140
               bombs: {
                 abomb: [1n],
                 hbomb: [1n],
@@ -70,7 +72,7 @@ describe("Ranking class", () => {
             stats: {
               units: { city: [2n, 0n, 0n, 2n] },
               conquests: 8n,
-              gold: [0n, 50n, 10n, 5n], // total 65
+              gold: [0n, 50n, 10n, 5n], // total 65, no train trade
               bombs: {
                 abomb: [0n],
                 hbomb: [2n],
@@ -86,7 +88,7 @@ describe("Ranking class", () => {
               // no units, but has conquests/killedAt to count as played
               conquests: 8n,
               killedAt: BigInt(600),
-              gold: [0n, 10n, 2n, 10n], //  total 22
+              gold: [0n, 10n, 2n, 10n, 0n, 5n], //  total 27
               bombs: {},
             },
             persistentID: null,
@@ -178,8 +180,13 @@ describe("Ranking class", () => {
     expect(r.score(p1, RankType.StolenGold)).toBe(
       Number(p1.gold[GOLD_INDEX_STEAL] ?? 0n),
     );
-    expect(r.score(p1, RankType.TradedGold)).toBe(
+    expect(r.score(p1, RankType.NavalTrade)).toBe(
       Number(p1.gold[GOLD_INDEX_TRADE] ?? 0n),
+    );
+    const ownTrain = p1.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
+    const otherTrain = p1.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
+    expect(r.score(p1, RankType.TrainTrade)).toBe(
+      Number(ownTrain + otherTrain),
     );
     expect(r.score(p1, RankType.ConqueredGold)).toBe(
       Number(p1.gold[GOLD_INDEX_WAR] ?? 0n),

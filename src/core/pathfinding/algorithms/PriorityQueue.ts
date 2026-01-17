@@ -18,7 +18,20 @@ export class MinHeap implements PriorityQueue {
 
   push(node: number, priority: number): void {
     if (this.size >= this.capacity) {
-      throw new Error(`MinHeap capacity exceeded: ${this.capacity}`);
+      console.error(
+        `MinHeap capacity exceeded (${this.capacity}). ` +
+          "Resizing, but this indicates a bug. Please investigate.",
+      );
+
+      this.capacity *= 2;
+
+      const newHeap = new Int32Array(this.capacity);
+      const newPri = new Float32Array(this.capacity);
+      newHeap.set(this.heap);
+      newPri.set(this.priorities);
+
+      this.heap = newHeap;
+      this.priorities = newPri;
     }
 
     let i = this.size++;
@@ -94,6 +107,8 @@ export class MinHeap implements PriorityQueue {
 export class BucketQueue implements PriorityQueue {
   private buckets: Int32Array[];
   private bucketSizes: Int32Array;
+  private bucketStamp: Uint32Array;
+  private stamp = 0;
   private minBucket: number;
   private maxBucket: number;
   private size: number;
@@ -102,6 +117,7 @@ export class BucketQueue implements PriorityQueue {
     this.maxBucket = maxPriority + 1;
     this.buckets = new Array(this.maxBucket);
     this.bucketSizes = new Int32Array(this.maxBucket);
+    this.bucketStamp = new Uint32Array(this.maxBucket);
     this.minBucket = this.maxBucket;
     this.size = 0;
   }
@@ -113,7 +129,9 @@ export class BucketQueue implements PriorityQueue {
       this.buckets[bucket] = new Int32Array(64);
     }
 
-    const size = this.bucketSizes[bucket];
+    const size =
+      this.bucketStamp[bucket] === this.stamp ? this.bucketSizes[bucket] : 0;
+
     if (size >= this.buckets[bucket].length) {
       const newBucket = new Int32Array(this.buckets[bucket].length * 2);
       newBucket.set(this.buckets[bucket]);
@@ -121,7 +139,8 @@ export class BucketQueue implements PriorityQueue {
     }
 
     this.buckets[bucket][size] = node;
-    this.bucketSizes[bucket]++;
+    this.bucketSizes[bucket] = size + 1;
+    this.bucketStamp[bucket] = this.stamp;
     this.size++;
 
     if (bucket < this.minBucket) {
@@ -131,11 +150,13 @@ export class BucketQueue implements PriorityQueue {
 
   pop(): number {
     while (this.minBucket < this.maxBucket) {
-      const size = this.bucketSizes[this.minBucket];
-      if (size > 0) {
-        this.bucketSizes[this.minBucket]--;
-        this.size--;
-        return this.buckets[this.minBucket][size - 1];
+      if (this.bucketStamp[this.minBucket] === this.stamp) {
+        const size = this.bucketSizes[this.minBucket];
+        if (size > 0) {
+          this.bucketSizes[this.minBucket]--;
+          this.size--;
+          return this.buckets[this.minBucket][size - 1];
+        }
       }
       this.minBucket++;
     }
@@ -147,7 +168,11 @@ export class BucketQueue implements PriorityQueue {
   }
 
   clear(): void {
-    this.bucketSizes.fill(0);
+    this.stamp++;
+    if (this.stamp > 0xffffffff) {
+      this.bucketStamp.fill(0);
+      this.stamp = 1;
+    }
     this.minBucket = this.maxBucket;
     this.size = 0;
   }

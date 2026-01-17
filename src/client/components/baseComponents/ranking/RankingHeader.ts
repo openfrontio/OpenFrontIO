@@ -14,7 +14,7 @@ export class RankingHeader extends LitElement {
   render() {
     return html`
       <li
-        class="text-lg bg-gray-800 font-bold relative pt-2 pb-2 pr-5 pl-5 mb-1.25 rounded-md flex justify-between items-center"
+        class="text-lg border-white/5 bg-white/[0.02] text-white/60 text-xs uppercase tracking-wider relative pt-2 pb-2 pr-5 pl-5 flex justify-between items-center"
       >
         ${this.renderHeaderContent()}
       </li>
@@ -36,17 +36,17 @@ export class RankingHeader extends LitElement {
       case RankType.MIRV:
         return html`
           <div class="flex justify-between sm:px-17.5 w-full">
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.atoms"),
               RankType.Atoms,
             )}
             /
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.hydros"),
               RankType.Hydros,
             )}
             /
-            ${this.renderBombHeaderButton(
+            ${this.renderMultipleChoiceHeaderButton(
               translateText("game_info_modal.mirv"),
               RankType.MIRV,
             )}
@@ -56,10 +56,21 @@ export class RankingHeader extends LitElement {
         return html`<div class="w-full">
           ${translateText("game_info_modal.all_gold")}
         </div>`;
-      case RankType.TradedGold:
-        return html`<div class="w-full">
-          ${translateText("game_info_modal.trade")}
-        </div>`;
+      case RankType.NavalTrade:
+      case RankType.TrainTrade:
+        return html`
+          <div class="flex justify-between sm:px-17.5 w-full">
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.train_trade"),
+              RankType.TrainTrade,
+            )}
+            /
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.naval_trade"),
+              RankType.NavalTrade,
+            )}
+          </div>
+        `;
       case RankType.ConqueredGold:
         return html`<div class="w-full">
           ${translateText("game_info_modal.conquest_gold")}
@@ -74,7 +85,7 @@ export class RankingHeader extends LitElement {
     }
   }
 
-  private renderBombHeaderButton(label: string, type: RankType) {
+  private renderMultipleChoiceHeaderButton(label: string, type: RankType) {
     return html`
       <button
         @click=${() => this.onSort(type)}

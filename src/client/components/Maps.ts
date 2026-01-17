@@ -4,56 +4,6 @@ import { Difficulty, GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
-// Add map descriptions
-export const MapDescription: Record<keyof typeof GameMapType, string> = {
-  World: "World",
-  GiantWorldMap: "Giant World Map",
-  Europe: "Europe",
-  EuropeClassic: "Europe Classic",
-  Mena: "MENA",
-  NorthAmerica: "North America",
-  Oceania: "Oceania",
-  BlackSea: "Black Sea",
-  Africa: "Africa",
-  Pangaea: "Pangaea",
-  Asia: "Asia",
-  Mars: "Mars",
-  SouthAmerica: "South America",
-  BritanniaClassic: "Britannia Classic",
-  Britannia: "Britannia",
-  GatewayToTheAtlantic: "Gateway to the Atlantic",
-  Australia: "Australia",
-  Iceland: "Iceland",
-  EastAsia: "East Asia",
-  BetweenTwoSeas: "Between Two Seas",
-  FaroeIslands: "Faroe Islands",
-  DeglaciatedAntarctica: "Deglaciated Antarctica",
-  FalklandIslands: "Falkland Islands",
-  Baikal: "Baikal",
-  Halkidiki: "Halkidiki",
-  StraitOfGibraltar: "Strait of Gibraltar",
-  Italia: "Italia",
-  Japan: "Japan",
-  Pluto: "Pluto",
-  Montreal: "Montreal",
-  NewYorkCity: "New York City",
-  Achiran: "Achiran",
-  BaikalNukeWars: "Baikal (Nuke Wars)",
-  FourIslands: "Four Islands",
-  Svalmel: "Svalmel",
-  GulfOfStLawrence: "Gulf of St. Lawrence",
-  Lisbon: "Lisbon",
-  Manicouagan: "Manicouagan",
-  Lemnos: "Lemnos",
-  TwoLakes: "Two Lakes",
-  Sierpinski: "Sierpinski",
-  StraitOfHormuz: "Strait of Hormuz",
-  Surrounded: "Surrounded",
-  Didier: "Didier",
-  DidierFrance: "Didier (France)",
-  AmazonRiver: "Amazon River",
-};
-
 @customElement("map-display")
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";

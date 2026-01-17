@@ -49,7 +49,9 @@ export class GameInfoModal extends LitElement {
         title="${translateText("game_info_modal.title")}"
         translationKey="main.game_info"
       >
-        <div class="flex flex-col items-center px-25 text-center mb-4">
+        <div
+          class="h-full flex flex-col items-center px-25 text-center mb-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+        >
           <div class="w-75 sm:w-125">
             ${this.isLoadingGame
               ? this.renderLoadingAnimation()
@@ -108,7 +110,7 @@ export class GameInfoModal extends LitElement {
     const isUnusualThumbnailSize = hasUnusualThumbnailSize(info.config.gameMap);
     return html`
       <div
-        class="h-37.5 flex relative justify-between rounded-xl bg-blue-600 items-center"
+        class="h-37.5 flex relative justify-between rounded-xl bg-black/20 items-center"
       >
         ${this.mapImage
           ? html`<img
@@ -140,7 +142,7 @@ export class GameInfoModal extends LitElement {
     const bestScore =
       this.rankedPlayers.length > 0 ? this.score(this.rankedPlayers[0]) : 0;
     return html`
-      <ul class="">
+      <ul>
         <ranking-header
           .rankType=${this.rankType}
           @sort=${this.sort}

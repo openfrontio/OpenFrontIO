@@ -5,6 +5,8 @@ import {
   Game,
   GameMode,
   Player,
+  PlayerType,
+  RankedType,
   Team,
 } from "../game/Game";
 
@@ -44,6 +46,19 @@ export class WinCheckExecution implements Execution {
     if (sorted.length === 0) {
       return;
     }
+
+    if (this.mg.config().gameConfig().rankedType === RankedType.OneVOne) {
+      const humans = sorted.filter(
+        (p) => p.type() === PlayerType.Human && !p.isDisconnected(),
+      );
+      if (humans.length === 1) {
+        this.mg.setWinner(humans[0], this.mg.stats().stats());
+        console.log(`${humans[0].name()} has won the game`);
+        this.active = false;
+        return;
+      }
+    }
+
     const max = sorted[0];
     const timeElapsed =
       (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;

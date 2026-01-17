@@ -26,7 +26,7 @@ export class Footer extends LitElement {
             />
           </a>
           <a
-            href="https://www.reddit.com/r/OpenFrontIO/"
+            href="https://www.reddit.com/r/OpenFront/"
             target="_blank"
             rel="noopener noreferrer"
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"

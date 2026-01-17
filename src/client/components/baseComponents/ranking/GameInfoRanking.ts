@@ -2,6 +2,8 @@ import { AnalyticsRecord, PlayerRecord } from "../../../../core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
 } from "../../../../core/StatsSchemas";
 
@@ -12,7 +14,8 @@ export enum RankType {
   MIRV = "MIRV",
   TotalGold = "TotalGold",
   StolenGold = "StolenGold",
-  TradedGold = "TradedGold",
+  NavalTrade = "NavalTrade",
+  TrainTrade = "TrainTrade",
   ConqueredGold = "ConqueredGold",
   Lifetime = "Lifetime",
 }
@@ -134,10 +137,15 @@ export class Ranking {
         return Number(player.gold.reduce((sum, gold) => sum + gold, 0n));
       case RankType.StolenGold:
         return Number(player.gold[GOLD_INDEX_STEAL] ?? 0n);
-      case RankType.TradedGold:
+      case RankType.NavalTrade:
         return Number(player.gold[GOLD_INDEX_TRADE] ?? 0n);
       case RankType.ConqueredGold:
         return Number(player.gold[GOLD_INDEX_WAR] ?? 0n);
+      case RankType.TrainTrade: {
+        const ownTrains = player.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
+        const otherTrains = player.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
+        return Number(ownTrains + otherTrains);
+      }
     }
   }
 

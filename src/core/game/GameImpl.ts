@@ -838,6 +838,24 @@ export class GameImpl implements Game {
     );
   }
 
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit) => boolean,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean {
+    return this.unitGrid.anyUnitNearby(
+      tile,
+      searchRange,
+      types,
+      predicate,
+      playerId,
+      includeUnderConstruction,
+    );
+  }
+
   nearbyUnits(
     tile: TileRef,
     searchRange: number,

@@ -374,6 +374,9 @@ export class PublicLobby extends LitElement {
     if (publicGameModifiers.isCompact) {
       labels.push(translateText("public_game_modifier.compact_map"));
     }
+    if (publicGameModifiers.startingGold) {
+      labels.push(translateText("public_game_modifier.starting_gold"));
+    }
     return labels;
   }
 

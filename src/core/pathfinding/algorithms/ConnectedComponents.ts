@@ -1,6 +1,7 @@
 // Connected Component Labeling using flood-fill
 
 import { GameMap, TileRef } from "../../game/GameMap";
+import { DebugSpan } from "../../utilities/DebugSpan";
 
 export const LAND_MARKER = 0xff; // Must fit in Uint8Array
 
@@ -28,6 +29,7 @@ export class ConnectedComponents {
   }
 
   initialize(): void {
+    DebugSpan.start("ConnectedComponents:initialize");
     let ids: Uint8Array | Uint16Array = this.createPrefilledIds();
 
     let nextId = 0;
@@ -52,6 +54,7 @@ export class ConnectedComponents {
     }
 
     this.componentIds = ids;
+    DebugSpan.end();
   }
 
   /**

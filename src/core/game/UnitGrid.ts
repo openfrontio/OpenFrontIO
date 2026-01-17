@@ -225,4 +225,45 @@ export class UnitGrid {
     }
     return false;
   }
+
+  // Return true if any unit of the given types matches the predicate
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit | UnitView) => boolean,
+    playerId?: PlayerID,
+    includeUnderConstruction: boolean = false,
+  ): boolean {
+    const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
+      tile,
+      searchRange,
+    );
+    const rangeSquared = searchRange * searchRange;
+    for (let cy = startGridY; cy <= endGridY; cy++) {
+      for (let cx = startGridX; cx <= endGridX; cx++) {
+        for (const type of types) {
+          const unitSet = this.grid[cy][cx].get(type);
+          if (unitSet === undefined) continue;
+          for (const unit of unitSet) {
+            if (
+              !this.unitIsInRange(
+                unit,
+                tile,
+                rangeSquared,
+                playerId,
+                includeUnderConstruction,
+              )
+            ) {
+              continue;
+            }
+            if (predicate(unit)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
 }

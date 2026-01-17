@@ -1,5 +1,4 @@
 import tailwindcss from "@tailwindcss/vite";
-import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
@@ -10,19 +9,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // Vite already handles these, but its good practice to define them explicitly
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-let gitCommit = process.env.GIT_COMMIT;
-
-if (!gitCommit) {
-  try {
-    gitCommit = execSync("git rev-parse HEAD").toString().trim();
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("Unable to determine git commit:", error.message);
-    }
-    gitCommit = "unknown";
-  }
-}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -50,16 +36,21 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       tsconfigPaths(),
-      createHtmlPlugin({
-        minify: isProduction,
-        entry: "/src/client/Main.ts",
-        template: "index.html",
-        inject: {
-          data: {
-            // In case we need to inject variables into HTML
-          },
-        },
-      }),
+      ...(isProduction
+        ? []
+        : [
+            createHtmlPlugin({
+              minify: false,
+              entry: "/src/client/Main.ts",
+              template: "index.html",
+              inject: {
+                data: {
+                  gitCommit: JSON.stringify("DEV"),
+                  instanceId: JSON.stringify("DEV_ID"),
+                },
+              },
+            }),
+          ]),
       viteStaticCopy({
         targets: [
           {
@@ -76,7 +67,6 @@ export default defineConfig(({ mode }) => {
         isProduction ? "" : "localhost:3000",
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
-      "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
       "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
         env.STRIPE_PUBLISHABLE_KEY,
       ),

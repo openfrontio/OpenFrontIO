@@ -41,6 +41,27 @@ To process a subset of maps, pass a comma-separated list:
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
 
+## Command Line Flags
+
+- `--maps`: Optional comma-separated list of maps to process.
+  - ex: `go run . --maps=world,eastasia,big_plains`
+
+### Logging
+
+- `--log-level`: Explicitly sets the log level.
+  - ex: `go run . --log-level=debug`
+  - values: `ALL`, `DEBUG`, `INFO` (default), `WARN`, `ERROR`.
+- `--verbose` or `-v`: Adds additional logging and prefixes logs with the `[mapname]`. Alias of `--log-level=DEBUG`.
+- `--debug-performance`: Adds additional logging for performance-based recommendations, sets `--log-level=DEBUG`.
+- `--debug-removal`: Adds additional logging of removed island and lake position/size, sets `--log-level=DEBUG`.
+
+The Generator outputs logs using `slog` with standard log-levels, and an additional ALL level.
+
+The `--verbose`, `-v`, `--debug-performance`, and `--debug-removal` flags all set the log level to `DEBUG`.
+`debug-performance` and `debug-removal` are opt-in on top of the debug log level, as they can produce wordy output. You must pass the specific flag to see the corresponding logs if the `log-level` is set to `DEBUG`.
+
+Setting `--log-level=ALL` will output all possible logs, including all `DEBUG` tiers, regardless of whether the specific flags are passed.
+
 ## Create image.png
 
 The map-generator will process your input file at `assets/maps/<map_name>/image.png` to generate the map
@@ -105,10 +126,8 @@ The country will need to be added to `../src/client/data/countries.json`
 
 Using the `name` from your json:
 
-- Add to the MapDescription `../src/client/components/Maps.ts`
-- Add to the numPlayersConfig `../src/core/configuration/DefaultConfig.ts`
-- Add to the mapCategories `../src/core/game/Game.ts`
-- Add to the map playlist `../src/server/MapPlaylist.ts`
+- Add to GameMapType and mapCategories in `../src/core/game/Game.ts`
+- Add to the map playlist in `../src/server/MapPlaylist.ts`
 - Add to the `map` translation object in `../resources/lang/en.json`
 
 ## Notes

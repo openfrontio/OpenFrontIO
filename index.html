@@ -56,6 +56,12 @@
     />
     <meta property="og:type" content="game" />
 
+    <!-- Injected from Server env -->
+    <script>
+      window.GIT_COMMIT = <%- gitCommit %>;
+      window.INSTANCE_ID = <%- instanceId %>;
+    </script>
+
     <!-- CrazyGames SDK -->
     <script
       src="https://sdk.crazygames.com/crazygames-sdk-v3.js"

@@ -16,6 +16,7 @@ import {
   GameType,
   HumansVsNations,
   Quads,
+  RankedType,
   Trios,
   UnitType,
 } from "./game/Game";
@@ -131,6 +132,19 @@ export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 
+const ClientInfoSchema = z.object({
+  clientID: z.string(),
+  username: z.string(),
+});
+
+export const GameInfoSchema = z.object({
+  gameID: z.string(),
+  clients: z.array(ClientInfoSchema).optional(),
+  numClients: z.number().optional(),
+  msUntilStart: z.number().optional(),
+  gameConfig: z.lazy(() => GameConfigSchema).optional(),
+});
+
 export interface GameInfo {
   gameID: GameID;
   clients?: ClientInfo[];
@@ -170,11 +184,13 @@ export const GameConfigSchema = z.object({
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
+  rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   publicGameModifiers: z
     .object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
+      startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
   disableNations: z.boolean(),
@@ -185,11 +201,12 @@ export const GameConfigSchema = z.object({
   disableNavMesh: z.boolean().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
-  maxTimerValue: z.number().int().min(1).max(120).optional(),
+  maxTimerValue: z.number().int().min(1).max(120).optional(), // In minutes
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
-  isOneVOne: z.boolean().optional(),
+  goldMultiplier: z.number().min(0.1).max(1000).optional(),
+  startingGold: z.number().int().min(0).max(1000000000).optional(),
 });
 
 export const TeamSchema = z.string();
@@ -218,10 +235,13 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-export const ID = z
-  .string()
-  .regex(/^[a-zA-Z0-9]+$/)
-  .length(8);
+
+export const GAME_ID_REGEX = /^[A-Za-z0-9]{8}$/;
+
+export const isValidGameID = (value: string): boolean =>
+  GAME_ID_REGEX.test(value);
+
+export const ID = z.string().regex(GAME_ID_REGEX);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
