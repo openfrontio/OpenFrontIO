@@ -20,7 +20,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, sigmoid, simpleHash, within } from "../Util";
+import { assertNever, sigmoid, simpleHash, toInt, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
@@ -289,15 +289,7 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
-    const debuff = this.tradeShipShortRangeDebuff();
-    const baseGold =
-      100_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 100 * dist;
-    const numPortBonus = numPorts - 1;
-    // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
-    const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
-    const multiplier = this.goldMultiplier();
-    return BigInt(Math.floor(baseGold * bonus * multiplier));
+    return toInt(10000 + 150 * Math.pow(dist, 1.1));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -306,13 +298,12 @@ export class DefaultConfig implements Config {
     numPlayerPorts: number,
     numPlayerTradeShips: number,
   ): number {
-    // Geometric mean of base spawn rate and port multiplier
-    const combined = Math.sqrt(
-      this.tradeShipBaseSpawn(numTradeShips, numPlayerTradeShips) *
-        this.tradeShipPortMultiplier(numPlayerPorts),
-    );
-
-    return Math.floor(25 / combined);
+    if (numPlayerPorts <= 3) return 18;
+    if (numPlayerPorts <= 5) return 25;
+    if (numPlayerPorts <= 8) return 35;
+    if (numPlayerPorts <= 10) return 40;
+    if (numPlayerPorts <= 12) return 45;
+    return 50;
   }
 
   private tradeShipBaseSpawn(
@@ -388,12 +379,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MIRV:
         return {
-          cost: (game: Game, player: Player) => {
-            if (player.type() === PlayerType.Human && this.infiniteGold()) {
-              return 0n;
-            }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
-          },
+          cost: this.costWrapper(() => 35_000_000),
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
