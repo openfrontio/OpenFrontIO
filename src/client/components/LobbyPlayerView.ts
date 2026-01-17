@@ -23,7 +23,7 @@ export interface TeamPreviewData {
   players: ClientInfo[];
 }
 
-@customElement("lobby-team-view")
+@customElement("lobby-player-view")
 export class LobbyTeamView extends LitElement {
   @property({ type: String }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Array }) clients: ClientInfo[] = [];

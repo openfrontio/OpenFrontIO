@@ -17,7 +17,7 @@ import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
@@ -183,7 +183,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ${this.renderGameConfig()}
           ${this.hasJoined && this.players.length > 0
             ? html`
-                <lobby-team-view
+                <lobby-player-view
                   class="mt-6"
                   .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                   .clients=${this.players}
@@ -193,7 +193,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
                   .disableNations=${this.gameConfig?.disableNations ?? false}
                   .isCompactMap=${this.gameConfig?.gameMapSize ===
                   GameMapSize.Compact}
-                ></lobby-team-view>
+                ></lobby-player-view>
               `
             : ""}
         </div>

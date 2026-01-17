@@ -27,7 +27,7 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -933,7 +933,7 @@ export class HostLobbyModal extends BaseModal {
             </div>
 
             <!-- Player List -->
-            <lobby-team-view
+            <lobby-player-view
               .gameMode=${this.gameMode}
               .clients=${this.clients}
               .lobbyCreatorClientID=${this.lobbyCreatorClientID}
@@ -942,7 +942,7 @@ export class HostLobbyModal extends BaseModal {
               .disableNations=${this.disableNations}
               .isCompactMap=${this.compactMap}
               .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-            ></lobby-team-view>
+            ></lobby-player-view>
           </div>
         </div>
 
