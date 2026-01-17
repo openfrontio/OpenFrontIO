@@ -57,7 +57,7 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     territoryRgb = mix(
       territoryRgb,
       vec3f(1.0, 0.0, 1.0),
-      clamp(0.35 * defendedStrength, 0.0, 0.35),
+      clamp(0.8 * defendedStrength, 0.1, 0.35),
     );
     if (hasFallout) {
       // Fallout color is at index 0
