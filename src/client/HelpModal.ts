@@ -50,6 +50,7 @@ export class HelpModal extends BaseModal {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      localAttack: "KeyL",
       swapDirection: "KeyU",
       shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
