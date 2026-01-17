@@ -552,7 +552,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
-        style="--left: ${this.position.x}px; --top: ${this.position.y}px; --transform: none;"
+        style="--left: ${this.position.x}px; --top: ${this.position
+          .y}px; --transform: none;"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="reset-button" @click="${this.handleReset}">
