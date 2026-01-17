@@ -598,6 +598,8 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
+  public isSkinTest: boolean = false;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -605,7 +607,9 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
     private humans: Player[],
+    isSkinTest?: boolean,
   ) {
+    this.isSkinTest = isSkinTest ?? false;
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);

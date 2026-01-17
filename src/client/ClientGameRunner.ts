@@ -34,10 +34,12 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  ReplaySpeedChangeEvent,
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { TestSkinExecution } from "./TestSkinExecution";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -50,6 +52,7 @@ import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -62,6 +65,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  isSkinTest?: boolean;
 }
 
 export function joinLobby(
@@ -210,6 +214,7 @@ async function createClientGame(
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    lobbyConfig.isSkinTest,
   );
 
   const canvas = createCanvas();
@@ -240,6 +245,7 @@ export class ClientGameRunner {
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
+  private testSkinExecution: TestSkinExecution | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -254,6 +260,16 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
+  }
+
+  private stopSkinTest() {
+    if (this.testSkinExecution !== null) {
+      try {
+        this.testSkinExecution.stop();
+      } finally {
+        this.testSkinExecution = null;
+      }
+    }
   }
 
   private async saveGame(update: WinUpdate) {
@@ -298,6 +314,31 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
+    if (this.lobby.isSkinTest) {
+      // Set game speed to maximum
+      this.eventBus.emit(
+        new ReplaySpeedChangeEvent(ReplaySpeedMultiplier.fastest),
+      );
+
+      // Clean up any prior skin test resources, then set a new timeout and start a fresh execution
+      this.stopSkinTest();
+
+      // Start a fresh TestSkinExecution which manages its own modal timeout
+      this.testSkinExecution = new TestSkinExecution(
+        this.gameView,
+        this.eventBus,
+        this.lobby.clientID,
+        () => this.isActive,
+        () => {
+          // Called when execution requests the modal be shown — stop the game and
+          // clean up resources first.
+          this.isActive = false;
+          this.stopSkinTest();
+        },
+      );
+      this.testSkinExecution.start();
+    }
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
@@ -344,7 +385,12 @@ export class ClientGameRunner {
       this.currentTickDelay = undefined;
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        if (this.lobby.isSkinTest) {
+          // For skin tests, show the modal immediately on win instead of waiting
+          this.testSkinExecution?.showModal();
+        } else {
+          this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        }
       }
     });
 
@@ -478,6 +524,8 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    // Clean up skin test resources
+    this.stopSkinTest();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {

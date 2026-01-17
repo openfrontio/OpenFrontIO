@@ -205,6 +205,7 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  isSkinTest?: boolean;
 }
 
 class Client {
@@ -767,6 +768,7 @@ class Client {
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
+        isSkinTest: lobby.isSkinTest,
       },
       () => {
         console.log("Closing modals");
