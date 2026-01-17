@@ -13,12 +13,12 @@ import darkModeIcon from "/images/DarkModeIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
 import exitIcon from "/images/ExitIconWhite.svg?url";
 import explosionIcon from "/images/ExplosionIconWhite.svg?url";
+import gridIcon from "/images/GridIconWhite.svg?url";
 import mouseIcon from "/images/MouseIconWhite.svg?url";
 import ninjaIcon from "/images/NinjaIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
 import sirenIcon from "/images/SirenIconWhite.svg?url";
 import treeIcon from "/images/TreeIconWhite.svg?url";
-import gridIcon from "/images/GridIconWhite.svg?url";
 import musicIcon from "/images/music.svg?url";
 
 export class ShowSettingsModalEvent {
