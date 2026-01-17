@@ -42,25 +42,20 @@ export class TerritoryRenderPass implements RenderPass {
         {
           binding: 1,
           visibility: 2 /* FRAGMENT */,
-          buffer: { type: "uniform" },
+          texture: { sampleType: "uint" },
         },
         {
           binding: 2,
           visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "uint" },
+          texture: { sampleType: "float" },
         },
         {
           binding: 3,
           visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "uint" },
-        },
-        {
-          binding: 4,
-          visibility: 2 /* FRAGMENT */,
           texture: { sampleType: "float" },
         },
         {
-          binding: 5,
+          binding: 4,
           visibility: 2 /* FRAGMENT */,
           texture: { sampleType: "float" },
         },
@@ -112,7 +107,6 @@ export class TerritoryRenderPass implements RenderPass {
 
     // Update uniforms
     resources.writeUniformBuffer(performance.now() / 1000);
-    resources.writeDefenseParamsBuffer();
 
     const pass = encoder.beginRenderPass({
       colorAttachments: [
@@ -142,9 +136,8 @@ export class TerritoryRenderPass implements RenderPass {
       !this.bindGroupLayout ||
       !this.resources ||
       !this.resources.uniformBuffer ||
-      !this.resources.defenseParamsBuffer ||
       !this.resources.stateTexture ||
-      !this.resources.defendedTexture ||
+      !this.resources.defendedStrengthTexture ||
       !this.resources.paletteTexture ||
       !this.resources.terrainTexture
     ) {
@@ -157,22 +150,18 @@ export class TerritoryRenderPass implements RenderPass {
         { binding: 0, resource: { buffer: this.resources.uniformBuffer } },
         {
           binding: 1,
-          resource: { buffer: this.resources.defenseParamsBuffer },
-        },
-        {
-          binding: 2,
           resource: this.resources.stateTexture.createView(),
         },
         {
-          binding: 3,
-          resource: this.resources.defendedTexture.createView(),
+          binding: 2,
+          resource: this.resources.defendedStrengthTexture.createView(),
         },
         {
-          binding: 4,
+          binding: 3,
           resource: this.resources.paletteTexture.createView(),
         },
         {
-          binding: 5,
+          binding: 4,
           resource: this.resources.terrainTexture.createView(),
         },
       ],
