@@ -546,6 +546,7 @@ export class HostLobbyModal extends BaseModal {
                     min: 0,
                     max: 120,
                     value: this.maxTimerValue ?? 0,
+                    ariaLabel: translateText("host_modal.max_timer"),
                     placeholder: translateText("host_modal.mins_placeholder"),
                     onInput: this.handleMaxTimerValueChanges,
                     onKeyDown: this.handleMaxTimerValueKeyDown,
@@ -562,6 +563,9 @@ export class HostLobbyModal extends BaseModal {
                     max: 120,
                     step: 1,
                     value: this.spawnImmunityDurationMinutes ?? 0,
+                    ariaLabel: translateText(
+                      "host_modal.player_immunity_duration",
+                    ),
                     placeholder: translateText("host_modal.mins_placeholder"),
                     onInput: this.handleSpawnImmunityDurationInput,
                     onKeyDown: this.handleSpawnImmunityDurationKeyDown,
