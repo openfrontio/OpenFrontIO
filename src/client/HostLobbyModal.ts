@@ -1,6 +1,6 @@
 import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { copyToClipboard, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { EventBus } from "../core/EventBus";
 import {
@@ -16,7 +16,6 @@ import {
   mapCategories,
 } from "../core/game/Game";
 import { getCompactMapNationCount } from "../core/game/NationCreation";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -27,6 +26,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyChatPanel";
@@ -70,19 +70,16 @@ export class HostLobbyModal extends BaseModal {
   @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
   @state() private lobbyId = "";
-  @state() private copySuccess = false;
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
   private eventBus: EventBus | null = null;
   private username: string | null = null;
@@ -197,91 +194,11 @@ export class HostLobbyModal extends BaseModal {
           },
           ariaLabel: translateText("common.back"),
           rightContent: html`
-            <!-- Lobby ID Box -->
-            <div
-              class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-            >
-              <button
-                @click=${() => {
-                  this.lobbyIdVisible = !this.lobbyIdVisible;
-                  this.requestUpdate();
-                }}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("user_setting.toggle_visibility")}"
-              >
-                ${this.lobbyIdVisible
-                  ? html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                      ></path>
-                    </svg>`
-                  : html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                      ></path>
-                      <path
-                        d="M144 256l224 0"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                        stroke-linecap="round"
-                      ></path>
-                    </svg>`}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                @dblclick=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.add("select-all");
-                }}
-                @mouseleave=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.remove(
-                    "select-all",
-                  );
-                }}
-                class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                ${this.copySuccess
-                  ? translateText("common.copied")
-                  : this.lobbyIdVisible
-                    ? this.lobbyId
-                    : "••••••••"}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  height="16px"
-                  width="16px"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                  />
-                </svg>
-              </button>
-            </div>
+            <copy-button
+              .lobbyId=${this.lobbyId}
+              .lobbySuffix=${this.lobbyUrlSuffix}
+              include-lobby-query
+            ></copy-button>
           `,
         })}
 
@@ -1122,10 +1039,6 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
-    this.lobbyIdVisible = this.userSettings.get(
-      "settings.lobbyIdVisibility",
-      true,
-    );
 
     createLobby(this.lobbyCreatorClientID)
       .then(async (lobby) => {
@@ -1244,10 +1157,8 @@ export class HostLobbyModal extends BaseModal {
     this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
-    this.copySuccess = false;
     this.clients = [];
     this.lobbyCreatorClientID = "";
-    this.lobbyIdVisible = true;
     this.nationCount = 0;
     this.goldMultiplier = false;
     this.goldMultiplierValue = undefined;
@@ -1534,15 +1445,6 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobbyOnClose = true;
     }
     return response;
-  }
-
-  private async copyToClipboard() {
-    const url = await this.buildLobbyUrl();
-    await copyToClipboard(
-      url,
-      () => (this.copySuccess = true),
-      () => (this.copySuccess = false),
-    );
   }
 
   private async pollPlayers() {
