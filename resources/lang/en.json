@@ -198,7 +198,8 @@
     "not_found": "Not Found",
     "clear_session": "Clear Session",
     "failed_to_send_recovery_email": "Failed to send recovery email",
-    "enter_email_address": "Please enter an email address"
+    "enter_email_address": "Please enter an email address",
+    "personal_player_id": "Personal Player ID:"
   },
   "stats_modal": {
     "title": "Stats",
