@@ -603,7 +603,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       },
     })
       .then((response) => response.json())
-      .then(async (data: GameInfo) => {
+      .then((data: GameInfo) => {
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         if (data.gameConfig) {
@@ -611,7 +611,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
             this.gameConfig?.gameMap !== data.gameConfig.gameMap;
           this.gameConfig = data.gameConfig;
           if (mapChanged) {
-            await this.loadNationCount();
+            this.loadNationCount();
           }
         }
       })
