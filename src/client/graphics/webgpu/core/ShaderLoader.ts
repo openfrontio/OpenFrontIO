@@ -1,28 +1,18 @@
 /**
- * Utility for loading WGSL shader files via Vite ?raw imports.
- * Caches loaded shaders to avoid re-importing.
+ * Utility for loading WGSL shader sources bundled by Vite.
+ * Uses a static glob so production builds reliably include all shaders.
  */
 
-const shaderCache = new Map<string, Promise<string>>();
+const shaderSources = import.meta.glob("../shaders/**/*.wgsl", {
+  as: "raw",
+  eager: true,
+}) as Record<string, string>;
 
-/**
- * Load a shader file from the shaders directory.
- * @param path Relative path from shaders/ directory (e.g., "compute/state-update.wgsl")
- * @returns Promise resolving to the shader code as a string
- */
 export async function loadShader(path: string): Promise<string> {
-  // Check cache first
-  if (shaderCache.has(path)) {
-    return shaderCache.get(path)!;
+  const key = `../shaders/${path}`;
+  const src = shaderSources[key];
+  if (!src) {
+    throw new Error(`Missing WGSL shader source: ${key}`);
   }
-
-  // Import shader using Vite ?raw import
-  const shaderPromise = import(`../shaders/${path}?raw`).then(
-    (module) => module.default as string,
-  );
-
-  // Cache the promise
-  shaderCache.set(path, shaderPromise);
-
-  return shaderPromise;
+  return src;
 }
