@@ -6,6 +6,8 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 const BASE_CELL_COUNT = 10;
+const MAX_COLUMNS = 50;
+const MIN_ROWS = 2;
 const LABEL_PADDING = 8;
 const LABEL_BG_PADDING = 4;
 
@@ -17,6 +19,22 @@ const toAlphaLabel = (index: number): string => {
     value = Math.floor(value / 26) - 1;
   } while (value >= 0);
   return label;
+};
+
+const computeGrid = (width: number, height: number) => {
+  let cellSize = Math.min(width, height) / BASE_CELL_COUNT;
+  let rows = Math.max(1, Math.round(height / cellSize));
+  let cols = Math.max(1, Math.round(width / cellSize));
+
+  if (cols > MAX_COLUMNS) {
+    const maxRowsForCols = Math.floor((MAX_COLUMNS * height) / width);
+    rows = Math.max(MIN_ROWS, Math.min(rows, maxRowsForCols));
+  }
+
+  cellSize = height / rows;
+  cols = Math.max(1, Math.round(width / cellSize));
+
+  return { cellSize, rows, cols };
 };
 
 export class CoordinateGridLayer implements Layer {
@@ -45,13 +63,7 @@ export class CoordinateGridLayer implements Layer {
     const height = this.game.height();
     if (width <= 0 || height <= 0) return;
 
-    let cellSize = Math.min(width, height) / BASE_CELL_COUNT;
-    let rows = Math.max(1, Math.round(height / cellSize));
-    let cols = Math.max(1, Math.round(width / cellSize));
-    cellSize = Math.min(width / cols, height / rows);
-    rows = Math.max(1, Math.round(height / cellSize));
-    cols = Math.max(1, Math.round(width / cellSize));
-
+    const { cellSize, rows, cols } = computeGrid(width, height);
     const cellWidth = cellSize;
     const cellHeight = cellSize;
     const canvasWidth = context.canvas.width;
