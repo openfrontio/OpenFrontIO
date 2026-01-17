@@ -1,20 +1,17 @@
-// Shore-coercing transformer that converts shore tiles to water tiles for pathfinding
-
 import { GameMap, TileRef } from "../../game/GameMap";
 import { PathFinder } from "../types";
 
+type Coerced = { water: TileRef | null; original: TileRef | null };
+
 /**
- * Wraps a PathFinder to handle shore tiles.
- * Coerces shore tiles to nearby water tiles before pathfinding,
- * then fixes the path extremes to include the original shore tiles.
- *
- * Works at whatever resolution the map provides - can be used with
- * full map or minimap-based pathfinders.
+ * Coerces shore/land endpoints to adjacent water tiles for pathfinding,
+ * then restores original shore tiles to the returned path.
  */
 export class ShoreCoercingTransformer implements PathFinder<number> {
   constructor(
-    private inner: PathFinder<number>,
-    private map: GameMap,
+    private readonly inner: PathFinder<number>,
+    private readonly map: GameMap,
+    private readonly findBestShoreNeighbor: boolean = true,
   ) {}
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
@@ -23,41 +20,34 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
     const waterFrom: TileRef[] = [];
 
     for (const f of fromArray) {
-      const coerced = this.coerceToWater(f);
-      if (coerced.water !== null) {
-        waterFrom.push(coerced.water);
-        waterToOriginal.set(coerced.water, coerced.original);
+      const { water, original } = this.coerceToWater(f, to);
+      if (water !== null) {
+        waterFrom.push(water);
+        // Keep first mapping if multiple shores coerce to same water tile
+        if (!waterToOriginal.has(water)) waterToOriginal.set(water, original);
       }
     }
 
-    if (waterFrom.length === 0) {
-      return null;
-    }
+    if (!waterFrom.length) return null;
 
-    // Coerce to tile
     const coercedTo = this.coerceToWater(to);
-    if (coercedTo.water === null) {
-      return null;
-    }
+    if (coercedTo.water === null) return null;
 
-    // Search on water tiles
-    const fromTiles = waterFrom.length === 1 ? waterFrom[0] : waterFrom;
-    const path = this.inner.findPath(fromTiles, coercedTo.water);
-    if (!path || path.length === 0) {
-      return null;
-    }
+    const path = this.inner.findPath(
+      waterFrom.length === 1 ? waterFrom[0] : waterFrom,
+      coercedTo.water,
+    );
+    if (!path?.length) return null;
 
-    // Look up the actual path start in the map
-    const originalShore = waterToOriginal.get(path[0]);
-    if (originalShore !== undefined && originalShore !== null) {
-      path.unshift(originalShore);
-    }
+    // Restore original shore endpoints to the path
+    const originalStart = this.resolveOriginalStart(
+      path[0],
+      fromArray,
+      waterToOriginal,
+    );
+    if (originalStart !== null) path.unshift(originalStart);
 
-    // Append original to if different
-    if (
-      coercedTo.original !== null &&
-      path[path.length - 1] !== coercedTo.original
-    ) {
+    if (coercedTo.original !== null && path.at(-1) !== coercedTo.original) {
       path.push(coercedTo.original);
     }
 
@@ -65,27 +55,62 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
   }
 
   /**
-   * Coerce a tile to water for pathfinding.
-   * If tile is already water, returns it unchanged.
-   * If tile is shore (land with water neighbor), finds the nearest water neighbor.
+   * Finds the original shore tile for a given start water tile.
+   * Falls back to neighbor search if inner pathfinder rewrote the start tile.
    */
-  private coerceToWater(tile: TileRef): {
-    water: TileRef | null;
-    original: TileRef | null;
-  } {
-    // If already water, no coercion needed
-    if (this.map.isWater(tile)) {
-      return { water: tile, original: null };
-    }
+  private resolveOriginalStart(
+    startWater: TileRef,
+    candidates: TileRef[],
+    mapping: Map<TileRef, TileRef | null>,
+  ): TileRef | null {
+    const mapped = mapping.get(startWater);
+    if (mapped !== undefined) return mapped;
 
-    // Find adjacent water neighbor
+    // Fallback: find which candidate shore borders the start water tile
+    for (const f of candidates) {
+      if (this.map.isWater(f)) continue;
+      for (const n of this.map.neighbors(f)) {
+        if (n === startWater) return f;
+      }
+    }
+    return null;
+  }
+
+  /** Coerces land tiles to an adjacent water tile; water tiles pass through unchanged. */
+  private coerceToWater(tile: TileRef, destination?: TileRef): Coerced {
+    if (this.map.isWater(tile)) return { water: tile, original: null };
+
+    let best: TileRef | null = null;
+    let maxScore = -1;
+    let minDist = Infinity;
+
     for (const n of this.map.neighbors(tile)) {
-      if (this.map.isWater(n)) {
-        return { water: n, original: tile };
+      if (!this.map.isWater(n)) continue;
+      if (!this.findBestShoreNeighbor) return { water: n, original: tile };
+
+      // Prefer water tiles with more water neighbors (better connectivity)
+      const score = this.countWaterNeighbors(n);
+      const dist =
+        destination !== null && destination !== undefined
+          ? this.map.euclideanDistSquared(n, destination)
+          : 0;
+
+      // Highest connectivity, then closest to destination
+      if (score > maxScore || (score === maxScore && dist < minDist)) {
+        maxScore = score;
+        minDist = dist;
+        best = n;
       }
     }
 
-    // No water neighbor found - let HPA* handle at minimap level
-    return { water: null, original: tile };
+    return { water: best, original: tile };
+  }
+
+  private countWaterNeighbors(tile: TileRef): number {
+    let count = 0;
+    for (const n of this.map.neighbors(tile)) {
+      if (this.map.isWater(n)) count++;
+    }
+    return count;
   }
 }
