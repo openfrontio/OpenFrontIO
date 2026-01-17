@@ -161,7 +161,7 @@
     "logged_in_with_discord": "디스코드 로그인 완료",
     "recovery_email_sent": "{email}(으)로 복구 이메일을 보냈습니다."
   },
-  "stats_modal": {
+  "leaderboard_modal": {
     "title": "정보",
     "clan_stats": "클랜 정보",
     "loading": "로딩 중...",

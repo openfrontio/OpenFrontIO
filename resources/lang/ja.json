@@ -198,7 +198,7 @@
     "failed_to_send_recovery_email": "再設定メールを送信できませんでした",
     "enter_email_address": "メールアドレスを入力してください"
   },
-  "stats_modal": {
+  "leaderboard_modal": {
     "title": "ステータス",
     "clan_stats": "クランステータス",
     "loading": "ロード中…",
