@@ -94,7 +94,9 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    let { isCompact, isRandomSpawn } = this.getRandomPublicGameModifiers();
+    const modifiers = this.getRandomPublicGameModifiers();
+    const { startingGold } = modifiers;
+    let { isCompact, isRandomSpawn } = modifiers;
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
@@ -122,11 +124,10 @@ export class MapPlaylist {
       maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
-      publicGameModifiers: { isCompact, isRandomSpawn },
+      publicGameModifiers: { isCompact, isRandomSpawn, startingGold },
+      startingGold,
       difficulty:
-        playerTeams === HumansVsNations
-          ? Difficulty.Impossible
-          : Difficulty.Easy,
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -198,6 +199,7 @@ export class MapPlaylist {
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
+      startingGold: Math.random() < 0.03 ? 5_000_000 : undefined, // 3% chance
     };
   }
 

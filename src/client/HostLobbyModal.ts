@@ -1,6 +1,6 @@
 import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { copyToClipboard, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
@@ -14,8 +14,6 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { getCompactMapNationCount } from "../core/game/NationCreation";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -26,9 +24,10 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -60,20 +59,21 @@ export class HostLobbyModal extends BaseModal {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
+  @state() private goldMultiplier: boolean = false;
+  @state() private goldMultiplierValue: number | undefined = undefined;
+  @state() private startingGold: boolean = false;
+  @state() private startingGoldValue: number | undefined = undefined;
   @state() private lobbyId = "";
-  @state() private copySuccess = false;
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
@@ -140,91 +140,11 @@ export class HostLobbyModal extends BaseModal {
           },
           ariaLabel: translateText("common.back"),
           rightContent: html`
-            <!-- Lobby ID Box -->
-            <div
-              class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-            >
-              <button
-                @click=${() => {
-                  this.lobbyIdVisible = !this.lobbyIdVisible;
-                  this.requestUpdate();
-                }}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("user_setting.toggle_visibility")}"
-              >
-                ${this.lobbyIdVisible
-                  ? html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                      ></path>
-                    </svg>`
-                  : html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                      ></path>
-                      <path
-                        d="M144 256l224 0"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                        stroke-linecap="round"
-                      ></path>
-                    </svg>`}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                @dblclick=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.add("select-all");
-                }}
-                @mouseleave=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.remove(
-                    "select-all",
-                  );
-                }}
-                class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                ${this.copySuccess
-                  ? translateText("common.copied")
-                  : this.lobbyIdVisible
-                    ? this.lobbyId
-                    : "••••••••"}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  height="16px"
-                  width="16px"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                  />
-                </svg>
-              </button>
-            </div>
+            <copy-button
+              .lobbyId=${this.lobbyId}
+              .lobbySuffix=${this.lobbyUrlSuffix}
+              include-lobby-query
+            ></copy-button>
           `,
         })}
 
@@ -739,6 +659,158 @@ export class HostLobbyModal extends BaseModal {
                     ${translateText("host_modal.player_immunity_duration")}
                   </div>
                 </div>
+
+                <!-- Gold Multiplier -->
+                <div
+                  role="button"
+                  tabindex="0"
+                  @click=${this.createToggleHandlers(
+                    () => this.goldMultiplier,
+                    (val) => (this.goldMultiplier = val),
+                    () => this.goldMultiplierValue,
+                    (val) => (this.goldMultiplierValue = val),
+                    2,
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.goldMultiplier,
+                    (val) => (this.goldMultiplier = val),
+                    () => this.goldMultiplierValue,
+                    (val) => (this.goldMultiplierValue = val),
+                    2,
+                  ).keydown}
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
+                    .goldMultiplier
+                    ? "bg-blue-500/20 border-blue-500/50"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                >
+                  <div class="flex items-center justify-center w-full mt-1">
+                    <div
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
+                        .goldMultiplier
+                        ? "bg-blue-500 border-blue-500"
+                        : "border-white/20 bg-white/5"}"
+                    >
+                      ${this.goldMultiplier
+                        ? html`<svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 text-white"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>`
+                        : ""}
+                    </div>
+                  </div>
+
+                  ${this.goldMultiplier
+                    ? html`<input
+                        type="number"
+                        id="gold-multiplier-value"
+                        min="0.1"
+                        max="1000"
+                        step="any"
+                        value=${this.goldMultiplierValue ?? ""}
+                        class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                        aria-label=${translateText(
+                          "single_modal.gold_multiplier",
+                        )}
+                        @change=${this.handleGoldMultiplierValueChanges}
+                        @keydown=${this.handleGoldMultiplierValueKeyDown}
+                        placeholder=${translateText(
+                          "single_modal.gold_multiplier_placeholder",
+                        )}
+                      />`
+                    : html`<div
+                        class="h-[2px] w-4 bg-white/10 rounded my-3"
+                      ></div>`}
+
+                  <div
+                    class="text-[10px] uppercase font-bold text-white/60 tracking-wider text-center w-full leading-tight break-words hyphens-auto"
+                  >
+                    ${translateText("single_modal.gold_multiplier")}
+                  </div>
+                </div>
+
+                <!-- Starting Gold -->
+                <div
+                  role="button"
+                  tabindex="0"
+                  @click=${this.createToggleHandlers(
+                    () => this.startingGold,
+                    (val) => (this.startingGold = val),
+                    () => this.startingGoldValue,
+                    (val) => (this.startingGoldValue = val),
+                    5000000,
+                  ).click}
+                  @keydown=${this.createToggleHandlers(
+                    () => this.startingGold,
+                    (val) => (this.startingGold = val),
+                    () => this.startingGoldValue,
+                    (val) => (this.startingGoldValue = val),
+                    5000000,
+                  ).keydown}
+                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
+                    .startingGold
+                    ? "bg-blue-500/20 border-blue-500/50"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                >
+                  <div class="flex items-center justify-center w-full mt-1">
+                    <div
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
+                        .startingGold
+                        ? "bg-blue-500 border-blue-500"
+                        : "border-white/20 bg-white/5"}"
+                    >
+                      ${this.startingGold
+                        ? html`<svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 text-white"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>`
+                        : ""}
+                    </div>
+                  </div>
+
+                  ${this.startingGold
+                    ? html`<input
+                        type="number"
+                        id="starting-gold-value"
+                        min="0"
+                        max="1000000000"
+                        step="100000"
+                        .value=${String(this.startingGoldValue ?? "")}
+                        class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
+                        aria-label=${translateText(
+                          "single_modal.starting_gold",
+                        )}
+                        @input=${this.handleStartingGoldValueChanges}
+                        @keydown=${this.handleStartingGoldValueKeyDown}
+                        placeholder=${translateText(
+                          "single_modal.starting_gold_placeholder",
+                        )}
+                      />`
+                    : html`<div
+                        class="h-[2px] w-4 bg-white/10 rounded my-3"
+                      ></div>`}
+
+                  <div
+                    class="text-[10px] uppercase font-bold text-white/60 tracking-wider text-center w-full leading-tight break-words hyphens-auto"
+                  >
+                    ${translateText("single_modal.starting_gold")}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -778,33 +850,16 @@ export class HostLobbyModal extends BaseModal {
             </div>
 
             <!-- Player List -->
-            <div class="border-t border-white/10 pt-6">
-              <div class="flex justify-between items-center mb-4">
-                <div
-                  class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                >
-                  ${this.clients.length}
-                  ${this.clients.length === 1
-                    ? translateText("host_modal.player")
-                    : translateText("host_modal.players")}
-                  <span style="margin: 0 8px;">•</span>
-                  ${this.getEffectiveNationCount()}
-                  ${this.getEffectiveNationCount() === 1
-                    ? translateText("host_modal.nation_player")
-                    : translateText("host_modal.nation_players")}
-                </div>
-              </div>
-
-              <lobby-team-view
-                class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                .gameMode=${this.gameMode}
-                .clients=${this.clients}
-                .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                .teamCount=${this.teamCount}
-                .nationCount=${this.getEffectiveNationCount()}
-                .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-              ></lobby-team-view>
-            </div>
+            <lobby-player-view
+              .gameMode=${this.gameMode}
+              .clients=${this.clients}
+              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+              .teamCount=${this.teamCount}
+              .nationCount=${this.nationCount}
+              .disableNations=${this.disableNations}
+              .isCompactMap=${this.compactMap}
+              .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            ></lobby-player-view>
           </div>
         </div>
 
@@ -841,10 +896,6 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
-    this.lobbyIdVisible = this.userSettings.get(
-      "settings.lobbyIdVisibility",
-      true,
-    );
 
     createLobby(this.lobbyCreatorClientID)
       .then(async (lobby) => {
@@ -963,11 +1014,13 @@ export class HostLobbyModal extends BaseModal {
     this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
-    this.copySuccess = false;
     this.clients = [];
     this.lobbyCreatorClientID = "";
-    this.lobbyIdVisible = true;
     this.nationCount = 0;
+    this.goldMultiplier = false;
+    this.goldMultiplierValue = undefined;
+    this.startingGold = false;
+    this.startingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
   }
@@ -1033,6 +1086,44 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
+    this.putGameConfig();
+  }
+
+  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
+    if (["+", "-", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const value = parseFloat(input.value);
+
+    if (isNaN(value) || value < 0.1 || value > 1000) {
+      this.goldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.goldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  }
+
+  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value);
+
+    if (isNaN(value) || value < 0 || value > 1000000000) {
+      this.startingGoldValue = undefined;
+    } else {
+      this.startingGoldValue = value;
+    }
     this.putGameConfig();
   }
 
@@ -1151,6 +1242,12 @@ export class HostLobbyModal extends BaseModal {
                 }),
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
+            goldMultiplier:
+              this.goldMultiplier === true
+                ? this.goldMultiplierValue
+                : undefined,
+            startingGold:
+              this.startingGold === true ? this.startingGoldValue : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
@@ -1199,15 +1296,6 @@ export class HostLobbyModal extends BaseModal {
     return response;
   }
 
-  private async copyToClipboard() {
-    const url = await this.buildLobbyUrl();
-    await copyToClipboard(
-      url,
-      () => (this.copySuccess = true),
-      () => (this.copySuccess = false),
-    );
-  }
-
   private async pollPlayers() {
     const config = await getServerConfigFromClient();
     fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
@@ -1234,30 +1322,21 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async loadNationCount() {
+    const currentMap = this.selectedMap;
     try {
-      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const mapData = this.mapLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
-      this.nationCount = manifest.nations.length;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      this.nationCount = 0;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = 0;
+      }
     }
-  }
-
-  /**
-   * Returns the effective nation count for display purposes.
-   * In HumansVsNations mode, this equals the number of human players.
-   * For compact maps, only 25% of nations are used.
-   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
-   */
-  private getEffectiveNationCount(): number {
-    if (this.disableNations) {
-      return 0;
-    }
-    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
-      return this.clients.length;
-    }
-    return getCompactMapNationCount(this.nationCount, this.compactMap);
   }
 }
 
