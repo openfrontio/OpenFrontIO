@@ -1,0 +1,233 @@
+import { html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { translateText } from "./Utils";
+import { BaseModal } from "./components/BaseModal";
+import "./components/baseComponents/Modal";
+import { modalHeader } from "./components/ui/ModalHeader";
+import {
+  collectGraphicsDiagnostics,
+  GraphicsDiagnostics,
+} from "./utilities/Diagnostic";
+import infoIcon from "/images/InfoIcon.svg?url";
+
+@customElement("troubleshooting-modal")
+export class TroubleshootingModal extends BaseModal {
+  @property({ type: String }) markdown = "Loading...";
+
+  @property({ type: Object })
+  diagnostics?: GraphicsDiagnostics;
+
+  private initialized: boolean = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadDiagnostics();
+  }
+
+  private async loadDiagnostics() {
+    const canvas = document.createElement("canvas");
+
+    if (!canvas) return;
+
+    this.diagnostics = await collectGraphicsDiagnostics(canvas);
+  }
+
+  render() {
+    if (!this.diagnostics) {
+      return html`<div>${translateText("troubleshooting.loading")}</div>`;
+    }
+
+    const { browser, rendering, power } = this.diagnostics;
+
+    const content = html`
+      <div
+        class="h-full select-text flex flex-col ${this.inline
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
+          : ""}"
+      >
+        ${modalHeader({
+          titleContent: html` <div class="flex flex-col sm:flex-row gap-2">
+            <span
+              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
+            >
+              ${translateText("troubleshooting.title")}
+            </span>
+            <button
+              class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+              @click=${this.copyDiagnostics}
+            >
+              Copy for Discord
+            </button>
+          </div>`,
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
+        <div
+          class="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
+        >
+          ${this.section(
+            "",
+            html`${this.infoTip(
+              translateText("troubleshooting.hardware_acceleration_tip"),
+              true,
+            )}`,
+          )}
+          ${this.section(
+            translateText("troubleshooting.environment"),
+            html`
+              ${this.row(
+                translateText("troubleshooting.browser"),
+                browser.engine,
+              )}
+              ${this.row(
+                translateText("troubleshooting.platform"),
+                browser.platform,
+              )}
+              ${this.row(translateText("troubleshooting.os"), browser.os)}
+              ${this.row(
+                translateText("troubleshooting.device_pixel_ratio"),
+                browser.dpr,
+              )}
+              ${this.infoTip(translateText("troubleshooting.chromium_tip"))}
+            `,
+          )}
+          ${this.section(
+            translateText("troubleshooting.rendering"),
+            html`
+              ${this.row(
+                translateText("troubleshooting.renderer"),
+                this.describeRenderer(rendering),
+              )}
+              ${this.row(
+                translateText("troubleshooting.max_texture_size"),
+                rendering.maxTextureSize ??
+                  translateText("troubleshooting.unknown"),
+              )}
+              ${this.row(
+                translateText("troubleshooting.high_precision_shaders"),
+                rendering.shaderHighp === true
+                  ? translateText("troubleshooting.yes")
+                  : translateText("troubleshooting.no"),
+              )}${this.row(
+                translateText("troubleshooting.gpu"),
+                !rendering.gpu || rendering.gpu.unavailable
+                  ? translateText("troubleshooting.unavailable")
+                  : `${rendering.gpu.vendor} — ${rendering.gpu.renderer}`,
+              )}
+              ${this.infoTip(translateText("troubleshooting.gpu_tip"))}
+            `,
+          )}
+          ${this.section(
+            translateText("troubleshooting.power"),
+            html`
+              ${power.unavailable
+                ? this.row(
+                    translateText("troubleshooting.battery"),
+                    translateText("troubleshooting.unavailable"),
+                  )
+                : html`
+                    ${this.row(
+                      translateText("troubleshooting.charging"),
+                      power.charging
+                        ? translateText("troubleshooting.yes")
+                        : translateText("troubleshooting.no"),
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.battery_level"),
+                      power.level,
+                    )}
+                  `}
+              ${this.infoTip(translateText("troubleshooting.power_saving_tip"))}
+            `,
+          )}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        title=${translateText("troubleshooting.title")}
+        ?inline=${this.inline}
+        hideCloseButton
+        hideHeader
+      >
+        ${content}
+      </o-modal>
+    `;
+  }
+
+  private infoTip(text: string, warning?: boolean): unknown {
+    return html`
+      <div
+        class="mt-2 ${warning
+          ? "bg-orange-500/10"
+          : "bg-white/10"} flex gap-2 text-white py-1 px-3 rounded-sm  border-1 ${warning
+          ? "border-orange-400"
+          : "border-white/40"}"
+      >
+        <img src="${infoIcon}" class="w-4" />
+        ${text}
+      </div>
+    `;
+  }
+
+  protected onOpen(): void {
+    if (!this.initialized) {
+      console.log("Loading diagnostics...");
+      this.initialized = true;
+      this.loadDiagnostics();
+    }
+  }
+
+  private section(title: string, content: unknown) {
+    return html`
+      <div class="px-4 py-3">
+        <h4
+          class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400"
+        >
+          ${title}
+        </h4>
+        <div class="space-y-1">${content}</div>
+      </div>
+    `;
+  }
+
+  private row(label: string, value: unknown) {
+    return html`
+      <div class="flex justify-between gap-4 text-sm">
+        <span class="text-slate-400">${label}</span>
+        <span class="text-right text-white max-w-100">${value}</span>
+      </div>
+    `;
+  }
+
+  private async copyDiagnostics() {
+    if (!this.diagnostics) return;
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: html`${translateText("troubleshooting.copied_to_clipboard")}`,
+          type: "info",
+          duration: 3000,
+        },
+      }),
+    );
+    const formatted =
+      "```json\n" + JSON.stringify(this.diagnostics, null, 2) + "\n```";
+    await navigator.clipboard.writeText(formatted);
+  }
+
+  private describeRenderer(rendering: any): string {
+    if (rendering.gpu?.software) {
+      return translateText("troubleshooting.software_rendering");
+    }
+    if (rendering.type === "Canvas2D") {
+      return translateText("troubleshooting.canvas_2d_no_gpu");
+    }
+    return `${rendering.type}`;
+  }
+}

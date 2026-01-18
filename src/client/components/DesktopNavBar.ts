@@ -116,6 +116,11 @@ export class DesktopNavBar extends LitElement {
         ></button>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          data-page="page-troubleshooting"
+          data-i18n="main.troubleshooting"
+        ></button>
+        <button
+          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-stats"
           data-i18n="main.stats"
         ></button>
