@@ -49,7 +49,6 @@ export async function collectGraphicsDiagnostics(
   const uaData = (navigator as any).userAgentData;
 
   const os = uaData?.platform ?? detectOS(navigator.userAgent);
-  console.log("Detected:", uaData);
 
   const browser: BrowserInfo = {
     engine: uaData?.brands
@@ -95,7 +94,6 @@ export async function collectGraphicsDiagnostics(
       const vendor = gl.getParameter(
         (debugInfo as any).UNMASKED_VENDOR_WEBGL,
       ) as string;
-      console.log({ renderer, vendor });
       rendering.gpu = {
         vendor,
         renderer,
@@ -123,7 +121,6 @@ export async function collectGraphicsDiagnostics(
   } else {
     power = { unavailable: true };
   }
-  console.log({ browser, rendering, power });
   return {
     browser,
     rendering,
