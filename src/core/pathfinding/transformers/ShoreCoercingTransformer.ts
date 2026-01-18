@@ -21,10 +21,7 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       const coerced = this.coerceToWater(f, to);
       if (coerced.water !== null) {
         waterFrom.push(coerced.water);
-        // Keep first mapping if multiple shores coerce to same water tile
-        if (!waterToOriginal.has(coerced.water)) {
-          waterToOriginal.set(coerced.water, coerced.original);
-        }
+        waterToOriginal.set(coerced.water, coerced.original);
       }
     }
 
