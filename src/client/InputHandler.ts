@@ -3,7 +3,22 @@ import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
+import { getDefaultKeybinds } from "./Keybinds";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+
+type ParsedKeybind = { primary: string; modifiers: string[] };
+
+const MODIFIER_CODES = new Set([
+  "ShiftLeft",
+  "ShiftRight",
+  "ControlLeft",
+  "ControlRight",
+  "AltLeft",
+  "AltRight",
+  "MetaLeft",
+  "MetaRight",
+]);
+const MOUSE_CODES = new Set(["MouseLeft", "MouseMiddle"]);
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -154,6 +169,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
+  private parsedKeybinds = new Map<string, ParsedKeybind>();
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
@@ -196,37 +212,11 @@ export class InputHandler {
       console.warn("Invalid keybinds JSON:", e);
     }
 
-    // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
-
     this.keybinds = {
-      toggleView: "Space",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      boatAttack: "KeyB",
-      groundAttack: "KeyG",
-      swapDirection: "KeyU",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      buildCity: "Digit1",
-      buildFactory: "Digit2",
-      buildPort: "Digit3",
-      buildDefensePost: "Digit4",
-      buildMissileSilo: "Digit5",
-      buildSamLauncher: "Digit6",
-      buildWarship: "Digit7",
-      buildAtomBomb: "Digit8",
-      buildHydrogenBomb: "Digit9",
-      buildMIRV: "Digit0",
+      ...getDefaultKeybinds(),
       ...saved,
     };
+    this.parsedKeybinds.clear();
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
@@ -234,7 +224,7 @@ export class InputHandler {
       "wheel",
       (e) => {
         this.onScroll(e);
-        this.onShiftScroll(e);
+        this.onAttackRatioScroll(e);
         e.preventDefault();
       },
       { passive: false },
@@ -252,32 +242,29 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Skip if shift is held down
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
+      // Skip if the attack modifier is held down.
+      if (this.isAttackModifierActive()) {
         return;
       }
 
       if (
-        this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has("ArrowUp")
+        this.isKeybindActive(this.keybinds.moveUp) ||
+        this.isKeybindActive(this.keybinds.moveUpAlt)
       )
         deltaY += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has("ArrowDown")
+        this.isKeybindActive(this.keybinds.moveDown) ||
+        this.isKeybindActive(this.keybinds.moveDownAlt)
       )
         deltaY -= this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has("ArrowLeft")
+        this.isKeybindActive(this.keybinds.moveLeft) ||
+        this.isKeybindActive(this.keybinds.moveLeftAlt)
       )
         deltaX += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has("ArrowRight")
+        this.isKeybindActive(this.keybinds.moveRight) ||
+        this.isKeybindActive(this.keybinds.moveRightAlt)
       )
         deltaX -= this.PAN_SPEED;
 
@@ -289,14 +276,14 @@ export class InputHandler {
       const cy = window.innerHeight / 2;
 
       if (
-        this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
+        this.isKeybindActive(this.keybinds.zoomOut) ||
+        this.isKeybindActive(this.keybinds.zoomOutAlt)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
-        this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
+        this.isKeybindActive(this.keybinds.zoomIn) ||
+        this.isKeybindActive(this.keybinds.zoomInAlt)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -304,11 +291,15 @@ export class InputHandler {
 
     window.addEventListener("keydown", (e) => {
       const isTextInput = this.isTextInputTarget(e.target);
-      if (isTextInput && e.code !== "Escape") {
+      const closeViewKey = "Escape";
+      const allowCloseViewInInput = true;
+      if (isTextInput && (!allowCloseViewInInput || e.code !== closeViewKey)) {
         return;
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      this.activeKeys.add(e.code);
+
+      if (this.matchesKeybind(e, this.keybinds.toggleView)) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -316,36 +307,10 @@ export class InputHandler {
         }
       }
 
-      if (e.code === "Escape") {
+      if (this.matchesKeybind(e, closeViewKey)) {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
         this.setGhostStructure(null);
-      }
-
-      if (
-        [
-          this.keybinds.moveUp,
-          this.keybinds.moveDown,
-          this.keybinds.moveLeft,
-          this.keybinds.moveRight,
-          this.keybinds.zoomOut,
-          this.keybinds.zoomIn,
-          "ArrowUp",
-          "ArrowLeft",
-          "ArrowDown",
-          "ArrowRight",
-          "Minus",
-          "Equal",
-          this.keybinds.attackRatioDown,
-          this.keybinds.attackRatioUp,
-          this.keybinds.centerCamera,
-          "ControlLeft",
-          "ControlRight",
-          "ShiftLeft",
-          "ShiftRight",
-        ].includes(e.code)
-      ) {
-        this.activeKeys.add(e.code);
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -354,102 +319,112 @@ export class InputHandler {
         return;
       }
 
-      if (e.code === this.keybinds.toggleView) {
+      if (this.matchesKeybindPrimary(e, this.keybinds.toggleView)) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
       }
 
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (e.code === resetKey && this.isAltKeyHeld(e)) {
+      const resetKey = this.keybinds.resetGfx;
+      if (this.matchesKeybind(e, resetKey)) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === this.keybinds.boatAttack) {
+      if (this.matchesKeybind(e, this.keybinds.boatAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === this.keybinds.groundAttack) {
+      if (this.matchesKeybind(e, this.keybinds.groundAttack)) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
       }
 
-      if (e.code === this.keybinds.attackRatioDown) {
+      if (this.matchesKeybind(e, this.keybinds.attackRatioDown)) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === this.keybinds.attackRatioUp) {
+      if (this.matchesKeybind(e, this.keybinds.attackRatioUp)) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === this.keybinds.centerCamera) {
+      if (this.matchesKeybind(e, this.keybinds.attackRatioScrollDown)) {
+        e.preventDefault();
+        this.eventBus.emit(new AttackRatioEvent(-10));
+      }
+
+      if (this.matchesKeybind(e, this.keybinds.attackRatioScrollUp)) {
+        e.preventDefault();
+        this.eventBus.emit(new AttackRatioEvent(10));
+      }
+
+      if (this.matchesKeybind(e, this.keybinds.centerCamera)) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      if (e.code === this.keybinds.buildCity) {
+      if (this.matchesKeybind(e, this.keybinds.buildCity)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.City);
       }
 
-      if (e.code === this.keybinds.buildFactory) {
+      if (this.matchesKeybind(e, this.keybinds.buildFactory)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Factory);
       }
 
-      if (e.code === this.keybinds.buildPort) {
+      if (this.matchesKeybind(e, this.keybinds.buildPort)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Port);
       }
 
-      if (e.code === this.keybinds.buildDefensePost) {
+      if (this.matchesKeybind(e, this.keybinds.buildDefensePost)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.DefensePost);
       }
 
-      if (e.code === this.keybinds.buildMissileSilo) {
+      if (this.matchesKeybind(e, this.keybinds.buildMissileSilo)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MissileSilo);
       }
 
-      if (e.code === this.keybinds.buildSamLauncher) {
+      if (this.matchesKeybind(e, this.keybinds.buildSamLauncher)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.SAMLauncher);
       }
 
-      if (e.code === this.keybinds.buildAtomBomb) {
+      if (this.matchesKeybind(e, this.keybinds.buildAtomBomb)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.AtomBomb);
       }
 
-      if (e.code === this.keybinds.buildHydrogenBomb) {
+      if (this.matchesKeybind(e, this.keybinds.buildHydrogenBomb)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.HydrogenBomb);
       }
 
-      if (e.code === this.keybinds.buildWarship) {
+      if (this.matchesKeybind(e, this.keybinds.buildWarship)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.Warship);
       }
 
-      if (e.code === this.keybinds.buildMIRV) {
+      if (this.matchesKeybind(e, this.keybinds.buildMIRV)) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MIRV);
       }
 
-      if (e.code === this.keybinds.swapDirection) {
+      if (this.matchesKeybind(e, this.keybinds.swapDirection)) {
         e.preventDefault();
         const nextDirection = !this.uiState.rocketDirectionUp;
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
-      // Shift-D to toggle performance overlay
+      // Toggle performance overlay keybind
       console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
-      if (e.code === "KeyD" && e.shiftKey) {
+      if (this.matchesKeybind(e, this.keybinds.togglePerformanceOverlay)) {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
@@ -460,15 +435,13 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
-    if (event.button === 1) {
+    if (this.matchesPointerKeybind(event, this.keybinds.autoUpgrade)) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
       return;
     }
 
-    if (event.button > 0) {
-      return;
-    }
+    if (event.button > 0) return;
 
     this.pointerDown = true;
     this.pointers.set(event.pointerId, event);
@@ -495,6 +468,10 @@ export class InputHandler {
     if (event.button > 0) {
       return;
     }
+
+    if (!this.pointerDown) {
+      return;
+    }
     this.pointerDown = false;
     this.pointers.clear();
 
@@ -517,7 +494,11 @@ export class InputHandler {
         return;
       }
 
-      if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
+      const attackModifierActive = this.matchesPointerKeybind(
+        event,
+        this.keybinds.attackModifier,
+      );
+      if (!this.userSettings.leftClickOpensMenu() || attackModifierActive) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
@@ -526,21 +507,39 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
-      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
+    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    if (scrollValue === 0) return;
+
+    const direction = scrollValue > 0 ? "down" : "up";
+    const ratioKeybind =
+      direction === "down"
+        ? this.keybinds.attackRatioScrollDown
+        : this.keybinds.attackRatioScrollUp;
+    if (this.matchesWheelKeybind(event, ratioKeybind, direction)) {
+      return;
     }
+
+    const realCtrl =
+      this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
+    const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
+    this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
   }
 
-  private onShiftScroll(event: WheelEvent) {
-    if (event.shiftKey) {
-      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      const ratio = scrollValue > 0 ? -10 : 10;
-      this.eventBus.emit(new AttackRatioEvent(ratio));
+  private onAttackRatioScroll(event: WheelEvent) {
+    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    if (scrollValue === 0) return;
+
+    const direction = scrollValue > 0 ? "down" : "up";
+    const keybind =
+      direction === "down"
+        ? this.keybinds.attackRatioScrollDown
+        : this.keybinds.attackRatioScrollUp;
+    if (!this.matchesWheelKeybind(event, keybind, direction)) {
+      return;
     }
+
+    const ratio = direction === "down" ? -10 : 10;
+    this.eventBus.emit(new AttackRatioEvent(ratio));
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -634,65 +633,185 @@ export class InputHandler {
     this.activeKeys.clear();
   }
 
-  isModifierKeyPressed(event: PointerEvent): boolean {
-    return (
-      ((this.keybinds.modifierKey === "AltLeft" ||
-        this.keybinds.modifierKey === "AltRight") &&
-        event.altKey) ||
-      ((this.keybinds.modifierKey === "ControlLeft" ||
-        this.keybinds.modifierKey === "ControlRight") &&
-        event.ctrlKey) ||
-      ((this.keybinds.modifierKey === "ShiftLeft" ||
-        this.keybinds.modifierKey === "ShiftRight") &&
-        event.shiftKey) ||
-      ((this.keybinds.modifierKey === "MetaLeft" ||
-        this.keybinds.modifierKey === "MetaRight") &&
-        event.metaKey)
-    );
+  private isAttackModifierActive(): boolean {
+    return this.isKeybindActive(this.keybinds.attackModifier);
   }
 
-  private isAltKeyHeld(event: KeyboardEvent): boolean {
-    if (
-      this.keybinds.altKey === "AltLeft" ||
-      this.keybinds.altKey === "AltRight"
-    ) {
-      return event.altKey && !event.ctrlKey;
+  isModifierKeyPressed(event: PointerEvent): boolean {
+    return this.matchesPointerKeybind(event, this.keybinds.modifierKey);
+  }
+
+  private parseKeybind(keybind: string | undefined): ParsedKeybind | null {
+    if (!keybind || keybind === "Null") return null;
+    const cached = this.parsedKeybinds.get(keybind);
+    if (cached) return cached;
+
+    const parts = keybind
+      .split("+")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return null;
+
+    const modifiers: string[] = [];
+    let primary: string | null = null;
+    for (const part of parts) {
+      if (MODIFIER_CODES.has(part)) {
+        modifiers.push(part);
+      } else {
+        primary = part;
+      }
     }
+    primary ??= modifiers.pop() ?? null;
+    if (!primary) return null;
+
+    const parsed = { primary, modifiers };
+    this.parsedKeybinds.set(keybind, parsed);
+    return parsed;
+  }
+
+  private isKeybindActive(keybind: string | undefined): boolean {
+    const parsed = this.parseKeybind(keybind);
+    if (!parsed) return false;
+    if (!this.activeKeys.has(parsed.primary)) return false;
     if (
-      this.keybinds.altKey === "ControlLeft" ||
-      this.keybinds.altKey === "ControlRight"
+      parsed.modifiers.length === 0 &&
+      !MODIFIER_CODES.has(parsed.primary) &&
+      this.hasActiveModifiers()
     ) {
-      return event.ctrlKey;
+      return false;
     }
-    if (
-      this.keybinds.altKey === "ShiftLeft" ||
-      this.keybinds.altKey === "ShiftRight"
-    ) {
-      return event.shiftKey;
+    for (const modifier of parsed.modifiers) {
+      if (!this.activeKeys.has(modifier)) return false;
     }
+    return true;
+  }
+
+  private matchesKeybind(
+    event: KeyboardEvent,
+    keybind: string | undefined,
+  ): boolean {
+    const parsed = this.parseKeybind(keybind);
+    if (!parsed) return false;
+    if (event.code !== parsed.primary) return false;
     if (
-      this.keybinds.altKey === "MetaLeft" ||
-      this.keybinds.altKey === "MetaRight"
+      parsed.modifiers.length === 0 &&
+      !MODIFIER_CODES.has(parsed.primary) &&
+      this.hasActiveModifiers()
     ) {
-      return event.metaKey;
+      return false;
+    }
+    for (const modifier of parsed.modifiers) {
+      if (!this.activeKeys.has(modifier)) return false;
+    }
+    return true;
+  }
+
+  private matchesKeybindPrimary(
+    event: KeyboardEvent,
+    keybind: string | undefined,
+  ): boolean {
+    const parsed = this.parseKeybind(keybind);
+    if (!parsed) return false;
+    return event.code === parsed.primary;
+  }
+
+  private matchesWheelKeybind(
+    event: WheelEvent,
+    keybind: string | undefined,
+    direction: "up" | "down",
+  ): boolean {
+    const parsed = this.parseKeybind(keybind);
+    if (!parsed) return false;
+
+    const expected = direction === "up" ? "ScrollUp" : "ScrollDown";
+    if (parsed.primary !== expected) return false;
+
+    if (parsed.modifiers.length === 0 && this.hasWheelModifiers(event)) {
+      return false;
+    }
+
+    for (const modifier of parsed.modifiers) {
+      if (!this.isWheelModifierHeld(event, modifier)) return false;
+    }
+
+    return true;
+  }
+
+  private hasWheelModifiers(event: WheelEvent): boolean {
+    return event.shiftKey || event.ctrlKey || event.altKey || event.metaKey;
+  }
+
+  private isWheelModifierHeld(event: WheelEvent, code: string): boolean {
+    if (code === "AltLeft" || code === "AltRight") return event.altKey;
+    if (code === "ControlLeft" || code === "ControlRight") return event.ctrlKey;
+    if (code === "ShiftLeft" || code === "ShiftRight") return event.shiftKey;
+    if (code === "MetaLeft" || code === "MetaRight") return event.metaKey;
+    return false;
+  }
+
+  private matchesPointerKeybind(
+    event: PointerEvent,
+    keybind: string | undefined,
+  ): boolean {
+    const parsed = this.parseKeybind(keybind);
+    if (!parsed) return false;
+
+    if (parsed.primary === "MouseLeft" && parsed.modifiers.length === 0) {
+      return false;
+    }
+
+    const pointerCode = this.getPointerCode(event);
+    if (!pointerCode) return false;
+
+    if (MOUSE_CODES.has(parsed.primary)) {
+      if (parsed.primary !== pointerCode) return false;
+    } else {
+      if (pointerCode !== "MouseLeft") return false;
+      if (!this.isPointerCodeActive(event, parsed.primary)) return false;
+    }
+
+    for (const modifier of parsed.modifiers) {
+      if (!this.isPointerCodeActive(event, modifier)) return false;
+    }
+
+    return true;
+  }
+
+  private isPointerCodeActive(event: PointerEvent, code: string): boolean {
+    if (MOUSE_CODES.has(code)) {
+      return this.getPointerCode(event) === code;
+    }
+    if (MODIFIER_CODES.has(code)) {
+      return this.isPointerModifierHeld(event, code);
+    }
+    return this.activeKeys.has(code);
+  }
+
+  private isPointerModifierHeld(event: PointerEvent, code: string): boolean {
+    if (code === "AltLeft" || code === "AltRight") return event.altKey;
+    if (code === "ControlLeft" || code === "ControlRight") return event.ctrlKey;
+    if (code === "ShiftLeft" || code === "ShiftRight") return event.shiftKey;
+    if (code === "MetaLeft" || code === "MetaRight") return event.metaKey;
+    return false;
+  }
+
+  private getPointerCode(event: PointerEvent): string | null {
+    if (event.button === 0) return "MouseLeft";
+    if (event.button === 1) return "MouseMiddle";
+    if (event.button === 2) return "MouseRight";
+    return null;
+  }
+
+  private hasActiveModifiers(): boolean {
+    for (const code of this.activeKeys) {
+      if (MODIFIER_CODES.has(code)) {
+        return true;
+      }
     }
     return false;
   }
 
   isAltKeyPressed(event: PointerEvent): boolean {
-    return (
-      ((this.keybinds.altKey === "AltLeft" ||
-        this.keybinds.altKey === "AltRight") &&
-        event.altKey) ||
-      ((this.keybinds.altKey === "ControlLeft" ||
-        this.keybinds.altKey === "ControlRight") &&
-        event.ctrlKey) ||
-      ((this.keybinds.altKey === "ShiftLeft" ||
-        this.keybinds.altKey === "ShiftRight") &&
-        event.shiftKey) ||
-      ((this.keybinds.altKey === "MetaLeft" ||
-        this.keybinds.altKey === "MetaRight") &&
-        event.metaKey)
-    );
+    return this.matchesPointerKeybind(event, this.keybinds.altKey);
   }
 }

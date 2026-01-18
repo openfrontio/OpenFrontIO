@@ -86,8 +86,26 @@ export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
 
+  // Handle key combos
+  if (value.includes("+")) {
+    return value
+      .split("+")
+      .map((part) => formatKeyForDisplay(part.trim()))
+      .filter(Boolean)
+      .join(" + ");
+  }
+
   // Handle space character or "Space" key
   if (value === " " || value === "Space") return "Space";
+
+  if (value === "ShiftLeft" || value === "ShiftRight") return "Shift";
+  if (value === "ControlLeft" || value === "ControlRight") return "Ctrl";
+  if (value === "AltLeft" || value === "AltRight") return "Alt";
+  if (value === "MetaLeft" || value === "MetaRight") return "Meta";
+  if (value === "MouseLeft") return "Left Click";
+  if (value === "MouseMiddle") return "Middle Click";
+  if (value === "ScrollUp") return "Scroll Up";
+  if (value === "ScrollDown") return "Scroll Down";
 
   // Handle DigitN pattern (e.g., "Digit1" -> "1")
   if (/^Digit\d$/.test(value)) {
@@ -97,6 +115,10 @@ export function formatKeyForDisplay(value: string): string {
   // Handle KeyX pattern (e.g., "KeyA" -> "A")
   if (/^Key[A-Z]$/.test(value)) {
     return value.replace("Key", "");
+  }
+
+  if (value.startsWith("Numpad")) {
+    return `Num ${value.slice(6)}`;
   }
 
   // Fallback: capitalize first letter

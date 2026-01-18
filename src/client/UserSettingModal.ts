@@ -1,5 +1,6 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { getDefaultKeybinds } from "../client/Keybinds";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
@@ -16,36 +17,43 @@ interface FlagInputModalElement extends HTMLElement {
   returnTo?: string;
 }
 
-const isMac =
-  typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
-
-const DefaultKeybinds: Record<string, string> = {
-  toggleView: "Space",
-  buildCity: "Digit1",
-  buildFactory: "Digit2",
-  buildPort: "Digit3",
-  buildDefensePost: "Digit4",
-  buildMissileSilo: "Digit5",
-  buildSamLauncher: "Digit6",
-  buildWarship: "Digit7",
-  buildAtomBomb: "Digit8",
-  buildHydrogenBomb: "Digit9",
-  buildMIRV: "Digit0",
-  attackRatioDown: "KeyT",
-  attackRatioUp: "KeyY",
-  boatAttack: "KeyB",
-  groundAttack: "KeyG",
-  swapDirection: "KeyU",
-  zoomOut: "KeyQ",
-  zoomIn: "KeyE",
-  centerCamera: "KeyC",
-  moveUp: "KeyW",
-  moveLeft: "KeyA",
-  moveDown: "KeyS",
-  moveRight: "KeyD",
-  modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-  altKey: "AltLeft",
-};
+const DefaultKeybinds = getDefaultKeybinds();
+const KEYBIND_MODIFIER_CODES = new Set([
+  "ShiftLeft",
+  "ShiftRight",
+  "ControlLeft",
+  "ControlRight",
+  "AltLeft",
+  "AltRight",
+  "MetaLeft",
+  "MetaRight",
+]);
+const RESERVED_BROWSER_PRIMARY_CODES = new Set([
+  "KeyS",
+  "KeyP",
+  "KeyR",
+  "KeyW",
+  "KeyT",
+  "KeyN",
+  "KeyO",
+  "KeyF",
+  "KeyG",
+  "KeyL",
+  "KeyK",
+  "KeyH",
+  "KeyJ",
+  "KeyD",
+  "KeyU",
+  "KeyB",
+  "KeyI",
+  "KeyQ",
+  "KeyM",
+  "KeyZ",
+  "KeyY",
+  "Digit0",
+  "Equal",
+  "Minus",
+]);
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
@@ -107,7 +115,19 @@ export class UserSettingModal extends BaseModal {
         });
 
         if (isValid) {
-          this.keybinds = parsed;
+          if ("closeView" in parsed) {
+            const rest = {
+              ...(parsed as Record<
+                string,
+                { value: string | string[]; key: string }
+              >),
+            };
+            delete rest.closeView;
+            this.keybinds = rest;
+            localStorage.setItem("settings.keybinds", JSON.stringify(rest));
+          } else {
+            this.keybinds = parsed;
+          }
         } else {
           console.warn(
             "Invalid keybinds structure: entries must be objects with 'key' (string) and 'value' (string or string[]) properties. Ignoring saved data.",
@@ -120,6 +140,93 @@ export class UserSettingModal extends BaseModal {
       }
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);
+    }
+  }
+
+  private parseKeybindValue(
+    value: string | undefined,
+  ): { primary: string; modifiers: string[] } | null {
+    if (!value || value === "Null") return null;
+    const parts = value
+      .split("+")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return null;
+
+    const modifiers: string[] = [];
+    let primary: string | null = null;
+    for (const part of parts) {
+      if (KEYBIND_MODIFIER_CODES.has(part)) {
+        modifiers.push(part);
+      } else {
+        primary = part;
+      }
+    }
+    primary ??= modifiers.pop() ?? null;
+    if (!primary) return null;
+    return { primary, modifiers };
+  }
+
+  private isReservedBrowserKeybind(value: string): boolean {
+    const parsed = this.parseKeybindValue(value);
+    if (!parsed) return false;
+    const hasControlOrMeta = parsed.modifiers.some(
+      (modifier) =>
+        modifier === "ControlLeft" ||
+        modifier === "ControlRight" ||
+        modifier === "MetaLeft" ||
+        modifier === "MetaRight",
+    );
+    if (!hasControlOrMeta) return false;
+    return RESERVED_BROWSER_PRIMARY_CODES.has(parsed.primary);
+  }
+
+  private showKeybindError(messageKey: string, displayKey: string) {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: html`
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 text-red-500 inline-block align-middle mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <span class="font-medium">
+              ${(() => {
+                const message = translateText(messageKey, {
+                  key: displayKey,
+                });
+                const parts = message.split(displayKey);
+                return html`${parts[0]}<span
+                    class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
+                    >${displayKey}</span
+                  >${parts[1] || ""}`;
+              })()}
+            </span>
+          `,
+          color: "red",
+          duration: 3000,
+        },
+      }),
+    );
+  }
+
+  private resetKeybindElement(action: string, prevValue?: string) {
+    const element = this.renderRoot.querySelector(
+      `setting-keybind[action="${action}"]`,
+    ) as SettingKeybind;
+    if (element) {
+      element.value = prevValue ?? DefaultKeybinds[action] ?? "";
+      element.requestUpdate();
     }
   }
 
@@ -149,53 +256,17 @@ export class UserSettingModal extends BaseModal {
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
 
+    if (value !== "Null" && this.isReservedBrowserKeybind(value)) {
+      const displayKey = formatKeyForDisplay(key || value);
+      this.showKeybindError("user_setting.keybind_reserved_error", displayKey);
+      this.resetKeybindElement(action, prevValue);
+      return;
+    }
+
     if (values.includes(value) && value !== "Null") {
       const displayKey = formatKeyForDisplay(key || value);
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: html`
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6 text-red-500 inline-block align-middle mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span class="font-medium">
-                ${(() => {
-                  const message = translateText(
-                    "user_setting.keybind_conflict_error",
-                    { key: displayKey },
-                  );
-                  const parts = message.split(displayKey);
-                  return html`${parts[0]}<span
-                      class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
-                      >${displayKey}</span
-                    >${parts[1] || ""}`;
-                })()}
-              </span>
-            `,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-
-      const element = this.renderRoot.querySelector(
-        `setting-keybind[action="${action}"]`,
-      ) as SettingKeybind;
-      if (element) {
-        element.value = prevValue ?? DefaultKeybinds[action] ?? "";
-        element.requestUpdate();
-      }
+      this.showKeybindError("user_setting.keybind_conflict_error", displayKey);
+      this.resetKeybindElement(action, prevValue);
       return;
     }
 
@@ -215,8 +286,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.keybinds[action];
-    if (!entry) return "";
-    return entry.key || "";
+    if (entry?.key) return entry.key;
+    return this.getKeyValue(action) ?? "";
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
@@ -475,6 +546,28 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="resetGfx"
+        label=${translateText("user_setting.reset_graphics")}
+        description=${translateText("user_setting.reset_graphics_desc")}
+        .defaultKey=${DefaultKeybinds.resetGfx}
+        .value=${this.getKeyValue("resetGfx")}
+        .display=${this.getKeyChar("resetGfx")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="togglePerformanceOverlay"
+        label=${translateText("user_setting.performance_overlay_keybind")}
+        description=${translateText(
+          "user_setting.performance_overlay_keybind_desc",
+        )}
+        .defaultKey=${DefaultKeybinds.togglePerformanceOverlay}
+        .value=${this.getKeyValue("togglePerformanceOverlay")}
+        .display=${this.getKeyChar("togglePerformanceOverlay")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -607,11 +700,41 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="autoUpgrade"
+        label=${translateText("user_setting.auto_upgrade")}
+        description=${translateText("user_setting.auto_upgrade_desc")}
+        .defaultKey=${DefaultKeybinds.autoUpgrade}
+        .value=${this.getKeyValue("autoUpgrade")}
+        .display=${this.getKeyChar("autoUpgrade")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
         ${translateText("user_setting.attack_ratio_controls")}
       </h2>
+
+      <setting-keybind
+        action="attackModifier"
+        label=${translateText("user_setting.attack_modifier")}
+        description=${translateText("user_setting.attack_modifier_desc")}
+        .defaultKey=${DefaultKeybinds.attackModifier}
+        .value=${this.getKeyValue("attackModifier")}
+        .display=${this.getKeyChar("attackModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioUp"
+        label=${translateText("user_setting.attack_ratio_up")}
+        description=${translateText("user_setting.attack_ratio_up_desc")}
+        defaultKey="KeyY"
+        .value=${this.getKeyValue("attackRatioUp")}
+        .display=${this.getKeyChar("attackRatioUp")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
 
       <setting-keybind
         action="attackRatioDown"
@@ -624,12 +747,24 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action="attackRatioUp"
-        label=${translateText("user_setting.attack_ratio_up")}
-        description=${translateText("user_setting.attack_ratio_up_desc")}
-        defaultKey="KeyY"
-        .value=${this.getKeyValue("attackRatioUp")}
-        .display=${this.getKeyChar("attackRatioUp")}
+        action="attackRatioScrollUp"
+        label=${translateText("user_setting.attack_ratio_scroll_up")}
+        description=${translateText("user_setting.attack_ratio_scroll_up_desc")}
+        .defaultKey=${DefaultKeybinds.attackRatioScrollUp}
+        .value=${this.getKeyValue("attackRatioScrollUp")}
+        .display=${this.getKeyChar("attackRatioScrollUp")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioScrollDown"
+        label=${translateText("user_setting.attack_ratio_scroll_down")}
+        description=${translateText(
+          "user_setting.attack_ratio_scroll_down_desc",
+        )}
+        .defaultKey=${DefaultKeybinds.attackRatioScrollDown}
+        .value=${this.getKeyValue("attackRatioScrollDown")}
+        .display=${this.getKeyChar("attackRatioScrollDown")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -695,6 +830,26 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="zoomOutAlt"
+        label=${translateText("user_setting.zoom_out_alt")}
+        description=${translateText("user_setting.zoom_out_alt_desc")}
+        .defaultKey=${DefaultKeybinds.zoomOutAlt}
+        .value=${this.getKeyValue("zoomOutAlt")}
+        .display=${this.getKeyChar("zoomOutAlt")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomInAlt"
+        label=${translateText("user_setting.zoom_in_alt")}
+        description=${translateText("user_setting.zoom_in_alt_desc")}
+        .defaultKey=${DefaultKeybinds.zoomInAlt}
+        .value=${this.getKeyValue("zoomInAlt")}
+        .display=${this.getKeyChar("zoomInAlt")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -748,6 +903,46 @@ export class UserSettingModal extends BaseModal {
         defaultKey="KeyD"
         .value=${this.getKeyValue("moveRight")}
         .display=${this.getKeyChar("moveRight")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveUpAlt"
+        label=${translateText("user_setting.move_up_alt")}
+        description=${translateText("user_setting.move_up_alt_desc")}
+        .defaultKey=${DefaultKeybinds.moveUpAlt}
+        .value=${this.getKeyValue("moveUpAlt")}
+        .display=${this.getKeyChar("moveUpAlt")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveLeftAlt"
+        label=${translateText("user_setting.move_left_alt")}
+        description=${translateText("user_setting.move_left_alt_desc")}
+        .defaultKey=${DefaultKeybinds.moveLeftAlt}
+        .value=${this.getKeyValue("moveLeftAlt")}
+        .display=${this.getKeyChar("moveLeftAlt")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveDownAlt"
+        label=${translateText("user_setting.move_down_alt")}
+        description=${translateText("user_setting.move_down_alt_desc")}
+        .defaultKey=${DefaultKeybinds.moveDownAlt}
+        .value=${this.getKeyValue("moveDownAlt")}
+        .display=${this.getKeyChar("moveDownAlt")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveRightAlt"
+        label=${translateText("user_setting.move_right_alt")}
+        description=${translateText("user_setting.move_right_alt_desc")}
+        .defaultKey=${DefaultKeybinds.moveRightAlt}
+        .value=${this.getKeyValue("moveRightAlt")}
+        .display=${this.getKeyChar("moveRightAlt")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
     `;

@@ -1,5 +1,6 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { getDefaultKeybinds } from "../client/Keybinds";
 import { translateText } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -32,35 +33,29 @@ export class HelpModal extends BaseModal {
             if (typeof v === "string") return [k, v];
             return [k, undefined];
           })
-          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+          .filter(([, v]) => typeof v === "string"),
       ) as Record<string, string>;
     } catch (e) {
       console.warn("Invalid keybinds JSON:", e);
     }
 
-    const isMac = /Mac/.test(navigator.userAgent);
     return {
-      toggleView: "Space",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "KeyT",
-      attackRatioUp: "KeyY",
-      swapDirection: "KeyU",
-      shiftKey: "ShiftLeft",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
-      altKey: "AltLeft",
-      resetGfx: "KeyR",
+      ...getDefaultKeybinds(),
       ...saved,
     };
   }
 
   private getKeyLabel(code: string): string {
     if (!code) return "";
+    if (code === "Null") return translateText("common.none");
+
+    if (code.includes("+")) {
+      return code
+        .split("+")
+        .map((part) => this.getKeyLabel(part.trim()))
+        .filter(Boolean)
+        .join(" + ");
+    }
 
     const specialLabels: Record<string, string> = {
       ShiftLeft: "⇧ Shift",
@@ -71,6 +66,10 @@ export class HelpModal extends BaseModal {
       AltRight: "Alt",
       MetaLeft: "⌘",
       MetaRight: "⌘",
+      MouseLeft: "Left Click",
+      MouseMiddle: "Middle Click",
+      ScrollUp: "Scroll Up",
+      ScrollDown: "Scroll Down",
       Space: "Space",
       ArrowUp: "↑",
       ArrowDown: "↓",
@@ -190,20 +189,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.shiftKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
+                      ${this.renderKey(keybinds.attackModifier)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_attack_altclick")}
@@ -211,20 +197,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.modifierKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
+                      ${this.renderKey(keybinds.modifierKey)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_build")}
@@ -232,20 +205,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div
-                          class="w-5 h-8 border border-white/40 rounded-full relative"
-                        >
-                          <div
-                            class="absolute top-0 left-0 w-1/2 h-1/2 bg-red-500/80 rounded-tl-full"
-                          ></div>
-                          <div
-                            class="w-0.5 h-1.5 bg-white/40 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                          ></div>
-                        </div>
-                      </div>
+                      ${this.renderKey(keybinds.altKey)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_emote")}
@@ -296,22 +256,9 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.shiftKey)}
-                        <span class="text-white/40 font-bold">+</span>
-                        <div class="flex items-center gap-1">
-                          <div
-                            class="w-5 h-8 border border-white/40 rounded-full relative"
-                          >
-                            <div
-                              class="w-0.5 h-2 bg-red-400 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                            ></div>
-                          </div>
-                          <div class="flex flex-col text-[10px] text-white/50">
-                            <span>↑</span>
-                            <span>↓</span>
-                          </div>
-                        </div>
+                      <div class="flex flex-wrap gap-2">
+                        ${this.renderKey(keybinds.attackRatioScrollDown)}
+                        ${this.renderKey(keybinds.attackRatioScrollUp)}
                       </div>
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
@@ -321,8 +268,6 @@ export class HelpModal extends BaseModal {
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
-                        ${this.renderKey(keybinds.altKey)}
-                        <span class="text-white/40 font-bold">+</span>
                         ${this.renderKey(keybinds.resetGfx)}
                       </div>
                     </td>
@@ -332,13 +277,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      <div
-                        class="w-5 h-8 border border-white/40 rounded-full relative"
-                      >
-                        <div
-                          class="w-0.5 h-2 bg-red-400 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                        ></div>
-                      </div>
+                      ${this.renderKey(keybinds.autoUpgrade)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_auto_upgrade")}

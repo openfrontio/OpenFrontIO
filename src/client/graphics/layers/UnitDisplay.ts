@@ -7,7 +7,7 @@ import {
   GhostStructureChangedEvent,
   ToggleStructureEvent,
 } from "../../InputHandler";
-import { renderNumber, translateText } from "../../Utils";
+import { formatKeyForDisplay, renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
@@ -98,6 +98,21 @@ export class UnitDisplay extends LitElement implements Layer {
     }
   }
 
+  private getKeybindValue(action: string): string {
+    const entry = (this.keybinds as Record<string, unknown>)[action];
+    if (typeof entry === "string") {
+      return entry === "Null" ? "" : entry;
+    }
+    if (entry && typeof entry === "object" && "value" in entry) {
+      const raw = (entry as { value?: unknown }).value;
+      const value = Array.isArray(raw) ? (raw[0] ?? "") : raw;
+      if (typeof value === "string") {
+        return value === "Null" ? "" : value;
+      }
+    }
+    return "";
+  }
+
   tick() {
     const player = this.game?.myPlayer();
     player?.actions().then((actions) => {
@@ -139,42 +154,42 @@ export class UnitDisplay extends LitElement implements Layer {
               this._cities,
               UnitType.City,
               "city",
-              this.keybinds["buildCity"]?.key ?? "1",
+              this.getKeybindValue("buildCity"),
             )}
             ${this.renderUnitItem(
               factoryIcon,
               this._factories,
               UnitType.Factory,
               "factory",
-              this.keybinds["buildFactory"]?.key ?? "2",
+              this.getKeybindValue("buildFactory"),
             )}
             ${this.renderUnitItem(
               portIcon,
               this._port,
               UnitType.Port,
               "port",
-              this.keybinds["buildPort"]?.key ?? "3",
+              this.getKeybindValue("buildPort"),
             )}
             ${this.renderUnitItem(
               defensePostIcon,
               this._defensePost,
               UnitType.DefensePost,
               "defense_post",
-              this.keybinds["buildDefensePost"]?.key ?? "4",
+              this.getKeybindValue("buildDefensePost"),
             )}
             ${this.renderUnitItem(
               missileSiloIcon,
               this._missileSilo,
               UnitType.MissileSilo,
               "missile_silo",
-              this.keybinds["buildMissileSilo"]?.key ?? "5",
+              this.getKeybindValue("buildMissileSilo"),
             )}
             ${this.renderUnitItem(
               samLauncherIcon,
               this._samLauncher,
               UnitType.SAMLauncher,
               "sam_launcher",
-              this.keybinds["buildSamLauncher"]?.key ?? "6",
+              this.getKeybindValue("buildSamLauncher"),
             )}
           </div>
         </div>
@@ -185,28 +200,28 @@ export class UnitDisplay extends LitElement implements Layer {
               this._warships,
               UnitType.Warship,
               "warship",
-              this.keybinds["buildWarship"]?.key ?? "7",
+              this.getKeybindValue("buildWarship"),
             )}
             ${this.renderUnitItem(
               atomBombIcon,
               null,
               UnitType.AtomBomb,
               "atom_bomb",
-              this.keybinds["buildAtomBomb"]?.key ?? "8",
+              this.getKeybindValue("buildAtomBomb"),
             )}
             ${this.renderUnitItem(
               hydrogenBombIcon,
               null,
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
-              this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+              this.getKeybindValue("buildHydrogenBomb"),
             )}
             ${this.renderUnitItem(
               mirvIcon,
               null,
               UnitType.MIRV,
               "mirv",
-              this.keybinds["buildMIRV"]?.key ?? "0",
+              this.getKeybindValue("buildMIRV"),
             )}
           </div>
         </div>
@@ -226,10 +241,8 @@ export class UnitDisplay extends LitElement implements Layer {
     }
     const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
-    const displayHotkey = hotkey
-      .replace("Digit", "")
-      .replace("Key", "")
-      .toUpperCase();
+    const displayHotkey = formatKeyForDisplay(hotkey);
+    const hotkeyLabel = displayHotkey ? ` [${displayHotkey}]` : "";
 
     return html`
       <div
@@ -249,9 +262,7 @@ export class UnitDisplay extends LitElement implements Layer {
                 class="absolute -top-[250%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-20 shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText(
-                    "unit_type." + structureKey,
-                  )}${` [${displayHotkey}]`}
+                  ${translateText("unit_type." + structureKey)}${hotkeyLabel}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -302,9 +313,11 @@ export class UnitDisplay extends LitElement implements Layer {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-1 text-xs relative -top-1.5 text-gray-400">
-            ${displayHotkey}
-          </div>`}
+          ${displayHotkey
+            ? html`<div class="ml-1 text-xs relative -top-1.5 text-gray-400">
+                ${displayHotkey}
+              </div>`
+            : null}
           <div class="flex items-center gap-1 pt-1">
             <img src=${icon} alt=${structureKey} class="align-middle size-6" />
             ${number !== null ? renderNumber(number) : null}
