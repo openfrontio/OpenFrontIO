@@ -10,13 +10,14 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMode } from "../core/game/Game";
+import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
@@ -27,8 +28,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
   @state() private currentLobbyId: string = "";
+  @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
+  private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
 
@@ -93,26 +96,17 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ${this.renderGameConfig()}
           ${this.hasJoined && this.players.length > 0
             ? html`
-                <div class="mt-6 border-t border-white/10 pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                    >
-                      ${this.players.length}
-                      ${this.players.length === 1
-                        ? translateText("private_lobby.player")
-                        : translateText("private_lobby.players")}
-                    </div>
-                  </div>
-
-                  <lobby-team-view
-                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                    .clients=${this.players}
-                    .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  ></lobby-team-view>
-                </div>
+                <lobby-player-view
+                  class="mt-6"
+                  .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                  .clients=${this.players}
+                  .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                  .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                  .nationCount=${this.nationCount}
+                  .disableNations=${this.gameConfig?.disableNations ?? false}
+                  .isCompactMap=${this.gameConfig?.gameMapSize ===
+                  GameMapSize.Compact}
+                ></lobby-player-view>
               `
             : ""}
         </div>
@@ -296,6 +290,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+    this.nationCount = 0;
 
     this.leaveLobbyOnClose = true;
   }
@@ -512,11 +507,38 @@ export class JoinPrivateLobbyModal extends BaseModal {
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         if (data.gameConfig) {
+          const mapChanged =
+            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
           this.gameConfig = data.gameConfig;
+          if (mapChanged) {
+            this.loadNationCount();
+          }
         }
       })
       .catch((error) => {
         console.error("Error polling players:", error);
       });
+  }
+
+  private async loadNationCount() {
+    if (!this.gameConfig) {
+      this.nationCount = 0;
+      return;
+    }
+    const currentMap = this.gameConfig.gameMap;
+    try {
+      const mapData = this.mapLoader.getMapData(currentMap);
+      const manifest = await mapData.manifest();
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = 0;
+      }
+    }
   }
 }
