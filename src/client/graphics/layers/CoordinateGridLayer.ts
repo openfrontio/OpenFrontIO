@@ -10,7 +10,6 @@ const BASE_CELL_COUNT = 10;
 const MAX_COLUMNS = 50;
 const MIN_ROWS = 2;
 const LABEL_PADDING = 8;
-const LABEL_BG_PADDING = 4;
 
 const toAlphaLabel = (index: number): string => {
   let value = index;
@@ -71,6 +70,24 @@ export class CoordinateGridLayer implements Layer {
     const canvasWidth = context.canvas.width;
     const canvasHeight = context.canvas.height;
 
+    const mapTopScreenRaw = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, 0),
+    ).y;
+    const mapBottomScreenRaw = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, height),
+    ).y;
+    const mapLeftScreenRaw = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, 0),
+    ).x;
+    const mapRightScreenRaw = this.transformHandler.worldToScreenCoordinates(
+      new Cell(width, 0),
+    ).x;
+
+    const mapTopScreen = Math.min(mapTopScreenRaw, mapBottomScreenRaw);
+    const mapBottomScreen = Math.max(mapTopScreenRaw, mapBottomScreenRaw);
+    const mapLeftScreen = Math.min(mapLeftScreenRaw, mapRightScreenRaw);
+    const mapRightScreen = Math.max(mapLeftScreenRaw, mapRightScreenRaw);
+
     context.save();
     context.strokeStyle = "rgba(255, 255, 255, 0.35)";
     context.lineWidth = 1.25;
@@ -83,8 +100,8 @@ export class CoordinateGridLayer implements Layer {
         new Cell(worldX, 0),
       ).x;
       if (screenX < -1 || screenX > canvasWidth + 1) continue;
-      context.moveTo(screenX, 0);
-      context.lineTo(screenX, canvasHeight);
+      context.moveTo(screenX, mapTopScreen);
+      context.lineTo(screenX, mapBottomScreen);
     }
 
     for (let row = 0; row <= rows; row++) {
@@ -94,83 +111,56 @@ export class CoordinateGridLayer implements Layer {
         new Cell(0, worldY),
       ).y;
       if (screenY < -1 || screenY > canvasHeight + 1) continue;
-      context.moveTo(0, screenY);
-      context.lineTo(canvasWidth, screenY);
+      context.moveTo(mapLeftScreen, screenY);
+      context.lineTo(mapRightScreen, screenY);
     }
 
     context.stroke();
 
     context.font = "12px monospace";
 
-    const drawLabel = (
-      text: string,
-      x: number,
-      y: number,
-      align: CanvasTextAlign,
-      baseline: CanvasTextBaseline,
-    ) => {
-      context.textAlign = align;
-      context.textBaseline = baseline;
-      const metrics = context.measureText(text);
-      const textWidth = metrics.width;
-      const textHeight =
-        (metrics.actualBoundingBoxAscent ?? 8) +
-        (metrics.actualBoundingBoxDescent ?? 4);
-
-      let rectX = x;
-      let rectY = y;
-
-      if (align === "center") rectX -= textWidth / 2;
-      if (align === "right") rectX -= textWidth;
-      if (baseline === "middle") rectY -= textHeight / 2;
-      if (baseline === "bottom") rectY -= textHeight;
-
-      context.fillStyle = "rgba(0, 0, 0, 0.55)";
-      context.fillRect(
-        rectX - LABEL_BG_PADDING,
-        rectY - LABEL_BG_PADDING,
-        textWidth + LABEL_BG_PADDING * 2,
-        textHeight + LABEL_BG_PADDING * 2,
-      );
-
-      context.fillStyle = "rgba(255, 255, 255, 0.95)";
+    const drawLabel = (text: string, x: number, y: number) => {
+      context.textAlign = "left";
+      context.textBaseline = "top";
+      context.fillStyle = "rgba(20, 20, 20, 0.9)";
       context.fillText(text, x, y);
     };
 
-    const mapTopScreen = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
-    ).y;
-    const mapLeftScreen = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
-    ).x;
-
-    const labelY = Math.min(
-      Math.max(mapTopScreen + LABEL_PADDING, LABEL_PADDING),
-      canvasHeight - LABEL_PADDING,
+    // Render per-cell labels (e.g., A1) at cell top-left
+    const fontSize = Math.min(
+      16,
+      Math.max(9, 10 + (this.transformHandler.scale - 1) * 1.2),
     );
-    const labelX = Math.min(
-      Math.max(mapLeftScreen + LABEL_PADDING, LABEL_PADDING),
-      canvasWidth - LABEL_PADDING,
-    );
-
-    for (let col = 0; col < cols; col++) {
-      const centerX = (col + 0.5) * cellWidth;
-      if (centerX > width) break;
-      const screenX = this.transformHandler.worldToScreenCoordinates(
-        new Cell(centerX, 0),
-      ).x;
-      if (screenX < 0 || screenX > canvasWidth) continue;
-      drawLabel(String(col + 1), screenX, labelY, "center", "top");
-    }
-
+    context.font = `${fontSize}px monospace`;
     for (let row = 0; row < rows; row++) {
+      const rowLabel = toAlphaLabel(row);
       const centerY = (row + 0.5) * cellHeight;
       if (centerY > height) break;
       const screenY = this.transformHandler.worldToScreenCoordinates(
         new Cell(0, centerY),
       ).y;
-      if (screenY < 0 || screenY > canvasHeight) continue;
-      drawLabel(toAlphaLabel(row), labelX, screenY, "left", "middle");
+      if (screenY < -LABEL_PADDING || screenY > canvasHeight + LABEL_PADDING)
+        continue;
+
+      for (let col = 0; col < cols; col++) {
+        const centerX = (col + 0.5) * cellWidth;
+        if (centerX > width) break;
+        const screenX = this.transformHandler.worldToScreenCoordinates(
+          new Cell(centerX, centerY),
+        ).x;
+        if (screenX < -LABEL_PADDING || screenX > canvasWidth + LABEL_PADDING)
+          continue;
+
+        // Position at cell top-left in screen space
+        const cellTopLeft = this.transformHandler.worldToScreenCoordinates(
+          new Cell(centerX - cellWidth / 2, centerY - cellHeight / 2),
+        );
+        drawLabel(
+          `${rowLabel}${col + 1}`,
+          cellTopLeft.x + LABEL_PADDING,
+          cellTopLeft.y + LABEL_PADDING,
+        );
+      }
     }
 
     context.restore();
