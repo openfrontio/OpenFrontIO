@@ -41,6 +41,7 @@ import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { WebGPUDebugOverlay } from "./layers/WebGPUDebugOverlay";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -222,6 +223,16 @@ export function createRenderer(
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
+  const webgpuDebugOverlay = document.querySelector(
+    "webgpu-debug-overlay",
+  ) as WebGPUDebugOverlay;
+  if (!(webgpuDebugOverlay instanceof WebGPUDebugOverlay)) {
+    console.error("webgpu debug overlay not found");
+  }
+  webgpuDebugOverlay.eventBus = eventBus;
+  webgpuDebugOverlay.userSettings = userSettings;
+  webgpuDebugOverlay.requestUpdate();
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -288,6 +299,7 @@ export function createRenderer(
     new AdTimer(game),
     alertFrame,
     performanceOverlay,
+    webgpuDebugOverlay,
   ];
 
   return new GameRenderer(
@@ -298,6 +310,7 @@ export function createRenderer(
     uiState,
     layers,
     performanceOverlay,
+    webgpuDebugOverlay,
   );
 }
 
@@ -312,6 +325,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
+    private webgpuDebugOverlay: WebGPUDebugOverlay,
   ) {
     // Keep the main canvas transparent; the WebGPU territory canvas renders the background.
     const context = canvas.getContext("2d", { alpha: true });
@@ -401,6 +415,7 @@ export class GameRenderer {
 
     const layerDurations = FrameProfiler.consume();
     this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    this.webgpuDebugOverlay.updateFrameMetrics(duration);
 
     if (duration > 50) {
       console.warn(

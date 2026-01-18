@@ -136,6 +136,10 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+export class WebGPUComputeMetricsEvent implements GameEvent {
+  constructor(public readonly computeMs: number) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
