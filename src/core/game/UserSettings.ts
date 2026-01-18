@@ -33,6 +33,20 @@ export class UserSettings {
     localStorage.setItem(key, value.toString());
   }
 
+  getInt(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const intValue = parseInt(value, 10);
+    if (!Number.isFinite(intValue)) return defaultValue;
+
+    return intValue;
+  }
+
+  setInt(key: string, value: number): void {
+    localStorage.setItem(key, Math.trunc(value).toString());
+  }
+
   emojis() {
     return this.get("settings.emojis", true);
   }
@@ -71,6 +85,10 @@ export class UserSettings {
 
   territoryPatterns() {
     return this.get("settings.territoryPatterns", true);
+  }
+
+  territoryBorderMode(): number {
+    return this.getInt("settings.territoryBorderMode", 1);
   }
 
   cursorCostLabel() {
