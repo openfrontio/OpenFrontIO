@@ -72,7 +72,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
-  @state() private lobbyChatEnabled: boolean = true;
+  @state() private lobbyChatEnabled: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];

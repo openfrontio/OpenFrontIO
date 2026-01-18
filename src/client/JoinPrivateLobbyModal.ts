@@ -34,6 +34,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
   @state() private nationCount: number = 0;
+  @state() private lobbyChatEnabled: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   private eventBus: EventBus | null = null;
@@ -154,55 +155,59 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ${this.hasJoined && this.players.length > 0
             ? html`
                 <div class="mt-6 border-t border-white/10 pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                    >
-                      ${this.players.length}
-                      ${this.players.length === 1
-                        ? translateText("private_lobby.player")
-                        : translateText("private_lobby.players")}
-                    </div>
-                    <button
-                      @click=${() => {
-                        this.chatVisible = !this.chatVisible;
-                        // Clear unread indicator when opening chat
-                        if (this.chatVisible) {
-                          this.hasUnreadMessages = false;
-                        }
-                      }}
-                      class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
-                        .chatVisible
-                        ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
-                        : "bg-white/5 text-white/60 hover:bg-white/10"}"
-                      title="${translateText(
-                        this.chatVisible
-                          ? "lobby_chat.hide"
-                          : "lobby_chat.show",
-                      )}"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        height="14px"
-                        width="14px"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-                        />
-                      </svg>
-                      ${translateText(
-                        this.chatVisible
-                          ? "lobby_chat.hide"
-                          : "lobby_chat.show",
-                      )}
-                      ${!this.chatVisible && this.hasUnreadMessages
-                        ? html`<span
-                            class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
-                          ></span>`
-                        : ""}
-                    </button>
-                  </div>
+                  ${this.lobbyChatEnabled
+                    ? html`
+                        <div class="flex justify-between items-center mb-4">
+                          <div
+                            class="text-xs font-bold text-white/40 uppercase tracking-widest"
+                          >
+                            ${this.players.length}
+                            ${this.players.length === 1
+                              ? translateText("private_lobby.player")
+                              : translateText("private_lobby.players")}
+                          </div>
+                          <button
+                            @click=${() => {
+                              this.chatVisible = !this.chatVisible;
+                              // Clear unread indicator when opening chat
+                              if (this.chatVisible) {
+                                this.hasUnreadMessages = false;
+                              }
+                            }}
+                            class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
+                              .chatVisible
+                              ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                              : "bg-white/5 text-white/60 hover:bg-white/10"}"
+                            title="${translateText(
+                              this.chatVisible
+                                ? "lobby_chat.hide"
+                                : "lobby_chat.show",
+                            )}"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              height="14px"
+                              width="14px"
+                              fill="currentColor"
+                            >
+                              <path
+                                d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                              />
+                            </svg>
+                            ${translateText(
+                              this.chatVisible
+                                ? "lobby_chat.hide"
+                                : "lobby_chat.show",
+                            )}
+                            ${!this.chatVisible && this.hasUnreadMessages
+                              ? html`<span
+                                  class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
+                                ></span>`
+                              : ""}
+                          </button>
+                        </div>
+                      `
+                    : ""}
 
                   <lobby-player-view
                     class="block"
@@ -216,20 +221,24 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     GameMapSize.Compact}
                   ></lobby-player-view>
 
-                  <div
-                    class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
-                      .chatVisible
-                      ? ""
-                      : "hidden"}"
-                  >
-                    <div class="text-sm font-semibold text-white/80 mb-2">
-                      ${translateText("lobby_chat.title")}
-                    </div>
-                    <lobby-chat-panel
-                      .eventBus=${this.eventBus}
-                      .username=${this.username}
-                    ></lobby-chat-panel>
-                  </div>
+                  ${this.lobbyChatEnabled
+                    ? html`
+                        <div
+                          class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
+                            .chatVisible
+                            ? ""
+                            : "hidden"}"
+                        >
+                          <div class="text-sm font-semibold text-white/80 mb-2">
+                            ${translateText("lobby_chat.title")}
+                          </div>
+                          <lobby-chat-panel
+                            .eventBus=${this.eventBus}
+                            .username=${this.username}
+                          ></lobby-chat-panel>
+                        </div>
+                      `
+                    : ""}
                 </div>
               `
             : ""}
@@ -642,6 +651,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
           const mapChanged =
             this.gameConfig?.gameMap !== data.gameConfig.gameMap;
           this.gameConfig = data.gameConfig;
+          // Sync lobbyChatEnabled from server config
+          this.lobbyChatEnabled = data.gameConfig.lobbyChatEnabled ?? false;
           if (mapChanged) {
             this.loadNationCount();
           }
