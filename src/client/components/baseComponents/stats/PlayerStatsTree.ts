@@ -149,7 +149,7 @@ export class PlayerStatsTreeView extends LitElement {
       attacks: this.mergeStatArrays(base.attacks, next.attacks),
       betrayals: this.mergeStatValue(base.betrayals, next.betrayals),
       killedAt: this.mergeStatValue(base.killedAt, next.killedAt),
-      conquests: this.mergeStatValue(base.conquests, next.conquests),
+      conquests: this.mergeStatArrays(base.conquests, next.conquests),
       boats: this.mergeStatRecord(base.boats, next.boats),
       bombs: this.mergeStatRecord(base.bombs, next.bombs),
       gold: this.mergeStatArrays(base.gold, next.gold),
