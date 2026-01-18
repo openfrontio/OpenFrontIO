@@ -29,7 +29,18 @@ export class HelpModal extends BaseModal {
       saved = Object.fromEntries(
         Object.entries(parsed)
           .map(([k, v]) => {
-            if (this.isKeybindObject(v)) return [k, v.value];
+            if (this.isKeybindObject(v)) return [k, (v as any).value];
+
+            if (
+              typeof v === "object" &&
+              v !== null &&
+              "value" in (v as any) &&
+              Array.isArray((v as any).value)
+            ) {
+              return [k, (v as any).value.join(" ")];
+            }
+
+            if (Array.isArray(v)) return [k, v.join(" ")];
             if (typeof v === "string") return [k, v];
             return [k, undefined];
           })
