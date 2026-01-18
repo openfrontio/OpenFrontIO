@@ -22,19 +22,47 @@ const toAlphaLabel = (index: number): string => {
 };
 
 const computeGrid = (width: number, height: number) => {
+  // Initial square-ish estimate
   let cellSize = Math.min(width, height) / BASE_CELL_COUNT;
   let rows = Math.max(1, Math.round(height / cellSize));
   let cols = Math.max(1, Math.round(width / cellSize));
 
+  // Cap columns and adjust rows accordingly
   if (cols > MAX_COLUMNS) {
     const maxRowsForCols = Math.floor((MAX_COLUMNS * height) / width);
     rows = Math.max(MIN_ROWS, Math.min(rows, maxRowsForCols));
+    cols = MAX_COLUMNS;
   }
 
-  cellSize = height / rows;
-  cols = Math.max(1, Math.round(width / cellSize));
+  cellSize = Math.min(width / cols, height / rows);
+  const fullCols = Math.max(1, Math.floor(width / cellSize));
+  const fullRows = Math.max(1, Math.floor(height / cellSize));
 
-  return { cellSize, rows, cols };
+  const remainderX = Math.max(0, width - fullCols * cellSize);
+  const remainderY = Math.max(0, height - fullRows * cellSize);
+
+  const hasExtraCol = remainderX > 0.001;
+  const hasExtraRow = remainderY > 0.001;
+
+  const totalCols = fullCols + (hasExtraCol ? 1 : 0);
+  const totalRows = fullRows + (hasExtraRow ? 1 : 0);
+
+  const lastColWidth = hasExtraCol ? remainderX : cellSize;
+  const lastRowHeight = hasExtraRow ? remainderY : cellSize;
+
+  return {
+    cellSize,
+    rows: totalRows,
+    cols: totalCols,
+    fullCols,
+    fullRows,
+    lastColWidth,
+    lastRowHeight,
+    hasExtraCol,
+    hasExtraRow,
+    gridWidth: width,
+    gridHeight: height,
+  };
 };
 
 export class CoordinateGridLayer implements Layer {
@@ -64,7 +92,19 @@ export class CoordinateGridLayer implements Layer {
     const height = this.game.height();
     if (width <= 0 || height <= 0) return;
 
-    const { cellSize, rows, cols } = computeGrid(width, height);
+    const {
+      cellSize,
+      rows,
+      cols,
+      fullCols,
+      fullRows,
+      lastColWidth,
+      lastRowHeight,
+      hasExtraCol,
+      hasExtraRow,
+      gridWidth,
+      gridHeight,
+    } = computeGrid(width, height);
     const cellWidth = cellSize;
     const cellHeight = cellSize;
     const canvasWidth = context.canvas.width;
@@ -84,35 +124,65 @@ export class CoordinateGridLayer implements Layer {
     ).x;
 
     const mapTopScreen = Math.min(mapTopScreenRaw, mapBottomScreenRaw);
-    const mapBottomScreen = Math.max(mapTopScreenRaw, mapBottomScreenRaw);
     const mapLeftScreen = Math.min(mapLeftScreenRaw, mapRightScreenRaw);
-    const mapRightScreen = Math.max(mapLeftScreenRaw, mapRightScreenRaw);
+    const mapTopWorld = 0;
+    const mapLeftWorld = 0;
 
     context.save();
     context.strokeStyle = "rgba(255, 255, 255, 0.35)";
     context.lineWidth = 1.25;
     context.beginPath();
 
-    for (let col = 0; col <= cols; col++) {
-      const worldX = col * cellWidth;
-      if (worldX > width) break;
+    for (let col = 0; col <= fullCols; col++) {
+      const worldX = col * cellWidth + mapLeftWorld;
       const screenX = this.transformHandler.worldToScreenCoordinates(
-        new Cell(worldX, 0),
+        new Cell(worldX, mapTopWorld),
       ).x;
       if (screenX < -1 || screenX > canvasWidth + 1) continue;
+      const screenBottom = this.transformHandler.worldToScreenCoordinates(
+        new Cell(worldX, gridHeight),
+      ).y;
       context.moveTo(screenX, mapTopScreen);
-      context.lineTo(screenX, mapBottomScreen);
+      context.lineTo(screenX, screenBottom);
+    }
+    // Final vertical line at map right edge only if grid fits perfectly
+    if (!hasExtraCol) {
+      const mapRightLine = this.transformHandler.worldToScreenCoordinates(
+        new Cell(gridWidth, mapTopWorld),
+      ).x;
+      context.moveTo(mapRightLine, mapTopScreen);
+      context.lineTo(
+        mapRightLine,
+        this.transformHandler.worldToScreenCoordinates(
+          new Cell(gridWidth, gridHeight),
+        ).y,
+      );
     }
 
-    for (let row = 0; row <= rows; row++) {
-      const worldY = row * cellHeight;
-      if (worldY > height) break;
+    for (let row = 0; row <= fullRows; row++) {
+      const worldY = row * cellHeight + mapTopWorld;
       const screenY = this.transformHandler.worldToScreenCoordinates(
-        new Cell(0, worldY),
+        new Cell(mapLeftWorld, worldY),
       ).y;
       if (screenY < -1 || screenY > canvasHeight + 1) continue;
+      const screenRight = this.transformHandler.worldToScreenCoordinates(
+        new Cell(gridWidth, worldY),
+      ).x;
       context.moveTo(mapLeftScreen, screenY);
-      context.lineTo(mapRightScreen, screenY);
+      context.lineTo(screenRight, screenY);
+    }
+    // Final horizontal line at map bottom edge only if grid fits perfectly
+    if (!hasExtraRow) {
+      const mapBottomLine = this.transformHandler.worldToScreenCoordinates(
+        new Cell(mapLeftWorld, gridHeight),
+      ).y;
+      context.moveTo(mapLeftScreen, mapBottomLine);
+      context.lineTo(
+        this.transformHandler.worldToScreenCoordinates(
+          new Cell(gridWidth, gridHeight),
+        ).x,
+        mapBottomLine,
+      );
     }
 
     context.stroke();
@@ -126,7 +196,7 @@ export class CoordinateGridLayer implements Layer {
       context.fillText(text, x, y);
     };
 
-    // Render per-cell labels (e.g., A1) at cell top-left
+    // Render per-cell labels (like A1, B1, etc.) at cell top-left
     const fontSize = Math.min(
       16,
       Math.max(9, 10 + (this.transformHandler.scale - 1) * 1.2),
@@ -134,8 +204,9 @@ export class CoordinateGridLayer implements Layer {
     context.font = `${fontSize}px monospace`;
     for (let row = 0; row < rows; row++) {
       const rowLabel = toAlphaLabel(row);
-      const centerY = (row + 0.5) * cellHeight;
-      if (centerY > height) break;
+      const startY = row * cellHeight;
+      const rowHeight = row < fullRows ? cellHeight : lastRowHeight;
+      const centerY = startY + rowHeight / 2;
       const screenY = this.transformHandler.worldToScreenCoordinates(
         new Cell(0, centerY),
       ).y;
@@ -143,8 +214,9 @@ export class CoordinateGridLayer implements Layer {
         continue;
 
       for (let col = 0; col < cols; col++) {
-        const centerX = (col + 0.5) * cellWidth;
-        if (centerX > width) break;
+        const startX = col * cellWidth;
+        const colWidth = col < fullCols ? cellWidth : lastColWidth;
+        const centerX = startX + colWidth / 2;
         const screenX = this.transformHandler.worldToScreenCoordinates(
           new Cell(centerX, centerY),
         ).x;
@@ -153,7 +225,7 @@ export class CoordinateGridLayer implements Layer {
 
         // Position at cell top-left in screen space
         const cellTopLeft = this.transformHandler.worldToScreenCoordinates(
-          new Cell(centerX - cellWidth / 2, centerY - cellHeight / 2),
+          new Cell(startX, startY),
         );
         drawLabel(
           `${rowLabel}${col + 1}`,
