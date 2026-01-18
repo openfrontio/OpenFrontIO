@@ -137,6 +137,22 @@ export class CoordinateGridLayer implements Layer {
       context.fillText(text, x, y);
     };
 
+    const mapTopScreen = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, 0),
+    ).y;
+    const mapLeftScreen = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, 0),
+    ).x;
+
+    const labelY = Math.min(
+      Math.max(mapTopScreen + LABEL_PADDING, LABEL_PADDING),
+      canvasHeight - LABEL_PADDING,
+    );
+    const labelX = Math.min(
+      Math.max(mapLeftScreen + LABEL_PADDING, LABEL_PADDING),
+      canvasWidth - LABEL_PADDING,
+    );
+
     for (let col = 0; col < cols; col++) {
       const centerX = (col + 0.5) * cellWidth;
       if (centerX > width) break;
@@ -144,7 +160,7 @@ export class CoordinateGridLayer implements Layer {
         new Cell(centerX, 0),
       ).x;
       if (screenX < 0 || screenX > canvasWidth) continue;
-      drawLabel(String(col + 1), screenX, LABEL_PADDING, "center", "top");
+      drawLabel(String(col + 1), screenX, labelY, "center", "top");
     }
 
     for (let row = 0; row < rows; row++) {
@@ -154,7 +170,7 @@ export class CoordinateGridLayer implements Layer {
         new Cell(0, centerY),
       ).y;
       if (screenY < 0 || screenY > canvasHeight) continue;
-      drawLabel(toAlphaLabel(row), LABEL_PADDING, screenY, "left", "middle");
+      drawLabel(toAlphaLabel(row), labelX, screenY, "left", "middle");
     }
 
     context.restore();
