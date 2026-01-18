@@ -749,10 +749,18 @@ export class Transport {
     this.socket.onclose = null;
     this.socket.onerror = null;
 
-    // Close the connection if it's still open
-    if (this.socket.readyState === WebSocket.OPEN) {
-      this.socket.close();
+    // Close the connection if it's still open or still connecting
+    try {
+      if (
+        this.socket.readyState === WebSocket.OPEN ||
+        this.socket.readyState === WebSocket.CONNECTING
+      ) {
+        this.socket.close();
+      }
+    } catch (e) {
+      console.warn("Error while closing WebSocket:", e);
     }
+
     this.socket = null;
   }
 }

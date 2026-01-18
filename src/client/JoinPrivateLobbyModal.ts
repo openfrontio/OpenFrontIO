@@ -11,15 +11,16 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMode } from "../core/game/Game";
+import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { ReceiveLobbyChatEvent } from "./Transport";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/LobbyChatPanel";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
@@ -32,10 +33,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private currentLobbyId: string = "";
   @state() private chatVisible: boolean = false;
   @state() private hasUnreadMessages: boolean = false;
+  @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   private eventBus: EventBus | null = null;
   private username: string | null = null;
+  private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
   private isSubscribedToChatEvent = false;
@@ -192,13 +195,17 @@ export class JoinPrivateLobbyModal extends BaseModal {
                     </button>
                   </div>
 
-                  <lobby-team-view
-                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
+                  <lobby-player-view
+                    class="block"
                     .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                     .clients=${this.players}
                     .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                     .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  ></lobby-team-view>
+                    .nationCount=${this.nationCount}
+                    .disableNations=${this.gameConfig?.disableNations ?? false}
+                    .isCompactMap=${this.gameConfig?.gameMapSize ===
+                    GameMapSize.Compact}
+                  ></lobby-player-view>
 
                   <div
                     class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
@@ -398,6 +405,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+    this.nationCount = 0;
 
     // Reset chat state
     this.chatVisible = false;
@@ -622,11 +630,38 @@ export class JoinPrivateLobbyModal extends BaseModal {
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         if (data.gameConfig) {
+          const mapChanged =
+            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
           this.gameConfig = data.gameConfig;
+          if (mapChanged) {
+            this.loadNationCount();
+          }
         }
       })
       .catch((error) => {
         console.error("Error polling players:", error);
       });
+  }
+
+  private async loadNationCount() {
+    if (!this.gameConfig) {
+      this.nationCount = 0;
+      return;
+    }
+    const currentMap = this.gameConfig.gameMap;
+    try {
+      const mapData = this.mapLoader.getMapData(currentMap);
+      const manifest = await mapData.manifest();
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = 0;
+      }
+    }
   }
 }
