@@ -171,6 +171,8 @@ export class InputHandler {
   private keybinds: Record<string, string> = {};
   private parsedKeybinds = new Map<string, ParsedKeybind>();
 
+  private readonly onKeybindsChanged = () => this.reloadKeybindsFromStorage();
+
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
@@ -183,40 +185,12 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      // flatten { key: {key, value} } → { key: value } and accept legacy string values
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            // Extract value from nested object or plain string
-            let val: unknown;
-            if (v && typeof v === "object" && "value" in v) {
-              val = (v as { value: unknown }).value;
-            } else {
-              val = v;
-            }
-
-            // Map invalid values to undefined (filtered later)
-            if (typeof val !== "string") {
-              return [k, undefined];
-            }
-            return [k, val];
-          })
-          .filter(([, v]) => typeof v === "string"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
-
-    this.keybinds = {
-      ...getDefaultKeybinds(),
-      ...saved,
-    };
-    this.parsedKeybinds.clear();
+    // Load keybinds from storage (and listen for runtime updates).
+    this.reloadKeybindsFromStorage();
+    window.addEventListener(
+      "settings.keybinds.changed",
+      this.onKeybindsChanged,
+    );
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
@@ -626,11 +600,50 @@ export class InputHandler {
     return false;
   }
 
+  private reloadKeybindsFromStorage() {
+    let saved: Record<string, string> = {};
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem("settings.keybinds") ?? "{}",
+      );
+
+      saved = Object.fromEntries(
+        Object.entries(parsed)
+          .map(([k, v]) => {
+            let val: unknown;
+            if (v && typeof v === "object" && "value" in v) {
+              val = (v as { value: unknown }).value;
+            } else {
+              val = v;
+            }
+
+            if (typeof val !== "string") {
+              return [k, undefined];
+            }
+            return [k, val];
+          })
+          .filter(([, v]) => typeof v === "string"),
+      ) as Record<string, string>;
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
+    }
+
+    this.keybinds = {
+      ...getDefaultKeybinds(),
+      ...saved,
+    };
+    this.parsedKeybinds.clear();
+  }
+
   destroy() {
     if (this.moveInterval !== null) {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
+    window.removeEventListener(
+      "settings.keybinds.changed",
+      this.onKeybindsChanged,
+    );
   }
 
   private isAttackModifierActive(): boolean {

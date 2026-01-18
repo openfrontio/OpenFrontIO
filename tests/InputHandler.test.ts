@@ -1,4 +1,5 @@
 import { AutoUpgradeEvent, InputHandler } from "../src/client/InputHandler";
+import { getDefaultKeybinds } from "../src/client/Keybinds";
 import { EventBus } from "../src/core/EventBus";
 
 class MockPointerEvent {
@@ -38,6 +39,7 @@ describe("InputHandler AutoUpgrade", () => {
       mockCanvas,
       eventBus,
     );
+    (inputHandler as any).keybinds = getDefaultKeybinds();
   });
 
   describe("Middle Mouse Button Handling", () => {
@@ -450,6 +452,62 @@ describe("InputHandler AutoUpgrade", () => {
       // default remains when parsing fails
       expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
       spy.mockRestore();
+    });
+
+    test("applies keybind changes at runtime when settings are saved", () => {
+      const emit = vi.spyOn(eventBus, "emit");
+
+      // initialize handler so it registers runtime listeners
+      inputHandler.initialize();
+
+      // change autoUpgrade to Shift + LeftClick at runtime
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({ autoUpgrade: "ShiftLeft+MouseLeft" }),
+      );
+      // notify runtime listeners (UserSettingModal now dispatches this event)
+      window.dispatchEvent(new CustomEvent("settings.keybinds.changed"));
+
+      // simulate left-click without shift -> should behave as normal left click
+      const leftNoShift = new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 10,
+        clientY: 20,
+        pointerId: 1,
+      });
+      inputHandler["onPointerDown"](leftNoShift);
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({ x: 10, y: 20 }),
+      );
+      const calls = emit.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      // last call should NOT be AutoUpgradeEvent when shift is not held
+      expect(lastCall[0]).not.toBeInstanceOf(AutoUpgradeEvent);
+
+      // complete the click cycle so the next press is treated as a fresh click
+      inputHandler["onPointerUp"]({
+        button: 0,
+        x: 10,
+        y: 20,
+        pointerId: 1,
+      } as any);
+
+      // simulate left-click with shift -> should now trigger AutoUpgradeEvent
+      const leftWithShift = new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 30,
+        clientY: 40,
+        pointerId: 1,
+      }) as any;
+      leftWithShift.shiftKey = true;
+      inputHandler["onPointerDown"](leftWithShift);
+
+      expect(emit).toHaveBeenCalledWith(
+        expect.objectContaining({ x: 30, y: 40 }),
+      );
+      // final emitted event should be AutoUpgradeEvent
+      const finalCall = emit.mock.calls[emit.mock.calls.length - 1];
+      expect(finalCall[0]).toBeInstanceOf(AutoUpgradeEvent);
     });
   });
 });

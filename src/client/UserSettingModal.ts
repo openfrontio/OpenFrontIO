@@ -125,6 +125,9 @@ export class UserSettingModal extends BaseModal {
             delete rest.closeView;
             this.keybinds = rest;
             localStorage.setItem("settings.keybinds", JSON.stringify(rest));
+            window.dispatchEvent(
+              new CustomEvent("settings.keybinds.changed", { detail: rest }),
+            );
           } else {
             this.keybinds = parsed;
           }
@@ -272,6 +275,9 @@ export class UserSettingModal extends BaseModal {
 
     this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
     localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+    window.dispatchEvent(
+      new CustomEvent("settings.keybinds.changed", { detail: this.keybinds }),
+    );
   }
 
   private getKeyValue(action: string): string | undefined {
