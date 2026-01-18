@@ -23,7 +23,7 @@ export interface StationManager {
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
   private stationsById: (TrainStation | undefined)[] = [];
-  private nextId = 0;
+  private nextId = 1; // Start from 1; 0 is reserved as invalid/sentinel
 
   addStation(station: TrainStation) {
     station.id = this.nextId++;
