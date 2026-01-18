@@ -58,6 +58,9 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
       this.isSubscribedToChatEvent = true;
     }
+
+    // Trigger re-render so template uses updated eventBus/username
+    this.requestUpdate();
   }
 
   connectedCallback() {
@@ -69,6 +72,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
       this.isSubscribedToChatEvent = false;
     }
+    this.eventBus = null;
+    this.username = null;
+
+    // Trigger re-render to reflect null state in template
+    this.requestUpdate();
+
     super.disconnectedCallback();
   }
 
