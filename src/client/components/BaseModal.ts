@@ -105,7 +105,12 @@ export abstract class BaseModal extends LitElement {
     if (this.inline) {
       this.style.pointerEvents = "none";
       if (window.showPage) {
-        window.showPage?.("page-play");
+        const h = window.location.hash || "";
+        if (h.startsWith("#news") || h.startsWith("#page-news")) {
+          window.showPage?.("page-news");
+        } else {
+          window.showPage?.("page-play");
+        }
       }
     } else {
       this.modalEl?.close();

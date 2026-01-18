@@ -46,6 +46,30 @@ export function initNavigation() {
       }
     });
 
+    // Maintain URL hash for News: set when showing news, clear when navigating away
+    try {
+      const h = window.location.hash || "";
+      if (pageId === "page-news") {
+        if (!h.startsWith("#news")) {
+          history.replaceState(
+            null,
+            "",
+            window.location.pathname + window.location.search + "#news",
+          );
+        }
+      } else {
+        if (h.startsWith("#news")) {
+          history.replaceState(
+            null,
+            "",
+            window.location.pathname + window.location.search,
+          );
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
     // Dispatch CustomEvent to notify listeners of page change
     window.dispatchEvent(new CustomEvent("showPage", { detail: pageId }));
   };
@@ -106,9 +130,14 @@ export function initNavigation() {
     }
   });
 
-  // Set default page to play if no menu item is active
+  // Set default page to play (or news if URL hash indicates it) if no menu item is active
   const anyActive = document.querySelector(".nav-menu-item.active");
   if (!anyActive) {
-    showPage("page-play");
+    const h = window.location.hash || "";
+    if (h.startsWith("#news")) {
+      showPage("page-news");
+    } else {
+      showPage("page-play");
+    }
   }
 }

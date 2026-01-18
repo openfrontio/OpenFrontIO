@@ -86,6 +86,16 @@ export class NewsModal extends BaseModal {
         .then((markdown) => (this.markdown = markdown));
     }
   }
+
+  protected onClose(): void {
+    if (window.location.hash.startsWith("#news")) {
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+  }
 }
 
 @customElement("news-button")

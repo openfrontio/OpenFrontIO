@@ -30,6 +30,7 @@ import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
+import { NewsModal } from "./NewsModal";
 import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
@@ -222,6 +223,7 @@ class Client {
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private newsModal: NewsModal;
 
   private gutterAds: GutterAds;
 
@@ -393,6 +395,8 @@ class Client {
     ) {
       console.warn("Territory patterns modal element not found");
     }
+
+    this.newsModal = document.querySelector("news-modal") as NewsModal;
 
     // We no longer need to manually manage the preview button as PatternInput handles it component-side.
     // However, we still want to ensure the modal can be opened.
@@ -743,6 +747,11 @@ class Client {
       console.log(`joining lobby ${lobbyId}`);
       return;
     }
+
+    if (decodedHash.startsWith("#news")) {
+      window.showPage?.("page-news");
+    }
+
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();

@@ -284,7 +284,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
       // Reset URL to base when modal closes
-      history.replaceState(null, "", window.location.origin + "/");
+      const currentHash = window.location.hash;
+      if (!(currentHash && currentHash.startsWith("#news"))) {
+        history.replaceState(null, "", window.location.origin + "/");
+      }
     }
 
     this.hasJoined = false;
