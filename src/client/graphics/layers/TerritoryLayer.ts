@@ -129,6 +129,9 @@ export class TerritoryLayer implements Layer {
       this.redraw();
     }
 
+    // Apply user settings even while the game is paused (settings modal).
+    this.refreshBorderModeIfNeeded();
+
     this.ensureTerritoryCanvasAttached(context.canvas);
     this.updateHoverHighlight();
 
