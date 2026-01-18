@@ -325,16 +325,6 @@ export class InputHandler {
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (this.matchesKeybind(e, this.keybinds.attackRatioScrollDown)) {
-        e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(-10));
-      }
-
-      if (this.matchesKeybind(e, this.keybinds.attackRatioScrollUp)) {
-        e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(10));
-      }
-
       if (this.matchesKeybind(e, this.keybinds.centerCamera)) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
