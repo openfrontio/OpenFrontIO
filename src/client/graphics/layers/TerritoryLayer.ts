@@ -4,9 +4,17 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, MouseOverEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  MouseOverEvent,
+  WebGPUComputeMetricsEvent,
+} from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
+import {
+  buildTerritoryShaderParams,
+  readTerritoryShaderId,
+} from "../webgpu/render/TerritoryShaderRegistry";
 import { TerritoryRenderer } from "../webgpu/TerritoryRenderer";
 import { Layer } from "./Layer";
 
@@ -27,7 +35,7 @@ export class TerritoryLayer implements Layer {
 
   private lastPaletteSignature: string | null = null;
   private lastDefensePostsSignature: string | null = null;
-  private lastBorderMode: number | null = null;
+  private lastTerritoryShaderSignature: string | null = null;
 
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
@@ -69,7 +77,7 @@ export class TerritoryLayer implements Layer {
 
     this.refreshPaletteIfNeeded();
     this.refreshDefensePostsIfNeeded();
-    this.refreshBorderModeIfNeeded();
+    this.applyTerritoryShaderSettings();
 
     const updatedTiles = this.game.recentlyUpdatedTiles();
     for (let i = 0; i < updatedTiles.length; i++) {
@@ -79,7 +87,12 @@ export class TerritoryLayer implements Layer {
     // After collecting pending updates and handling palette/theme changes,
     // invoke the renderer's tick() to process compute passes. This ensures
     // compute shaders run at the simulation rate rather than every frame.
-    this.territoryRenderer?.tick();
+    if (this.territoryRenderer) {
+      const start = performance.now();
+      this.territoryRenderer.tick();
+      const computeMs = performance.now() - start;
+      this.eventBus.emit(new WebGPUComputeMetricsEvent(computeMs));
+    }
 
     FrameProfiler.end("TerritoryLayer:tick", tickProfile);
   }
@@ -100,8 +113,7 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer = renderer;
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.setHighlightedOwnerId(this.hoveredOwnerSmallId);
-    this.lastBorderMode = this.userSettings.territoryBorderMode();
-    this.territoryRenderer.setBorderMode(this.lastBorderMode);
+    this.applyTerritoryShaderSettings(true);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
     this.lastPaletteSignature = this.computePaletteSignature();
@@ -130,7 +142,7 @@ export class TerritoryLayer implements Layer {
     }
 
     // Apply user settings even while the game is paused (settings modal).
-    this.refreshBorderModeIfNeeded();
+    this.applyTerritoryShaderSettings();
 
     this.ensureTerritoryCanvasAttached(context.canvas);
     this.updateHoverHighlight();
@@ -289,15 +301,25 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  private refreshBorderModeIfNeeded() {
+  private applyTerritoryShaderSettings(force: boolean = false) {
     if (!this.territoryRenderer) {
       return;
     }
-    const mode = this.userSettings.territoryBorderMode();
-    if (mode !== this.lastBorderMode) {
-      this.lastBorderMode = mode;
-      this.territoryRenderer.setBorderMode(mode);
+
+    const shaderId = readTerritoryShaderId(this.userSettings);
+    const { shaderPath, params0, params1 } = buildTerritoryShaderParams(
+      this.userSettings,
+      shaderId,
+    );
+
+    const signature = `${shaderPath}:${Array.from(params0).join(",")}:${Array.from(params1).join(",")}`;
+    if (!force && signature === this.lastTerritoryShaderSignature) {
+      return;
     }
+    this.lastTerritoryShaderSignature = signature;
+
+    this.territoryRenderer.setTerritoryShader(shaderPath);
+    this.territoryRenderer.setTerritoryShaderParams(params0, params1);
   }
 
   private computeDefensePostsSignature(): string {
