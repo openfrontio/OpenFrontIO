@@ -870,6 +870,12 @@ class Client {
     this.gameStop();
     this.gameStop = null;
 
+    try {
+      history.replaceState(null, "", "/");
+    } catch (e) {
+      console.warn("Failed to restore URL on leave:", e);
+    }
+
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
