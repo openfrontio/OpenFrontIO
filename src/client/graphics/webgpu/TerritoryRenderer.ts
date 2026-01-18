@@ -28,6 +28,7 @@ export class TerritoryRenderer {
   private resources: GroundTruthData | null = null;
   private ready = false;
   private initPromise: Promise<void> | null = null;
+  private borderMode = 1;
 
   // Compute passes
   private computePasses: ComputePass[] = [];
@@ -98,6 +99,8 @@ export class TerritoryRenderer {
       this.theme,
       state,
     );
+
+    this.resources.setBorderMode(this.borderMode);
 
     // Upload terrain data and params (terrain colors will be computed on GPU)
     this.resources.uploadTerrainData();
@@ -228,6 +231,7 @@ export class TerritoryRenderer {
   }
 
   setBorderMode(mode: number): void {
+    this.borderMode = mode;
     if (!this.resources) {
       return;
     }

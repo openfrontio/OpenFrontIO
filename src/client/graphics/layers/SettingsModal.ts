@@ -155,7 +155,6 @@ export class SettingsModal extends LitElement implements Layer {
       throw new Error(`Invalid border mode: ${value}`);
 
     this.userSettings.setInt("settings.territoryBorderMode", mode);
-    this.eventBus.emit(new RefreshGraphicsEvent());
     this.requestUpdate();
   }
 
