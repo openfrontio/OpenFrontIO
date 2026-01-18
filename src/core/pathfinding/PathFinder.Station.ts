@@ -42,7 +42,7 @@ class StationGraphAdapter implements AStarAdapter {
   }
 
   maxNeighbors(): number {
-    return 8;
+    return 32;
   }
 
   maxPriority(): number {
