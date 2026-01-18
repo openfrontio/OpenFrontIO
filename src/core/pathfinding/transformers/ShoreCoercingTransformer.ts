@@ -10,7 +10,6 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
   constructor(
     private inner: PathFinder<number>,
     private map: GameMap,
-    private findBestShoreNeighbor: boolean = true,
   ) {}
 
   findPath(from: TileRef | TileRef[], to: TileRef): TileRef[] | null {
@@ -99,10 +98,6 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
 
     for (const n of this.map.neighbors(tile)) {
       if (!this.map.isWater(n)) continue;
-
-      if (!this.findBestShoreNeighbor) {
-        return { water: n, original: tile };
-      }
 
       // Score by water neighbor count (connectivity)
       const score = this.countWaterNeighbors(n);

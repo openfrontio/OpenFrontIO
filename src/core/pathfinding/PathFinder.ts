@@ -48,7 +48,7 @@ export class PathFinding {
       .wrap((pf) => new ComponentCheckTransformer(pf, componentCheckFn))
       .wrap((pf) => new SmoothingWaterTransformer(pf, miniMap))
       .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
-      .wrap((pf) => new ShoreCoercingTransformer(pf, game.map(), true))
+      .wrap((pf) => new ShoreCoercingTransformer(pf, game.map()))
       .buildWithStepper(tileStepperConfig(game));
   }
 
@@ -58,7 +58,7 @@ export class PathFinding {
 
     return PathFinderBuilder.create(pf)
       .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
-      .wrap((pf) => new ShoreCoercingTransformer(pf, game.map(), true))
+      .wrap((pf) => new ShoreCoercingTransformer(pf, game.map()))
       .buildWithStepper(tileStepperConfig(game));
   }
 
