@@ -18,7 +18,7 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
     const waterFrom: TileRef[] = [];
 
     for (const f of fromArray) {
-      const coerced = this.coerceToWater(f, to);
+      const coerced = this.coerceToWater(f);
       if (coerced.water !== null) {
         waterFrom.push(coerced.water);
         waterToOriginal.set(coerced.water, coerced.original);
@@ -62,10 +62,7 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
    * If tile is already water, returns it unchanged.
    * If tile is shore, finds the best adjacent water neighbor.
    */
-  private coerceToWater(
-    tile: TileRef,
-    destination?: TileRef,
-  ): {
+  private coerceToWater(tile: TileRef): {
     water: TileRef | null;
     original: TileRef | null;
   } {
@@ -75,22 +72,16 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
 
     let best: TileRef | null = null;
     let maxScore = -1;
-    let minDist = Infinity;
 
     for (const n of this.map.neighbors(tile)) {
       if (!this.map.isWater(n)) continue;
 
       // Score by water neighbor count (connectivity)
       const score = this.countWaterNeighbors(n);
-      const dist =
-        destination !== undefined
-          ? this.map.euclideanDistSquared(n, destination)
-          : 0;
 
-      // Pick highest connectivity, then closest to destination
-      if (score > maxScore || (score === maxScore && dist < minDist)) {
+      // Pick highest connectivity
+      if (score > maxScore) {
         maxScore = score;
-        minDist = dist;
         best = n;
       }
     }
