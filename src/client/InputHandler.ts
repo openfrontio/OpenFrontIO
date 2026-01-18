@@ -478,6 +478,10 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
+    if (event.deltaY === 0 && event.deltaX !== 0) {
+      return;
+    }
+
     const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
     if (scrollValue === 0) return;
 
