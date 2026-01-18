@@ -23,6 +23,8 @@ export class GroundTruthData {
   public readonly terrainTexture: GPUTexture;
   public readonly terrainDataTexture: GPUTexture;
   public readonly paletteTexture: GPUTexture;
+  public readonly ownerIndexTexture: GPUTexture;
+  public readonly relationsTexture: GPUTexture;
   public readonly defendedStrengthTexture: GPUTexture;
 
   // Buffers
@@ -65,7 +67,7 @@ export class GroundTruthData {
   private defenseCircleOffsets: Int16Array = new Int16Array(0); // [dx0, dy0, dx1, dy1, ...]
 
   // Uniform data arrays
-  private readonly uniformData = new Float32Array(12);
+  private readonly uniformData = new Float32Array(20);
   private readonly terrainParamsData = new Float32Array(24); // 6 vec4f: shore, water, shorelineWater, plainsBase, highlandBase, mountainBase
   private readonly stateUpdateParamsData = new Uint32Array(4); // updateCount, range, pad, pad
   private readonly defendedStrengthParamsData = new Uint32Array(4); // dirtyCount, range, pad, pad
@@ -78,7 +80,13 @@ export class GroundTruthData {
   private viewOffsetY = 0;
   private alternativeView = false;
   private highlightedOwnerId = -1;
-  private borderMode = 1;
+
+  private territoryShaderParams0 = new Float32Array(4);
+  private territoryShaderParams1 = new Float32Array(4);
+
+  private paletteMaxSmallId = 0;
+  private ownerIndexWidth = 1;
+  private relationsSize = 1;
 
   private constructor(
     private readonly device: GPUDevice,
@@ -102,9 +110,9 @@ export class GroundTruthData {
     const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
     const STORAGE_BINDING = GPUTextureUsage?.STORAGE_BINDING ?? 0x8;
 
-    // Render uniforms: 3x vec4f = 48 bytes
+    // Render uniforms: 5x vec4f = 80 bytes
     this.uniformBuffer = device.createBuffer({
-      size: 48,
+      size: 80,
       usage: UNIFORM | COPY_DST_BUF,
     });
 
@@ -140,10 +148,24 @@ export class GroundTruthData {
       usage: TEXTURE_BINDING | STORAGE_BINDING,
     });
 
-    // Palette texture (rgba8unorm)
+    // Palette texture (rgba8unorm): row 0 territory colors, row 1 border colors
     this.paletteTexture = device.createTexture({
-      size: { width: 1, height: 1 },
+      size: { width: 1, height: 2 },
       format: "rgba8unorm",
+      usage: COPY_DST_TEX | TEXTURE_BINDING,
+    });
+
+    // SmallID -> dense index lookup texture (r32uint)
+    this.ownerIndexTexture = device.createTexture({
+      size: { width: 1, height: 1 },
+      format: "r32uint",
+      usage: COPY_DST_TEX | TEXTURE_BINDING,
+    });
+
+    // Dense relation matrix texture (r8uint)
+    this.relationsTexture = device.createTexture({
+      size: { width: 1, height: 1 },
+      format: "r8uint",
       usage: COPY_DST_TEX | TEXTURE_BINDING,
     });
 
@@ -224,8 +246,14 @@ export class GroundTruthData {
     this.highlightedOwnerId = ownerSmallId ?? -1;
   }
 
-  setBorderMode(mode: number): void {
-    this.borderMode = Math.max(0, Math.min(2, Math.trunc(mode)));
+  setTerritoryShaderParams(
+    params0: Float32Array | number[],
+    params1: Float32Array | number[],
+  ): void {
+    for (let i = 0; i < 4; i++) {
+      this.territoryShaderParams0[i] = Number(params0[i] ?? 0);
+      this.territoryShaderParams1[i] = Number(params1[i] ?? 0);
+    }
   }
 
   // =====================
@@ -447,6 +475,7 @@ export class GroundTruthData {
     for (const player of this.game.playerViews()) {
       maxSmallId = Math.max(maxSmallId, player.smallID());
     }
+    this.paletteMaxSmallId = maxSmallId;
     const nextPaletteWidth =
       GroundTruthData.PALETTE_RESERVED_SLOTS + Math.max(1, maxSmallId + 1);
 
@@ -458,21 +487,23 @@ export class GroundTruthData {
       const COPY_DST_TEX = GPUTextureUsage?.COPY_DST ?? 0x2;
       const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
       (this as any).paletteTexture = this.device.createTexture({
-        size: { width: this.paletteWidth, height: 1 },
+        size: { width: this.paletteWidth, height: 2 },
         format: "rgba8unorm",
         usage: COPY_DST_TEX | TEXTURE_BINDING,
       });
       textureRecreated = true;
     }
 
-    const bytes = new Uint8Array(this.paletteWidth * 4);
+    const rowStride = this.paletteWidth * 4;
+    const row0 = new Uint8Array(rowStride);
+    const row1 = new Uint8Array(rowStride);
 
     // Store special colors in reserved slots (0-9)
     const falloutIdx = GroundTruthData.PALETTE_FALLOUT_INDEX * 4;
-    bytes[falloutIdx] = 120;
-    bytes[falloutIdx + 1] = 255;
-    bytes[falloutIdx + 2] = 71;
-    bytes[falloutIdx + 3] = 255;
+    row0[falloutIdx] = 120;
+    row0[falloutIdx + 1] = 255;
+    row0[falloutIdx + 2] = 71;
+    row0[falloutIdx + 3] = 255;
 
     // Store player colors starting at index 10
     for (const player of this.game.playerViews()) {
@@ -480,27 +511,126 @@ export class GroundTruthData {
       if (id <= 0) continue;
       const rgba = player.territoryColor().rgba;
       const idx = (GroundTruthData.PALETTE_RESERVED_SLOTS + id) * 4;
-      bytes[idx] = rgba.r;
-      bytes[idx + 1] = rgba.g;
-      bytes[idx + 2] = rgba.b;
-      bytes[idx + 3] = 255;
+      row0[idx] = rgba.r;
+      row0[idx + 1] = rgba.g;
+      row0[idx + 2] = rgba.b;
+      row0[idx + 3] = 255;
+
+      const borderRgba = player.borderColor().rgba;
+      row1[idx] = borderRgba.r;
+      row1[idx + 1] = borderRgba.g;
+      row1[idx + 2] = borderRgba.b;
+      row1[idx + 3] = 255;
     }
 
-    const bytesPerRow = align(this.paletteWidth * 4, 256);
-    const padded =
-      bytesPerRow === this.paletteWidth * 4
-        ? bytes
-        : (() => {
-            const tmp = new Uint8Array(bytesPerRow);
-            tmp.set(bytes);
-            return tmp;
-          })();
+    const bytesPerRow = align(rowStride, 256);
+    const padded = new Uint8Array(bytesPerRow * 2);
+    padded.set(row0, 0);
+    padded.set(row1, bytesPerRow);
 
     this.device.queue.writeTexture(
       { texture: this.paletteTexture },
       padded,
-      { bytesPerRow, rowsPerImage: 1 },
-      { width: this.paletteWidth, height: 1, depthOrArrayLayers: 1 },
+      { bytesPerRow, rowsPerImage: 2 },
+      { width: this.paletteWidth, height: 2, depthOrArrayLayers: 1 },
+    );
+
+    return textureRecreated;
+  }
+
+  uploadRelations(): boolean {
+    const players = this.game
+      .playerViews()
+      .filter((p) => p.smallID() > 0)
+      .slice()
+      .sort((a, b) => a.smallID() - b.smallID());
+
+    const maxSmallId = this.paletteMaxSmallId;
+    const nextOwnerIndexWidth = Math.max(1, maxSmallId + 1);
+
+    let textureRecreated = false;
+
+    if (nextOwnerIndexWidth !== this.ownerIndexWidth) {
+      this.ownerIndexWidth = nextOwnerIndexWidth;
+      (this.ownerIndexTexture as any).destroy?.();
+      const GPUTextureUsage = (globalThis as any).GPUTextureUsage;
+      const COPY_DST_TEX = GPUTextureUsage?.COPY_DST ?? 0x2;
+      const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
+      (this as any).ownerIndexTexture = this.device.createTexture({
+        size: { width: this.ownerIndexWidth, height: 1 },
+        format: "r32uint",
+        usage: COPY_DST_TEX | TEXTURE_BINDING,
+      });
+      textureRecreated = true;
+    }
+
+    const denseBySmallId = new Uint32Array(this.ownerIndexWidth);
+    let dense = 0;
+    for (const p of players) {
+      const id = p.smallID();
+      if (id <= 0 || id >= this.ownerIndexWidth) continue;
+      dense++;
+      denseBySmallId[id] = dense;
+    }
+
+    const ownerIndexBytesPerRow = align(this.ownerIndexWidth * 4, 256);
+    const ownerIndexPaddedU32 = new Uint32Array(ownerIndexBytesPerRow / 4);
+    ownerIndexPaddedU32.set(denseBySmallId);
+    this.device.queue.writeTexture(
+      { texture: this.ownerIndexTexture },
+      ownerIndexPaddedU32,
+      { bytesPerRow: ownerIndexBytesPerRow, rowsPerImage: 1 },
+      { width: this.ownerIndexWidth, height: 1, depthOrArrayLayers: 1 },
+    );
+
+    const nextRelationsSize = Math.max(1, dense + 1);
+    if (nextRelationsSize !== this.relationsSize) {
+      this.relationsSize = nextRelationsSize;
+      (this.relationsTexture as any).destroy?.();
+      const GPUTextureUsage = (globalThis as any).GPUTextureUsage;
+      const COPY_DST_TEX = GPUTextureUsage?.COPY_DST ?? 0x2;
+      const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
+      (this as any).relationsTexture = this.device.createTexture({
+        size: { width: this.relationsSize, height: this.relationsSize },
+        format: "r8uint",
+        usage: COPY_DST_TEX | TEXTURE_BINDING,
+      });
+      textureRecreated = true;
+    }
+
+    const relBytesPerRow = align(this.relationsSize, 256);
+    const relPadded = new Uint8Array(relBytesPerRow * this.relationsSize);
+
+    // 0 = neutral, 1 = friendly, 2 = embargo
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        const a = players[i];
+        const b = players[j];
+        const aDense = denseBySmallId[a.smallID()];
+        const bDense = denseBySmallId[b.smallID()];
+        if (aDense === 0 || bDense === 0) continue;
+
+        let code = 0;
+        if (a.hasEmbargo(b)) {
+          code = 2;
+        } else if (a.isFriendly(b) || b.isFriendly(a)) {
+          code = 1;
+        }
+
+        relPadded[aDense + bDense * relBytesPerRow] = code;
+        relPadded[bDense + aDense * relBytesPerRow] = code;
+      }
+    }
+
+    this.device.queue.writeTexture(
+      { texture: this.relationsTexture },
+      relPadded,
+      { bytesPerRow: relBytesPerRow, rowsPerImage: this.relationsSize },
+      {
+        width: this.relationsSize,
+        height: this.relationsSize,
+        depthOrArrayLayers: 1,
+      },
     );
 
     return textureRecreated;
@@ -853,8 +983,18 @@ export class GroundTruthData {
     this.uniformData[7] = this.highlightedOwnerId;
     this.uniformData[8] = this.viewWidth;
     this.uniformData[9] = this.viewHeight;
-    this.uniformData[10] = this.borderMode;
+    this.uniformData[10] = this.game.myPlayer()?.smallID() ?? 0;
     this.uniformData[11] = 0;
+
+    this.uniformData[12] = this.territoryShaderParams0[0];
+    this.uniformData[13] = this.territoryShaderParams0[1];
+    this.uniformData[14] = this.territoryShaderParams0[2];
+    this.uniformData[15] = this.territoryShaderParams0[3];
+
+    this.uniformData[16] = this.territoryShaderParams1[0];
+    this.uniformData[17] = this.territoryShaderParams1[1];
+    this.uniformData[18] = this.territoryShaderParams1[2];
+    this.uniformData[19] = this.territoryShaderParams1[3];
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
   }

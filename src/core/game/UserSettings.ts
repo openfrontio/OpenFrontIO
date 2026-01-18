@@ -145,6 +145,10 @@ export class UserSettings {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
+  webgpuDebug(): boolean {
+    return this.get("settings.webgpuDebug", true);
+  }
+
   alertFrame() {
     return this.getBool("settings.alertFrame", true);
   }
@@ -188,10 +192,6 @@ export class UserSettings {
     );
   }
 
-  territoryBorderMode(): number {
-    return this.getInt("settings.territoryBorderMode", 1);
-  }
-
   cursorCostLabel() {
     const legacy = this.getBool("settings.ghostPricePill", true);
     return this.getBool("settings.cursorCostLabel", legacy);
@@ -212,6 +212,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
+  }
+
+  toggleWebgpuDebug() {
+    this.set("settings.webgpuDebug", !this.webgpuDebug());
   }
 
   toggleAlertFrame() {

@@ -16,6 +16,7 @@ export class TerritoryRenderPass implements RenderPass {
   private device: GPUDevice | null = null;
   private resources: GroundTruthData | null = null;
   private canvasFormat: GPUTextureFormat | null = null;
+  private shaderPath = "render/territory.wgsl";
   private clearR = 0;
   private clearG = 0;
   private clearB = 0;
@@ -28,9 +29,6 @@ export class TerritoryRenderPass implements RenderPass {
     this.device = device;
     this.resources = resources;
     this.canvasFormat = canvasFormat;
-
-    const shaderCode = await loadShader("render/territory.wgsl");
-    const shaderModule = device.createShaderModule({ code: shaderCode });
 
     this.bindGroupLayout = device.createBindGroupLayout({
       entries: [
@@ -59,21 +57,20 @@ export class TerritoryRenderPass implements RenderPass {
           visibility: 2 /* FRAGMENT */,
           texture: { sampleType: "float" },
         },
+        {
+          binding: 5,
+          visibility: 2 /* FRAGMENT */,
+          texture: { sampleType: "uint" },
+        },
+        {
+          binding: 6,
+          visibility: 2 /* FRAGMENT */,
+          texture: { sampleType: "uint" },
+        },
       ],
     });
 
-    this.pipeline = device.createRenderPipeline({
-      layout: device.createPipelineLayout({
-        bindGroupLayouts: [this.bindGroupLayout],
-      }),
-      vertex: { module: shaderModule, entryPoint: "vsMain" },
-      fragment: {
-        module: shaderModule,
-        entryPoint: "fsMain",
-        targets: [{ format: canvasFormat }],
-      },
-      primitive: { topology: "triangle-list" },
-    });
+    await this.setShader(this.shaderPath);
 
     this.rebuildBindGroup();
 
@@ -82,6 +79,30 @@ export class TerritoryRenderPass implements RenderPass {
     this.clearR = bg.r / 255;
     this.clearG = bg.g / 255;
     this.clearB = bg.b / 255;
+  }
+
+  async setShader(shaderPath: string): Promise<void> {
+    this.shaderPath = shaderPath;
+
+    if (!this.device || !this.bindGroupLayout || !this.canvasFormat) {
+      return;
+    }
+
+    const shaderCode = await loadShader(shaderPath);
+    const shaderModule = this.device.createShaderModule({ code: shaderCode });
+
+    this.pipeline = this.device.createRenderPipeline({
+      layout: this.device.createPipelineLayout({
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
+      vertex: { module: shaderModule, entryPoint: "vsMain" },
+      fragment: {
+        module: shaderModule,
+        entryPoint: "fsMain",
+        targets: [{ format: this.canvasFormat }],
+      },
+      primitive: { topology: "triangle-list" },
+    });
   }
 
   needsUpdate(): boolean {
@@ -139,7 +160,9 @@ export class TerritoryRenderPass implements RenderPass {
       !this.resources.stateTexture ||
       !this.resources.defendedStrengthTexture ||
       !this.resources.paletteTexture ||
-      !this.resources.terrainTexture
+      !this.resources.terrainTexture ||
+      !this.resources.ownerIndexTexture ||
+      !this.resources.relationsTexture
     ) {
       return;
     }
@@ -163,6 +186,14 @@ export class TerritoryRenderPass implements RenderPass {
         {
           binding: 4,
           resource: this.resources.terrainTexture.createView(),
+        },
+        {
+          binding: 5,
+          resource: this.resources.ownerIndexTexture.createView(),
+        },
+        {
+          binding: 6,
+          resource: this.resources.relationsTexture.createView(),
         },
       ],
     });

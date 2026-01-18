@@ -28,7 +28,9 @@ export class TerritoryRenderer {
   private resources: GroundTruthData | null = null;
   private ready = false;
   private initPromise: Promise<void> | null = null;
-  private borderMode = 1;
+  private territoryShaderPath = "render/territory.wgsl";
+  private territoryShaderParams0 = new Float32Array(4);
+  private territoryShaderParams1 = new Float32Array(4);
 
   // Compute passes
   private computePasses: ComputePass[] = [];
@@ -99,8 +101,10 @@ export class TerritoryRenderer {
       this.theme,
       state,
     );
-
-    this.resources.setBorderMode(this.borderMode);
+    this.resources.setTerritoryShaderParams(
+      this.territoryShaderParams0,
+      this.territoryShaderParams1,
+    );
 
     // Upload terrain data and params (terrain colors will be computed on GPU)
     this.resources.uploadTerrainData();
@@ -134,6 +138,10 @@ export class TerritoryRenderer {
         this.resources,
         webgpuDevice.canvasFormat,
       );
+    }
+
+    if (this.territoryRenderPass) {
+      await this.territoryRenderPass.setShader(this.territoryShaderPath);
     }
 
     // Compute dependency order (topological sort)
@@ -230,12 +238,29 @@ export class TerritoryRenderer {
     this.resources.setHighlightedOwnerId(ownerSmallId);
   }
 
-  setBorderMode(mode: number): void {
-    this.borderMode = mode;
+  setTerritoryShader(shaderPath: string): void {
+    this.territoryShaderPath = shaderPath;
+    if (this.territoryRenderPass) {
+      void this.territoryRenderPass.setShader(shaderPath);
+    }
+  }
+
+  setTerritoryShaderParams(
+    params0: Float32Array | number[],
+    params1: Float32Array | number[],
+  ): void {
+    for (let i = 0; i < 4; i++) {
+      this.territoryShaderParams0[i] = Number(params0[i] ?? 0);
+      this.territoryShaderParams1[i] = Number(params1[i] ?? 0);
+    }
+
     if (!this.resources) {
       return;
     }
-    this.resources.setBorderMode(mode);
+    this.resources.setTerritoryShaderParams(
+      this.territoryShaderParams0,
+      this.territoryShaderParams1,
+    );
   }
 
   markTile(tile: TileRef): void {
@@ -321,6 +346,9 @@ export class TerritoryRenderer {
 
     // Upload palette if needed
     this.resources.uploadPalette();
+
+    // Upload diplomacy relations (used by retro shader / debug modes)
+    this.resources.uploadRelations();
 
     // Upload defense posts if needed (also produces defended dirty tiles on changes)
     this.resources.uploadDefensePosts();

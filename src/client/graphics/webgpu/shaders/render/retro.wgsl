@@ -2,8 +2,8 @@ struct Uniforms {
   mapResolution_viewScale_time: vec4f, // x=mapW, y=mapH, z=viewScale, w=timeSec
   viewOffset_alt_highlight: vec4f,     // x=offX, y=offY, z=alternativeView, w=highlightOwnerId
   viewSize_pad: vec4f,                // x=viewW, y=viewH, z=myPlayerSmallId, w unused
-  shaderParams0: vec4f,
-  shaderParams1: vec4f,
+  shaderParams0: vec4f,               // x=thicknessPx, y=borderStrength, z=glowStrength, w=glowRadiusMul
+  shaderParams1: vec4f,               // x=flags, y=relationTintStrength, z=defendedPatternStrength, w=defendedThreshold
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -25,6 +25,33 @@ fn vsMain(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
   return vec4f(p, 0.0, 1.0);
 }
 
+fn hasFlag(flags: u32, bit: u32) -> bool {
+  return (flags & (1u << bit)) != 0u;
+}
+
+fn relationCode(ownerA: u32, ownerB: u32) -> u32 {
+  if (ownerA == 0u || ownerB == 0u) {
+    return 0u;
+  }
+  let aDense = textureLoad(ownerIndexTex, vec2i(i32(ownerA), 0), 0).x;
+  let bDense = textureLoad(ownerIndexTex, vec2i(i32(ownerB), 0), 0).x;
+  if (aDense == 0u || bDense == 0u) {
+    return 0u;
+  }
+  return textureLoad(relationsTex, vec2i(i32(aDense), i32(bDense)), 0).x;
+}
+
+fn applyDefendedPattern(
+  baseRgb: vec3f,
+  strength: f32,
+  texCoord: vec2i,
+) -> vec3f {
+  let parity = (u32(texCoord.x) ^ u32(texCoord.y)) & 1u;
+  let factor = select(0.75, 1.25, parity == 1u);
+  let patterned = clamp(baseRgb * factor, vec3f(0.0), vec3f(1.0));
+  return mix(baseRgb, patterned, clamp(strength, 0.0, 1.0));
+}
+
 @fragment
 fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let mapRes = u.mapResolution_viewScale_time.xy;
@@ -33,23 +60,35 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let viewOffset = u.viewOffset_alt_highlight.xy;
   let altView = u.viewOffset_alt_highlight.z;
   let highlightId = u.viewOffset_alt_highlight.w;
-  let viewSize = u.viewSize_pad.xy;
-  let borderMode = u.shaderParams0.x;
-  let thicknessPx = u.shaderParams0.y;
-  let borderStrength = u.shaderParams0.z;
-  let glowStrength = u.shaderParams0.w;
-  let glowRadiusMul = u.shaderParams1.x;
-  let drawDefendedRadius = u.shaderParams1.y;
-  let disableDefendedTint = u.shaderParams1.z;
+  let myPlayerSmallId = u.viewSize_pad.z;
+
+  let thicknessPx = u.shaderParams0.x;
+  let borderStrength = u.shaderParams0.y;
+  let glowStrength = u.shaderParams0.z;
+  let glowRadiusMul = u.shaderParams0.w;
+
+  let flags = u32(max(0.0, u.shaderParams1.x) + 0.5);
+  let relationTintStrength = u.shaderParams1.y;
+  let defendedPatternStrength = u.shaderParams1.z;
+  let defendedThreshold = u.shaderParams1.w;
+
+  let enableRelations = hasFlag(flags, 0u);
+  let enableDefendedPattern = hasFlag(flags, 1u);
+  let enableSplit = hasFlag(flags, 2u);
+  let drawDefendedRadius = hasFlag(flags, 3u);
+  let disableDefendedTint = hasFlag(flags, 4u);
 
   // WebGPU fragment position is top-left origin and at pixel centers (0.5, 1.5, ...).
   let viewCoord = vec2f(pos.x - 0.5, pos.y - 0.5);
   let mapHalf = mapRes * 0.5;
-  // Match TransformHandler.screenToWorldCoordinates formula:
-  // gameX = (canvasX - game.width() / 2) / scale + offsetX + game.width() / 2
   let mapCoord = (viewCoord - mapHalf) / viewScale + viewOffset + mapHalf;
 
-  if (mapCoord.x < 0.0 || mapCoord.y < 0.0 || mapCoord.x >= mapRes.x || mapCoord.y >= mapRes.y) {
+  if (
+    mapCoord.x < 0.0 ||
+    mapCoord.y < 0.0 ||
+    mapCoord.x >= mapRes.x ||
+    mapCoord.y >= mapRes.y
+  ) {
     discard;
   }
 
@@ -60,12 +99,13 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
 
   let terrain = textureLoad(terrainTex, texCoord, 0);
   let defendedStrength = textureLoad(defendedStrengthTex, texCoord, 0).x;
+
   var outColor = terrain;
   if (owner != 0u) {
     // Player colors start at index 10
     let c = textureLoad(paletteTex, vec2i(i32(owner) + 10, 0), 0);
     var territoryRgb = c.rgb;
-    if (disableDefendedTint <= 0.5) {
+    if (!disableDefendedTint) {
       let defendedTint = select(
         0.0,
         clamp(0.8 * defendedStrength, 0.1, 0.35),
@@ -84,79 +124,124 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     }
     outColor = vec4f(mix(terrain.rgb, territoryRgb, 0.65), 1.0);
   } else if (hasFallout) {
-    // Fallout color is at index 0
     let falloutColor = textureLoad(paletteTex, vec2i(0, 0), 0).rgb;
     outColor = vec4f(mix(terrain.rgb, falloutColor, 0.5), 1.0);
   }
 
-  // Apply alternative view (hide territory by showing terrain only)
-  if (altView > 0.5 && owner != 0u) {
+  // In alt view we show only borders on top of terrain.
+  if (altView > 0.5) {
     outColor = terrain;
   }
 
-  // Borders (purely visual): render a stable-pixel-width line at ownership edges.
-  if (borderMode > 0.5 && altView <= 0.5 && owner != 0u) {
+  if (owner != 0u) {
     let fx = fract(mapCoord.x);
     let fy = fract(mapCoord.y);
 
-    var dist = 1e9;
+    var bestDist = 1e9;
+    var otherOwner = 0u;
+    var otherCoord = texCoord;
 
     // Only border against other non-zero owners.
     if (texCoord.x > 0) {
       let o = textureLoad(stateTex, texCoord + vec2i(-1, 0), 0).x & 0xFFFu;
       if (o != 0u && o != owner) {
-        dist = min(dist, fx);
+        let d = fx;
+        if (d < bestDist) {
+          bestDist = d;
+          otherOwner = o;
+          otherCoord = texCoord + vec2i(-1, 0);
+        }
       }
     }
     if (texCoord.x + 1 < i32(mapRes.x)) {
       let o = textureLoad(stateTex, texCoord + vec2i(1, 0), 0).x & 0xFFFu;
       if (o != 0u && o != owner) {
-        dist = min(dist, 1.0 - fx);
+        let d = 1.0 - fx;
+        if (d < bestDist) {
+          bestDist = d;
+          otherOwner = o;
+          otherCoord = texCoord + vec2i(1, 0);
+        }
       }
     }
     if (texCoord.y > 0) {
       let o = textureLoad(stateTex, texCoord + vec2i(0, -1), 0).x & 0xFFFu;
       if (o != 0u && o != owner) {
-        dist = min(dist, fy);
+        let d = fy;
+        if (d < bestDist) {
+          bestDist = d;
+          otherOwner = o;
+          otherCoord = texCoord + vec2i(0, -1);
+        }
       }
     }
     if (texCoord.y + 1 < i32(mapRes.y)) {
       let o = textureLoad(stateTex, texCoord + vec2i(0, 1), 0).x & 0xFFFu;
       if (o != 0u && o != owner) {
-        dist = min(dist, 1.0 - fy);
+        let d = 1.0 - fy;
+        if (d < bestDist) {
+          bestDist = d;
+          otherOwner = o;
+          otherCoord = texCoord + vec2i(0, 1);
+        }
       }
     }
 
-    if (dist < 1e8) {
+    if (otherOwner != 0u) {
       let pxPerTile = max(viewScale, 0.001);
       let aaTiles = 1.0 / pxPerTile;
+      let thicknessTiles = max(0.1, thicknessPx) / pxPerTile;
 
-      // Mode 1: thin black border.
-      // Mode 2: thicker black border + obvious tinted glow.
-      let isGlow = borderMode > 1.5;
-      let thicknessTiles = thicknessPx / pxPerTile;
+      let line = 1.0 - smoothstep(thicknessTiles, thicknessTiles + aaTiles, bestDist);
+      let glowTiles = (max(0.1, thicknessPx) * max(0.1, glowRadiusMul)) / pxPerTile;
+      let glow = 1.0 - smoothstep(glowTiles, glowTiles + aaTiles * 3.0, bestDist);
 
-      let line = 1.0 - smoothstep(thicknessTiles, thicknessTiles + aaTiles, dist);
+      var baseBorderRgb = textureLoad(paletteTex, vec2i(i32(owner) + 10, 1), 0).rgb;
+
+      if (!enableSplit) {
+        let otherBorderRgb = textureLoad(paletteTex, vec2i(i32(otherOwner) + 10, 1), 0).rgb;
+        baseBorderRgb = 0.5 * (baseBorderRgb + otherBorderRgb);
+      }
+
+      var edgeDefendedStrength = defendedStrength;
+      if (!enableSplit) {
+        let otherDef = textureLoad(defendedStrengthTex, otherCoord, 0).x;
+        edgeDefendedStrength = max(edgeDefendedStrength, otherDef);
+      }
+
+      // Determine relation color (normal: between owners, altView: relation to viewer).
+      var rel = 0u;
+      if (enableRelations) {
+        if (altView > 0.5) {
+          rel = relationCode(owner, u32(max(0.0, myPlayerSmallId) + 0.5));
+        } else {
+          rel = relationCode(owner, otherOwner);
+        }
+      }
+
+      var borderRgb = baseBorderRgb;
+      if (rel != 0u) {
+        let tintTarget = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), rel == 2u);
+        let tint = clamp(0.35 * relationTintStrength, 0.0, 1.0);
+        borderRgb = mix(borderRgb, tintTarget, tint);
+      }
+
+      if (enableDefendedPattern && edgeDefendedStrength >= defendedThreshold) {
+        borderRgb = applyDefendedPattern(borderRgb, defendedPatternStrength, texCoord);
+      }
+
       outColor = vec4f(
-        mix(outColor.rgb, vec3f(0.0, 0.0, 0.0), clamp(line * borderStrength, 0.0, 1.0)),
+        mix(outColor.rgb, borderRgb, clamp(line * borderStrength, 0.0, 1.0)),
         outColor.a,
       );
-
-      if (isGlow) {
-        let glowTiles = (thicknessPx * glowRadiusMul) / pxPerTile;
-        let glow = 1.0 - smoothstep(glowTiles, glowTiles + aaTiles * 3.0, dist);
-        let ownerRgb = textureLoad(paletteTex, vec2i(i32(owner) + 10, 0), 0).rgb;
-        let glowColor = mix(vec3f(1.0, 1.0, 1.0), ownerRgb, 0.85);
-        outColor = vec4f(
-          mix(outColor.rgb, glowColor, clamp(glow * glowStrength, 0.0, 1.0)),
-          outColor.a,
-        );
-      }
+      outColor = vec4f(
+        mix(outColor.rgb, borderRgb, clamp(glow * glowStrength, 0.0, 1.0)),
+        outColor.a,
+      );
     }
   }
 
-  // Debug: defended radius boundary (based on defendedStrengthTex coverage).
-  if (drawDefendedRadius > 0.5 && defendedStrength > 0.001 && owner != 0u) {
+  if (drawDefendedRadius && defendedStrength > 0.001 && owner != 0u) {
     let fx = fract(mapCoord.x);
     let fy = fract(mapCoord.y);
 
@@ -193,8 +278,8 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
       let thicknessTiles = 1.5 / pxPerTile;
       let line = 1.0 - smoothstep(thicknessTiles, thicknessTiles + aaTiles, dist);
 
-      let borderRgb = textureLoad(paletteTex, vec2i(i32(owner) + 10, 1), 0).rgb;
-      let ringRgb = mix(borderRgb, vec3f(1.0, 1.0, 1.0), 0.5);
+      let baseBorderRgb = textureLoad(paletteTex, vec2i(i32(owner) + 10, 1), 0).rgb;
+      let ringRgb = mix(baseBorderRgb, vec3f(1.0, 1.0, 1.0), 0.5);
       outColor = vec4f(
         mix(outColor.rgb, ringRgb, clamp(line * 0.65, 0.0, 1.0)),
         outColor.a,
