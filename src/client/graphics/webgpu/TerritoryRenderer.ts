@@ -227,6 +227,13 @@ export class TerritoryRenderer {
     this.resources.setHighlightedOwnerId(ownerSmallId);
   }
 
+  setBorderMode(mode: number): void {
+    if (!this.resources) {
+      return;
+    }
+    this.resources.setBorderMode(mode);
+  }
+
   markTile(tile: TileRef): void {
     if (this.stateUpdatePass) {
       this.stateUpdatePass.markTile(tile);

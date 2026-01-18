@@ -148,6 +148,17 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onTerritoryBorderModeChange(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    const mode = Number.parseInt(value, 10);
+    if (!Number.isFinite(mode))
+      throw new Error(`Invalid border mode: ${value}`);
+
+    this.userSettings.setInt("settings.territoryBorderMode", mode);
+    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.requestUpdate();
+  }
+
   private onToggleRandomNameModeButtonClick() {
     this.userSettings.toggleRandomName();
     this.requestUpdate();
@@ -292,6 +303,34 @@ export class SettingsModal extends LitElement implements Layer {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+            >
+              <img
+                src=${treeIcon}
+                alt="territoryBorderMode"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.territory_border_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.territory_border_mode_desc")}
+                </div>
+              </div>
+              <select
+                class="shrink-0 bg-slate-900 border border-slate-600 text-white/90 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                .value=${String(this.userSettings.territoryBorderMode())}
+                @change=${this.onTerritoryBorderModeChange}
+              >
+                <option value="0">Off</option>
+                <option value="1">Simple</option>
+                <option value="2">Glow</option>
+              </select>
+            </div>
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
