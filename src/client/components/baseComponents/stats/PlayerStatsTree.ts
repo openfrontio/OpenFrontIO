@@ -203,7 +203,7 @@ export class PlayerStatsTreeView extends LitElement {
       attacks: stats.attacks ? [...stats.attacks] : undefined,
       betrayals: stats.betrayals,
       killedAt: stats.killedAt,
-      conquests: stats.conquests,
+      conquests: stats.conquests ? [...stats.conquests] : undefined,
       boats: stats.boats ? { ...stats.boats } : undefined,
       bombs: stats.bombs ? { ...stats.bombs } : undefined,
       gold: stats.gold ? [...stats.gold] : undefined,
