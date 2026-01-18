@@ -5,6 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+import "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
@@ -368,6 +369,16 @@ export class UserSettingModal extends BaseModal {
     this.userSettings.set("settings.territoryPatterns", enabled);
 
     console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+  }
+
+  private changeTerritoryBorderMode(e: CustomEvent<{ value: string }>) {
+    const value = e.detail?.value;
+    if (typeof value !== "string") return;
+
+    const mode = parseInt(value, 10);
+    if (!Number.isFinite(mode)) return;
+
+    this.userSettings.setInt("settings.territoryBorderMode", mode);
   }
 
   private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
@@ -793,6 +804,21 @@ export class UserSettingModal extends BaseModal {
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
       ></setting-toggle>
+
+      <setting-select
+        label="${translateText("user_setting.territory_border_mode_label")}"
+        description="${translateText(
+          "user_setting.territory_border_mode_desc",
+        )}"
+        id="territory-border-mode-select"
+        .value=${String(this.userSettings.territoryBorderMode())}
+        .options=${[
+          { value: "0", label: "Off" },
+          { value: "1", label: "Simple" },
+          { value: "2", label: "Glow" },
+        ]}
+        @change=${this.changeTerritoryBorderMode}
+      ></setting-select>
 
       <!-- 😊 Emojis -->
       <setting-toggle
