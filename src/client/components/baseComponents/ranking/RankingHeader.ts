@@ -14,7 +14,7 @@ export class RankingHeader extends LitElement {
   render() {
     return html`
       <li
-        class="text-lg border-white/5 bg-white/[0.02] text-white/60 text-xs uppercase tracking-wider relative pt-2 pb-2 pr-5 pl-5 flex justify-between items-center"
+        class="h-[30px] text-lg border-white/5 bg-white/[0.02] text-white/60 text-xs uppercase tracking-wider relative pt-2 pb-2 pr-5 pl-5 flex justify-between items-center"
       >
         ${this.renderHeaderContent()}
       </li>
@@ -27,10 +27,21 @@ export class RankingHeader extends LitElement {
         return html`<div class="w-full">
           ${translateText("game_info_modal.survival_time")}
         </div>`;
-      case RankType.Conquests:
-        return html`<div class="w-full">
-          ${translateText("game_info_modal.num_of_conquests")}
-        </div>`;
+      case RankType.ConquestHumans:
+      case RankType.ConquestBots:
+        return html`
+          <div class="flex justify-between sm:px-17.5 w-full">
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.num_of_conquests_humans"),
+              RankType.ConquestHumans,
+            )}
+            /
+            ${this.renderMultipleChoiceHeaderButton(
+              translateText("game_info_modal.num_of_conquests_bots"),
+              RankType.ConquestBots,
+            )}
+          </div>
+        `;
       case RankType.Atoms:
       case RankType.Hydros:
       case RankType.MIRV:
