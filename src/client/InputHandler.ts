@@ -472,7 +472,7 @@ export class InputHandler {
       return;
     }
 
-    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    const scrollValue = event.deltaY;
     if (scrollValue === 0) return;
 
     const direction = scrollValue > 0 ? "down" : "up";
