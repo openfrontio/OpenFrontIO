@@ -113,20 +113,26 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     if (dist < 1e8) {
       let pxPerTile = max(viewScale, 0.001);
       let aaTiles = 1.0 / pxPerTile;
-      let thicknessPx = select(1.0, 2.5, borderMode > 1.5);
+
+      // Mode 1: thin black border.
+      // Mode 2: thicker black border + obvious tinted glow.
+      let isGlow = borderMode > 1.5;
+      let thicknessPx = select(1.0, 3.0, isGlow);
       let thicknessTiles = thicknessPx / pxPerTile;
 
       let line = 1.0 - smoothstep(thicknessTiles, thicknessTiles + aaTiles, dist);
       outColor = vec4f(
-        mix(outColor.rgb, vec3f(0.0, 0.0, 0.0), clamp(line * 0.9, 0.0, 0.9)),
+        mix(outColor.rgb, vec3f(0.0, 0.0, 0.0), clamp(line * 0.95, 0.0, 0.95)),
         outColor.a,
       );
 
-      if (borderMode > 1.5) {
-        let glowTiles = (thicknessPx * 3.0) / pxPerTile;
-        let glow = 1.0 - smoothstep(glowTiles, glowTiles + aaTiles * 2.0, dist);
+      if (isGlow) {
+        let glowTiles = (thicknessPx * 5.0) / pxPerTile;
+        let glow = 1.0 - smoothstep(glowTiles, glowTiles + aaTiles * 3.0, dist);
+        let ownerRgb = textureLoad(paletteTex, vec2i(i32(owner) + 10, 0), 0).rgb;
+        let glowColor = mix(vec3f(1.0, 1.0, 1.0), ownerRgb, 0.85);
         outColor = vec4f(
-          mix(outColor.rgb, vec3f(1.0, 1.0, 1.0), clamp(glow * 0.12, 0.0, 0.12)),
+          mix(outColor.rgb, glowColor, clamp(glow * 0.35, 0.0, 0.35)),
           outColor.a,
         );
       }
