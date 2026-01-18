@@ -1,7 +1,7 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-type SelectOption = {
+export type SettingSelectOption = {
   value: number | string;
   label: string;
 };
@@ -10,8 +10,10 @@ type SelectOption = {
 export class SettingSelect extends LitElement {
   @property() label = "Setting";
   @property() description = "";
-  @property({ type: Array }) options: SelectOption[] = [];
+  @property() id = "setting-select-input";
+  @property({ type: Array }) options: SettingSelectOption[] = [];
   @property({ type: String }) value = "";
+  @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
     return this;
@@ -35,14 +37,18 @@ export class SettingSelect extends LitElement {
   }
 
   render() {
+    const rainbowClass = this.easter
+      ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
+      : "";
+
     return html`
       <div
-        class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
+        class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3 ${rainbowClass}"
       >
         <div class="flex flex-col min-w-0">
           <label
             class="text-white font-bold text-base block mb-1"
-            for="setting-select-input"
+            for=${this.id}
             >${this.label}</label
           >
           <div class="text-white/50 text-sm leading-snug">
@@ -51,7 +57,7 @@ export class SettingSelect extends LitElement {
         </div>
         <div class="relative w-full">
           <select
-            id="setting-select-input"
+            id=${this.id}
             class="w-full appearance-none py-2 pl-3 pr-9 border border-white/20 rounded-lg bg-black/40 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             .value=${String(this.value)}
             @change=${this.handleChange}

@@ -300,6 +300,16 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private changeTerritoryBorderMode(e: CustomEvent<{ value: number | string }>) {
+    const rawValue = e.detail?.value;
+    const value =
+      typeof rawValue === "number" ? rawValue : parseInt(String(rawValue), 10);
+    if (!Number.isFinite(value)) return;
+
+    this.userSettings.setInt("settings.territoryBorderMode", Math.round(value));
+    this.requestUpdate();
+  }
+
   private toggleTerritoryPatterns() {
     this.userSettings.toggleTerritoryPatterns();
 
@@ -752,6 +762,21 @@ export class UserSettingModal extends BaseModal {
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
+      <setting-select
+        label="${translateText("user_setting.territory_border_mode_label")}"
+        description="${translateText(
+          "user_setting.territory_border_mode_desc",
+        )}"
+        id="territory-border-mode-select"
+        .value=${String(this.userSettings.territoryBorderMode())}
+        .options=${[
+          { value: 0, label: "Off" },
+          { value: 1, label: "Simple" },
+          { value: 2, label: "Glow" },
+        ]}
+        @change=${this.changeTerritoryBorderMode}
+      ></setting-select>
+
       <setting-toggle
         label="${translateText("user_setting.emojis_label")}"
         description="${translateText("user_setting.emojis_desc")}"

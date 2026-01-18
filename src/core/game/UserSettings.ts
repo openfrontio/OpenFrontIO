@@ -123,6 +123,20 @@ export class UserSettings {
     this.setCached(key, value.toString());
   }
 
+  getInt(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const intValue = parseInt(value, 10);
+    if (!Number.isFinite(intValue)) return defaultValue;
+
+    return intValue;
+  }
+
+  setInt(key: string, value: number): void {
+    localStorage.setItem(key, Math.trunc(value).toString());
+  }
+
   emojis() {
     return this.getBool("settings.emojis", true);
   }
@@ -172,6 +186,10 @@ export class UserSettings {
       "settings.attackingTroopsOverlay",
       !this.attackingTroopsOverlay(),
     );
+  }
+
+  territoryBorderMode(): number {
+    return this.getInt("settings.territoryBorderMode", 1);
   }
 
   cursorCostLabel() {

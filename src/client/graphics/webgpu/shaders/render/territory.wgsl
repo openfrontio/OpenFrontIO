@@ -1,7 +1,7 @@
 struct Uniforms {
   mapResolution_viewScale_time: vec4f, // x=mapW, y=mapH, z=viewScale, w=timeSec
   viewOffset_alt_highlight: vec4f,     // x=offX, y=offY, z=alternativeView, w=highlightOwnerId
-  viewSize_pad: vec4f,                // x=viewW, y=viewH, z/w unused
+  viewSize_pad: vec4f,                // x=viewW, y=viewH, z=borderMode, w unused
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -30,6 +30,7 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   let altView = u.viewOffset_alt_highlight.z;
   let highlightId = u.viewOffset_alt_highlight.w;
   let viewSize = u.viewSize_pad.xy;
+  let borderMode = u.viewSize_pad.z;
 
   // WebGPU fragment position is top-left origin and at pixel centers (0.5, 1.5, ...).
   let viewCoord = vec2f(pos.x - 0.5, pos.y - 0.5);
@@ -74,6 +75,62 @@ fn fsMain(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   // Apply alternative view (hide territory by showing terrain only)
   if (altView > 0.5 && owner != 0u) {
     outColor = terrain;
+  }
+
+  // Borders (purely visual): render a stable-pixel-width line at ownership edges.
+  if (borderMode > 0.5 && altView <= 0.5 && owner != 0u) {
+    let fx = fract(mapCoord.x);
+    let fy = fract(mapCoord.y);
+
+    var dist = 1e9;
+
+    // Only border against other non-zero owners.
+    if (texCoord.x > 0) {
+      let o = textureLoad(stateTex, texCoord + vec2i(-1, 0), 0).x & 0xFFFu;
+      if (o != 0u && o != owner) {
+        dist = min(dist, fx);
+      }
+    }
+    if (texCoord.x + 1 < i32(mapRes.x)) {
+      let o = textureLoad(stateTex, texCoord + vec2i(1, 0), 0).x & 0xFFFu;
+      if (o != 0u && o != owner) {
+        dist = min(dist, 1.0 - fx);
+      }
+    }
+    if (texCoord.y > 0) {
+      let o = textureLoad(stateTex, texCoord + vec2i(0, -1), 0).x & 0xFFFu;
+      if (o != 0u && o != owner) {
+        dist = min(dist, fy);
+      }
+    }
+    if (texCoord.y + 1 < i32(mapRes.y)) {
+      let o = textureLoad(stateTex, texCoord + vec2i(0, 1), 0).x & 0xFFFu;
+      if (o != 0u && o != owner) {
+        dist = min(dist, 1.0 - fy);
+      }
+    }
+
+    if (dist < 1e8) {
+      let pxPerTile = max(viewScale, 0.001);
+      let aaTiles = 1.0 / pxPerTile;
+      let thicknessPx = select(1.0, 2.5, borderMode > 1.5);
+      let thicknessTiles = thicknessPx / pxPerTile;
+
+      let line = 1.0 - smoothstep(thicknessTiles, thicknessTiles + aaTiles, dist);
+      outColor = vec4f(
+        mix(outColor.rgb, vec3f(0.0, 0.0, 0.0), clamp(line * 0.9, 0.0, 0.9)),
+        outColor.a,
+      );
+
+      if (borderMode > 1.5) {
+        let glowTiles = (thicknessPx * 3.0) / pxPerTile;
+        let glow = 1.0 - smoothstep(glowTiles, glowTiles + aaTiles * 2.0, dist);
+        outColor = vec4f(
+          mix(outColor.rgb, vec3f(1.0, 1.0, 1.0), clamp(glow * 0.12, 0.0, 0.12)),
+          outColor.a,
+        );
+      }
+    }
   }
 
   // Apply hover highlight if needed

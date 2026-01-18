@@ -78,6 +78,7 @@ export class GroundTruthData {
   private viewOffsetY = 0;
   private alternativeView = false;
   private highlightedOwnerId = -1;
+  private borderMode = 1;
 
   private constructor(
     private readonly device: GPUDevice,
@@ -221,6 +222,10 @@ export class GroundTruthData {
 
   setHighlightedOwnerId(ownerSmallId: number | null): void {
     this.highlightedOwnerId = ownerSmallId ?? -1;
+  }
+
+  setBorderMode(mode: number): void {
+    this.borderMode = Math.max(0, Math.min(2, Math.trunc(mode)));
   }
 
   // =====================
@@ -608,9 +613,11 @@ export class GroundTruthData {
   }
 
   private ensureDefensePostsByOwnerBuffer(capacityPosts: number): void {
+    const requested = Math.max(1, capacityPosts);
     if (
       this.defensePostsByOwnerBuffer &&
-      capacityPosts <= this.defensePostsByOwnerCapacity
+      requested <= this.defensePostsByOwnerCapacity &&
+      this.defensePostsByOwnerStaging
     ) {
       return;
     }
@@ -621,7 +628,7 @@ export class GroundTruthData {
 
     this.defensePostsByOwnerCapacity = Math.max(
       8,
-      Math.pow(2, Math.ceil(Math.log2(Math.max(1, capacityPosts)))),
+      Math.pow(2, Math.ceil(Math.log2(requested))),
     );
 
     const bytesPerPost = 8; // 2 * u32 (x,y)
@@ -846,7 +853,7 @@ export class GroundTruthData {
     this.uniformData[7] = this.highlightedOwnerId;
     this.uniformData[8] = this.viewWidth;
     this.uniformData[9] = this.viewHeight;
-    this.uniformData[10] = 0;
+    this.uniformData[10] = this.borderMode;
     this.uniformData[11] = 0;
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);

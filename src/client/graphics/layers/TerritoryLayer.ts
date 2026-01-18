@@ -27,6 +27,7 @@ export class TerritoryLayer implements Layer {
 
   private lastPaletteSignature: string | null = null;
   private lastDefensePostsSignature: string | null = null;
+  private lastBorderMode: number | null = null;
 
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
@@ -68,6 +69,7 @@ export class TerritoryLayer implements Layer {
 
     this.refreshPaletteIfNeeded();
     this.refreshDefensePostsIfNeeded();
+    this.refreshBorderModeIfNeeded();
 
     const updatedTiles = this.game.recentlyUpdatedTiles();
     for (let i = 0; i < updatedTiles.length; i++) {
@@ -98,6 +100,8 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer = renderer;
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.setHighlightedOwnerId(this.hoveredOwnerSmallId);
+    this.lastBorderMode = this.userSettings.territoryBorderMode();
+    this.territoryRenderer.setBorderMode(this.lastBorderMode);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
     this.lastPaletteSignature = this.computePaletteSignature();
@@ -279,6 +283,17 @@ export class TerritoryLayer implements Layer {
     if (signature !== this.lastPaletteSignature) {
       this.lastPaletteSignature = signature;
       this.territoryRenderer.refreshPalette();
+    }
+  }
+
+  private refreshBorderModeIfNeeded() {
+    if (!this.territoryRenderer) {
+      return;
+    }
+    const mode = this.userSettings.territoryBorderMode();
+    if (mode !== this.lastBorderMode) {
+      this.lastBorderMode = mode;
+      this.territoryRenderer.setBorderMode(mode);
     }
   }
 
