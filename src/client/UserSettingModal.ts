@@ -185,6 +185,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   private showKeybindError(messageKey: string, displayKey: string) {
+    const KEY_TOKEN = "__KEY_TOKEN__";
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: {
@@ -206,13 +207,18 @@ export class UserSettingModal extends BaseModal {
             <span class="font-medium">
               ${(() => {
                 const message = translateText(messageKey, {
-                  key: displayKey,
+                  key: KEY_TOKEN,
                 });
-                const parts = message.split(displayKey);
-                return html`${parts[0]}<span
-                    class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
-                    >${displayKey}</span
-                  >${parts[1] || ""}`;
+                const parts = message.split(KEY_TOKEN);
+                return html`${parts[0]}${parts
+                  .slice(1)
+                  .map(
+                    (p) =>
+                      html`<span
+                          class="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-red-200 mx-1 border border-white/10"
+                          >${displayKey}</span
+                        >${p}`,
+                  )}`;
               })()}
             </span>
           `,
