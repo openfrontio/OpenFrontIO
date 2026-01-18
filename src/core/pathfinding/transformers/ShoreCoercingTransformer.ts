@@ -41,25 +41,9 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
     }
 
     // Restore original start shore tile
-    const startWater = path[0];
-    let originalStart = waterToOriginal.get(startWater);
-
-    // Fallback: if inner pathfinder rewrote start, find which shore borders path[0]
-    if (originalStart === undefined) {
-      for (const f of fromArray) {
-        if (this.map.isWater(f)) continue;
-        for (const n of this.map.neighbors(f)) {
-          if (n === startWater) {
-            originalStart = f;
-            break;
-          }
-        }
-        if (originalStart !== undefined) break;
-      }
-    }
-
-    if (originalStart !== undefined && originalStart !== null) {
-      path.unshift(originalStart);
+    const originalShore = waterToOriginal.get(path[0]);
+    if (originalShore !== undefined && originalShore !== null) {
+      path.unshift(originalShore);
     }
 
     // Append original to if different
