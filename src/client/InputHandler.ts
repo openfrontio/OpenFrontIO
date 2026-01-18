@@ -396,11 +396,8 @@ export class InputHandler {
         this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
       }
 
-      // Toggle performance overlay keybind
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
       if (this.matchesKeybind(e, this.keybinds.togglePerformanceOverlay)) {
         e.preventDefault();
-        console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
 
