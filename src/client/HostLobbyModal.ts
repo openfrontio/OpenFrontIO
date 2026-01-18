@@ -962,6 +962,7 @@ export class HostLobbyModal extends BaseModal {
     // Reset chat state
     this.chatVisible = false;
     this.hasUnreadMessages = false;
+    this.lobbyChatEnabled = false;
     const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
     if (chatPanel) {
       (chatPanel as any).clearMessages();
