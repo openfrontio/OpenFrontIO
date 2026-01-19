@@ -15,25 +15,21 @@ import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
+
 export class TransportShipExecution implements Execution {
-  private lastMove: number;
+  private active = true;
 
   // TODO: make this configurable
   private ticksPerMove = 1;
-
-  private active = true;
+  private lastMove: number;
 
   private mg: Game;
   private target: Player | TerraNullius;
+  private pathFinder: SteppingPathFinder<TileRef>;
 
-  // TODO make private
-  public path: TileRef[];
   private dst: TileRef | null;
   private src: TileRef | null;
-
   private boat: Unit;
-
-  private pathFinder: SteppingPathFinder<TileRef>;
 
   private originalOwner: Player;
 
