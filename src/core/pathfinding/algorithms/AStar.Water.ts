@@ -1,6 +1,6 @@
 import { GameMap, TileRef } from "../../game/GameMap";
 import { PathFinder } from "../types";
-import { BucketQueue, PriorityQueue } from "./PriorityQueue";
+import { MinHeap, PriorityQueue } from "./PriorityQueue";
 
 const LAND_BIT = 7; // Bit 7 in terrain indicates land
 const MAGNITUDE_MASK = 0x1f;
@@ -45,11 +45,7 @@ export class AStarWater implements PathFinder<number> {
     this.gScore = new Uint32Array(this.numNodes);
     this.cameFrom = new Int32Array(this.numNodes);
 
-    // Account for scaled costs + tie-breaker headroom
-    const maxDim = map.width() + map.height();
-    const maxF =
-      (this.heuristicWeight + 1) * BASE_COST * maxDim + COST_SCALE * maxDim;
-    this.queue = new BucketQueue(maxF);
+    this.queue = new MinHeap(this.numNodes);
   }
 
   findPath(start: number | number[], goal: number): number[] | null {

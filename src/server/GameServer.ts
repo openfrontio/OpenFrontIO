@@ -129,13 +129,17 @@ export class GameServer {
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
-
     if (gameConfig.disabledUnits !== undefined) {
       this.gameConfig.disabledUnits = gameConfig.disabledUnits;
     }
-
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
+    if (gameConfig.goldMultiplier !== undefined) {
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+    }
+    if (gameConfig.startingGold !== undefined) {
+      this.gameConfig.startingGold = gameConfig.startingGold;
     }
   }
 
