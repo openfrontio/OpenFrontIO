@@ -211,6 +211,7 @@ export enum GameMapSize {
 export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
+  startingGold?: number;
 }
 
 export interface UnitInfo {

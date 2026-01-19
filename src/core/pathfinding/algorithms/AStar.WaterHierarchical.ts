@@ -12,6 +12,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
   private abstractAStar: AbstractGraphAStar;
   private localAStar: AStarWaterBounded;
   private localAStarMultiCluster: AStarWaterBounded;
+  private localAStarShortPath: AStarWaterBounded;
   private sourceResolver: SourceResolver;
 
   constructor(
@@ -41,6 +42,11 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       maxMultiClusterNodes,
     );
 
+    // BoundedAStar for short path multi-source (120 + 2*10 padding = 140)
+    const shortPathSize = 140;
+    const maxShortPathNodes = shortPathSize * shortPathSize;
+    this.localAStarShortPath = new AStarWaterBounded(map, maxShortPathNodes);
+
     // SourceResolver for multi-source search
     this.sourceResolver = new SourceResolver(this.map, this.graph);
   }
@@ -62,6 +68,10 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     sources: TileRef[],
     target: TileRef,
   ): TileRef[] | null {
+    // Early exit: try bounded A* for sources close to target
+    const shortPath = this.tryShortPathMultiSource(sources, target);
+    if (shortPath) return shortPath;
+
     // 1. Resolve target to abstract node
     const targetNode = this.sourceResolver.resolveTarget(target);
     if (!targetNode) return null;
@@ -80,6 +90,44 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     // 5. Run full single-source from winner
     return this.findPathSingle(winningSource, target);
+  }
+
+  private tryShortPathMultiSource(
+    sources: TileRef[],
+    target: TileRef,
+  ): TileRef[] | null {
+    const SHORT_PATH_THRESHOLD = 120;
+    const PADDING = 10;
+
+    const candidates = sources.filter(
+      (s) => this.map.manhattanDist(s, target) <= SHORT_PATH_THRESHOLD,
+    );
+    if (candidates.length === 0) return null;
+
+    const toX = this.map.x(target);
+    const toY = this.map.y(target);
+    let minX = toX,
+      maxX = toX,
+      minY = toY,
+      maxY = toY;
+
+    for (const s of candidates) {
+      const sx = this.map.x(s);
+      const sy = this.map.y(s);
+      minX = Math.min(minX, sx);
+      maxX = Math.max(maxX, sx);
+      minY = Math.min(minY, sy);
+      maxY = Math.max(maxY, sy);
+    }
+
+    const bounds = {
+      minX: Math.max(0, minX - PADDING),
+      maxX: Math.min(this.map.width() - 1, maxX + PADDING),
+      minY: Math.max(0, minY - PADDING),
+      maxY: Math.min(this.map.height() - 1, maxY + PADDING),
+    };
+
+    return this.localAStarShortPath.searchBounded(candidates, target, bounds);
   }
 
   findPathSingle(from: TileRef, to: TileRef): TileRef[] | null {
