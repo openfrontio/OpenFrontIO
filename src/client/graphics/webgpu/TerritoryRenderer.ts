@@ -7,9 +7,11 @@ import { DefendedStrengthFullPass } from "./compute/DefendedStrengthFullPass";
 import { DefendedStrengthPass } from "./compute/DefendedStrengthPass";
 import { StateUpdatePass } from "./compute/StateUpdatePass";
 import { TerrainComputePass } from "./compute/TerrainComputePass";
+import { VisualStateSmoothingPass } from "./compute/VisualStateSmoothingPass";
 import { GroundTruthData } from "./core/GroundTruthData";
 import { WebGPUDevice } from "./core/WebGPUDevice";
 import { RenderPass } from "./render/RenderPass";
+import { TemporalResolvePass } from "./render/TemporalResolvePass";
 import { TerritoryRenderPass } from "./render/TerritoryRenderPass";
 
 export interface TerritoryWebGLCreateResult {
@@ -31,10 +33,15 @@ export class TerritoryRenderer {
   private territoryShaderPath = "render/territory.wgsl";
   private territoryShaderParams0 = new Float32Array(4);
   private territoryShaderParams1 = new Float32Array(4);
+  private preSmoothingShaderPath = "compute/visual-state-smoothing.wgsl";
+  private preSmoothingParams0 = new Float32Array(4);
+  private postSmoothingShaderPath = "render/temporal-resolve.wgsl";
+  private postSmoothingParams0 = new Float32Array(4);
 
   // Compute passes
   private computePasses: ComputePass[] = [];
   private computePassOrder: ComputePass[] = [];
+  private frameComputePasses: ComputePass[] = [];
 
   // Render passes
   private renderPasses: RenderPass[] = [];
@@ -45,8 +52,13 @@ export class TerritoryRenderer {
   private stateUpdatePass: StateUpdatePass | null = null;
   private defendedStrengthFullPass: DefendedStrengthFullPass | null = null;
   private defendedStrengthPass: DefendedStrengthPass | null = null;
+  private visualStateSmoothingPass: VisualStateSmoothingPass | null = null;
   private territoryRenderPass: TerritoryRenderPass | null = null;
+  private temporalResolvePass: TemporalResolvePass | null = null;
   private readonly defensePostRange: number;
+
+  private preSmoothingEnabled = false;
+  private postSmoothingEnabled = false;
 
   private constructor(
     private readonly game: GameView,
@@ -115,6 +127,7 @@ export class TerritoryRenderer {
     this.stateUpdatePass = new StateUpdatePass();
     this.defendedStrengthFullPass = new DefendedStrengthFullPass();
     this.defendedStrengthPass = new DefendedStrengthPass();
+    this.visualStateSmoothingPass = new VisualStateSmoothingPass();
 
     this.computePasses = [
       this.terrainComputePass,
@@ -123,12 +136,19 @@ export class TerritoryRenderer {
       this.defendedStrengthPass,
     ];
 
+    this.frameComputePasses = [this.visualStateSmoothingPass];
+
     // Create render passes
     this.territoryRenderPass = new TerritoryRenderPass();
-    this.renderPasses = [this.territoryRenderPass];
+    this.temporalResolvePass = new TemporalResolvePass();
+    this.renderPasses = [this.territoryRenderPass, this.temporalResolvePass];
 
     // Initialize all passes
     for (const pass of this.computePasses) {
+      await pass.init(webgpuDevice.device, this.resources);
+    }
+
+    for (const pass of this.frameComputePasses) {
       await pass.init(webgpuDevice.device, this.resources);
     }
 
@@ -143,6 +163,9 @@ export class TerritoryRenderer {
     if (this.territoryRenderPass) {
       await this.territoryRenderPass.setShader(this.territoryShaderPath);
     }
+
+    this.applyPreSmoothingConfig();
+    this.applyPostSmoothingConfig();
 
     // Compute dependency order (topological sort)
     this.computePassOrder = this.topologicalSort(this.computePasses);
@@ -215,6 +238,15 @@ export class TerritoryRenderer {
     this.canvas.height = nextHeight;
     this.resources.setViewSize(nextWidth, nextHeight);
     this.device.reconfigure();
+
+    if (this.postSmoothingEnabled && this.resources) {
+      this.resources.ensurePostSmoothingTextures(
+        nextWidth,
+        nextHeight,
+        this.device.canvasFormat,
+      );
+      this.resources.invalidateHistory();
+    }
   }
 
   setViewTransform(scale: number, offsetX: number, offsetY: number): void {
@@ -243,6 +275,7 @@ export class TerritoryRenderer {
     if (this.territoryRenderPass) {
       void this.territoryRenderPass.setShader(shaderPath);
     }
+    this.resources?.invalidateHistory();
   }
 
   setTerritoryShaderParams(
@@ -261,6 +294,77 @@ export class TerritoryRenderer {
       this.territoryShaderParams0,
       this.territoryShaderParams1,
     );
+    this.resources.invalidateHistory();
+  }
+
+  setPreSmoothing(
+    enabled: boolean,
+    shaderPath: string,
+    params0: Float32Array | number[],
+  ): void {
+    this.preSmoothingEnabled = enabled;
+    if (shaderPath) {
+      this.preSmoothingShaderPath = shaderPath;
+    }
+    for (let i = 0; i < 4; i++) {
+      this.preSmoothingParams0[i] = Number(params0[i] ?? 0);
+    }
+    this.applyPreSmoothingConfig();
+  }
+
+  setPostSmoothing(
+    enabled: boolean,
+    shaderPath: string,
+    params0: Float32Array | number[],
+  ): void {
+    this.postSmoothingEnabled = enabled;
+    if (shaderPath) {
+      this.postSmoothingShaderPath = shaderPath;
+    }
+    for (let i = 0; i < 4; i++) {
+      this.postSmoothingParams0[i] = Number(params0[i] ?? 0);
+    }
+    this.applyPostSmoothingConfig();
+  }
+
+  private applyPreSmoothingConfig(): void {
+    if (!this.resources || !this.visualStateSmoothingPass) {
+      return;
+    }
+
+    this.resources.setUseVisualStateTexture(this.preSmoothingEnabled);
+    if (this.preSmoothingEnabled) {
+      this.resources.ensureVisualStateTexture();
+      void this.visualStateSmoothingPass.setShader(this.preSmoothingShaderPath);
+      this.visualStateSmoothingPass.setParams(this.preSmoothingParams0);
+    } else {
+      this.visualStateSmoothingPass.setParams(new Float32Array(4));
+      this.resources.releaseVisualStateTexture();
+    }
+
+    this.resources.invalidateHistory();
+  }
+
+  private applyPostSmoothingConfig(): void {
+    if (!this.resources || !this.temporalResolvePass || !this.device) {
+      return;
+    }
+
+    if (this.postSmoothingEnabled) {
+      void this.temporalResolvePass.setShader(this.postSmoothingShaderPath);
+      this.temporalResolvePass.setParams(this.postSmoothingParams0);
+      this.temporalResolvePass.setEnabled(true);
+      this.resources.ensurePostSmoothingTextures(
+        this.canvas.width,
+        this.canvas.height,
+        this.device.canvasFormat,
+      );
+    } else {
+      this.temporalResolvePass.setEnabled(false);
+      this.resources.releasePostSmoothingTextures();
+    }
+
+    this.resources.invalidateHistory();
   }
 
   markTile(tile: TileRef): void {
@@ -340,6 +444,8 @@ export class TerritoryRenderer {
       return;
     }
 
+    this.resources.updateTickTiming(performance.now() / 1000);
+
     if (this.game.config().defensePostRange() !== this.defensePostRange) {
       throw new Error("defensePostRange changed at runtime; unsupported.");
     }
@@ -356,9 +462,14 @@ export class TerritoryRenderer {
     // Initial state upload
     this.resources.uploadState();
 
+    const stateUpdatesPending = this.stateUpdatePass?.needsUpdate() ?? false;
+    if (!stateUpdatesPending) {
+      this.resources.setLastStateUpdateCount(0);
+    }
+
     const needsCompute =
       (this.terrainComputePass?.needsUpdate() ?? false) ||
-      (this.stateUpdatePass?.needsUpdate() ?? false) ||
+      stateUpdatesPending ||
       (this.defendedStrengthFullPass?.needsUpdate() ?? false) ||
       (this.defendedStrengthPass?.needsUpdate() ?? false);
 
@@ -367,6 +478,23 @@ export class TerritoryRenderer {
     }
 
     const encoder = this.device.device.createCommandEncoder();
+
+    if (this.preSmoothingEnabled && stateUpdatesPending) {
+      this.resources.ensureVisualStateTexture();
+      const visualStateTexture = this.resources.getVisualStateTexture();
+      if (visualStateTexture) {
+        encoder.copyTextureToTexture(
+          { texture: this.resources.stateTexture },
+          { texture: visualStateTexture },
+          {
+            width: this.resources.getMapWidth(),
+            height: this.resources.getMapHeight(),
+            depthOrArrayLayers: 1,
+          },
+        );
+        this.resources.consumeVisualStateSyncNeeded();
+      }
+    }
 
     // Execute compute passes in dependency order (clear will run before update if needed)
     for (const pass of this.computePassOrder) {
@@ -393,6 +521,9 @@ export class TerritoryRenderer {
       return;
     }
 
+    const nowSec = performance.now() / 1000;
+    this.resources.writeTemporalUniformBuffer(nowSec);
+
     // If terrain needs recomputation, trigger it asynchronously (no blocking)
     // It will be ready for the next frame, acceptable trade-off for performance
     if (this.terrainComputePass?.needsUpdate()) {
@@ -404,14 +535,54 @@ export class TerritoryRenderer {
     }
 
     const encoder = this.device.device.createCommandEncoder();
-    const textureView = this.device.context.getCurrentTexture().createView();
+    const swapchainView = this.device.context.getCurrentTexture().createView();
+
+    if (
+      this.preSmoothingEnabled &&
+      this.resources.consumeVisualStateSyncNeeded()
+    ) {
+      const visualStateTexture = this.resources.getVisualStateTexture();
+      if (visualStateTexture) {
+        encoder.copyTextureToTexture(
+          { texture: this.resources.stateTexture },
+          { texture: visualStateTexture },
+          {
+            width: this.resources.getMapWidth(),
+            height: this.resources.getMapHeight(),
+            depthOrArrayLayers: 1,
+          },
+        );
+      }
+    }
+
+    for (const pass of this.frameComputePasses) {
+      if (!pass.needsUpdate()) {
+        continue;
+      }
+      pass.execute(encoder, this.resources);
+    }
 
     // Execute render passes in dependency order
     for (const pass of this.renderPassOrder) {
       if (!pass.needsUpdate()) {
         continue;
       }
-      pass.execute(encoder, this.resources, textureView);
+      if (pass === this.territoryRenderPass && this.postSmoothingEnabled) {
+        if (!this.resources.getCurrentColorTexture()) {
+          this.resources.ensurePostSmoothingTextures(
+            this.canvas.width,
+            this.canvas.height,
+            this.device.canvasFormat,
+          );
+        }
+        const currentTexture = this.resources.getCurrentColorTexture();
+        if (currentTexture) {
+          pass.execute(encoder, this.resources, currentTexture.createView());
+        }
+        continue;
+      }
+
+      pass.execute(encoder, this.resources, swapchainView);
     }
 
     this.device.device.queue.submit([encoder.finish()]);

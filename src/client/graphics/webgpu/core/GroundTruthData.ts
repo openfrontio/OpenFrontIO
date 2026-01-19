@@ -26,9 +26,13 @@ export class GroundTruthData {
   public readonly ownerIndexTexture: GPUTexture;
   public readonly relationsTexture: GPUTexture;
   public readonly defendedStrengthTexture: GPUTexture;
+  public visualStateTexture: GPUTexture | null = null;
+  public currentColorTexture: GPUTexture | null = null;
+  public historyColorTextures: [GPUTexture, GPUTexture] | null = null;
 
   // Buffers
   public readonly uniformBuffer: GPUBuffer;
+  public readonly temporalUniformBuffer: GPUBuffer;
   public readonly terrainParamsBuffer: GPUBuffer;
   public readonly stateUpdateParamsBuffer: GPUBuffer;
   public readonly defendedStrengthParamsBuffer: GPUBuffer;
@@ -57,6 +61,19 @@ export class GroundTruthData {
   private needsPaletteUpload = true;
   private needsTerrainDataUpload = true;
   private needsTerrainParamsUpload = true;
+  private useVisualStateTexture = false;
+  private visualStateNeedsSync = false;
+  private lastStateUpdateCount = 0;
+  private historyIndex = 0;
+  private historyValid = false;
+  private postSmoothingWidth = 0;
+  private postSmoothingHeight = 0;
+  private postSmoothingFormat: GPUTextureFormat | null = null;
+  private lastTickSec = 0;
+  private tickDtSec = 0.1;
+  private tickDtEmaSec = 0.1;
+  private tickCount = 0;
+  private readonly tickEmaAlpha = 0.2;
   private paletteWidth = 1;
   private needsDefensePostsUpload = true;
   private defensePostsTotalCount = 0;
@@ -68,6 +85,7 @@ export class GroundTruthData {
 
   // Uniform data arrays
   private readonly uniformData = new Float32Array(20);
+  private readonly temporalData = new Float32Array(8);
   private readonly terrainParamsData = new Float32Array(24); // 6 vec4f: shore, water, shorelineWater, plainsBase, highlandBase, mountainBase
   private readonly stateUpdateParamsData = new Uint32Array(4); // updateCount, range, pad, pad
   private readonly defendedStrengthParamsData = new Uint32Array(4); // dirtyCount, range, pad, pad
@@ -107,12 +125,19 @@ export class GroundTruthData {
     const UNIFORM = GPUBufferUsage?.UNIFORM ?? 0x40;
     const COPY_DST_BUF = GPUBufferUsage?.COPY_DST ?? 0x8;
     const COPY_DST_TEX = GPUTextureUsage?.COPY_DST ?? 0x2;
+    const COPY_SRC_TEX = GPUTextureUsage?.COPY_SRC ?? 0x1;
     const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
     const STORAGE_BINDING = GPUTextureUsage?.STORAGE_BINDING ?? 0x8;
 
     // Render uniforms: 5x vec4f = 80 bytes
     this.uniformBuffer = device.createBuffer({
       size: 80,
+      usage: UNIFORM | COPY_DST_BUF,
+    });
+
+    // Temporal uniforms: 2x vec4f = 32 bytes
+    this.temporalUniformBuffer = device.createBuffer({
+      size: 32,
       usage: UNIFORM | COPY_DST_BUF,
     });
 
@@ -138,7 +163,7 @@ export class GroundTruthData {
     this.stateTexture = device.createTexture({
       size: { width: mapWidth, height: mapHeight },
       format: "r32uint",
-      usage: COPY_DST_TEX | TEXTURE_BINDING | STORAGE_BINDING,
+      usage: COPY_DST_TEX | COPY_SRC_TEX | TEXTURE_BINDING | STORAGE_BINDING,
     });
 
     // Defended strength texture (rgba8unorm, r channel used)
@@ -233,13 +258,24 @@ export class GroundTruthData {
   }
 
   setViewTransform(scale: number, offsetX: number, offsetY: number): void {
+    const eps = 1e-4;
+    const changed =
+      Math.abs(scale - this.viewScale) > eps ||
+      Math.abs(offsetX - this.viewOffsetX) > eps ||
+      Math.abs(offsetY - this.viewOffsetY) > eps;
     this.viewScale = scale;
     this.viewOffsetX = offsetX;
     this.viewOffsetY = offsetY;
+    if (changed) {
+      this.invalidateHistory();
+    }
   }
 
   setAlternativeView(enabled: boolean): void {
-    this.alternativeView = enabled;
+    if (this.alternativeView !== enabled) {
+      this.alternativeView = enabled;
+      this.invalidateHistory();
+    }
   }
 
   setHighlightedOwnerId(ownerSmallId: number | null): void {
@@ -254,6 +290,190 @@ export class GroundTruthData {
       this.territoryShaderParams0[i] = Number(params0[i] ?? 0);
       this.territoryShaderParams1[i] = Number(params1[i] ?? 0);
     }
+  }
+
+  setUseVisualStateTexture(enabled: boolean): void {
+    this.useVisualStateTexture = enabled;
+    if (enabled) {
+      this.visualStateNeedsSync = true;
+    }
+  }
+
+  consumeVisualStateSyncNeeded(): boolean {
+    if (!this.visualStateNeedsSync) {
+      return false;
+    }
+    this.visualStateNeedsSync = false;
+    return true;
+  }
+
+  ensureVisualStateTexture(): void {
+    if (this.visualStateTexture) {
+      return;
+    }
+    const GPUTextureUsage = (globalThis as any).GPUTextureUsage;
+    const COPY_DST_TEX = GPUTextureUsage?.COPY_DST ?? 0x2;
+    const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
+    const STORAGE_BINDING = GPUTextureUsage?.STORAGE_BINDING ?? 0x8;
+    this.visualStateTexture = this.device.createTexture({
+      size: { width: this.mapWidth, height: this.mapHeight },
+      format: "r32uint",
+      usage: COPY_DST_TEX | TEXTURE_BINDING | STORAGE_BINDING,
+    });
+  }
+
+  releaseVisualStateTexture(): void {
+    if (this.visualStateTexture) {
+      (this.visualStateTexture as any).destroy?.();
+      this.visualStateTexture = null;
+    }
+  }
+
+  getVisualStateTexture(): GPUTexture | null {
+    return this.visualStateTexture;
+  }
+
+  getRenderStateTexture(): GPUTexture {
+    if (this.useVisualStateTexture && this.visualStateTexture) {
+      return this.visualStateTexture;
+    }
+    return this.stateTexture;
+  }
+
+  setLastStateUpdateCount(count: number): void {
+    this.lastStateUpdateCount = Math.max(0, Math.floor(count));
+  }
+
+  getLastStateUpdateCount(): number {
+    return this.lastStateUpdateCount;
+  }
+
+  updateTickTiming(nowSec: number): void {
+    if (this.lastTickSec > 0) {
+      const dt = Math.max(1e-3, nowSec - this.lastTickSec);
+      this.tickDtSec = dt;
+      this.tickDtEmaSec =
+        this.tickDtEmaSec * (1 - this.tickEmaAlpha) + dt * this.tickEmaAlpha;
+    }
+    this.lastTickSec = nowSec;
+    this.tickCount += 1;
+  }
+
+  writeTemporalUniformBuffer(nowSec: number): void {
+    const denom = Math.max(1e-3, this.tickDtEmaSec);
+    const alpha = Math.max(0, Math.min(1, (nowSec - this.lastTickSec) / denom));
+
+    this.temporalData[0] = nowSec;
+    this.temporalData[1] = this.lastTickSec;
+    this.temporalData[2] = this.tickDtSec;
+    this.temporalData[3] = this.tickDtEmaSec;
+    this.temporalData[4] = alpha;
+    this.temporalData[5] = this.tickCount;
+    this.temporalData[6] = this.historyValid ? 1 : 0;
+    this.temporalData[7] = 0;
+
+    this.device.queue.writeBuffer(
+      this.temporalUniformBuffer,
+      0,
+      this.temporalData,
+    );
+  }
+
+  invalidateHistory(): void {
+    this.historyValid = false;
+  }
+
+  markHistoryValid(): void {
+    this.historyValid = true;
+  }
+
+  swapHistoryTextures(): void {
+    if (!this.historyColorTextures) {
+      return;
+    }
+    this.historyIndex = this.historyIndex === 0 ? 1 : 0;
+  }
+
+  ensurePostSmoothingTextures(
+    width: number,
+    height: number,
+    format: GPUTextureFormat,
+  ): void {
+    const w = Math.max(1, Math.floor(width));
+    const h = Math.max(1, Math.floor(height));
+    const needsRebuild =
+      !this.currentColorTexture ||
+      !this.historyColorTextures ||
+      this.postSmoothingWidth !== w ||
+      this.postSmoothingHeight !== h ||
+      this.postSmoothingFormat !== format;
+
+    if (!needsRebuild) {
+      return;
+    }
+
+    this.releasePostSmoothingTextures();
+
+    const GPUTextureUsage = (globalThis as any).GPUTextureUsage;
+    const RENDER_ATTACHMENT = GPUTextureUsage?.RENDER_ATTACHMENT ?? 0x10;
+    const TEXTURE_BINDING = GPUTextureUsage?.TEXTURE_BINDING ?? 0x4;
+
+    this.currentColorTexture = this.device.createTexture({
+      size: { width: w, height: h },
+      format,
+      usage: RENDER_ATTACHMENT | TEXTURE_BINDING,
+    });
+    const historyA = this.device.createTexture({
+      size: { width: w, height: h },
+      format,
+      usage: RENDER_ATTACHMENT | TEXTURE_BINDING,
+    });
+    const historyB = this.device.createTexture({
+      size: { width: w, height: h },
+      format,
+      usage: RENDER_ATTACHMENT | TEXTURE_BINDING,
+    });
+
+    this.historyColorTextures = [historyA, historyB];
+    this.historyIndex = 0;
+    this.historyValid = false;
+    this.postSmoothingWidth = w;
+    this.postSmoothingHeight = h;
+    this.postSmoothingFormat = format;
+  }
+
+  releasePostSmoothingTextures(): void {
+    if (this.currentColorTexture) {
+      (this.currentColorTexture as any).destroy?.();
+      this.currentColorTexture = null;
+    }
+    if (this.historyColorTextures) {
+      (this.historyColorTextures[0] as any).destroy?.();
+      (this.historyColorTextures[1] as any).destroy?.();
+      this.historyColorTextures = null;
+    }
+    this.historyValid = false;
+    this.postSmoothingWidth = 0;
+    this.postSmoothingHeight = 0;
+    this.postSmoothingFormat = null;
+  }
+
+  getCurrentColorTexture(): GPUTexture | null {
+    return this.currentColorTexture;
+  }
+
+  getHistoryReadTexture(): GPUTexture | null {
+    if (!this.historyColorTextures) {
+      return null;
+    }
+    return this.historyColorTextures[this.historyIndex];
+  }
+
+  getHistoryWriteTexture(): GPUTexture | null {
+    if (!this.historyColorTextures) {
+      return null;
+    }
+    return this.historyColorTextures[this.historyIndex === 0 ? 1 : 0];
   }
 
   // =====================

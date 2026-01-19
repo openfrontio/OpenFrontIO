@@ -5,6 +5,18 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { WebGPUComputeMetricsEvent } from "../../InputHandler";
 import {
+  TERRITORY_POST_SMOOTHING,
+  TERRITORY_POST_SMOOTHING_KEY,
+  territoryPostSmoothingIdFromInt,
+  territoryPostSmoothingIntFromId,
+} from "../webgpu/render/TerritoryPostSmoothingRegistry";
+import {
+  TERRITORY_PRE_SMOOTHING,
+  TERRITORY_PRE_SMOOTHING_KEY,
+  territoryPreSmoothingIdFromInt,
+  territoryPreSmoothingIntFromId,
+} from "../webgpu/render/TerritoryPreSmoothingRegistry";
+import {
   TERRITORY_SHADER_KEY,
   TERRITORY_SHADERS,
   territoryShaderIdFromInt,
@@ -89,6 +101,15 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       user-select: none;
     }
 
+    .sectionTitle {
+      margin-top: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
     select,
     input[type="range"] {
       width: 170px;
@@ -161,6 +182,32 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     this.userSettings.setInt(
       TERRITORY_SHADER_KEY,
       territoryShaderIntFromId(id),
+    );
+    this.requestUpdate();
+  }
+
+  private selectedPreSmoothingId() {
+    const selected = this.userSettings.getInt(TERRITORY_PRE_SMOOTHING_KEY, 0);
+    return territoryPreSmoothingIdFromInt(selected);
+  }
+
+  private setSelectedPreSmoothingId(id: "off" | "dissolve" | "budget") {
+    this.userSettings.setInt(
+      TERRITORY_PRE_SMOOTHING_KEY,
+      territoryPreSmoothingIntFromId(id),
+    );
+    this.requestUpdate();
+  }
+
+  private selectedPostSmoothingId() {
+    const selected = this.userSettings.getInt(TERRITORY_POST_SMOOTHING_KEY, 0);
+    return territoryPostSmoothingIdFromInt(selected);
+  }
+
+  private setSelectedPostSmoothingId(id: "off" | "fade" | "dissolve") {
+    this.userSettings.setInt(
+      TERRITORY_POST_SMOOTHING_KEY,
+      territoryPostSmoothingIntFromId(id),
     );
     this.requestUpdate();
   }
@@ -242,6 +289,14 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     const shaderId = this.selectedShaderId();
     const shader =
       TERRITORY_SHADERS.find((s) => s.id === shaderId) ?? TERRITORY_SHADERS[0];
+    const preId = this.selectedPreSmoothingId();
+    const pre =
+      TERRITORY_PRE_SMOOTHING.find((s) => s.id === preId) ??
+      TERRITORY_PRE_SMOOTHING[0];
+    const postId = this.selectedPostSmoothingId();
+    const post =
+      TERRITORY_POST_SMOOTHING.find((s) => s.id === postId) ??
+      TERRITORY_POST_SMOOTHING[0];
 
     return html`
       <div class="overlay">
@@ -280,6 +335,58 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
         </div>
 
         ${shader.options.map((opt) => this.renderOptionControl(opt))}
+
+        <div class="sectionTitle">Temporal</div>
+
+        <div class="row">
+          <div class="label">Post Compute</div>
+          <select
+            .value=${live(String(territoryPreSmoothingIntFromId(preId)))}
+            @change=${(e: Event) => {
+              const raw = (e.target as HTMLSelectElement).value;
+              const next = territoryPreSmoothingIdFromInt(
+                Number.parseInt(raw, 10),
+              );
+              this.setSelectedPreSmoothingId(next);
+            }}
+          >
+            ${TERRITORY_PRE_SMOOTHING.map(
+              (s) =>
+                html`<option
+                  value=${String(territoryPreSmoothingIntFromId(s.id))}
+                >
+                  ${s.label}
+                </option>`,
+            )}
+          </select>
+        </div>
+
+        ${pre.options.map((opt) => this.renderOptionControl(opt))}
+
+        <div class="row">
+          <div class="label">Post Render</div>
+          <select
+            .value=${live(String(territoryPostSmoothingIntFromId(postId)))}
+            @change=${(e: Event) => {
+              const raw = (e.target as HTMLSelectElement).value;
+              const next = territoryPostSmoothingIdFromInt(
+                Number.parseInt(raw, 10),
+              );
+              this.setSelectedPostSmoothingId(next);
+            }}
+          >
+            ${TERRITORY_POST_SMOOTHING.map(
+              (s) =>
+                html`<option
+                  value=${String(territoryPostSmoothingIntFromId(s.id))}
+                >
+                  ${s.label}
+                </option>`,
+            )}
+          </select>
+        </div>
+
+        ${post.options.map((opt) => this.renderOptionControl(opt))}
       </div>
     `;
   }
