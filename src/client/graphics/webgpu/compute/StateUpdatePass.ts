@@ -87,6 +87,8 @@ export class StateUpdatePass implements ComputePass {
       return;
     }
 
+    resources.setLastStateUpdateCount(numUpdates);
+
     const updatesBuffer = resources.ensureUpdatesBuffer(numUpdates);
     resources.writeStateUpdateParamsBuffer(numUpdates);
 
