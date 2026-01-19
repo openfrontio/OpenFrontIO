@@ -156,3 +156,26 @@ export const PlayerLeaderboardResponseSchema = z.object({
 export type PlayerLeaderboardResponse = z.infer<
   typeof PlayerLeaderboardResponseSchema
 >;
+
+export const RankedLeaderboardEntrySchema = z.object({
+  rank: z.string(),
+  elo: z.number(),
+  peakElo: z.number().nullable(),
+  wins: z.number(),
+  losses: z.number(),
+  total: z.number(),
+  public_id: z.string(),
+  user: z.unknown().nullable(),
+  username: z.string(),
+  clanTag: z.string().nullable(),
+});
+export type RankedLeaderboardEntry = z.infer<
+  typeof RankedLeaderboardEntrySchema
+>;
+
+export const RankedLeaderboardResponseSchema = z.object({
+  "1v1": RankedLeaderboardEntrySchema.array(),
+});
+export type RankedLeaderboardResponse = z.infer<
+  typeof RankedLeaderboardResponseSchema
+>;

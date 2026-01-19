@@ -6,6 +6,7 @@ import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
   PlayerLeaderboardEntry,
+  RankedLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
@@ -78,58 +79,38 @@ export class LeaderboardModal extends BaseModal {
     this.error = null;
 
     try {
-      // MOCK-START
-      const mockPlayers: PlayerLeaderboardEntry[] = Array.from(
-        { length: 250 },
-        (_, i) => ({
-          rank: i + 1,
-          playerId: `player-${i}`,
-          username: `Player ${i + 1}`,
-          elo: 2500 - i * 8 + Math.floor(Math.random() * 20),
-          games: 100 + Math.floor(Math.random() * 500),
-          wins: 60 + Math.floor(Math.random() * 300),
-          losses: 40 + Math.floor(Math.random() * 200),
-          winRate: 0.6,
-          clanTag: Math.random() > 0.7 ? "CLAN" : undefined,
-          flag: ["us", "gb", "de", "fr", "tr", "es", "br"][
-            Math.floor(Math.random() * 7)
-          ],
-        }),
-      );
+      const res = await fetch(`${getApiBase()}/leaderboard/ranked`, {
+        headers: { Accept: "application/json" },
+      });
 
+      if (!res.ok) throw new Error(`Unexpected status ${res.status}`);
+
+      const json = await res.json();
+      const parsed = RankedLeaderboardResponseSchema.safeParse(json);
+      if (!parsed.success) throw new Error("Invalid response format");
+
+      this.playerData = parsed.data["1v1"].map((entry) => {
+        const games = entry.total;
+        return {
+          rank: Number.parseInt(entry.rank, 10),
+          playerId: entry.public_id,
+          username: entry.username,
+          clanTag: entry.clanTag ?? undefined,
+          elo: entry.elo,
+          games,
+          wins: entry.wins,
+          losses: entry.losses,
+          winRate: games > 0 ? entry.wins / games : 0,
+        };
+      });
+
+      this.currentUserEntry = null;
       const userMe = await getUserMe();
       if (userMe) {
         const myId = userMe.player.publicId;
-        const myInTop250 = Math.random() > 0.5; // For demo/mock purposes
-
-        if (myInTop250) {
-          const myRank = 10 + Math.floor(Math.random() * 200);
-          const myEntry = mockPlayers[myRank - 1];
-          myEntry.playerId = myId;
-          myEntry.username =
-            userMe.user.discord?.global_name ??
-            userMe.user.discord?.username ??
-            "Me";
-          this.currentUserEntry = myEntry;
-        } else {
-          this.currentUserEntry = {
-            rank: 1234,
-            playerId: myId,
-            username:
-              userMe.user.discord?.global_name ??
-              userMe.user.discord?.username ??
-              "Me",
-            elo: userMe.player.leaderboard?.oneVone?.elo ?? 1000,
-            games: 50,
-            wins: 25,
-            losses: 25,
-            winRate: 0.5,
-          };
-        }
+        this.currentUserEntry =
+          this.playerData.find((player) => player.playerId === myId) ?? null;
       }
-      // MOCK-END
-
-      this.playerData = mockPlayers;
 
       // If test mode is enabled, override the current user with a random player from the list
       if (this.testRandomUser && this.playerData.length > 0) {
@@ -243,13 +224,13 @@ export class LeaderboardModal extends BaseModal {
           class="${tabClass(this.activeTab === "players")}"
           @click=${() => this.handleTabChange("players")}
         >
-          1v1 Ranked
+          ${translateText("leaderboard_modal.ranked_tab")}
         </div>
         <div
           class="${tabClass(this.activeTab === "clans")}"
           @click=${() => this.handleTabChange("clans")}
         >
-          Clans
+          ${translateText("leaderboard_modal.clans_tab")}
         </div>
       </div>
     `;
@@ -460,13 +441,17 @@ export class LeaderboardModal extends BaseModal {
         <div class="flex flex-col items-end gap-1 w-32">
           <div class="text-right font-mono text-white font-medium">
             ${player.elo}
-            <span class="text-[10px] text-white/30 truncate">ELO</span>
+            <span class="text-[10px] text-white/30 truncate"
+              >${translateText("leaderboard_modal.elo")}</span
+            >
           </div>
         </div>
         <div class="flex-col items-end gap-1 w-32 hidden md:flex">
           <div class="text-right font-mono text-white font-medium">
             ${player.games}
-            <span class="text-[10px] text-white/30 uppercase">Games</span>
+            <span class="text-[10px] text-white/30 uppercase"
+              >${translateText("leaderboard_modal.games")}</span
+            >
           </div>
         </div>
         <div class="inline-flex flex-col items-end pr-6 w-32">
@@ -498,10 +483,14 @@ export class LeaderboardModal extends BaseModal {
             ${translateText("leaderboard_modal.rank")}
           </div>
           <div class="flex-1 ml-4">
-            ${translateText("leaderboard_modal.player") || "Player"}
+            ${translateText("leaderboard_modal.player")}
           </div>
-          <div class="w-32 text-right">ELO</div>
-          <div class="w-32 text-right hidden md:block">Games</div>
+          <div class="w-32 text-right">
+            ${translateText("leaderboard_modal.elo")}
+          </div>
+          <div class="w-32 text-right hidden md:block">
+            ${translateText("leaderboard_modal.games")}
+          </div>
           <div class="w-32 text-right pr-6">
             ${translateText("leaderboard_modal.win_loss_ratio")}
           </div>
@@ -531,7 +520,7 @@ export class LeaderboardModal extends BaseModal {
                 <div class="flex-1 flex flex-col ml-4">
                   <span
                     class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
-                    >Your Ranking</span
+                    >${translateText("leaderboard_modal.your_ranking")}</span
                   >
                   <span class="font-bold text-white text-base"
                     >${this.currentUserEntry.username}</span
@@ -540,7 +529,9 @@ export class LeaderboardModal extends BaseModal {
                 <div class="flex flex-col items-end w-32">
                   <div class="font-mono text-white font-bold text-lg">
                     ${this.currentUserEntry.elo}
-                    <span class="text-[10px] text-white/60">ELO</span>
+                    <span class="text-[10px] text-white/60"
+                      >${translateText("leaderboard_modal.elo")}</span
+                    >
                   </div>
                 </div>
               </div>
@@ -653,7 +644,7 @@ export class LeaderboardModal extends BaseModal {
               <span
                 class="text-white text-xl sm:text-2xl font-bold uppercase tracking-widest"
               >
-                ${translateText("main.leaderboard") || "Leaderboards"}
+                ${translateText("leaderboard_modal.title_plural")}
               </span>
               ${this.activeTab === "clans" ? dateRange : ""}
             </div>
