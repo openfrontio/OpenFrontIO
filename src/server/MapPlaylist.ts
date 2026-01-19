@@ -63,6 +63,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Surrounded: 4,
   DidierFrance: 1,
   AmazonRiver: 3,
+  Sierpinski: 10,
 };
 
 interface MapWithMode {
@@ -198,7 +199,7 @@ export class MapPlaylist {
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
-      startingGold: Math.random() < 0.03 ? 5_000_000 : undefined, // 3% chance
+      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
     };
   }
 
