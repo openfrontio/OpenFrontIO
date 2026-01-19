@@ -28,8 +28,8 @@ export const TERRITORY_POST_SMOOTHING: TerritoryPostSmoothingDefinition[] = [
         kind: "range",
         key: "settings.webgpu.territory.postSmoothing.blendStrength",
         label: "Blend Strength",
-        defaultValue: 1,
-        min: 0,
+        defaultValue: 0.2,
+        min: 0.01,
         max: 1,
         step: 0.01,
       },
@@ -108,7 +108,7 @@ export function buildTerritoryPostSmoothingParams(
 
   const blendStrength = userSettings.getFloat(
     "settings.webgpu.territory.postSmoothing.blendStrength",
-    1,
+    0.2,
   );
   const dissolveWidth = userSettings.getFloat(
     "settings.webgpu.territory.postSmoothing.dissolveWidth",

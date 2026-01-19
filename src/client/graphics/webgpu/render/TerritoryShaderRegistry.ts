@@ -194,7 +194,7 @@ export const TERRITORY_SHADERS: TerritoryShaderDefinition[] = [
         key: "settings.webgpu.territory.retro.defendedThreshold",
         label: "Defended Threshold",
         defaultValue: 0.01,
-        min: 0,
+        min: 0.01,
         max: 1,
         step: 0.01,
       },
