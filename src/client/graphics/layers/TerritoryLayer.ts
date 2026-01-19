@@ -12,6 +12,14 @@ import {
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import {
+  buildTerritoryPostSmoothingParams,
+  readTerritoryPostSmoothingId,
+} from "../webgpu/render/TerritoryPostSmoothingRegistry";
+import {
+  buildTerritoryPreSmoothingParams,
+  readTerritoryPreSmoothingId,
+} from "../webgpu/render/TerritoryPreSmoothingRegistry";
+import {
   buildTerritoryShaderParams,
   readTerritoryShaderId,
 } from "../webgpu/render/TerritoryShaderRegistry";
@@ -36,6 +44,8 @@ export class TerritoryLayer implements Layer {
   private lastPaletteSignature: string | null = null;
   private lastDefensePostsSignature: string | null = null;
   private lastTerritoryShaderSignature: string | null = null;
+  private lastPreSmoothingSignature: string | null = null;
+  private lastPostSmoothingSignature: string | null = null;
 
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
@@ -78,6 +88,7 @@ export class TerritoryLayer implements Layer {
     this.refreshPaletteIfNeeded();
     this.refreshDefensePostsIfNeeded();
     this.applyTerritoryShaderSettings();
+    this.applyTerritorySmoothingSettings();
 
     const updatedTiles = this.game.recentlyUpdatedTiles();
     for (let i = 0; i < updatedTiles.length; i++) {
@@ -114,6 +125,7 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.setHighlightedOwnerId(this.hoveredOwnerSmallId);
     this.applyTerritoryShaderSettings(true);
+    this.applyTerritorySmoothingSettings(true);
     this.territoryRenderer.markAllDirty();
     this.territoryRenderer.refreshPalette();
     this.lastPaletteSignature = this.computePaletteSignature();
@@ -143,6 +155,7 @@ export class TerritoryLayer implements Layer {
 
     // Apply user settings even while the game is paused (settings modal).
     this.applyTerritoryShaderSettings();
+    this.applyTerritorySmoothingSettings();
 
     this.ensureTerritoryCanvasAttached(context.canvas);
     this.updateHoverHighlight();
@@ -320,6 +333,42 @@ export class TerritoryLayer implements Layer {
 
     this.territoryRenderer.setTerritoryShader(shaderPath);
     this.territoryRenderer.setTerritoryShaderParams(params0, params1);
+  }
+
+  private applyTerritorySmoothingSettings(force: boolean = false) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+
+    const preId = readTerritoryPreSmoothingId(this.userSettings);
+    const preParams = buildTerritoryPreSmoothingParams(
+      this.userSettings,
+      preId,
+    );
+    const preSignature = `${preId}:${Array.from(preParams.params0).join(",")}`;
+    if (force || preSignature !== this.lastPreSmoothingSignature) {
+      this.lastPreSmoothingSignature = preSignature;
+      this.territoryRenderer.setPreSmoothing(
+        preParams.enabled,
+        preParams.shaderPath,
+        preParams.params0,
+      );
+    }
+
+    const postId = readTerritoryPostSmoothingId(this.userSettings);
+    const postParams = buildTerritoryPostSmoothingParams(
+      this.userSettings,
+      postId,
+    );
+    const postSignature = `${postId}:${Array.from(postParams.params0).join(",")}`;
+    if (force || postSignature !== this.lastPostSmoothingSignature) {
+      this.lastPostSmoothingSignature = postSignature;
+      this.territoryRenderer.setPostSmoothing(
+        postParams.enabled,
+        postParams.shaderPath,
+        postParams.params0,
+      );
+    }
   }
 
   private computeDefensePostsSignature(): string {

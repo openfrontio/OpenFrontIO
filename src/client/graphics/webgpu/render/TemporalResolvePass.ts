@@ -3,12 +3,11 @@ import { loadShader } from "../core/ShaderLoader";
 import { RenderPass } from "./RenderPass";
 
 /**
- * Main territory rendering pass.
- * Renders territory colors, defended tiles, fallout, and hover highlights.
+ * Post-render temporal resolve pass. Blends current and history frames.
  */
-export class TerritoryRenderPass implements RenderPass {
-  name = "territory";
-  dependencies: string[] = [];
+export class TemporalResolvePass implements RenderPass {
+  name = "temporal-resolve";
+  dependencies: string[] = ["territory"];
 
   private pipeline: GPURenderPipeline | null = null;
   private bindGroupLayout: GPUBindGroupLayout | null = null;
@@ -16,10 +15,11 @@ export class TerritoryRenderPass implements RenderPass {
   private device: GPUDevice | null = null;
   private resources: GroundTruthData | null = null;
   private canvasFormat: GPUTextureFormat | null = null;
-  private shaderPath = "render/territory.wgsl";
-  private clearR = 0;
-  private clearG = 0;
-  private clearB = 0;
+  private paramsBuffer: GPUBuffer | null = null;
+  private paramsData = new Float32Array(4);
+  private enabled = false;
+  private boundCurrentTexture: GPUTexture | null = null;
+  private boundHistoryTexture: GPUTexture | null = null;
 
   async init(
     device: GPUDevice,
@@ -29,6 +29,14 @@ export class TerritoryRenderPass implements RenderPass {
     this.device = device;
     this.resources = resources;
     this.canvasFormat = canvasFormat;
+
+    const GPUBufferUsage = (globalThis as any).GPUBufferUsage;
+    const UNIFORM = GPUBufferUsage?.UNIFORM ?? 0x40;
+    const COPY_DST = GPUBufferUsage?.COPY_DST ?? 0x8;
+    this.paramsBuffer = device.createBuffer({
+      size: 16,
+      usage: UNIFORM | COPY_DST,
+    });
 
     this.bindGroupLayout = device.createBindGroupLayout({
       entries: [
@@ -40,7 +48,7 @@ export class TerritoryRenderPass implements RenderPass {
         {
           binding: 1,
           visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "uint" },
+          buffer: { type: "uniform" },
         },
         {
           binding: 2,
@@ -52,38 +60,14 @@ export class TerritoryRenderPass implements RenderPass {
           visibility: 2 /* FRAGMENT */,
           texture: { sampleType: "float" },
         },
-        {
-          binding: 4,
-          visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "float" },
-        },
-        {
-          binding: 5,
-          visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "uint" },
-        },
-        {
-          binding: 6,
-          visibility: 2 /* FRAGMENT */,
-          texture: { sampleType: "uint" },
-        },
       ],
     });
 
-    await this.setShader(this.shaderPath);
-
+    await this.setShader("render/temporal-resolve.wgsl");
     this.rebuildBindGroup();
-
-    // Extract clear color from theme
-    const bg = resources.getTheme().backgroundColor().rgba;
-    this.clearR = bg.r / 255;
-    this.clearG = bg.g / 255;
-    this.clearB = bg.b / 255;
   }
 
   async setShader(shaderPath: string): Promise<void> {
-    this.shaderPath = shaderPath;
-
     if (!this.device || !this.bindGroupLayout || !this.canvasFormat) {
       return;
     }
@@ -99,15 +83,26 @@ export class TerritoryRenderPass implements RenderPass {
       fragment: {
         module: shaderModule,
         entryPoint: "fsMain",
-        targets: [{ format: this.canvasFormat }],
+        targets: [{ format: this.canvasFormat }, { format: this.canvasFormat }],
       },
       primitive: { topology: "triangle-list" },
     });
   }
 
+  setParams(params0: Float32Array | number[]): void {
+    this.paramsData[0] = Number(params0[0] ?? 0);
+    this.paramsData[1] = Number(params0[1] ?? 1);
+    this.paramsData[2] = Number(params0[2] ?? 0.08);
+    this.paramsData[3] = 0;
+    this.enabled = this.paramsData[0] > 0;
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
   needsUpdate(): boolean {
-    // Always run every frame (can be optimized later if needed)
-    return true;
+    return this.enabled;
   }
 
   execute(
@@ -115,19 +110,33 @@ export class TerritoryRenderPass implements RenderPass {
     resources: GroundTruthData,
     target: GPUTextureView,
   ): void {
-    if (!this.device || !this.pipeline) {
+    if (!this.device || !this.pipeline || !this.paramsBuffer) {
+      return;
+    }
+    if (!this.enabled) {
       return;
     }
 
-    // Rebuild bind group if needed (e.g., after texture recreation)
-    this.rebuildBindGroup();
+    const currentTexture = resources.getCurrentColorTexture();
+    const historyRead = resources.getHistoryReadTexture();
+    const historyWrite = resources.getHistoryWriteTexture();
+    if (!currentTexture || !historyRead || !historyWrite) {
+      return;
+    }
+
+    this.device.queue.writeBuffer(this.paramsBuffer, 0, this.paramsData);
+
+    const shouldRebuild =
+      !this.bindGroup ||
+      this.boundCurrentTexture !== currentTexture ||
+      this.boundHistoryTexture !== historyRead;
+    if (shouldRebuild) {
+      this.rebuildBindGroup();
+    }
 
     if (!this.bindGroup) {
       return;
     }
-
-    // Update uniforms
-    resources.writeUniformBuffer(performance.now() / 1000);
 
     const pass = encoder.beginRenderPass({
       colorAttachments: [
@@ -135,12 +144,13 @@ export class TerritoryRenderPass implements RenderPass {
           view: target,
           loadOp: "clear",
           storeOp: "store",
-          clearValue: {
-            r: this.clearR,
-            g: this.clearG,
-            b: this.clearB,
-            a: 1,
-          },
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+        },
+        {
+          view: historyWrite.createView(),
+          loadOp: "clear",
+          storeOp: "store",
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
         },
       ],
     });
@@ -149,6 +159,9 @@ export class TerritoryRenderPass implements RenderPass {
     pass.setBindGroup(0, this.bindGroup);
     pass.draw(3);
     pass.end();
+
+    resources.swapHistoryTextures();
+    resources.markHistoryValid();
   }
 
   rebuildBindGroup(): void {
@@ -156,48 +169,42 @@ export class TerritoryRenderPass implements RenderPass {
       !this.device ||
       !this.bindGroupLayout ||
       !this.resources ||
-      !this.resources.uniformBuffer ||
-      !this.resources.defendedStrengthTexture ||
-      !this.resources.paletteTexture ||
-      !this.resources.terrainTexture ||
-      !this.resources.ownerIndexTexture ||
-      !this.resources.relationsTexture
+      !this.resources.temporalUniformBuffer ||
+      !this.paramsBuffer
     ) {
       return;
     }
 
-    const stateTexture = this.resources.getRenderStateTexture();
+    const currentTexture = this.resources.getCurrentColorTexture();
+    const historyRead = this.resources.getHistoryReadTexture();
+    if (!currentTexture || !historyRead) {
+      return;
+    }
 
     this.bindGroup = this.device.createBindGroup({
       layout: this.bindGroupLayout,
       entries: [
-        { binding: 0, resource: { buffer: this.resources.uniformBuffer } },
+        {
+          binding: 0,
+          resource: { buffer: this.resources.temporalUniformBuffer },
+        },
         {
           binding: 1,
-          resource: stateTexture.createView(),
+          resource: { buffer: this.paramsBuffer },
         },
         {
           binding: 2,
-          resource: this.resources.defendedStrengthTexture.createView(),
+          resource: currentTexture.createView(),
         },
         {
           binding: 3,
-          resource: this.resources.paletteTexture.createView(),
-        },
-        {
-          binding: 4,
-          resource: this.resources.terrainTexture.createView(),
-        },
-        {
-          binding: 5,
-          resource: this.resources.ownerIndexTexture.createView(),
-        },
-        {
-          binding: 6,
-          resource: this.resources.relationsTexture.createView(),
+          resource: historyRead.createView(),
         },
       ],
     });
+
+    this.boundCurrentTexture = currentTexture;
+    this.boundHistoryTexture = historyRead;
   }
 
   dispose(): void {
@@ -206,5 +213,6 @@ export class TerritoryRenderPass implements RenderPass {
     this.bindGroup = null;
     this.device = null;
     this.resources = null;
+    this.paramsBuffer = null;
   }
 }
