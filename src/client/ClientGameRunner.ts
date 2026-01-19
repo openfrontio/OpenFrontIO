@@ -288,6 +288,7 @@ export class ClientGameRunner {
         this.testSkinExecution = null;
       }
     }
+  }
   /**
    * Determines whether window closing should be prevented.
    *
