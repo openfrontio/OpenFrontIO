@@ -365,8 +365,7 @@ export class ClientGameRunner {
         () => {
           // Called when execution requests the modal be shown — stop the game and
           // clean up resources first.
-          this.isActive = false;
-          this.stopSkinTest();
+          this.stop();
         },
       );
       this.testSkinExecution.start();
