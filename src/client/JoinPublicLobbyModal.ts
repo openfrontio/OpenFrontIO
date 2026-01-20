@@ -12,6 +12,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-public-lobby-modal")
 export class JoinPublicLobbyModal extends BaseModal {
   @state() private players: ClientInfo[] = [];
+  @state() private playerCount: number = 0;
   @state() private gameConfig: GameConfig | null = null;
   @state() private currentLobbyId: string = "";
   @state() private nationCount: number = 0;
@@ -35,7 +36,7 @@ export class JoinPublicLobbyModal extends BaseModal {
             })
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
-    const playerCount = this.players.length;
+    const playerCount = this.playerCount;
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -124,6 +125,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = false;
     this.gameConfig = null;
     this.players = [];
+    this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
     this.startLobbySocket(lobbyId);
@@ -156,6 +158,7 @@ export class JoinPublicLobbyModal extends BaseModal {
 
     this.gameConfig = null;
     this.players = [];
+    this.playerCount = 0;
     this.currentLobbyId = "";
     this.nationCount = 0;
     this.lobbyStartAt = null;
@@ -214,7 +217,7 @@ export class JoinPublicLobbyModal extends BaseModal {
               translateText("common.enabled"),
             )
           : html``}
-        ${c.publicGameModifiers?.startingGold
+        ${c.publicGameModifiers?.startingGold !== undefined
           ? this.renderConfigItem(
               translateText("host_modal.starting_gold"),
               renderNumber(c.publicGameModifiers.startingGold),
@@ -285,10 +288,17 @@ export class JoinPublicLobbyModal extends BaseModal {
   }
 
   private updateFromLobby(lobby: GameInfo) {
-    this.players = lobby.clients ?? [];
-    if (this.lobbyStartAt === null) {
-      const msUntilStart = lobby.msUntilStart ?? 0;
-      this.lobbyStartAt = msUntilStart + Date.now();
+    if (lobby.clients) {
+      this.players = lobby.clients;
+      this.playerCount = lobby.clients.length;
+    } else {
+      this.players = [];
+      this.playerCount = lobby.numClients ?? 0;
+    }
+    if (lobby.msUntilStart !== undefined) {
+      this.lobbyStartAt = lobby.msUntilStart + Date.now();
+    } else {
+      this.lobbyStartAt = null;
     }
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
@@ -306,9 +316,16 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.lobbySocket = new WorkerLobbySocket(lobbyId, (lobby) => {
       if (lobby) {
         this.updateFromLobby(lobby);
+      } else {
+        this.handleLobbyClosed();
       }
     });
     this.lobbySocket.start();
+  }
+
+  private handleLobbyClosed() {
+    this.leaveLobbyOnClose = true;
+    this.close();
   }
 
   private async loadNationCount() {
