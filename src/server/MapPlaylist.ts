@@ -71,18 +71,18 @@ interface MapWithMode {
   mode: GameMode;
 }
 
-const TEAM_COUNTS = [
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  Duos,
-  Trios,
-  Quads,
-  HumansVsNations,
-] as const satisfies TeamCountConfig[];
+const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
+  { config: 2, weight: 10 },
+  { config: 3, weight: 10 },
+  { config: 4, weight: 10 },
+  { config: 5, weight: 10 },
+  { config: 6, weight: 10 },
+  { config: 7, weight: 10 },
+  { config: Duos, weight: 5 },
+  { config: Trios, weight: 7.5 },
+  { config: Quads, weight: 7.5 },
+  { config: HumansVsNations, weight: 20 },
+];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
@@ -192,7 +192,17 @@ export class MapPlaylist {
   }
 
   private getTeamCount(): TeamCountConfig {
-    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
+    const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
+    const roll = Math.random() * totalWeight;
+
+    let cumulativeWeight = 0;
+    for (const { config, weight } of TEAM_WEIGHTS) {
+      cumulativeWeight += weight;
+      if (roll < cumulativeWeight) {
+        return config;
+      }
+    }
+    return TEAM_WEIGHTS[0].config;
   }
 
   private getRandomPublicGameModifiers(): PublicGameModifiers {
