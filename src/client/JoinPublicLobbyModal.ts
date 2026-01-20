@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { renderNumber, translateText } from "../client/Utils";
 import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
@@ -13,7 +13,6 @@ import { modalHeader } from "./components/ui/ModalHeader";
 export class JoinPublicLobbyModal extends BaseModal {
   @state() private players: ClientInfo[] = [];
   @state() private gameConfig: GameConfig | null = null;
-  @state() private lobbyCreatorClientID: string | null = null;
   @state() private currentLobbyId: string = "";
   @state() private nationCount: number = 0;
   @state() private msUntilStart: number | null = null;
@@ -40,7 +39,6 @@ export class JoinPublicLobbyModal extends BaseModal {
                   class="mt-6"
                   .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                   .clients=${this.players}
-                  .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                   .teamCount=${this.gameConfig?.playerTeams ?? 2}
                   .nationCount=${this.nationCount}
                   .disableNations=${this.gameConfig?.disableNations ?? false}
@@ -89,7 +87,6 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = false;
     this.gameConfig = null;
     this.players = [];
-    this.lobbyCreatorClientID = null;
     this.nationCount = 0;
     this.msUntilStart = null;
 
@@ -126,7 +123,6 @@ export class JoinPublicLobbyModal extends BaseModal {
 
     this.gameConfig = null;
     this.players = [];
-    this.lobbyCreatorClientID = null;
     this.currentLobbyId = "";
     this.nationCount = 0;
     this.msUntilStart = null;
@@ -169,22 +165,28 @@ export class JoinPublicLobbyModal extends BaseModal {
       c.gameMode === "Free For All"
         ? translateText("game_mode.ffa")
         : translateText("game_mode.teams");
-    const diffName = translateText(
-      "difficulty." + c.difficulty.toLowerCase().replace(/ /g, ""),
-    );
-
     return html`
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         ${this.renderConfigItem(translateText("map.map"), mapName)}
         ${this.renderConfigItem(translateText("host_modal.mode"), modeName)}
-        ${this.renderConfigItem(
-          translateText("difficulty.difficulty"),
-          diffName,
-        )}
-        ${this.renderConfigItem(
-          translateText("host_modal.bots"),
-          c.bots.toString(),
-        )}
+        ${c.publicGameModifiers?.isRandomSpawn
+          ? this.renderConfigItem(
+              translateText("host_modal.random_spawn"),
+              translateText("common.enabled"),
+            )
+          : html``}
+        ${c.publicGameModifiers?.isCompact
+          ? this.renderConfigItem(
+              translateText("host_modal.compact_map"),
+              translateText("common.enabled"),
+            )
+          : html``}
+        ${c.publicGameModifiers?.startingGold
+          ? this.renderConfigItem(
+              translateText("host_modal.starting_gold"),
+              renderNumber(c.publicGameModifiers.startingGold),
+            )
+          : html``}
         ${c.gameMode !== "Free For All" && c.playerTeams
           ? this.renderConfigItem(
               typeof c.playerTeams === "string"
@@ -269,7 +271,6 @@ export class JoinPublicLobbyModal extends BaseModal {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         this.msUntilStart = data.msUntilStart ?? null;
         if (data.gameConfig) {
