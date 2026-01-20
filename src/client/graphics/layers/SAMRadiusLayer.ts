@@ -8,7 +8,7 @@ import type {
   PlayerView,
   UnitView,
 } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import { AlternateViewEvent, ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import { NukeRenderUtilLayer } from "./NukeRenderUtilLayer";
@@ -31,6 +31,7 @@ interface SamInfo {
  */
 export class SAMRadiusLayer implements Layer {
   private readonly theme: Theme;
+  private alternativeView: boolean = false;
   private readonly samLaunchers: Map<number, SamInfo> = new Map(); // Track SAM launcher IDs -> SAM info
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
@@ -68,6 +69,9 @@ export class SAMRadiusLayer implements Layer {
     this.eventBus.on(ToggleStructureEvent, (e) =>
       this.handleToggleStructure(e),
     );
+    this.eventBus.on(AlternateViewEvent, (e) => {
+      this.alternativeView = e.alternateView;
+    });
   }
 
   shouldTransform(): boolean {
@@ -290,7 +294,10 @@ export class SAMRadiusLayer implements Layer {
       ctx.beginPath();
       ctx.arc(a.x + offsetX, a.y + offsetY, a.r, s, e);
 
-      const nukeMode = this.nukeRenderUtilLayer.isNukeGhostActive();
+      // nuke mode shows transparent radii and other predictions
+      const nukeMode =
+        this.nukeRenderUtilLayer.isNukeGhostActive() && !this.alternativeView;
+
       // players who are targeted by nuke are stressed
       const stressed = this.nukeRenderUtilLayer
         .getAllianceStressedPlayers()
