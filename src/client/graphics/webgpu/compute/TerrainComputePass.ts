@@ -16,36 +16,28 @@ export class TerrainComputePass implements ComputePass {
   private device: GPUDevice | null = null;
   private resources: GroundTruthData | null = null;
   private needsCompute = true;
+  private shaderPath = "compute/terrain-compute.wgsl";
 
   async init(device: GPUDevice, resources: GroundTruthData): Promise<void> {
     this.device = device;
     this.resources = resources;
 
-    const shaderCode = await loadShader("compute/terrain-compute.wgsl");
-    const shaderModule = device.createShaderModule({ code: shaderCode });
+    this.ensureBindGroupLayout();
+    await this.setShader(this.shaderPath);
+    this.rebuildBindGroup();
+  }
 
-    this.bindGroupLayout = device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: 4 /* COMPUTE */,
-          buffer: { type: "uniform" },
-        },
-        {
-          binding: 1,
-          visibility: 4 /* COMPUTE */,
-          texture: { sampleType: "uint" },
-        },
-        {
-          binding: 2,
-          visibility: 4 /* COMPUTE */,
-          storageTexture: { format: "rgba8unorm" },
-        },
-      ],
-    });
+  async setShader(shaderPath: string): Promise<void> {
+    this.shaderPath = shaderPath;
+    if (!this.device || !this.bindGroupLayout) {
+      return;
+    }
 
-    this.pipeline = device.createComputePipeline({
-      layout: device.createPipelineLayout({
+    const shaderCode = await loadShader(shaderPath);
+    const shaderModule = this.device.createShaderModule({ code: shaderCode });
+
+    this.pipeline = this.device.createComputePipeline({
+      layout: this.device.createPipelineLayout({
         bindGroupLayouts: [this.bindGroupLayout],
       }),
       compute: {
@@ -54,7 +46,7 @@ export class TerrainComputePass implements ComputePass {
       },
     });
 
-    this.rebuildBindGroup();
+    this.needsCompute = true;
   }
 
   needsUpdate(): boolean {
@@ -106,6 +98,32 @@ export class TerrainComputePass implements ComputePass {
         {
           binding: 2,
           resource: this.resources.terrainTexture.createView(),
+        },
+      ],
+    });
+  }
+
+  private ensureBindGroupLayout(): void {
+    if (!this.device || this.bindGroupLayout) {
+      return;
+    }
+
+    this.bindGroupLayout = this.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: 4 /* COMPUTE */,
+          buffer: { type: "uniform" },
+        },
+        {
+          binding: 1,
+          visibility: 4 /* COMPUTE */,
+          texture: { sampleType: "uint" },
+        },
+        {
+          binding: 2,
+          visibility: 4 /* COMPUTE */,
+          storageTexture: { format: "rgba8unorm" },
         },
       ],
     });
