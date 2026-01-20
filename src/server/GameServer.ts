@@ -817,6 +817,10 @@ export class GameServer {
         clientID,
         reason,
       });
+
+      if (reason !== "duplicate_session") {
+        this.kickedClients.add(clientID);
+      }
     }
   }
 

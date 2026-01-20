@@ -322,7 +322,7 @@ export class PlayerPanel extends LitElement implements Layer {
     }
 
     const targetClientID = other.clientID();
-    if (!targetClientID) return;
+    if (!targetClientID || targetClientID.length === 0) return;
 
     const confirmed = confirm(
       translateText("player_panel.kick_confirm", { name: other.name() }),
@@ -454,7 +454,7 @@ export class PlayerPanel extends LitElement implements Layer {
       my.isLobbyCreator() &&
       other !== my &&
       other.type() === PlayerType.Human &&
-      other.clientID() !== null;
+      !!other.clientID();
 
     if (!canKick && !alreadyKicked) return html``;
 
