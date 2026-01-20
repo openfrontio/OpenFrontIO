@@ -144,12 +144,11 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const ffaMaps = [
+    const maps = [
       GameMapType.Iceland,
-      GameMapType.World,
-      GameMapType.EuropeClassic,
       GameMapType.Australia,
-      GameMapType.FaroeIslands,
+      GameMapType.Australia,
+      GameMapType.Australia,
       GameMapType.Pangaea,
       GameMapType.Italia,
       GameMapType.FalklandIslands,
@@ -158,7 +157,7 @@ export class MapPlaylist {
     return {
       donateGold: false,
       donateTroops: false,
-      gameMap: ffaMaps[Math.floor(Math.random() * ffaMaps.length)],
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
@@ -169,7 +168,7 @@ export class MapPlaylist {
       maxTimerValue: 10, // 10 minutes
       instantBuild: false,
       randomSpawn: false,
-      disableNations: false,
+      disableNations: true,
       gameMode: GameMode.FFA,
       bots: 100,
       spawnImmunityDuration: 5 * 10,
