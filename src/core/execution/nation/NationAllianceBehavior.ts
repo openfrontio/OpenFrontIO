@@ -240,13 +240,13 @@ export class NationAllianceBehavior {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return false; // 0% chance to reject on easy
+        return this.random.nextInt(0, 100) < 25; // 25% chance to reject on easy
       case Difficulty.Medium:
-        return this.random.nextInt(0, 100) < 20; // 20% chance to reject on medium
+        return this.random.nextInt(0, 100) < 50; // 50% chance to reject on medium
       case Difficulty.Hard:
-        return this.random.nextInt(0, 100) < 40; // 40% chance to reject on hard
+        return this.random.nextInt(0, 100) < 75; // 75% chance to reject on hard
       case Difficulty.Impossible:
-        return this.random.nextInt(0, 100) < 60; // 60% chance to reject on impossible
+        return true; // 100% chance to reject on impossible
       default:
         assertNever(difficulty);
     }
