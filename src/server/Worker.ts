@@ -12,7 +12,6 @@ import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
-  GameInfo,
   ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
@@ -257,83 +256,8 @@ export async function startWorker() {
     }
   });
 
-  const parseWsPath = (url: string | undefined) => {
-    const safeUrl = url ?? "/";
-    try {
-      const parsed = new URL(safeUrl, "http://localhost");
-      const match = parsed.pathname.match(/^\/w\d+(\/.*)?$/);
-      const path = match ? match[1] || "/" : parsed.pathname;
-      return { path, searchParams: parsed.searchParams };
-    } catch {
-      return { path: "/", searchParams: new URLSearchParams() };
-    }
-  };
-
-  const handleLobbySocket = (ws: WebSocket, lobbyId: GameID) => {
-    let interval: NodeJS.Timeout | null = null;
-
-    const sendUpdate = () => {
-      if (ws.readyState !== WebSocket.OPEN) return false;
-      const game = gm.game(lobbyId);
-      if (!game) {
-        ws.send(JSON.stringify({ type: "lobby_closed" }));
-        ws.close(1000, "Lobby not found");
-        return false;
-      }
-      const info = game.gameInfo();
-      const msUntilStart =
-        info.msUntilStart !== undefined
-          ? Math.max(0, info.msUntilStart - Date.now())
-          : undefined;
-      const lobbyInfo: GameInfo = { ...info, msUntilStart };
-      ws.send(JSON.stringify({ type: "lobby_update", data: lobbyInfo }));
-      return true;
-    };
-
-    if (!sendUpdate()) {
-      return;
-    }
-
-    interval = setInterval(() => {
-      if (!sendUpdate() && interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    }, 1000);
-
-    ws.on("close", () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    });
-
-    ws.on("error", () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    });
-  };
-
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
-    const { path, searchParams } = parseWsPath(req.url);
-    if (path === "/lobbies") {
-      const lobbyId = searchParams.get("gameID");
-      if (!lobbyId) {
-        ws.close(1008, "Missing gameID");
-        return;
-      }
-      const expectedWorkerId = config.workerIndex(lobbyId);
-      if (expectedWorkerId !== workerId) {
-        ws.close(1008, "Worker mismatch");
-        return;
-      }
-      handleLobbySocket(ws, lobbyId);
-      return;
-    }
-
     ws.on("message", async (message: string) => {
       const forwarded = req.headers["x-forwarded-for"];
       const ip = Array.isArray(forwarded)

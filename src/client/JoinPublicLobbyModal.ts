@@ -2,8 +2,8 @@ import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
-import { WorkerLobbySocket } from "./LobbySocket";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/LobbyPlayerView";
@@ -20,8 +20,8 @@ export class JoinPublicLobbyModal extends BaseModal {
 
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
-  private lobbySocket: WorkerLobbySocket | null = null;
   private countdownTimerId: number | null = null;
+  private lobbyPollInterval: number | null = null;
 
   render() {
     const secondsRemaining =
@@ -129,7 +129,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
-    this.startLobbySocket(lobbyId);
+    this.startLobbyPolling(lobbyId);
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
     }
@@ -149,9 +149,8 @@ export class JoinPublicLobbyModal extends BaseModal {
   }
 
   protected onClose(): void {
-    this.lobbySocket?.stop();
-    this.lobbySocket = null;
     this.clearCountdownTimer();
+    this.stopLobbyPolling();
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
@@ -312,23 +311,67 @@ export class JoinPublicLobbyModal extends BaseModal {
     }
   }
 
-  private startLobbySocket(lobbyId: string) {
-    if (this.lobbySocket) {
-      this.lobbySocket.stop();
-    }
-    this.lobbySocket = new WorkerLobbySocket(lobbyId, (lobby) => {
-      if (lobby) {
-        this.updateFromLobby(lobby);
-      } else {
-        this.handleLobbyClosed();
-      }
-    });
-    this.lobbySocket.start();
-  }
-
   private handleLobbyClosed() {
     this.leaveLobbyOnClose = true;
     this.close();
+  }
+
+  private startLobbyPolling(lobbyId: string) {
+    this.stopLobbyPolling();
+    void this.pollLobby(lobbyId);
+    this.lobbyPollInterval = window.setInterval(() => {
+      void this.pollLobby(lobbyId);
+    }, 1000);
+  }
+
+  private stopLobbyPolling() {
+    if (this.lobbyPollInterval === null) {
+      return;
+    }
+    clearInterval(this.lobbyPollInterval);
+    this.lobbyPollInterval = null;
+  }
+
+  private async pollLobby(lobbyId: string) {
+    if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
+      return;
+    }
+    try {
+      const config = await getServerConfigFromClient();
+      if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
+        return;
+      }
+      const response = await fetch(
+        `/${config.workerPath(lobbyId)}/api/game/${lobbyId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (response.status === 404) {
+        this.handleLobbyClosed();
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      const data = (await response.json()) as GameInfo;
+      if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
+        return;
+      }
+      const msUntilStart = data.msUntilStart;
+      this.updateFromLobby({
+        ...data,
+        msUntilStart:
+          msUntilStart !== undefined
+            ? Math.max(0, msUntilStart - Date.now())
+            : undefined,
+      });
+    } catch (error) {
+      console.error("Error polling public lobby:", error);
+    }
   }
 
   private syncCountdownTimer() {
