@@ -21,6 +21,7 @@ export class JoinPublicLobbyModal extends BaseModal {
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private lobbySocket: WorkerLobbySocket | null = null;
+  private countdownTimerId: number | null = null;
 
   render() {
     const secondsRemaining =
@@ -43,7 +44,7 @@ export class JoinPublicLobbyModal extends BaseModal {
       >
         ${modalHeader({
           title: translateText("public_lobby.title"),
-          onBack: this.closeAndLeave,
+          onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
         })}
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
@@ -150,6 +151,7 @@ export class JoinPublicLobbyModal extends BaseModal {
   protected onClose(): void {
     this.lobbySocket?.stop();
     this.lobbySocket = null;
+    this.clearCountdownTimer();
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
@@ -300,6 +302,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     } else {
       this.lobbyStartAt = null;
     }
+    this.syncCountdownTimer();
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
       this.gameConfig = lobby.gameConfig;
@@ -326,6 +329,27 @@ export class JoinPublicLobbyModal extends BaseModal {
   private handleLobbyClosed() {
     this.leaveLobbyOnClose = true;
     this.close();
+  }
+
+  private syncCountdownTimer() {
+    if (this.lobbyStartAt === null) {
+      this.clearCountdownTimer();
+      return;
+    }
+    if (this.countdownTimerId !== null) {
+      return;
+    }
+    this.countdownTimerId = window.setInterval(() => {
+      this.requestUpdate();
+    }, 1000);
+  }
+
+  private clearCountdownTimer() {
+    if (this.countdownTimerId === null) {
+      return;
+    }
+    clearInterval(this.countdownTimerId);
+    this.countdownTimerId = null;
   }
 
   private async loadNationCount() {
