@@ -1,9 +1,9 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { renderNumber, translateText } from "../client/Utils";
+import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
+import { WorkerLobbySocket } from "./LobbySocket";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/LobbyPlayerView";
@@ -15,13 +15,27 @@ export class JoinPublicLobbyModal extends BaseModal {
   @state() private gameConfig: GameConfig | null = null;
   @state() private currentLobbyId: string = "";
   @state() private nationCount: number = 0;
-  @state() private msUntilStart: number | null = null;
+  @state() private lobbyStartAt: number | null = null;
 
-  private playersInterval: NodeJS.Timeout | null = null;
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
+  private lobbySocket: WorkerLobbySocket | null = null;
 
   render() {
+    const secondsRemaining =
+      this.lobbyStartAt !== null
+        ? Math.max(0, Math.floor((this.lobbyStartAt - Date.now()) / 1000))
+        : null;
+    const statusLabel =
+      secondsRemaining === null
+        ? translateText("public_lobby.waiting_for_players")
+        : secondsRemaining > 0
+          ? translateText("public_lobby.starting_in", {
+              time: renderDuration(secondsRemaining),
+            })
+          : translateText("public_lobby.started");
+    const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
+    const playerCount = this.players.length;
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -50,12 +64,35 @@ export class JoinPublicLobbyModal extends BaseModal {
         </div>
 
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
-          <button
-            class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
-            disabled
+          <div
+            class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
           >
-            ${this.getStatusLabel()}
-          </button>
+            <div class="flex flex-col">
+              <span
+                class="text-[10px] font-bold uppercase tracking-widest text-white/40"
+                >${translateText("public_lobby.status")}</span
+              >
+              <span class="text-sm font-bold text-white">${statusLabel}</span>
+            </div>
+            ${maxPlayers > 0
+              ? html`
+                  <div
+                    class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
+                  >
+                    <span>${playerCount}/${maxPlayers}</span>
+                    <svg
+                      class="w-4 h-4 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                      ></path>
+                    </svg>
+                  </div>
+                `
+              : html``}
+          </div>
         </div>
       </div>
     `;
@@ -75,26 +112,24 @@ export class JoinPublicLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "") {
+  public open(lobbyId: string = "", lobbyInfo?: GameInfo) {
     super.open();
     if (lobbyId) {
-      this.startTrackingLobby(lobbyId);
+      this.startTrackingLobby(lobbyId, lobbyInfo);
     }
   }
 
-  private startTrackingLobby(lobbyId: string) {
+  private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
     this.leaveLobbyOnClose = false;
     this.gameConfig = null;
     this.players = [];
     this.nationCount = 0;
-    this.msUntilStart = null;
-
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
+    this.lobbyStartAt = null;
+    this.startLobbySocket(lobbyId);
+    if (lobbyInfo) {
+      this.updateFromLobby(lobbyInfo);
     }
-    this.pollPlayers();
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
   }
 
   private leaveLobby() {
@@ -111,10 +146,8 @@ export class JoinPublicLobbyModal extends BaseModal {
   }
 
   protected onClose(): void {
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
+    this.lobbySocket?.stop();
+    this.lobbySocket = null;
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
@@ -125,7 +158,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.players = [];
     this.currentLobbyId = "";
     this.nationCount = 0;
-    this.msUntilStart = null;
+    this.lobbyStartAt = null;
     this.leaveLobbyOnClose = true;
   }
 
@@ -251,40 +284,31 @@ export class JoinPublicLobbyModal extends BaseModal {
     `;
   }
 
-  private getStatusLabel(): string {
-    if (this.msUntilStart !== null && this.msUntilStart <= 2000) {
-      return translateText("public_lobby.starting_game");
+  private updateFromLobby(lobby: GameInfo) {
+    this.players = lobby.clients ?? [];
+    if (this.lobbyStartAt === null) {
+      const msUntilStart = lobby.msUntilStart ?? 0;
+      this.lobbyStartAt = msUntilStart + Date.now();
     }
-    return translateText("public_lobby.waiting_for_players");
+    if (lobby.gameConfig) {
+      const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
+      this.gameConfig = lobby.gameConfig;
+      if (mapChanged) {
+        this.loadNationCount();
+      }
+    }
   }
 
-  private async pollPlayers() {
-    const lobbyId = this.currentLobbyId;
-    if (!lobbyId) return;
-    const config = await getServerConfigFromClient();
-
-    fetch(`/${config.workerPath(lobbyId)}/api/game/${lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.players = data.clients ?? [];
-        this.msUntilStart = data.msUntilStart ?? null;
-        if (data.gameConfig) {
-          const mapChanged =
-            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
-          this.gameConfig = data.gameConfig;
-          if (mapChanged) {
-            this.loadNationCount();
-          }
-        }
-      })
-      .catch((error) => {
-        console.error("Error polling players:", error);
-      });
+  private startLobbySocket(lobbyId: string) {
+    if (this.lobbySocket) {
+      this.lobbySocket.stop();
+    }
+    this.lobbySocket = new WorkerLobbySocket(lobbyId, (lobby) => {
+      if (lobby) {
+        this.updateFromLobby(lobby);
+      }
+    });
+    this.lobbySocket.start();
   }
 
   private async loadNationCount() {
