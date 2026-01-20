@@ -658,7 +658,6 @@ class Client {
   }
 
   private handleUrl() {
-    console.debug("handleUrl", window.location.pathname);
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
