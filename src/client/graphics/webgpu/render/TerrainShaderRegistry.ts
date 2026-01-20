@@ -63,6 +63,15 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         max: 5,
         step: 0.25,
       },
+      {
+        kind: "range",
+        key: "settings.webgpu.terrain.improvedLite.waterBlurStrength",
+        label: "Water Blur Strength",
+        defaultValue: 1,
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
     ],
   },
   {
@@ -96,6 +105,33 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         min: 0.5,
         max: 6,
         step: 0.25,
+      },
+      {
+        kind: "range",
+        key: "settings.webgpu.terrain.improvedHeavy.waterDepthStrength",
+        label: "Water Depth Strength",
+        defaultValue: 0.35,
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        kind: "range",
+        key: "settings.webgpu.terrain.improvedHeavy.waterDepthCurve",
+        label: "Water Depth Curve",
+        defaultValue: 2,
+        min: 0.5,
+        max: 4,
+        step: 0.25,
+      },
+      {
+        kind: "range",
+        key: "settings.webgpu.terrain.improvedHeavy.waterDepthBlur",
+        label: "Water Depth Blur",
+        defaultValue: 0.6,
+        min: 0,
+        max: 1,
+        step: 0.05,
       },
       {
         kind: "range",
@@ -153,9 +189,9 @@ export function buildTerrainShaderParams(
   },
   shaderId: TerrainShaderId,
 ): { shaderPath: string; params0: Float32Array; params1: Float32Array } {
-  const shorelineMixLand = 0.6;
-  const shorelineMixWater = 0.7;
-  const specularStrength = 0.05;
+  const waterDepthStrengthDefault = 0.4;
+  const waterDepthCurveDefault = 2;
+  const waterDepthBlurDefault = 0.6;
 
   if (shaderId === "improved-lite") {
     const noiseStrength = userSettings.getFloat(
@@ -166,14 +202,17 @@ export function buildTerrainShaderParams(
       "settings.webgpu.terrain.improvedLite.blendWidth",
       5,
     );
-
+    const waterBlurStrength = userSettings.getFloat(
+      "settings.webgpu.terrain.improvedLite.waterBlurStrength",
+      1,
+    );
     const params0 = new Float32Array([
       noiseStrength,
       blendWidth,
-      shorelineMixLand,
-      shorelineMixWater,
+      waterBlurStrength,
+      0,
     ]);
-    const params1 = new Float32Array([0, 0, 0, specularStrength]);
+    const params1 = new Float32Array([0, 0, 0, 0]);
     return {
       shaderPath: "compute/terrain-compute-improved-lite.wgsl",
       params0,
@@ -194,6 +233,18 @@ export function buildTerrainShaderParams(
       "settings.webgpu.terrain.improvedHeavy.blendWidth",
       4.5,
     );
+    const waterDepthStrength = userSettings.getFloat(
+      "settings.webgpu.terrain.improvedHeavy.waterDepthStrength",
+      0.35,
+    );
+    const waterDepthCurve = userSettings.getFloat(
+      "settings.webgpu.terrain.improvedHeavy.waterDepthCurve",
+      2,
+    );
+    const waterDepthBlur = userSettings.getFloat(
+      "settings.webgpu.terrain.improvedHeavy.waterDepthBlur",
+      0.6,
+    );
     const lightingStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.lightingStrength",
       0.3,
@@ -206,14 +257,14 @@ export function buildTerrainShaderParams(
     const params0 = new Float32Array([
       noiseStrength,
       blendWidth,
-      shorelineMixLand,
-      shorelineMixWater,
+      waterDepthStrength,
+      waterDepthCurve,
     ]);
     const params1 = new Float32Array([
       detailNoiseStrength,
       lightingStrength,
       cavityStrength,
-      specularStrength,
+      waterDepthBlur,
     ]);
     return {
       shaderPath: "compute/terrain-compute-improved-heavy.wgsl",
@@ -225,9 +276,9 @@ export function buildTerrainShaderParams(
   const params0 = new Float32Array([
     0,
     2.5,
-    shorelineMixLand,
-    shorelineMixWater,
+    waterDepthStrengthDefault,
+    waterDepthCurveDefault,
   ]);
-  const params1 = new Float32Array([0, 0, 0, specularStrength]);
+  const params1 = new Float32Array([waterDepthBlurDefault, 0, 0, 0]);
   return { shaderPath: "compute/terrain-compute.wgsl", params0, params1 };
 }

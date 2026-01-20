@@ -5,8 +5,8 @@ struct TerrainParams {
   plainsBaseColor: vec4f,   // Plains base RGB (magnitude 0)
   highlandBaseColor: vec4f, // Highland base RGB (magnitude 10)
   mountainBaseColor: vec4f, // Mountain base RGB (magnitude 20)
-  tuning0: vec4f,           // x=noiseStrength, y=blendWidth, z=shoreMixLand, w=shoreMixWater
-  tuning1: vec4f,           // x=detailNoise, y=lightingStrength, z=cavityStrength, w=specularStrength
+  tuning0: vec4f,           // x=noiseStrength, y=blendWidth, z=waterDepthStrength, w=waterDepthCurve
+  tuning1: vec4f,           // x=detailNoise, y=lightingStrength, z=cavityStrength, w=waterDepthBlur
 };
 
 @group(0) @binding(0) var<uniform> params: TerrainParams;
@@ -34,10 +34,9 @@ fn clampCoord(coord: vec2i, dims: vec2u) -> vec2i {
   return vec2i(clamp(coord.x, 0, maxX), clamp(coord.y, 0, maxY));
 }
 
-fn sampleMagnitude(coord: vec2i, dims: vec2u) -> f32 {
+fn sampleTerrainData(coord: vec2i, dims: vec2u) -> u32 {
   let c = clampCoord(coord, dims);
-  let data = textureLoad(terrainDataTex, c, 0).x;
-  return f32(data & MAGNITUDE_MASK);
+  return textureLoad(terrainDataTex, c, 0).x;
 }
 
 fn computeLandColor(
@@ -69,14 +68,6 @@ fn computeLandColor(
   return clamp(land + vec3f(noiseBias), vec3f(0.0), vec3f(1.0));
 }
 
-fn computeWaterColor(mag: f32, noise: f32, noiseStrength: f32) -> vec3f {
-  let depth = clamp(mag / 10.0, 0.0, 1.0);
-  var water = mix(params.shorelineWaterColor.rgb, params.waterColor.rgb, depth);
-  let noiseBias = (noise - 0.5) * noiseStrength;
-  water = clamp(water + vec3f(noiseBias), vec3f(0.0), vec3f(1.0));
-  return water;
-}
-
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let x = i32(globalId.x);
@@ -99,18 +90,31 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let noiseFine = hash21(vec2u(texCoord) * 3u + vec2u(17u, 29u));
   let noiseStrength = max(params.tuning0.x, 0.0);
   let blendWidth = max(params.tuning0.y, 0.1);
-  let shoreMixLand = clamp(params.tuning0.z, 0.0, 1.0);
-  let shoreMixWater = clamp(params.tuning0.w, 0.0, 1.0);
+  let waterDepthStrength = clamp(params.tuning0.z, 0.0, 1.0);
+  let waterDepthCurve = max(params.tuning0.w, 0.1);
   let detailNoiseStrength = max(params.tuning1.x, 0.0);
   let lightingStrength = clamp(params.tuning1.y, 0.0, 1.0);
   let cavityStrength = clamp(params.tuning1.z, 0.0, 1.0);
-  let specularStrength = max(params.tuning1.w, 0.0);
+  let waterDepthBlur = clamp(params.tuning1.w, 0.0, 1.0);
+  let shoreMixLand = 0.6;
+  let shoreMixWater = 0.55;
+  let specularStrength = 0.05;
 
   let hC = mag / 31.0;
-  let hL = sampleMagnitude(texCoord + vec2i(-1, 0), dims) / 31.0;
-  let hR = sampleMagnitude(texCoord + vec2i(1, 0), dims) / 31.0;
-  let hD = sampleMagnitude(texCoord + vec2i(0, -1), dims) / 31.0;
-  let hU = sampleMagnitude(texCoord + vec2i(0, 1), dims) / 31.0;
+  let dataL = sampleTerrainData(texCoord + vec2i(-1, 0), dims);
+  let dataR = sampleTerrainData(texCoord + vec2i(1, 0), dims);
+  let dataD = sampleTerrainData(texCoord + vec2i(0, -1), dims);
+  let dataU = sampleTerrainData(texCoord + vec2i(0, 1), dims);
+
+  let magL = f32(dataL & MAGNITUDE_MASK);
+  let magR = f32(dataR & MAGNITUDE_MASK);
+  let magD = f32(dataD & MAGNITUDE_MASK);
+  let magU = f32(dataU & MAGNITUDE_MASK);
+
+  let hL = magL / 31.0;
+  let hR = magR / 31.0;
+  let hD = magD / 31.0;
+  let hU = magU / 31.0;
 
   let dx = hR - hL;
   let dy = hU - hD;
@@ -146,7 +150,37 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 
     color = vec4f(land, 1.0);
   } else {
-    var water = computeWaterColor(mag, noise, noiseStrength * 0.6);
+    var sum = mag;
+    var count = 1.0;
+    if ((dataL & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + magL;
+      count = count + 1.0;
+    }
+    if ((dataR & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + magR;
+      count = count + 1.0;
+    }
+    if ((dataD & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + magD;
+      count = count + 1.0;
+    }
+    if ((dataU & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + magU;
+      count = count + 1.0;
+    }
+
+    let avgMag = sum / count;
+    let smoothMag = mix(mag, avgMag, waterDepthBlur);
+    let depth01 = clamp(smoothMag / 10.0, 0.0, 1.0);
+    let depth = clamp(pow(depth01, waterDepthCurve), 0.0, 1.0);
+    let depthColor = mix(
+      params.shorelineWaterColor.rgb,
+      params.waterColor.rgb,
+      depth,
+    );
+    var water = mix(params.waterColor.rgb, depthColor, waterDepthStrength);
+    let noiseBias = (noise - 0.5) * (noiseStrength * 0.6);
+    water = clamp(water + vec3f(noiseBias), vec3f(0.0), vec3f(1.0));
 
     if (isShoreline) {
       water = mix(water, params.shorelineWaterColor.rgb, shoreMixWater);
