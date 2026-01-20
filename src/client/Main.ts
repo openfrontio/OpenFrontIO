@@ -1,7 +1,12 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
+import {
+  GAME_ID_REGEX,
+  GameInfo,
+  GameRecord,
+  GameStartInfo,
+} from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -200,6 +205,7 @@ export interface JoinLobbyEvent {
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
+  publicLobbyInfo?: GameInfo;
 }
 
 class Client {
@@ -757,7 +763,7 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinPublicModal?.open(lobby.gameID);
+      this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
     const config = await getServerConfigFromClient();
     this.updateJoinUrlForShare(lobby.gameID, config);
