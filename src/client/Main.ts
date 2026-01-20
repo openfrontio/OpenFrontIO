@@ -630,7 +630,7 @@ class Client {
 
       // Attempt to join lobby
       this.handleUrl();
-    }
+    };
 
     // Handle browser navigation & manual hash edits
     window.addEventListener("popstate", onPopState);
