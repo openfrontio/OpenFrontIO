@@ -16,6 +16,7 @@ const MAGNITUDE_MASK = 0x1f;
  * Water path smoother transformer with two passes:
  * 1. Binary search LOS smoothing (avoids shallow water)
  * 2. Local A* refinement on endpoints (first/last N tiles)
+ * 3. Binary search LOS smoothing again (farther from shore)
  */
 export class SmoothingWaterTransformer implements PathFinder<TileRef> {
   private readonly mapWidth: number;
