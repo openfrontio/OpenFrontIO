@@ -84,7 +84,6 @@ export class NukeRenderUtilLayer implements Layer {
 
     const player = this.game.myPlayer();
     if (!player) {
-      this.trajectoryPoints = [];
       this.lastTargetTile = null;
       this.spawnTile = null;
       return;
@@ -139,6 +138,7 @@ export class NukeRenderUtilLayer implements Layer {
     // Target is already found for this frame when this is called in renderLayer().
     // Safety check
     if (!this.spawnTile || !this.targetTile) {
+      this.clearCurrentTrajectory();
       return;
     }
     // Calculate trajectory using ParabolaUniversalPathFinder with cached spawn tile
@@ -248,13 +248,26 @@ export class NukeRenderUtilLayer implements Layer {
     return this.targetTile;
   }
 
+  // Resets variables relating to trajectory prediction
+  private clearCurrentTrajectory() {
+    // check trajectory already cleared
+    if (this.targetedIndex === -1) {
+      return;
+    }
+    this.trajectoryPoints = [];
+    this.interceptingPlayers.clear();
+    this.targetedIndex = -1;
+    this.untargetableSegmentBounds = [-1, -1];
+  }
+
   tick() {
     this.trajectoryPreviewTick();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.findTargetTile() === null || !this.spawnTile) {
-      this.trajectoryPoints = [];
+      this.allianceStressedPlayers.clear();
+      this.clearCurrentTrajectory();
       return;
     }
     const player = this.game.myPlayer();
