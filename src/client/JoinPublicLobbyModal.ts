@@ -199,7 +199,7 @@ export class JoinPublicLobbyModal extends BaseModal {
       "map." + c.gameMap.toLowerCase().replace(/ /g, ""),
     );
     const modeName =
-      c.gameMode === "Free For All"
+      c.gameMode === GameMode.FFA
         ? translateText("game_mode.ffa")
         : translateText("game_mode.teams");
     return html`
@@ -224,7 +224,7 @@ export class JoinPublicLobbyModal extends BaseModal {
               renderNumber(c.publicGameModifiers.startingGold),
             )
           : html``}
-        ${c.gameMode !== "Free For All" && c.playerTeams
+        ${c.gameMode !== GameMode.FFA && c.playerTeams
           ? this.renderConfigItem(
               typeof c.playerTeams === "string"
                 ? translateText("host_modal.team_type")
