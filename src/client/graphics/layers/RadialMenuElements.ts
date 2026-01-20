@@ -548,17 +548,7 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
-    const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
-      params.myPlayer,
-      params.tile,
-    );
-
-    params.playerActionHandler.handleBoatAttack(
-      params.myPlayer,
-      params.selected?.id() ?? null,
-      params.tile,
-      spawn !== false ? spawn : null,
-    );
+    params.playerActionHandler.handleBoatAttack(params.myPlayer, params.tile);
 
     params.closeMenu();
   },
