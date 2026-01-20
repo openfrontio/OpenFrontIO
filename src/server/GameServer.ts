@@ -31,6 +31,8 @@ export enum GamePhase {
   Finished = "FINISHED",
 }
 
+type KickClientReason = "duplicate_session" | "lobby_creator";
+
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
@@ -217,7 +219,7 @@ export class GameServer {
         });
         // Kick the existing client instead of the new one, because this was causing issues when
         // a client wanted to replay the game afterwards.
-        this.kickClient(conflicting.clientID);
+        this.kickClient(conflicting.clientID, "duplicate_session");
       }
     }
 
@@ -354,7 +356,7 @@ export class GameServer {
                   kickMethod: "websocket",
                 });
 
-                this.kickClient(clientMsg.intent.target);
+                this.kickClient(clientMsg.intent.target, "lobby_creator");
                 return;
               }
               case "update_game_config": {
@@ -772,26 +774,40 @@ export class GameServer {
     return this.gameConfig.gameType === GameType.Public;
   }
 
-  public kickClient(clientID: ClientID): void {
+  public kickClient(
+    clientID: ClientID,
+    reason: KickClientReason = "duplicate_session",
+  ): void {
     if (this.kickedClients.has(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
+        reason,
       });
       return;
     }
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
+      const errorMessage =
+        reason === "lobby_creator"
+          ? "Kicked by lobby creator"
+          : "Kicked from game (you may have been playing on another tab)";
+      const closeReason =
+        reason === "lobby_creator"
+          ? "Kicked by lobby creator"
+          : "Kicked from game";
+
       this.log.info("Kicking client from game", {
         clientID: client.clientID,
         persistentID: client.persistentID,
+        reason,
       });
       client.ws.send(
         JSON.stringify({
           type: "error",
-          error: "Kicked from game (you may have been playing on another tab)",
+          error: errorMessage,
         } satisfies ServerErrorMessage),
       );
-      client.ws.close(1000, "Kicked from game");
+      client.ws.close(1000, closeReason);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
@@ -799,6 +815,7 @@ export class GameServer {
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
+        reason,
       });
     }
   }
