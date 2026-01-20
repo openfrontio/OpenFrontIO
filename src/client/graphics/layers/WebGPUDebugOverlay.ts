@@ -339,7 +339,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
           </div>
         </div>
 
-        <div class="sectionTitle">Shaders</div>
+        <div class="sectionTitle">Terrain</div>
 
         <div class="row">
           <div class="label">Terrain Shader</div>
