@@ -20,7 +20,8 @@
     "target_dead_note": "You can't send resources to an eliminated player.",
     "none": "None",
     "copied": "Copied!",
-    "click_to_copy": "Click to copy"
+    "click_to_copy": "Click to copy",
+    "enabled": "Enabled"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
