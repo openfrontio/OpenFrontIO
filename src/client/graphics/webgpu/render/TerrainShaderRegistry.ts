@@ -49,7 +49,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedLite.noiseStrength",
         label: "Noise Strength",
-        defaultValue: 0.025,
+        defaultValue: 0.005,
         min: 0,
         max: 0.08,
         step: 0.005,
@@ -58,7 +58,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedLite.blendWidth",
         label: "Biome Blend Width",
-        defaultValue: 2.5,
+        defaultValue: 5,
         min: 0.5,
         max: 5,
         step: 0.25,
@@ -74,7 +74,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedHeavy.noiseStrength",
         label: "Noise Strength",
-        defaultValue: 0.025,
+        defaultValue: 0.01,
         min: 0,
         max: 0.1,
         step: 0.005,
@@ -83,7 +83,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedHeavy.detailNoiseStrength",
         label: "Detail Noise Strength",
-        defaultValue: 0.015,
+        defaultValue: 0.01,
         min: 0,
         max: 0.08,
         step: 0.005,
@@ -92,7 +92,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedHeavy.blendWidth",
         label: "Biome Blend Width",
-        defaultValue: 2.8,
+        defaultValue: 4.5,
         min: 0.5,
         max: 6,
         step: 0.25,
@@ -101,7 +101,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedHeavy.lightingStrength",
         label: "Lighting Strength",
-        defaultValue: 0.9,
+        defaultValue: 0.3,
         min: 0,
         max: 1,
         step: 0.05,
@@ -110,7 +110,7 @@ export const TERRAIN_SHADERS: TerrainShaderDefinition[] = [
         kind: "range",
         key: "settings.webgpu.terrain.improvedHeavy.cavityStrength",
         label: "Cavity Strength",
-        defaultValue: 0.6,
+        defaultValue: 0.15,
         min: 0,
         max: 1,
         step: 0.05,
@@ -160,11 +160,11 @@ export function buildTerrainShaderParams(
   if (shaderId === "improved-lite") {
     const noiseStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedLite.noiseStrength",
-      0.025,
+      0.005,
     );
     const blendWidth = userSettings.getFloat(
       "settings.webgpu.terrain.improvedLite.blendWidth",
-      2.5,
+      5,
     );
 
     const params0 = new Float32Array([
@@ -184,23 +184,23 @@ export function buildTerrainShaderParams(
   if (shaderId === "improved-heavy") {
     const noiseStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.noiseStrength",
-      0.025,
+      0.01,
     );
     const detailNoiseStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.detailNoiseStrength",
-      0.015,
+      0.01,
     );
     const blendWidth = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.blendWidth",
-      2.8,
+      4.5,
     );
     const lightingStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.lightingStrength",
-      0.9,
+      0.3,
     );
     const cavityStrength = userSettings.getFloat(
       "settings.webgpu.terrain.improvedHeavy.cavityStrength",
-      0.6,
+      0.15,
     );
 
     const params0 = new Float32Array([
