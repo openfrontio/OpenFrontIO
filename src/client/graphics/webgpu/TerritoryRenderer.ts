@@ -33,6 +33,9 @@ export class TerritoryRenderer {
   private territoryShaderPath = "render/territory.wgsl";
   private territoryShaderParams0 = new Float32Array(4);
   private territoryShaderParams1 = new Float32Array(4);
+  private terrainShaderPath = "compute/terrain-compute.wgsl";
+  private terrainShaderParams0 = new Float32Array(4);
+  private terrainShaderParams1 = new Float32Array(4);
   private preSmoothingShaderPath = "compute/visual-state-smoothing.wgsl";
   private preSmoothingParams0 = new Float32Array(4);
   private postSmoothingShaderPath = "render/temporal-resolve.wgsl";
@@ -117,6 +120,10 @@ export class TerritoryRenderer {
       this.territoryShaderParams0,
       this.territoryShaderParams1,
     );
+    this.resources.setTerrainShaderParams(
+      this.terrainShaderParams0,
+      this.terrainShaderParams1,
+    );
 
     // Upload terrain data and params (terrain colors will be computed on GPU)
     this.resources.uploadTerrainData();
@@ -124,6 +131,7 @@ export class TerritoryRenderer {
 
     // Create compute passes (terrain compute should run first)
     this.terrainComputePass = new TerrainComputePass();
+    void this.terrainComputePass.setShader(this.terrainShaderPath);
     this.stateUpdatePass = new StateUpdatePass();
     this.defendedStrengthFullPass = new DefendedStrengthFullPass();
     this.defendedStrengthPass = new DefendedStrengthPass();
@@ -278,6 +286,16 @@ export class TerritoryRenderer {
     this.resources?.invalidateHistory();
   }
 
+  setTerrainShader(shaderPath: string): void {
+    this.terrainShaderPath = shaderPath;
+    if (!this.terrainComputePass) {
+      return;
+    }
+    void this.terrainComputePass.setShader(shaderPath).then(() => {
+      this.refreshTerrain();
+    });
+  }
+
   setTerritoryShaderParams(
     params0: Float32Array | number[],
     params1: Float32Array | number[],
@@ -295,6 +313,25 @@ export class TerritoryRenderer {
       this.territoryShaderParams1,
     );
     this.resources.invalidateHistory();
+  }
+
+  setTerrainShaderParams(
+    params0: Float32Array | number[],
+    params1: Float32Array | number[],
+  ): void {
+    for (let i = 0; i < 4; i++) {
+      this.terrainShaderParams0[i] = Number(params0[i] ?? 0);
+      this.terrainShaderParams1[i] = Number(params1[i] ?? 0);
+    }
+
+    if (!this.resources) {
+      return;
+    }
+    this.resources.setTerrainShaderParams(
+      this.terrainShaderParams0,
+      this.terrainShaderParams1,
+    );
+    this.refreshTerrain();
   }
 
   setPreSmoothing(

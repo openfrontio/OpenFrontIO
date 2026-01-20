@@ -12,6 +12,10 @@ import {
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import {
+  buildTerrainShaderParams,
+  readTerrainShaderId,
+} from "../webgpu/render/TerrainShaderRegistry";
+import {
   buildTerritoryPostSmoothingParams,
   readTerritoryPostSmoothingId,
 } from "../webgpu/render/TerritoryPostSmoothingRegistry";
@@ -43,6 +47,7 @@ export class TerritoryLayer implements Layer {
 
   private lastPaletteSignature: string | null = null;
   private lastDefensePostsSignature: string | null = null;
+  private lastTerrainShaderSignature: string | null = null;
   private lastTerritoryShaderSignature: string | null = null;
   private lastPreSmoothingSignature: string | null = null;
   private lastPostSmoothingSignature: string | null = null;
@@ -87,6 +92,7 @@ export class TerritoryLayer implements Layer {
 
     this.refreshPaletteIfNeeded();
     this.refreshDefensePostsIfNeeded();
+    this.applyTerrainShaderSettings();
     this.applyTerritoryShaderSettings();
     this.applyTerritorySmoothingSettings();
 
@@ -124,6 +130,7 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer = renderer;
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.setHighlightedOwnerId(this.hoveredOwnerSmallId);
+    this.applyTerrainShaderSettings(true);
     this.applyTerritoryShaderSettings(true);
     this.applyTerritorySmoothingSettings(true);
     this.territoryRenderer.markAllDirty();
@@ -333,6 +340,25 @@ export class TerritoryLayer implements Layer {
 
     this.territoryRenderer.setTerritoryShader(shaderPath);
     this.territoryRenderer.setTerritoryShaderParams(params0, params1);
+  }
+
+  private applyTerrainShaderSettings(force: boolean = false) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+
+    const terrainId = readTerrainShaderId(this.userSettings);
+    const { shaderPath, params0, params1 } = buildTerrainShaderParams(
+      this.userSettings,
+      terrainId,
+    );
+    const signature = `${shaderPath}:${Array.from(params0).join(",")}:${Array.from(params1).join(",")}`;
+    if (!force && signature === this.lastTerrainShaderSignature) {
+      return;
+    }
+    this.lastTerrainShaderSignature = signature;
+    this.territoryRenderer.setTerrainShader(shaderPath);
+    this.territoryRenderer.setTerrainShaderParams(params0, params1);
   }
 
   private applyTerritorySmoothingSettings(force: boolean = false) {

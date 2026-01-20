@@ -5,6 +5,13 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { WebGPUComputeMetricsEvent } from "../../InputHandler";
 import {
+  TERRAIN_SHADER_KEY,
+  TERRAIN_SHADERS,
+  terrainShaderIdFromInt,
+  terrainShaderIntFromId,
+  TerrainShaderOption,
+} from "../webgpu/render/TerrainShaderRegistry";
+import {
   TERRITORY_POST_SMOOTHING,
   TERRITORY_POST_SMOOTHING_KEY,
   territoryPostSmoothingIdFromInt,
@@ -21,8 +28,11 @@ import {
   TERRITORY_SHADERS,
   territoryShaderIdFromInt,
   territoryShaderIntFromId,
+  TerritoryShaderOption,
 } from "../webgpu/render/TerritoryShaderRegistry";
 import { Layer } from "./Layer";
+
+type ShaderOption = TerrainShaderOption | TerritoryShaderOption;
 
 @customElement("webgpu-debug-overlay")
 export class WebGPUDebugOverlay extends LitElement implements Layer {
@@ -186,6 +196,18 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private selectedTerrainShaderId() {
+    const selected = this.userSettings.getInt(TERRAIN_SHADER_KEY, 0);
+    return terrainShaderIdFromInt(selected);
+  }
+
+  private setSelectedTerrainShaderId(
+    id: "classic" | "improved-lite" | "improved-heavy",
+  ) {
+    this.userSettings.setInt(TERRAIN_SHADER_KEY, terrainShaderIntFromId(id));
+    this.requestUpdate();
+  }
+
   private selectedPreSmoothingId() {
     const selected = this.userSettings.getInt(TERRITORY_PRE_SMOOTHING_KEY, 0);
     return territoryPreSmoothingIdFromInt(selected);
@@ -212,9 +234,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private renderOptionControl(
-    option: (typeof TERRITORY_SHADERS)[number]["options"][number],
-  ) {
+  private renderOptionControl(option: ShaderOption) {
     if (option.kind === "boolean") {
       const enabled = this.userSettings.get(option.key, option.defaultValue);
       return html`
@@ -289,6 +309,10 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     const shaderId = this.selectedShaderId();
     const shader =
       TERRITORY_SHADERS.find((s) => s.id === shaderId) ?? TERRITORY_SHADERS[0];
+    const terrainShaderId = this.selectedTerrainShaderId();
+    const terrainShader =
+      TERRAIN_SHADERS.find((s) => s.id === terrainShaderId) ??
+      TERRAIN_SHADERS[0];
     const preId = this.selectedPreSmoothingId();
     const pre =
       TERRITORY_PRE_SMOOTHING.find((s) => s.id === preId) ??
@@ -314,6 +338,31 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
             <div class="value">${this.renderFps}</div>
           </div>
         </div>
+
+        <div class="sectionTitle">Shaders</div>
+
+        <div class="row">
+          <div class="label">Terrain Shader</div>
+          <select
+            .value=${live(String(terrainShaderIntFromId(terrainShaderId)))}
+            @change=${(e: Event) => {
+              const raw = (e.target as HTMLSelectElement).value;
+              const next = terrainShaderIdFromInt(Number.parseInt(raw, 10));
+              this.setSelectedTerrainShaderId(next);
+            }}
+          >
+            ${TERRAIN_SHADERS.map(
+              (s) =>
+                html`<option value=${String(terrainShaderIntFromId(s.id))}>
+                  ${s.label}
+                </option>`,
+            )}
+          </select>
+        </div>
+
+        ${terrainShader.options.map((opt) => this.renderOptionControl(opt))}
+
+        <div class="sectionTitle">Territory</div>
 
         <div class="row">
           <div class="label">Territory Shader</div>

@@ -86,7 +86,7 @@ export class GroundTruthData {
   // Uniform data arrays
   private readonly uniformData = new Float32Array(20);
   private readonly temporalData = new Float32Array(8);
-  private readonly terrainParamsData = new Float32Array(24); // 6 vec4f: shore, water, shorelineWater, plainsBase, highlandBase, mountainBase
+  private readonly terrainParamsData = new Float32Array(32); // 8 vec4f: base colors + tuning
   private readonly stateUpdateParamsData = new Uint32Array(4); // updateCount, range, pad, pad
   private readonly defendedStrengthParamsData = new Uint32Array(4); // dirtyCount, range, pad, pad
 
@@ -101,6 +101,8 @@ export class GroundTruthData {
 
   private territoryShaderParams0 = new Float32Array(4);
   private territoryShaderParams1 = new Float32Array(4);
+  private terrainShaderParams0 = new Float32Array([0.0, 2.5, 0.6, 0.7]);
+  private terrainShaderParams1 = new Float32Array([0.0, 0.9, 0.6, 0.05]);
 
   private paletteMaxSmallId = 0;
   private ownerIndexWidth = 1;
@@ -153,9 +155,9 @@ export class GroundTruthData {
       usage: UNIFORM | COPY_DST_BUF,
     });
 
-    // Terrain params: 6x vec4f = 96 bytes (shore, water, shorelineWater, plainsBase, highlandBase, mountainBase)
+    // Terrain params: 8x vec4f = 128 bytes (base colors + tuning)
     this.terrainParamsBuffer = device.createBuffer({
-      size: 96,
+      size: 128,
       usage: UNIFORM | COPY_DST_BUF,
     });
 
@@ -290,6 +292,17 @@ export class GroundTruthData {
       this.territoryShaderParams0[i] = Number(params0[i] ?? 0);
       this.territoryShaderParams1[i] = Number(params1[i] ?? 0);
     }
+  }
+
+  setTerrainShaderParams(
+    params0: Float32Array | number[],
+    params1: Float32Array | number[],
+  ): void {
+    for (let i = 0; i < 4; i++) {
+      this.terrainShaderParams0[i] = Number(params0[i] ?? 0);
+      this.terrainShaderParams1[i] = Number(params1[i] ?? 0);
+    }
+    this.needsTerrainParamsUpload = true;
   }
 
   setUseVisualStateTexture(enabled: boolean): void {
@@ -673,6 +686,16 @@ export class GroundTruthData {
     this.terrainParamsData[21] = mountainColor.g / 255;
     this.terrainParamsData[22] = mountainColor.b / 255;
     this.terrainParamsData[23] = 1.0;
+
+    // Index 24-31: tuning params (shader-dependent)
+    this.terrainParamsData[24] = this.terrainShaderParams0[0];
+    this.terrainParamsData[25] = this.terrainShaderParams0[1];
+    this.terrainParamsData[26] = this.terrainShaderParams0[2];
+    this.terrainParamsData[27] = this.terrainShaderParams0[3];
+    this.terrainParamsData[28] = this.terrainShaderParams1[0];
+    this.terrainParamsData[29] = this.terrainShaderParams1[1];
+    this.terrainParamsData[30] = this.terrainShaderParams1[2];
+    this.terrainParamsData[31] = this.terrainShaderParams1[3];
 
     this.device.queue.writeBuffer(
       this.terrainParamsBuffer,

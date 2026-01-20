@@ -5,6 +5,8 @@ struct TerrainParams {
   plainsBaseColor: vec4f,   // Plains base RGB (magnitude 0)
   highlandBaseColor: vec4f, // Highland base RGB (magnitude 10)
   mountainBaseColor: vec4f, // Mountain base RGB (magnitude 20)
+  tuning0: vec4f,           // Shader tuning params (unused in classic)
+  tuning1: vec4f,           // Shader tuning params (unused in classic)
 };
 
 @group(0) @binding(0) var<uniform> params: TerrainParams;
