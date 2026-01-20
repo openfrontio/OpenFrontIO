@@ -416,6 +416,7 @@ export class PublicLobby extends LitElement {
           detail: {
             gameID: lobby.gameID,
             clientID: generateID(),
+            source: "public",
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
