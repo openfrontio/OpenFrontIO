@@ -23,6 +23,7 @@ import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
+import { JoinPublicLobbyModal } from "./JoinPublicLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -216,6 +217,7 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
 }
 
 class Client {
@@ -229,6 +231,7 @@ class Client {
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinPrivateLobbyModal;
+  private joinPublicModal: JoinPublicLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
@@ -524,6 +527,15 @@ class Client {
     if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
       console.warn("Join private lobby modal element not found");
     }
+    this.joinPublicModal = document.querySelector(
+      "join-public-lobby-modal",
+    ) as JoinPublicLobbyModal;
+    if (
+      !this.joinPublicModal ||
+      !(this.joinPublicModal instanceof JoinPublicLobbyModal)
+    ) {
+      console.warn("Join public lobby modal element not found");
+    }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
@@ -561,6 +573,10 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal?.close();
+      this.joinPublicModal?.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
+      }
 
       onJoinChanged();
     };
@@ -758,6 +774,9 @@ class Client {
       this.gameStop(true);
       document.body.classList.remove("in-game");
     }
+    if (lobby.source === "public") {
+      this.joinPublicModal?.open(lobby.gameID);
+    }
     const config = await getServerConfigFromClient();
     this.updateJoinUrlForShare(lobby.gameID, config);
 
@@ -800,6 +819,7 @@ class Client {
           "single-player-modal",
           "host-lobby-modal",
           "join-private-lobby-modal",
+          "join-public-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
@@ -842,6 +862,7 @@ class Client {
       },
       () => {
         this.joinModal.close();
+        this.joinPublicModal?.close();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
