@@ -204,6 +204,7 @@ export class LangSelector extends LitElement {
       "single-player-modal",
       "host-lobby-modal",
       "join-private-lobby-modal",
+      "join-public-lobby-modal",
       "emoji-table",
       "leader-board",
       "build-menu",
