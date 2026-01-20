@@ -328,12 +328,14 @@
     "teams_Trios": "{team_count} teams of 3 (Trios)",
     "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
+    "starting_in": "Starting in {time}",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "started": "Started"
+    "started": "Started",
+    "status": "Status"
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",
