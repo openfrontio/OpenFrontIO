@@ -101,8 +101,8 @@ export class GroundTruthData {
 
   private territoryShaderParams0 = new Float32Array(4);
   private territoryShaderParams1 = new Float32Array(4);
-  private terrainShaderParams0 = new Float32Array([0.0, 2.5, 0.6, 0.7]);
-  private terrainShaderParams1 = new Float32Array([0.0, 0.9, 0.6, 0.05]);
+  private terrainShaderParams0 = new Float32Array([0.0, 2.5, 1.0, 0.0]);
+  private terrainShaderParams1 = new Float32Array([0.6, 0.0, 0.0, 0.0]);
 
   private paletteMaxSmallId = 0;
   private ownerIndexWidth = 1;

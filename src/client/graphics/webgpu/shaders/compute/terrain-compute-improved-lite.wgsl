@@ -5,8 +5,7 @@ struct TerrainParams {
   plainsBaseColor: vec4f,   // Plains base RGB (magnitude 0)
   highlandBaseColor: vec4f, // Highland base RGB (magnitude 10)
   mountainBaseColor: vec4f, // Mountain base RGB (magnitude 20)
-  tuning0: vec4f,           // x=noiseStrength, y=blendWidth, z=shoreMixLand, w=shoreMixWater
-  tuning1: vec4f,           // unused in lite
+  tuning0: vec4f,           // x=noiseStrength, y=blendWidth, z=waterBlurStrength, w=unused
 };
 
 @group(0) @binding(0) var<uniform> params: TerrainParams;
@@ -26,6 +25,12 @@ fn hash21(p: vec2u) -> f32 {
   n *= 0xc2b2ae35u;
   n ^= n >> 16u;
   return f32(n & 0x00ffffffu) / 16777215.0;
+}
+
+fn clampCoord(coord: vec2i, dims: vec2u) -> vec2i {
+  let maxX = i32(dims.x) - 1;
+  let maxY = i32(dims.y) - 1;
+  return vec2i(clamp(coord.x, 0, maxX), clamp(coord.y, 0, maxY));
 }
 
 fn computeLandColor(mag: f32, noise: f32, noiseStrength: f32, blendWidth: f32) -> vec3f {
@@ -52,14 +57,6 @@ fn computeLandColor(mag: f32, noise: f32, noiseStrength: f32, blendWidth: f32) -
   return clamp(land + vec3f(noiseBias), vec3f(0.0), vec3f(1.0));
 }
 
-fn computeWaterColor(mag: f32, noise: f32, noiseStrength: f32) -> vec3f {
-  let depth = clamp(mag / 10.0, 0.0, 1.0);
-  var water = mix(params.shorelineWaterColor.rgb, params.waterColor.rgb, depth);
-  let noiseBias = (noise - 0.5) * noiseStrength;
-  water = clamp(water + vec3f(noiseBias), vec3f(0.0), vec3f(1.0));
-  return water;
-}
-
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let x = i32(globalId.x);
@@ -81,8 +78,8 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let noise = hash21(vec2u(texCoord));
   let noiseStrength = max(params.tuning0.x, 0.0);
   let blendWidth = max(params.tuning0.y, 0.1);
-  let shoreMixLand = clamp(params.tuning0.z, 0.0, 1.0);
-  let shoreMixWater = clamp(params.tuning0.w, 0.0, 1.0);
+  let waterDepthBlur = clamp(params.tuning0.z, 0.0, 1.0);
+  let shoreMixLand = 0.6;
   var color: vec4f;
 
   if (isLand) {
@@ -92,10 +89,44 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     }
     color = vec4f(land, 1.0);
   } else {
-    var water = computeWaterColor(mag, noise, noiseStrength * 0.6);
     if (isShoreline) {
-      water = mix(water, params.shorelineWaterColor.rgb, shoreMixWater);
+      color = vec4f(params.shorelineWaterColor.rgb, 1.0);
+      textureStore(terrainTex, texCoord, color);
+      return;
     }
+
+    var sum = mag;
+    var count = 1.0;
+    let dataL = textureLoad(terrainDataTex, clampCoord(texCoord + vec2i(-1, 0), dims), 0).x;
+    if ((dataL & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + f32(dataL & MAGNITUDE_MASK);
+      count = count + 1.0;
+    }
+    let dataR = textureLoad(terrainDataTex, clampCoord(texCoord + vec2i(1, 0), dims), 0).x;
+    if ((dataR & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + f32(dataR & MAGNITUDE_MASK);
+      count = count + 1.0;
+    }
+    let dataD = textureLoad(terrainDataTex, clampCoord(texCoord + vec2i(0, -1), dims), 0).x;
+    if ((dataD & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + f32(dataD & MAGNITUDE_MASK);
+      count = count + 1.0;
+    }
+    let dataU = textureLoad(terrainDataTex, clampCoord(texCoord + vec2i(0, 1), dims), 0).x;
+    if ((dataU & (1u << IS_LAND_BIT)) == 0u) {
+      sum = sum + f32(dataU & MAGNITUDE_MASK);
+      count = count + 1.0;
+    }
+
+    let avgMag = sum / count;
+    let smoothMag = mix(mag, avgMag, waterDepthBlur);
+    let magClamped = min(smoothMag, 10.0);
+    let adjustment = (1.0 - magClamped) / 255.0;
+    let water = vec3f(
+      max(params.waterColor.r + adjustment, 0.0),
+      max(params.waterColor.g + adjustment, 0.0),
+      max(params.waterColor.b + adjustment, 0.0),
+    );
     color = vec4f(water, 1.0);
   }
 
