@@ -13,7 +13,7 @@ export class PlayPage extends LitElement {
         id="page-play"
         class="flex flex-col gap-2 w-full max-w-6xl mx-auto px-0 sm:px-4 transition-all duration-300 my-auto min-h-0"
       >
-        <token-login class="w-full hidden"></token-login>
+        <token-login class="absolute"></token-login>
 
         <!-- Header / Identity Section -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">

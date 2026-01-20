@@ -111,7 +111,7 @@ export class BotExecution implements Execution {
     }
 
     if (this.neighborsTerraNullius) {
-      if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
+      if (this.bot.neighbors().some((n) => !n.isPlayer())) {
         this.attackBehavior.sendAttack(this.mg.terraNullius());
         return;
       }

@@ -208,8 +208,10 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: (() => void) | null = null;
+  private gameStop: ((force?: boolean) => boolean) | null = null;
   private eventBus: EventBus = new EventBus();
+
+  private currentUrl: string | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -277,7 +279,7 @@ class Client {
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
-        this.gameStop();
+        this.gameStop(true);
         await crazyGamesSDK.gameplayStop();
       }
     });
@@ -583,15 +585,7 @@ class Client {
     // Attempt to join lobby
     this.handleUrl();
 
-    let preventHashUpdate = false;
-
     const onHashUpdate = () => {
-      // Prevent double-handling when both popstate and hashchange fire
-      if (preventHashUpdate) {
-        preventHashUpdate = false;
-        return;
-      }
-
       // Reset the UI to its initial state
       this.joinModal?.close();
       if (this.gameStop !== null) {
@@ -602,11 +596,39 @@ class Client {
       this.handleUrl();
     };
 
+    const onPopState = () => {
+      if (this.currentUrl !== null && this.gameStop !== null) {
+        console.info("Game is active");
+
+        if (!this.gameStop()) {
+          console.info("Player is active, ask before leaving game");
+
+          const isConfirmed = confirm(
+            translateText("help_modal.exit_confirmation"),
+          );
+
+          if (!isConfirmed) {
+            // Rollback navigator history
+            history.pushState(null, "", this.currentUrl);
+            return;
+          }
+        }
+
+        console.info("Player is not active, leave the game immediately");
+
+        crazyGamesSDK.gameplayStop().then(() => {
+          // redirect to the home page
+          window.location.href = "/";
+        });
+      } else {
+        console.info("Game not active, handle hash update");
+
+        onHashUpdate();
+      }
+    };
+
     // Handle browser navigation & manual hash edits
-    window.addEventListener("popstate", () => {
-      preventHashUpdate = true;
-      onHashUpdate();
-    });
+    window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onHashUpdate);
 
@@ -687,7 +709,7 @@ class Client {
           // in case it is unset during reload.
           this.userSettings.setSelectedPatternName(patternName);
         });
-        this.tokenLoginModal.open(token);
+        this.tokenLoginModal.openWithToken(token);
       } else {
         alertAndStrip(`purchase succeeded: ${patternName}`);
         this.patternsModal.refresh();
@@ -706,7 +728,7 @@ class Client {
       }
 
       strip();
-      this.tokenLoginModal.open(token);
+      this.tokenLoginModal.openWithToken(token);
       return;
     }
 
@@ -738,7 +760,7 @@ class Client {
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
-      this.gameStop();
+      this.gameStop(true);
       document.body.classList.remove("in-game");
     }
     const config = await getServerConfigFromClient();
@@ -844,6 +866,9 @@ class Client {
           "",
           `/${config.workerPath(lobby.gameID)}/game/${lobby.gameID}?live`,
         );
+
+        // Store current URL for popstate confirmation
+        this.currentUrl = window.location.href;
       },
     );
   }
@@ -865,8 +890,15 @@ class Client {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.gameStop();
+    this.gameStop(true);
     this.gameStop = null;
+    this.currentUrl = null;
+
+    try {
+      history.replaceState(null, "", "/");
+    } catch (e) {
+      console.warn("Failed to restore URL on leave:", e);
+    }
 
     document.body.classList.remove("in-game");
 

@@ -63,6 +63,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Surrounded: 4,
   DidierFrance: 1,
   AmazonRiver: 3,
+  Sierpinski: 10,
 };
 
 interface MapWithMode {
@@ -94,7 +95,9 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    let { isCompact, isRandomSpawn } = this.getRandomPublicGameModifiers();
+    const modifiers = this.getRandomPublicGameModifiers();
+    const { startingGold } = modifiers;
+    let { isCompact, isRandomSpawn } = modifiers;
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
@@ -122,11 +125,10 @@ export class MapPlaylist {
       maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
-      publicGameModifiers: { isCompact, isRandomSpawn },
+      publicGameModifiers: { isCompact, isRandomSpawn, startingGold },
+      startingGold,
       difficulty:
-        playerTeams === HumansVsNations
-          ? Difficulty.Impossible
-          : Difficulty.Easy,
+        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -142,12 +144,11 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const ffaMaps = [
+    const maps = [
       GameMapType.Iceland,
-      GameMapType.World,
-      GameMapType.EuropeClassic,
       GameMapType.Australia,
-      GameMapType.FaroeIslands,
+      GameMapType.Australia,
+      GameMapType.Australia,
       GameMapType.Pangaea,
       GameMapType.Italia,
       GameMapType.FalklandIslands,
@@ -156,7 +157,7 @@ export class MapPlaylist {
     return {
       donateGold: false,
       donateTroops: false,
-      gameMap: ffaMaps[Math.floor(Math.random() * ffaMaps.length)],
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
@@ -167,7 +168,7 @@ export class MapPlaylist {
       maxTimerValue: 10, // 10 minutes
       instantBuild: false,
       randomSpawn: false,
-      disableNations: false,
+      disableNations: true,
       gameMode: GameMode.FFA,
       bots: 100,
       spawnImmunityDuration: 5 * 10,
@@ -198,6 +199,7 @@ export class MapPlaylist {
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
+      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
     };
   }
 
