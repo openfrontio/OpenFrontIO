@@ -255,6 +255,8 @@ export class WorkerLobbySocket {
       }
       if (message.type === "lobby_closed") {
         this.onLobbyUpdate(null);
+        this.stop();
+        return;
       }
     } catch (error) {
       console.error("Error parsing lobby WebSocket message:", error);
@@ -273,6 +275,7 @@ export class WorkerLobbySocket {
 
   private handleClose() {
     if (!this.isActive) return;
+    this.ws = null;
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
       this.wsConnectionAttempts++;
