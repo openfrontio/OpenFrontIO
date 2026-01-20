@@ -299,12 +299,15 @@ export class SAMRadiusLayer implements Layer {
       const intercepting = this.nukeRenderUtilLayer
         .getInterceptingPlayers()
         .has(a.owner.smallID());
+      // players who are not allied
+      const enemy =
+        !a.owner.isMe() && !this.game.myPlayer()?.isFriendly(a.owner);
 
       // Outline
       if (nukeMode) {
         if (intercepting) {
           ctx.strokeStyle = interceptOutlineColor.toRgbString();
-        } else if (stressed) {
+        } else if (stressed || enemy) {
           ctx.strokeStyle = outlineColor.toRgbString();
         } else {
           ctx.strokeStyle = outlineColor.alpha(0.3).toRgbString();
@@ -332,11 +335,7 @@ export class SAMRadiusLayer implements Layer {
             ctx.strokeStyle = lineColorFriend.alpha(0.3).toRgbString();
           }
         } else {
-          if (intercepting || stressed) {
-            ctx.strokeStyle = lineColorEnemy.toRgbString();
-          } else {
-            ctx.strokeStyle = lineColorEnemy.alpha(0.3).toRgbString();
-          }
+          ctx.strokeStyle = lineColorEnemy.toRgbString();
         }
       } else {
         if (a.owner.isMe()) {
