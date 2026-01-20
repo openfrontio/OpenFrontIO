@@ -13,7 +13,7 @@ const LOS_MIN_MAGNITUDE_PASS2 = 3;
 const MAGNITUDE_MASK = 0x1f;
 
 /**
- * Water path smoother transformer with two passes:
+ * Water path smoother transformer:
  * 1. Binary search LOS smoothing (avoids shallow water)
  * 2. Local A* refinement on endpoints (first/last N tiles)
  * 3. Binary search LOS smoothing again (farther from shore)
