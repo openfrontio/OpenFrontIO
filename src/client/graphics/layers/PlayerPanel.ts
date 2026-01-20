@@ -44,13 +44,13 @@ import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import kickIcon from "/images/ExitIconWhite.svg?url";
+import shieldIcon from "/images/ShieldIconWhite.svg?url";
 import stopTradingIcon from "/images/StopIconWhite.png?url";
 import targetIcon from "/images/TargetIconWhite.svg?url";
 import startTradingIcon from "/images/TradingIconWhite.png?url";
 import traitorIcon from "/images/TraitorIconLightRed.svg?url";
 import breakAllianceIcon from "/images/TraitorIconWhite.svg?url";
-import kickIcon from "/images/ExitIconWhite.svg?url";
-import shieldIcon from "/images/ShieldIconWhite.svg?url";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -483,7 +483,8 @@ export class PlayerPanel extends LitElement implements Layer {
             aria-hidden="true"
             class="h-5 w-5 shrink-0 transition-transform group-hover:scale-110 text-zinc-400"
           />
-          <span class="text-base sm:text-[14px] leading-5 font-semibold tracking-tight"
+          <span
+            class="text-base sm:text-[14px] leading-5 font-semibold tracking-tight"
             >${moderationTitle}</span
           >
         </summary>
