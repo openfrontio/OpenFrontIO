@@ -15,7 +15,9 @@ import {
 } from "../../core/game/Game";
 import { getCompactMapNationCount } from "../../core/game/NationCreation";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
+import { UserSettings } from "../../core/game/UserSettings";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
+import { createRandomName } from "../../core/Util";
 import { translateText } from "../Utils";
 
 export interface TeamPreviewData {
@@ -30,6 +32,7 @@ export class LobbyTeamView extends LitElement {
   @state() private teamPreview: TeamPreviewData[] = [];
   @state() private teamMaxSize: number = 0;
   @property({ type: String }) lobbyCreatorClientID: string = "";
+  @property({ type: String }) currentClientID: string = "";
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
   @property({ type: Number }) nationCount: number = 0;
@@ -38,6 +41,7 @@ export class LobbyTeamView extends LitElement {
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
+  private userSettings: UserSettings = new UserSettings();
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
@@ -108,12 +112,14 @@ export class LobbyTeamView extends LitElement {
         ${repeat(
           this.clients,
           (c) => c.clientID ?? c.username,
-          (client) =>
-            html`<div
+          (client) => {
+            const displayName = this.displayUsername(client);
+            return html`<div
               class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
             >
-              ${client.username}
-            </div>`,
+              ${displayName}
+            </div>`;
+          },
         )}
       </div>
       <div class="flex-1 flex flex-col gap-3 md:gap-4 md:pr-1">
@@ -151,9 +157,10 @@ export class LobbyTeamView extends LitElement {
     return html`${repeat(
       this.clients,
       (c) => c.clientID ?? c.username,
-      (client) =>
-        html`<span class="player-tag">
-          <span class="text-white">${client.username}</span>
+      (client) => {
+        const displayName = this.displayUsername(client);
+        return html`<span class="player-tag">
+          <span class="text-white">${displayName}</span>
           ${client.clientID === this.lobbyCreatorClientID
             ? html`<span class="host-badge"
                 >(${translateText("host_modal.host_badge")})</span
@@ -163,13 +170,14 @@ export class LobbyTeamView extends LitElement {
                   class="remove-player-btn"
                   @click=${() => this.onKickPlayer?.(client.clientID)}
                   aria-label=${translateText("host_modal.remove_player", {
-                    username: client.username,
+                    username: displayName,
                   })}
                 >
                   ×
                 </button>`
               : html``}
-        </span>`,
+        </span>`;
+      },
     )} `;
   }
 
@@ -207,11 +215,12 @@ export class LobbyTeamView extends LitElement {
             : repeat(
                 preview.players,
                 (p) => p.clientID ?? p.username,
-                (p) =>
-                  html` <div
+                (p) => {
+                  const displayName = this.displayUsername(p);
+                  return html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
-                    <span class="truncate text-white">${p.username}</span>
+                    <span class="truncate text-white">${displayName}</span>
                     ${p.clientID === this.lobbyCreatorClientID
                       ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
@@ -223,14 +232,15 @@ export class LobbyTeamView extends LitElement {
                             aria-label=${translateText(
                               "host_modal.remove_player",
                               {
-                                username: p.username,
+                                username: displayName,
                               },
                             )}
                           >
                             ×
                           </button>`
                         : html``}
-                  </div>`,
+                  </div>`;
+                },
               )}
         </div>
       </div>
@@ -352,5 +362,19 @@ export class LobbyTeamView extends LitElement {
       return this.clients.length;
     }
     return getCompactMapNationCount(this.nationCount, this.isCompactMap);
+  }
+
+  private displayUsername(client: ClientInfo): string {
+    if (!this.userSettings.anonymousNames()) {
+      return client.username;
+    }
+
+    if (this.currentClientID && client.clientID === this.currentClientID) {
+      return client.username;
+    }
+
+    return (
+      createRandomName(client.username, PlayerType.Human) ?? client.username
+    );
   }
 }

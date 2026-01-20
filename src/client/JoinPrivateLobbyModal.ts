@@ -28,6 +28,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
   @state() private currentLobbyId: string = "";
+  @state() private currentClientID: string = "";
   @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
@@ -101,6 +102,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
                   .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                   .clients=${this.players}
                   .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                  .currentClientID=${this.currentClientID}
                   .teamCount=${this.gameConfig?.playerTeams ?? 2}
                   .nationCount=${this.nationCount}
                   .disableNations=${this.gameConfig?.disableNations ?? false}
@@ -290,6 +292,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+    this.currentClientID = "";
     this.nationCount = 0;
 
     this.leaveLobbyOnClose = true;
@@ -418,6 +421,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.showMessage(translateText("private_lobby.joined_waiting"));
       this.message = "";
       this.hasJoined = true;
+      this.currentClientID = generateID();
 
       // If the modal closes as part of joining the game, do not leave the lobby
       this.leaveLobbyOnClose = false;
@@ -426,7 +430,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: generateID(),
+            clientID: this.currentClientID,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -477,12 +481,13 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
+    this.currentClientID = generateID();
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
           gameRecord: parsed.data,
-          clientID: generateID(),
+          clientID: this.currentClientID,
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
