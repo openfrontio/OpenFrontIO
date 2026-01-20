@@ -47,7 +47,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
       return path;
     }
 
-    // Pass 1: LOS smoothing with binary search (stricter magnitude)
+    // Pass 1: LOS smoothing with binary search
     let smoothed = DebugSpan.wrap("smoother:los", () =>
       this.losSmooth(path, LOS_MIN_MAGNITUDE_PASS1),
     );
@@ -57,7 +57,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
       this.refineEndpoints(smoothed),
     );
 
-    // Pass 3: LOS smoothing again (relaxed magnitude)
+    // Pass 3: LOS smoothing again, farther from the shore
     smoothed = DebugSpan.wrap("smoother:los2", () =>
       this.losSmooth(smoothed, LOS_MIN_MAGNITUDE_PASS2),
     );
