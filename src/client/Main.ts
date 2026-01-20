@@ -200,6 +200,7 @@ declare global {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
+    "nav-click": CustomEvent<{ pageId: string }>;
   }
 }
 
@@ -301,6 +302,7 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener("nav-click", this.handleNavClick.bind(this));
     document.addEventListener(
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
@@ -613,6 +615,12 @@ class Client {
 
       // Attempt to join lobby
       this.handleUrl();
+
+      const hash = window.location.hash;
+      const isGamePath = /^\/(?:w\d+\/)?game\//.test(window.location.pathname);
+      if (!isGamePath && (hash === "" || hash === "#")) {
+        window.showPage?.("page-play");
+      }
     };
 
     const onPopState = () => {
@@ -761,6 +769,20 @@ class Client {
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
       return;
+    }
+    if (decodedHash.startsWith("#page-")) {
+      window.showPage?.(decodedHash.slice(1));
+      return;
+    }
+    if (decodedHash.startsWith("#")) {
+      const slug = decodedHash.slice(1);
+      if (slug) {
+        const pageId = `page-${slug}`;
+        if (document.getElementById(pageId)) {
+          window.showPage?.(pageId);
+          return;
+        }
+      }
     }
     if (decodedHash.startsWith("#affiliate=")) {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
@@ -915,21 +937,7 @@ class Client {
     }
     console.log("leaving lobby, cancelling game");
     this.gameStop(true);
-    this.gameStop = null;
-    this.currentUrl = null;
-
-    try {
-      history.replaceState(null, "", "/");
-    } catch (e) {
-      console.warn("Failed to restore URL on leave:", e);
-    }
-
-    document.body.classList.remove("in-game");
-
-    crazyGamesSDK.gameplayStop();
-
-    this.gutterAds.hide();
-    this.publicLobby.leaveLobby();
+    this.finaliseLeaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -947,6 +955,74 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
+    }
+  }
+
+  private handleNavClick(event: CustomEvent<{ pageId: string }>) {
+    const pageId = event.detail?.pageId;
+    if (!pageId) return;
+    if (this.gameStop === null) {
+      this.updateNavUrl(pageId);
+      return;
+    }
+
+    event.preventDefault();
+    this.leaveGameForNavigation(pageId);
+  }
+
+  private leaveGameForNavigation(pageId: string) {
+    if (this.gameStop === null) {
+      window.showPage?.(pageId);
+      this.updateNavUrl(pageId);
+      return;
+    }
+
+    const canLeave = this.gameStop();
+    if (!canLeave) {
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
+      if (!isConfirmed) {
+        return;
+      }
+      this.gameStop(true);
+    }
+
+    this.finaliseLeaveLobby();
+    window.showPage?.(pageId);
+    this.updateNavUrl(pageId);
+  }
+
+  private finaliseLeaveLobby() {
+    this.gameStop = null;
+    this.currentUrl = null;
+
+    try {
+      history.replaceState(null, "", "/");
+    } catch (e) {
+      console.warn("Failed to restore URL on leave:", e);
+    }
+
+    document.body.classList.remove("in-game");
+    crazyGamesSDK.gameplayStop();
+    this.gutterAds.hide();
+    this.publicLobby.leaveLobby();
+  }
+
+  private updateNavUrl(pageId: string) {
+    const targetUrl =
+      pageId === "page-play" ? "/" : `/#${pageId.replace(/^page-/, "")}`;
+    const currentUrl = `${window.location.pathname}${window.location.hash}`;
+
+    if (currentUrl === targetUrl) return;
+    try {
+      if (pageId === "page-play") {
+        history.replaceState(null, "", targetUrl);
+      } else {
+        history.pushState(null, "", targetUrl);
+      }
+    } catch (e) {
+      console.warn("Failed to update navigation URL:", e);
     }
   }
 

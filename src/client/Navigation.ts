@@ -48,6 +48,17 @@ export function initNavigation() {
 
     // Dispatch CustomEvent to notify listeners of page change
     window.dispatchEvent(new CustomEvent("showPage", { detail: pageId }));
+
+    if (
+      pageId === "page-play" &&
+      !/^\/(?:w\d+\/)?game\//.test(window.location.pathname)
+    ) {
+      try {
+        history.replaceState(null, "", "/");
+      } catch (e) {
+        console.warn("Failed to update URL on page close:", e);
+      }
+    }
   };
 
   window.showPage = showPage;
@@ -57,10 +68,18 @@ export function initNavigation() {
     const target = (e.target as HTMLElement).closest(
       ".nav-menu-item[data-page]",
     );
-    if (target) {
-      const pageId = (target as HTMLElement).dataset.page;
-      if (pageId) showPage(pageId);
-    }
+    if (!target) return;
+    const pageId = (target as HTMLElement).dataset.page;
+    if (!pageId) return;
+
+    const navEvent = new CustomEvent("nav-click", {
+      detail: { pageId },
+      cancelable: true,
+    });
+    const shouldProceed = document.dispatchEvent(navEvent);
+    if (!shouldProceed) return;
+
+    showPage(pageId);
   });
 
   // Wait for main-layout component to render before setting up click handler
