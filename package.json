@@ -75,7 +75,7 @@
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-sh": "^0.17.4",
     "protobufjs": "^7.5.3",
-    "sinon": "^21.0.0",
+    "sinon": "^21.0.1",
     "sinon-chai": "^4.0.0",
     "tailwindcss": "^4.1.18",
     "tsconfig-paths": "^4.2.0",
