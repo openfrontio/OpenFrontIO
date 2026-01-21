@@ -152,10 +152,17 @@ export class GameServer {
       return;
     }
 
-    if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
-        clientID: client.clientID,
-      });
+    const existingClient = this.allClients.get(client.clientID);
+    if (existingClient) {
+      if (existingClient.persistentID !== client.persistentID) {
+        this.websockets.delete(client.ws);
+        client.ws.close(1002, "Client ID already in use");
+        return;
+      }
+      this.replaceClientSocket(existingClient, client.ws);
+      if (this._hasStarted) {
+        this.sendStartGameMsg(client.ws, 0);
+      }
       return;
     }
 
@@ -268,19 +275,35 @@ export class GameServer {
       return;
     }
 
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== msg.clientID,
-    );
-    this.activeClients.push(client);
-    client.lastPing = Date.now();
-    this.markClientDisconnected(msg.clientID, false);
-
-    client.ws = ws;
-    this.addListeners(client);
+    this.replaceClientSocket(client, ws);
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
     }
+  }
+
+  private replaceClientSocket(client: Client, ws: WebSocket) {
+    const previousWs = client.ws;
+    if (previousWs !== ws) {
+      previousWs.removeAllListeners();
+      this.websockets.delete(previousWs);
+      if (
+        previousWs.readyState === WebSocket.OPEN ||
+        previousWs.readyState === WebSocket.CONNECTING
+      ) {
+        previousWs.close(1000, "Replaced by new connection");
+      }
+    }
+
+    client.ws = ws;
+    client.lastPing = Date.now();
+    this.websockets.add(ws);
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== client.clientID,
+    );
+    this.activeClients.push(client);
+    this.markClientDisconnected(client.clientID, false);
+    this.addListeners(client);
   }
 
   private addListeners(client: Client) {
