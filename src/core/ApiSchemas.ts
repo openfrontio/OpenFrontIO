@@ -160,7 +160,7 @@ export type PlayerLeaderboardResponse = z.infer<
 export const RankedLeaderboardEntrySchema = z.object({
   rank: z.number(),
   elo: z.number(),
-  peakElo: z.number(),
+  peakElo: z.number().nullable(),
   wins: z.number(),
   losses: z.number(),
   total: z.number(),
