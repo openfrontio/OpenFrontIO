@@ -123,7 +123,6 @@ export class JoinPublicLobbyModal extends BaseModal {
 
   private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
-    this.leaveLobbyOnClose = false;
     this.gameConfig = null;
     this.players = [];
     this.playerCount = 0;
@@ -167,7 +166,18 @@ export class JoinPublicLobbyModal extends BaseModal {
   }
 
   public closeAndLeave() {
-    this.leaveLobbyOnClose = true;
+    this.leaveLobby();
+    try {
+      history.replaceState(null, "", window.location.origin + "/");
+    } catch (error) {
+      console.warn("Failed to restore URL on leave:", error);
+    }
+    this.leaveLobbyOnClose = false;
+    this.close();
+  }
+
+  public closeWithoutLeaving() {
+    this.leaveLobbyOnClose = false;
     this.close();
   }
 
