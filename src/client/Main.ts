@@ -213,6 +213,7 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
+  private joinAttemptId = 0;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -756,6 +757,7 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    const joinAttemptId = ++this.joinAttemptId;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -766,11 +768,22 @@ class Client {
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
     const config = await getServerConfigFromClient();
+    if (joinAttemptId !== this.joinAttemptId) {
+      return;
+    }
     this.updateJoinUrlForShare(lobby.gameID, config);
 
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
     );
+    if (joinAttemptId !== this.joinAttemptId) {
+      return;
+    }
+
+    const turnstileToken = await this.getTurnstileToken(lobby);
+    if (joinAttemptId !== this.joinAttemptId) {
+      return;
+    }
 
     this.gameStop = joinLobby(
       this.eventBus,
@@ -786,7 +799,7 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
-        turnstileToken: await this.getTurnstileToken(lobby),
+        turnstileToken,
         playerName:
           this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
         clientID: lobby.clientID,
@@ -803,11 +816,11 @@ class Client {
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
+        this.joinPublicModal?.closeWithoutLeaving();
         [
           "single-player-modal",
           "host-lobby-modal",
           "join-private-lobby-modal",
-          "join-public-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
@@ -850,7 +863,7 @@ class Client {
       },
       () => {
         this.joinModal.close();
-        this.joinPublicModal?.close();
+        this.joinPublicModal?.closeWithoutLeaving();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
@@ -894,7 +907,15 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
+    this.joinAttemptId++;
     if (this.gameStop === null) {
+      try {
+        history.replaceState(null, "", "/");
+      } catch (e) {
+        console.warn("Failed to restore URL on leave:", e);
+      }
+      document.body.classList.remove("in-game");
+      this.publicLobby.leaveLobby();
       return;
     }
     console.log("leaving lobby, cancelling game");
