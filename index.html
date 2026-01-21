@@ -75,11 +75,11 @@
       defer
     ></script>
 
-    <!-- Publift/Fuse ads -->
-    <script
-      async
-      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
-    ></script>
+    <script data-cfasync="false">
+      window.ramp = window.ramp || {};
+      window.ramp.que = window.ramp.que || [];
+      window.ramp.passiveMode = true;
+    </script>
 
     <script>
       window.googletag = window.googletag || { cmd: [] };
@@ -362,4 +362,12 @@
     ></script>
     <script type="module" src="/src/client/Main.ts"></script>
   </body>
+
+  <footer>
+    <script
+      data-cfasync="false"
+      async
+      src="//cdn.intergient.com/1025558/75940/ramp.js"
+    ></script>
+  </footer>
 </html>

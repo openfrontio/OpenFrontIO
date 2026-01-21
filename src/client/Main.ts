@@ -169,13 +169,6 @@ declare global {
         newPageView: () => void;
       };
     };
-    fusetag: {
-      registerZone: (id: string) => void;
-      destroyZone: (id: string) => void;
-      pageInit: (options?: any) => void;
-      que: Array<() => void>;
-      destroySticky: () => void;
-    };
     ramp: {
       que: Array<() => void>;
       passiveMode: boolean;
@@ -184,7 +177,7 @@ declare global {
       settings?: {
         slots?: any;
       };
-      spaNewPage: (url: string) => void;
+      spaNewPage: (url?: string) => void;
     };
     showPage?: (pageId: string) => void;
   }
@@ -288,6 +281,7 @@ class Client {
     if (!(gutterAds instanceof GutterAds))
       throw new Error("Missing gutter-ads");
     this.gutterAds = gutterAds;
+    this.gutterAds.show();
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -648,8 +642,6 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
-
-    this.initializeFuseTag();
   }
 
   private handleUrl() {
@@ -853,6 +845,7 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        window.PageOS.session.newPageView();
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
         document.body.classList.add("in-game");
@@ -924,28 +917,6 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
-  }
-
-  private initializeFuseTag() {
-    const tryInitFuseTag = (): boolean => {
-      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
-        console.log("initializing fuse tag");
-        window.fusetag.que.push(() => {
-          window.fusetag.pageInit({
-            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
-          });
-        });
-        return true;
-      } else {
-        return false;
-      }
-    };
-
-    const interval = setInterval(() => {
-      if (tryInitFuseTag()) {
-        clearInterval(interval);
-      }
-    }, 100);
   }
 
   private async getTurnstileToken(
