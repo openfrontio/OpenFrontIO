@@ -103,7 +103,7 @@ export enum GameMapType {
   Montreal = "Montreal",
   NewYorkCity = "New York City",
   Achiran = "Achiran",
-  BaikalNukeWars = "Baikal (Nuke Wars)",
+  BaikalNukeWars = "Baikal Nuke Wars",
   FourIslands = "Four Islands",
   Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
