@@ -5,6 +5,7 @@ WORKDIR /usr/src/app
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
+ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 # Copy package files first for better caching
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
@@ -42,6 +43,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     supervisor \
     apache2-utils \
+    redis-server \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \

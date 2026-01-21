@@ -1,5 +1,6 @@
 import { base64url } from "jose";
 import { Logger } from "winston";
+import { GameEnv } from "../core/configuration/Config";
 import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
 import {
@@ -21,6 +22,7 @@ export class PrivilegeRefresher {
     private endpoint: string,
     parentLog: Logger,
     private refreshInterval: number = 1000 * 60 * 3,
+    private env: GameEnv = GameEnv.Prod,
   ) {
     this.log = parentLog.child({ comp: "privilege-refresher" });
   }
@@ -57,7 +59,12 @@ export class PrivilegeRefresher {
       );
       this.log.info(`Privilege checker loaded successfully`);
     } catch (error) {
-      this.log.error(`Failed to fetch cosmetics from ${this.endpoint}:`, error);
+      if (this.env !== GameEnv.Dev) {
+        this.log.error(
+          `Failed to fetch cosmetics from ${this.endpoint}:`,
+          error,
+        );
+      }
       throw error;
     }
   }

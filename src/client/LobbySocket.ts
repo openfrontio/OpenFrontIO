@@ -1,3 +1,4 @@
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 
 type LobbyUpdateHandler = (lobbies: GameInfo[]) => void;
@@ -8,12 +9,18 @@ interface LobbySocketOptions {
   pollIntervalMs?: number;
 }
 
+function getRandomWorkerPath(numWorkers: number): string {
+  const workerIndex = Math.floor(Math.random() * numWorkers);
+  return `/w${workerIndex}`;
+}
+
 export class PublicLobbySocket {
   private ws: WebSocket | null = null;
   private wsReconnectTimeout: number | null = null;
   private fallbackPollInterval: number | null = null;
   private wsConnectionAttempts = 0;
   private wsAttemptCounted = false;
+  private workerPath: string = "";
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -30,8 +37,11 @@ export class PublicLobbySocket {
     this.pollIntervalMs = options?.pollIntervalMs ?? 1000;
   }
 
-  start() {
+  async start() {
     this.wsConnectionAttempts = 0;
+    // Get config to determine number of workers, then pick a random one
+    const config = await getServerConfigFromClient();
+    this.workerPath = getRandomWorkerPath(config.numWorkers());
     this.connectWebSocket();
   }
 
@@ -49,7 +59,7 @@ export class PublicLobbySocket {
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/lobbies`;
+      const wsUrl = `${protocol}//${window.location.host}${this.workerPath}/lobbies`;
 
       this.ws = new WebSocket(wsUrl);
       this.wsAttemptCounted = false;
@@ -164,7 +174,7 @@ export class PublicLobbySocket {
 
   private async fetchLobbiesHTTP() {
     try {
-      const response = await fetch(`/api/public_lobbies`);
+      const response = await fetch(`${this.workerPath}/api/public_lobbies`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
