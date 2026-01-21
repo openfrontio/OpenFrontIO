@@ -462,7 +462,8 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "humans_vs_nations": "Humans vs Nations"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
