@@ -161,7 +161,7 @@
     "logged_in_with_discord": "ورود با دیسکرد",
     "recovery_email_sent": "یمیل بازیابی به {email} ارسال شد"
   },
-  "stats_modal": {
+  "leaderboard_modal": {
     "title": "آمار",
     "clan_stats": "آمار کلن",
     "loading": "در حال بارگذاری...",

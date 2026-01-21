@@ -161,7 +161,7 @@
     "logged_in_with_discord": "Ви увійшли через Discord",
     "recovery_email_sent": "Лист для відновлення надіслано на {email}"
   },
-  "stats_modal": {
+  "leaderboard_modal": {
     "title": "Статистика",
     "clan_stats": "Статистика кланів",
     "loading": "Завантаження...",

@@ -161,7 +161,7 @@
     "logged_in_with_discord": "Angemeldet mit Discord",
     "recovery_email_sent": "Wiederherstellungs-E-Mail an {email} gesendet"
   },
-  "stats_modal": {
+  "leaderboard_modal": {
     "title": "Statistiken",
     "clan_stats": "Clan-Statistiken",
     "loading": "Lädt...",
