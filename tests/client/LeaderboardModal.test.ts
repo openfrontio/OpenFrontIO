@@ -43,12 +43,11 @@ vi.mock("../../src/client/Api", () => ({
   getUserMe: vi.fn(async () => false),
 }));
 
-global.fetch = vi.fn();
-
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;
 
   beforeEach(async () => {
+    vi.stubGlobal("fetch", vi.fn());
     if (!customElements.get("leaderboard-modal")) {
       customElements.define("leaderboard-modal", LeaderboardModal);
     }
@@ -59,6 +58,7 @@ describe("LeaderboardModal", () => {
 
   afterEach(() => {
     document.body.removeChild(modal);
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
