@@ -55,9 +55,11 @@ export class PlayerModerationModal extends LitElement {
 
     const my = this.myPlayer;
     const other = this.target;
+    const eventBus = this.eventBus;
 
     if (!my || !other) return;
     if (!this.canKick(my, other) || this.alreadyKicked) return;
+    if (!eventBus) return;
 
     const targetClientID = other.clientID();
     if (!targetClientID || targetClientID.length === 0) return;
@@ -67,7 +69,7 @@ export class PlayerModerationModal extends LitElement {
     );
     if (!confirmed) return;
 
-    this.eventBus?.emit(new SendKickPlayerIntentEvent(targetClientID));
+    eventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
     this.dispatchEvent(
       new CustomEvent("kicked", { detail: { playerId: String(other.id()) } }),
     );
@@ -136,7 +138,9 @@ export class PlayerModerationModal extends LitElement {
               </button>
             </div>
 
-            <div class="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+            <div
+              class="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+            >
               <div
                 class="text-sm font-semibold text-zinc-100 truncate"
                 title=${other.name()}

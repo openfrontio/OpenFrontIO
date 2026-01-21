@@ -359,7 +359,10 @@ export class GameServer {
                   kickMethod: "websocket",
                 });
 
-                this.kickClient(clientMsg.intent.target, KICK_REASON_LOBBY_CREATOR);
+                this.kickClient(
+                  clientMsg.intent.target,
+                  KICK_REASON_LOBBY_CREATOR,
+                );
                 return;
               }
               case "update_game_config": {
@@ -790,9 +793,9 @@ export class GameServer {
       });
       return;
     }
-    
+
     this.kickedClients.add(clientID);
-    
+
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
       this.log.info("Kicking client from game", {

@@ -322,9 +322,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.moderationTarget = null;
   };
 
-  private handleModerationKicked = (
-    e: CustomEvent<{ playerId?: string }>,
-  ) => {
+  private handleModerationKicked = (e: CustomEvent<{ playerId?: string }>) => {
     const playerId = e.detail?.playerId;
     if (playerId) this.kickedPlayerIDs.add(String(playerId));
     this.closeModeration();
@@ -968,7 +966,6 @@ export class PlayerPanel extends LitElement implements Layer {
                           ></send-resource-modal>
                         `
                       : ""}
-
                     ${this.moderationTarget
                       ? html`
                           <player-moderation-modal
