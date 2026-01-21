@@ -7,20 +7,6 @@ import { renderPatternPreview } from "./components/PatternButton";
 import { fetchCosmetics } from "./Cosmetics";
 import { translateText } from "./Utils";
 
-// Module-level cosmetics cache to avoid refetching on every component mount
-let cosmeticsCache: Promise<Cosmetics | null> | null = null;
-
-function getCachedCosmetics(): Promise<Cosmetics | null> {
-  if (!cosmeticsCache) {
-    const fetchPromise = fetchCosmetics();
-    cosmeticsCache = fetchPromise.catch((err) => {
-      cosmeticsCache = null;
-      throw err;
-    });
-  }
-  return cosmeticsCache;
-}
-
 @customElement("pattern-input")
 export class PatternInput extends LitElement {
   @state() public pattern: PlayerPattern | null = null;
@@ -63,7 +49,7 @@ export class PatternInput extends LitElement {
     super.connectedCallback();
     this._abortController = new AbortController();
     this.isLoading = true;
-    const cosmetics = await getCachedCosmetics();
+    const cosmetics = await fetchCosmetics();
     if (!this.isConnected) return;
     this.cosmetics = cosmetics;
     this.updateFromSettings();
