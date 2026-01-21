@@ -29,12 +29,19 @@ export class LeaderboardModal extends BaseModal {
   @state() private playerData: PlayerLeaderboardEntry[] = [];
   @state() private currentUserEntry: PlayerLeaderboardEntry | null = null;
   @state() private showStickyUser: boolean = false;
+  @state() private playerHasMore: boolean = true;
+  @state() private isLoadingMorePlayers: boolean = false;
+  @state() private playerLoadMoreError: string | null = null;
 
   // Set this to true to pick a random player as the current user for testing sticky bars/highlighting
   private testRandomUser: boolean = false;
 
   private hasLoadedClans = false;
   private hasLoadedPlayers = false;
+  private readonly playerPageSize = 50;
+  private currentPage = 1;
+  private currentUserId: string | null = null;
+  private currentUserIdLoaded = false;
 
   @query(".virtualizer-container") private virtualizerContainer?: HTMLElement;
 
@@ -46,7 +53,7 @@ export class LeaderboardModal extends BaseModal {
     if (this.activeTab === "clans" && !this.hasLoadedClans) {
       void this.loadClanLeaderboard();
     } else if (this.activeTab === "players" && !this.hasLoadedPlayers) {
-      void this.loadPlayerLeaderboard();
+      void this.loadPlayerLeaderboard(true);
     }
   }
 
@@ -74,46 +81,103 @@ export class LeaderboardModal extends BaseModal {
     }
   }
 
-  private async loadPlayerLeaderboard() {
-    this.isLoading = true;
-    this.error = null;
+  private async loadPlayerLeaderboard(reset = false) {
+    if (reset) {
+      this.currentPage = 1;
+      this.playerHasMore = true;
+      this.playerLoadMoreError = null;
+      this.playerData = [];
+      this.currentUserEntry = null;
+      this.showStickyUser = false;
+    } else if (!this.playerHasMore) {
+      return;
+    }
+
+    if (this.isLoading || this.isLoadingMorePlayers) return;
+
+    if (reset) {
+      this.isLoading = true;
+      this.error = null;
+    } else {
+      this.isLoadingMorePlayers = true;
+      this.playerLoadMoreError = null;
+    }
 
     try {
-      const res = await fetch(`${getApiBase()}/leaderboard/ranked`, {
+      const url = new URL(`${getApiBase()}/leaderboard/ranked`);
+      url.searchParams.set("page", String(this.currentPage));
+      const res = await fetch(url.toString(), {
         headers: { Accept: "application/json" },
       });
 
-      if (!res.ok) throw new Error(`Unexpected status ${res.status}`);
+      if (!res.ok) {
+        // Handle "Page must be between X and Y" error as end of list
+        if (res.status === 400) {
+          const errorJson = await res.json().catch(() => null);
+          if (errorJson?.message?.includes("Page must be between")) {
+            this.playerHasMore = false;
+            this.hasLoadedPlayers = true;
+            return;
+          }
+        }
+        throw new Error(`Unexpected status ${res.status}`);
+      }
 
       const json = await res.json();
       const parsed = RankedLeaderboardResponseSchema.safeParse(json);
       if (!parsed.success) throw new Error("Invalid response format");
 
-      this.playerData = parsed.data["1v1"].map((entry) => {
-        const games = entry.total;
-        return {
-          rank: Number.parseInt(entry.rank, 10),
+      const nextPlayers: PlayerLeaderboardEntry[] = parsed.data["1v1"].map(
+        (entry) => ({
+          rank: entry.rank,
           playerId: entry.public_id,
           username: entry.username,
           clanTag: entry.clanTag ?? undefined,
           elo: entry.elo,
-          games,
+          games: entry.total,
           wins: entry.wins,
           losses: entry.losses,
-          winRate: games > 0 ? entry.wins / games : 0,
-        };
-      });
+          winRate: entry.total > 0 ? entry.wins / entry.total : 0,
+        }),
+      );
 
-      this.currentUserEntry = null;
-      const userMe = await getUserMe();
-      if (userMe) {
-        const myId = userMe.player.publicId;
+      const receivedCount = nextPlayers.length;
+      if (reset) {
+        this.playerData = nextPlayers;
+      } else {
+        const existingIds = new Set(
+          this.playerData.map((player) => player.playerId),
+        );
+        const deduped = nextPlayers.filter(
+          (player) => !existingIds.has(player.playerId),
+        );
+        this.playerData = [...this.playerData, ...deduped];
+      }
+
+      if (receivedCount > 0) {
+        this.currentPage++;
+      }
+
+      // If this page has less than 50 results, we're at the end of the list
+      if (receivedCount < this.playerPageSize) {
+        this.playerHasMore = false;
+      }
+
+      if (reset && !this.currentUserIdLoaded) {
+        this.currentUserIdLoaded = true;
+        const userMe = await getUserMe();
+        this.currentUserId = userMe ? userMe.player.publicId : null;
+      }
+
+      if (this.currentUserId && !this.currentUserEntry) {
         this.currentUserEntry =
-          this.playerData.find((player) => player.playerId === myId) ?? null;
+          nextPlayers.find(
+            (player) => player.playerId === this.currentUserId,
+          ) ?? null;
       }
 
       // If test mode is enabled, override the current user with a random player from the list
-      if (this.testRandomUser && this.playerData.length > 0) {
+      if (reset && this.testRandomUser && this.playerData.length > 0) {
         const randomIndex = Math.floor(Math.random() * this.playerData.length);
         this.currentUserEntry = { ...this.playerData[randomIndex] };
         console.log(
@@ -123,10 +187,19 @@ export class LeaderboardModal extends BaseModal {
 
       this.hasLoadedPlayers = true;
       this.updateStickyVisibility();
+      this.schedulePlayerFillCheck();
     } catch {
-      this.error = translateText("leaderboard_modal.error");
+      if (reset) {
+        this.error = translateText("leaderboard_modal.error");
+      } else {
+        this.playerLoadMoreError = translateText("leaderboard_modal.error");
+      }
     } finally {
-      this.isLoading = false;
+      if (reset) {
+        this.isLoading = false;
+      } else {
+        this.isLoadingMorePlayers = false;
+      }
     }
   }
 
@@ -208,6 +281,30 @@ export class LeaderboardModal extends BaseModal {
 
   private handleScroll() {
     this.updateStickyVisibility();
+    this.maybeLoadMorePlayers();
+  }
+
+  private maybeLoadMorePlayers() {
+    if (this.activeTab !== "players") return;
+    if (this.isLoading || this.isLoadingMorePlayers) return;
+    if (!this.playerHasMore || this.error || this.playerLoadMoreError) return;
+    if (!this.virtualizerContainer) return;
+
+    const threshold = 64 * 3;
+    const scrollTop = this.virtualizerContainer.scrollTop;
+    const containerHeight = this.virtualizerContainer.clientHeight;
+    const scrollHeight = this.virtualizerContainer.scrollHeight;
+    const nearBottom = scrollTop + containerHeight >= scrollHeight - threshold;
+
+    if (nearBottom) {
+      void this.loadPlayerLeaderboard();
+    }
+  }
+
+  private schedulePlayerFillCheck() {
+    if (this.activeTab !== "players") return;
+    if (!this.playerHasMore || this.error || this.playerLoadMoreError) return;
+    void this.updateComplete.then(() => this.maybeLoadMorePlayers());
   }
 
   private renderTabs() {
@@ -398,6 +495,7 @@ export class LeaderboardModal extends BaseModal {
   private renderPlayerRow(player: PlayerLeaderboardEntry) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
+    const winRate = player.games > 0 ? player.wins / player.games : 0;
 
     const rankColor =
       {
@@ -456,10 +554,10 @@ export class LeaderboardModal extends BaseModal {
         </div>
         <div class="inline-flex flex-col items-end pr-6 w-32">
           <span
-            class="font-mono font-bold ${player.winRate >= 0.5
+            class="font-mono font-bold ${winRate >= 0.5
               ? "text-green-400"
               : "text-red-400"}"
-            >${(player.winRate * 100).toFixed(1)}%</span
+            >${(winRate * 100).toFixed(1)}%</span
           >
           <span
             class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
@@ -470,8 +568,39 @@ export class LeaderboardModal extends BaseModal {
     `;
   }
 
+  private renderPlayerFooter() {
+    if (this.isLoadingMorePlayers) {
+      return html`
+        <div class="flex items-center justify-center py-4 text-white/50">
+          <div
+            class="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mr-2"
+          ></div>
+          <span class="text-[10px] font-bold uppercase tracking-widest">
+            ${translateText("leaderboard_modal.loading")}
+          </span>
+        </div>
+      `;
+    }
+
+    if (this.playerLoadMoreError) {
+      return html`
+        <div class="flex items-center justify-center py-4">
+          <button
+            class="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl text-xs font-bold uppercase transition-all active:scale-95"
+            @click=${() => this.loadPlayerLeaderboard()}
+          >
+            ${translateText("leaderboard_modal.try_again")}
+          </button>
+        </div>
+      `;
+    }
+
+    return "";
+  }
+
   private renderPlayerLeaderboard() {
-    if (this.isLoading) return this.renderLoading();
+    if (this.isLoading && this.playerData.length === 0)
+      return this.renderLoading();
     if (this.error) return this.renderError();
 
     return html`
@@ -504,6 +633,7 @@ export class LeaderboardModal extends BaseModal {
             renderItem: (p) => this.renderPlayerRow(p),
             scroller: true,
           })}
+          ${this.renderPlayerFooter()}
         </div>
         ${this.showStickyUser && this.currentUserEntry
           ? html`

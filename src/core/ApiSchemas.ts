@@ -158,16 +158,16 @@ export type PlayerLeaderboardResponse = z.infer<
 >;
 
 export const RankedLeaderboardEntrySchema = z.object({
-  rank: z.string(),
+  rank: z.number(),
   elo: z.number(),
-  peakElo: z.number().nullable(),
+  peakElo: z.number(),
   wins: z.number(),
   losses: z.number(),
   total: z.number(),
   public_id: z.string(),
-  user: z.unknown().nullable(),
+  user: DiscordUserSchema.nullable().optional(),
   username: z.string(),
-  clanTag: z.string().nullable(),
+  clanTag: z.string().nullable().optional(),
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
