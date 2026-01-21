@@ -17,25 +17,18 @@ export class TroubleshootingModal extends BaseModal {
   @property({ type: Object })
   diagnostics?: GraphicsDiagnostics;
 
-  private initialized: boolean = false;
+  @property({ type: Boolean }) loading = true;
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.loadDiagnostics();
-  }
+  private initialized: boolean = false;
 
   private async loadDiagnostics() {
     const canvas = document.createElement("canvas");
     this.diagnostics = await collectGraphicsDiagnostics(canvas);
+    this.loading = false;
+    this.initialized = true;
   }
 
   render() {
-    if (!this.diagnostics) {
-      return html`<div>${translateText("troubleshooting.loading")}</div>`;
-    }
-
-    const { browser, rendering, power } = this.diagnostics;
-
     const content = html`
       <div
         class="h-full select-text flex flex-col ${this.inline
@@ -66,85 +59,97 @@ export class TroubleshootingModal extends BaseModal {
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
-        <div
-          class="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
-        >
-          ${this.section(
-            "",
-            html`${this.infoTip(
-              translateText("troubleshooting.hardware_acceleration_tip"),
-              true,
-            )}`,
-          )}
-          ${this.section(
-            translateText("troubleshooting.environment"),
-            html`
-              ${this.row(
-                translateText("troubleshooting.browser"),
-                browser.engine,
-              )}
-              ${this.row(
-                translateText("troubleshooting.platform"),
-                browser.platform,
-              )}
-              ${this.row(translateText("troubleshooting.os"), browser.os)}
-              ${this.row(
-                translateText("troubleshooting.device_pixel_ratio"),
-                browser.dpr,
-              )}
-              ${this.infoTip(translateText("troubleshooting.chromium_tip"))}
-            `,
-          )}
-          ${this.section(
-            translateText("troubleshooting.rendering"),
-            html`
-              ${this.row(
-                translateText("troubleshooting.renderer"),
-                this.describeRenderer(rendering),
-              )}
-              ${this.row(
-                translateText("troubleshooting.max_texture_size"),
-                rendering.maxTextureSize ??
-                  translateText("troubleshooting.unknown"),
-              )}
-              ${this.row(
-                translateText("troubleshooting.high_precision_shaders"),
-                rendering.shaderHighp === true
-                  ? translateText("troubleshooting.yes")
-                  : translateText("troubleshooting.no"),
-              )}${this.row(
-                translateText("troubleshooting.gpu"),
-                !rendering.gpu || rendering.gpu.unavailable
-                  ? translateText("troubleshooting.unavailable")
-                  : `${rendering.gpu.vendor} — ${rendering.gpu.renderer}`,
-              )}
-              ${this.infoTip(translateText("troubleshooting.gpu_tip"))}
-            `,
-          )}
-          ${this.section(
-            translateText("troubleshooting.power"),
-            html`
-              ${power.unavailable
-                ? this.row(
-                    translateText("troubleshooting.battery"),
-                    translateText("troubleshooting.unavailable"),
-                  )
-                : html`
+        ${this.loading
+          ? ""
+          : html`
+              <div
+                class="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent mr-1"
+              >
+                ${this.section(
+                  "",
+                  html`${this.infoTip(
+                    translateText("troubleshooting.hardware_acceleration_tip"),
+                    true,
+                  )}`,
+                )}
+                ${this.section(
+                  translateText("troubleshooting.environment"),
+                  html`
                     ${this.row(
-                      translateText("troubleshooting.charging"),
-                      power.charging
+                      translateText("troubleshooting.browser"),
+                      this.diagnostics!.browser.engine,
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.platform"),
+                      this.diagnostics!.browser.platform,
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.os"),
+                      this.diagnostics!.browser.os,
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.device_pixel_ratio"),
+                      this.diagnostics!.browser.dpr,
+                    )}
+                    ${this.infoTip(
+                      translateText("troubleshooting.chromium_tip"),
+                    )}
+                  `,
+                )}
+                ${this.section(
+                  translateText("troubleshooting.rendering"),
+                  html`
+                    ${this.row(
+                      translateText("troubleshooting.renderer"),
+                      this.describeRenderer(this.diagnostics!.rendering),
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.max_texture_size"),
+                      this.diagnostics!.rendering.maxTextureSize ??
+                        translateText("troubleshooting.unknown"),
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.high_precision_shaders"),
+                      this.diagnostics!.rendering.shaderHighp === true
                         ? translateText("troubleshooting.yes")
                         : translateText("troubleshooting.no"),
+                    )}${this.row(
+                      translateText("troubleshooting.gpu"),
+                      !this.diagnostics!.rendering.gpu ||
+                        this.diagnostics!.rendering.gpu.unavailable
+                        ? translateText("troubleshooting.unavailable")
+                        : `${this.diagnostics!.rendering.gpu.vendor} — ${this.diagnostics!.rendering.gpu.renderer}`,
                     )}
-                    ${this.row(
-                      translateText("troubleshooting.battery_level"),
-                      power.level,
+                    ${this.infoTip(translateText("troubleshooting.gpu_tip"))}
+                  `,
+                )}
+                ${this.section(
+                  translateText("troubleshooting.power"),
+                  html`
+                    ${this.diagnostics!.power.unavailable
+                      ? this.row(
+                          translateText("troubleshooting.battery"),
+                          translateText("troubleshooting.unavailable"),
+                        )
+                      : html`
+                          ${this.row(
+                            translateText("troubleshooting.charging"),
+                            this.diagnostics!.power.charging
+                              ? translateText("troubleshooting.yes")
+                              : translateText("troubleshooting.no"),
+                          )}
+                          ${this.row(
+                            translateText("troubleshooting.battery_level"),
+                            this.diagnostics!.power.level,
+                          )}
+                        `}
+                    ${this.infoTip(
+                      translateText("troubleshooting.power_saving_tip"),
                     )}
-                  `}
-              ${this.infoTip(translateText("troubleshooting.power_saving_tip"))}
-            `,
-          )}
-        </div>
+                  `,
+                )}
+              </div>
+            `};
       </div>
     `;
 
