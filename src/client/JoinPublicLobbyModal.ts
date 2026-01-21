@@ -241,7 +241,9 @@ export class JoinPublicLobbyModal extends BaseModal {
               renderNumber(c.publicGameModifiers.startingGold),
             )
           : html``}
-        ${c.gameMode !== GameMode.FFA && c.playerTeams
+        ${c.gameMode !== GameMode.FFA &&
+        c.playerTeams &&
+        c.playerTeams !== HumansVsNations
           ? this.renderConfigItem(
               typeof c.playerTeams === "string"
                 ? translateText("host_modal.team_type")
