@@ -104,7 +104,7 @@ export class HelpModal extends BaseModal {
           : ""}"
       >
         ${modalHeader({
-          title: translateText("main.instructions"),
+          title: translateText("main.help"),
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
@@ -120,6 +120,58 @@ export class HelpModal extends BaseModal {
             [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
             scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
+          <!-- Hotkeys Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-blue-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                <path d="M6 8h.001"></path>
+                <path d="M10 8h.001"></path>
+                <path d="M14 8h.001"></path>
+                <path d="M18 8h.001"></path>
+                <path d="M6 12h.001"></path>
+                <path d="M10 12h.001"></path>
+                <path d="M14 12h.001"></path>
+                <path d="M18 12h.001"></path>
+                <path d="M6 16h12"></path>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("main.troubleshooting")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
+          <section>
+            <div class="w-full flex flex-col items-center">
+              <p class="mb-6 text-white/70 text-sm">
+                ${translateText("help_modal.troubleshooting_desc")}
+              </p>
+              <button
+                id="troubleshooting-button"
+                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                data-page="page-troubleshooting"
+                data-i18n="main.go_to_troubleshooting"
+              >
+                <span
+                  class="relative z-10 text-2xl"
+                  data-i18n="main.go_to_troubleshooting"
+                ></span>
+              </button>
+            </div>
+          </section>
           <!-- Hotkeys Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">

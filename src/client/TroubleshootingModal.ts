@@ -26,9 +26,6 @@ export class TroubleshootingModal extends BaseModal {
 
   private async loadDiagnostics() {
     const canvas = document.createElement("canvas");
-
-    if (!canvas) return;
-
     this.diagnostics = await collectGraphicsDiagnostics(canvas);
   }
 
@@ -46,17 +43,25 @@ export class TroubleshootingModal extends BaseModal {
           : ""}"
       >
         ${modalHeader({
-          titleContent: html` <div class="flex flex-col sm:flex-row gap-2">
+          titleContent: html` <div
+            class="w-full flex flex-col sm:flex-row justify-between gap-2"
+          >
             <span
               class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
             >
-              ${translateText("troubleshooting.title")}
+              <a
+                target="_blank"
+                class="hover:text-blue-200 text-blue-400 cursor-pointer"
+                @click=${this.close}
+                >${translateText("main.help")}</a
+              >
+              / ${translateText("troubleshooting.title")}
             </span>
             <button
-              class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+              class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
               @click=${this.copyDiagnostics}
             >
-              Copy for Discord
+              ${translateText("common.copy")}
             </button>
           </div>`,
           onBack: this.close,
@@ -206,6 +211,9 @@ export class TroubleshootingModal extends BaseModal {
 
   private async copyDiagnostics() {
     if (!this.diagnostics) return;
+    const formatted =
+      "```json\n" + JSON.stringify(this.diagnostics, null, 2) + "\n```";
+    await navigator.clipboard.writeText(formatted);
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: {
@@ -215,9 +223,6 @@ export class TroubleshootingModal extends BaseModal {
         },
       }),
     );
-    const formatted =
-      "```json\n" + JSON.stringify(this.diagnostics, null, 2) + "\n```";
-    await navigator.clipboard.writeText(formatted);
   }
 
   private describeRenderer(rendering: any): string {
@@ -228,5 +233,18 @@ export class TroubleshootingModal extends BaseModal {
       return translateText("troubleshooting.canvas_2d_no_gpu");
     }
     return `${rendering.type}`;
+  }
+
+  public close(): void {
+    this.unregisterEscapeHandler();
+
+    if (this.inline) {
+      this.style.pointerEvents = "none";
+      if (window.showPage) {
+        window.showPage?.("page-help");
+      }
+    } else {
+      this.modalEl?.close();
+    }
   }
 }
