@@ -588,12 +588,8 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal?.close();
-      if (this.gameStop !== null) {
-        this.handleLeaveLobby();
-      }
 
-      // Attempt to join lobby
-      this.handleUrl();
+      onJoinChanged();
     };
 
     const onPopState = () => {
@@ -627,10 +623,19 @@ class Client {
       }
     };
 
+    const onJoinChanged = () => {
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
+      }
+
+      // Attempt to join lobby
+      this.handleUrl();
+    };
+
     // Handle browser navigation & manual hash edits
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
-    window.addEventListener("join-changed", onHashUpdate);
+    window.addEventListener("join-changed", onJoinChanged);
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
