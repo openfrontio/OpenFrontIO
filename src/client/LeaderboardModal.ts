@@ -186,9 +186,10 @@ export class LeaderboardModal extends BaseModal {
       }
 
       this.hasLoadedPlayers = true;
-      this.updateStickyVisibility();
+      this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
-    } catch {
+    } catch (err) {
+      console.error("loadPlayerLeaderboard: request failed", err);
       if (reset) {
         this.error = translateText("leaderboard_modal.error");
       } else {
@@ -207,6 +208,9 @@ export class LeaderboardModal extends BaseModal {
     this.activeTab = tab;
     this.error = null;
     this.loadActiveTabData();
+    if (tab === "players") {
+      this.scheduleStickyVisibilityCheck();
+    }
   }
 
   private handleClanSort(
@@ -256,27 +260,32 @@ export class LeaderboardModal extends BaseModal {
     }
 
     if (!this.virtualizerContainer) {
+      this.showStickyUser = false;
+      return;
+    }
+
+    const currentRow = this.virtualizerContainer.querySelector(
+      '[data-current-user="true"]',
+    ) as HTMLElement | null;
+
+    if (!currentRow) {
       this.showStickyUser = true;
       return;
     }
 
-    const index = this.playerData.findIndex(
-      (p) => p.playerId === this.currentUserEntry?.playerId,
-    );
-    if (index === -1) {
-      this.showStickyUser = true;
-      return;
-    }
-
-    const scrollTop = this.virtualizerContainer.scrollTop;
-    const containerHeight = this.virtualizerContainer.clientHeight;
-    // Row height is roughly 64px (py-3 (12px * 2) + font height + borders)
-    const rowHeight = 64;
-    const myPos = index * rowHeight;
-
+    const containerRect = this.virtualizerContainer.getBoundingClientRect();
+    const rowRect = currentRow.getBoundingClientRect();
     const isVisible =
-      myPos >= scrollTop && myPos + rowHeight <= scrollTop + containerHeight;
+      rowRect.top >= containerRect.top &&
+      rowRect.bottom <= containerRect.bottom;
     this.showStickyUser = !isVisible;
+  }
+
+  private scheduleStickyVisibilityCheck() {
+    if (this.activeTab !== "players") return;
+    void this.updateComplete.then(() => {
+      requestAnimationFrame(() => this.updateStickyVisibility());
+    });
   }
 
   private handleScroll() {
@@ -513,6 +522,7 @@ export class LeaderboardModal extends BaseModal {
 
     return html`
       <div
+        data-current-user=${isCurrentUser ? "true" : "false"}
         class="flex items-center border-b border-white/5 py-3 px-6 hover:bg-white/[0.07] transition-colors w-full ${isCurrentUser
           ? "bg-blue-500/15 border-l-4 border-l-blue-500 pl-5"
           : ""}"
@@ -624,49 +634,62 @@ export class LeaderboardModal extends BaseModal {
             ${translateText("leaderboard_modal.win_loss_ratio")}
           </div>
         </div>
-        <div
-          class="virtualizer-container flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20"
-          @scroll=${() => this.handleScroll()}
-        >
-          ${virtualize({
-            items: this.playerData,
-            renderItem: (p) => this.renderPlayerRow(p),
-            scroller: true,
-          })}
-          ${this.renderPlayerFooter()}
-        </div>
-        ${this.showStickyUser && this.currentUserEntry
-          ? html`
-              <div
-                class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center animate-in slide-in-from-bottom duration-300"
-              >
-                <div class="w-16 text-center">
+        <div class="relative flex-1 min-h-0">
+          <div
+            class="virtualizer-container h-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 ${this
+              .showStickyUser
+              ? "pb-20"
+              : "pb-0"}"
+            @scroll=${() => this.handleScroll()}
+          >
+            ${virtualize({
+              items: this.playerData,
+              renderItem: (p) => this.renderPlayerRow(p),
+              scroller: true,
+            })}
+            ${this.renderPlayerFooter()}
+          </div>
+          ${this.currentUserEntry
+            ? html`
+                <div class="absolute inset-x-0 bottom-0">
                   <div
-                    class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+                    class="bg-blue-600/90 backdrop-blur-md border-t border-blue-400/30 py-4 px-6 shadow-2xl flex items-center transition-all duration-200 ${this
+                      .showStickyUser
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-3 pointer-events-none"}"
+                    aria-hidden=${this.showStickyUser ? "false" : "true"}
                   >
-                    ${this.currentUserEntry.rank}
+                    <div class="w-16 text-center">
+                      <div
+                        class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+                      >
+                        ${this.currentUserEntry.rank}
+                      </div>
+                    </div>
+                    <div class="flex-1 flex flex-col ml-4">
+                      <span
+                        class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
+                        >${translateText(
+                          "leaderboard_modal.your_ranking",
+                        )}</span
+                      >
+                      <span class="font-bold text-white text-base"
+                        >${this.currentUserEntry.username}</span
+                      >
+                    </div>
+                    <div class="flex flex-col items-end w-32">
+                      <div class="font-mono text-white font-bold text-lg">
+                        ${this.currentUserEntry.elo}
+                        <span class="text-[10px] text-white/60"
+                          >${translateText("leaderboard_modal.elo")}</span
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="flex-1 flex flex-col ml-4">
-                  <span
-                    class="text-[10px] uppercase font-bold text-blue-200/60 leading-tight"
-                    >${translateText("leaderboard_modal.your_ranking")}</span
-                  >
-                  <span class="font-bold text-white text-base"
-                    >${this.currentUserEntry.username}</span
-                  >
-                </div>
-                <div class="flex flex-col items-end w-32">
-                  <div class="font-mono text-white font-bold text-lg">
-                    ${this.currentUserEntry.elo}
-                    <span class="text-[10px] text-white/60"
-                      >${translateText("leaderboard_modal.elo")}</span
-                    >
-                  </div>
-                </div>
-              </div>
-            `
-          : ""}
+              `
+            : ""}
+        </div>
       </div>
     `;
   }
