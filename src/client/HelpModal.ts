@@ -125,7 +125,8 @@ export class HelpModal extends BaseModal {
             <div class="text-blue-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-blue-400"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -133,16 +134,9 @@ export class HelpModal extends BaseModal {
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                <path d="M6 8h.001"></path>
-                <path d="M10 8h.001"></path>
-                <path d="M14 8h.001"></path>
-                <path d="M18 8h.001"></path>
-                <path d="M6 12h.001"></path>
-                <path d="M10 12h.001"></path>
-                <path d="M14 12h.001"></path>
-                <path d="M18 12h.001"></path>
-                <path d="M6 16h12"></path>
+                <path d="M2 20 L12 0 L22 20 L2 20"></path>
+                <line x1="12" y1="8" x2="12" y2="14"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
               </svg>
             </div>
             <h3
