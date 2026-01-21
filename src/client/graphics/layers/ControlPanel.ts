@@ -199,8 +199,7 @@ export class ControlPanel extends LitElement implements Layer {
               <span>
                 (${renderTroops(
                   (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-                )}
-                )
+                )})
               </span>
             </span>
           </label>

@@ -8,13 +8,15 @@ import { PathFinder } from "../types";
 
 const ENDPOINT_REFINEMENT_TILES = 50;
 const LOCAL_ASTAR_MAX_AREA = 100 * 100;
-const LOS_MIN_MAGNITUDE = 3;
+const LOS_MIN_MAGNITUDE_PASS1 = 2;
+const LOS_MIN_MAGNITUDE_PASS2 = 3;
 const MAGNITUDE_MASK = 0x1f;
 
 /**
- * Water path smoother transformer with two passes:
+ * Water path smoother transformer:
  * 1. Binary search LOS smoothing (avoids shallow water)
  * 2. Local A* refinement on endpoints (first/last N tiles)
+ * 3. Binary search LOS smoothing again (farther from shore)
  */
 export class SmoothingWaterTransformer implements PathFinder<TileRef> {
   private readonly mapWidth: number;
@@ -47,20 +49,24 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
     }
 
     // Pass 1: LOS smoothing with binary search
-    let smoothed = DebugSpan.wrap("smoother:los", () => this.losSmooth(path));
+    let smoothed = DebugSpan.wrap("smoother:los", () =>
+      this.losSmooth(path, LOS_MIN_MAGNITUDE_PASS1),
+    );
 
     // Pass 2: Local A* refinement on endpoints
     smoothed = DebugSpan.wrap("smoother:refine", () =>
       this.refineEndpoints(smoothed),
     );
 
-    // Pass 3: LOS smoothing again (refinement may create new shortcut opportunities)
-    smoothed = DebugSpan.wrap("smoother:los2", () => this.losSmooth(smoothed));
+    // Pass 3: LOS smoothing again, farther from the shore
+    smoothed = DebugSpan.wrap("smoother:los2", () =>
+      this.losSmooth(smoothed, LOS_MIN_MAGNITUDE_PASS2),
+    );
 
     return smoothed;
   }
 
-  private losSmooth(path: TileRef[]): TileRef[] {
+  private losSmooth(path: TileRef[], minMagnitude: number): TileRef[] {
     const result: TileRef[] = [path[0]];
     let current = 0;
 
@@ -72,7 +78,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
 
       while (lo <= hi) {
         const mid = (lo + hi) >>> 1;
-        if (this.canSee(path[current], path[mid])) {
+        if (this.canSee(path[current], path[mid], minMagnitude)) {
           farthest = mid;
           lo = mid + 1;
         } else {
@@ -188,7 +194,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
     return this.localAStar.searchBounded(from, to, bounds);
   }
 
-  private canSee(from: TileRef, to: TileRef): boolean {
+  private canSee(from: TileRef, to: TileRef, minMagnitude: number): boolean {
     const x0 = from % this.mapWidth;
     const y0 = (from / this.mapWidth) | 0;
     const x1 = to % this.mapWidth;
@@ -214,7 +220,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
 
       // Check magnitude - avoid shallow water
       const magnitude = this.terrain[tile] & MAGNITUDE_MASK;
-      if (magnitude < LOS_MIN_MAGNITUDE) return false;
+      if (magnitude < minMagnitude) return false;
 
       if (x === x1 && y === y1) return true;
 
@@ -229,10 +235,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
 
         const intermediateTile = (y * this.mapWidth + x) as TileRef;
         const intMag = this.terrain[intermediateTile] & MAGNITUDE_MASK;
-        if (
-          !this.isTraversable(intermediateTile) ||
-          intMag < LOS_MIN_MAGNITUDE
-        ) {
+        if (!this.isTraversable(intermediateTile) || intMag < minMagnitude) {
           // Try alternative path
           x -= sx;
           err += dy;
@@ -241,7 +244,7 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
 
           const altTile = (y * this.mapWidth + x) as TileRef;
           const altMag = this.terrain[altTile] & MAGNITUDE_MASK;
-          if (!this.isTraversable(altTile) || altMag < LOS_MIN_MAGNITUDE)
+          if (!this.isTraversable(altTile) || altMag < minMagnitude)
             return false;
 
           x += sx;

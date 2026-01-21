@@ -42,8 +42,8 @@ export class AStarWaterHierarchical implements PathFinder<number> {
       maxMultiClusterNodes,
     );
 
-    // BoundedAStar for short path multi-source (120 + 2*10 padding = 140)
-    const shortPathSize = 140;
+    // BoundedAStar for short path multi-source
+    const shortPathSize = 260; // 2 * (120 + padding 10)
     const maxShortPathNodes = shortPathSize * shortPathSize;
     this.localAStarShortPath = new AStarWaterBounded(map, maxShortPathNodes);
 

@@ -42,6 +42,11 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
+    // Security: If random spawn is enabled, prevent players from re-rolling their spawn location
+    if (this.mg.config().isRandomSpawn() && player.hasSpawned()) {
+      return;
+    }
+
     this.tile ??= this.randomSpawnLand();
 
     if (this.tile === undefined) {

@@ -1,5 +1,3 @@
-// Shore-coercing transformer that converts shore tiles to water tiles for pathfinding
-
 import { GameMap, TileRef } from "../../game/GameMap";
 import { PathFinder } from "../types";
 
@@ -7,9 +5,6 @@ import { PathFinder } from "../types";
  * Wraps a PathFinder to handle shore tiles.
  * Coerces shore tiles to nearby water tiles before pathfinding,
  * then fixes the path extremes to include the original shore tiles.
- *
- * Works at whatever resolution the map provides - can be used with
- * full map or minimap-based pathfinders.
  */
 export class ShoreCoercingTransformer implements PathFinder<number> {
   constructor(
@@ -34,20 +29,18 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
       return null;
     }
 
-    // Coerce to tile
     const coercedTo = this.coerceToWater(to);
     if (coercedTo.water === null) {
       return null;
     }
 
-    // Search on water tiles
     const fromTiles = waterFrom.length === 1 ? waterFrom[0] : waterFrom;
     const path = this.inner.findPath(fromTiles, coercedTo.water);
     if (!path || path.length === 0) {
       return null;
     }
 
-    // Look up the actual path start in the map
+    // Restore original start shore tile
     const originalShore = waterToOriginal.get(path[0]);
     if (originalShore !== undefined && originalShore !== null) {
       path.unshift(originalShore);
@@ -67,25 +60,43 @@ export class ShoreCoercingTransformer implements PathFinder<number> {
   /**
    * Coerce a tile to water for pathfinding.
    * If tile is already water, returns it unchanged.
-   * If tile is shore (land with water neighbor), finds the nearest water neighbor.
+   * If tile is shore, finds the best adjacent water neighbor.
    */
   private coerceToWater(tile: TileRef): {
     water: TileRef | null;
     original: TileRef | null;
   } {
-    // If already water, no coercion needed
     if (this.map.isWater(tile)) {
       return { water: tile, original: null };
     }
 
-    // Find adjacent water neighbor
+    let best: TileRef | null = null;
+    let maxScore = -1;
+
     for (const n of this.map.neighbors(tile)) {
-      if (this.map.isWater(n)) {
-        return { water: n, original: tile };
+      if (!this.map.isWater(n)) continue;
+
+      // Score by water neighbor count (connectivity)
+      const score = this.countWaterNeighbors(n);
+
+      // Pick highest connectivity
+      if (score > maxScore) {
+        maxScore = score;
+        best = n;
       }
     }
 
-    // No water neighbor found - let HPA* handle at minimap level
+    if (best !== null) {
+      return { water: best, original: tile };
+    }
     return { water: null, original: tile };
+  }
+
+  private countWaterNeighbors(tile: TileRef): number {
+    let count = 0;
+    for (const n of this.map.neighbors(tile)) {
+      if (this.map.isWater(n)) count++;
+    }
+    return count;
   }
 }

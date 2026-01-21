@@ -114,13 +114,7 @@ export class AiAttackBehavior {
     }
 
     this.game.addExecution(
-      new TransportShipExecution(
-        this.player,
-        this.game.owner(dst).id(),
-        dst,
-        this.player.troops() / 5,
-        null,
-      ),
+      new TransportShipExecution(this.player, dst, this.player.troops() / 5),
     );
     return;
   }
@@ -741,13 +735,7 @@ export class AiAttackBehavior {
     }
 
     this.game.addExecution(
-      new TransportShipExecution(
-        this.player,
-        target.id(),
-        closest.y,
-        troops,
-        null,
-      ),
+      new TransportShipExecution(this.player, closest.y, troops),
     );
   }
 
