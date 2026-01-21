@@ -869,7 +869,6 @@ class Client {
           "single-player-modal",
           "host-lobby-modal",
           "join-private-lobby-modal",
-          "join-public-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
