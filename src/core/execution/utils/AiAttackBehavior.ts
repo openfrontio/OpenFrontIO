@@ -880,9 +880,6 @@ export class AiAttackBehavior {
       return false;
     }
 
-    console.log(
-      `AI Player ${this.player.name()} donating ${availableTroops} troops to teammate ${selectedTeammate.name()}`,
-    );
     this.game.addExecution(
       new DonateTroopsExecution(
         this.player,
