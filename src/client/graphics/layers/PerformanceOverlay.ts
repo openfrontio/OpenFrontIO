@@ -209,6 +209,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     .layer-bar-fill {
       height: 100%;
+      width: var(--width);
       background: #38bdf8;
       border-radius: 3px;
     }
@@ -611,7 +612,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
                   </span>
                   <div class="layer-bar">
                     <div
-                      class="layer-bar-fill w-(--width)"
+                      class="layer-bar-fill"
                       style="--width: ${width}%;"
                     ></div>
                   </div>
