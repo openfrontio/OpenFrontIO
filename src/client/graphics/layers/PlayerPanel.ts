@@ -25,7 +25,6 @@ import {
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
-  SendKickPlayerIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import {
@@ -38,13 +37,13 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import "./PlayerModerationModal";
 import "./SendResourceModal";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
-import kickIcon from "/images/ExitIconWhite.svg?url";
 import shieldIcon from "/images/ShieldIconWhite.svg?url";
 import stopTradingIcon from "/images/StopIconWhite.png?url";
 import targetIcon from "/images/TargetIconWhite.svg?url";
@@ -71,6 +70,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
   @state() private suppressNextHide: boolean = false;
+  @state() private moderationTarget: PlayerView | null = null;
 
   private ctModal: ChatModal;
 
@@ -146,6 +146,7 @@ export class PlayerPanel extends LitElement implements Layer {
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
     this.tile = tile;
+    this.moderationTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -160,6 +161,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.tile = tile;
     this.sendTarget = target;
     this.sendMode = "gold";
+    this.moderationTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -168,6 +170,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.isVisible = false;
     this.sendMode = "none";
     this.sendTarget = null;
+    this.moderationTarget = null;
     this.requestUpdate();
   }
 
@@ -309,30 +312,24 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  private handleKickClick(e: Event, other: PlayerView) {
+  private openModeration(e: MouseEvent, other: PlayerView) {
     e.stopPropagation();
-
-    const my = this.g.myPlayer();
-    if (
-      !my?.isLobbyCreator() ||
-      other === my ||
-      other.type() !== PlayerType.Human
-    ) {
-      return;
-    }
-
-    const targetClientID = other.clientID();
-    if (!targetClientID || targetClientID.length === 0) return;
-
-    const confirmed = confirm(
-      translateText("player_panel.kick_confirm", { name: other.name() }),
-    );
-    if (!confirmed) return;
-
-    this.kickedPlayerIDs.add(String(other.id()));
-    this.eventBus.emit(new SendKickPlayerIntentEvent(targetClientID));
-    this.hide();
+    this.suppressNextHide = true;
+    this.moderationTarget = other;
   }
+
+  private closeModeration = () => {
+    this.moderationTarget = null;
+  };
+
+  private handleModerationKicked = (
+    e: CustomEvent<{ playerId?: string }>,
+  ) => {
+    const playerId = e.detail?.playerId;
+    if (playerId) this.kickedPlayerIDs.add(String(playerId));
+    this.closeModeration();
+    this.hide();
+  };
 
   private handleToggleRocketDirection(e: Event) {
     e.stopPropagation();
@@ -459,50 +456,19 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!canKick && !alreadyKicked) return html``;
 
     const moderationTitle = translateText("player_panel.moderation");
-    const kickTitle = alreadyKicked
-      ? translateText("player_panel.kicked")
-      : translateText("player_panel.kick");
 
     return html`
       <ui-divider></ui-divider>
-      <details>
-        <summary
-          class="group w-full min-w-[50px] cursor-pointer select-none flex flex-col items-center justify-center
-                 gap-1 rounded-lg py-1.5 border border-white/10 bg-white/4 shadow-xs
-                 transition-all duration-150
-                 text-red-400 hover:bg-red-500/10 hover:text-red-300
-                 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-red-400/30
-                 active:translate-y-[1px]
-                 list-none [&::-webkit-details-marker]:hidden"
-          title=${moderationTitle}
-          aria-label=${moderationTitle}
-        >
-          <img
-            src=${shieldIcon}
-            alt=""
-            aria-hidden="true"
-            class="h-5 w-5 shrink-0 transition-transform group-hover:scale-110 text-zinc-400"
-          />
-          <span
-            class="text-base sm:text-[14px] leading-5 font-semibold tracking-tight"
-            >${moderationTitle}</span
-          >
-        </summary>
-
-        <div class="mt-2 rounded-xl border border-red-400/25 bg-red-500/5 p-2">
-          <div class="grid auto-cols-fr grid-flow-col gap-1">
-            ${actionButton({
-              onClick: (e: MouseEvent) => this.handleKickClick(e, other),
-              icon: kickIcon,
-              iconAlt: "Kick",
-              title: kickTitle,
-              label: kickTitle,
-              type: "red",
-              disabled: alreadyKicked,
-            })}
-          </div>
-        </div>
-      </details>
+      <div class="grid auto-cols-fr grid-flow-col gap-1">
+        ${actionButton({
+          onClick: (e: MouseEvent) => this.openModeration(e, other),
+          icon: shieldIcon,
+          iconAlt: "Moderation",
+          title: moderationTitle,
+          label: moderationTitle,
+          type: "red",
+        })}
+      </div>
     `;
   }
 
@@ -1000,6 +966,22 @@ export class PlayerPanel extends LitElement implements Layer {
                             @confirm=${this.confirmSend}
                             @close=${this.closeSend}
                           ></send-resource-modal>
+                        `
+                      : ""}
+
+                    ${this.moderationTarget
+                      ? html`
+                          <player-moderation-modal
+                            .open=${true}
+                            .myPlayer=${my}
+                            .target=${this.moderationTarget}
+                            .eventBus=${this.eventBus}
+                            .alreadyKicked=${this.kickedPlayerIDs.has(
+                              String(this.moderationTarget.id()),
+                            )}
+                            @close=${this.closeModeration}
+                            @kicked=${this.handleModerationKicked}
+                          ></player-moderation-modal>
                         `
                       : ""}
 
