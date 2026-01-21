@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMapSize, GameMode } from "../core/game/Game";
+import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/LobbyPlayerView";
@@ -165,6 +165,11 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = true;
   }
 
+  disconnectedCallback() {
+    this.onClose();
+    super.disconnectedCallback();
+  }
+
   public closeAndLeave() {
     this.leaveLobby();
     try {
@@ -209,9 +214,11 @@ export class JoinPublicLobbyModal extends BaseModal {
       "map." + c.gameMap.toLowerCase().replace(/ /g, ""),
     );
     const modeName =
-      c.gameMode === GameMode.FFA
-        ? translateText("game_mode.ffa")
-        : translateText("game_mode.teams");
+      c.playerTeams === HumansVsNations
+        ? translateText("game_mode.humans_vs_nations")
+        : c.gameMode === GameMode.FFA
+          ? translateText("game_mode.ffa")
+          : translateText("game_mode.teams");
     return html`
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         ${this.renderConfigItem(translateText("map.map"), mapName)}
