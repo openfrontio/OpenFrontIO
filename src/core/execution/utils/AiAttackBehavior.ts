@@ -1,11 +1,13 @@
 import {
   Difficulty,
   Game,
+  GameMode,
   Player,
   PlayerID,
   PlayerType,
   Relation,
   TerraNullius,
+  UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
@@ -16,6 +18,7 @@ import {
   calculateBoundingBoxCenter,
 } from "../../Util";
 import { AttackExecution } from "../AttackExecution";
+import { DonateTroopsExecution } from "../DonateTroopExecution";
 import { NationAllianceBehavior } from "../nation/NationAllianceBehavior";
 import {
   EMOJI_ASSIST_ACCEPT,
@@ -94,6 +97,16 @@ export class AiAttackBehavior {
 
   private attackWithRandomBoat(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
+
+    // Check if we've already sent out the maximum number of transport ships
+    if (
+      this.player.unitCount(UnitType.TransportShip) >=
+      this.game.config().boatMaxNumber()
+    ) {
+      return;
+    }
+
+    // Check if we have any ocean shore tiles to launch from
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.game.isOceanShore(t),
     );
@@ -309,6 +322,8 @@ export class AiAttackBehavior {
       return false;
     };
 
+    const donate = (): boolean => this.donateTroops();
+
     // Return strategies in order based on difficulty
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
@@ -317,13 +332,13 @@ export class AiAttackBehavior {
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
         // prettier-ignore
-        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island];
+        return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island, donate];
       case Difficulty.Hard:
         // prettier-ignore
-        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island];
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island];
+        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -519,13 +534,22 @@ export class AiAttackBehavior {
   }
 
   private findNearestIslandEnemy(): Player | null {
-    const myBorder = this.player.borderTiles();
-    if (myBorder.size === 0) return null;
+    // Check if we've already sent out the maximum number of transport ships
+    if (
+      this.player.unitCount(UnitType.TransportShip) >=
+      this.game.config().boatMaxNumber()
+    ) {
+      return null;
+    }
+
+    // Check if we have any ocean shore tiles to launch from
+    const hasOceanShore = Array.from(this.player.borderTiles()).some((t) =>
+      this.game.isOceanShore(t),
+    );
+    if (!hasOceanShore) return null;
 
     const filteredPlayers = this.game.players().filter((p) => {
       if (p === this.player) return false;
-      if (!p.isAlive()) return false;
-      if (p.borderTiles().size === 0) return false;
       if (this.player.isFriendly(p)) return false;
       // Don't spam boats into players with more troops
       return p.troops() < this.player.troops();
@@ -646,12 +670,14 @@ export class AiAttackBehavior {
   }
 
   shouldAttack(other: Player | TerraNullius): boolean {
-    // Always attack Terra Nullius, non-humans and traitors (or if we are a bot)
     if (
+      // Always attack Terra Nullius, non-humans and traitors
       other.isPlayer() === false ||
       other.type() !== PlayerType.Human ||
       other.isTraitor() ||
-      this.player.type() === PlayerType.Bot
+      // Always attack if we are a bot or in an HvN game
+      this.player.type() === PlayerType.Bot ||
+      this.game.config().gameConfig().playerTeams === "Humans Vs Nations"
     ) {
       return true;
     }
@@ -758,5 +784,113 @@ export class AiAttackBehavior {
     }
     this.botAttackTroopsSent += troops;
     return troops;
+  }
+
+  private donateTroops(): boolean {
+    // Only donate in team games
+    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      return false;
+    }
+
+    // Check if donating troops is allowed
+    if (this.game.config().donateTroops() === false) {
+      return false;
+    }
+
+    // Don't donate if our team has won (otherwise nations will keep donating forever, circularly)
+    const myTeam = this.player.team();
+    if (myTeam !== null) {
+      let teamTiles = 0;
+      for (const player of this.game.players()) {
+        if (player.team() === myTeam) {
+          teamTiles += player.numTilesOwned();
+        }
+      }
+      const numTilesWithoutFallout =
+        this.game.numLandTiles() - this.game.numTilesWithFallout();
+      const teamPercent = (teamTiles / numTilesWithoutFallout) * 100;
+      if (teamPercent >= this.game.config().percentageTilesOwnedToWin()) {
+        return false;
+      }
+    }
+
+    // Skip donating based on difficulty
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        // Easy nations don't donate
+        return false;
+      case Difficulty.Medium:
+        // Medium nations donate 25% of the time
+        if (!this.random.chance(4)) {
+          return false;
+        }
+        break;
+      case Difficulty.Hard:
+        // Hard nations donate 50% of the time
+        if (!this.random.chance(2)) {
+          return false;
+        }
+        break;
+      case Difficulty.Impossible:
+        // Impossible nations always try to donate
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    // Find teammates (same team, not self, alive)
+    const teammates = this.game.players().filter((p) => {
+      if (p === this.player) return false;
+      return this.player.isOnSameTeam(p);
+    });
+
+    if (teammates.length === 0) {
+      return false;
+    }
+
+    // Find teammate with lowest troop percentage (troops / maxTroops)
+    const teammatesWithTroopPercentage = teammates
+      .map((teammate) => {
+        const maxTroops = this.game.config().maxTroops(teammate);
+        const troopPercentage = teammate.troops() / Math.max(maxTroops, 1);
+        return { teammate, troopPercentage };
+      })
+      .sort((a, b) => a.troopPercentage - b.troopPercentage);
+
+    // Try to donate to teammates in order of lowest troop percentage
+    let selectedTeammate: Player | null = null;
+    for (const entry of teammatesWithTroopPercentage) {
+      if (this.player.canDonateTroops(entry.teammate)) {
+        selectedTeammate = entry.teammate;
+        break;
+      }
+    }
+
+    if (selectedTeammate === null) {
+      return false;
+    }
+
+    // Donate a portion of our troops (keeping reserve)
+    const maxTroops = this.game.config().maxTroops(this.player);
+    const troopsToKeep = maxTroops * this.reserveRatio;
+    const availableTroops = this.player.troops() - troopsToKeep;
+
+    if (availableTroops < 1) {
+      return false;
+    }
+
+    console.log(
+      `AI Player ${this.player.name()} donating ${availableTroops} troops to teammate ${selectedTeammate.name()}`,
+    );
+    this.game.addExecution(
+      new DonateTroopsExecution(
+        this.player,
+        selectedTeammate.id(),
+        availableTroops,
+      ),
+    );
+
+    return true;
   }
 }
