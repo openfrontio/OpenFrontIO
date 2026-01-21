@@ -4,7 +4,6 @@ import {
   isStructureType,
   MessageType,
   Player,
-  StructureTypes,
   TerraNullius,
   TrajectoryTile,
   Unit,
@@ -16,7 +15,7 @@ import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola"
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
-import { computeNukeBlastCounts } from "./Util";
+import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -85,35 +84,21 @@ export class NukeExecution implements Execution {
     }
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
-    const threshold = this.mg.config().nukeAllianceBreakThreshold();
 
-    // Use shared utility to compute weighted tile counts per player
-    const blastCounts = computeNukeBlastCounts({
-      gm: this.mg,
+    const playersToBreakAllianceWith = listNukeBreakAlliance({
+      game: this.mg,
       targetTile: this.dst,
       magnitude,
+      allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
+      threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });
 
-    // Collect all players that should have alliance broken:
-    // either exceeds tile threshold OR has a structure in blast radius
-    const playersToBreakAllianceWith = new Set<number>();
-
-    for (const [playerSmallId, totalWeight] of blastCounts) {
-      if (totalWeight > threshold) {
-        playersToBreakAllianceWith.add(playerSmallId);
+    // Automatically reject incoming alliance requests.
+    for (const incoming of this.player.incomingAllianceRequests()) {
+      if (playersToBreakAllianceWith.has(incoming.requestor().smallID())) {
+        incoming.reject();
       }
     }
-
-    // Also check if any allied structures would be destroyed
-    this.mg
-      .nearbyUnits(this.dst, magnitude.outer, [...StructureTypes])
-      .filter(
-        ({ unit }) =>
-          unit.owner().isPlayer() && this.player.isAlliedWith(unit.owner()),
-      )
-      .forEach(({ unit }) =>
-        playersToBreakAllianceWith.add(unit.owner().smallID()),
-      );
 
     for (const playerSmallId of playersToBreakAllianceWith) {
       const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
@@ -123,11 +108,12 @@ export class NukeExecution implements Execution {
 
       // Resolves exploit of alliance breaking in which a pending alliance request
       // was accepted in the middle of a missile attack.
-      const allianceRequest = attackedPlayer
+      const outgoingAllianceRequest = attackedPlayer
         .incomingAllianceRequests()
         .find((ar) => ar.requestor() === this.player);
-      if (allianceRequest) {
-        allianceRequest.reject();
+      if (outgoingAllianceRequest) {
+        outgoingAllianceRequest.reject();
+        continue;
       }
 
       const alliance = this.player.allianceWith(attackedPlayer);

@@ -30,6 +30,10 @@ import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
+import {
+  renderToggleInputCard,
+  renderToggleInputCardInput,
+} from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import randomMap from "/images/RandomMap.webp?url";
 
@@ -52,6 +56,10 @@ export class SinglePlayerModal extends BaseModal {
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   @state() private userMeResponse: UserMeResponse | false = false;
+  @state() private goldMultiplier: boolean = false;
+  @state() private goldMultiplierValue: number | undefined = undefined;
+  @state() private startingGold: boolean = false;
+  @state() private startingGoldValue: number | undefined = undefined;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -518,20 +526,10 @@ export class SinglePlayerModal extends BaseModal {
                     }
                   },
                 )}
-
-                <!-- Toggle with input support for Max Timer -->
-                <div
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .maxTimer
-                    ? "bg-blue-500/20 border-blue-500/50"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                  @click=${(e: Event) => {
-                    // Prevent toggling when clicking the input
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.max_timer",
+                  checked: this.maxTimer,
+                  onClick: () => {
                     this.maxTimer = !this.maxTimer;
                     if (!this.maxTimer) {
                       this.maxTimerValue = undefined;
@@ -549,58 +547,102 @@ export class SinglePlayerModal extends BaseModal {
                         }
                       }, 0);
                     }
-                  }}
-                >
-                  <div class="flex items-center justify-center w-full mt-1">
-                    <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .maxTimer
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
-                    >
-                      ${this.maxTimer
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
-                    </div>
-                  </div>
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "end-timer-value",
+                    min: 1,
+                    max: 120,
+                    value: this.maxTimerValue ?? "",
+                    ariaLabel: translateText("single_modal.max_timer"),
+                    placeholder: translateText(
+                      "single_modal.max_timer_placeholder",
+                    ),
+                    onInput: this.handleMaxTimerValueChanges,
+                    onKeyDown: this.handleMaxTimerValueKeyDown,
+                  }),
+                })}
 
-                  ${this.maxTimer
-                    ? html`<input
-                        type="number"
-                        id="end-timer-value"
-                        min="1"
-                        max="120"
-                        .value=${String(this.maxTimerValue ?? "")}
-                        class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                        aria-label=${translateText("single_modal.max_timer")}
-                        @input=${this.handleMaxTimerValueChanges}
-                        @keydown=${this.handleMaxTimerValueKeyDown}
-                        placeholder=${translateText(
-                          "single_modal.max_timer_placeholder",
-                        )}
-                      />`
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
-                  <!-- Spacer/Icon placeholder -->
+                <!-- Gold Multiplier -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.gold_multiplier",
+                  checked: this.goldMultiplier,
+                  onClick: () => {
+                    this.goldMultiplier = !this.goldMultiplier;
+                    if (!this.goldMultiplier) {
+                      this.goldMultiplierValue = undefined;
+                    } else {
+                      if (
+                        !this.goldMultiplierValue ||
+                        this.goldMultiplierValue <= 0
+                      ) {
+                        this.goldMultiplierValue = 2;
+                      }
+                      setTimeout(() => {
+                        const input = this.renderRoot.querySelector(
+                          "#gold-multiplier-value",
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 0);
+                    }
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "gold-multiplier-value",
+                    min: 0.1,
+                    max: 1000,
+                    step: "any",
+                    value: this.goldMultiplierValue ?? "",
+                    ariaLabel: translateText("single_modal.gold_multiplier"),
+                    placeholder: translateText(
+                      "single_modal.gold_multiplier_placeholder",
+                    ),
+                    onChange: this.handleGoldMultiplierValueChanges,
+                    onKeyDown: this.handleGoldMultiplierValueKeyDown,
+                  }),
+                })}
 
-                  <div
-                    class="text-[10px] uppercase font-bold text-white/60 tracking-wider text-center w-full leading-tight break-words hyphens-auto"
-                  >
-                    ${translateText("single_modal.max_timer")}
-                  </div>
-                </div>
+                <!-- Starting Gold -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.starting_gold",
+                  checked: this.startingGold,
+                  onClick: () => {
+                    this.startingGold = !this.startingGold;
+                    if (!this.startingGold) {
+                      this.startingGoldValue = undefined;
+                    } else {
+                      if (
+                        !this.startingGoldValue ||
+                        this.startingGoldValue < 0
+                      ) {
+                        this.startingGoldValue = 5000000;
+                      }
+                      setTimeout(() => {
+                        const input = this.renderRoot.querySelector(
+                          "#starting-gold-value",
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 0);
+                    }
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "starting-gold-value",
+                    min: 0,
+                    max: 1000000000,
+                    step: 100000,
+                    value: this.startingGoldValue ?? "",
+                    ariaLabel: translateText("single_modal.starting_gold"),
+                    placeholder: translateText(
+                      "single_modal.starting_gold_placeholder",
+                    ),
+                    onInput: this.handleStartingGoldValueChanges,
+                    onKeyDown: this.handleStartingGoldValueKeyDown,
+                  }),
+                })}
               </div>
             </div>
 
@@ -714,6 +756,10 @@ export class SinglePlayerModal extends BaseModal {
     this.randomSpawn = false;
     this.teamCount = 2;
     this.disabledUnits = [];
+    this.goldMultiplier = false;
+    this.goldMultiplierValue = undefined;
+    this.startingGold = false;
+    this.startingGoldValue = undefined;
   }
 
   private handleSelectRandomMap() {
@@ -764,6 +810,42 @@ export class SinglePlayerModal extends BaseModal {
       this.maxTimerValue = undefined;
     } else {
       this.maxTimerValue = value;
+    }
+  }
+
+  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
+    if (["+", "-", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const value = parseFloat(input.value);
+
+    if (isNaN(value) || value < 0.1 || value > 1000) {
+      this.goldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.goldMultiplierValue = value;
+    }
+  }
+
+  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value);
+
+    if (isNaN(value) || value < 0 || value > 1000000000) {
+      this.startingGoldValue = undefined;
+    } else {
+      this.startingGoldValue = value;
     }
   }
 
@@ -888,6 +970,12 @@ export class SinglePlayerModal extends BaseModal {
                 : {
                     disableNations: this.disableNations,
                   }),
+              ...(this.goldMultiplier && this.goldMultiplierValue
+                ? { goldMultiplier: this.goldMultiplierValue }
+                : {}),
+              ...(this.startingGold && this.startingGoldValue !== undefined
+                ? { startingGold: this.startingGoldValue }
+                : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },
