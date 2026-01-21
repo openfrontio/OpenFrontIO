@@ -116,14 +116,25 @@ export class DynamicUILayer implements Layer {
   }
 
   onBombEvent(unit: UnitView) {
-    if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return;
+    }
+    if (
+      this.createdThisTick(unit) &&
+      (unit.owner() === myPlayer || unit.owner().isOnSameTeam(myPlayer))
+    ) {
       const target = new NukeTelegraph(this.transformHandler, this.game, unit);
       this.uiElements.push(target);
     }
   }
 
   onTransportShipEvent(unit: UnitView) {
-    if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return;
+    }
+    if (this.createdThisTick(unit) && unit.owner() === myPlayer) {
       const target = new NavalTarget(this.transformHandler, this.game, unit);
       this.uiElements.push(target);
     }
@@ -144,11 +155,6 @@ export class DynamicUILayer implements Layer {
         this.uiElements.splice(i, 1);
       }
     }
-  }
-
-  private isOwnedByPlayer(unit: UnitView): boolean {
-    const my = this.game.myPlayer();
-    return my !== null && unit.owner() === my;
   }
 
   private createdThisTick(unit: UnitView): boolean {
