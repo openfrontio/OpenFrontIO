@@ -30,6 +30,7 @@ import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
+import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -42,21 +43,32 @@ const playlist = new MapPlaylist(true);
 export async function startWorker() {
   log.info(`Worker starting...`);
 
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  const app = express();
+  const server = http.createServer(app);
+  const wss = new WebSocketServer({ noServer: true });
+
+  const gm = new GameManager(config, log);
+
+  // Initialize lobby service (handles WebSocket upgrade routing, lobby polling, Redis polling)
+  const lobbyService = new WorkerLobbyService({
+    server,
+    gameWss: wss,
+    gm,
+    config,
+    workerId,
+    log,
+  });
+  lobbyService.start();
+
   setTimeout(
     () => {
       startMatchmakingPolling(gm);
     },
     1000 + Math.random() * 2000,
   );
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
-  const app = express();
-  const server = http.createServer(app);
-  const wss = new WebSocketServer({ server });
-
-  const gm = new GameManager(config, log);
 
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
@@ -65,6 +77,8 @@ export async function startWorker() {
   const privilegeRefresher = new PrivilegeRefresher(
     config.jwtIssuer() + "/cosmetics.json",
     log,
+    undefined,
+    config.env(),
   );
   privilegeRefresher.start();
 
@@ -202,6 +216,11 @@ export async function startWorker() {
       return res.status(404).json({ error: "Game not found" });
     }
     res.json(game.gameInfo());
+  });
+
+  // Public lobbies endpoint - reads from Redis via lobby service
+  app.get("/api/public_lobbies", async (req, res) => {
+    res.json(lobbyService.getPublicLobbiesData());
   });
 
   registerGamePreviewRoute({
@@ -534,7 +553,9 @@ async function startMatchmakingPolling(gm: GameManager) {
           }, 5000);
         }
       } catch (error) {
-        log.error(`Error polling lobby:`, error);
+        if (config.env() !== GameEnv.Dev) {
+          log.error(`Error polling matchmaking:`, error);
+        }
       }
     },
     5000 + Math.random() * 1000,
