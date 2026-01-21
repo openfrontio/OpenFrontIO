@@ -149,7 +149,7 @@ export class TroubleshootingModal extends BaseModal {
                   `,
                 )}
               </div>
-            `};
+            `}
       </div>
     `;
 
