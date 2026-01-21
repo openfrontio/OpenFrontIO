@@ -120,7 +120,7 @@ export class HelpModal extends BaseModal {
             [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
             scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
-          <!-- Hotkeys Section -->
+          <!-- Troubleshooting Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
               <svg

@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "copy": "Copy",
     "back": "Back",
     "available": "Available",
     "preset_max": "Max",
@@ -52,6 +53,7 @@
     "help": "Help",
     "menu": "Menu",
     "troubleshooting": "Troubleshooting",
+    "go_to_troubleshooting": "Go to our troubleshooting page",
     "pick_pattern": "Pick a pattern!"
   },
   "news": {
@@ -171,6 +173,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "player_icons": "Player icons",
+    "troubleshooting_desc": "If you experience performance issues, crashes, or other problems while playing OpenFront, please visit our Troubleshooting page for help diagnosing and fixing common issues:",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - Number 1. This is the top player in the leaderboard.",
     "icon_traitor": "Broken shield - Traitor. This player attacked an ally.",

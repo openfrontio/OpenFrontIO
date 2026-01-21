@@ -69,7 +69,10 @@ export async function collectGraphicsDiagnostics(
     canvas.getContext("webgl", { antialias: true });
 
   if (gl) {
-    type = gl instanceof WebGL2RenderingContext ? "WebGL2" : "WebGL1";
+    const isWebGL2 =
+      typeof WebGL2RenderingContext !== "undefined" &&
+      gl instanceof WebGL2RenderingContext;
+    type = isWebGL2 ? "WebGL2" : "WebGL1";
   }
 
   const rendering: RenderingInfo = { type };
