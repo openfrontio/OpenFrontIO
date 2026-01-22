@@ -75,13 +75,13 @@ export class LanguageModal extends BaseModal {
                   />
                   <div class="flex flex-col items-start min-w-0">
                     <span
-                      class="text-sm font-bold uppercase tracking-wider truncate w-full text-left ${isActive
+                      class="text-sm font-bold uppercase tracking-wider whitespace-normal break-words w-full text-left ${isActive
                         ? "text-white"
                         : "text-gray-200 group-hover:text-white"}"
                       >${lang.native}</span
                     >
                     <span
-                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors truncate w-full text-left"
+                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors whitespace-normal break-words w-full text-left"
                       >${lang.en}</span
                     >
                   </div>

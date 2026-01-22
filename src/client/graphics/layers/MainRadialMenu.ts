@@ -134,7 +134,9 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     const isFriendlyTarget =
-      recipient !== null && recipient.isFriendly(myPlayer);
+      recipient !== null &&
+      recipient.isFriendly(myPlayer) &&
+      !recipient.isDisconnected();
 
     this.radialMenu.setCenterButtonAppearance(
       isFriendlyTarget ? donateTroopIcon : swordIcon,
