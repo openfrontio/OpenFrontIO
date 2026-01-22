@@ -82,6 +82,7 @@ export function createRailNetwork(game: Game): RailNetwork {
 
 export class RailNetworkImpl implements RailNetwork {
   private maxConnectionDistance: number = 4;
+  private stationRadius: number = 3;
   private railGrid: RailSpatialGrid;
 
   constructor(
@@ -133,7 +134,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   private connectToExistingRails(station: TrainStation): boolean {
-    const rails = this.railGrid.query(station.tile(), 3);
+    const rails = this.railGrid.query(station.tile(), this.stationRadius);
 
     const editedClusters = new Set<Cluster>();
     for (const rail of rails) {
