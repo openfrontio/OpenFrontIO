@@ -794,6 +794,14 @@ export class GameServer {
       return;
     }
 
+    if (!this.allClients.has(clientID)) {
+      this.log.warn(`cannot kick client, not found in game`, {
+        clientID,
+        reasonKey,
+      });
+      return;
+    }
+
     this.kickedClients.add(clientID);
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
@@ -813,7 +821,6 @@ export class GameServer {
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
-      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
