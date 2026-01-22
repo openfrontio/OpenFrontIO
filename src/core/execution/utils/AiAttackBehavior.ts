@@ -2,6 +2,7 @@ import {
   Difficulty,
   Game,
   GameMode,
+  HumansVsNations,
   Player,
   PlayerID,
   PlayerType,
@@ -677,7 +678,7 @@ export class AiAttackBehavior {
       other.isTraitor() ||
       // Always attack if we are a bot or in an HvN game
       this.player.type() === PlayerType.Bot ||
-      this.game.config().gameConfig().playerTeams === "Humans Vs Nations"
+      this.game.config().gameConfig().playerTeams === HumansVsNations
     ) {
       return true;
     }
