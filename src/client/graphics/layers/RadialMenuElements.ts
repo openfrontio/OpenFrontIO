@@ -117,6 +117,14 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   return isFriendly.call(selectedPlayer, params.myPlayer);
 }
 
+function isDisconnectedTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  if (selectedPlayer === null) return false;
+  const isDisconnected = (selectedPlayer as PlayerView).isDisconnected;
+  if (typeof isDisconnected !== "function") return false;
+  return isDisconnected.call(selectedPlayer);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
@@ -571,7 +579,7 @@ export const centerButtonElement: CenterButtonElement = {
       return false;
     }
 
-    if (isFriendlyTarget(params)) {
+    if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
       return !params.playerActions.interaction?.canDonateTroops;
     }
 
@@ -581,7 +589,7 @@ export const centerButtonElement: CenterButtonElement = {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      if (isFriendlyTarget(params)) {
+      if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
         const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
@@ -626,7 +634,7 @@ export const rootMenuElement: MenuElement = {
         : [
             boatMenuElement,
             ally,
-            isFriendlyTarget(params)
+            isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),
