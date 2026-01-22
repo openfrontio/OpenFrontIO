@@ -839,7 +839,7 @@ export class AiAttackBehavior {
         assertNever(difficulty);
     }
 
-    // Find teammates (same team, not self, alive)
+    // Find teammates
     const teammates = this.game.players().filter((p) => {
       if (p === this.player) return false;
       return this.player.isOnSameTeam(p);
