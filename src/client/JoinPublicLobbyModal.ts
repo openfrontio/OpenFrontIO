@@ -2,7 +2,6 @@ import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -21,7 +20,20 @@ export class JoinPublicLobbyModal extends BaseModal {
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
-  private lobbyPollInterval: number | null = null;
+  private readonly handleLobbyInfo = (event: Event) => {
+    const lobby = (event as CustomEvent<GameInfo>).detail;
+    if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
+      return;
+    }
+    const msUntilStart = lobby.msUntilStart;
+    this.updateFromLobby({
+      ...lobby,
+      msUntilStart:
+        msUntilStart !== undefined
+          ? Math.max(0, msUntilStart - Date.now())
+          : undefined,
+    });
+  };
 
   render() {
     const secondsRemaining =
@@ -128,7 +140,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
-    this.startLobbyPolling(lobbyId);
+    this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
     }
@@ -149,7 +161,7 @@ export class JoinPublicLobbyModal extends BaseModal {
 
   protected onClose(): void {
     this.clearCountdownTimer();
-    this.stopLobbyPolling();
+    this.stopLobbyUpdates();
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
@@ -330,67 +342,19 @@ export class JoinPublicLobbyModal extends BaseModal {
     }
   }
 
-  private handleLobbyClosed() {
-    this.leaveLobbyOnClose = true;
-    this.close();
+  private startLobbyUpdates() {
+    this.stopLobbyUpdates();
+    document.addEventListener(
+      "lobby-info",
+      this.handleLobbyInfo as EventListener,
+    );
   }
 
-  private startLobbyPolling(lobbyId: string) {
-    this.stopLobbyPolling();
-    void this.pollLobby(lobbyId);
-    this.lobbyPollInterval = window.setInterval(() => {
-      void this.pollLobby(lobbyId);
-    }, 1000);
-  }
-
-  private stopLobbyPolling() {
-    if (this.lobbyPollInterval === null) {
-      return;
-    }
-    clearInterval(this.lobbyPollInterval);
-    this.lobbyPollInterval = null;
-  }
-
-  private async pollLobby(lobbyId: string) {
-    if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
-      return;
-    }
-    try {
-      const config = await getServerConfigFromClient();
-      if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
-        return;
-      }
-      const response = await fetch(
-        `/${config.workerPath(lobbyId)}/api/game/${lobbyId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      if (response.status === 404) {
-        this.handleLobbyClosed();
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-      const data = (await response.json()) as GameInfo;
-      if (!this.currentLobbyId || this.currentLobbyId !== lobbyId) {
-        return;
-      }
-      const msUntilStart = data.msUntilStart;
-      this.updateFromLobby({
-        ...data,
-        msUntilStart:
-          msUntilStart !== undefined
-            ? Math.max(0, msUntilStart - Date.now())
-            : undefined,
-      });
-    } catch (error) {
-      console.error("Error polling public lobby:", error);
-    }
+  private stopLobbyUpdates() {
+    document.removeEventListener(
+      "lobby-info",
+      this.handleLobbyInfo as EventListener,
+    );
   }
 
   private syncCountdownTimer() {
