@@ -370,6 +370,7 @@
     "teams_Trios": "{team_count} teams of 3 (Trios)",
     "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
+    "connecting": "Connecting to lobby...",
     "starting_in": "Starting in {time}",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
