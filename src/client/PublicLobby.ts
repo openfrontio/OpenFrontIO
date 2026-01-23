@@ -11,7 +11,7 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { getPersistentClientID } from "./Auth";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -362,7 +362,7 @@ export class PublicLobby extends LitElement {
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobby.gameID,
-          clientID: generateID(),
+          clientID: getPersistentClientID(),
           source: "public",
           publicLobbyInfo: lobby,
         } as JoinLobbyEvent,
