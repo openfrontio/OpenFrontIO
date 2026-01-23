@@ -70,7 +70,11 @@ export class TurnstileManager {
     }
 
     const token = await this.ensureToken();
-    return token?.token ?? null;
+    if (!token) {
+      return null;
+    }
+    this.invalidateToken();
+    return token.token;
   }
 
   private async ensureToken(): Promise<TurnstileToken | null> {
