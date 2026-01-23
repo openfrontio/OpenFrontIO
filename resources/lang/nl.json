@@ -198,7 +198,7 @@
     "failed_to_send_recovery_email": "Verzenden herstel e-mail mislukt",
     "enter_email_address": "Voer een e-mailadres in alsjeblieft"
   },
-  "leaderboard_modal": {
+  "stats_modal": {
     "title": "Statistieken",
     "clan_stats": "Clan statistieken",
     "loading": "Laden...",

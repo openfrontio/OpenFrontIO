@@ -198,7 +198,7 @@
     "failed_to_send_recovery_email": "Грешка при изпращането на имейл за възстановяване",
     "enter_email_address": "Моля, въведи имейл адрес"
   },
-  "leaderboard_modal": {
+  "stats_modal": {
     "title": "Статистики",
     "clan_stats": "Кланови статистики",
     "loading": "Зареждане...",

@@ -161,7 +161,7 @@
     "logged_in_with_discord": "使用 Discord 登录",
     "recovery_email_sent": "账号找回邮件已发送至 {email}"
   },
-  "leaderboard_modal": {
+  "stats_modal": {
     "title": "统计",
     "clan_stats": "军团统计",
     "loading": "正在加载……",
