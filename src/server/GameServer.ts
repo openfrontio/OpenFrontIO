@@ -163,6 +163,7 @@ export class GameServer {
         return;
       }
       this.replaceClientSocket(existingClient, client.ws);
+      this.startLobbyInfoBroadcast();
       if (this._hasStarted) {
         this.sendStartGameMsg(client.ws, 0);
       }
