@@ -547,7 +547,11 @@ export class GameServer {
     }
     this.broadcastLobbyInfo();
     this.lobbyInfoIntervalId = setInterval(() => {
-      if (this._hasStarted || this._hasEnded || this.activeClients.length === 0) {
+      if (
+        this._hasStarted ||
+        this._hasEnded ||
+        this.activeClients.length === 0
+      ) {
         this.stopLobbyInfoBroadcast();
         return;
       }
