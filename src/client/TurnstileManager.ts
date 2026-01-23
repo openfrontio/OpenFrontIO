@@ -30,6 +30,14 @@ export class TurnstileManager {
     }
   }
 
+  invalidateToken(): void {
+    this.token = null;
+    if (this.refreshTimeout !== null) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = null;
+    }
+  }
+
   private async runWarmup(): Promise<void> {
     try {
       const config = await this.getServerConfig();
