@@ -556,42 +556,46 @@ export class AiAttackBehavior {
       return p.troops() < this.player.troops();
     });
 
-    if (filteredPlayers.length > 0) {
-      const playerCenter = this.getPlayerCenter(this.player);
+    if (filteredPlayers.length === 0) return null;
 
-      const sortedPlayers = filteredPlayers
-        .map((filteredPlayer) => {
-          const filteredPlayerCenter = this.getPlayerCenter(filteredPlayer);
+    const playerCenter = this.getPlayerCenter(this.player);
 
-          const playerCenterTile = this.game.ref(
-            playerCenter.x,
-            playerCenter.y,
-          );
-          const filteredPlayerCenterTile = this.game.ref(
-            filteredPlayerCenter.x,
-            filteredPlayerCenter.y,
-          );
+    const sortedPlayers = filteredPlayers
+      .map((filteredPlayer) => {
+        const filteredPlayerCenter = this.getPlayerCenter(filteredPlayer);
 
-          const distance = this.game.manhattanDist(
-            playerCenterTile,
-            filteredPlayerCenterTile,
-          );
-          return { player: filteredPlayer, distance };
-        })
-        .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
+        const playerCenterTile = this.game.ref(playerCenter.x, playerCenter.y);
+        const filteredPlayerCenterTile = this.game.ref(
+          filteredPlayerCenter.x,
+          filteredPlayerCenter.y,
+        );
 
-      // Select the nearest or second-nearest enemy (So our boat doesn't always run into the same warship, if there is one)
-      let selectedEnemy: Player | null;
-      if (sortedPlayers.length > 1 && this.random.chance(2)) {
-        selectedEnemy = sortedPlayers[1].player;
-      } else {
-        selectedEnemy = sortedPlayers[0].player;
-      }
+        const distance = this.game.manhattanDist(
+          playerCenterTile,
+          filteredPlayerCenterTile,
+        );
+        return { player: filteredPlayer, distance };
+      })
+      .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
 
-      if (selectedEnemy !== null) {
-        return selectedEnemy;
+    // Try players in order of distance until we find one reachable by boat
+    for (const entry of sortedPlayers) {
+      const closest = closestTwoTiles(
+        this.game,
+        Array.from(this.player.borderTiles()).filter((t) =>
+          this.game.isOceanShore(t),
+        ),
+        Array.from(entry.player.borderTiles()).filter((t) =>
+          this.game.isOceanShore(t),
+        ),
+      );
+      if (closest === null) continue;
+
+      if (canBuildTransportShip(this.game, this.player, closest.y)) {
+        return entry.player;
       }
     }
+
     return null;
   }
 
@@ -745,6 +749,10 @@ export class AiAttackBehavior {
       return;
     }
 
+    if (!canBuildTransportShip(this.game, this.player, closest.y)) {
+      return;
+    }
+
     let troops;
     if (target.type() === PlayerType.Bot) {
       troops = this.calculateBotAttackTroops(target, this.player.troops() / 5);
@@ -798,21 +806,9 @@ export class AiAttackBehavior {
       return false;
     }
 
-    // Don't donate if our team has won (otherwise nations will keep donating forever, circularly)
-    const myTeam = this.player.team();
-    if (myTeam !== null) {
-      let teamTiles = 0;
-      for (const player of this.game.players()) {
-        if (player.team() === myTeam) {
-          teamTiles += player.numTilesOwned();
-        }
-      }
-      const numTilesWithoutFallout =
-        this.game.numLandTiles() - this.game.numTilesWithFallout();
-      const teamPercent = (teamTiles / numTilesWithoutFallout) * 100;
-      if (teamPercent >= this.game.config().percentageTilesOwnedToWin()) {
-        return false;
-      }
+    // Don't donate if the game has a winner
+    if (this.game.getWinner() !== null) {
+      return false;
     }
 
     // Skip donating based on difficulty
@@ -840,11 +836,13 @@ export class AiAttackBehavior {
         assertNever(difficulty);
     }
 
-    // Find teammates
-    const teammates = this.game.players().filter((p) => {
-      if (p === this.player) return false;
-      return this.player.isOnSameTeam(p);
-    });
+    // Find teammates who are currently in combat
+    const teammates = this.game
+      .players()
+      .filter((p) => this.player.isOnSameTeam(p))
+      .filter(
+        (p) => p.incomingAttacks().length > 0 || p.outgoingAttacks().length > 0,
+      );
 
     if (teammates.length === 0) {
       return false;
@@ -881,6 +879,7 @@ export class AiAttackBehavior {
       return false;
     }
 
+    console.log("donation!");
     this.game.addExecution(
       new DonateTroopsExecution(
         this.player,
