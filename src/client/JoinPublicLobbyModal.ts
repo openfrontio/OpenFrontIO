@@ -21,6 +21,7 @@ export class JoinPublicLobbyModal extends BaseModal {
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
+  private handledJoinTimeout = false;
   private readonly handleLobbyInfo = (event: Event) => {
     const lobby = (event as CustomEvent<GameInfo>).detail;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
@@ -161,6 +162,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.nationCount = 0;
     this.lobbyStartAt = null;
     this.isConnecting = true;
+    this.handledJoinTimeout = false;
     this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
@@ -388,6 +390,7 @@ export class JoinPublicLobbyModal extends BaseModal {
       return;
     }
     this.countdownTimerId = window.setInterval(() => {
+      this.checkForJoinTimeout();
       this.requestUpdate();
     }, 1000);
   }
@@ -398,6 +401,31 @@ export class JoinPublicLobbyModal extends BaseModal {
     }
     clearInterval(this.countdownTimerId);
     this.countdownTimerId = null;
+  }
+
+  private checkForJoinTimeout() {
+    if (
+      this.handledJoinTimeout ||
+      !this.isConnecting ||
+      this.lobbyStartAt === null ||
+      !this.isModalOpen
+    ) {
+      return;
+    }
+    if (Date.now() < this.lobbyStartAt) {
+      return;
+    }
+    this.handledJoinTimeout = true;
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: translateText("public_lobby.join_timeout"),
+          color: "red",
+          duration: 3500,
+        },
+      }),
+    );
+    this.closeAndLeave();
   }
 
   private async loadNationCount() {

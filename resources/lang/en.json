@@ -386,7 +386,8 @@
     "teams": "{num} teams",
     "players_per_team": "of {num}",
     "started": "Started",
-    "status": "Status"
+    "status": "Status",
+    "join_timeout": "You didn't enter the game in time."
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",
