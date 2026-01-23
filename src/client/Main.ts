@@ -240,6 +240,11 @@ class Client {
     token: string;
     createdAt: number;
   }> | null = null;
+  private serverConfigPrefetch: Promise<
+    Awaited<ReturnType<typeof getServerConfigFromClient>>
+  > | null = null;
+  private cosmeticsPromise: Promise<Awaited<ReturnType<typeof fetchCosmetics>>> | null =
+    null;
 
   constructor() {}
 
@@ -248,6 +253,16 @@ class Client {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
+    // Warm critical join dependencies to avoid blocking on first join.
+    const configPrefetch = getServerConfigFromClient();
+    configPrefetch.catch((error) => {
+      console.warn("Server config prefetch failed", error);
+      if (this.serverConfigPrefetch === configPrefetch) {
+        this.serverConfigPrefetch = null;
+      }
+    });
+    this.serverConfigPrefetch = configPrefetch;
+    this.cosmeticsPromise = fetchCosmetics();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -796,23 +811,29 @@ class Client {
     if (lobby.source === "public") {
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const config = await getServerConfigFromClient();
+    const configPromise =
+      this.serverConfigPrefetch ?? getServerConfigFromClient();
+    const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
+    const turnstilePromise = configPromise.then((config) =>
+      this.getTurnstileToken(lobby, config),
+    );
+    const [config, cosmetics, turnstileToken] = await Promise.all([
+      configPromise,
+      cosmeticsPromise,
+      turnstilePromise,
+    ]);
     if (joinAttemptId !== this.joinAttemptId) {
       return;
+    }
+    if (this.serverConfigPrefetch === configPromise) {
+      this.serverConfigPrefetch = null;
+    }
+    if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
+      this.cosmeticsPromise = null;
     }
     this.updateJoinUrlForShare(lobby.gameID, config);
 
-    const pattern = this.userSettings.getSelectedPatternName(
-      await fetchCosmetics(),
-    );
-    if (joinAttemptId !== this.joinAttemptId) {
-      return;
-    }
-
-    const turnstileToken = await this.getTurnstileToken(lobby);
-    if (joinAttemptId !== this.joinAttemptId) {
-      return;
-    }
+    const pattern = this.userSettings.getSelectedPatternName(cosmetics);
 
     this.gameStop = joinLobby(
       this.eventBus,
@@ -1004,10 +1025,11 @@ class Client {
 
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
+    config?: Awaited<ReturnType<typeof getServerConfigFromClient>>,
   ): Promise<string | null> {
-    const config = await getServerConfigFromClient();
+    const resolvedConfig = config ?? (await getServerConfigFromClient());
     if (
-      config.env() === GameEnv.Dev ||
+      resolvedConfig.env() === GameEnv.Dev ||
       lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
     ) {
       return null;
