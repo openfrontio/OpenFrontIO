@@ -55,7 +55,6 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
-import { TurnstileManager } from "./TurnstileManager";
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
