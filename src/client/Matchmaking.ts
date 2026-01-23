@@ -3,7 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { getUserMe, hasLinkedAccount } from "./Api";
-import { getPersistentClientID, getPlayToken } from "./Auth";
+import { getClientIDForGame, getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
@@ -227,7 +227,7 @@ export class MatchmakingModal extends BaseModal {
       new CustomEvent("join-lobby", {
         detail: {
           gameID: this.gameID,
-          clientID: getPersistentClientID(),
+          clientID: getClientIDForGame(this.gameID),
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
