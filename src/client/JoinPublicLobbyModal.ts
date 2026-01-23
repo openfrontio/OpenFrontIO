@@ -16,6 +16,7 @@ export class JoinPublicLobbyModal extends BaseModal {
   @state() private currentLobbyId: string = "";
   @state() private nationCount: number = 0;
   @state() private lobbyStartAt: number | null = null;
+  @state() private isConnecting: boolean = true;
 
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
@@ -24,6 +25,9 @@ export class JoinPublicLobbyModal extends BaseModal {
     const lobby = (event as CustomEvent<GameInfo>).detail;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
       return;
+    }
+    if (this.isConnecting) {
+      this.isConnecting = false;
     }
     const msUntilStart = lobby.msUntilStart;
     this.updateFromLobby({
@@ -60,21 +64,37 @@ export class JoinPublicLobbyModal extends BaseModal {
           ariaLabel: translateText("common.close"),
         })}
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
-          ${this.gameConfig ? this.renderGameConfig() : html``}
-          ${this.players.length > 0
+          ${this.isConnecting
             ? html`
-                <lobby-player-view
-                  class="mt-6"
-                  .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                  .clients=${this.players}
-                  .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  .nationCount=${this.nationCount}
-                  .disableNations=${this.gameConfig?.disableNations ?? false}
-                  .isCompactMap=${this.gameConfig?.gameMapSize ===
-                  GameMapSize.Compact}
-                ></lobby-player-view>
+                <div
+                  class="min-h-[240px] flex flex-col items-center justify-center gap-4"
+                >
+                  <div
+                    class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"
+                  ></div>
+                  <p class="text-center text-white/80 text-sm">
+                    ${translateText("public_lobby.connecting")}
+                  </p>
+                </div>
               `
-            : ""}
+            : html`
+                ${this.gameConfig ? this.renderGameConfig() : html``}
+                ${this.players.length > 0
+                  ? html`
+                      <lobby-player-view
+                        class="mt-6"
+                        .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                        .clients=${this.players}
+                        .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                        .nationCount=${this.nationCount}
+                        .disableNations=${this.gameConfig?.disableNations ??
+                        false}
+                        .isCompactMap=${this.gameConfig?.gameMapSize ===
+                        GameMapSize.Compact}
+                      ></lobby-player-view>
+                    `
+                  : ""}
+              `}
         </div>
 
         <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
@@ -140,6 +160,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.isConnecting = true;
     this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
@@ -174,6 +195,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.currentLobbyId = "";
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.isConnecting = true;
     this.leaveLobbyOnClose = true;
   }
 
