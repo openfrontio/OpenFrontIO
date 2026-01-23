@@ -974,6 +974,7 @@ class Client {
   private async handleLeaveLobby(/* event: CustomEvent */) {
     this.joinAttemptId++;
     this.turnstileManager.invalidateToken();
+    this.turnstileManager.warmup();
     this.isJoiningLobby = false;
     if (this.gameStop === null) {
       try {
