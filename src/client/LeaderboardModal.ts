@@ -797,7 +797,7 @@ export class LeaderboardModal extends BaseModal {
               <span
                 class="text-white text-xl sm:text-2xl font-bold uppercase tracking-widest"
               >
-                ${translateText("leaderboard_modal.title_plural")}
+                ${translateText("leaderboard_modal.title")}
               </span>
               ${this.activeTab === "clans" ? dateRange : ""}
             </div>

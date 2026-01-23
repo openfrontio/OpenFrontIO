@@ -28,7 +28,6 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.player": "Player",
       "leaderboard_modal.loading": "Loading",
       "leaderboard_modal.try_again": "Try Again",
-      "leaderboard_modal.title_plural": "Leaderboards",
       "leaderboard_modal.no_data_yet": "No data yet",
       "leaderboard_modal.no_stats": "No stats",
       "leaderboard_modal.your_ranking": "Your ranking",
