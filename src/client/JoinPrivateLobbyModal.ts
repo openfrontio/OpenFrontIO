@@ -11,7 +11,7 @@ import {
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
-import { getPersistentClientID } from "./Auth";
+import { getClientIDForGame } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -421,7 +421,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.showMessage(translateText("private_lobby.joined_waiting"));
       this.message = "";
       this.hasJoined = true;
-      this.currentClientID = getPersistentClientID();
+      this.currentClientID = getClientIDForGame(lobbyId);
 
       // If the modal closes as part of joining the game, do not leave the lobby
       this.leaveLobbyOnClose = false;
@@ -481,7 +481,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    this.currentClientID = getPersistentClientID();
+    this.currentClientID = getClientIDForGame(lobbyId);
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
