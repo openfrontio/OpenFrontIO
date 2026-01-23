@@ -21,6 +21,7 @@ import {
   isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { getPersistentClientID } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -635,7 +636,7 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
-    this.lobbyCreatorClientID = generateID();
+    this.lobbyCreatorClientID = getPersistentClientID();
 
     createLobby(this.lobbyCreatorClientID)
       .then(async (lobby) => {
