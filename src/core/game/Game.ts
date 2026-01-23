@@ -183,6 +183,17 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
 };
 
+export const featuredMaps: GameMapType[] = [
+  GameMapType.World,
+  GameMapType.Europe,
+  GameMapType.NorthAmerica,
+  GameMapType.SouthAmerica,
+  GameMapType.Asia,
+  GameMapType.Africa,
+  GameMapType.Oceania,
+  GameMapType.Japan,
+];
+
 export enum GameType {
   Singleplayer = "Singleplayer",
   Public = "Public",

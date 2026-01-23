@@ -246,6 +246,8 @@
   },
   "map": {
     "map": "Map",
+    "featured": "Featured",
+    "all": "All",
     "world": "World",
     "giantworldmap": "Giant World Map",
     "europe": "Europe",
@@ -296,6 +298,7 @@
     "amazonriver": "Amazon River"
   },
   "map_categories": {
+    "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
     "fantasy": "Other",
