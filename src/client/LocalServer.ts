@@ -17,6 +17,7 @@ import {
   getClanTag,
   replacer,
 } from "../core/Util";
+import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
@@ -208,7 +209,7 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        persistentID: null,
+        persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
