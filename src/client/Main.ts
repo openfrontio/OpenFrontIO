@@ -7,9 +7,7 @@ import {
   GameRecord,
   GameStartInfo,
 } from "../core/Schemas";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
@@ -56,6 +54,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import { TurnstileManager } from "./TurnstileManager";
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -236,10 +235,7 @@ class Client {
 
   private gutterAds: GutterAds;
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
+  private turnstileManager: TurnstileManager;
   private serverConfigPrefetch: Promise<
     Awaited<ReturnType<typeof getServerConfigFromClient>>
   > | null = null;
@@ -247,13 +243,14 @@ class Client {
     Awaited<ReturnType<typeof fetchCosmetics>>
   > | null = null;
 
-  constructor() {}
+  constructor() {
+    this.turnstileManager = new TurnstileManager(() =>
+      this.getServerConfigPrefetched(),
+    );
+  }
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
     // Warm critical join dependencies to avoid blocking on first join.
     const configPrefetch = getServerConfigFromClient();
     configPrefetch.catch((error) => {
@@ -264,6 +261,8 @@ class Client {
     });
     this.serverConfigPrefetch = configPrefetch;
     this.cosmeticsPromise = fetchCosmetics();
+    // Prefetch turnstile token so it is available when the user joins a lobby.
+    this.turnstileManager.warmup();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -323,7 +322,6 @@ class Client {
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
     );
-
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
@@ -438,6 +436,7 @@ class Client {
         setTimeout(() => {
           this.patternsModal.refresh();
         }, 50);
+        this.turnstileManager.warmup();
       }
     });
 
@@ -812,11 +811,10 @@ class Client {
     if (lobby.source === "public") {
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const configPromise =
-      this.serverConfigPrefetch ?? getServerConfigFromClient();
+    const configPromise = this.getServerConfigPrefetched();
     const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
-    const turnstilePromise = configPromise.then((config) =>
-      this.getTurnstileToken(lobby, config),
+    const turnstilePromise = this.turnstileManager.getTokenForJoin(
+      lobby.gameStartInfo,
     );
     const [config, cosmetics, turnstileToken] = await Promise.all([
       configPromise,
@@ -825,9 +823,6 @@ class Client {
     ]);
     if (joinAttemptId !== this.joinAttemptId) {
       return;
-    }
-    if (this.serverConfigPrefetch === configPromise) {
-      this.serverConfigPrefetch = null;
     }
     if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
       this.cosmeticsPromise = null;
@@ -1024,39 +1019,14 @@ class Client {
     }, 100);
   }
 
-  private async getTurnstileToken(
-    lobby: JoinLobbyEvent,
-    config?: Awaited<ReturnType<typeof getServerConfigFromClient>>,
-  ): Promise<string | null> {
-    const resolvedConfig = config ?? (await getServerConfigFromClient());
-    if (
-      resolvedConfig.env() === GameEnv.Dev ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
-    ) {
-      return null;
+  private async getServerConfigPrefetched() {
+    const configPromise =
+      this.serverConfigPrefetch ?? getServerConfigFromClient();
+    const config = await configPromise;
+    if (this.serverConfigPrefetch === configPromise) {
+      this.serverConfigPrefetch = null;
     }
-
-    if (this.turnstileTokenPromise === null) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
-
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    return config;
   }
 }
 
@@ -1071,44 +1041,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
-}
-
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
-  }
-
-  const config = await getServerConfigFromClient();
-  const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
-  });
 }
