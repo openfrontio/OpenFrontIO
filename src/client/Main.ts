@@ -793,11 +793,27 @@ class Client {
     const turnstilePromise = this.turnstileManager.getTokenForJoin(
       lobby.gameStartInfo,
     );
-    const [config, cosmetics, turnstileToken] = await Promise.all([
-      configPromise,
-      cosmeticsPromise,
-      turnstilePromise,
-    ]);
+    let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
+    let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
+    let turnstileToken: string | null;
+    try {
+      [config, cosmetics, turnstileToken] = await Promise.all([
+        configPromise,
+        cosmeticsPromise,
+        turnstilePromise,
+      ]);
+    } catch (error) {
+      if (joinAttemptId === this.joinAttemptId) {
+        this.isJoiningLobby = false;
+        if (this.cosmeticsPromise === cosmeticsPromise) {
+          this.cosmeticsPromise = null;
+        }
+        this.joinModal?.close();
+        this.joinPublicModal?.closeWithoutLeaving();
+      }
+      console.error("Failed to prepare join flow:", error);
+      return;
+    }
     if (joinAttemptId !== this.joinAttemptId) {
       return;
     }
