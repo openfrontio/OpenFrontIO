@@ -10,6 +10,7 @@ export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
 const CLIENT_ID_KEY = "client_join_id";
+const CLIENT_GAME_ID_KEY = "client_join_game_id";
 
 let __jwt: string | null = null;
 
@@ -211,12 +212,18 @@ export function getPersistentID(): string {
   return base64urlToUuid(sub);
 }
 
-export function getPersistentClientID(): string {
-  const value = sessionStorage.getItem(CLIENT_ID_KEY);
-  if (value && /^[A-Za-z0-9]{8}$/.test(value)) {
-    return value;
+export function getClientIDForGame(gameID: string): string {
+  const storedGameID = sessionStorage.getItem(CLIENT_GAME_ID_KEY);
+  const storedClientID = sessionStorage.getItem(CLIENT_ID_KEY);
+  if (
+    storedGameID === gameID &&
+    storedClientID &&
+    /^[A-Za-z0-9]{8}$/.test(storedClientID)
+  ) {
+    return storedClientID;
   }
   const newID = generateID();
+  sessionStorage.setItem(CLIENT_GAME_ID_KEY, gameID);
   sessionStorage.setItem(CLIENT_ID_KEY, newID);
   return newID;
 }
