@@ -193,6 +193,7 @@ declare global {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
+    "lobby-info": CustomEvent<GameInfo>;
   }
 }
 

@@ -105,7 +105,8 @@ export type ServerMessage =
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerLobbyInfoMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -115,6 +116,9 @@ export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
+export type ServerLobbyInfoMessage = z.infer<
+  typeof ServerLobbyInfoMessageSchema
+>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -539,6 +543,11 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const ServerLobbyInfoMessageSchema = z.object({
+  type: z.literal("lobby_info"),
+  lobby: GameInfoSchema,
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -546,6 +555,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyInfoMessageSchema,
 ]);
 
 //

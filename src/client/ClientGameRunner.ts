@@ -96,6 +96,12 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    if (message.type === "lobby_info") {
+      document.dispatchEvent(
+        new CustomEvent("lobby-info", { detail: message.lobby }),
+      );
+      return;
+    }
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
