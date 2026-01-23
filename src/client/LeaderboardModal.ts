@@ -353,150 +353,152 @@ export class LeaderboardModal extends BaseModal {
     const maxGames = Math.max(...clans.map((c) => c.games), 1);
 
     return html`
-      <div
-        class="overflow-x-auto rounded-xl border border-white/5 bg-black/20 mx-6 mb-6"
-      >
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr
-              class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/[0.02]"
-            >
-              <th class="py-4 px-4 text-center font-bold w-16">
-                ${translateText("leaderboard_modal.rank")}
-              </th>
-              <th class="py-4 px-4 text-left font-bold">
-                ${translateText("leaderboard_modal.clan")}
-              </th>
-              <th
-                @click=${() => this.handleClanSort("games")}
-                class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors"
+      <div class="h-full px-6 pb-6">
+        <div
+          class="h-full overflow-y-auto overflow-x-auto rounded-xl border border-white/5 bg-black/20"
+        >
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr
+                class="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/5 bg-white/[0.02]"
               >
-                ${translateText("leaderboard_modal.games")}
-                ${this.clanSortBy === "games"
-                  ? this.clanSortOrder === "asc"
-                    ? "↑"
-                    : "↓"
-                  : "↕"}
-              </th>
-              <th
-                @click=${() => this.handleClanSort("wins")}
-                class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
-                title=${translateText("leaderboard_modal.win_score_tooltip")}
-              >
-                ${translateText("leaderboard_modal.win_score")}
-                ${this.clanSortBy === "wins"
-                  ? this.clanSortOrder === "asc"
-                    ? "↑"
-                    : "↓"
-                  : "↕"}
-              </th>
-              <th
-                @click=${() => this.handleClanSort("losses")}
-                class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
-                title=${translateText("leaderboard_modal.loss_score_tooltip")}
-              >
-                ${translateText("leaderboard_modal.loss_score")}
-                ${this.clanSortBy === "losses"
-                  ? this.clanSortOrder === "asc"
-                    ? "↑"
-                    : "↓"
-                  : "↕"}
-              </th>
-              <th
-                @click=${() => this.handleClanSort("ratio")}
-                class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
-              >
-                ${translateText("leaderboard_modal.win_loss_ratio")}
-                ${this.clanSortBy === "ratio"
-                  ? this.clanSortOrder === "asc"
-                    ? "↑"
-                    : "↓"
-                  : "↕"}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sorted.map((clan, index) => {
-              const displayRank = index + 1;
-              const rankColor =
-                displayRank === 1
-                  ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/20"
-                  : displayRank === 2
-                    ? "text-slate-300 bg-slate-400/10 ring-1 ring-slate-400/20"
-                    : displayRank === 3
-                      ? "text-amber-600 bg-amber-600/10 ring-1 ring-amber-600/20"
-                      : "text-white/40 bg-white/5";
-              const rankIcon =
-                displayRank === 1
-                  ? "👑"
-                  : displayRank === 2
-                    ? "🥈"
-                    : displayRank === 3
-                      ? "🥉"
-                      : String(displayRank);
-
-              return html`
-                <tr
-                  class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group"
+                <th class="py-4 px-4 text-center font-bold w-16">
+                  ${translateText("leaderboard_modal.rank")}
+                </th>
+                <th class="py-4 px-4 text-left font-bold">
+                  ${translateText("leaderboard_modal.clan")}
+                </th>
+                <th
+                  @click=${() => this.handleClanSort("games")}
+                  class="py-4 px-4 text-right font-bold w-32 cursor-pointer hover:text-white/60 transition-colors"
                 >
-                  <td class="py-3 px-4 text-center">
-                    <div
-                      class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
-                    >
-                      ${rankIcon}
-                    </div>
-                  </td>
-                  <td class="py-3 px-4 font-bold text-blue-300">
-                    <div
-                      class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 inline-block"
-                    >
-                      ${clan.clanTag}
-                    </div>
-                  </td>
-                  <td class="py-3 px-4 text-right">
-                    <div class="flex flex-col items-end gap-1">
-                      <span class="text-white font-mono font-medium"
-                        >${clan.games.toLocaleString()}</span
-                      >
+                  ${translateText("leaderboard_modal.games")}
+                  ${this.clanSortBy === "games"
+                    ? this.clanSortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : "↕"}
+                </th>
+                <th
+                  @click=${() => this.handleClanSort("wins")}
+                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
+                  title=${translateText("leaderboard_modal.win_score_tooltip")}
+                >
+                  ${translateText("leaderboard_modal.win_score")}
+                  ${this.clanSortBy === "wins"
+                    ? this.clanSortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : "↕"}
+                </th>
+                <th
+                  @click=${() => this.handleClanSort("losses")}
+                  class="py-4 px-4 text-right font-bold hidden md:table-cell cursor-pointer hover:text-white/60 transition-colors"
+                  title=${translateText("leaderboard_modal.loss_score_tooltip")}
+                >
+                  ${translateText("leaderboard_modal.loss_score")}
+                  ${this.clanSortBy === "losses"
+                    ? this.clanSortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : "↕"}
+                </th>
+                <th
+                  @click=${() => this.handleClanSort("ratio")}
+                  class="py-4 px-4 text-right font-bold pr-6 cursor-pointer hover:text-white/60 transition-colors"
+                >
+                  ${translateText("leaderboard_modal.win_loss_ratio")}
+                  ${this.clanSortBy === "ratio"
+                    ? this.clanSortOrder === "asc"
+                      ? "↑"
+                      : "↓"
+                    : "↕"}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sorted.map((clan, index) => {
+                const displayRank = index + 1;
+                const rankColor =
+                  displayRank === 1
+                    ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/20"
+                    : displayRank === 2
+                      ? "text-slate-300 bg-slate-400/10 ring-1 ring-slate-400/20"
+                      : displayRank === 3
+                        ? "text-amber-600 bg-amber-600/10 ring-1 ring-amber-600/20"
+                        : "text-white/40 bg-white/5";
+                const rankIcon =
+                  displayRank === 1
+                    ? "👑"
+                    : displayRank === 2
+                      ? "🥈"
+                      : displayRank === 3
+                        ? "🥉"
+                        : String(displayRank);
+
+                return html`
+                  <tr
+                    class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group"
+                  >
+                    <td class="py-3 px-4 text-center">
                       <div
-                        class="w-24 h-1 bg-white/10 rounded-full overflow-hidden"
+                        class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
                       >
-                        <div
-                          class="h-full bg-blue-500/50 rounded-full"
-                          style="width: ${(clan.games / maxGames) * 100}%"
-                        ></div>
+                        ${rankIcon}
                       </div>
-                    </div>
-                  </td>
-                  <td
-                    class="py-3 px-4 text-right font-mono text-green-400/90 hidden md:table-cell"
-                  >
-                    ${clan.weightedWins}
-                  </td>
-                  <td
-                    class="py-3 px-4 text-right font-mono text-red-400/90 hidden md:table-cell"
-                  >
-                    ${clan.weightedLosses}
-                  </td>
-                  <td class="py-3 px-4 text-right pr-6">
-                    <div class="inline-flex flex-col items-end">
-                      <span
-                        class="font-mono font-bold ${clan.weightedWLRatio >= 1
-                          ? "text-green-400"
-                          : "text-red-400"}"
-                        >${clan.weightedWLRatio}</span
+                    </td>
+                    <td class="py-3 px-4 font-bold text-blue-300">
+                      <div
+                        class="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20 inline-block"
                       >
-                      <span
-                        class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
-                        >${translateText("leaderboard_modal.ratio")}</span
-                      >
-                    </div>
-                  </td>
-                </tr>
-              `;
-            })}
-          </tbody>
-        </table>
+                        ${clan.clanTag}
+                      </div>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                      <div class="flex flex-col items-end gap-1">
+                        <span class="text-white font-mono font-medium"
+                          >${clan.games.toLocaleString()}</span
+                        >
+                        <div
+                          class="w-24 h-1 bg-white/10 rounded-full overflow-hidden"
+                        >
+                          <div
+                            class="h-full bg-blue-500/50 rounded-full"
+                            style="width: ${(clan.games / maxGames) * 100}%"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      class="py-3 px-4 text-right font-mono text-green-400/90 hidden md:table-cell"
+                    >
+                      ${clan.weightedWins}
+                    </td>
+                    <td
+                      class="py-3 px-4 text-right font-mono text-red-400/90 hidden md:table-cell"
+                    >
+                      ${clan.weightedLosses}
+                    </td>
+                    <td class="py-3 px-4 text-right pr-6">
+                      <div class="inline-flex flex-col items-end">
+                        <span
+                          class="font-mono font-bold ${clan.weightedWLRatio >= 1
+                            ? "text-green-400"
+                            : "text-red-400"}"
+                          >${clan.weightedWLRatio}</span
+                        >
+                        <span
+                          class="text-[10px] uppercase text-white/30 font-bold tracking-wider"
+                          >${translateText("leaderboard_modal.ratio")}</span
+                        >
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
   }
