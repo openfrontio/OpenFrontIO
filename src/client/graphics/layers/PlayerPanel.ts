@@ -444,15 +444,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderModeration(my: PlayerView, other: PlayerView) {
-    const alreadyKicked = this.kickedPlayerIDs.has(String(other.id()));
-    const canKick =
-      my.isLobbyCreator() &&
-      other !== my &&
-      other.type() === PlayerType.Human &&
-      !!other.clientID();
-
-    if (!canKick && !alreadyKicked) return html``;
-
+    if (!my.isLobbyCreator()) return html``;
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`

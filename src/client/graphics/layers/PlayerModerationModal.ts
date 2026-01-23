@@ -85,7 +85,6 @@ export class PlayerModerationModal extends LitElement {
 
     const canKick = this.canKick(my, other);
     const alreadyKicked = this.alreadyKicked;
-    if (!canKick && !alreadyKicked) return html``;
 
     const moderationTitle = translateText("player_panel.moderation");
     const kickTitle = alreadyKicked
