@@ -52,9 +52,7 @@ export class TurnstileManager {
     }
   }
 
-  async getTokenForJoin(
-    gameStartInfo?: GameStartInfo,
-  ): Promise<string | null> {
+  async getTokenForJoin(gameStartInfo?: GameStartInfo): Promise<string | null> {
     const config = await this.getServerConfig();
     if (
       config.env() === GameEnv.Dev ||
