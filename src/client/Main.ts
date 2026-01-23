@@ -45,6 +45,7 @@ import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import { TurnstileManager } from "./TurnstileManager";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
@@ -54,7 +55,6 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
-import { TurnstileManager } from "./TurnstileManager";
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -246,6 +246,7 @@ class Client {
   private matchmakingModal: MatchmakingModal;
 
   private gutterAds: GutterAds;
+  private isJoiningLobby = false;
 
   private turnstileManager: TurnstileManager;
   private serverConfigPrefetch: Promise<
@@ -668,12 +669,14 @@ class Client {
   }
 
   private async handleUrl() {
+    if (this.isJoiningLobby) {
+      return;
+    }
     // Wait for modal custom elements to be defined
     await Promise.all([
       customElements.whenDefined("join-private-lobby-modal"),
       customElements.whenDefined("host-lobby-modal"),
     ]);
-
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = await crazyGamesSDK.getInviteGameId();
@@ -792,6 +795,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     const joinAttemptId = ++this.joinAttemptId;
+    this.isJoiningLobby = true;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -799,6 +803,7 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
+      this.joinModal?.close();
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
     const configPromise = this.getServerConfigPrefetched();
@@ -898,6 +903,7 @@ class Client {
         }
       },
       () => {
+        this.isJoiningLobby = false;
         this.joinModal.close();
         this.joinPublicModal?.closeWithoutLeaving();
         this.publicLobby.stop();
@@ -944,6 +950,7 @@ class Client {
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
     this.joinAttemptId++;
+    this.isJoiningLobby = false;
     if (this.gameStop === null) {
       try {
         history.replaceState(null, "", "/");
