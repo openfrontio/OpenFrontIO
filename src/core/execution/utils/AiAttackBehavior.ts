@@ -879,7 +879,6 @@ export class AiAttackBehavior {
       return false;
     }
 
-    console.log("donation!");
     this.game.addExecution(
       new DonateTroopsExecution(
         this.player,
