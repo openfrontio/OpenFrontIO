@@ -243,8 +243,9 @@ class Client {
   private serverConfigPrefetch: Promise<
     Awaited<ReturnType<typeof getServerConfigFromClient>>
   > | null = null;
-  private cosmeticsPromise: Promise<Awaited<ReturnType<typeof fetchCosmetics>>> | null =
-    null;
+  private cosmeticsPromise: Promise<
+    Awaited<ReturnType<typeof fetchCosmetics>>
+  > | null = null;
 
   constructor() {}
 
