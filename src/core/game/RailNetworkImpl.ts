@@ -83,6 +83,7 @@ export function createRailNetwork(game: Game): RailNetwork {
 export class RailNetworkImpl implements RailNetwork {
   private maxConnectionDistance: number = 4;
   private stationRadius: number = 3;
+  private gridCellSize: number = 4;
   private railGrid: RailSpatialGrid;
 
   constructor(
@@ -90,7 +91,7 @@ export class RailNetworkImpl implements RailNetwork {
     private _stationManager: StationManager,
     private pathService: RailPathFinderService,
   ) {
-    this.railGrid = new RailSpatialGrid(game, 4); // 4x4 tiles spatial grid
+    this.railGrid = new RailSpatialGrid(game, this.gridCellSize); // 4x4 tiles spatial grid
   }
 
   stationManager(): StationManager {
@@ -140,15 +141,19 @@ export class RailNetworkImpl implements RailNetwork {
     for (const rail of rails) {
       const from = rail.from;
       const to = rail.to;
+      const closestRailIndex = rail.getClosestTileIndex(
+        this.game,
+        station.tile(),
+      );
+      if (closestRailIndex === 0 || closestRailIndex >= rail.tiles.length) {
+        continue;
+      }
+
       // Disconnect current rail as it will become invalid
       from.removeRailroad(rail);
       to.removeRailroad(rail);
       this.railGrid.unregister(rail);
 
-      const closestRailIndex = rail.getClosestTileIndex(
-        this.game,
-        station.tile(),
-      );
       const newRailFrom = new Railroad(
         from,
         station,
@@ -163,7 +168,7 @@ export class RailNetworkImpl implements RailNetwork {
       // New station is connected to both new rails
       station.addRailroad(newRailFrom);
       station.addRailroad(newRailTo);
-      // From and to are connected to one of each
+      // From and to are connected to the new segments
       from.addRailroad(newRailFrom);
       to.addRailroad(newRailTo);
 

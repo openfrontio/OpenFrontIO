@@ -19,14 +19,12 @@ export class RailSpatialGrid {
     // Defensive: avoid double-registration but it should never happen
     this.unregister(rail);
 
-    const visited = new Set<string>();
     const railCells = new Set<string>();
 
     for (const tile of rail.tiles) {
       const { cx, cy } = this.cellOf(this.game.x(tile), this.game.y(tile));
       const k = this.key(cx, cy);
-      if (visited.has(k)) continue;
-      visited.add(k);
+      if (railCells.has(k)) continue;
 
       let set = this.cells.get(k);
       if (!set) {
