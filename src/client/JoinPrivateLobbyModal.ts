@@ -11,7 +11,7 @@ import {
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
-import { getPersistentClientID } from "./Auth";
+import { getClientIDForGame } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -426,7 +426,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: getPersistentClientID(),
+            clientID: getClientIDForGame(lobbyId),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -482,7 +482,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         detail: {
           gameID: lobbyId,
           gameRecord: parsed.data,
-          clientID: getPersistentClientID(),
+          clientID: getClientIDForGame(lobbyId),
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
