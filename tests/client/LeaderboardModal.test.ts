@@ -37,10 +37,37 @@ vi.mock("../../src/client/Utils", () => ({
   }),
 }));
 
-vi.mock("../../src/client/Api", () => ({
-  getApiBase: vi.fn(() => "http://localhost:3000"),
-  getUserMe: vi.fn(async () => false),
-}));
+vi.mock("../../src/client/Api", () => {
+  const getApiBase = () => "http://localhost:3000";
+  return {
+    getApiBase: vi.fn(getApiBase),
+    getUserMe: vi.fn(async () => false),
+    fetchClanLeaderboard: vi.fn(async () => {
+      const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return false;
+      return res.json();
+    }),
+    fetchPlayerLeaderboard: vi.fn(async (page: number) => {
+      const url = new URL(`${getApiBase()}/leaderboard/ranked`);
+      url.searchParams.set("page", String(page));
+      const res = await fetch(url.toString(), {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) {
+        if (res.status === 400) {
+          const errorJson = await res.json().catch(() => null);
+          if (errorJson?.message?.includes("Page must be between")) {
+            return "reached_limit";
+          }
+        }
+        return false;
+      }
+      return res.json();
+    }),
+  };
+});
 
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;

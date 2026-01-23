@@ -4,11 +4,9 @@ import { customElement, query, state } from "lit/decorators.js";
 import {
   ClanLeaderboardEntry,
   ClanLeaderboardResponse,
-  ClanLeaderboardResponseSchema,
   PlayerLeaderboardEntry,
-  RankedLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
-import { getApiBase, getUserMe } from "./Api";
+import { fetchClanLeaderboard, fetchPlayerLeaderboard, getUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
@@ -62,17 +60,10 @@ export class LeaderboardModal extends BaseModal {
     this.error = null;
 
     try {
-      const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
-        headers: { Accept: "application/json" },
-      });
+      const data = await fetchClanLeaderboard();
+      if (!data) throw new Error("Failed to load clan leaderboard");
 
-      if (!res.ok) throw new Error(`Unexpected status ${res.status}`);
-
-      const json = await res.json();
-      const parsed = ClanLeaderboardResponseSchema.safeParse(json);
-      if (!parsed.success) throw new Error("Invalid response format");
-
-      this.clanData = parsed.data;
+      this.clanData = data;
       this.hasLoadedClans = true;
     } catch {
       this.error = translateText("leaderboard_modal.error");
@@ -104,30 +95,19 @@ export class LeaderboardModal extends BaseModal {
     }
 
     try {
-      const url = new URL(`${getApiBase()}/leaderboard/ranked`);
-      url.searchParams.set("page", String(this.currentPage));
-      const res = await fetch(url.toString(), {
-        headers: { Accept: "application/json" },
-      });
+      const result = await fetchPlayerLeaderboard(this.currentPage);
 
-      if (!res.ok) {
-        // Handle "Page must be between X and Y" error as end of list
-        if (res.status === 400) {
-          const errorJson = await res.json().catch(() => null);
-          if (errorJson?.message?.includes("Page must be between")) {
-            this.playerHasMore = false;
-            this.hasLoadedPlayers = true;
-            return;
-          }
-        }
-        throw new Error(`Unexpected status ${res.status}`);
+      if (result === false) {
+        throw new Error("Failed to load player leaderboard");
       }
 
-      const json = await res.json();
-      const parsed = RankedLeaderboardResponseSchema.safeParse(json);
-      if (!parsed.success) throw new Error("Invalid response format");
+      if (result === "reached_limit") {
+        this.playerHasMore = false;
+        this.hasLoadedPlayers = true;
+        return;
+      }
 
-      const nextPlayers: PlayerLeaderboardEntry[] = parsed.data["1v1"].map(
+      const nextPlayers: PlayerLeaderboardEntry[] = result["1v1"].map(
         (entry) => ({
           rank: entry.rank,
           playerId: entry.public_id,
