@@ -2,12 +2,14 @@ import { decodeJwt } from "jose";
 import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
+import { generateID } from "../core/Util";
 import { getApiBase, getAudience } from "./Api";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
+const CLIENT_ID_KEY = "client_join_id";
 
 let __jwt: string | null = null;
 
@@ -207,6 +209,16 @@ export function getPersistentID(): string {
   const sub = payload.sub;
   if (!sub) return getPersistentIDFromLocalStorage();
   return base64urlToUuid(sub);
+}
+
+export function getPersistentClientID(): string {
+  const value = sessionStorage.getItem(CLIENT_ID_KEY);
+  if (value && /^[A-Za-z0-9]{8}$/.test(value)) {
+    return value;
+  }
+  const newID = generateID();
+  sessionStorage.setItem(CLIENT_ID_KEY, newID);
+  return newID;
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
