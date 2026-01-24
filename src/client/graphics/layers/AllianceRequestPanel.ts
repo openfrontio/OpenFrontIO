@@ -794,7 +794,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
         }
         .alliance-panel-container {
           position: fixed;
-          top: 16px;
+          top: 24px;
           z-index: 1000;
           transition: left 0.3s ease;
         }
