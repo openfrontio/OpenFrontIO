@@ -16,6 +16,7 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+const MAX_TICKS_PER_HEARTBEAT = 4;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -36,9 +37,19 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   const message = e.data;
 
   switch (message.type) {
-    case "heartbeat":
-      (await gameRunner)?.executeNextTick();
+    case "heartbeat": {
+      const gr = await gameRunner;
+      if (!gr) {
+        break;
+      }
+      const ticksToRun = Math.min(gr.pendingTurns(), MAX_TICKS_PER_HEARTBEAT);
+      for (let i = 0; i < ticksToRun; i++) {
+        if (!gr.executeNextTick()) {
+          break;
+        }
+      }
       break;
+    }
     case "init":
       try {
         gameRunner = createGameRunner(

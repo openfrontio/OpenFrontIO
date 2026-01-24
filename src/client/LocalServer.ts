@@ -20,7 +20,13 @@ import {
 import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import {
+  defaultReplaySpeedMultiplier,
+  ReplaySpeedMultiplier,
+} from "./utilities/ReplaySpeedMultiplier";
+
+// build a small backlog so MAX can catch up.
+const MAX_REPLAY_BACKLOG_TURNS = 60;
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -64,9 +70,16 @@ export class LocalServer {
       const turnIntervalMs =
         this.lobbyConfig.serverConfig.turnIntervalMs() *
         this.replaySpeedMultiplier;
+      const backlog = Math.max(0, this.turns.length - this.turnsExecuted);
+      const allowReplayBacklog =
+        this.replaySpeedMultiplier === ReplaySpeedMultiplier.fastest &&
+        this.lobbyConfig.gameRecord !== undefined;
+      const maxBacklog = allowReplayBacklog ? MAX_REPLAY_BACKLOG_TURNS : 0;
 
+      const canQueueNextTurn =
+        backlog === 0 || (maxBacklog > 0 && backlog < maxBacklog);
       if (
-        this.turnsExecuted === this.turns.length &&
+        canQueueNextTurn &&
         Date.now() > this.turnStartTime + turnIntervalMs
       ) {
         this.turnStartTime = Date.now();

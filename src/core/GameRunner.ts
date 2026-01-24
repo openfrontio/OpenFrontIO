@@ -112,12 +112,12 @@ export class GameRunner {
     this.turns.push(turn);
   }
 
-  public executeNextTick() {
+  public executeNextTick(): boolean {
     if (this.isExecuting) {
-      return;
+      return false;
     }
     if (this.currTurn >= this.turns.length) {
-      return;
+      return false;
     }
     this.isExecuting = true;
 
@@ -144,7 +144,8 @@ export class GameRunner {
       } else {
         console.error("Game tick error:", error);
       }
-      return;
+      this.isExecuting = false;
+      return false;
     }
 
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
@@ -177,6 +178,11 @@ export class GameRunner {
       tickExecutionDuration: tickExecutionDuration,
     });
     this.isExecuting = false;
+    return true;
+  }
+
+  public pendingTurns(): number {
+    return Math.max(0, this.turns.length - this.currTurn);
   }
 
   public playerActions(
