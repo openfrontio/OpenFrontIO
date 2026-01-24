@@ -759,17 +759,12 @@ export class ClientGameRunner {
   private sendBoatAttackIntent(tile: TileRef) {
     if (!this.myPlayer) return;
 
-    this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
-      this.eventBus.emit(
-        new SendBoatAttackIntentEvent(
-          this.gameView.owner(tile).id(),
-          tile,
-          this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          spawn === false ? null : spawn,
-        ),
-      );
-    });
+    this.eventBus.emit(
+      new SendBoatAttackIntentEvent(
+        tile,
+        this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+      ),
+    );
   }
 
   private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {

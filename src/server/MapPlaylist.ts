@@ -71,18 +71,18 @@ interface MapWithMode {
   mode: GameMode;
 }
 
-const TEAM_COUNTS = [
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  Duos,
-  Trios,
-  Quads,
-  HumansVsNations,
-] as const satisfies TeamCountConfig[];
+const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
+  { config: 2, weight: 10 },
+  { config: 3, weight: 10 },
+  { config: 4, weight: 10 },
+  { config: 5, weight: 10 },
+  { config: 6, weight: 10 },
+  { config: 7, weight: 10 },
+  { config: Duos, weight: 5 },
+  { config: Trios, weight: 7.5 },
+  { config: Quads, weight: 7.5 },
+  { config: HumansVsNations, weight: 20 },
+];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
@@ -128,7 +128,7 @@ export class MapPlaylist {
       publicGameModifiers: { isCompact, isRandomSpawn, startingGold },
       startingGold,
       difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Hard : Difficulty.Easy,
+        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -144,12 +144,11 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const ffaMaps = [
+    const maps = [
       GameMapType.Iceland,
-      GameMapType.World,
-      GameMapType.EuropeClassic,
       GameMapType.Australia,
-      GameMapType.FaroeIslands,
+      GameMapType.Australia,
+      GameMapType.Australia,
       GameMapType.Pangaea,
       GameMapType.Italia,
       GameMapType.FalklandIslands,
@@ -158,7 +157,7 @@ export class MapPlaylist {
     return {
       donateGold: false,
       donateTroops: false,
-      gameMap: ffaMaps[Math.floor(Math.random() * ffaMaps.length)],
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
@@ -169,7 +168,7 @@ export class MapPlaylist {
       maxTimerValue: 10, // 10 minutes
       instantBuild: false,
       randomSpawn: false,
-      disableNations: false,
+      disableNations: true,
       gameMode: GameMode.FFA,
       bots: 100,
       spawnImmunityDuration: 5 * 10,
@@ -193,7 +192,17 @@ export class MapPlaylist {
   }
 
   private getTeamCount(): TeamCountConfig {
-    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
+    const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
+    const roll = Math.random() * totalWeight;
+
+    let cumulativeWeight = 0;
+    for (const { config, weight } of TEAM_WEIGHTS) {
+      cumulativeWeight += weight;
+      if (roll < cumulativeWeight) {
+        return config;
+      }
+    }
+    return TEAM_WEIGHTS[0].config;
   }
 
   private getRandomPublicGameModifiers(): PublicGameModifiers {
