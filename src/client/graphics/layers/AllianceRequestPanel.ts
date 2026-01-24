@@ -100,7 +100,7 @@ interface AllianceIndicator {
   otherPlayerWantsRenewal?: boolean;
 }
 
-const MAX_VISIBLE_INDICATORS = 5; // TEST: normally 20
+const MAX_VISIBLE_INDICATORS = 10;
 
 @customElement("alliance-request-panel")
 export class AllianceRequestPanel extends LitElement implements Layer {
@@ -592,7 +592,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           cursor: pointer;
           position: relative;
           transition: transform 0.15s ease;
-          border: 2px solid #444;
+          border: 2px solid #475569;
           overflow: hidden;
         }
         .alliance-indicator-bg {
@@ -653,13 +653,13 @@ export class AllianceRequestPanel extends LitElement implements Layer {
 
         .radial-arc-accept {
           fill: url(#acceptGradient);
-          stroke: rgba(68, 68, 68, 0.8);
+          stroke: rgba(71, 85, 105, 0.9);
           stroke-width: 1.5;
         }
 
         .radial-arc-reject {
           fill: url(#rejectGradient);
-          stroke: rgba(68, 68, 68, 0.8);
+          stroke: rgba(71, 85, 105, 0.9);
           stroke-width: 1.5;
         }
 
@@ -732,7 +732,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           font-size: 14px;
           font-weight: bold;
           color: white;
-          border: 1.5px solid #555;
+          border: 1.5px solid #64748b;
           z-index: 10;
           pointer-events: none;
         }
@@ -750,7 +750,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           font-size: 13px;
           font-weight: bold;
           color: white;
-          border: 1.5px solid #555;
+          border: 1.5px solid #64748b;
           z-index: 10;
           pointer-events: none;
         }

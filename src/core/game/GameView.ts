@@ -613,64 +613,11 @@ export class GameView implements GameMap {
       this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
 
-    // Test patterns for nations - give some nations player skins for testing
-    const testPatterns = [
-      {
-        name: "stripes_v",
-        patternData: "ABMIVVU",
-        colorPalette: {
-          name: "blue_white",
-          primaryColor: "#3b82f6",
-          secondaryColor: "#ffffff",
-        },
-      },
-      {
-        name: "stripes_h",
-        patternData: "ABMIDw8",
-        colorPalette: {
-          name: "red_gold",
-          primaryColor: "#ef4444",
-          secondaryColor: "#fbbf24",
-        },
-      },
-      {
-        name: "checkerboard",
-        patternData: "ABMIpaU",
-        colorPalette: {
-          name: "green_black",
-          primaryColor: "#22c55e",
-          secondaryColor: "#1f2937",
-        },
-      },
-      {
-        name: "diagonal",
-        patternData: "AHE4AQACAAQACAAQACAAQACAAAABAAIABAAIABAAIABAAIA",
-        colorPalette: {
-          name: "purple_pink",
-          primaryColor: "#a855f7",
-          secondaryColor: "#ec4899",
-        },
-      },
-      {
-        name: "cross",
-        patternData: "AHE4AYACQAQgCBAQCCAEQAKAAYABQAIgBBAICBAEIAJAAYA",
-        colorPalette: {
-          name: "orange_white",
-          primaryColor: "#f97316",
-          secondaryColor: "#ffffff",
-        },
-      },
-    ];
-
     for (let i = 0; i < this._mapData.nations.length; i++) {
       const nation = this._mapData.nations[i];
       // Nations don't have client ids, so we use their name as the key instead.
-      // Give every other nation a test pattern for skin testing
-      const pattern =
-        i % 2 === 0 ? testPatterns[i % testPatterns.length] : undefined;
       this._cosmetics.set(nation.name, {
         flag: nation.flag,
-        pattern: pattern,
       } satisfies PlayerCosmetics);
     }
   }

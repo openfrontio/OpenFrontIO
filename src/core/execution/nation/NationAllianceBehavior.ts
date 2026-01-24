@@ -79,9 +79,8 @@ export class NationAllianceBehavior {
       p.type() !== PlayerType.Bot;
 
     for (const enemy of borderingEnemies) {
-      // 20x more frequent: changed from chance(30) to chance(2) - roughly 50% chance per tick
       if (
-        this.random.chance(2) &&
+        this.random.chance(30) &&
         isAcceptablePlayerType(enemy) &&
         this.player.canSendAllianceRequest(enemy) &&
         this.getAllianceDecision(enemy, false)

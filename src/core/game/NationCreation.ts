@@ -49,24 +49,7 @@ export function createNationsForGame(
 
   // For non-HumansVsNations modes, simply use the effective nations
   if (!isHumansVsNations) {
-    // TEST: Generate extra nations to test alliance request panel overflow (30 total)
-    const baseNations = effectiveNations.map(toNation);
-    const targetNationCount = 30;
-    if (baseNations.length < targetNationCount) {
-      const usedNames = new Set(baseNations.map((n) => n.playerInfo.name));
-      const additionalCount = targetNationCount - baseNations.length;
-      for (let i = 0; i < additionalCount; i++) {
-        const name = generateUniqueNationName(random, usedNames);
-        usedNames.add(name);
-        baseNations.push(
-          new Nation(
-            undefined,
-            new PlayerInfo(name, PlayerType.Nation, null, random.nextID()),
-          ),
-        );
-      }
-    }
-    return baseNations;
+    return effectiveNations.map(toNation);
   }
 
   // HumansVsNations mode: balance nation count to match human count
