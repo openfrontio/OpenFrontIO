@@ -38,16 +38,30 @@ export class NationAllianceBehavior {
 
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
-      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
-      // Skip if no expiration yet/ ally didn't request extension yet / nation already agreed to extend
-      if (!alliance.onlyOneAgreedToExtend()) continue;
-
       const human = alliance.other(this.player);
-      if (!this.getAllianceDecision(human, true)) continue;
-
-      this.game.addExecution(
-        new AllianceExtensionExecution(this.player, human.id()),
-      );
+      
+      // Check if alliance is expiring soon (within the prompt offset window)
+      const isExpiringSoon = alliance.expiresAt() <= this.game.ticks() + this.game.config().allianceExtensionPromptOffset();
+      
+      // Nations proactively request extension when alliance is about to expire
+      // This makes them very likely to request BEFORE the human does (for testing)
+      if (isExpiringSoon && !alliance.onlyOneAgreedToExtend() && !alliance.bothAgreedToExtend()) {
+        // 90% chance each tick to proactively request renewal
+        if (this.random.chance(2) && this.getAllianceDecision(human, true)) {
+          this.game.addExecution(
+            new AllianceExtensionExecution(this.player, human.id()),
+          );
+          continue;
+        }
+      }
+      
+      // Also respond to human's extension request if they asked first
+      if (alliance.onlyOneAgreedToExtend()) {
+        if (!this.getAllianceDecision(human, true)) continue;
+        this.game.addExecution(
+          new AllianceExtensionExecution(this.player, human.id()),
+        );
+      }
     }
   }
 
@@ -59,8 +73,9 @@ export class NationAllianceBehavior {
       p.type() !== PlayerType.Bot;
 
     for (const enemy of borderingEnemies) {
+      // 20x more frequent: changed from chance(30) to chance(2) - roughly 50% chance per tick
       if (
-        this.random.chance(30) &&
+        this.random.chance(2) &&
         isAcceptablePlayerType(enemy) &&
         this.player.canSendAllianceRequest(enemy) &&
         this.getAllianceDecision(enemy, false)

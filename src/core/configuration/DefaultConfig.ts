@@ -507,7 +507,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 300 * 10; // 5 minutes.
+    return 45 * 10; // 45 seconds for testing
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
@@ -526,7 +526,8 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    // Always use 10 seconds (100 ticks) for spawn phase
+    return 100;
   }
   numBots(): number {
     return this.bots();

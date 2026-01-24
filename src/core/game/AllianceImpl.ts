@@ -62,6 +62,16 @@ export class AllianceImpl implements MutableAlliance {
     );
   }
 
+  hasOtherRequestedExtension(player: Player): boolean {
+    // Check if the OTHER player (not the one passed in) has requested extension
+    if (this.requestor_ === player) {
+      return this.extensionRequestedRecipient_;
+    } else if (this.recipient_ === player) {
+      return this.extensionRequestedRequestor_;
+    }
+    return false;
+  }
+
   public id(): number {
     return this.id_;
   }

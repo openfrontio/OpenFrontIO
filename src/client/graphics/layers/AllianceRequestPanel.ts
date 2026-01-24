@@ -1,13 +1,17 @@
+import { base64url } from "jose";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
-import { MessageType, Tick } from "../../../core/game/Game";
+import { Tick } from "../../../core/game/Game";
 import {
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { PatternDecoder } from "../../../core/PatternDecoder";
+import { PlayerPattern } from "../../../core/Schemas";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
@@ -16,12 +20,75 @@ import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { GoToPlayerEvent } from "./Leaderboard";
 
+// Cache for pattern preview images
+const patternPreviewCache = new Map<string, string>();
+
+function generatePatternPreviewDataUrl(
+  pattern: PlayerPattern,
+  size: number,
+): string {
+  const patternLookupKey = [
+    pattern.name,
+    pattern.colorPalette?.primaryColor ?? "undefined",
+    pattern.colorPalette?.secondaryColor ?? "undefined",
+    size,
+  ].join("-");
+
+  if (patternPreviewCache.has(patternLookupKey)) {
+    return patternPreviewCache.get(patternLookupKey)!;
+  }
+
+  try {
+    const decoder = new PatternDecoder(pattern, base64url.decode);
+    const scaledWidth = decoder.scaledWidth();
+    const scaledHeight = decoder.scaledHeight();
+
+    const width = Math.max(1, Math.floor(size / scaledWidth)) * scaledWidth;
+    const height = Math.max(1, Math.floor(size / scaledHeight)) * scaledHeight;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+    const primary = pattern.colorPalette?.primaryColor
+      ? new Colord(pattern.colorPalette.primaryColor).toRgb()
+      : { r: 255, g: 255, b: 255 };
+    const secondary = pattern.colorPalette?.secondaryColor
+      ? new Colord(pattern.colorPalette.secondaryColor).toRgb()
+      : { r: 0, g: 0, b: 0 };
+
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const rgba = decoder.isPrimary(x, y) ? primary : secondary;
+        data[i++] = rgba.r;
+        data[i++] = rgba.g;
+        data[i++] = rgba.b;
+        data[i++] = 255;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const dataUrl = canvas.toDataURL("image/png");
+    patternPreviewCache.set(patternLookupKey, dataUrl);
+    return dataUrl;
+  } catch (e) {
+    console.error("Error generating pattern preview", e);
+    return "";
+  }
+}
+
 interface AllianceIndicator {
   id: string;
   type: "request" | "renewal";
   playerSmallID: number;
   playerName: string;
   playerColor: string;
+  playerPattern?: PlayerPattern;
   createdAt: Tick;
   duration: Tick;
   // For requests
@@ -171,6 +238,19 @@ export class AllianceRequestPanel extends LitElement implements Layer {
         continue;
       }
 
+      // Always update otherPlayerWantsRenewal for existing indicators
+      const existingIndicator = this.indicators.find(
+        (i) => i.type === "renewal" && i.allianceID === alliance.id,
+      );
+      if (existingIndicator && existingIndicator.otherPlayerWantsRenewal !== alliance.otherWantsToExtend) {
+        this.indicators = this.indicators.map((i) =>
+          i === existingIndicator
+            ? { ...i, otherPlayerWantsRenewal: alliance.otherWantsToExtend }
+            : i,
+        );
+        this.requestUpdate();
+      }
+
       if (
         (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
         this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
@@ -192,11 +272,12 @@ export class AllianceRequestPanel extends LitElement implements Layer {
         playerSmallID: other.smallID(),
         playerName: other.name(),
         playerColor: color,
+        playerPattern: other.cosmetics.pattern,
         createdAt: this.game.ticks(),
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
         allianceID: alliance.id,
         otherPlayerView: other,
-        otherPlayerWantsRenewal: alliance.hasExtensionRequest,
+        otherPlayerWantsRenewal: alliance.otherWantsToExtend,
       });
     }
   }
@@ -298,6 +379,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       playerSmallID: update.requestorID,
       playerName: requestor.name(),
       playerColor: color,
+      playerPattern: requestor.cosmetics.pattern,
       createdAt: this.game.ticks(),
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
       requestorView: requestor,
@@ -367,9 +449,35 @@ export class AllianceRequestPanel extends LitElement implements Layer {
 
   private handleFocus(indicator: AllianceIndicator) {
     const player = this.game.playerBySmallID(indicator.playerSmallID);
-    if (player) {
-      this.eventBus.emit(new GoToPlayerEvent(player as PlayerView));
+    if (player.isPlayer()) {
+      this.eventBus.emit(new GoToPlayerEvent(player));
     }
+  }
+
+  // Helper to create SVG arc path for radial buttons
+  private describeArc(x: number, y: number, innerRadius: number, outerRadius: number, startAngle: number, endAngle: number): string {
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+    
+    const x1 = x + innerRadius * Math.cos(startRad);
+    const y1 = y + innerRadius * Math.sin(startRad);
+    const x2 = x + outerRadius * Math.cos(startRad);
+    const y2 = y + outerRadius * Math.sin(startRad);
+    const x3 = x + outerRadius * Math.cos(endRad);
+    const y3 = y + outerRadius * Math.sin(endRad);
+    const x4 = x + innerRadius * Math.cos(endRad);
+    const y4 = y + innerRadius * Math.sin(endRad);
+    
+    const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+    
+    return [
+      `M ${x1} ${y1}`,
+      `L ${x2} ${y2}`,
+      `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3}`,
+      `L ${x4} ${y4}`,
+      `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1}`,
+      'Z'
+    ].join(' ');
   }
 
   shouldTransform(): boolean {
@@ -388,7 +496,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       <style>
         .alliance-indicator-wrapper {
           position: relative;
-          padding: 16px 8px 8px 8px; /* Generous padding for hover area */
+          padding: 12px 4px 8px 4px; /* Reduced horizontal padding for closer circles */
           cursor: pointer;
         }
         .alliance-indicator-wrapper:hover .alliance-indicator {
@@ -412,6 +520,16 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           bottom: 0;
           border-radius: 50%;
         }
+        .alliance-indicator-pattern {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          image-rendering: pixelated;
+        }
         .countdown-overlay {
           position: absolute;
           top: 0;
@@ -421,96 +539,102 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           pointer-events: none;
           transition: height 0.1s linear;
         }
-        .alliance-popup {
+        
+        /* Radial popup container - positioned above the indicator circle */
+        .radial-popup {
+          position: absolute;
+          bottom: 50%;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 200;
+          pointer-events: auto;
+        }
+        
+        /* SVG radial menu */
+        .radial-svg {
+          overflow: visible;
+          filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+        
+        .radial-arc {
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        
+        .radial-arc:hover {
+          filter: brightness(1.2);
+        }
+        
+        .radial-arc-accept {
+          fill: url(#acceptGradient);
+          stroke: rgba(0, 0, 0, 0.5);
+          stroke-width: 2;
+        }
+        
+        .radial-arc-reject {
+          fill: url(#rejectGradient);
+          stroke: rgba(0, 0, 0, 0.5);
+          stroke-width: 2;
+        }
+        
+        .radial-arc-icon {
+          fill: white;
+          font-size: 18px;
+          font-weight: bold;
+          pointer-events: none;
+          text-anchor: middle;
+          dominant-baseline: central;
+        }
+        
+        /* Info tooltip below the indicator circle */
+        .radial-info {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          margin-top: 4px;
+          background: rgba(31, 41, 55, 0.95);
+          backdrop-filter: blur(4px);
+          border-radius: 6px;
+          padding: 4px 8px;
+          text-align: center;
+          white-space: nowrap;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+          z-index: 201;
+        }
+        
+        .radial-info::before {
+          content: "";
           position: absolute;
           bottom: 100%;
           left: 50%;
           transform: translateX(-50%);
-          margin-bottom: 4px;
-          background: rgba(31, 41, 55, 0.95);
-          backdrop-filter: blur(4px);
-          border-radius: 8px;
-          padding: 10px 12px;
-          white-space: nowrap;
-          z-index: 200;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-          pointer-events: auto;
+          border: 5px solid transparent;
+          border-bottom-color: rgba(31, 41, 55, 0.95);
+          margin-bottom: -1px;
         }
-        .alliance-popup::after {
-          content: "";
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          border: 8px solid transparent;
-          border-top-color: rgba(31, 41, 55, 0.95);
-          margin-top: -1px;
-        }
-        /* Invisible bridge between popup and circle */
-        .alliance-popup::before {
-          content: "";
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80px;
-          height: 12px;
-          background: transparent;
-        }
-        .popup-player-name {
+        
+        .radial-player-name {
           font-weight: 600;
-          margin-bottom: 8px;
-          text-align: center;
           color: white;
-          font-size: 14px;
+          font-size: 13px;
         }
-        .popup-type-label {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.7);
-          margin-bottom: 8px;
-          text-align: center;
-        }
-        .popup-buttons {
-          display: flex;
-          gap: 8px;
-          justify-content: center;
-        }
-        .popup-btn {
-          padding: 6px 14px;
-          border-radius: 6px;
+        
+        .radial-countdown {
+          color: #fbbf24;
           font-size: 12px;
           font-weight: 600;
-          cursor: pointer;
-          border: none;
-          transition: all 0.15s ease;
-          display: flex;
-          align-items: center;
-          gap: 4px;
         }
-        .popup-btn-accept {
-          background: #22c55e;
-          color: white;
+        
+        .radial-other-wants {
+          color: #22c55e;
+          font-size: 10px;
+          font-weight: 600;
         }
-        .popup-btn-accept:hover {
-          background: #16a34a;
-        }
-        .popup-btn-reject {
-          background: #ef4444;
-          color: white;
-        }
-        .popup-btn-reject:hover {
-          background: #dc2626;
-        }
-        .popup-btn-focus {
-          background: #6b7280;
-          color: white;
-        }
-        .popup-btn-focus:hover {
-          background: #4b5563;
-        }
+        
         .request-icon {
           position: absolute;
-          top: 5px;
+          bottom: -3px;
           right: -3px;
           width: 22px;
           height: 22px;
@@ -528,7 +652,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
         }
         .renewal-icon {
           position: absolute;
-          top: 5px;
+          bottom: -3px;
           right: -3px;
           width: 22px;
           height: 22px;
@@ -552,30 +676,21 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
           50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
         }
-        .other-wants-label {
-          color: #22c55e;
-          font-size: 11px;
-          font-weight: 600;
-          margin-bottom: 4px;
-          text-align: center;
-        }
-        .countdown-seconds {
-          color: #fbbf24;
-          font-size: 12px;
-          font-weight: 600;
-          margin-bottom: 6px;
-          text-align: center;
-        }
       </style>
       <div
-        class="flex flex-row gap-3 items-end pointer-events-auto"
-        style="padding-right: 20px; padding-bottom: 24px;"
+        class="flex flex-row gap-1 items-end pointer-events-auto"
+        style="padding-right: 20px; padding-bottom: 60px;"
       >
         ${this.indicators.map((indicator) => {
           const elapsed = this.game.ticks() - indicator.createdAt;
           const remaining = indicator.duration - elapsed;
           const remainingSeconds = Math.max(0, Math.ceil(remaining / 10));
           const percentExpired = Math.min(100, (elapsed / indicator.duration) * 100);
+          
+          // Generate pattern preview if player has a pattern
+          const patternUrl = indicator.playerPattern
+            ? generatePatternPreviewDataUrl(indicator.playerPattern, 48)
+            : null;
           
           return html`
             <div
@@ -592,6 +707,9 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                 @click=${() => this.handleFocus(indicator)}
               >
                 <div class="alliance-indicator-bg" style="background-color: ${indicator.playerColor};"></div>
+                ${patternUrl
+                  ? html`<img class="alliance-indicator-pattern" src="${patternUrl}" alt="Player pattern" />`
+                  : ""}
                 <div class="countdown-overlay" style="height: ${percentExpired}%;"></div>
               </div>
               ${indicator.type === "request"
@@ -600,61 +718,65 @@ export class AllianceRequestPanel extends LitElement implements Layer {
               ${this.hoveredIndicator === indicator.id
                 ? html`
                     <div
-                      class="alliance-popup"
+                      class="radial-popup"
                       @mouseenter=${() => (this.popupHovered = true)}
                       @mouseleave=${() => this.closePopup()}
                     >
-                        <div class="popup-player-name">${indicator.playerName}</div>
-                        <div class="countdown-seconds">${translateText("events_display.seconds_remaining", { seconds: remainingSeconds })}</div>
-                        ${indicator.type === "renewal" && indicator.otherPlayerWantsRenewal
-                          ? html`<div class="other-wants-label">${translateText("events_display.wants_to_renew")}</div>`
-                          : ''}}
-                      <div class="popup-type-label">
-                        ${indicator.type === "request"
-                          ? translateText("events_display.request_alliance", {
-                              name: indicator.playerName,
-                            })
-                          : translateText("events_display.about_to_expire", {
-                              name: indicator.playerName,
-                            })}
-                      </div>
-                      <div class="popup-buttons">
-                        <button
-                          class="popup-btn popup-btn-focus"
-                          @click=${(e: Event) => {
-                            e.stopPropagation();
-                            this.handleFocus(indicator);
-                          }}
-                        >
-                          ${translateText("events_display.focus")}
-                        </button>
-                        <button
-                          class="popup-btn popup-btn-accept"
+                      <!-- SVG with radial arc buttons above the indicator -->
+                      <svg class="radial-svg" width="140" height="60" viewBox="-70 -60 140 60" style="display: block;">
+                        <defs>
+                          <linearGradient id="acceptGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#22c55e"/>
+                            <stop offset="100%" style="stop-color:#16a34a"/>
+                          </linearGradient>
+                          <linearGradient id="rejectGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ef4444"/>
+                            <stop offset="100%" style="stop-color:#dc2626"/>
+                          </linearGradient>
+                        </defs>
+                        
+                        <!-- Accept arc (left side) - spans from -150deg to -90deg (60 degrees, meeting at top) -->
+                        <path
+                          class="radial-arc radial-arc-accept"
+                          d="${this.describeArc(0, 0, 24, 55, -150, -90)}"
                           @click=${(e: Event) => {
                             e.stopPropagation();
                             this.handleAccept(indicator);
                           }}
-                        >
-                          ${indicator.type === "request"
-                            ? translateText("events_display.accept_alliance")
-                            : translateText("events_display.renew_alliance", {
-                                name: indicator.playerName,
-                              })}
-                        </button>
-                        <button
-                          class="popup-btn popup-btn-reject"
+                        />
+                        <text 
+                          class="radial-arc-icon" 
+                          x="${39.5 * Math.cos(-120 * Math.PI / 180)}" 
+                          y="${39.5 * Math.sin(-120 * Math.PI / 180)}"
+                          style="pointer-events: none;"
+                        >✓</text>
+                        
+                        <!-- Reject arc (right side) - spans from -90deg to -30deg (60 degrees, meeting at top) -->
+                        <path
+                          class="radial-arc radial-arc-reject"
+                          d="${this.describeArc(0, 0, 24, 55, -90, -30)}"
                           @click=${(e: Event) => {
                             e.stopPropagation();
                             this.handleReject(indicator);
                           }}
-                        >
-                          ${indicator.type === "request"
-                            ? translateText("events_display.reject_alliance")
-                            : translateText("events_display.ignore")}
-                        </button>
+                        />
+                        <text 
+                          class="radial-arc-icon" 
+                          x="${39.5 * Math.cos(-60 * Math.PI / 180)}" 
+                          y="${39.5 * Math.sin(-60 * Math.PI / 180)}"
+                          style="pointer-events: none;"
+                        >✕</text>
+                      </svg>
                     </div>
-                  </div>
-                `
+                    <!-- Info tooltip below the indicator circle -->
+                    <div class="radial-info">
+                      <div class="radial-player-name">${indicator.playerName}</div>
+                      <div class="radial-countdown">${remainingSeconds}s</div>
+                      ${indicator.type === "renewal" && indicator.otherPlayerWantsRenewal
+                        ? html`<div class="radial-other-wants">${translateText("events_display.wants_to_renew")}</div>`
+                        : ""}
+                    </div>
+                  `
               : ""}
             </div>
           `;
