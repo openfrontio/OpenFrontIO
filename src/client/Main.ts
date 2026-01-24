@@ -599,14 +599,22 @@ class Client {
         if (!this.gameStop()) {
           console.info("Player is active, ask before leaving game");
 
-          // Rollback navigator history (here so the confirm dialog also works on mobile)
-          history.pushState(null, "", this.currentUrl);
+          // Rollback navigator history to stay in game on cancel
+          // Before calling confirm so dialog also shows on mobile
+          history.replaceState(null, "", this.currentUrl);
 
           const isConfirmed = confirm(
             translateText("help_modal.exit_confirmation"),
           );
 
           if (!isConfirmed) {
+            // Rebuild stack:
+            // - prevent being put back homepage when clicking back button again after cancelling
+            // - replaceState instead of 2x pushState for cleaner history
+            // Can't prevent browser blocking popState on clicking back button again without in-game click first
+            // - preventable by only having pushState this.currentUrl here, which breaks confirm on mobile
+            history.replaceState(null, "", window.location.origin + "#refresh");
+            history.pushState(null, "", this.currentUrl);
             return;
           }
         }
