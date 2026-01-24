@@ -285,7 +285,6 @@ export class ClientGameRunner {
    * (when the player is not alive or doesn't exist)
    */
   public shouldPreventWindowClose(): boolean {
-    // Show confirmation dialog if player is alive in the game
     // gameView, not this.myPlayer, so it works before 1st click after spawn phase too
     return (
       (this.gameView.myPlayer()?.isAlive() ?? false) ||

@@ -609,7 +609,7 @@ class Client {
 
           if (!isConfirmed) {
             // Rebuild stack:
-            // - prevent being put back homepage when clicking back button again after cancelling
+            // - prevent being put back to homepage when clicking back button again after cancelling
             // - replaceState instead of 2x pushState for cleaner history
             // Can't prevent browser blocking popState on clicking back button again without in-game click first
             // - preventable by only having pushState this.currentUrl here, which breaks confirm on mobile
