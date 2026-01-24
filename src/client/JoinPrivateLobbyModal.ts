@@ -283,8 +283,13 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      // Reset URL to base when modal closes
-      history.replaceState(null, "", window.location.origin + "/");
+      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
+        window.location.pathname,
+      );
+      if (!preserveDeepLink) {
+        // Reset URL to base when modal closes
+        history.replaceState(null, "", window.location.origin + "/");
+      }
     }
 
     this.hasJoined = false;
@@ -412,7 +417,21 @@ export class JoinPrivateLobbyModal extends BaseModal {
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    if (!response.ok) {
+      return false;
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return false;
+    }
+
+    let gameInfo: { exists?: boolean };
+    try {
+      gameInfo = await response.json();
+    } catch (error) {
+      console.warn("Failed to parse active lobby response", error);
+      return false;
+    }
 
     if (gameInfo.exists) {
       this.showMessage(translateText("private_lobby.joined_waiting"));
