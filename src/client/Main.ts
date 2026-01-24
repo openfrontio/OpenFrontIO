@@ -840,8 +840,6 @@ class Client {
     if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
       this.cosmeticsPromise = null;
     }
-    this.updateJoinUrlForShare(lobby.gameID, config);
-
     const pattern = this.userSettings.getSelectedPatternName(cosmetics);
 
     this.gameStop = joinLobby(
@@ -938,6 +936,8 @@ class Client {
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
         document.body.classList.add("in-game");
+
+        this.updateJoinUrlForShare(lobby.gameID, config);
 
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
