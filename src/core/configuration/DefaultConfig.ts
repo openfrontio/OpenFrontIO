@@ -4,6 +4,7 @@ import {
   Difficulty,
   Game,
   GameMode,
+  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -506,7 +507,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 300 * 10; // 5 minutes
+    return 300 * 10; // 5 minutes.
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
@@ -525,8 +526,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    // Always use 10 seconds (100 ticks) for spawn phase
-    return 100;
+    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
   numBots(): number {
     return this.bots();
