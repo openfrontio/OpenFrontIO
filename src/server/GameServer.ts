@@ -17,6 +17,7 @@ import {
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -54,6 +55,8 @@ export class GameServer {
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
+
+  private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private log: Logger;
 
@@ -152,10 +155,18 @@ export class GameServer {
       return;
     }
 
-    if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
-        clientID: client.clientID,
-      });
+    const existingClient = this.allClients.get(client.clientID);
+    if (existingClient) {
+      if (existingClient.persistentID !== client.persistentID) {
+        this.websockets.delete(client.ws);
+        client.ws.close(1002, "Client ID already in use");
+        return;
+      }
+      this.replaceClientSocket(existingClient, client.ws);
+      this.startLobbyInfoBroadcast();
+      if (this._hasStarted) {
+        this.sendStartGameMsg(client.ws, 0);
+      }
       return;
     }
 
@@ -229,6 +240,7 @@ export class GameServer {
     this.markClientDisconnected(client.clientID, false);
     this.allClients.set(client.clientID, client);
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
@@ -268,19 +280,35 @@ export class GameServer {
       return;
     }
 
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== msg.clientID,
-    );
-    this.activeClients.push(client);
-    client.lastPing = Date.now();
-    this.markClientDisconnected(msg.clientID, false);
-
-    client.ws = ws;
-    this.addListeners(client);
+    this.replaceClientSocket(client, ws);
+    this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
     }
+  }
+
+  private replaceClientSocket(client: Client, ws: WebSocket) {
+    const previousWs = client.ws;
+    if (previousWs !== ws) {
+      previousWs.removeAllListeners();
+      if (
+        previousWs.readyState === WebSocket.OPEN ||
+        previousWs.readyState === WebSocket.CONNECTING
+      ) {
+        previousWs.close(1000, "Replaced by new connection");
+      }
+    }
+
+    client.ws = ws;
+    client.lastPing = Date.now();
+    this.websockets.add(ws);
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== client.clientID,
+    );
+    this.activeClients.push(client);
+    this.markClientDisconnected(client.clientID, false);
+    this.addListeners(client);
   }
 
   private addListeners(client: Client) {
@@ -505,6 +533,47 @@ export class GameServer {
     }
   }
 
+  private startLobbyInfoBroadcast() {
+    if (this._hasStarted || this._hasEnded) {
+      return;
+    }
+    if (this.lobbyInfoIntervalId !== null) {
+      return;
+    }
+    this.broadcastLobbyInfo();
+    this.lobbyInfoIntervalId = setInterval(() => {
+      if (
+        this._hasStarted ||
+        this._hasEnded ||
+        this.activeClients.length === 0
+      ) {
+        this.stopLobbyInfoBroadcast();
+        return;
+      }
+      this.broadcastLobbyInfo();
+    }, 1000);
+  }
+
+  private stopLobbyInfoBroadcast() {
+    if (this.lobbyInfoIntervalId === null) {
+      return;
+    }
+    clearInterval(this.lobbyInfoIntervalId);
+    this.lobbyInfoIntervalId = null;
+  }
+
+  private broadcastLobbyInfo() {
+    const msg = JSON.stringify({
+      type: "lobby_info",
+      lobby: this.gameInfo(),
+    } satisfies ServerLobbyInfoMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
+    });
+  }
+
   public prestart() {
     if (this.hasStarted()) {
       return;
@@ -542,6 +611,7 @@ export class GameServer {
       return;
     }
     this._hasStarted = true;
+    this.stopLobbyInfoBroadcast();
     this._startTime = Date.now();
     // Set last ping to start so we don't immediately stop the game
     // if no client connects/pings.
@@ -642,6 +712,7 @@ export class GameServer {
 
   async end() {
     this._hasEnded = true;
+    this.stopLobbyInfoBroadcast();
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);

@@ -19,6 +19,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -899,8 +900,8 @@ export class SinglePlayerModal extends BaseModal {
     console.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
-    const clientID = generateID();
     const gameID = generateID();
+    const clientID = getClientIDForGame(gameID);
 
     const usernameInput = document.querySelector(
       "username-input",

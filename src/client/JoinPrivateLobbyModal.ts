@@ -8,10 +8,10 @@ import {
   GameInfo,
   GameRecordSchema,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -283,8 +283,13 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      // Reset URL to base when modal closes
-      history.replaceState(null, "", window.location.origin + "/");
+      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
+        window.location.pathname,
+      );
+      if (!preserveDeepLink) {
+        // Reset URL to base when modal closes
+        history.replaceState(null, "", window.location.origin + "/");
+      }
     }
 
     this.hasJoined = false;
@@ -412,7 +417,21 @@ export class JoinPrivateLobbyModal extends BaseModal {
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    if (!response.ok) {
+      return false;
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return false;
+    }
+
+    let gameInfo: { exists?: boolean };
+    try {
+      gameInfo = await response.json();
+    } catch (error) {
+      console.warn("Failed to parse active lobby response", error);
+      return false;
+    }
 
     if (gameInfo.exists) {
       this.showMessage(translateText("private_lobby.joined_waiting"));
@@ -426,7 +445,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: generateID(),
+            clientID: getClientIDForGame(lobbyId),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -477,12 +496,15 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
+    // If the modal closes as part of joining the replay, do not leave/reset URL
+    this.leaveLobbyOnClose = false;
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
           gameRecord: parsed.data,
-          clientID: generateID(),
+          clientID: getClientIDForGame(lobbyId),
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
