@@ -13,6 +13,23 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  const devGameHtmlBypass = (req?: {
+    url?: string;
+    method?: string;
+    headers?: { accept?: string | string[] };
+  }) => {
+    if (req?.method !== "GET") return undefined;
+    const accept = req.headers?.accept;
+    const acceptValue = Array.isArray(accept)
+      ? accept.join(",")
+      : (accept ?? "");
+    if (!acceptValue.includes("text/html")) return undefined;
+    if (!req.url) return undefined;
+    if (/^\/w\d+\/game\/[^/]+/.test(req.url)) {
+      return "/";
+    }
+    return undefined;
+  };
 
   return {
     test: {
@@ -103,6 +120,7 @@ export default defineConfig(({ mode }) => {
           ws: true,
           secure: false,
           changeOrigin: true,
+          bypass: (req) => devGameHtmlBypass(req),
           rewrite: (path) => path.replace(/^\/w0/, ""),
         },
         "/w1": {
@@ -110,6 +128,7 @@ export default defineConfig(({ mode }) => {
           ws: true,
           secure: false,
           changeOrigin: true,
+          bypass: (req) => devGameHtmlBypass(req),
           rewrite: (path) => path.replace(/^\/w1/, ""),
         },
         "/w2": {
@@ -117,6 +136,7 @@ export default defineConfig(({ mode }) => {
           ws: true,
           secure: false,
           changeOrigin: true,
+          bypass: (req) => devGameHtmlBypass(req),
           rewrite: (path) => path.replace(/^\/w2/, ""),
         },
         // API proxies
