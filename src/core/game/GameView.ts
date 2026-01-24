@@ -666,7 +666,8 @@ export class GameView implements GameMap {
       const nation = this._mapData.nations[i];
       // Nations don't have client ids, so we use their name as the key instead.
       // Give every other nation a test pattern for skin testing
-      const pattern = i % 2 === 0 ? testPatterns[i % testPatterns.length] : undefined;
+      const pattern =
+        i % 2 === 0 ? testPatterns[i % testPatterns.length] : undefined;
       this._cosmetics.set(nation.name, {
         flag: nation.flag,
         pattern: pattern,

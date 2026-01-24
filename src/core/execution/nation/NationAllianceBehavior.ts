@@ -39,13 +39,19 @@ export class NationAllianceBehavior {
   handleAllianceExtensionRequests() {
     for (const alliance of this.player.alliances()) {
       const human = alliance.other(this.player);
-      
+
       // Check if alliance is expiring soon (within the prompt offset window)
-      const isExpiringSoon = alliance.expiresAt() <= this.game.ticks() + this.game.config().allianceExtensionPromptOffset();
-      
+      const isExpiringSoon =
+        alliance.expiresAt() <=
+        this.game.ticks() + this.game.config().allianceExtensionPromptOffset();
+
       // Nations proactively request extension when alliance is about to expire
       // This makes them very likely to request BEFORE the human does (for testing)
-      if (isExpiringSoon && !alliance.onlyOneAgreedToExtend() && !alliance.bothAgreedToExtend()) {
+      if (
+        isExpiringSoon &&
+        !alliance.onlyOneAgreedToExtend() &&
+        !alliance.bothAgreedToExtend()
+      ) {
         // 90% chance each tick to proactively request renewal
         if (this.random.chance(2) && this.getAllianceDecision(human, true)) {
           this.game.addExecution(
@@ -54,7 +60,7 @@ export class NationAllianceBehavior {
           continue;
         }
       }
-      
+
       // Also respond to human's extension request if they asked first
       if (alliance.onlyOneAgreedToExtend()) {
         if (!this.getAllianceDecision(human, true)) continue;

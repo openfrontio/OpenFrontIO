@@ -4,7 +4,6 @@ import {
   Difficulty,
   Game,
   GameMode,
-  GameType,
   Gold,
   Player,
   PlayerInfo,

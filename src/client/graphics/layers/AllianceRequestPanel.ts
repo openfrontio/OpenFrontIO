@@ -1,7 +1,7 @@
+import { Colord } from "colord";
 import { base64url } from "jose";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Tick } from "../../../core/game/Game";
 import {
@@ -100,6 +100,8 @@ interface AllianceIndicator {
   otherPlayerWantsRenewal?: boolean;
 }
 
+const MAX_VISIBLE_INDICATORS = 5; // TEST: normally 20
+
 @customElement("alliance-request-panel")
 export class AllianceRequestPanel extends LitElement implements Layer {
   public eventBus: EventBus;
@@ -109,6 +111,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
   @state() private indicators: AllianceIndicator[] = [];
   @state() private hoveredIndicator: string | null = null;
   @state() private popupHovered: boolean = false;
+  @state() private sidebarWidth: number = 0;
 
   // Queue of pending indicator additions while popup is open
   private pendingIndicators: AllianceIndicator[] = [];
@@ -117,6 +120,9 @@ export class AllianceRequestPanel extends LitElement implements Layer {
 
   // allianceID -> last checked at tick (for renewal notifications)
   private alliancesCheckedAt = new Map<number, Tick>();
+
+  // ResizeObserver to track sidebar height changes
+  private sidebarObserver: ResizeObserver | null = null;
 
   private updateMap = [
     [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
@@ -131,10 +137,44 @@ export class AllianceRequestPanel extends LitElement implements Layer {
     this.indicators = [];
   }
 
-  init() {}
+  init() {
+    // Observe the game-left-sidebar for size changes
+    this.setupSidebarObserver();
+  }
+
+  private setupSidebarObserver() {
+    // Look for the aside element inside the sidebar (the actual visible element)
+    const sidebar = document.querySelector("game-left-sidebar aside");
+    if (sidebar) {
+      this.sidebarObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          this.sidebarWidth = entry.contentRect.width;
+        }
+      });
+      this.sidebarObserver.observe(sidebar);
+      // Get initial width
+      this.sidebarWidth = sidebar.getBoundingClientRect().width;
+    } else {
+      // Sidebar not found yet, use default position
+      this.sidebarWidth = 0;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.sidebarObserver) {
+      this.sidebarObserver.disconnect();
+      this.sidebarObserver = null;
+    }
+  }
 
   tick() {
     this.active = true;
+
+    // Try to set up sidebar observer if not already done
+    if (!this.sidebarObserver) {
+      this.setupSidebarObserver();
+    }
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer || !myPlayer.isAlive()) {
@@ -207,14 +247,14 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       // Check if the alliance still exists and is still in expiration window
       const myPlayer = this.game.myPlayer();
       if (!myPlayer) return true;
-      
+
       const alliance = myPlayer
         .alliances()
         .find((a) => a.id === indicator.allianceID);
-      
+
       // Alliance no longer exists (expired or broken)
       if (!alliance) return true;
-      
+
       // Alliance was renewed (expiresAt is now far in the future)
       if (
         alliance.expiresAt >
@@ -242,7 +282,11 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       const existingIndicator = this.indicators.find(
         (i) => i.type === "renewal" && i.allianceID === alliance.id,
       );
-      if (existingIndicator && existingIndicator.otherPlayerWantsRenewal !== alliance.otherWantsToExtend) {
+      if (
+        existingIndicator &&
+        existingIndicator.otherPlayerWantsRenewal !==
+          alliance.otherWantsToExtend
+      ) {
         this.indicators = this.indicators.map((i) =>
           i === existingIndicator
             ? { ...i, otherPlayerWantsRenewal: alliance.otherWantsToExtend }
@@ -296,7 +340,10 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       ) {
         this.indicators = this.indicators.map((i, idx) =>
           idx === existingIndex
-            ? { ...i, otherPlayerWantsRenewal: indicator.otherPlayerWantsRenewal }
+            ? {
+                ...i,
+                otherPlayerWantsRenewal: indicator.otherPlayerWantsRenewal,
+              }
             : i,
         );
         this.requestUpdate();
@@ -313,8 +360,16 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       return;
     }
 
-    // Add to the front of the array so new indicators appear on the left
-    this.indicators = [indicator, ...this.indicators];
+    // If we're at max capacity, queue the indicator instead of showing it
+    if (this.indicators.length >= MAX_VISIBLE_INDICATORS) {
+      if (!this.pendingIndicators.some((i) => i.id === indicator.id)) {
+        this.pendingIndicators.push(indicator);
+      }
+      return;
+    }
+
+    // Add to the end of the array so new indicators appear on the right (row grows rightward)
+    this.indicators = [...this.indicators, indicator];
     this.requestUpdate();
   }
 
@@ -324,6 +379,18 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       return;
     }
     this.indicators = this.indicators.filter((i) => i.id !== id);
+
+    // If we have pending indicators and now have room, add one
+    if (
+      this.indicators.length < MAX_VISIBLE_INDICATORS &&
+      this.pendingIndicators.length > 0
+    ) {
+      const nextIndicator = this.pendingIndicators.shift()!;
+      if (!this.indicators.some((i) => i.id === nextIndicator.id)) {
+        this.indicators = [...this.indicators, nextIndicator];
+      }
+    }
+
     this.requestUpdate();
   }
 
@@ -336,15 +403,16 @@ export class AllianceRequestPanel extends LitElement implements Layer {
       this.pendingRemovals.clear();
     }
 
-    // Apply any pending additions
-    if (this.pendingIndicators.length > 0) {
-      for (const indicator of this.pendingIndicators) {
-        // Double-check it doesn't already exist
-        if (!this.indicators.some((i) => i.id === indicator.id)) {
-          this.indicators = [indicator, ...this.indicators];
-        }
+    // Apply any pending additions (up to the max limit)
+    while (
+      this.pendingIndicators.length > 0 &&
+      this.indicators.length < MAX_VISIBLE_INDICATORS
+    ) {
+      const indicator = this.pendingIndicators.shift()!;
+      // Double-check it doesn't already exist
+      if (!this.indicators.some((i) => i.id === indicator.id)) {
+        this.indicators = [...this.indicators, indicator];
       }
-      this.pendingIndicators = [];
     }
 
     this.requestUpdate();
@@ -455,10 +523,17 @@ export class AllianceRequestPanel extends LitElement implements Layer {
   }
 
   // Helper to create SVG arc path for radial buttons
-  private describeArc(x: number, y: number, innerRadius: number, outerRadius: number, startAngle: number, endAngle: number): string {
+  private describeArc(
+    x: number,
+    y: number,
+    innerRadius: number,
+    outerRadius: number,
+    startAngle: number,
+    endAngle: number,
+  ): string {
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
-    
+
     const x1 = x + innerRadius * Math.cos(startRad);
     const y1 = y + innerRadius * Math.sin(startRad);
     const x2 = x + outerRadius * Math.cos(startRad);
@@ -467,17 +542,17 @@ export class AllianceRequestPanel extends LitElement implements Layer {
     const y3 = y + outerRadius * Math.sin(endRad);
     const x4 = x + innerRadius * Math.cos(endRad);
     const y4 = y + innerRadius * Math.sin(endRad);
-    
+
     const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
-    
+
     return [
       `M ${x1} ${y1}`,
       `L ${x2} ${y2}`,
       `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3}`,
       `L ${x4} ${y4}`,
       `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1}`,
-      'Z'
-    ].join(' ');
+      "Z",
+    ].join(" ");
   }
 
   shouldTransform(): boolean {
@@ -488,9 +563,17 @@ export class AllianceRequestPanel extends LitElement implements Layer {
 
   render() {
     // Don't show during spawn phase or if no indicators
-    if (!this.active || this.indicators.length === 0 || this.game.inSpawnPhase()) {
+    if (
+      !this.active ||
+      !this.game ||
+      this.indicators.length === 0 ||
+      this.game.inSpawnPhase()
+    ) {
       return html``;
     }
+
+    // Position to the right of the sidebar (16px base + sidebar width + 20px gap)
+    const leftPosition = 16 + this.sidebarWidth + 20;
 
     return html`
       <style>
@@ -509,7 +592,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           cursor: pointer;
           position: relative;
           transition: transform 0.15s ease;
-          border: 3px solid #000;
+          border: 2px solid #444;
           overflow: hidden;
         }
         .alliance-indicator-bg {
@@ -519,6 +602,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           right: 0;
           bottom: 0;
           border-radius: 50%;
+          z-index: 1;
         }
         .alliance-indicator-pattern {
           position: absolute;
@@ -529,6 +613,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           border-radius: 50%;
           object-fit: cover;
           image-rendering: pixelated;
+          z-index: 2;
         }
         .countdown-overlay {
           position: absolute;
@@ -538,8 +623,9 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           background: rgba(255, 255, 255, 0.6);
           pointer-events: none;
           transition: height 0.1s linear;
+          z-index: 3;
         }
-        
+
         /* Radial popup container - positioned above the indicator circle */
         .radial-popup {
           position: absolute;
@@ -549,34 +635,34 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           z-index: 200;
           pointer-events: auto;
         }
-        
+
         /* SVG radial menu */
         .radial-svg {
           overflow: visible;
           filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
         }
-        
+
         .radial-arc {
           cursor: pointer;
           transition: all 0.15s ease;
         }
-        
+
         .radial-arc:hover {
           filter: brightness(1.2);
         }
-        
+
         .radial-arc-accept {
           fill: url(#acceptGradient);
-          stroke: rgba(0, 0, 0, 0.5);
-          stroke-width: 2;
+          stroke: rgba(68, 68, 68, 0.8);
+          stroke-width: 1.5;
         }
-        
+
         .radial-arc-reject {
           fill: url(#rejectGradient);
-          stroke: rgba(0, 0, 0, 0.5);
-          stroke-width: 2;
+          stroke: rgba(68, 68, 68, 0.8);
+          stroke-width: 1.5;
         }
-        
+
         .radial-arc-icon {
           fill: white;
           font-size: 18px;
@@ -585,7 +671,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           text-anchor: middle;
           dominant-baseline: central;
         }
-        
+
         /* Info tooltip below the indicator circle */
         .radial-info {
           position: absolute;
@@ -602,7 +688,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
           z-index: 201;
         }
-        
+
         .radial-info::before {
           content: "";
           position: absolute;
@@ -613,25 +699,25 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           border-bottom-color: rgba(31, 41, 55, 0.95);
           margin-bottom: -1px;
         }
-        
+
         .radial-player-name {
           font-weight: 600;
           color: white;
           font-size: 13px;
         }
-        
+
         .radial-countdown {
           color: #fbbf24;
           font-size: 12px;
           font-weight: 600;
         }
-        
+
         .radial-other-wants {
           color: #22c55e;
           font-size: 10px;
           font-weight: 600;
         }
-        
+
         .request-icon {
           position: absolute;
           bottom: -3px;
@@ -646,7 +732,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           font-size: 14px;
           font-weight: bold;
           color: white;
-          border: 2px solid rgba(0, 0, 0, 0.8);
+          border: 1.5px solid #555;
           z-index: 10;
           pointer-events: none;
         }
@@ -664,7 +750,7 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           font-size: 13px;
           font-weight: bold;
           color: white;
-          border: 2px solid rgba(0, 0, 0, 0.8);
+          border: 1.5px solid #555;
           z-index: 10;
           pointer-events: none;
         }
@@ -673,25 +759,64 @@ export class AllianceRequestPanel extends LitElement implements Layer {
           animation: pulse-green 1s infinite;
         }
         @keyframes pulse-green {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-          50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+          0%,
+          100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+          }
+          50% {
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+          }
+        }
+        .overflow-indicator {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 8px;
+          background: rgba(0, 0, 0, 0.7);
+          border-radius: 12px;
+          color: white;
+          font-size: 12px;
+          font-weight: bold;
+          gap: 4px;
+          white-space: nowrap;
+        }
+        .overflow-caret {
+          animation: slide-left-right 0.8s ease-in-out infinite;
+        }
+        @keyframes slide-left-right {
+          0%,
+          100% {
+            transform: translateX(-2px);
+          }
+          50% {
+            transform: translateX(2px);
+          }
+        }
+        .alliance-panel-container {
+          position: fixed;
+          top: 16px;
+          z-index: 1000;
+          transition: left 0.3s ease;
         }
       </style>
       <div
-        class="flex flex-row gap-1 items-end pointer-events-auto"
-        style="padding-right: 20px; padding-bottom: 60px;"
+        class="alliance-panel-container flex flex-row flex-wrap gap-1 items-start pointer-events-auto"
+        style="left: ${leftPosition}px;"
       >
         ${this.indicators.map((indicator) => {
           const elapsed = this.game.ticks() - indicator.createdAt;
           const remaining = indicator.duration - elapsed;
           const remainingSeconds = Math.max(0, Math.ceil(remaining / 10));
-          const percentExpired = Math.min(100, (elapsed / indicator.duration) * 100);
-          
+          const percentExpired = Math.min(
+            100,
+            (elapsed / indicator.duration) * 100,
+          );
+
           // Generate pattern preview if player has a pattern
           const patternUrl = indicator.playerPattern
             ? generatePatternPreviewDataUrl(indicator.playerPattern, 48)
             : null;
-          
+
           return html`
             <div
               class="alliance-indicator-wrapper"
@@ -706,15 +831,31 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                 class="alliance-indicator"
                 @click=${() => this.handleFocus(indicator)}
               >
-                <div class="alliance-indicator-bg" style="background-color: ${indicator.playerColor};"></div>
+                <div
+                  class="alliance-indicator-bg"
+                  style="background-color: ${indicator.playerColor};"
+                ></div>
                 ${patternUrl
-                  ? html`<img class="alliance-indicator-pattern" src="${patternUrl}" alt="Player pattern" />`
+                  ? html`<img
+                      class="alliance-indicator-pattern"
+                      src="${patternUrl}"
+                      alt="Player pattern"
+                    />`
                   : ""}
-                <div class="countdown-overlay" style="height: ${percentExpired}%;"></div>
+                <div
+                  class="countdown-overlay"
+                  style="height: ${percentExpired}%;"
+                ></div>
               </div>
               ${indicator.type === "request"
                 ? html`<div class="request-icon">?</div>`
-                : html`<div class="renewal-icon ${indicator.otherPlayerWantsRenewal ? 'other-wants' : ''}">⏳</div>`}
+                : html`<div
+                    class="renewal-icon ${indicator.otherPlayerWantsRenewal
+                      ? "other-wants"
+                      : ""}"
+                  >
+                    ⏳
+                  </div>`}
               ${this.hoveredIndicator === indicator.id
                 ? html`
                     <div
@@ -723,18 +864,36 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                       @mouseleave=${() => this.closePopup()}
                     >
                       <!-- SVG with radial arc buttons above the indicator -->
-                      <svg class="radial-svg" width="140" height="60" viewBox="-70 -60 140 60" style="display: block;">
+                      <svg
+                        class="radial-svg"
+                        width="140"
+                        height="60"
+                        viewBox="-70 -60 140 60"
+                        style="display: block;"
+                      >
                         <defs>
-                          <linearGradient id="acceptGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#22c55e"/>
-                            <stop offset="100%" style="stop-color:#16a34a"/>
+                          <linearGradient
+                            id="acceptGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <stop offset="0%" style="stop-color:#22c55e" />
+                            <stop offset="100%" style="stop-color:#16a34a" />
                           </linearGradient>
-                          <linearGradient id="rejectGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ef4444"/>
-                            <stop offset="100%" style="stop-color:#dc2626"/>
+                          <linearGradient
+                            id="rejectGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <stop offset="0%" style="stop-color:#ef4444" />
+                            <stop offset="100%" style="stop-color:#dc2626" />
                           </linearGradient>
                         </defs>
-                        
+
                         <!-- Accept arc (left side) - spans from -150deg to -90deg (60 degrees, meeting at top) -->
                         <path
                           class="radial-arc radial-arc-accept"
@@ -744,13 +903,15 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                             this.handleAccept(indicator);
                           }}
                         />
-                        <text 
-                          class="radial-arc-icon" 
-                          x="${39.5 * Math.cos(-120 * Math.PI / 180)}" 
-                          y="${39.5 * Math.sin(-120 * Math.PI / 180)}"
+                        <text
+                          class="radial-arc-icon"
+                          x="${39.5 * Math.cos((-120 * Math.PI) / 180)}"
+                          y="${39.5 * Math.sin((-120 * Math.PI) / 180)}"
                           style="pointer-events: none;"
-                        >✓</text>
-                        
+                        >
+                          ✓
+                        </text>
+
                         <!-- Reject arc (right side) - spans from -90deg to -30deg (60 degrees, meeting at top) -->
                         <path
                           class="radial-arc radial-arc-reject"
@@ -760,27 +921,42 @@ export class AllianceRequestPanel extends LitElement implements Layer {
                             this.handleReject(indicator);
                           }}
                         />
-                        <text 
-                          class="radial-arc-icon" 
-                          x="${39.5 * Math.cos(-60 * Math.PI / 180)}" 
-                          y="${39.5 * Math.sin(-60 * Math.PI / 180)}"
+                        <text
+                          class="radial-arc-icon"
+                          x="${39.5 * Math.cos((-60 * Math.PI) / 180)}"
+                          y="${39.5 * Math.sin((-60 * Math.PI) / 180)}"
                           style="pointer-events: none;"
-                        >✕</text>
+                        >
+                          ✕
+                        </text>
                       </svg>
                     </div>
                     <!-- Info tooltip below the indicator circle -->
                     <div class="radial-info">
-                      <div class="radial-player-name">${indicator.playerName}</div>
+                      <div class="radial-player-name">
+                        ${indicator.playerName}
+                      </div>
                       <div class="radial-countdown">${remainingSeconds}s</div>
-                      ${indicator.type === "renewal" && indicator.otherPlayerWantsRenewal
-                        ? html`<div class="radial-other-wants">${translateText("events_display.wants_to_renew")}</div>`
+                      ${indicator.type === "renewal" &&
+                      indicator.otherPlayerWantsRenewal
+                        ? html`<div class="radial-other-wants">
+                            ${translateText("events_display.wants_to_renew")}
+                          </div>`
                         : ""}
                     </div>
                   `
-              : ""}
+                : ""}
             </div>
           `;
         })}
+        ${this.pendingIndicators.length > 0
+          ? html`
+              <div class="overflow-indicator">
+                <span>+${this.pendingIndicators.length}</span>
+                <span class="overflow-caret">&gt;</span>
+              </div>
+            `
+          : ""}
       </div>
     `;
   }
