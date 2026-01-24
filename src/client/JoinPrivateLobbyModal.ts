@@ -481,6 +481,9 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
+    // If the modal closes as part of joining the replay, do not leave/reset URL
+    this.leaveLobbyOnClose = false;
+
     this.currentClientID = getClientIDForGame(lobbyId);
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
