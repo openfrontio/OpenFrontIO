@@ -220,6 +220,7 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
+  private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
 
   private usernameInput: UsernameInput | null = null;
@@ -786,6 +787,7 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      this.preserveDeepLinkUrl = true;
       window.showPage?.("page-join-private-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
@@ -930,6 +932,7 @@ class Client {
       },
       () => {
         this.isJoiningLobby = false;
+        this.preserveDeepLinkUrl = false;
         this.joinModal.close();
         this.joinPublicModal?.closeWithoutLeaving();
         this.publicLobby.stop();
@@ -978,7 +981,9 @@ class Client {
     this.isJoiningLobby = false;
     if (this.gameStop === null) {
       try {
-        history.replaceState(null, "", "/");
+        if (!this.preserveDeepLinkUrl) {
+          history.replaceState(null, "", "/");
+        }
       } catch (e) {
         console.warn("Failed to restore URL on leave:", e);
       }
@@ -992,7 +997,9 @@ class Client {
     this.currentUrl = null;
 
     try {
-      history.replaceState(null, "", "/");
+      if (!this.preserveDeepLinkUrl) {
+        history.replaceState(null, "", "/");
+      }
     } catch (e) {
       console.warn("Failed to restore URL on leave:", e);
     }
