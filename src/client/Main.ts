@@ -599,13 +599,14 @@ class Client {
         if (!this.gameStop()) {
           console.info("Player is active, ask before leaving game");
 
+          // Rollback navigator history (here so the confirm dialog also works on mobile)
+          history.pushState(null, "", this.currentUrl);
+
           const isConfirmed = confirm(
             translateText("help_modal.exit_confirmation"),
           );
 
           if (!isConfirmed) {
-            // Rollback navigator history
-            history.pushState(null, "", this.currentUrl);
             return;
           }
         }

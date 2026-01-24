@@ -281,12 +281,16 @@ export class ClientGameRunner {
    * the window or navigate away during an active game session.
    *
    * @returns {boolean} `true` if the window close should be prevented
-   * (when the player is alive in the game), `false` otherwise
+   * (when the player is alive in the game or during spawn phase), `false` otherwise
    * (when the player is not alive or doesn't exist)
    */
   public shouldPreventWindowClose(): boolean {
     // Show confirmation dialog if player is alive in the game
-    return !!this.myPlayer?.isAlive();
+    // gameView, not this.myPlayer, so it works before 1st click after spawn phase too
+    return (
+      (this.gameView.myPlayer()?.isAlive() ?? false) ||
+      this.gameView.inSpawnPhase()
+    );
   }
 
   private async saveGame(update: WinUpdate) {
