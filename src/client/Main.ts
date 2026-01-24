@@ -233,6 +233,7 @@ class Client {
   private currentUrl: string | null = null;
   private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
+  private joinAbortController: AbortController | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -596,6 +597,7 @@ class Client {
     }
 
     const onHashUpdate = () => {
+      this.cancelJoinInFlight();
       // Reset the UI to its initial state
       this.joinModal?.close();
       this.joinPublicModal?.close();
@@ -797,6 +799,9 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     const joinAttemptId = ++this.joinAttemptId;
+    this.joinAbortController?.abort();
+    const joinAbortController = new AbortController();
+    this.joinAbortController = joinAbortController;
     this.isJoiningLobby = true;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
@@ -823,6 +828,9 @@ class Client {
         turnstilePromise,
       ]);
     } catch (error) {
+      if (joinAbortController.signal.aborted) {
+        return;
+      }
       if (joinAttemptId === this.joinAttemptId) {
         this.isJoiningLobby = false;
         if (this.cosmeticsPromise === cosmeticsPromise) {
@@ -834,7 +842,10 @@ class Client {
       console.error("Failed to prepare join flow:", error);
       return;
     }
-    if (joinAttemptId !== this.joinAttemptId) {
+    if (
+      joinAttemptId !== this.joinAttemptId ||
+      joinAbortController.signal.aborted
+    ) {
       return;
     }
     if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
@@ -921,6 +932,9 @@ class Client {
       () => {
         this.isJoiningLobby = false;
         this.preserveDeepLinkUrl = false;
+        if (this.joinAbortController === joinAbortController) {
+          this.joinAbortController = null;
+        }
         this.joinModal.close();
         this.joinPublicModal?.closeWithoutLeaving();
         this.publicLobby.stop();
@@ -968,7 +982,7 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    this.joinAttemptId++;
+    this.cancelJoinInFlight();
     this.turnstileManager.invalidateToken();
     this.turnstileManager.warmup();
     this.isJoiningLobby = false;
@@ -1051,6 +1065,18 @@ class Client {
       this.serverConfigPrefetch = null;
     }
     return config;
+  }
+
+  private cancelJoinInFlight() {
+    const hasJoinInFlight = this.isJoiningLobby || this.joinAbortController;
+    if (hasJoinInFlight) {
+      this.joinAttemptId++;
+      if (this.joinAbortController) {
+        this.joinAbortController.abort();
+        this.joinAbortController = null;
+      }
+      this.isJoiningLobby = false;
+    }
   }
 }
 
