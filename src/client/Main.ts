@@ -601,6 +601,7 @@ class Client {
 
           // Rollback navigator history to stay in game on cancel
           // Before calling confirm so dialog also shows on mobile
+          history.replaceState(null, "", window.location.origin + "#refresh");
           history.replaceState(null, "", this.currentUrl);
 
           const isConfirmed = confirm(
@@ -613,8 +614,8 @@ class Client {
             // - replaceState instead of 2x pushState for cleaner history
             // Can't prevent browser blocking popState on clicking back button again without in-game click first
             // - preventable by only having pushState this.currentUrl here, which breaks confirm on mobile
-            history.replaceState(null, "", window.location.origin + "#refresh");
-            history.pushState(null, "", this.currentUrl);
+            // history.replaceState(null, "", window.location.origin + "#refresh");
+            // history.pushState(null, "", this.currentUrl);
             return;
           }
         }
