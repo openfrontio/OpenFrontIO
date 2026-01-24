@@ -58,6 +58,7 @@ export interface NukeMagnitude {
 
 export interface Config {
   spawnImmunityDuration(): Tick;
+  defaultSpawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
   theme(): Theme;

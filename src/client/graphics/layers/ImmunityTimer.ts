@@ -41,7 +41,11 @@ export class ImmunityTimer extends LitElement implements Layer {
     const immunityDuration = this.game.config().spawnImmunityDuration();
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
 
-    if (immunityDuration <= 5 * 10 || this.game.inSpawnPhase()) {
+    if (
+      immunityDuration <= this.game.config().defaultSpawnImmunityDuration() ||
+      this.game.inSpawnPhase()
+    ) {
+      // Don't show the timer if default immunity.
       this.setInactive();
       return;
     }
