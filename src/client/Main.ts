@@ -223,6 +223,7 @@ class Client {
   private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
   private joinAbortController: AbortController | null = null;
+  private skipNextHashChange = false;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -624,6 +625,10 @@ class Client {
     this.handleUrl();
 
     const onHashUpdate = () => {
+      if (this.skipNextHashChange) {
+        this.skipNextHashChange = false;
+        return;
+      }
       this.cancelJoinInFlight();
       // Reset the UI to its initial state
       this.joinModal?.close();
@@ -648,6 +653,7 @@ class Client {
 
           if (!isConfirmed) {
             // Rollback navigator history
+            this.skipNextHashChange = true;
             history.pushState(null, "", this.currentUrl);
             return;
           }
