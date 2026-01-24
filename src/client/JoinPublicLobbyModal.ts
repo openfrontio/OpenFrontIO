@@ -188,7 +188,12 @@ export class JoinPublicLobbyModal extends BaseModal {
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      history.replaceState(null, "", window.location.origin + "/");
+      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
+        window.location.pathname,
+      );
+      if (!preserveDeepLink) {
+        history.replaceState(null, "", window.location.origin + "/");
+      }
     }
 
     this.gameConfig = null;
@@ -209,7 +214,12 @@ export class JoinPublicLobbyModal extends BaseModal {
   public closeAndLeave() {
     this.leaveLobby();
     try {
-      history.replaceState(null, "", window.location.origin + "/");
+      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
+        window.location.pathname,
+      );
+      if (!preserveDeepLink) {
+        history.replaceState(null, "", window.location.origin + "/");
+      }
     } catch (error) {
       console.warn("Failed to restore URL on leave:", error);
     }
