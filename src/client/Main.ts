@@ -232,6 +232,7 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
+  private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
   private joinAbortController: AbortController | null = null;
   private skipNextHashChange = false;
