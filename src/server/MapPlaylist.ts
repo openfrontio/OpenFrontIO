@@ -171,7 +171,7 @@ export class MapPlaylist {
       disableNations: true,
       gameMode: GameMode.FFA,
       bots: 100,
-      spawnImmunityDuration: 5 * 10,
+      spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
