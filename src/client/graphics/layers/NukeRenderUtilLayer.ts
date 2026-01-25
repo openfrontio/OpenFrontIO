@@ -38,6 +38,8 @@ export class NukeRenderUtilLayer implements Layer {
 
   // A list of players currently stressed or intercepting the trajectory.
   private interceptingPlayers = new Set<number>();
+  // A list of SAM units intercepting the trajectory.
+  private interceptingSAMs = new Set<number>();
 
   constructor(
     private readonly game: GameView,
@@ -189,7 +191,8 @@ export class NukeRenderUtilLayer implements Layer {
         break;
       }
     }
-    this.interceptingPlayers = new Set();
+    this.interceptingPlayers.clear();
+    this.interceptingSAMs.clear();
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
     // Check trajectory
@@ -214,6 +217,7 @@ export class NukeRenderUtilLayer implements Layer {
         ) {
           this.targetedIndex = i;
           this.interceptingPlayers.add(sam.unit.owner().smallID());
+          this.interceptingSAMs.add(sam.unit.id());
         }
       }
       if (this.targetedIndex !== this.trajectoryPoints.length) break;
@@ -308,6 +312,11 @@ export class NukeRenderUtilLayer implements Layer {
   // players who will shoot the nuke down first are intercepting
   getInterceptingPlayers() {
     return this.interceptingPlayers;
+  }
+
+  // Specific SAM units intercepting the nuke
+  getInterceptingSAMs() {
+    return this.interceptingSAMs;
   }
 
   getTrajectoryInfo() {

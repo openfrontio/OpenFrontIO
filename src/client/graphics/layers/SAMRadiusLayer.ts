@@ -18,6 +18,7 @@ interface SAMRadius {
   x: number;
   y: number;
   r: number;
+  unitID: number;
   owner: PlayerView;
   arcs: Interval[];
 }
@@ -164,6 +165,7 @@ export class SAMRadiusLayer implements Layer {
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().samRange(sam.level()),
+        unitID: sam.id(),
         owner: sam.owner(),
         arcs: [],
       };
@@ -281,7 +283,7 @@ export class SAMRadiusLayer implements Layer {
     const lineColorSelf = this.theme.selfColor();
     const lineColorEnemy = this.theme.enemyColor();
     const lineColorFriend = this.theme.allyColor();
-    const lineColorStressed = colord("rgba(255, 128, 0, 1)");
+    const lineColorStressed = this.theme.allyColor(); // No change atm
     const extraOutlineWidth = 1; // adds onto below
     const lineWidth = 3;
     const lineDash = [12, 6];
@@ -302,10 +304,10 @@ export class SAMRadiusLayer implements Layer {
       const stressed = this.nukeRenderUtilLayer
         .getAllianceStressedPlayers()
         .has(a.owner.smallID());
-      // players who will shoot the nuke down are intercepting
+      // SAMs who will shoot the nuke down are intercepting
       const intercepting = this.nukeRenderUtilLayer
-        .getInterceptingPlayers()
-        .has(a.owner.smallID());
+        .getInterceptingSAMs()
+        .has(a.unitID);
       // players who are not allied
       const enemy =
         !a.owner.isMe() && !this.game.myPlayer()?.isFriendly(a.owner);
