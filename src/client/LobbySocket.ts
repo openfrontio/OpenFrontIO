@@ -3,12 +3,14 @@ import { GameInfo } from "../core/Schemas";
 
 type LobbyUpdateHandler = (lobbies: GameInfo[]) => void;
 type VoteRequestHandler = () => void;
+type VoteStatsHandler = (activeVoteCount: number) => void;
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
   maxWsAttempts?: number;
   pollIntervalMs?: number;
   onVoteRequest?: VoteRequestHandler;
+  onVoteStats?: VoteStatsHandler;
 }
 
 export class PublicLobbySocket {
@@ -23,6 +25,7 @@ export class PublicLobbySocket {
   private readonly pollIntervalMs: number;
   private readonly onLobbiesUpdate: LobbyUpdateHandler;
   private readonly onVoteRequest?: VoteRequestHandler;
+  private readonly onVoteStats?: VoteStatsHandler;
   private pendingVote: { token: string; maps: GameMapType[] } | null = null;
 
   constructor(
@@ -34,6 +37,7 @@ export class PublicLobbySocket {
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
     this.pollIntervalMs = options?.pollIntervalMs ?? 1000;
     this.onVoteRequest = options?.onVoteRequest;
+    this.onVoteStats = options?.onVoteStats;
   }
 
   start() {
@@ -87,6 +91,9 @@ export class PublicLobbySocket {
         this.onLobbiesUpdate(message.data?.lobbies ?? []);
       } else if (message.type === "map_vote_request") {
         this.onVoteRequest?.();
+      } else if (message.type === "map_vote_stats") {
+        const activeVoteCount = Number(message.data?.activeVoteCount ?? 0);
+        this.onVoteStats?.(activeVoteCount);
       }
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);

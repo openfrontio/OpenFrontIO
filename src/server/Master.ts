@@ -131,6 +131,33 @@ function broadcastMapVoteRequest() {
   });
 }
 
+function getActiveVoteCount(): number {
+  return mapVotesByUser.size;
+}
+
+function broadcastMapVoteStats() {
+  const message = JSON.stringify({
+    type: "map_vote_stats",
+    data: { activeVoteCount: getActiveVoteCount() },
+  });
+  const clientsToRemove: WebSocket[] = [];
+
+  connectedClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    } else if (
+      client.readyState === WebSocket.CLOSED ||
+      client.readyState === WebSocket.CLOSING
+    ) {
+      clientsToRemove.push(client);
+    }
+  });
+
+  clientsToRemove.forEach((client) => {
+    connectedClients.delete(client);
+  });
+}
+
 function normalizeVotedMaps(maps: GameMapType[]): Set<GameMapType> {
   const unique = new Set<GameMapType>();
   maps.forEach((map) => {
@@ -165,6 +192,7 @@ function unregisterVoteConnection(ws: WebSocket) {
   if (connections.size === 0) {
     mapVoteConnectionsByUser.delete(userId);
     mapVotesByUser.delete(userId);
+    broadcastMapVoteStats();
   } else {
     mapVoteConnectionsByUser.set(userId, connections);
   }
@@ -173,9 +201,11 @@ function unregisterVoteConnection(ws: WebSocket) {
 function setUserVote(userId: string, maps: Set<GameMapType>) {
   if (maps.size === 0) {
     mapVotesByUser.delete(userId);
+    broadcastMapVoteStats();
     return;
   }
   mapVotesByUser.set(userId, maps);
+  broadcastMapVoteStats();
 }
 
 function collectMapVoteWeights(): Map<GameMapType, number> {
@@ -190,6 +220,7 @@ function collectMapVoteWeights(): Map<GameMapType, number> {
 
 function clearMapVotes() {
   mapVotesByUser.clear();
+  broadcastMapVoteStats();
 }
 
 async function handleLobbyMessage(ws: WebSocket, raw: WebSocket.RawData) {
@@ -238,6 +269,12 @@ export async function startMaster() {
     // Send current lobbies immediately (always send, even if empty)
     ws.send(
       JSON.stringify({ type: "lobbies_update", data: publicLobbiesData }),
+    );
+    ws.send(
+      JSON.stringify({
+        type: "map_vote_stats",
+        data: { activeVoteCount: getActiveVoteCount() },
+      }),
     );
 
     ws.on("close", () => {

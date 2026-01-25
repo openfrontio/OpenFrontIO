@@ -59,6 +59,30 @@ export class MapVoteModal extends BaseModal {
     );
   }
 
+  private handleVoteSubmit = () => {
+    const maps = Array.from(this.selectedMaps);
+    saveStoredMapVotes(maps);
+    this.dispatchEvent(
+      new CustomEvent("map-vote-submit", {
+        detail: { maps },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: {
+          message: this.loggedIn
+            ? translateText("public_lobby.vote_toast_submitted")
+            : translateText("public_lobby.vote_saved"),
+          color: "green",
+          duration: 2500,
+        },
+      }),
+    );
+    this.close();
+  };
+
   private renderCategory(
     categoryKey: string,
     maps: GameMapType[],
@@ -165,6 +189,25 @@ export class MapVoteModal extends BaseModal {
               </div>
             </div>
           </div>
+        </div>
+
+        <div
+          class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10"
+        >
+          <button
+            class="px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+            type="button"
+            @click=${() => this.close()}
+          >
+            ${translateText("common.cancel")}
+          </button>
+          <button
+            class="px-5 py-2 text-xs font-bold uppercase tracking-widest rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+            type="button"
+            @click=${this.handleVoteSubmit}
+          >
+            ${translateText("public_lobby.vote_submit")}
+          </button>
         </div>
       </div>
     `;

@@ -29,6 +29,7 @@ export class PublicLobby extends LitElement {
   @state() private mapImages: Map<GameID, string> = new Map();
   @state() private joiningDotIndex: number = 0;
   @state() private isLoggedIn: boolean = false;
+  @state() private activeVoteCount: number = 0;
 
   private joiningInterval: number | null = null;
   private currLobby: GameInfo | null = null;
@@ -39,6 +40,9 @@ export class PublicLobby extends LitElement {
     {
       onVoteRequest: () => {
         void this.sendStoredVotes();
+      },
+      onVoteStats: (activeVoteCount) => {
+        this.activeVoteCount = activeVoteCount;
       },
     },
   );
@@ -56,6 +60,11 @@ export class PublicLobby extends LitElement {
     if (!customEvent.detail?.maps) return;
     void this.handleMapVoteChange(customEvent);
   };
+  private handleMapVoteSubmitEvent = (event: Event) => {
+    const customEvent = event as CustomEvent<{ maps: GameMapType[] }>;
+    if (!customEvent.detail?.maps) return;
+    void this.handleMapVoteSubmit(customEvent.detail.maps);
+  };
 
   createRenderRoot() {
     return this;
@@ -65,6 +74,7 @@ export class PublicLobby extends LitElement {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.handleUserMeResponse);
     document.addEventListener("map-vote-change", this.handleMapVoteChangeEvent);
+    document.addEventListener("map-vote-submit", this.handleMapVoteSubmitEvent);
     this.lobbySocket.start();
   }
 
@@ -74,6 +84,10 @@ export class PublicLobby extends LitElement {
     document.removeEventListener(
       "map-vote-change",
       this.handleMapVoteChangeEvent,
+    );
+    document.removeEventListener(
+      "map-vote-submit",
+      this.handleMapVoteSubmitEvent,
     );
     this.lobbySocket.stop();
     this.stopJoiningAnimation();
@@ -93,6 +107,13 @@ export class PublicLobby extends LitElement {
     const auth = await userAuth();
     if (!auth) return;
     this.lobbySocket.sendMapVote(auth.jwt, event.detail.maps);
+  }
+
+  private async handleMapVoteSubmit(maps: GameMapType[]) {
+    if (!this.isLoggedIn) return;
+    const auth = await userAuth();
+    if (!auth) return;
+    this.lobbySocket.sendMapVote(auth.jwt, maps);
   }
 
   private openMapVoteModal() {
@@ -177,10 +198,7 @@ export class PublicLobby extends LitElement {
 
     return html`
       <div class="flex flex-col gap-2">
-        <div
-          class="flex items-center gap-2 text-xs uppercase tracking-widest text-white/60 px-1"
-        >
-          <span>${translateText("public_lobby.current")}</span>
+        <div class="flex items-center gap-3 text-xs px-1">
           <button
             class="group flex items-center justify-center w-7 h-7 rounded-full border border-white/10 bg-slate-900/70 hover:bg-slate-800/90 text-white/80 hover:text-white transition-colors"
             @click=${this.openMapVoteModal}
@@ -201,6 +219,20 @@ export class PublicLobby extends LitElement {
               ></path>
             </svg>
           </button>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs uppercase tracking-widest text-white/70">
+              ${translateText("public_lobby.vote_cta")}
+            </span>
+            <span
+              class="text-[10px] text-white/50 normal-case tracking-normal"
+              title=${translateText("public_lobby.vote_count_tooltip")}
+              aria-label=${translateText("public_lobby.vote_count_tooltip")}
+            >
+              ${translateText("public_lobby.vote_count_label", {
+                count: this.activeVoteCount,
+              })}
+            </span>
+          </div>
         </div>
 
         <div class="relative">
