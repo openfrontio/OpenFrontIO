@@ -361,7 +361,6 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
@@ -379,6 +378,11 @@ export class ClientGameRunner {
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
+
+      // In singleplayer/replay (local server), only acknowledge the turn once the
+      // update has been fully applied and the renderer has ticked. This prevents
+      // the local server from queuing turns faster than we can process them.
+      this.transport.turnComplete();
     });
 
     const onconnect = () => {
