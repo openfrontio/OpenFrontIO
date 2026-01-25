@@ -1091,17 +1091,39 @@ export class GameImpl implements Game {
       }
     }
 
-    const gold = conquered.gold();
-    this.displayMessage(
-      `Conquered ${conquered.displayName()} received ${renderNumber(
+    // Don't transfer gold when the conquered player didn't play (no conquest stats)
+    // This is especially important when starting gold is enabled
+    // Players still get gold for conquering bots because we don't record stats for them
+    const conqueredStats = this._stats.getPlayerStats(conquered);
+    const skipGoldTransfer =
+      conqueredStats && conqueredStats.conquests === undefined;
+    const gold = skipGoldTransfer ? 0n : conquered.gold();
+
+    if (gold > 0n) {
+      this.displayMessage(
+        "events_display.received_gold_from_conquest",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
         gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      conqueror.id(),
-      gold,
-    );
-    conqueror.addGold(gold);
-    conquered.removeGold(gold);
+        {
+          gold: renderNumber(gold),
+          name: conquered.displayName(),
+        },
+      );
+      conqueror.addGold(gold);
+      conquered.removeGold(gold);
+    } else if (skipGoldTransfer) {
+      this.displayMessage(
+        "events_display.conquered_inactive_player",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
+        undefined,
+        {
+          name: conquered.displayName(),
+        },
+      );
+    }
+
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
@@ -1110,7 +1132,9 @@ export class GameImpl implements Game {
     });
 
     // Record stats
-    this.stats().goldWar(conqueror, conquered, gold);
+    if (gold > 0n) {
+      this.stats().goldWar(conqueror, conquered, gold);
+    }
   }
 }
 
