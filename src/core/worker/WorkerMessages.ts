@@ -23,7 +23,21 @@ export type WorkerMessageType =
   | "attack_average_position"
   | "attack_average_position_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result";
+  | "transport_ship_spawn_result"
+  | "init_renderer"
+  | "renderer_ready"
+  | "set_view_size"
+  | "set_view_transform"
+  | "set_alternative_view"
+  | "set_highlighted_owner"
+  | "set_shader_settings"
+  | "mark_tile"
+  | "mark_all_dirty"
+  | "refresh_palette"
+  | "refresh_terrain"
+  | "tick_renderer"
+  | "render_frame"
+  | "renderer_metrics";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -112,6 +126,91 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
   result: TileRef | false;
 }
 
+// Renderer messages from main thread to worker
+export interface InitRendererMessage extends BaseWorkerMessage {
+  type: "init_renderer";
+  offscreenCanvas: OffscreenCanvas;
+  darkMode: boolean; // Whether to use dark theme
+}
+
+export interface SetViewSizeMessage extends BaseWorkerMessage {
+  type: "set_view_size";
+  width: number;
+  height: number;
+}
+
+export interface SetViewTransformMessage extends BaseWorkerMessage {
+  type: "set_view_transform";
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface SetAlternativeViewMessage extends BaseWorkerMessage {
+  type: "set_alternative_view";
+  enabled: boolean;
+}
+
+export interface SetHighlightedOwnerMessage extends BaseWorkerMessage {
+  type: "set_highlighted_owner";
+  ownerSmallId: number | null;
+}
+
+export interface SetShaderSettingsMessage extends BaseWorkerMessage {
+  type: "set_shader_settings";
+  territoryShader?: string;
+  territoryShaderParams0?: number[];
+  territoryShaderParams1?: number[];
+  terrainShader?: string;
+  terrainShaderParams0?: number[];
+  terrainShaderParams1?: number[];
+  preSmoothing?: {
+    enabled: boolean;
+    shaderPath: string;
+    params0: number[];
+  };
+  postSmoothing?: {
+    enabled: boolean;
+    shaderPath: string;
+    params0: number[];
+  };
+}
+
+export interface MarkTileMessage extends BaseWorkerMessage {
+  type: "mark_tile";
+  tile: TileRef;
+}
+
+export interface MarkAllDirtyMessage extends BaseWorkerMessage {
+  type: "mark_all_dirty";
+}
+
+export interface RefreshPaletteMessage extends BaseWorkerMessage {
+  type: "refresh_palette";
+}
+
+export interface RefreshTerrainMessage extends BaseWorkerMessage {
+  type: "refresh_terrain";
+}
+
+export interface TickRendererMessage extends BaseWorkerMessage {
+  type: "tick_renderer";
+}
+
+export interface RenderFrameMessage extends BaseWorkerMessage {
+  type: "render_frame";
+}
+
+// Renderer messages from worker to main thread
+export interface RendererReadyMessage extends BaseWorkerMessage {
+  type: "renderer_ready";
+}
+
+export interface RendererMetricsMessage extends BaseWorkerMessage {
+  type: "renderer_metrics";
+  computeMs: number;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
@@ -121,7 +220,19 @@ export type MainThreadMessage =
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
-  | TransportShipSpawnMessage;
+  | TransportShipSpawnMessage
+  | InitRendererMessage
+  | SetViewSizeMessage
+  | SetViewTransformMessage
+  | SetAlternativeViewMessage
+  | SetHighlightedOwnerMessage
+  | SetShaderSettingsMessage
+  | MarkTileMessage
+  | MarkAllDirtyMessage
+  | RefreshPaletteMessage
+  | RefreshTerrainMessage
+  | TickRendererMessage
+  | RenderFrameMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -131,4 +242,6 @@ export type WorkerMessage =
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage
-  | TransportShipSpawnResultMessage;
+  | TransportShipSpawnResultMessage
+  | RendererReadyMessage
+  | RendererMetricsMessage;
