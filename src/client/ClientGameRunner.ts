@@ -262,6 +262,10 @@ export class ClientGameRunner {
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
+  private pendingUpdates: GameUpdateViewData[] = [];
+  private pendingUpdateIndex: number = 0;
+  private drainPendingUpdatesRafId: number | null = null;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -361,28 +365,7 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
-      });
-      this.gameView.update(gu);
-      this.renderer.tick();
-
-      // Emit tick metrics event for performance overlay
-      this.eventBus.emit(
-        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
-      );
-
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
-
-      // In singleplayer/replay (local server), only acknowledge the turn once the
-      // update has been fully applied and the renderer has ticked. This prevents
-      // the local server from queuing turns faster than we can process them.
-      this.transport.turnComplete();
+      this.enqueueWorkerUpdate(gu);
     });
 
     const onconnect = () => {
@@ -506,6 +489,12 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    if (this.drainPendingUpdatesRafId !== null) {
+      cancelAnimationFrame(this.drainPendingUpdatesRafId);
+      this.drainPendingUpdatesRafId = null;
+    }
+    this.pendingUpdates = [];
+    this.pendingUpdateIndex = 0;
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
@@ -515,6 +504,97 @@ export class ClientGameRunner {
     if (this.goToPlayerTimeout) {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
+    }
+  }
+
+  private enqueueWorkerUpdate(update: GameUpdateViewData): void {
+    this.pendingUpdates.push(update);
+
+    if (this.drainPendingUpdatesRafId !== null || !this.isActive) {
+      return;
+    }
+
+    this.drainPendingUpdatesRafId = requestAnimationFrame(() => {
+      this.drainPendingUpdatesRafId = null;
+      this.drainPendingUpdates();
+    });
+  }
+
+  private drainPendingUpdates(): void {
+    if (!this.isActive) {
+      return;
+    }
+
+    const backlog = this.pendingUpdates.length - this.pendingUpdateIndex;
+    if (backlog <= 0) {
+      return;
+    }
+
+    const startTime = performance.now();
+    const maxDrainMs = backlog > 200 ? 12 : 8;
+    const maxUpdates = backlog > 200 ? 1000 : 200;
+
+    let processed = 0;
+    let totalTickExecutionDuration = 0;
+    let winUpdate: WinUpdate | null = null;
+
+    while (
+      processed < maxUpdates &&
+      this.pendingUpdateIndex < this.pendingUpdates.length &&
+      performance.now() - startTime < maxDrainMs
+    ) {
+      const gu = this.pendingUpdates[this.pendingUpdateIndex];
+      this.pendingUpdateIndex++;
+      processed++;
+
+      totalTickExecutionDuration += gu.tickExecutionDuration ?? 0;
+
+      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+      });
+
+      if (gu.updates[GameUpdateType.Win].length > 0) {
+        winUpdate = gu.updates[GameUpdateType.Win][0];
+      }
+
+      this.gameView.update(gu);
+      this.renderer.tick();
+    }
+
+    if (processed > 0) {
+      const avgTickExecutionDuration = totalTickExecutionDuration / processed;
+      this.eventBus.emit(
+        new TickMetricsEvent(avgTickExecutionDuration, this.currentTickDelay),
+      );
+      this.currentTickDelay = undefined;
+
+      if (winUpdate) {
+        this.saveGame(winUpdate);
+      }
+
+      // In singleplayer/replay (local server), acknowledge how many turns we've
+      // actually applied this frame. LocalServer uses this as bounded backpressure.
+      this.transport.turnComplete(processed);
+    }
+
+    // Compact the queue occasionally to avoid unbounded growth from array holes.
+    if (this.pendingUpdateIndex >= this.pendingUpdates.length) {
+      this.pendingUpdates = [];
+      this.pendingUpdateIndex = 0;
+    } else if (this.pendingUpdateIndex > 1024) {
+      this.pendingUpdates = this.pendingUpdates.slice(this.pendingUpdateIndex);
+      this.pendingUpdateIndex = 0;
+    }
+
+    // Keep draining if we still have backlog.
+    if (
+      this.pendingUpdates.length - this.pendingUpdateIndex > 0 &&
+      this.drainPendingUpdatesRafId === null
+    ) {
+      this.drainPendingUpdatesRafId = requestAnimationFrame(() => {
+        this.drainPendingUpdatesRafId = null;
+        this.drainPendingUpdates();
+      });
     }
   }
 

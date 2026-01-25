@@ -392,9 +392,9 @@ export class Transport {
     this.connect(this.onconnect, this.onmessage);
   }
 
-  public turnComplete() {
+  public turnComplete(count: number = 1) {
     if (this.isLocal) {
-      this.localServer.turnComplete();
+      this.localServer.turnComplete(count);
     }
   }
 
