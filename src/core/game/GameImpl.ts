@@ -7,6 +7,7 @@ import {
 import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -1091,15 +1092,26 @@ export class GameImpl implements Game {
       }
     }
 
-    // Don't transfer gold when the conquered player didn't play (no conquest stats)
+    // Don't transfer gold when the conquered player didn't play (never attacked anyone)
     // This is especially important when starting gold is enabled
     // Players still get gold for conquering bots because we don't record stats for them
-    const conqueredStats = this._stats.getPlayerStats(conquered);
+    const stats = this._stats.getPlayerStats(conquered);
+    const attacksSent = stats?.attacks?.[ATTACK_INDEX_SENT] ?? 0n;
     const skipGoldTransfer =
-      conqueredStats && conqueredStats.conquests === undefined;
+      attacksSent === 0n && conquered.type() === PlayerType.Human;
     const gold = skipGoldTransfer ? 0n : conquered.gold();
 
-    if (gold > 0n) {
+    if (skipGoldTransfer) {
+      this.displayMessage(
+        "events_display.conquered_inactive_player",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
+        undefined,
+        {
+          name: conquered.displayName(),
+        },
+      );
+    } else {
       this.displayMessage(
         "events_display.received_gold_from_conquest",
         MessageType.CONQUERED_PLAYER,
@@ -1112,16 +1124,6 @@ export class GameImpl implements Game {
       );
       conqueror.addGold(gold);
       conquered.removeGold(gold);
-    } else if (skipGoldTransfer) {
-      this.displayMessage(
-        "events_display.conquered_inactive_player",
-        MessageType.CONQUERED_PLAYER,
-        conqueror.id(),
-        undefined,
-        {
-          name: conquered.displayName(),
-        },
-      );
     }
 
     this.addUpdate({
