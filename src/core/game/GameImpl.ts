@@ -1094,7 +1094,6 @@ export class GameImpl implements Game {
 
     // Don't transfer gold when the conquered player didn't play (never attacked anyone)
     // This is especially important when starting gold is enabled
-    // Players still get gold for conquering bots because we don't record stats for them
     const stats = this._stats.getPlayerStats(conquered);
     const attacksSent = stats?.attacks?.[ATTACK_INDEX_SENT] ?? 0n;
     const skipGoldTransfer =
