@@ -25,11 +25,11 @@ function sendBoat(target: TileRef, troops: number) {
   game.addExecution(new TransportShipExecution(defender, target, troops));
 }
 
-const immunityPhaseTicks = 10;
 function waitForImmunityToEnd() {
-  for (let i = 0; i < immunityPhaseTicks + 1; i++) {
-    game.executeNextTick();
+  while (game.isSpawnImmunityActive()) {
+    game.executeNextTick()
   }
+  game.executeNextTick();
 }
 
 describe("Attack", () => {
@@ -338,7 +338,7 @@ describe("Attack immunity", () => {
       infiniteTroops: true,
     });
 
-    (game.config() as TestConfig).setSpawnImmunityDuration(immunityPhaseTicks);
+    (game.config() as TestConfig).setSpawnImmunityDuration(game.config().spawnImmunityDuration());
 
     const playerAInfo = new PlayerInfo(
       "playerA",
@@ -391,7 +391,7 @@ describe("Attack immunity", () => {
 
   test("Ensure a player can't attack during all the immunity phase", async () => {
     // Execute a few ticks but stop right before the immunity phase is over
-    for (let i = 0; i < immunityPhaseTicks - 1; i++) {
+    for (let i = 0; i < game.config().spawnImmunityDuration() - 1; i++) {
       game.executeNextTick();
     }
     // Player A attacks Player B
