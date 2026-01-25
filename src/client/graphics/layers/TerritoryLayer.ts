@@ -28,6 +28,7 @@ import {
   readTerritoryShaderId,
 } from "../webgpu/render/TerritoryShaderRegistry";
 import { TerritoryRenderer } from "../webgpu/TerritoryRenderer";
+import { TerritoryRendererProxy } from "../webgpu/TerritoryRendererProxy";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -42,7 +43,8 @@ export class TerritoryLayer implements Layer {
 
   private theme: Theme;
 
-  private territoryRenderer: TerritoryRenderer | null = null;
+  private territoryRenderer: TerritoryRenderer | TerritoryRendererProxy | null =
+    null;
   private alternativeView = false;
 
   private lastPaletteSignature: string | null = null;
@@ -119,9 +121,11 @@ export class TerritoryLayer implements Layer {
   }
 
   private configureRenderer() {
-    const { renderer, reason } = TerritoryRenderer.create(
+    // Use proxy to render in worker thread
+    const { renderer, reason } = TerritoryRendererProxy.create(
       this.game,
       this.theme,
+      this.game.worker,
     );
     if (!renderer) {
       throw new Error(reason ?? "WebGPU is required for territory rendering.");
@@ -188,6 +192,11 @@ export class TerritoryLayer implements Layer {
     }
 
     const canvas = this.territoryRenderer.canvas;
+
+    // Canvas must be HTMLCanvasElement for DOM operations (proxy always provides this)
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
 
     // If the renderer recreated its canvas, detach the old one.
     if (this.attachedTerritoryCanvas !== canvas) {

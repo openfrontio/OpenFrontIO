@@ -1,7 +1,12 @@
 import version from "resources/version.txt?raw";
-import { createGameRunner, GameRunner } from "../GameRunner";
+import { Theme } from "../configuration/Config";
+import { PastelTheme } from "../configuration/PastelTheme";
+import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { loadTerrainMap, TerrainMapData } from "../game/TerrainMapLoader";
+import { createGameRunner, GameRunner } from "../GameRunner";
+import { GameStartInfo } from "../Schemas";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -9,19 +14,28 @@ import {
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  RendererReadyMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
+import { WorkerTerritoryRenderer } from "./WorkerTerritoryRenderer";
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
+let gameStartInfo: GameStartInfo | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 const MAX_TICKS_PER_HEARTBEAT = 4;
+let renderer: WorkerTerritoryRenderer | null = null;
+let mapData: TerrainMapData | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
   if (!("updates" in gu)) {
     return;
+  }
+  // Update renderer with game update
+  if (renderer) {
+    renderer.updateGameView(gu);
   }
   sendMessage({
     type: "game_update",
@@ -52,6 +66,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     }
     case "init":
       try {
+        gameStartInfo = message.gameStartInfo;
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
@@ -181,6 +196,153 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         console.error("Failed to spawn transport ship:", error);
       }
       break;
+
+    case "init_renderer":
+      try {
+        if (!gameRunner || !gameStartInfo) {
+          throw new Error("Game runner not initialized");
+        }
+        const gr = await gameRunner;
+
+        // Load map data if not already loaded
+        // Use gameStartInfo.config which has the original game map info
+        mapData ??= await loadTerrainMap(
+          gameStartInfo.config.gameMap,
+          gameStartInfo.config.gameMapSize,
+          mapLoader,
+        );
+
+        // Create theme based on darkMode flag from main thread
+        // (can't access userSettings in worker, so it's passed from main thread)
+        const theme: Theme = message.darkMode
+          ? new PastelThemeDark()
+          : new PastelTheme();
+
+        renderer = new WorkerTerritoryRenderer();
+
+        await renderer.init(message.offscreenCanvas, gr, mapData, theme);
+
+        sendMessage({
+          type: "renderer_ready",
+          id: message.id,
+        } as RendererReadyMessage);
+      } catch (error) {
+        console.error("Failed to initialize renderer:", error);
+        sendMessage({
+          type: "renderer_ready",
+          id: message.id,
+        } as RendererReadyMessage);
+        throw error;
+      }
+      break;
+
+    case "set_view_size":
+      if (renderer) {
+        renderer.setViewSize(message.width, message.height);
+      }
+      break;
+
+    case "set_view_transform":
+      if (renderer) {
+        renderer.setViewTransform(
+          message.scale,
+          message.offsetX,
+          message.offsetY,
+        );
+      }
+      break;
+
+    case "set_alternative_view":
+      if (renderer) {
+        renderer.setAlternativeView(message.enabled);
+      }
+      break;
+
+    case "set_highlighted_owner":
+      if (renderer) {
+        renderer.setHighlightedOwnerId(message.ownerSmallId);
+      }
+      break;
+
+    case "set_shader_settings":
+      if (renderer) {
+        if (message.territoryShader) {
+          renderer.setTerritoryShader(message.territoryShader);
+        }
+        if (message.territoryShaderParams0 && message.territoryShaderParams1) {
+          renderer.setTerritoryShaderParams(
+            message.territoryShaderParams0,
+            message.territoryShaderParams1,
+          );
+        }
+        if (message.terrainShader) {
+          renderer.setTerrainShader(message.terrainShader);
+        }
+        if (message.terrainShaderParams0 && message.terrainShaderParams1) {
+          renderer.setTerrainShaderParams(
+            message.terrainShaderParams0,
+            message.terrainShaderParams1,
+          );
+        }
+        if (message.preSmoothing) {
+          renderer.setPreSmoothing(
+            message.preSmoothing.enabled,
+            message.preSmoothing.shaderPath,
+            message.preSmoothing.params0,
+          );
+        }
+        if (message.postSmoothing) {
+          renderer.setPostSmoothing(
+            message.postSmoothing.enabled,
+            message.postSmoothing.shaderPath,
+            message.postSmoothing.params0,
+          );
+        }
+      }
+      break;
+
+    case "mark_tile":
+      if (renderer) {
+        renderer.markTile(message.tile);
+      }
+      break;
+
+    case "mark_all_dirty":
+      if (renderer) {
+        renderer.markAllDirty();
+      }
+      break;
+
+    case "refresh_palette":
+      if (renderer) {
+        renderer.refreshPalette();
+      }
+      break;
+
+    case "refresh_terrain":
+      if (renderer) {
+        renderer.refreshTerrain();
+      }
+      break;
+
+    case "tick_renderer":
+      if (renderer) {
+        const start = performance.now();
+        renderer.tick();
+        const computeMs = performance.now() - start;
+        sendMessage({
+          type: "renderer_metrics",
+          computeMs,
+        });
+      }
+      break;
+
+    case "render_frame":
+      if (renderer) {
+        renderer.render();
+      }
+      break;
+
     default:
       console.warn("Unknown message :", message);
   }

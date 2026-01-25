@@ -46,6 +46,7 @@ export class WorkerClient {
         break;
 
       case "initialized":
+      case "renderer_ready":
       default:
         if (message.id && this.messageHandlers.has(message.id)) {
           const handler = this.messageHandlers.get(message.id)!;
@@ -54,6 +55,30 @@ export class WorkerClient {
         }
         break;
     }
+  }
+
+  /**
+   * Add a message handler for a specific message ID.
+   */
+  addMessageHandler(
+    id: string,
+    handler: (message: WorkerMessage) => void,
+  ): void {
+    this.messageHandlers.set(id, handler);
+  }
+
+  /**
+   * Remove a message handler.
+   */
+  removeMessageHandler(id: string): void {
+    this.messageHandlers.delete(id);
+  }
+
+  /**
+   * Post a message to the worker with optional transferables.
+   */
+  postMessage(message: any, transfer?: Transferable[]): void {
+    this.worker.postMessage(message, transfer);
   }
 
   initialize(): Promise<void> {

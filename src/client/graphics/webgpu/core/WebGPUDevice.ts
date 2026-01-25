@@ -19,10 +19,12 @@ export class WebGPUDevice {
 
   /**
    * Initialize WebGPU device and canvas context.
-   * @param canvas Canvas element to configure
+   * @param canvas Canvas element to configure (HTMLCanvasElement or OffscreenCanvas)
    * @returns WebGPUDevice instance or null if WebGPU is not available
    */
-  static async create(canvas: HTMLCanvasElement): Promise<WebGPUDevice | null> {
+  static async create(
+    canvas: HTMLCanvasElement | OffscreenCanvas,
+  ): Promise<WebGPUDevice | null> {
     const nav = globalThis.navigator as any;
     if (!nav?.gpu || typeof nav.gpu.requestAdapter !== "function") {
       return null;
