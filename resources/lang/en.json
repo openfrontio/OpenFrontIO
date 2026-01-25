@@ -796,9 +796,17 @@
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis",
+    "moderation": "Moderation",
+    "kick": "Kick player",
+    "kicked": "Already kicked",
+    "kick_confirm": "Kick {name}?\n\nThey won't be able to rejoin this game.",
     "arc_up": "Upward arc",
     "arc_down": "Downward arc",
     "flip_rocket_trajectory": "Flip rocket trajectory"
+  },
+  "kick_reason": {
+    "duplicate_session": "Kicked from game (you may have been playing on another tab)",
+    "lobby_creator": "Kicked by lobby creator"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
