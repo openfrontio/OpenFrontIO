@@ -6,10 +6,14 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
+import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameMapType } from "../core/game/Game";
+import { publicLobbyMaps } from "../core/game/PublicLobbyMaps";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -72,6 +76,16 @@ let publicLobbiesData: { lobbies: GameInfo[] } = { lobbies: [] };
 
 const publicLobbyIDs: Set<string> = new Set();
 const connectedClients: Set<WebSocket> = new Set();
+const publicLobbyMapSet = new Set(publicLobbyMaps);
+const mapVotesByUser = new Map<string, Set<GameMapType>>();
+const mapVoteConnectionsByUser = new Map<string, Set<WebSocket>>();
+const mapVoteUserByConnection = new Map<WebSocket, string>();
+
+const MapVoteMessageSchema = z.object({
+  type: z.literal("map_vote"),
+  token: z.string(),
+  maps: z.array(z.nativeEnum(GameMapType)),
+});
 
 // Broadcast lobbies to all connected clients
 function broadcastLobbies() {
@@ -93,6 +107,113 @@ function broadcastLobbies() {
   clientsToRemove.forEach((client) => {
     connectedClients.delete(client);
   });
+}
+
+function broadcastMapVoteRequest() {
+  const message = JSON.stringify({ type: "map_vote_request" });
+  const clientsToRemove: WebSocket[] = [];
+
+  connectedClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    } else if (
+      client.readyState === WebSocket.CLOSED ||
+      client.readyState === WebSocket.CLOSING
+    ) {
+      clientsToRemove.push(client);
+    }
+  });
+
+  clientsToRemove.forEach((client) => {
+    connectedClients.delete(client);
+  });
+}
+
+function normalizeVotedMaps(maps: GameMapType[]): Set<GameMapType> {
+  const unique = new Set<GameMapType>();
+  maps.forEach((map) => {
+    if (publicLobbyMapSet.has(map)) {
+      unique.add(map);
+    }
+  });
+  return unique;
+}
+
+function registerVoteConnection(userId: string, ws: WebSocket) {
+  const existingUserId = mapVoteUserByConnection.get(ws);
+  if (existingUserId && existingUserId !== userId) {
+    unregisterVoteConnection(ws);
+  }
+
+  mapVoteUserByConnection.set(ws, userId);
+  const connections = mapVoteConnectionsByUser.get(userId) ?? new Set();
+  connections.add(ws);
+  mapVoteConnectionsByUser.set(userId, connections);
+}
+
+function unregisterVoteConnection(ws: WebSocket) {
+  const userId = mapVoteUserByConnection.get(ws);
+  if (!userId) return;
+
+  mapVoteUserByConnection.delete(ws);
+  const connections = mapVoteConnectionsByUser.get(userId);
+  if (!connections) return;
+
+  connections.delete(ws);
+  if (connections.size === 0) {
+    mapVoteConnectionsByUser.delete(userId);
+    mapVotesByUser.delete(userId);
+  } else {
+    mapVoteConnectionsByUser.set(userId, connections);
+  }
+}
+
+function setUserVote(userId: string, maps: Set<GameMapType>) {
+  if (maps.size === 0) {
+    mapVotesByUser.delete(userId);
+    return;
+  }
+  mapVotesByUser.set(userId, maps);
+}
+
+function collectMapVoteWeights(): Map<GameMapType, number> {
+  const weights = new Map<GameMapType, number>();
+  for (const maps of mapVotesByUser.values()) {
+    for (const map of maps) {
+      weights.set(map, (weights.get(map) ?? 0) + 1);
+    }
+  }
+  return weights;
+}
+
+function clearMapVotes() {
+  mapVotesByUser.clear();
+}
+
+async function handleLobbyMessage(ws: WebSocket, raw: WebSocket.RawData) {
+  let payload: object | null = null;
+  try {
+    payload = JSON.parse(raw.toString()) as object;
+  } catch (error) {
+    log.warn("Failed to parse lobby WebSocket message", error);
+    return;
+  }
+
+  const parsed = MapVoteMessageSchema.safeParse(payload);
+  if (!parsed.success) {
+    return;
+  }
+
+  const { token, maps } = parsed.data;
+  const verification = await verifyClientToken(token, config);
+  if (verification.type !== "success" || !verification.claims) {
+    log.warn("Rejected map vote from unauthenticated client");
+    return;
+  }
+
+  const userId = verification.persistentId;
+  registerVoteConnection(userId, ws);
+  setUserVote(userId, normalizeVotedMaps(maps));
 }
 
 // Start the master process
@@ -119,11 +240,17 @@ export async function startMaster() {
 
     ws.on("close", () => {
       connectedClients.delete(ws);
+      unregisterVoteConnection(ws);
+    });
+
+    ws.on("message", (data) => {
+      void handleLobbyMessage(ws, data);
     });
 
     ws.on("error", (error) => {
       log.error(`WebSocket error:`, error);
       connectedClients.delete(ws);
+      unregisterVoteConnection(ws);
       try {
         if (
           ws.readyState === WebSocket.OPEN ||
@@ -314,6 +441,8 @@ async function schedulePublicGame(playlist: MapPlaylist) {
 
   // Send request to the worker to start the game
   try {
+    const mapVoteWeights = collectMapVoteWeights();
+    const gameConfig = await playlist.gameConfig(mapVoteWeights);
     const response = await fetch(
       `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
       {
@@ -322,13 +451,15 @@ async function schedulePublicGame(playlist: MapPlaylist) {
           "Content-Type": "application/json",
           [config.adminHeader()]: config.adminToken(),
         },
-        body: JSON.stringify(await playlist.gameConfig()),
+        body: JSON.stringify(gameConfig),
       },
     );
 
     if (!response.ok) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
+    clearMapVotes();
+    broadcastMapVoteRequest();
   } catch (error) {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;

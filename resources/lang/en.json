@@ -331,7 +331,13 @@
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "started": "Started"
+    "started": "Started",
+    "current": "Current public lobby",
+    "vote_button": "Vote on maps",
+    "vote_title": "Map Voting",
+    "vote_description": "Select any number of maps to influence the next public lobby.",
+    "vote_saved": "Your selection is saved on this device.",
+    "vote_login_required": "Log in to submit votes."
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",

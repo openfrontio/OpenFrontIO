@@ -1,7 +1,6 @@
 import {
   Difficulty,
   Duos,
-  GameMapName,
   GameMapSize,
   GameMapType,
   GameMode,
@@ -12,59 +11,12 @@ import {
   RankedType,
   Trios,
 } from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
+import {
+  getPublicLobbyMapWeight,
+  publicLobbyMaps,
+} from "../core/game/PublicLobbyMaps";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
-import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
-
-const log = logger.child({});
-
-// How many times each map should appear in the playlist.
-// Note: The Partial should eventually be removed for better type safety.
-const frequency: Partial<Record<GameMapName, number>> = {
-  Africa: 7,
-  Asia: 6,
-  Australia: 4,
-  Achiran: 5,
-  Baikal: 5,
-  BetweenTwoSeas: 5,
-  BlackSea: 6,
-  Britannia: 5,
-  BritanniaClassic: 4,
-  DeglaciatedAntarctica: 4,
-  EastAsia: 5,
-  Europe: 3,
-  EuropeClassic: 3,
-  FalklandIslands: 4,
-  FaroeIslands: 4,
-  FourIslands: 4,
-  GatewayToTheAtlantic: 5,
-  GulfOfStLawrence: 4,
-  Halkidiki: 4,
-  Iceland: 4,
-  Italia: 6,
-  Japan: 6,
-  Lisbon: 4,
-  Manicouagan: 4,
-  Mars: 3,
-  Mena: 6,
-  Montreal: 6,
-  NewYorkCity: 3,
-  NorthAmerica: 5,
-  Pangaea: 5,
-  Pluto: 6,
-  SouthAmerica: 5,
-  StraitOfGibraltar: 5,
-  Svalmel: 8,
-  World: 8,
-  Lemnos: 3,
-  TwoLakes: 6,
-  StraitOfHormuz: 4,
-  Surrounded: 4,
-  DidierFrance: 1,
-  AmazonRiver: 3,
-  Sierpinski: 10,
-};
 
 interface MapWithMode {
   map: GameMapType;
@@ -85,12 +37,21 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 ];
 
 export class MapPlaylist {
-  private mapsPlaylist: MapWithMode[] = [];
+  private recentMaps: GameMapType[] = [];
+  private modeSequenceIndex = 0;
+  private readonly maxRecentMaps = 5;
+  private readonly modeSequence: GameMode[];
 
-  constructor(private disableTeams: boolean = false) {}
+  constructor(private disableTeams: boolean = false) {
+    this.modeSequence = disableTeams
+      ? [GameMode.FFA]
+      : [GameMode.FFA, GameMode.Team, GameMode.FFA];
+  }
 
-  public async gameConfig(): Promise<GameConfig> {
-    const { map, mode } = this.getNextMap();
+  public async gameConfig(
+    mapVotes?: Map<GameMapType, number>,
+  ): Promise<GameConfig> {
+    const { map, mode } = this.getNextMap(mapVotes);
 
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
@@ -176,19 +137,62 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(): MapWithMode {
-    if (this.mapsPlaylist.length === 0) {
-      const numAttempts = 10000;
-      for (let i = 0; i < numAttempts; i++) {
-        if (this.shuffleMapsPlaylist()) {
-          log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
-        }
-      }
-      log.error("Failed to generate a valid map playlist");
+  private getNextMap(mapVotes?: Map<GameMapType, number>): MapWithMode {
+    const mode = this.getNextMode();
+    const map = this.getWeightedMap(mapVotes);
+    return { map, mode };
+  }
+
+  private getNextMode(): GameMode {
+    const mode = this.modeSequence[this.modeSequenceIndex];
+    this.modeSequenceIndex =
+      (this.modeSequenceIndex + 1) % this.modeSequence.length;
+    return mode;
+  }
+
+  private getWeightedMap(mapVotes?: Map<GameMapType, number>): GameMapType {
+    const weightedMaps = publicLobbyMaps
+      .map((map) => ({
+        map,
+        weight: getPublicLobbyMapWeight(map) + (mapVotes?.get(map) ?? 0),
+      }))
+      .filter(({ weight }) => weight > 0);
+
+    if (weightedMaps.length === 0) {
+      return publicLobbyMaps[0] ?? GameMapType.World;
     }
-    // Even if it failed, playlist will be partially populated.
-    return this.mapsPlaylist.shift()!;
+
+    const recentSet = new Set(this.recentMaps);
+    const hasNonRecent = weightedMaps.some(({ map }) => !recentSet.has(map));
+    const candidateMaps = hasNonRecent
+      ? weightedMaps.filter(({ map }) => !recentSet.has(map))
+      : weightedMaps;
+    const selected = this.pickWeightedMap(candidateMaps);
+
+    this.recentMaps.push(selected);
+    if (this.recentMaps.length > this.maxRecentMaps) {
+      this.recentMaps.shift();
+    }
+
+    return selected;
+  }
+
+  private pickWeightedMap(
+    weightedMaps: Array<{ map: GameMapType; weight: number }>,
+  ): GameMapType {
+    const totalWeight = weightedMaps.reduce(
+      (sum, { weight }) => sum + weight,
+      0,
+    );
+    const roll = Math.random() * totalWeight;
+    let cumulativeWeight = 0;
+    for (const { map, weight } of weightedMaps) {
+      cumulativeWeight += weight;
+      if (roll < cumulativeWeight) {
+        return map;
+      }
+    }
+    return weightedMaps[0]?.map ?? GameMapType.World;
   }
 
   private getTeamCount(): TeamCountConfig {
@@ -277,57 +281,5 @@ export class MapPlaylist {
       roundToNearest5(limitedBase * 0.75),
       roundToNearest5(limitedBase * 0.5),
     ];
-  }
-
-  private shuffleMapsPlaylist(): boolean {
-    const maps: GameMapType[] = [];
-    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      for (let i = 0; i < (frequency[key] ?? 0); i++) {
-        maps.push(GameMapType[key]);
-      }
-    });
-
-    const rand = new PseudoRandom(Date.now());
-
-    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
-    const team1: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-
-    this.mapsPlaylist = [];
-    for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
-          return false;
-        }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private addNextMap(
-    playlist: MapWithMode[],
-    nextEls: GameMapType[],
-    mode: GameMode,
-  ): boolean {
-    const nonConsecutiveNum = 5;
-    const lastEls = playlist
-      .slice(playlist.length - nonConsecutiveNum)
-      .map((m) => m.map);
-    for (let i = 0; i < nextEls.length; i++) {
-      const next = nextEls[i];
-      if (lastEls.includes(next)) {
-        continue;
-      }
-      nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
-      return true;
-    }
-    return false;
   }
 }
