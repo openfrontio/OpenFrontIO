@@ -25,6 +25,7 @@ vi.mock("../../src/core/Schemas", async () => {
   };
 });
 
+import { Intent } from "src/core/Schemas";
 import { GameEnv } from "../../src/core/configuration/Config";
 import { GameType } from "../../src/core/game/Game";
 import { GameServer } from "../../src/server/GameServer";
@@ -117,5 +118,63 @@ describe("GameLifecycle", () => {
     // Should not throw or crash
     await expect(game.end()).resolves.toBeUndefined();
     expect((game as any)._hasEnded).toBe(true);
+  });
+
+  it("should should block duplicate intents if they are not whitelisted", async () => {
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      mockConfig,
+      { gameType: GameType.Private } as any,
+    ) as any;
+
+    const clientId = "client-1";
+    const intent1: Intent = {
+      clientID: clientId,
+      type: "attack",
+      targetID: null,
+      troops: null
+    };
+    const intent2: Intent = {
+      clientID: clientId,
+      type: "attack",
+      targetID: null,
+      troops: null
+    };
+
+    game.addIntent(intent1);
+    game.addIntent(intent2);
+
+    expect(game.intents.length).toBe(1);
+  });
+
+  it("should should allow duplicate intents if they are whitelisted", async () => {
+    const game = new GameServer(
+      "test-game",
+      mockLogger,
+      Date.now(),
+      mockConfig,
+      { gameType: GameType.Private } as any,
+    ) as any;
+
+    const clientId = "client-1";
+    const intent1: Intent = {
+      clientID: clientId,
+      type: "emoji",
+      recipient: "some",
+      emoji: 1,
+    };
+    const intent2: Intent = {
+      clientID: clientId,
+      type: "emoji",
+      recipient: "some",
+      emoji: 2,
+    };
+
+    game.addIntent(intent1);
+    game.addIntent(intent2);
+
+    expect(game.intents.length).toBe(2);
   });
 });

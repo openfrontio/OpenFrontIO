@@ -76,6 +76,16 @@ export class GameServer {
 
   private _hasEnded = false;
 
+  private whitelistedIntents = new Set<Intent['type']>([
+    'emoji',
+    'spawn',
+    'mark_disconnected',
+    'update_game_config',
+    'cancel_attack',
+    'kick_player',
+    'cancel_boat',
+  ]);
+
   public desyncCount = 0;
 
   constructor(
@@ -585,7 +595,13 @@ export class GameServer {
   }
 
   private addIntent(intent: Intent) {
-    this.intents.push(intent);
+    const isWhitelisted = this.whitelistedIntents.has(intent.type);
+    const existing = this.intents.some(i => i.clientID === intent.clientID)
+    if (existing && !isWhitelisted) {
+      this.log.warn(`Ignoring duplicate intent from ${intent.clientID}. Maybe using an auto-clicker?`);
+    } else {
+      this.intents.push(intent);
+    }
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
