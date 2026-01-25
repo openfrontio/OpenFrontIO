@@ -381,15 +381,6 @@ export class ClientGameRunner {
       }
     });
 
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
-
     const onconnect = () => {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);

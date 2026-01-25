@@ -145,7 +145,7 @@ export class GameRunner {
         console.error("Game tick error:", error);
       }
       this.isExecuting = false;
-      return false;
+      return;
     }
 
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
@@ -267,5 +267,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.bestTransportShipSpawn(targetTile);
+  }
+
+  public hasPendingTurns(): boolean {
+    return this.currTurn < this.turns.length;
   }
 }
