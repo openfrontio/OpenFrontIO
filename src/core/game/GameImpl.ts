@@ -92,6 +92,7 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _isPaused: boolean = false;
+  private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
 
@@ -712,11 +713,16 @@ export class GameImpl implements Game {
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+    this._winner = winner;
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  getWinner(): Player | Team | null {
+    return this._winner;
   }
 
   private makeWinner(winner: string | Player): Winner | undefined {
