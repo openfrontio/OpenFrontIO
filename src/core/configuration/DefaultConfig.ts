@@ -4,7 +4,6 @@ import {
   Difficulty,
   Game,
   GameMode,
-  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -25,6 +24,7 @@ import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
+import { spawnPhaseTurns } from "./Timing";
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
@@ -542,7 +542,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    return spawnPhaseTurns(this._gameConfig.gameType);
   }
   numBots(): number {
     return this.bots();
