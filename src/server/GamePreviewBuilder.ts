@@ -194,7 +194,6 @@ export function buildPreview(
     : null;
   const image = mapThumbnail ?? `${origin}/images/GameplayScreenshot.png`;
 
-  const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";
 
   const title = isFinished
