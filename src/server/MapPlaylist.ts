@@ -39,7 +39,8 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 export class MapPlaylist {
   private recentMaps: GameMapType[] = [];
   private modeSequenceIndex = 0;
-  private readonly maxRecentMaps = 5;
+  // TODO: Adjust based on feedback
+  private readonly maxRecentMaps = 0; // e.g., 5
   private readonly modeSequence: GameMode[];
 
   constructor(private disableTeams: boolean = false) {

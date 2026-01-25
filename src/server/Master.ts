@@ -80,6 +80,8 @@ const publicLobbyMapSet = new Set(publicLobbyMaps);
 const mapVotesByUser = new Map<string, Set<GameMapType>>();
 const mapVoteConnectionsByUser = new Map<string, Set<WebSocket>>();
 const mapVoteUserByConnection = new Map<WebSocket, string>();
+// TODO: Adjust based on feedback
+const MAP_VOTE_WEIGHT = 10000000000; // for debug purposes, make votes very impactful 'w'
 
 const MapVoteMessageSchema = z.object({
   type: z.literal("map_vote"),
@@ -180,7 +182,7 @@ function collectMapVoteWeights(): Map<GameMapType, number> {
   const weights = new Map<GameMapType, number>();
   for (const maps of mapVotesByUser.values()) {
     for (const map of maps) {
-      weights.set(map, (weights.get(map) ?? 0) + 1);
+      weights.set(map, (weights.get(map) ?? 0) + MAP_VOTE_WEIGHT);
     }
   }
   return weights;
