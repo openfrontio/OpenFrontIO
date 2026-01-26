@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { GameInfo } from "../core/Schemas";
-import { spawnPhaseSeconds } from "../core/configuration/Timing";
+import { spawnPhaseSeconds } from "../core/configuration/DefaultConfig";
 import { GameMode } from "../core/game/Game";
 
 export const PlayerInfoSchema = z.object({
