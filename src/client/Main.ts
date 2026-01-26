@@ -50,6 +50,7 @@ import {
   isInIframe,
   translateText,
 } from "./Utils";
+import "./VideoAd";
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/MainLayout";
@@ -178,6 +179,23 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Video ad methods
+      onPlayerReady: (() => void) | null;
+      addUnits: (units: Array<{ type: string }>) => Promise<void>;
+      displayUnits: () => void;
+    };
+    Bolt: {
+      on: (unitType: string, event: string, callback: () => void) => void;
+      BOLT_AD_REQUEST_START: string;
+      BOLT_AD_IMPRESSION: string;
+      BOLT_AD_STARTED: string;
+      BOLT_FIRST_QUARTILE: string;
+      BOLT_MIDPOINT: string;
+      BOLT_THIRD_QUARTILE: string;
+      BOLT_AD_COMPLETE: string;
+      BOLT_AD_ERROR: string;
+      BOLT_AD_PAUSED: string;
+      BOLT_AD_CLICKED: string;
     };
     showPage?: (pageId: string) => void;
   }
