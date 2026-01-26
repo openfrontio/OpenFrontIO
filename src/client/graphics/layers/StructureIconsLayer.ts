@@ -18,7 +18,7 @@ import {
   GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
-  ToggleStructureEvent as ToggleStructuresEvent,
+  ToggleStructureEvent,
 } from "../../InputHandler";
 import {
   BuildUnitIntentEvent,
@@ -167,7 +167,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   async init() {
-    this.eventBus.on(ToggleStructuresEvent, (e) =>
+    this.eventBus.on(ToggleStructureEvent, (e) =>
       this.toggleStructures(e.structureTypes),
     );
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
@@ -264,20 +264,13 @@ export class StructureIconsLayer implements Layer {
     // Check if targeting an ally (for nuke warning visual)
     let targetingAlly = false;
     const myPlayer = this.game.myPlayer();
-    const nukeType = this.ghostUnit.buildableUnit.type;
-    if (
-      tileRef &&
-      myPlayer &&
-      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
-    ) {
+    if (tileRef && myPlayer && this.nukeRenderUtilLayer.isNukeGhostActive()) {
       // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
       const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
       if (allies.length > 0) {
         targetingAlly =
           allies.filter((p) =>
-            this.nukeRenderUtilLayer
-              .getAllianceStressedPlayers()
-              .has(p.smallID()),
+            this.nukeRenderUtilLayer.getAffectedPlayers().has(p.smallID()),
           ).length !== 0;
       }
     }
@@ -574,20 +567,21 @@ export class StructureIconsLayer implements Layer {
         break;
       }
     }
-    if (structureInfos) {
-      render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
-      render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
-      if (structureInfos.visible && focusStructure) {
-        render.iconContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
-        render.dotContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
-      } else {
-        render.iconContainer.filters = [];
-        render.dotContainer.filters = [];
-      }
+    if (!structureInfos) {
+      return;
+    }
+    render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
+    render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
+    if (structureInfos.visible && focusStructure) {
+      render.iconContainer.filters = [
+        new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+      ];
+      render.dotContainer.filters = [
+        new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+      ];
+    } else {
+      render.iconContainer.filters = [];
+      render.dotContainer.filters = [];
     }
   }
 

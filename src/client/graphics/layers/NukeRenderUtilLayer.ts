@@ -1,5 +1,5 @@
 import type { EventBus } from "../../../core/EventBus";
-import { listNukeBreakAlliance } from "../../../core/execution/Util";
+import { listAffectedByNuke } from "../../../core/execution/Util";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import type { GameView } from "../../../core/game/GameView";
@@ -27,7 +27,9 @@ export class NukeRenderUtilLayer implements Layer {
 
   // A list of every player that would have their alliance break if nuked.
   // Includes players not currently allied.
-  private allianceStressedPlayers = new Set<number>();
+  private affectedPlayers = new Set<number>();
+  // A list of structures that will be destroyed by this nuke.
+  private affectedStructures = new Set<number>();
 
   // for trajectory prediction
   private trajectoryPoints: TileRef[] = [];
@@ -206,7 +208,7 @@ export class NukeRenderUtilLayer implements Layer {
         if (
           sam.unit.owner().isMe() ||
           (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
-            !this.allianceStressedPlayers.has(sam.unit.owner().smallID()) &&
+            !this.affectedPlayers.has(sam.unit.owner().smallID()) &&
             !this.interceptingPlayers.has(sam.unit.owner().smallID()))
         ) {
           continue;
@@ -270,7 +272,7 @@ export class NukeRenderUtilLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.findTargetTile() === null || !this.spawnTile) {
-      this.allianceStressedPlayers.clear();
+      this.affectedPlayers.clear();
       this.clearCurrentTrajectory();
       return;
     }
@@ -279,8 +281,8 @@ export class NukeRenderUtilLayer implements Layer {
       return;
     }
 
-    // Calculate which players are "stressed" by current nuke placement.
-    this.allianceStressedPlayers = listNukeBreakAlliance({
+    // Calculate which players & structures are affected by current nuke placement.
+    const affectedByNuke = listAffectedByNuke({
       game: this.game,
       targetTile: this.targetTile as number,
       magnitude: this.game
@@ -295,6 +297,8 @@ export class NukeRenderUtilLayer implements Layer {
       ),
       threshold: this.game.config().nukeAllianceBreakThreshold(),
     });
+    this.affectedPlayers = affectedByNuke.affectedPlayerIDs;
+    this.affectedStructures = affectedByNuke.affectedStructureIDs;
 
     // Calculate possible trajectory
     this.trajectoryPreviewFrame();
@@ -304,9 +308,14 @@ export class NukeRenderUtilLayer implements Layer {
     return this.nukeGhostActive;
   }
 
-  // players who are targeted by nuke are stressed
-  getAllianceStressedPlayers() {
-    return this.allianceStressedPlayers;
+  // players who are targeted by nuke
+  getAffectedPlayers() {
+    return this.affectedPlayers;
+  }
+
+  // structures targeted by nuke
+  getAffectedStructures() {
+    return this.affectedStructures;
   }
 
   // players who will shoot the nuke down first are intercepting

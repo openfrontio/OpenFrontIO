@@ -44,67 +44,27 @@ export interface NukeAllianceCheckParams {
   threshold: number;
 }
 
-// Checks if nuking this tile would break an alliance.
-// Returns true if either:
-// 1. The weighted tile count for any ally exceeds the threshold
-// 2. Any allied structure would be destroyed
-export function wouldNukeBreakAlliance(
-  params: NukeAllianceCheckParams,
-): boolean {
-  const { game, targetTile, magnitude, allySmallIds, threshold } = params;
-
-  if (allySmallIds.size === 0) {
-    return false;
-  }
-
-  // Check if any allied structure would be destroyed
-  const wouldDestroyAlliedStructure = game.anyUnitNearby(
-    targetTile,
-    magnitude.outer,
-    StructureTypes,
-    (unit) =>
-      unit.owner().isPlayer() && allySmallIds.has(unit.owner().smallID()),
-  );
-  if (wouldDestroyAlliedStructure) return true;
-
-  const inner2 = magnitude.inner * magnitude.inner;
-  const allyTileCounts = new Map<number, number>();
-
-  let result = false;
-
-  game.circleSearch(
-    targetTile,
-    magnitude.outer,
-    (tile: TileRef, d2: number) => {
-      const ownerSmallId = game.ownerID(tile);
-      if (ownerSmallId > 0 && allySmallIds.has(ownerSmallId)) {
-        const weight = d2 <= inner2 ? 1 : 0.5;
-        const newCount = (allyTileCounts.get(ownerSmallId) ?? 0) + weight;
-        allyTileCounts.set(ownerSmallId, newCount);
-
-        if (newCount > threshold) {
-          result = true;
-          return false; // Found one! Stop searching.
-        }
-      }
-      return true;
-    },
-  );
-
-  return result;
+export interface AffectedByNuke {
+  affectedPlayerIDs: Set<number>;
+  affectedStructureIDs: Set<number>;
 }
 
-// Same as wouldNukeBreakAlliance(), but takes time to find every player
-// that would be "angered" from this nuke.
-// This includes unallied players!
-export function listNukeBreakAlliance(
+/**
+ Lists affected players and units by the nuke.
+ Players are considered "affected" if inner/outer threshold is exceeded
+ or a structure is destroyed.
+ Structures are considered "affected" if they are within outer blast
+ */
+export function listAffectedByNuke(
   params: NukeAllianceCheckParams,
-): Set<number> {
+): AffectedByNuke {
   const { game, targetTile, playerID, magnitude, threshold } = params;
 
   // Collect all players that should have alliance broken:
   // either exceeds tile threshold OR has a structure in blast radius
-  const playersToBreakAllianceWith = new Set<number>();
+  const playersAffected = new Set<number>();
+  // Collect all structures within the blast zone.
+  const structuresAffected = new Set<number>();
 
   // compute tile breakage threshold
   const blastCounts = computeNukeBlastCounts({
@@ -117,20 +77,24 @@ export function listNukeBreakAlliance(
       continue;
     }
     if (totalWeight > threshold) {
-      playersToBreakAllianceWith.add(playerSmallId);
+      playersAffected.add(playerSmallId);
     }
   }
 
-  // Also check if any allied structures would be destroyed
+  // Also check if any structures would be destroyed
   game
     .nearbyUnits(targetTile, magnitude.outer, [...StructureTypes])
     .forEach(({ unit }) => {
+      structuresAffected.add(unit.id());
       if (playerID !== unit.owner().smallID()) {
-        playersToBreakAllianceWith.add(unit.owner().smallID());
+        playersAffected.add(unit.owner().smallID());
       }
     });
 
-  return playersToBreakAllianceWith;
+  return {
+    affectedPlayerIDs: playersAffected,
+    affectedStructureIDs: structuresAffected,
+  };
 }
 
 export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {

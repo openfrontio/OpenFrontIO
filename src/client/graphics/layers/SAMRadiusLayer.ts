@@ -302,7 +302,7 @@ export class SAMRadiusLayer implements Layer {
 
       // players who are targeted by nuke are stressed
       const stressed = this.nukeRenderUtilLayer
-        .getAllianceStressedPlayers()
+        .getAffectedPlayers()
         .has(a.owner.smallID());
       // SAMs who will shoot the nuke down are intercepting
       const intercepting = this.nukeRenderUtilLayer

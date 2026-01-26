@@ -15,7 +15,7 @@ import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola"
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
-import { listNukeBreakAlliance } from "./Util";
+import { listAffectedByNuke } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -85,14 +85,14 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
 
-    const playersToBreakAllianceWith = listNukeBreakAlliance({
+    const playersToBreakAllianceWith = listAffectedByNuke({
       game: this.mg,
       targetTile: this.dst,
       magnitude,
       playerID: this.player.smallID(),
       allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
       threshold: this.mg.config().nukeAllianceBreakThreshold(),
-    });
+    }).affectedPlayerIDs;
 
     // Automatically reject incoming alliance requests.
     for (const incoming of this.player.incomingAllianceRequests()) {
