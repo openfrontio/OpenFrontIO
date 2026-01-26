@@ -1133,7 +1133,7 @@ export class GameImpl implements Game {
     });
 
     // Record stats
-    if (gold > 0n) {
+    if (!skipGoldTransfer) {
       this.stats().goldWar(conqueror, conquered, gold);
     }
   }
