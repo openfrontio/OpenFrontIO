@@ -2,10 +2,9 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
-import { PauseGameIntentEvent } from "../../Transport";
+import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -50,16 +49,20 @@ export class GameRightSidebar extends LitElement implements Layer {
     this._isVisible = true;
     this.game.inSpawnPhase();
 
+    this.eventBus.on(SendWinnerEvent, () => {
+      this.hasWinner = true;
+      this.requestUpdate();
+    });
+
     this.requestUpdate();
+  }
+
+  getTickIntervalMs() {
+    return 250;
   }
 
   tick() {
     // Timer logic
-    const updates = this.game.updatesSinceLastTick();
-    if (updates) {
-      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
-    }
-
     // Check if the player is the lobby creator
     if (!this.isLobbyCreator && this.game.myPlayer()?.isLobbyCreator()) {
       this.isLobbyCreator = true;
@@ -67,18 +70,24 @@ export class GameRightSidebar extends LitElement implements Layer {
     }
 
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
+    const ticks = this.game.ticks();
+    const gameTicks = Math.max(0, ticks - spawnPhaseTurns);
+    const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
+
+    if (this.game.inSpawnPhase()) {
+      this.timer = maxTimerValue !== undefined ? maxTimerValue * 60 : 0;
+      return;
+    }
+
+    if (this.hasWinner) {
+      return;
+    }
+
     if (maxTimerValue !== undefined) {
-      if (this.game.inSpawnPhase()) {
-        this.timer = maxTimerValue * 60;
-      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-        this.timer = Math.max(0, this.timer - 1);
-      }
+      this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
     } else {
-      if (this.game.inSpawnPhase()) {
-        this.timer = 0;
-      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-        this.timer++;
-      }
+      this.timer = elapsedSeconds;
     }
   }
 
