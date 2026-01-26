@@ -755,6 +755,7 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
   setPaused(paused: boolean): void;

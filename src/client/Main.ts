@@ -7,7 +7,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { getUserMe } from "./Api";
+import { getUserMe, hasLinkedAccount } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
@@ -163,18 +163,11 @@ declare global {
     GIT_COMMIT: string;
     INSTANCE_ID: string;
     turnstile: any;
-    enableAds: boolean;
+    adsEnabled: boolean;
     PageOS: {
       session: {
         newPageView: () => void;
       };
-    };
-    fusetag: {
-      registerZone: (id: string) => void;
-      destroyZone: (id: string) => void;
-      pageInit: (options?: any) => void;
-      que: Array<() => void>;
-      destroySticky: () => void;
     };
     ramp: {
       que: Array<() => void>;
@@ -184,7 +177,7 @@ declare global {
       settings?: {
         slots?: any;
       };
-      spaNewPage: (url: string) => void;
+      spaNewPage: (url?: string) => void;
     };
     showPage?: (pageId: string) => void;
   }
@@ -475,15 +468,14 @@ class Client {
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       // Check if user has actual authentication (discord or email), not just a publicId
-      const loggedIn =
-        userMeResponse !== false &&
-        userMeResponse !== null &&
-        typeof userMeResponse === "object" &&
-        userMeResponse.user &&
-        (userMeResponse.user.discord !== undefined ||
-          userMeResponse.user.email !== undefined);
-      updateMatchmakingButton(loggedIn);
+      const isLinked: boolean = hasLinkedAccount(userMeResponse);
+      updateMatchmakingButton(isLinked);
       updateAccountNavButton(userMeResponse);
+      const adsEnabled =
+        !crazyGamesSDK.isOnCrazyGames() &&
+        ((userMeResponse || null)?.player?.flares?.length ?? 0) === 0;
+      console.log("ads enabled: ", adsEnabled);
+      window.adsEnabled = adsEnabled;
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
           detail: userMeResponse,
@@ -588,12 +580,8 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal?.close();
-      if (this.gameStop !== null) {
-        this.handleLeaveLobby();
-      }
 
-      // Attempt to join lobby
-      this.handleUrl();
+      onJoinChanged();
     };
 
     const onPopState = () => {
@@ -627,10 +615,19 @@ class Client {
       }
     };
 
+    const onJoinChanged = () => {
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
+      }
+
+      // Attempt to join lobby
+      this.handleUrl();
+    };
+
     // Handle browser navigation & manual hash edits
     window.addEventListener("popstate", onPopState);
     window.addEventListener("hashchange", onHashUpdate);
-    window.addEventListener("join-changed", onHashUpdate);
+    window.addEventListener("join-changed", onJoinChanged);
 
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
@@ -648,8 +645,6 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
-
-    this.initializeFuseTag();
   }
 
   private handleUrl() {
@@ -842,7 +837,6 @@ class Client {
         if (startingModal && startingModal instanceof GameStartingModal) {
           startingModal.show();
         }
-        this.gutterAds.hide();
       },
       () => {
         this.joinModal.close();
@@ -853,6 +847,9 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
+        if (window.PageOS?.session?.newPageView) {
+          window.PageOS.session.newPageView();
+        }
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
         document.body.classList.add("in-game");
@@ -897,8 +894,6 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-
-    this.gutterAds.hide();
     this.publicLobby.leaveLobby();
   }
 
@@ -918,28 +913,6 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
-  }
-
-  private initializeFuseTag() {
-    const tryInitFuseTag = (): boolean => {
-      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
-        console.log("initializing fuse tag");
-        window.fusetag.que.push(() => {
-          window.fusetag.pageInit({
-            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
-          });
-        });
-        return true;
-      } else {
-        return false;
-      }
-    };
-
-    const interval = setInterval(() => {
-      if (tryInitFuseTag()) {
-        clearInterval(interval);
-      }
-    }, 100);
   }
 
   private async getTurnstileToken(
