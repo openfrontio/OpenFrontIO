@@ -40,6 +40,10 @@ describe("InputHandler AutoUpgrade", () => {
     );
   });
 
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
   describe("Middle Mouse Button Handling", () => {
     test("should emit AutoUpgradeEvent on middle mouse button press", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");

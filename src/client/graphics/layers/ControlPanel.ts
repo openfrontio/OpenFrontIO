@@ -39,6 +39,10 @@ export class ControlPanel extends LitElement implements Layer {
 
   private _lastTroopIncreaseRate: number;
 
+  getTickIntervalMs() {
+    return 100;
+  }
+
   init() {
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
@@ -81,9 +85,7 @@ export class ControlPanel extends LitElement implements Layer {
       return;
     }
 
-    if (this.game.ticks() % 5 === 0) {
-      this.updateTroopIncrease();
-    }
+    this.updateTroopIncrease();
 
     this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
