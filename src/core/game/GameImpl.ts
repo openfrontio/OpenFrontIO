@@ -1102,7 +1102,7 @@ export class GameImpl implements Game {
 
     if (skipGoldTransfer) {
       this.displayMessage(
-        "events_display.conquered_inactive_player",
+        "events_display.conquered_no_gold",
         MessageType.CONQUERED_PLAYER,
         conqueror.id(),
         undefined,
