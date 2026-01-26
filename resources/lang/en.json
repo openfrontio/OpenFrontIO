@@ -968,6 +968,7 @@
   },
   "matchmaking_button": {
     "play_ranked": "1v1 Ranked Matchmaking",
+    "elo": "ELO: ",
     "description": "(ALPHA)",
     "login_required": "Login to play ranked!",
     "must_login": "You must be logged in to play ranked matchmaking."

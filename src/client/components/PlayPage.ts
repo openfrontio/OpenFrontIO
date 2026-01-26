@@ -1,8 +1,35 @@
 import { LitElement, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import { UserMeResponse } from "../../core/ApiSchemas";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
+  @state() private elo: string = "...";
+  private _onUserMeResponse: (e: Event) => void;
+
+  connectedCallback() {
+    super.connectedCallback();
+
+    this._onUserMeResponse = (e: Event): void => {
+      const event = e as CustomEvent<UserMeResponse | false>;
+
+      if (!event.detail) {
+        this.elo = "...";
+        return;
+      }
+
+      this.elo =
+        event.detail?.player?.leaderboard?.oneVone?.elo?.toString() ?? "...";
+    };
+
+    document.addEventListener("userMeResponse", this._onUserMeResponse);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("userMeResponse", this._onUserMeResponse);
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -159,6 +186,17 @@ export class PlayPage extends LitElement {
                 class="relative z-10 text-2xl"
                 data-i18n="matchmaking_button.play_ranked"
               ></span>
+              <span>
+                <span
+                  class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+                  data-i18n="matchmaking_button.elo"
+                ></span>
+                <span
+                  class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+                >
+                  ${this.elo}</span
+                >
+              </span>
               <span
                 class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
                 data-i18n="matchmaking_button.description"
