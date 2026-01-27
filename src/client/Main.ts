@@ -7,7 +7,9 @@ import {
   GameRecord,
   GameStartInfo,
 } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
