@@ -176,7 +176,6 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.startLobbyUpdates();
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
-      this.isConnecting = false;
     }
   }
 
