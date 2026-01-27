@@ -17,7 +17,7 @@ export class TurnstileManager {
     if (this.warmupPromise) {
       return this.warmupPromise;
     }
-    this.warmupPromise = this.runWarmup();
+    this.warmupPromise = this.prefetchToken();
     try {
       await this.warmupPromise;
     } catch (error) {
@@ -35,7 +35,7 @@ export class TurnstileManager {
     }
   }
 
-  private async runWarmup(): Promise<void> {
+  private async prefetchToken(): Promise<void> {
     try {
       const config = await this.getServerConfig();
       if (config.env() === GameEnv.Dev) {
