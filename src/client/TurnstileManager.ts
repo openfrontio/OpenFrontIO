@@ -22,6 +22,8 @@ export class TurnstileManager {
     this.warmupPromise = this.runWarmup();
     try {
       await this.warmupPromise;
+    } catch (error) {
+      console.warn("Turnstile warmup failed", error);
     } finally {
       this.warmupPromise = null;
     }
