@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { restoreBaseUrlUnlessDeepLink, translateText } from "../client/Utils";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -285,13 +285,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
-        window.location.pathname,
-      );
-      if (!preserveDeepLink) {
-        // Reset URL to base when modal closes
-        history.replaceState(null, "", window.location.origin + "/");
-      }
+      // Reset URL to base when modal closes (unless deep-linked to a game).
+      restoreBaseUrlUnlessDeepLink();
     }
 
     this.hasJoined = false;

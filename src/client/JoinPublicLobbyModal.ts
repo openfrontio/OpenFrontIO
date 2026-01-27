@@ -1,6 +1,11 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderDuration, renderNumber, translateText } from "../client/Utils";
+import {
+  renderDuration,
+  renderNumber,
+  restoreBaseUrlUnlessDeepLink,
+  translateText,
+} from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -196,12 +201,7 @@ export class JoinPublicLobbyModal extends BaseModal {
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
-        window.location.pathname,
-      );
-      if (!preserveDeepLink) {
-        history.replaceState(null, "", window.location.origin + "/");
-      }
+      restoreBaseUrlUnlessDeepLink();
     }
 
     this.gameConfig = null;
@@ -222,12 +222,7 @@ export class JoinPublicLobbyModal extends BaseModal {
   public closeAndLeave() {
     this.leaveLobby();
     try {
-      const preserveDeepLink = /^\/(?:w\d+\/)?game\/[^/]+/.test(
-        window.location.pathname,
-      );
-      if (!preserveDeepLink) {
-        history.replaceState(null, "", window.location.origin + "/");
-      }
+      restoreBaseUrlUnlessDeepLink();
     } catch (error) {
       console.warn("Failed to restore URL on leave:", error);
     }
