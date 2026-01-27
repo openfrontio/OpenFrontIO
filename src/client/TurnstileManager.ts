@@ -19,14 +19,11 @@ export class TurnstileManager {
     if (this.warmupPromise) {
       return this.warmupPromise;
     }
-    const warmupPromise = this.runWarmup();
-    this.warmupPromise = warmupPromise;
+    this.warmupPromise = this.runWarmup();
     try {
-      await warmupPromise;
+      await this.warmupPromise;
     } finally {
-      if (this.warmupPromise === warmupPromise) {
-        this.warmupPromise = null;
-      }
+      this.warmupPromise = null;
     }
   }
 
