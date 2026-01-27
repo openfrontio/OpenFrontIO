@@ -653,6 +653,7 @@ export class HostLobbyModal extends BaseModal {
               .gameMode=${this.gameMode}
               .clients=${this.clients}
               .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+              .currentClientID=${this.lobbyCreatorClientID}
               .teamCount=${this.teamCount}
               .nationCount=${this.nationCount}
               .disableNations=${this.disableNations}
