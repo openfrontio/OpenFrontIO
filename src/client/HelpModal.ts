@@ -5,6 +5,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -157,6 +158,7 @@ export class HelpModal extends BaseModal {
                 id="troubleshooting-button"
                 class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                 data-page="page-troubleshooting"
+                @click="${this.openTroubleshooting}"
                 data-i18n="main.go_to_troubleshooting"
               >
                 <span
@@ -1181,6 +1183,20 @@ export class HelpModal extends BaseModal {
         ${content}
       </o-modal>
     `;
+  }
+
+  openTroubleshooting() {
+    const troubleshootingModal = document.querySelector(
+      "troubleshooting-modal",
+    ) as TroubleshootingModal;
+    if (
+      !troubleshootingModal ||
+      !(troubleshootingModal instanceof TroubleshootingModal)
+    ) {
+      console.warn("Troubleshooting modal element not found");
+      return;
+    }
+    troubleshootingModal.open();
   }
 
   protected onOpen(): void {

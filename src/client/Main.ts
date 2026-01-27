@@ -41,7 +41,6 @@ import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
-import { TroubleshootingModal } from "./TroubleshootingModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -510,26 +509,6 @@ class Client {
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
-
-    const troubleshootingModal = document.querySelector(
-      "troubleshooting-modal",
-    ) as TroubleshootingModal;
-    if (
-      !troubleshootingModal ||
-      !(troubleshootingModal instanceof TroubleshootingModal)
-    ) {
-      console.warn("Troubleshooting modal element not found");
-    }
-    document
-      .getElementById("troubleshooting-button")
-      ?.addEventListener("click", () => {
-        if (
-          troubleshootingModal &&
-          troubleshootingModal instanceof TroubleshootingModal
-        ) {
-          troubleshootingModal.open();
-        }
-      });
 
     const settingsModal = document.querySelector(
       "user-setting",
