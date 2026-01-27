@@ -986,18 +986,22 @@ class Client {
     }
   }
 
+  private restoreUrlAfterLeave() {
+    try {
+      if (!this.preserveDeepLinkUrl) {
+        history.replaceState(null, "", "/");
+      }
+    } catch (e) {
+      console.warn("Failed to restore URL on leave:", e);
+    }
+  }
+
   private async handleLeaveLobby(/* event: CustomEvent */) {
     this.cancelJoinInFlight();
     this.turnstileManager.clearTokenAndRefresh();
     this.turnstileManager.warmup();
     if (this.gameStop === null) {
-      try {
-        if (!this.preserveDeepLinkUrl) {
-          history.replaceState(null, "", "/");
-        }
-      } catch (e) {
-        console.warn("Failed to restore URL on leave:", e);
-      }
+      this.restoreUrlAfterLeave();
       document.body.classList.remove("in-game");
       this.publicLobby.leaveLobby();
       return;
@@ -1007,13 +1011,7 @@ class Client {
     this.gameStop = null;
     this.currentUrl = null;
 
-    try {
-      if (!this.preserveDeepLinkUrl) {
-        history.replaceState(null, "", "/");
-      }
-    } catch (e) {
-      console.warn("Failed to restore URL on leave:", e);
-    }
+    this.restoreUrlAfterLeave();
 
     document.body.classList.remove("in-game");
 
