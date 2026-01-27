@@ -6,6 +6,7 @@ import {
   PatternDataSchema,
   PatternNameSchema,
 } from "./CosmeticSchemas";
+import type { GameEvent } from "./EventBus";
 import {
   AllPlayers,
   Difficulty,
@@ -156,6 +157,11 @@ export interface GameInfo {
   msUntilStart?: number;
   gameConfig?: GameConfig;
 }
+
+export class LobbyInfoEvent implements GameEvent {
+  constructor(public lobby: GameInfo) {}
+}
+
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
