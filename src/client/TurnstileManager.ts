@@ -90,10 +90,9 @@ export class TurnstileManager {
   }
 
   private async fetchAndStoreToken() {
-    const tokenPromise = this.fetchToken();
-    this.tokenPromise = tokenPromise;
+    this.tokenPromise = this.fetchToken();
     try {
-      const token = await tokenPromise;
+      const token = await this.tokenPromise;
       if (token && this.isTokenValid(token)) {
         this.token = token;
         this.scheduleRefresh(token);
@@ -101,9 +100,7 @@ export class TurnstileManager {
     } catch (error) {
       console.warn("Turnstile token fetch failed", error);
     } finally {
-      if (this.tokenPromise === tokenPromise) {
-        this.tokenPromise = null;
-      }
+      this.tokenPromise = null;
     }
   }
 
