@@ -27,7 +27,7 @@ export class TurnstileManager {
     }
   }
 
-  invalidateToken(): void {
+  clearTokenAndRefresh(): void {
     this.token = null;
     if (this.refreshTimeout !== null) {
       clearTimeout(this.refreshTimeout);
@@ -62,7 +62,7 @@ export class TurnstileManager {
     if (!token) {
       return null;
     }
-    this.invalidateToken();
+    this.clearTokenAndRefresh();
     return token.token;
   }
 
