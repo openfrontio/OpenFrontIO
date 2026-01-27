@@ -132,14 +132,6 @@ export default defineConfig(({ mode }) => {
           bypass: (req) => devGameHtmlBypass(req),
           rewrite: (path) => path.replace(/^\/w1/, ""),
         },
-        "/w2": {
-          target: "ws://localhost:3003",
-          ws: true,
-          secure: false,
-          changeOrigin: true,
-          bypass: (req) => devGameHtmlBypass(req),
-          rewrite: (path) => path.replace(/^\/w2/, ""),
-        },
         // API proxies
         "/api": {
           target: "http://localhost:3000",
