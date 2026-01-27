@@ -332,7 +332,16 @@
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "started": "Started"
+    "started": "Started",
+    "vote_cta": "Vote for next map!",
+    "vote_count_label": "{count, plural, one {# vote influences the next map} other {# votes influence the next map}}",
+    "vote_count_tooltip": "Number of players currently voting (connected & waiting in public lobby)",
+    "vote_title": "Map Voting",
+    "vote_description": "Select any number of maps to influence the next public lobby.",
+    "vote_saved": "Your selection is saved on this device.",
+    "vote_login_required": "Log in to submit votes.",
+    "vote_submit": "Vote",
+    "vote_toast_submitted": "Vote submitted!"
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",

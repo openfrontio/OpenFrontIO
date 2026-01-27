@@ -26,6 +26,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
+import { MapVoteModal } from "./MapVoteModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
@@ -222,6 +223,7 @@ class Client {
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private mapVoteModal: MapVoteModal | null = null;
 
   private gutterAds: GutterAds;
 
@@ -272,6 +274,13 @@ class Client {
     ) as UsernameInput;
     if (!this.usernameInput) {
       console.warn("Username input element not found");
+    }
+
+    this.mapVoteModal = document.querySelector(
+      "map-vote-modal",
+    ) as MapVoteModal;
+    if (!this.mapVoteModal) {
+      console.warn("Map vote modal element not found");
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;

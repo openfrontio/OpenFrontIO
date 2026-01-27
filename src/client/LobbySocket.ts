@@ -1,11 +1,16 @@
+import { GameMapType } from "../core/game/Game";
 import { GameInfo } from "../core/Schemas";
 
 type LobbyUpdateHandler = (lobbies: GameInfo[]) => void;
+type VoteRequestHandler = () => void;
+type VoteStatsHandler = (activeVoteCount: number) => void;
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
   maxWsAttempts?: number;
   pollIntervalMs?: number;
+  onVoteRequest?: VoteRequestHandler;
+  onVoteStats?: VoteStatsHandler;
 }
 
 export class PublicLobbySocket {
@@ -19,6 +24,9 @@ export class PublicLobbySocket {
   private readonly maxWsAttempts: number;
   private readonly pollIntervalMs: number;
   private readonly onLobbiesUpdate: LobbyUpdateHandler;
+  private readonly onVoteRequest?: VoteRequestHandler;
+  private readonly onVoteStats?: VoteStatsHandler;
+  private pendingVote: { token: string; maps: GameMapType[] } | null = null;
 
   constructor(
     onLobbiesUpdate: LobbyUpdateHandler,
@@ -28,6 +36,8 @@ export class PublicLobbySocket {
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
     this.pollIntervalMs = options?.pollIntervalMs ?? 1000;
+    this.onVoteRequest = options?.onVoteRequest;
+    this.onVoteStats = options?.onVoteStats;
   }
 
   start() {
@@ -71,6 +81,7 @@ export class PublicLobbySocket {
       this.wsReconnectTimeout = null;
     }
     this.stopFallbackPolling();
+    this.flushPendingVote();
   }
 
   private handleMessage(event: MessageEvent) {
@@ -78,6 +89,11 @@ export class PublicLobbySocket {
       const message = JSON.parse(event.data as string);
       if (message.type === "lobbies_update") {
         this.onLobbiesUpdate(message.data?.lobbies ?? []);
+      } else if (message.type === "map_vote_request") {
+        this.onVoteRequest?.();
+      } else if (message.type === "map_vote_stats") {
+        const activeVoteCount = Number(message.data?.activeVoteCount ?? 0);
+        this.onVoteStats?.(activeVoteCount);
       }
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
@@ -114,7 +130,7 @@ export class PublicLobbySocket {
     console.error("WebSocket error:", error);
   }
 
-  private handleConnectError(error: unknown) {
+  private handleConnectError(error: Error | Event | string) {
     console.error("Error connecting WebSocket:", error);
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
@@ -159,6 +175,31 @@ export class PublicLobbySocket {
     if (this.fallbackPollInterval !== null) {
       clearInterval(this.fallbackPollInterval);
       this.fallbackPollInterval = null;
+    }
+  }
+
+  public sendMapVote(token: string, maps: GameMapType[]) {
+    this.pendingVote = { token, maps };
+    this.flushPendingVote();
+  }
+
+  public clearMapVote() {
+    this.pendingVote = null;
+  }
+
+  private flushPendingVote() {
+    if (!this.pendingVote) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    try {
+      this.ws.send(
+        JSON.stringify({
+          type: "map_vote",
+          token: this.pendingVote.token,
+          maps: this.pendingVote.maps,
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to send map vote:", error);
     }
   }
 
