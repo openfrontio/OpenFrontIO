@@ -843,7 +843,10 @@ export class GameServer {
       })),
       gameConfig: this.gameConfig,
       msUntilStart: this.isPublic()
-        ? this.createdAt + this.config.gameCreationRate()
+        ? Math.max(
+            0,
+            this.createdAt + this.config.gameCreationRate() - Date.now(),
+          )
         : undefined,
     };
   }
