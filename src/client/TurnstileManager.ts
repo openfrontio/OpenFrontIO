@@ -46,7 +46,7 @@ export class TurnstileManager {
         this.isTokenValid(this.token) &&
         this.timeUntilExpiry(this.token) > TURNSTILE_REFRESH_LEEWAY_MS
       ) {
-        this.scheduleRefresh(this.token);
+        this.scheduleRefresh(this.getRefreshMs(this.token));
         return;
       }
       if (!this.tokenPromise) {
@@ -68,7 +68,7 @@ export class TurnstileManager {
 
   private async getToken(): Promise<TurnstileToken | null> {
     if (this.token && this.isTokenValid(this.token)) {
-      this.scheduleRefresh(this.token);
+      this.scheduleRefresh(this.getRefreshMs(this.token));
       return this.token;
     }
 
@@ -79,7 +79,7 @@ export class TurnstileManager {
         console.warn("Turnstile token fetch failed", error);
       }
       if (this.token && this.isTokenValid(this.token)) {
-        this.scheduleRefresh(this.token);
+        this.scheduleRefresh(this.getRefreshMs(this.token));
         return this.token;
       }
       return null;
@@ -95,7 +95,7 @@ export class TurnstileManager {
       const token = await this.tokenPromise;
       if (token && this.isTokenValid(token)) {
         this.token = token;
-        this.scheduleRefresh(token);
+        this.scheduleRefresh(this.getRefreshMs(token));
       }
     } catch (error) {
       console.warn("Turnstile token fetch failed", error);
@@ -104,14 +104,10 @@ export class TurnstileManager {
     }
   }
 
-  private scheduleRefresh(token: TurnstileToken) {
+  private scheduleRefresh(refreshInMs: number) {
     if (this.refreshTimeout !== null) {
       clearTimeout(this.refreshTimeout);
     }
-    const refreshInMs = Math.max(
-      0,
-      this.timeUntilExpiry(token) - TURNSTILE_REFRESH_LEEWAY_MS,
-    );
     this.refreshTimeout = window.setTimeout(() => {
       this.refreshTimeout = null;
       this.warmup();
@@ -120,6 +116,13 @@ export class TurnstileManager {
 
   private isTokenValid(token: TurnstileToken) {
     return Date.now() < token.createdAt + TURNSTILE_TOKEN_TTL_MS;
+  }
+
+  private getRefreshMs(token: TurnstileToken) {
+    return Math.max(
+      0,
+      this.timeUntilExpiry(token) - TURNSTILE_REFRESH_LEEWAY_MS,
+    );
   }
 
   private timeUntilExpiry(token: TurnstileToken) {
