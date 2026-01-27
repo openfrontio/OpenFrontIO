@@ -1,4 +1,3 @@
-import version from "resources/version.txt?raw";
 import { FetchGameMapLoader } from "src/core/game/FetchGameMapLoader";
 import { GameMapType } from "src/core/game/Game";
 import { GameMapLoader } from "src/core/game/GameMapLoader";
@@ -10,7 +9,7 @@ const log = logger.child({ component: "MapLandTiles" });
 
 // Gets or creates the map loader, uses FetchGameMapLoader pointing to the master server.
 function getMapLoader(): GameMapLoader {
-  mapLoader ??= new FetchGameMapLoader("http://localhost:3000/maps", version);
+  mapLoader ??= new FetchGameMapLoader("http://localhost:3000/maps");
   return mapLoader;
 }
 
