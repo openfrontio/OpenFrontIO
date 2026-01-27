@@ -5,6 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
@@ -97,9 +98,7 @@ export function joinLobby(
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "lobby_info") {
-      document.dispatchEvent(
-        new CustomEvent("lobby-info", { detail: message.lobby }),
-      );
+      eventBus.emit(new LobbyInfoEvent(message.lobby));
       return;
     }
     if (message.type === "prestart") {

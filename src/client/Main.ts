@@ -210,7 +210,6 @@ declare global {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
-    "lobby-info": CustomEvent<GameInfo>;
   }
 }
 
@@ -562,6 +561,8 @@ class Client {
       !(this.joinPublicModal instanceof JoinPublicLobbyModal)
     ) {
       console.warn("Join public lobby modal element not found");
+    } else {
+      this.joinPublicModal.eventBus = this.eventBus;
     }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
