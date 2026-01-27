@@ -1,7 +1,11 @@
 import { z } from "zod";
 import {
+  ClanLeaderboardResponse,
+  ClanLeaderboardResponseSchema,
   PlayerProfile,
   PlayerProfileSchema,
+  RankedLeaderboardResponse,
+  RankedLeaderboardResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
@@ -174,6 +178,83 @@ export async function fetchGameById(
     return parsed.data;
   } catch (err) {
     console.warn("fetchGameById: request failed", err);
+    return false;
+  }
+}
+
+export async function fetchClanLeaderboard(): Promise<
+  ClanLeaderboardResponse | false
+> {
+  try {
+    const res = await fetch(`${getApiBase()}/public/clans/leaderboard`, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn(
+        "fetchClanLeaderboard: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = ClanLeaderboardResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn(
+        "fetchClanLeaderboard: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchClanLeaderboard: request failed", err);
+    return false;
+  }
+}
+
+export async function fetchPlayerLeaderboard(
+  page: number,
+): Promise<RankedLeaderboardResponse | "reached_limit" | false> {
+  try {
+    const url = new URL(`${getApiBase()}/leaderboard/ranked`);
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      // Handle "Page must be between X and Y" error as end of list
+      if (res.status === 400) {
+        const errorJson = await res.json().catch(() => null);
+        if (errorJson?.message?.includes("Page must be between")) {
+          return "reached_limit";
+        }
+      }
+      console.warn(
+        "fetchPlayerLeaderboard: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = RankedLeaderboardResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn(
+        "fetchPlayerLeaderboard: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
   }
 }
