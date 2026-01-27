@@ -7,6 +7,18 @@ type StorageLike = {
   setItem(key: string, value: string): void;
 };
 
+function isStorageLike(value: unknown): value is StorageLike {
+  const candidate = value as Partial<StorageLike> | null | undefined;
+  if (!candidate) return false;
+  return (
+    typeof candidate.getItem === "function" &&
+    typeof candidate.setItem === "function" &&
+    typeof candidate.removeItem === "function" &&
+    typeof candidate.clear === "function" &&
+    typeof candidate.key === "function"
+  );
+}
+
 function createMemoryStorage(): StorageLike {
   const map = new Map<string, string>();
   return {
@@ -38,13 +50,8 @@ function ensureWebStorage(storageKey: "localStorage" | "sessionStorage"): void {
   } catch {
     existing = undefined;
   }
-  if (
-    existing &&
-    typeof existing.getItem === "function" &&
-    typeof existing.setItem === "function" &&
-    typeof existing.removeItem === "function" &&
-    typeof existing.clear === "function"
-  ) {
+
+  if (isStorageLike(existing)) {
     return;
   }
 
