@@ -293,7 +293,8 @@ export class GameServer {
 
   private replaceClientSocket(client: Client, ws: WebSocket) {
     const previousWs = client.ws;
-    if (previousWs !== ws) {
+    if (previousWs && previousWs !== ws) {
+      this.websockets.delete(previousWs);
       previousWs.removeAllListeners();
       if (
         previousWs.readyState === WebSocket.OPEN ||
