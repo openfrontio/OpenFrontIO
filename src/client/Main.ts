@@ -254,9 +254,6 @@ class Client {
   private serverConfigPrefetch: Promise<
     Awaited<ReturnType<typeof getServerConfigFromClient>>
   > | null = null;
-  private cosmeticsPromise: Promise<
-    Awaited<ReturnType<typeof fetchCosmetics>>
-  > | null = null;
 
   constructor() {
     this.turnstileManager = new TurnstileManager(() =>
@@ -275,7 +272,6 @@ class Client {
       }
     });
     this.serverConfigPrefetch = configPrefetch;
-    this.cosmeticsPromise = fetchCosmetics();
     // Prefetch turnstile token so it is available when the user joins a lobby.
     this.turnstileManager.warmup();
 
@@ -820,14 +816,13 @@ class Client {
       this.joinModal?.close();
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
     let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
     let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
     let turnstileToken: string | null;
     try {
       [config, cosmetics, turnstileToken] = await Promise.all([
         this.getServerConfigPrefetched(),
-        cosmeticsPromise,
+        fetchCosmetics(),
         this.turnstileManager.getTokenForJoin(lobby.gameStartInfo),
       ]);
     } catch (error) {
@@ -836,9 +831,6 @@ class Client {
       }
       if (joinAttemptId === this.joinAttemptId) {
         this.isJoiningLobby = false;
-        if (this.cosmeticsPromise === cosmeticsPromise) {
-          this.cosmeticsPromise = null;
-        }
         this.joinModal?.close();
         this.joinPublicModal?.closeWithoutLeaving();
       }
@@ -850,9 +842,6 @@ class Client {
       joinAbortController.signal.aborted
     ) {
       return;
-    }
-    if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
-      this.cosmeticsPromise = null;
     }
     const pattern = this.userSettings.getSelectedPatternName(cosmetics);
 
