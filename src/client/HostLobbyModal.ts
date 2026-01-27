@@ -12,7 +12,6 @@ import {
   Quads,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
 import {
   ClientInfo,
@@ -28,7 +27,7 @@ import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyPlayerView";
-import "./components/Maps";
+import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -38,7 +37,6 @@ import {
   renderToggleInputCardInput,
 } from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
@@ -209,80 +207,14 @@ export class HostLobbyModal extends BaseModal {
                   ${translateText("map.map")}
                 </h3>
               </div>
-              <div class="space-y-8">
-                <!-- Use the imported mapCategories -->
-                ${Object.entries(mapCategories).map(
-                  ([categoryKey, maps]) => html`
-                    <div class="w-full">
-                      <h4
-                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                      >
-                        ${translateText(`map_categories.${categoryKey}`)}
-                      </h4>
-                      <div
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                      >
-                        ${maps.map((mapValue) => {
-                          const mapKey = Object.entries(GameMapType).find(
-                            ([, v]) => v === mapValue,
-                          )?.[0];
-                          return html`
-                            <div
-                              @click=${() => this.handleMapSelection(mapValue)}
-                              class="cursor-pointer transition-transform duration-200 active:scale-95"
-                            >
-                              <map-display
-                                .mapKey=${mapKey}
-                                .selected=${!this.useRandomMap &&
-                                this.selectedMap === mapValue}
-                                .translation=${translateText(
-                                  `map.${mapKey?.toLowerCase()}`,
-                                )}
-                              ></map-display>
-                            </div>
-                          `;
-                        })}
-                      </div>
-                    </div>
-                  `,
-                )}
-                <!-- Random Map Card -->
-                <div class="w-full pt-4 border-t border-white/5">
-                  <h4
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                  >
-                    ${translateText("map_categories.special")}
-                  </h4>
-                  <div
-                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                  >
-                    <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleSelectRandomMap}
-                    >
-                      <div
-                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-                      >
-                        <img
-                          src=${randomMap}
-                          alt=${translateText("map.random")}
-                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                        />
-                      </div>
-                      <div class="p-3 text-center border-t border-white/5">
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                        >
-                          ${translateText("map.random")}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <map-picker
+                .selectedMap=${this.selectedMap}
+                .useRandomMap=${this.useRandomMap}
+                .randomMapDivider=${true}
+                .onSelectMap=${(mapValue: GameMapType) =>
+                  this.handleMapSelection(mapValue)}
+                .onSelectRandom=${() => this.handleSelectRandomMap()}
+              ></map-picker>
             </div>
 
             <!-- Difficulty Selection -->
