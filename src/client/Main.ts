@@ -982,7 +982,7 @@ class Client {
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
     this.cancelJoinInFlight();
-    this.turnstileManager.invalidateToken();
+    this.turnstileManager.clearTokenAndRefresh();
     this.turnstileManager.warmup();
     this.isJoiningLobby = false;
     if (this.gameStop === null) {
