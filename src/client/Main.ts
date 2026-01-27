@@ -820,19 +820,15 @@ class Client {
       this.joinModal?.close();
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const configPromise = this.getServerConfigPrefetched();
     const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
-    const turnstilePromise = this.turnstileManager.getTokenForJoin(
-      lobby.gameStartInfo,
-    );
     let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
     let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
     let turnstileToken: string | null;
     try {
       [config, cosmetics, turnstileToken] = await Promise.all([
-        configPromise,
+        this.getServerConfigPrefetched(),
         cosmeticsPromise,
-        turnstilePromise,
+        this.turnstileManager.getTokenForJoin(lobby.gameStartInfo),
       ]);
     } catch (error) {
       if (joinAbortController.signal.aborted) {
