@@ -3,6 +3,7 @@ import { MessageType } from "../core/game/Game";
 import type { LangSelector } from "./LangSelector";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
+const GAME_DEEP_LINK_REGEX = /^\/(?:w\d+\/)?game\/[^/]+/;
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
@@ -117,6 +118,14 @@ export function createCanvas(): HTMLCanvasElement {
   canvas.style.touchAction = "none";
 
   return canvas;
+}
+
+export function restoreBaseUrlUnlessDeepLink(
+  pathname: string = window.location.pathname,
+): void {
+  if (!GAME_DEEP_LINK_REGEX.test(pathname)) {
+    history.replaceState(null, "", window.location.origin + "/");
+  }
 }
 /**
  * A polyfill for crypto.randomUUID that provides fallback implementations
