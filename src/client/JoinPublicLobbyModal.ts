@@ -44,13 +44,9 @@ export class JoinPublicLobbyModal extends BaseModal {
     if (this.isConnecting) {
       this.isConnecting = false;
     }
-    const msUntilStart = lobby.msUntilStart;
     this.updateFromLobby({
       ...lobby,
-      msUntilStart:
-        msUntilStart !== undefined
-          ? Math.max(0, msUntilStart - Date.now())
-          : undefined,
+      msUntilStart: lobby.msUntilStart ?? undefined,
     });
   };
 
