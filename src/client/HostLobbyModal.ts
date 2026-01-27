@@ -2,6 +2,7 @@ import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -27,12 +28,14 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
+import "./components/LobbyChatPanel";
 import "./components/LobbyPlayerView";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { ReceiveLobbyChatEvent } from "./Transport";
 import {
   renderToggleInputCard,
   renderToggleInputCardInput,
@@ -67,6 +70,9 @@ export class HostLobbyModal extends BaseModal {
   @state() private goldMultiplierValue: number | undefined = undefined;
   @state() private startingGold: boolean = false;
   @state() private startingGoldValue: number | undefined = undefined;
+  @state() private chatVisible: boolean = false;
+  @state() private hasUnreadMessages: boolean = false;
+  @state() private lobbyChatEnabled: boolean = false;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -79,8 +85,56 @@ export class HostLobbyModal extends BaseModal {
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
+  private eventBus: EventBus | null = null;
+  private username: string | null = null;
 
   private leaveLobbyOnClose = true;
+  private isSubscribedToChatEvent = false;
+
+  setEventBusAndUsername(eventBus: EventBus, username: string) {
+    // Unsubscribe from old eventBus if exists
+    if (this.eventBus && this.isSubscribedToChatEvent) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = false;
+    }
+
+    this.eventBus = eventBus;
+    this.username = username;
+
+    // Subscribe to new eventBus
+    if (this.eventBus && !this.isSubscribedToChatEvent) {
+      this.eventBus.on(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = true;
+    }
+
+    // Update chat panel
+    this.updateComplete.then(() => {
+      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+      if (chatPanel) {
+        (chatPanel as any).eventBus = this.eventBus;
+        (chatPanel as any).username = this.username;
+      }
+    });
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    if (this.eventBus && this.isSubscribedToChatEvent) {
+      this.eventBus.off(ReceiveLobbyChatEvent, this.onChatMessage);
+      this.isSubscribedToChatEvent = false;
+    }
+    super.disconnectedCallback();
+  }
+
+  private onChatMessage = (event: ReceiveLobbyChatEvent) => {
+    // Only set unread if chat is hidden
+    if (!this.chatVisible) {
+      this.hasUnreadMessages = true;
+    }
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -649,16 +703,83 @@ export class HostLobbyModal extends BaseModal {
             </div>
 
             <!-- Player List -->
-            <lobby-player-view
-              .gameMode=${this.gameMode}
-              .clients=${this.clients}
-              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-              .teamCount=${this.teamCount}
-              .nationCount=${this.nationCount}
-              .disableNations=${this.disableNations}
-              .isCompactMap=${this.compactMap}
-              .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-            ></lobby-player-view>
+            <div class="border-t border-white/10 pt-6">
+              ${this.lobbyChatEnabled
+                ? html`
+                    <div class="flex justify-between items-center mb-4">
+                      <button
+                        @click=${() => {
+                          this.chatVisible = !this.chatVisible;
+                          // Clear unread indicator when opening chat
+                          if (this.chatVisible) {
+                            this.hasUnreadMessages = false;
+                          }
+                        }}
+                        class="relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${this
+                          .chatVisible
+                          ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                          : "bg-white/5 text-white/60 hover:bg-white/10"}"
+                        title="${translateText(
+                          this.chatVisible
+                            ? "lobby_chat.hide"
+                            : "lobby_chat.show",
+                        )}"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          height="14px"
+                          width="14px"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                          />
+                        </svg>
+                        ${translateText(
+                          this.chatVisible
+                            ? "lobby_chat.hide"
+                            : "lobby_chat.show",
+                        )}
+                        ${!this.chatVisible && this.hasUnreadMessages
+                          ? html`<span
+                              class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"
+                            ></span>`
+                          : ""}
+                      </button>
+                    </div>
+                  `
+                : ""}
+
+              <lobby-player-view
+                .gameMode=${this.gameMode}
+                .clients=${this.clients}
+                .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                .teamCount=${this.teamCount}
+                .nationCount=${this.nationCount}
+                .disableNations=${this.disableNations}
+                .isCompactMap=${this.compactMap}
+                .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+              ></lobby-player-view>
+
+              ${this.lobbyChatEnabled
+                ? html`
+                    <div
+                      class="mt-4 p-3 rounded-lg border border-white/10 bg-white/5 ${this
+                        .chatVisible
+                        ? ""
+                        : "hidden"}"
+                    >
+                      <div class="text-sm font-semibold text-white/80 mb-2">
+                        ${translateText("lobby_chat.title")}
+                      </div>
+                      <lobby-chat-panel
+                        .eventBus=${this.eventBus}
+                        .username=${this.username}
+                      ></lobby-chat-panel>
+                    </div>
+                  `
+                : ""}
+            </div>
           </div>
         </div>
 
@@ -691,6 +812,23 @@ export class HostLobbyModal extends BaseModal {
         ${content}
       </o-modal>
     `;
+  }
+
+  firstUpdated(): void {
+    // Always start with chat hidden
+    this.chatVisible = false;
+
+    this.updateComplete.then(() => {
+      const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+      if (chatPanel && this.eventBus) {
+        (chatPanel as any).eventBus = this.eventBus;
+        (chatPanel as any).username = this.username;
+      }
+    });
+  }
+
+  updated(changedProperties: Map<string, unknown>): void {
+    super.updated(changedProperties);
   }
 
   protected onOpen(): void {
@@ -820,6 +958,15 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+
+    // Reset chat state
+    this.chatVisible = false;
+    this.hasUnreadMessages = false;
+    this.lobbyChatEnabled = false;
+    const chatPanel = this.renderRoot.querySelector("lobby-chat-panel");
+    if (chatPanel) {
+      (chatPanel as any).clearMessages();
+    }
 
     this.leaveLobbyOnClose = true;
   }
@@ -1047,6 +1194,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
+            lobbyChatEnabled: this.lobbyChatEnabled,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

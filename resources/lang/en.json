@@ -631,6 +631,14 @@
       "stop_trading": "Stop trading with [P1]!"
     }
   },
+  "lobby_chat": {
+    "title": "Lobby Chat",
+    "placeholder": "Type a message...",
+    "enable": "Enable Lobby Chat",
+    "send": "Send",
+    "show": "Show Chat",
+    "hide": "Hide Chat"
+  },
   "build_menu": {
     "desc": {
       "atom_bomb": "Small explosion",

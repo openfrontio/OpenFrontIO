@@ -453,6 +453,20 @@ export class GameServer {
             }
             break;
           }
+          case "lobby_chat": {
+            if (this.phase() !== GamePhase.Lobby) {
+              return;
+            }
+            const isHost = client.clientID === this.lobbyCreatorID;
+            const payload = JSON.stringify({
+              type: "lobby_chat",
+              username: client.username,
+              isHost,
+              text: clientMsg.text,
+            });
+            this.activeClients.forEach((c) => c.ws.send(payload));
+            break;
+          }
           case "ping": {
             this.lastPingUpdate = Date.now();
             client.lastPing = Date.now();
