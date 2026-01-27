@@ -3,12 +3,21 @@ import { customElement, property, state } from "lit/decorators.js";
 import {
   Difficulty,
   GameMapType,
-  featuredMaps,
   mapCategories,
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import randomMap from "/images/RandomMap.webp?url";
+
+const featuredMaps: GameMapType[] = [
+  GameMapType.World,
+  GameMapType.Europe,
+  GameMapType.NorthAmerica,
+  GameMapType.SouthAmerica,
+  GameMapType.Asia,
+  GameMapType.Africa,
+  GameMapType.Japan,
+];
 
 @customElement("map-picker")
 export class MapPicker extends LitElement {
@@ -38,33 +47,64 @@ export class MapPicker extends LitElement {
     return this.mapWins?.get(mapValue) ?? new Set();
   }
 
-  render() {
+  private renderMapCard(mapValue: GameMapType) {
+    const mapKey = Object.entries(GameMapType).find(
+      ([_, value]) => value === mapValue,
+    )?.[0];
+    return html`
+      <div
+        @click=${() => this.handleMapSelection(mapValue)}
+        class="cursor-pointer transition-transform duration-200 active:scale-95"
+      >
+        <map-display
+          .mapKey=${mapKey}
+          .selected=${!this.useRandomMap && this.selectedMap === mapValue}
+          .showMedals=${this.showMedals}
+          .wins=${this.getWins(mapValue)}
+          .translation=${translateText(`map.${mapKey?.toLowerCase()}`)}
+        ></map-display>
+      </div>
+    `;
+  }
+
+  private renderAllMaps() {
+    const mapCategoryEntries = Object.entries(mapCategories);
+    return html`<div class="space-y-8">
+      ${mapCategoryEntries.map(
+        ([categoryKey, maps]) => html`
+          <div class="w-full">
+            <h4
+              class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+            >
+              ${translateText(`map_categories.${categoryKey}`)}
+            </h4>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              ${maps.map((mapValue) => this.renderMapCard(mapValue))}
+            </div>
+          </div>
+        `,
+      )}
+    </div>`;
+  }
+
+  private renderFeaturedMaps() {
     let featuredMapList = featuredMaps;
     if (!featuredMapList.includes(this.selectedMap)) {
       featuredMapList = [this.selectedMap, ...featuredMaps];
     }
-    const mapKeyLookup = new Map(
-      Object.entries(GameMapType).map(([key, value]) => [value, key]),
-    );
-    const mapCategoryEntries = Object.entries(mapCategories);
-    const renderMapCard = (mapValue: GameMapType) => {
-      const mapKey = mapKeyLookup.get(mapValue);
-      return html`
-        <div
-          @click=${() => this.handleMapSelection(mapValue)}
-          class="cursor-pointer transition-transform duration-200 active:scale-95"
-        >
-          <map-display
-            .mapKey=${mapKey}
-            .selected=${!this.useRandomMap && this.selectedMap === mapValue}
-            .showMedals=${this.showMedals}
-            .wins=${this.getWins(mapValue)}
-            .translation=${translateText(`map.${mapKey?.toLowerCase()}`)}
-          ></map-display>
-        </div>
-      `;
-    };
+    return html`<div class="w-full">
+      <h4
+        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
+      >
+        ${translateText("map_categories.featured")}
+      </h4>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        ${featuredMapList.map((mapValue) => this.renderMapCard(mapValue))}
+      </div>
+    </div>`;
+  }
 
+  render() {
     return html`
       <div class="space-y-8">
         <div class="w-full">
@@ -99,35 +139,7 @@ export class MapPicker extends LitElement {
             </button>
           </div>
         </div>
-        ${this.showAllMaps
-          ? html`<div class="space-y-8">
-              ${mapCategoryEntries.map(
-                ([categoryKey, maps]) => html`
-                  <div class="w-full">
-                    <h4
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                    >
-                      ${translateText(`map_categories.${categoryKey}`)}
-                    </h4>
-                    <div
-                      class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                    >
-                      ${maps.map((mapValue) => renderMapCard(mapValue))}
-                    </div>
-                  </div>
-                `,
-              )}
-            </div>`
-          : html`<div class="w-full">
-              <h4
-                class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-              >
-                ${translateText("map_categories.featured")}
-              </h4>
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                ${featuredMapList.map((mapValue) => renderMapCard(mapValue))}
-              </div>
-            </div>`}
+        ${this.showAllMaps ? this.renderAllMaps() : this.renderFeaturedMaps()}
         <div
           class="w-full ${this.randomMapDivider
             ? "pt-4 border-t border-white/5"
