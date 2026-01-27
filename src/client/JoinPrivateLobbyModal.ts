@@ -17,6 +17,7 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
+import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
@@ -143,26 +144,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
     `;
   }
 
-  private renderConfigItem(
-    label: string,
-    value: string | TemplateResult,
-  ): TemplateResult {
-    return html`
-      <div
-        class="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-center min-w-[100px]"
-      >
-        <span
-          class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
-          >${label}</span
-        >
-        <span
-          class="text-white font-bold text-sm w-full break-words hyphens-auto"
-          >${value}</span
-        >
-      </div>
-    `;
-  }
-
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -180,25 +161,33 @@ export class JoinPrivateLobbyModal extends BaseModal {
 
     return html`
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        ${this.renderConfigItem(translateText("map.map"), mapName)}
-        ${this.renderConfigItem(translateText("host_modal.mode"), modeName)}
-        ${this.renderConfigItem(
-          translateText("difficulty.difficulty"),
-          diffName,
-        )}
-        ${this.renderConfigItem(
-          translateText("host_modal.bots"),
-          c.bots.toString(),
-        )}
+        <lobby-config-item
+          .label=${translateText("map.map")}
+          .value=${mapName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("host_modal.mode")}
+          .value=${modeName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("difficulty.difficulty")}
+          .value=${diffName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("host_modal.bots")}
+          .value=${c.bots.toString()}
+        ></lobby-config-item>
         ${c.gameMode !== "Free For All" && c.playerTeams
-          ? this.renderConfigItem(
-              typeof c.playerTeams === "string"
-                ? translateText("host_modal.team_type")
-                : translateText("host_modal.team_count"),
-              typeof c.playerTeams === "string"
-                ? translateText("host_modal.teams_" + c.playerTeams)
-                : c.playerTeams.toString(),
-            )
+          ? html`
+              <lobby-config-item
+                .label=${typeof c.playerTeams === "string"
+                  ? translateText("host_modal.team_type")
+                  : translateText("host_modal.team_count")}
+                .value=${typeof c.playerTeams === "string"
+                  ? translateText("host_modal.teams_" + c.playerTeams)
+                  : c.playerTeams.toString()}
+              ></lobby-config-item>
+            `
           : html``}
       </div>
       ${this.renderDisabledUnits()}
