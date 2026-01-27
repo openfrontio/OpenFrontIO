@@ -1,7 +1,13 @@
 import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderDuration, renderNumber, translateText } from "../client/Utils";
-import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
+import { EventBus } from "../core/EventBus";
+import {
+  ClientInfo,
+  GameConfig,
+  GameInfo,
+  LobbyInfoEvent,
+} from "../core/Schemas";
 import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -10,6 +16,8 @@ import { modalHeader } from "./components/ui/ModalHeader";
 
 @customElement("join-public-lobby-modal")
 export class JoinPublicLobbyModal extends BaseModal {
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   @state() private players: ClientInfo[] = [];
   @state() private playerCount: number = 0;
   @state() private gameConfig: GameConfig | null = null;
@@ -22,8 +30,8 @@ export class JoinPublicLobbyModal extends BaseModal {
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
-  private readonly handleLobbyInfo = (event: Event) => {
-    const lobby = (event as CustomEvent<GameInfo>).detail;
+  private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
+    const lobby = event.lobby;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
       return;
     }
@@ -378,17 +386,11 @@ export class JoinPublicLobbyModal extends BaseModal {
 
   private startLobbyUpdates() {
     this.stopLobbyUpdates();
-    document.addEventListener(
-      "lobby-info",
-      this.handleLobbyInfo as EventListener,
-    );
+    this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
   private stopLobbyUpdates() {
-    document.removeEventListener(
-      "lobby-info",
-      this.handleLobbyInfo as EventListener,
-    );
+    this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
   private syncCountdownTimer() {
