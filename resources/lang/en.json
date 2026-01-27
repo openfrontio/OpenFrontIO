@@ -166,6 +166,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -421,6 +422,7 @@
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "starting_gold": "5M Starting Gold"
   },
   "select_lang": {
