@@ -58,7 +58,7 @@ export class TurnstileManager {
   }
 
   async getTokenForJoin(): Promise<string | null> {
-    const token = await this.ensureToken();
+    const token = await this.getToken();
     if (!token) {
       return null;
     }
@@ -66,7 +66,7 @@ export class TurnstileManager {
     return token.token;
   }
 
-  private async ensureToken(): Promise<TurnstileToken | null> {
+  private async getToken(): Promise<TurnstileToken | null> {
     if (this.token && this.isTokenValid(this.token)) {
       this.scheduleRefresh(this.token);
       return this.token;
