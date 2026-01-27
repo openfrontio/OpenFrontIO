@@ -7,7 +7,9 @@ import {
   GameRecord,
   GameStartInfo,
 } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
@@ -800,12 +802,17 @@ class Client {
     }
     let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
     let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
-    let turnstileToken: string | null;
+    let turnstileToken: string | null = null;
     try {
-      [config, cosmetics, turnstileToken] = await Promise.all([
-        this.getServerConfigPrefetched(),
+      config = await this.getServerConfigPrefetched();
+      const shouldRequestToken =
+        config.env() !== GameEnv.Dev &&
+        lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer;
+      [cosmetics, turnstileToken] = await Promise.all([
         fetchCosmetics(),
-        this.turnstileManager.getTokenForJoin(lobby.gameStartInfo),
+        shouldRequestToken
+          ? this.turnstileManager.getTokenForJoin()
+          : Promise.resolve(null),
       ]);
     } catch (error) {
       if (joinAbortController.signal.aborted) {
