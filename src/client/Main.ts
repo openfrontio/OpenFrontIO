@@ -232,8 +232,6 @@ class Client {
   private matchmakingModal: MatchmakingModal;
 
   private gutterAds: GutterAds;
-  private isJoiningLobby = false;
-
   private turnstileManager: TurnstileManager;
   private serverConfigPrefetch: Promise<
     Awaited<ReturnType<typeof getServerConfigFromClient>>
@@ -659,7 +657,7 @@ class Client {
   }
 
   private async handleUrl() {
-    if (this.isJoiningLobby) {
+    if (this.joinAbortController) {
       return;
     }
     // Wait for modal custom elements to be defined
@@ -789,7 +787,6 @@ class Client {
     this.joinAbortController?.abort();
     const joinAbortController = (this.joinAbortController =
       new AbortController());
-    this.isJoiningLobby = true;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
@@ -819,9 +816,11 @@ class Client {
         return;
       }
       if (joinAttemptId === this.joinAttemptId) {
-        this.isJoiningLobby = false;
         this.joinModal?.close();
         this.joinPublicModal?.closeWithoutLeaving();
+        if (this.joinAbortController === joinAbortController) {
+          this.joinAbortController = null;
+        }
       }
       console.error("Failed to prepare join flow:", error);
       return;
@@ -911,7 +910,6 @@ class Client {
         }
       },
       () => {
-        this.isJoiningLobby = false;
         this.preserveDeepLinkUrl = false;
         if (this.joinAbortController === joinAbortController) {
           this.joinAbortController = null;
@@ -966,7 +964,6 @@ class Client {
     this.cancelJoinInFlight();
     this.turnstileManager.clearTokenAndRefresh();
     this.turnstileManager.warmup();
-    this.isJoiningLobby = false;
     if (this.gameStop === null) {
       try {
         if (!this.preserveDeepLinkUrl) {
@@ -1049,14 +1046,13 @@ class Client {
   }
 
   private cancelJoinInFlight() {
-    const hasJoinInFlight = this.isJoiningLobby || this.joinAbortController;
+    const hasJoinInFlight = Boolean(this.joinAbortController);
     if (hasJoinInFlight) {
       this.joinAttemptId++;
       if (this.joinAbortController) {
         this.joinAbortController.abort();
         this.joinAbortController = null;
       }
-      this.isJoiningLobby = false;
     }
   }
 }
