@@ -18,7 +18,6 @@
   "nations": [
     {
       "coordinates": [1941, 1031],
-      "flag": "Rif",
       "name": "Rif"
     },
     {
@@ -43,12 +42,10 @@
     },
     {
       "coordinates": [1271, 1393],
-      "flag": "Shilha",
       "name": "Shilha"
     },
     {
       "coordinates": [1555, 258],
-      "flag": "Andalusia",
       "name": "Andalusia"
     }
   ]
