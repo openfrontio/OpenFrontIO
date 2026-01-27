@@ -789,8 +789,8 @@ class Client {
     const lobby = event.detail;
     const joinAttemptId = ++this.joinAttemptId;
     this.joinAbortController?.abort();
-    const joinAbortController = new AbortController();
-    this.joinAbortController = joinAbortController;
+    const joinAbortController = (this.joinAbortController =
+      new AbortController());
     this.isJoiningLobby = true;
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
