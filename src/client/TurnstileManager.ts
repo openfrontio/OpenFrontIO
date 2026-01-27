@@ -1,6 +1,4 @@
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import type { GameStartInfo } from "../core/Schemas";
 
 type TurnstileToken = { token: string; createdAt: number };
 
@@ -59,15 +57,7 @@ export class TurnstileManager {
     }
   }
 
-  async getTokenForJoin(gameStartInfo?: GameStartInfo): Promise<string | null> {
-    const config = await this.getServerConfig();
-    if (
-      config.env() === GameEnv.Dev ||
-      gameStartInfo?.config.gameType === GameType.Singleplayer
-    ) {
-      return null;
-    }
-
+  async getTokenForJoin(): Promise<string | null> {
     const token = await this.ensureToken();
     if (!token) {
       return null;
