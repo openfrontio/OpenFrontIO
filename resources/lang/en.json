@@ -363,7 +363,7 @@
     "disabled_units": "Disabled Units"
   },
   "public_lobby": {
-    "title": "Join Public Lobby",
+    "title": "Waiting for Game Start...",
     "join": "Join next Game",
     "waiting": "players waiting",
     "teams_Duos": "{team_count} teams of 2 (Duos)",
