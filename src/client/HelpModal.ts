@@ -5,6 +5,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -104,7 +105,7 @@ export class HelpModal extends BaseModal {
           : ""}"
       >
         ${modalHeader({
-          title: translateText("main.instructions"),
+          title: translateText("main.help"),
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
@@ -120,6 +121,53 @@ export class HelpModal extends BaseModal {
             [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
             scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
+          <!-- Troubleshooting Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 20 L12 0 L22 20 L2 20"></path>
+                <line x1="12" y1="8" x2="12" y2="14"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("main.troubleshooting")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
+          <section>
+            <div class="w-full flex flex-col items-center">
+              <p class="mb-6 text-white/70 text-sm">
+                ${translateText("help_modal.troubleshooting_desc")}
+              </p>
+              <button
+                id="troubleshooting-button"
+                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                data-page="page-troubleshooting"
+                @click="${this.openTroubleshooting}"
+                data-i18n="main.go_to_troubleshooting"
+              >
+                <span
+                  class="relative z-10 text-2xl"
+                  data-i18n="main.go_to_troubleshooting"
+                ></span>
+              </button>
+            </div>
+          </section>
           <!-- Hotkeys Section -->
           <div class="flex items-center gap-3 mb-3">
             <div class="text-blue-400">
@@ -1135,6 +1183,20 @@ export class HelpModal extends BaseModal {
         ${content}
       </o-modal>
     `;
+  }
+
+  openTroubleshooting() {
+    const troubleshootingModal = document.querySelector(
+      "troubleshooting-modal",
+    ) as TroubleshootingModal;
+    if (
+      !troubleshootingModal ||
+      !(troubleshootingModal instanceof TroubleshootingModal)
+    ) {
+      console.warn("Troubleshooting modal element not found");
+      return;
+    }
+    troubleshootingModal.open();
   }
 
   protected onOpen(): void {

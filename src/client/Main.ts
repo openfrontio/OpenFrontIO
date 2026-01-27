@@ -813,6 +813,7 @@ class Client {
           "game-top-bar",
           "help-modal",
           "user-setting",
+          "troubleshooting-modal",
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
