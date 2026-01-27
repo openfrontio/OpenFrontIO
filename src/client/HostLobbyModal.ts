@@ -1161,6 +1161,9 @@ export class HostLobbyModal extends BaseModal {
     if (!preset) {
       this.showMessage(translateText("host_modal.presets_not_found"), "red");
       this.selectedPresetId = undefined;
+      this.presetNameInput = "";
+      setLastUsedPresetId(undefined);
+      this.requestUpdate();
       return;
     }
     this.presetNameInput = preset.name;
@@ -1221,7 +1224,9 @@ export class HostLobbyModal extends BaseModal {
       name: preset.name,
     }));
     this.autoApplyLastUsedPreset = store.autoApplyLastUsed ?? false;
-    const selectionId = preferredSelectionId ?? store.lastUsedPresetId;
+    const selectionId =
+      preferredSelectionId ??
+      (this.autoApplyLastUsedPreset ? store.lastUsedPresetId : undefined);
     const selectedPreset = selectionId
       ? store.presets.find((preset) => preset.id === selectionId)
       : undefined;
