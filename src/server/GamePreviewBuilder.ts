@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, spawnPhaseSeconds } from "../core/Schemas";
 import { GameMode } from "../core/game/Game";
 
 export const PlayerInfoSchema = z.object({
@@ -179,6 +179,11 @@ export function buildPreview(
 
   const winner = parseWinner(publicInfo?.info?.winner, players);
   const duration = publicInfo?.info?.duration;
+  const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
+  const adjustedDuration =
+    typeof duration === "number"
+      ? Math.max(0, duration - spawnPhaseSeconds(gameType))
+      : undefined;
 
   // Normalize map name to match filesystem (lowercase, no spaces or special chars)
   const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
@@ -188,7 +193,6 @@ export function buildPreview(
     : null;
   const image = mapThumbnail ?? `${origin}/images/GameplayScreenshot.png`;
 
-  const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";
 
   const title = isFinished
@@ -211,7 +215,9 @@ export function buildPreview(
     const detailParts: string[] = [];
     const playerCountLabel = `${activePlayers} ${activePlayers === 1 ? "player" : "players"}`;
     detailParts.push(playerCountLabel);
-    if (duration !== undefined) detailParts.push(`${formatDuration(duration)}`);
+    if (adjustedDuration !== undefined) {
+      detailParts.push(`${formatDuration(adjustedDuration)}`);
+    }
     if (matchTimestamp !== undefined) {
       const dateTime = formatDateTimeParts(matchTimestamp);
       detailParts.push(`${dateTime.date}`);

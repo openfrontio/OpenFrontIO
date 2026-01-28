@@ -4,7 +4,6 @@ import {
   Difficulty,
   Game,
   GameMode,
-  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -18,7 +17,12 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import {
+  GameConfig,
+  GameID,
+  spawnPhaseTurns,
+  TeamCountConfig,
+} from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
@@ -542,7 +546,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    return spawnPhaseTurns(this._gameConfig);
   }
   numBots(): number {
     return this.bots();

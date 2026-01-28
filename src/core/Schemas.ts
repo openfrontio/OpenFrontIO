@@ -89,6 +89,35 @@ export type UpdateGameConfigIntent = z.infer<
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
+const TICKS_PER_SECOND = 10;
+const SPAWN_PHASE_TICKS = {
+  singleplayer: 100,
+  multiplayer: 300,
+} as const;
+
+export function spawnPhaseTurns(
+  configOrGameType:
+    | Pick<GameConfig, "gameType">
+    | GameType
+    | string
+    | undefined,
+): number {
+  return (typeof configOrGameType === "object"
+    ? configOrGameType?.gameType
+    : configOrGameType) === GameType.Singleplayer
+    ? SPAWN_PHASE_TICKS.singleplayer
+    : SPAWN_PHASE_TICKS.multiplayer;
+}
+
+export function spawnPhaseSeconds(
+  configOrGameType:
+    | Pick<GameConfig, "gameType">
+    | GameType
+    | string
+    | undefined,
+): number {
+  return spawnPhaseTurns(configOrGameType) / TICKS_PER_SECOND;
+}
 
 export type ClientMessage =
   | ClientSendWinnerMessage
