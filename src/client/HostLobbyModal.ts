@@ -113,6 +113,12 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async buildLobbyUrl(): Promise<string> {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      const link = crazyGamesSDK.createInviteLink(this.lobbyId);
+      if (link !== null) {
+        return link;
+      }
+    }
     const config = await getServerConfigFromClient();
     return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
@@ -123,7 +129,9 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    history.replaceState(null, "", url);
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      history.replaceState(null, "", url);
+    }
   }
 
   render() {

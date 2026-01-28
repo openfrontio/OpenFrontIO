@@ -8,6 +8,7 @@ import {
   MIN_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 
 const usernameKey: string = "username";
 
@@ -39,8 +40,18 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    const stored = this.getStoredUsername();
+    const stored = this.getUsername();
     this.parseAndSetUsername(stored);
+    crazyGamesSDK.getUsername().then((username) => {
+      this.parseAndSetUsername(username ?? genAnonUsername());
+      this.requestUpdate();
+    });
+    crazyGamesSDK.addAuthListener((user) => {
+      if (user) {
+        this.parseAndSetUsername(user?.username);
+      }
+      this.requestUpdate();
+    });
   }
 
   private parseAndSetUsername(fullUsername: string) {
@@ -52,6 +63,8 @@ export class UsernameInput extends LitElement {
       this.clanTag = "";
       this.baseUsername = fullUsername;
     }
+
+    this.validateAndStore();
   }
 
   render() {
@@ -161,7 +174,7 @@ export class UsernameInput extends LitElement {
     }
   }
 
-  private getStoredUsername(): string {
+  private getUsername(): string {
     const storedUsername = localStorage.getItem(usernameKey);
     if (storedUsername) {
       return storedUsername;
@@ -176,20 +189,20 @@ export class UsernameInput extends LitElement {
   }
 
   private generateNewUsername(): string {
-    const newUsername = "Anon" + this.uuidToThreeDigits();
+    const newUsername = genAnonUsername();
     this.storeUsername(newUsername);
     return newUsername;
-  }
-
-  private uuidToThreeDigits(): string {
-    const uuid = uuidv4();
-    const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
-    const decimal = BigInt(`0x${cleanUuid}`);
-    const threeDigits = decimal % 1000n;
-    return threeDigits.toString().padStart(3, "0");
   }
 
   public isValid(): boolean {
     return this._isValid;
   }
+}
+
+export function genAnonUsername(): string {
+  const uuid = uuidv4();
+  const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
+  const decimal = BigInt(`0x${cleanUuid}`);
+  const threeDigits = decimal % 1000n;
+  return "Anon" + threeDigits.toString().padStart(3, "0");
 }

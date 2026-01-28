@@ -250,6 +250,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    crazyGamesSDK.gameplayStop();
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
