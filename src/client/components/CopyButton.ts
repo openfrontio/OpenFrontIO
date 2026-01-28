@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../../core/configuration/ConfigLoader";
 import { UserSettings } from "../../core/game/UserSettings";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { copyToClipboard, translateText } from "../Utils";
 
 @customElement("copy-button")
@@ -73,15 +74,21 @@ export class CopyButton extends LitElement {
     return url;
   }
 
-  private async resolveCopyText(): Promise<string> {
+  private async resolveCopyText(): Promise<string | null> {
     if (this.copyText) return this.copyText;
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return crazyGamesSDK.createInviteLink(this.lobbyId);
+    }
     if (!this.lobbyId) return "";
     return await this.buildCopyUrl();
   }
 
   private async handleCopy() {
     const text = await this.resolveCopyText();
-    if (!text) return;
+    if (!text) {
+      alert("Error copying game id");
+      return;
+    }
     await copyToClipboard(
       text,
       () => (this.copySuccess = true),

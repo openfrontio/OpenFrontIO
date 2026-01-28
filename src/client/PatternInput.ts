@@ -5,6 +5,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { renderPatternPreview } from "./components/PatternButton";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
 
 @customElement("pattern-input")
@@ -73,6 +74,10 @@ export class PatternInput extends LitElement {
   }
 
   render() {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return html``;
+    }
+
     const isDefault = this.pattern === null && this.selectedColor === null;
     const showSelect = this.showSelectLabel && isDefault;
     const buttonTitle = translateText("territory_patterns.title");
