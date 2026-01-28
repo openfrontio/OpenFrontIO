@@ -448,6 +448,7 @@ export interface MutableAlliance extends Alliance {
   id(): number;
   extend(): void;
   onlyOneAgreedToExtend(): boolean;
+  hasOtherRequestedExtension(player: Player): boolean;
 }
 
 export class PlayerInfo {

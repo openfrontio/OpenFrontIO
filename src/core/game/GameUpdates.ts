@@ -183,6 +183,7 @@ export interface AllianceView {
   createdAt: Tick;
   expiresAt: Tick;
   hasExtensionRequest: boolean;
+  otherWantsToExtend: boolean; // True if the other player has requested to extend but we haven't yet
 }
 
 export interface AllianceRequestUpdate {
