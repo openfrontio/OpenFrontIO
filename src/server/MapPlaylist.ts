@@ -11,6 +11,7 @@ import {
   Quads,
   RankedType,
   Trios,
+  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
@@ -18,6 +19,7 @@ import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
+const ARCADE_MAPS = new Set(mapCategories.arcade);
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
@@ -73,6 +75,21 @@ interface MapWithMode {
   mode: GameMode;
 }
 
+export type SpecialPreset =
+  | "compact"
+  | "startingGold"
+  | "randomSpawn"
+  | "crowded";
+
+export interface GameConfigOverrides {
+  mode?: GameMode;
+  playerTeams?: TeamCountConfig;
+  disableSpecialModifiers?: boolean;
+  ensureSpecialModifier?: boolean;
+  specialPreset?: SpecialPreset;
+  lobbyStartDelayMs?: number;
+}
+
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
   { config: 3, weight: 10 },
@@ -91,14 +108,24 @@ export class MapPlaylist {
 
   constructor(private disableTeams: boolean = false) {}
 
-  public async gameConfig(): Promise<GameConfig> {
-    const { map, mode } = this.getNextMap();
+  public async gameConfig(
+    overrides?: GameConfigOverrides,
+  ): Promise<GameConfig> {
+    const allowArcade = !(overrides?.disableSpecialModifiers ?? false);
+    const { map, mode: playlistMode } = this.getNextMap(allowArcade);
+
+    const mode = overrides?.mode ?? playlistMode;
 
     const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+      overrides?.playerTeams ??
+      (mode === GameMode.Team ? this.getTeamCount() : undefined);
 
-    const modifiers = this.getRandomPublicGameModifiers();
-    const { startingGold } = modifiers;
+    const modifiers = this.getRandomPublicGameModifiers({
+      disableSpecial: overrides?.disableSpecialModifiers ?? false,
+      specialPreset: overrides?.specialPreset,
+      ensureSpecial: overrides?.ensureSpecialModifier ?? false,
+    });
+    let { startingGold } = modifiers;
     let { isCompact, isRandomSpawn, isCrowded } = modifiers;
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
@@ -131,6 +158,22 @@ export class MapPlaylist {
       }
     }
 
+    // If adjustments removed specials, re-apply a guaranteed one when required
+    if (
+      overrides?.ensureSpecialModifier &&
+      !this.isSpecial({ isCompact, isRandomSpawn, isCrowded, startingGold })
+    ) {
+      startingGold = 5_000_000;
+    }
+
+    // Arcade maps should only appear in special modes.
+    if (
+      this.isArcadeMap(map) &&
+      !this.isSpecial({ isCompact, isRandomSpawn, isCrowded, startingGold })
+    ) {
+      startingGold = 5_000_000;
+    }
+
     // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
@@ -148,6 +191,7 @@ export class MapPlaylist {
         startingGold,
       },
       startingGold,
+      lobbyStartDelayMs: overrides?.lobbyStartDelayMs,
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
       infiniteGold: false,
@@ -197,19 +241,33 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(): MapWithMode {
+  private getNextMap(allowArcade: boolean): MapWithMode {
     if (this.mapsPlaylist.length === 0) {
       const numAttempts = 10000;
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
           log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
+          return this.shiftNextPlayableMap(allowArcade);
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
     // Even if it failed, playlist will be partially populated.
-    return this.mapsPlaylist.shift()!;
+    return this.shiftNextPlayableMap(allowArcade);
+  }
+
+  private shiftNextPlayableMap(allowArcade: boolean): MapWithMode {
+    if (allowArcade) {
+      return this.mapsPlaylist.shift()!;
+    }
+
+    const index = this.mapsPlaylist.findIndex(
+      (entry) => !this.isArcadeMap(entry.map),
+    );
+    if (index === -1) {
+      return this.mapsPlaylist.shift()!;
+    }
+    return this.mapsPlaylist.splice(index, 1)[0]!;
   }
 
   private getTeamCount(): TeamCountConfig {
@@ -226,13 +284,53 @@ export class MapPlaylist {
     return TEAM_WEIGHTS[0].config;
   }
 
-  private getRandomPublicGameModifiers(): PublicGameModifiers {
-    return {
+  private getRandomPublicGameModifiers(options?: {
+    disableSpecial: boolean;
+    specialPreset?: SpecialPreset;
+    ensureSpecial: boolean;
+  }): PublicGameModifiers {
+    // Explicit disable: no special modifiers
+    if (options?.disableSpecial) {
+      return {
+        isRandomSpawn: false,
+        isCompact: false,
+        isCrowded: false,
+        startingGold: undefined,
+      };
+    }
+
+    const modifiers: PublicGameModifiers = {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
       isCrowded: Math.random() < 0.05, // 5% chance
       startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
     };
+
+    // Force a specific preset if requested
+    switch (options?.specialPreset) {
+      case "compact":
+        modifiers.isCompact = true;
+        modifiers.isRandomSpawn = false;
+        break;
+      case "startingGold":
+        modifiers.startingGold = 5_000_000;
+        break;
+      case "randomSpawn":
+        modifiers.isRandomSpawn = true;
+        break;
+      case "crowded":
+        modifiers.isCrowded = true;
+        break;
+      default:
+        break;
+    }
+
+    // Guarantee at least one modifier when requested
+    if (options?.ensureSpecial && !this.isSpecial(modifiers)) {
+      modifiers.startingGold = 5_000_000;
+    }
+
+    return modifiers;
   }
 
   // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
@@ -298,6 +396,20 @@ export class MapPlaylist {
         break;
     }
     return p;
+  }
+
+  private isSpecial(modifiers: PublicGameModifiers | undefined): boolean {
+    if (!modifiers) return false;
+    return Boolean(
+      modifiers.isCompact ||
+        modifiers.isRandomSpawn ||
+        modifiers.isCrowded ||
+        (modifiers.startingGold && modifiers.startingGold > 0),
+    );
+  }
+
+  private isArcadeMap(map: GameMapType): boolean {
+    return ARCADE_MAPS.has(map);
   }
 
   /**

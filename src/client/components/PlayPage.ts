@@ -83,64 +83,8 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
-        <!-- Primary Game Actions Area -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-          <!-- Left Column: Featured Lobbies / Quick Play -->
-          <div class="lg:col-span-9 flex flex-col gap-6 min-w-0">
-            <!-- Public Lobby Card -->
-            <public-lobby
-              class="block w-full transition-all duration-[50ms]"
-            ></public-lobby>
-          </div>
-
-          <!-- Right Column: Custom Games & Modes -->
-          <div class="lg:col-span-3">
-            <div
-              class="group relative isolate flex flex-col w-full h-40 lg:h-96 overflow-hidden rounded-2xl transition-all duration-300"
-            >
-              <div
-                class="h-full flex flex-col bg-slate-900/40 backdrop-blur-sm rounded-2xl overflow-hidden"
-              >
-                <div
-                  class="py-2 bg-blue-900/20 text-center text-sm font-bold text-gray-300 uppercase tracking-widest"
-                  data-i18n="host_modal.label"
-                ></div>
-                <div class="flex-1 p-2 flex flex-row lg:flex-col gap-2">
-                  <o-button
-                    id="single-player"
-                    data-i18n-title="main.solo"
-                    translationKey="main.solo"
-                    fill
-                    class="flex-1 transition-transform"
-                  ></o-button>
-
-                  <o-button
-                    id="host-lobby-button"
-                    data-i18n-title="main.create"
-                    translationKey="main.create"
-                    fill
-                    secondary
-                    class="flex-1 opacity-90 hover:opacity-100"
-                  ></o-button>
-
-                  <o-button
-                    id="join-private-lobby-button"
-                    data-i18n-title="main.join"
-                    translationKey="main.join"
-                    fill
-                    secondary
-                    class="flex-1 opacity-90 hover:opacity-100"
-                  ></o-button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Matchmaking Buttons (Full Width across entire grid) -->
-          <div class="lg:col-span-12 flex flex-col gap-6">
-            <matchmaking-button></matchmaking-button>
-          </div>
-        </div>
+        <!-- Game Mode Selector -->
+        <game-mode-selector></game-mode-selector>
       </div>
     `;
   }

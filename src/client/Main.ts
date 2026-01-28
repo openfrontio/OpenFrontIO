@@ -57,9 +57,11 @@ import {
 } from "./Utils";
 import "./components/DesktopNavBar";
 import "./components/Footer";
+import "./components/GameModeSelector";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
+import "./components/RankedMoreSubmenu";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -223,7 +225,7 @@ class Client {
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinPrivateLobbyModal;
   private joinPublicModal: JoinPublicLobbyModal;
-  private publicLobby: PublicLobby;
+  private publicLobby: PublicLobby | null = null;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
@@ -292,7 +294,13 @@ class Client {
       console.warn("Username input element not found");
     }
 
-    this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    const publicLobby = document.querySelector("public-lobby");
+    if (publicLobby instanceof PublicLobby) {
+      this.publicLobby = publicLobby;
+    } else {
+      this.publicLobby = null;
+      console.warn("Public lobby element not found");
+    }
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
@@ -322,22 +330,25 @@ class Client {
     }
 
     const singlePlayer = document.getElementById("single-player");
-    if (singlePlayer === null) throw new Error("Missing single-player");
-    singlePlayer.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-single-player");
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
+    if (singlePlayer) {
+      singlePlayer.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-single-player");
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    } else {
+      console.debug("single-player button not present");
+    }
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
@@ -451,9 +462,49 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
+    const matchmakingButton = document.getElementById("matchmaking-button");
+    const matchmakingButtonLoggedOut = document.getElementById(
+      "matchmaking-button-logged-out",
+    );
+
+    const updateMatchmakingButton = (loggedIn: boolean) => {
+      if (!loggedIn) {
+        matchmakingButton?.classList.add("hidden");
+        matchmakingButtonLoggedOut?.classList.remove("hidden");
+      } else {
+        matchmakingButton?.classList.remove("hidden");
+        matchmakingButtonLoggedOut?.classList.add("hidden");
+      }
+    };
+
+    if (matchmakingButton) {
+      matchmakingButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-matchmaking");
+          this.publicLobby?.leaveLobby();
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    }
+
+    if (matchmakingButtonLoggedOut) {
+      matchmakingButtonLoggedOut.addEventListener("click", () => {
+        window.showPage?.("page-account");
+      });
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       updateAccountNavButton(userMeResponse);
+      updateMatchmakingButton(userMeResponse !== false);
       const hasLinkedAccount =
         !crazyGamesSDK.isOnCrazyGames() &&
         ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
@@ -506,23 +557,26 @@ class Client {
       console.warn("Host private lobby modal element not found");
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
-    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
-    hostLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-host-lobby");
-        this.publicLobby.leaveLobby();
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
+    if (hostLobbyButton) {
+      hostLobbyButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-host-lobby");
+          this.publicLobby?.leaveLobby();
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    } else {
+      console.debug("host-lobby-button not present");
+    }
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
@@ -544,23 +598,25 @@ class Client {
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
-    if (joinPrivateLobbyButton === null)
-      throw new Error("Missing join-private-lobby-button");
-    joinPrivateLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-join-private-lobby");
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
+    if (joinPrivateLobbyButton) {
+      joinPrivateLobbyButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-join-private-lobby");
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    } else {
+      console.debug("join-private-lobby-button not present");
+    }
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
@@ -897,7 +953,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -919,7 +975,7 @@ class Client {
         }
         this.joinModal.close();
         this.joinPublicModal?.closeWithoutLeaving();
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         incrementGamesPlayed();
 
         document.querySelectorAll(".ad").forEach((ad) => {
@@ -980,7 +1036,7 @@ class Client {
     if (this.gameStop === null) {
       this.restoreUrlAfterLeave();
       document.body.classList.remove("in-game");
-      this.publicLobby.leaveLobby();
+      this.publicLobby?.leaveLobby();
       return;
     }
     console.log("leaving lobby, cancelling game");
@@ -993,7 +1049,8 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-    this.publicLobby.leaveLobby();
+    this.gutterAds.hide();
+    this.publicLobby?.leaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent) {

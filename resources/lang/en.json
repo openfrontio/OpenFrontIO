@@ -467,6 +467,23 @@
     "teams": "Teams",
     "humans_vs_nations": "Humans vs Nations"
   },
+  "mode_selector": {
+    "ffa_title": "Free For All",
+    "ffa_subtitle": "Solo combat",
+    "teams_one_title": "Teams 1",
+    "teams_one_subtitle": "2-7 teams",
+    "teams_two_title": "Teams 2",
+    "teams_two_subtitle": "Duo / Trio / Quad",
+    "hvn_title": "Humans vs Nations",
+    "special_title": "Special Modes",
+    "other_title": "Ranked + More",
+    "other_subtitle": "Solo / HvN / Special / Custom",
+    "ranked_title": "1v1",
+    "ranked_subtitle": "Ranked",
+    "solo_subtitle": "Play Solo",
+    "create_subtitle": "Host custom game",
+    "join_subtitle": "Join with code"
+  },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
