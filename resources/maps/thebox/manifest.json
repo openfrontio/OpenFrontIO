@@ -1,0 +1,92 @@
+{
+  "map": {
+    "height": 2048,
+    "num_land_tiles": 4194304,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 512,
+    "num_land_tiles": 262144,
+    "width": 512
+  },
+  "map4x": {
+    "height": 1024,
+    "num_land_tiles": 1048576,
+    "width": 1024
+  },
+  "name": "The Box",
+  "nations": [
+    {
+      "coordinates": [
+        400,
+        400
+      ],
+      "flag": "",
+      "name": "Northwest Nation"
+    },
+    {
+      "coordinates": [
+        1024,
+        300
+      ],
+      "flag": "",
+      "name": "North Empire"
+    },
+    {
+      "coordinates": [
+        1650,
+        400
+      ],
+      "flag": "",
+      "name": "Northeast Caliphate"
+    },
+    {
+      "coordinates": [
+        350,
+        1024
+      ],
+      "flag": "",
+      "name": "Centerwest Tribe"
+    },
+    {
+      "coordinates": [
+        1024,
+        1024
+      ],
+      "flag": "",
+      "name": "Center Empire"
+    },
+    {
+      "coordinates": [
+        1700,
+        1024
+      ],
+      "flag": "",
+      "name": "Centereast Village"
+    },
+    {
+      "coordinates": [
+        400,
+        1650
+      ],
+      "flag": "",
+      "name": "Southwest Tribute"
+    },
+    {
+      "coordinates": [
+        1024,
+        1750
+      ],
+      "flag": "",
+      "name": "South Empire"
+    },
+    {
+      "coordinates": [
+        1650,
+        1650
+      ],
+      "flag": "",
+      "name": "Southeast Community"
+    }
+  ]
+}
