@@ -4,7 +4,6 @@ import {
   Difficulty,
   Game,
   GameMode,
-  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -18,31 +17,18 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import {
+  GameConfig,
+  GameID,
+  spawnPhaseTurns,
+  TeamCountConfig,
+} from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { Env } from "./Env";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
-
-export const TICKS_PER_SECOND = 10;
-export const SPAWN_PHASE_TICKS = {
-  singleplayer: 100,
-  multiplayer: 300,
-} as const;
-
-export type GameTypeLike = GameType | string | undefined;
-
-export function spawnPhaseTurns(gameType: GameTypeLike): number {
-  return gameType === GameType.Singleplayer
-    ? SPAWN_PHASE_TICKS.singleplayer
-    : SPAWN_PHASE_TICKS.multiplayer;
-}
-
-export function spawnPhaseSeconds(gameType: GameTypeLike): number {
-  return spawnPhaseTurns(gameType) / TICKS_PER_SECOND;
-}
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
@@ -560,7 +546,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return spawnPhaseTurns(this._gameConfig.gameType);
+    return spawnPhaseTurns(this._gameConfig);
   }
   numBots(): number {
     return this.bots();
