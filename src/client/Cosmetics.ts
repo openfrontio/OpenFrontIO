@@ -29,23 +29,30 @@ export async function handlePurchase(
   window.location.href = url;
 }
 
+let __cosmetics: Promise<Cosmetics | null> | null = null;
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
-  try {
-    const response = await fetch(`${getApiBase()}/cosmetics.json`);
-    if (!response.ok) {
-      console.error(`HTTP error! status: ${response.status}`);
-      return null;
-    }
-    const result = CosmeticsSchema.safeParse(await response.json());
-    if (!result.success) {
-      console.error(`Invalid cosmetics: ${result.error.message}`);
-      return null;
-    }
-    return result.data;
-  } catch (error) {
-    console.error("Error getting cosmetics:", error);
-    return null;
+  if (__cosmetics !== null) {
+    return __cosmetics;
   }
+  __cosmetics = (async () => {
+    try {
+      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      if (!response.ok) {
+        console.error(`HTTP error! status: ${response.status}`);
+        return null;
+      }
+      const result = CosmeticsSchema.safeParse(await response.json());
+      if (!result.success) {
+        console.error(`Invalid cosmetics: ${result.error.message}`);
+        return null;
+      }
+      return result.data;
+    } catch (error) {
+      console.error("Error getting cosmetics:", error);
+      return null;
+    }
+  })();
+  return __cosmetics;
 }
 
 export function patternRelationship(

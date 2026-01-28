@@ -5,21 +5,8 @@ import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { renderPatternPreview } from "./components/PatternButton";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
-
-// Module-level cosmetics cache to avoid refetching on every component mount
-let cosmeticsCache: Promise<Cosmetics | null> | null = null;
-
-function getCachedCosmetics(): Promise<Cosmetics | null> {
-  if (!cosmeticsCache) {
-    const fetchPromise = fetchCosmetics();
-    cosmeticsCache = fetchPromise.catch((err) => {
-      cosmeticsCache = null;
-      throw err;
-    });
-  }
-  return cosmeticsCache;
-}
 
 @customElement("pattern-input")
 export class PatternInput extends LitElement {
@@ -63,7 +50,7 @@ export class PatternInput extends LitElement {
     super.connectedCallback();
     this._abortController = new AbortController();
     this.isLoading = true;
-    const cosmetics = await getCachedCosmetics();
+    const cosmetics = await fetchCosmetics();
     if (!this.isConnected) return;
     this.cosmetics = cosmetics;
     this.updateFromSettings();
@@ -87,6 +74,10 @@ export class PatternInput extends LitElement {
   }
 
   render() {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return html``;
+    }
+
     const isDefault = this.pattern === null && this.selectedColor === null;
     const showSelect = this.showSelectLabel && isDefault;
     const buttonTitle = translateText("territory_patterns.title");

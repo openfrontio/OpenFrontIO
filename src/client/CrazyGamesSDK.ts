@@ -3,6 +3,28 @@ declare global {
     CrazyGames?: {
       SDK: {
         init: () => Promise<void>;
+        user: {
+          getUser(): Promise<{
+            username: string;
+          } | null>;
+          addAuthListener: (
+            listener: (
+              user: {
+                username: string;
+              } | null,
+            ) => void,
+          ) => void;
+        };
+        ad: {
+          requestAd: (
+            adType: string,
+            callbacks: {
+              adStarted: () => void;
+              adFinished: () => void;
+              adError: (error: any) => void;
+            },
+          ) => void;
+        };
         game: {
           gameplayStart: () => Promise<void>;
           gameplayStop: () => Promise<void>;
@@ -14,7 +36,9 @@ declare global {
             [key: string]: string | number;
           }) => string;
           hideInviteButton: () => void;
+          inviteLink: (params: { [key: string]: string | number }) => string;
           getInviteParam: (paramName: string) => string | null;
+          isInstantMultiplayer?: boolean;
         };
       };
     };
@@ -24,6 +48,24 @@ declare global {
 export class CrazyGamesSDK {
   private initialized = false;
   private isGameplayActive = false;
+  private readyPromise: Promise<void>;
+  private resolveReady!: () => void;
+
+  constructor() {
+    this.readyPromise = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+  }
+
+  async ready(): Promise<boolean> {
+    const timeout = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(false), 3000);
+    });
+
+    const ready = this.readyPromise.then(() => true);
+
+    return Promise.race([ready, timeout]);
+  }
 
   isOnCrazyGames(): boolean {
     try {
@@ -34,9 +76,17 @@ export class CrazyGamesSDK {
       }
       return false;
     } catch (e) {
+      console.log("[CrazyGames]: ", e);
       // If we get a cross-origin error, we're definitely iframed
       // Check our own referrer as fallback
-      return document.referrer.includes("crazygames");
+      const isCrazyGames = document.referrer.includes("crazygames");
+      console.log("[CrazyGames], contains referrer: ", isCrazyGames);
+      if (isCrazyGames) {
+        return true;
+      }
+
+      // Fallback: on safari private we can't get referrer, so just assume we are in crazygames if in iframe
+      return window.self !== window.top;
     }
   }
 
@@ -70,9 +120,60 @@ export class CrazyGamesSDK {
     try {
       await window.CrazyGames.SDK.init();
       this.initialized = true;
+      this.resolveReady();
       console.log("CrazyGames SDK initialized");
     } catch (error) {
       console.error("Failed to initialize CrazyGames SDK:", error);
+    }
+  }
+
+  async getUsername(): Promise<string | null> {
+    const isReady = await this.ready();
+    if (!isReady) {
+      return null;
+    }
+    try {
+      return (await window.CrazyGames!.SDK.user.getUser())?.username ?? null;
+    } catch (e) {
+      console.log("error getting CrazyGames username: ", e);
+      return null;
+    }
+  }
+
+  async addAuthListener(
+    listener: (
+      user: {
+        username: string;
+      } | null,
+    ) => void,
+  ): Promise<void> {
+    if (!(await this.ready())) {
+      return;
+    }
+
+    try {
+      console.log("registering CrazyGames auth listener");
+      window.CrazyGames!.SDK.user.addAuthListener(listener);
+    } catch (error) {
+      console.error("Failed to add auth listener:", error);
+    }
+  }
+
+  async isInstantMultiplayer(): Promise<boolean> {
+    const isReady = await this.ready();
+    if (!isReady) {
+      return false;
+    }
+    const gameId = await this.getInviteGameId();
+    if (gameId !== null) {
+      // Game id exists, meaning we are joining the game, not hosting it.
+      return false;
+    }
+    try {
+      return window.CrazyGames!.SDK.game.isInstantMultiplayer ?? false;
+    } catch (e) {
+      console.log("Error getting instant multiplayer: ", e);
+      return false;
     }
   }
 
@@ -156,7 +257,6 @@ export class CrazyGamesSDK {
     if (!this.isReady()) {
       return null;
     }
-
     try {
       const options: {
         gameId: string | number;
@@ -165,6 +265,9 @@ export class CrazyGamesSDK {
         gameId,
       };
       const link = window.CrazyGames!.SDK.game.showInviteButton(options);
+      // Store the game so we know that we are host. This way when player refreshes page,
+      // It won't show up as "joining" a game we created.
+      localStorage.setItem(gameId, "true");
       console.log("CrazyGames: invite button shown, link:", link);
       return link;
     } catch (error) {
@@ -186,19 +289,65 @@ export class CrazyGamesSDK {
     }
   }
 
-  getInviteGameId(): string | null {
+  createInviteLink(gameId: string): string | null {
     if (!this.isReady()) {
+      console.warn("CrazyGames SDK not ready, cannot create invite link");
       return null;
     }
 
     try {
-      const value = window.CrazyGames!.SDK.game.getInviteParam("gameId");
-      console.log(`CrazyGames: got invite gameId:`, value);
-      return value;
+      const link = window.CrazyGames!.SDK.game.inviteLink({ gameId });
+      console.log("CrazyGames: created invite link:", link);
+      return link;
+    } catch (error) {
+      console.error("Failed to create invite link:", error);
+      return null;
+    }
+  }
+
+  async getInviteGameId(): Promise<string | null> {
+    if (!(await this.ready())) {
+      return null;
+    }
+    try {
+      const gameId = window.CrazyGames!.SDK.game.getInviteParam("gameId");
+      if (gameId) {
+        console.log("[CrazyGames] found invite link", gameId);
+        // We already created this game, can't join a game we created.
+        return localStorage.getItem(gameId) === "true" ? null : gameId;
+      }
+      return null;
     } catch (error) {
       console.error(`Failed to get invite gameId:`, error);
       return null;
     }
+  }
+
+  requestMidgameAd(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.isReady()) {
+        resolve();
+        return;
+      }
+
+      try {
+        const callbacks = {
+          adFinished: () => {
+            console.log("End midgame ad");
+            resolve();
+          },
+          adError: (error: any) => {
+            console.log("Error midgame ad", error);
+            resolve();
+          },
+          adStarted: () => console.log("Start midgame ad"),
+        };
+        window.CrazyGames!.SDK.ad.requestAd("midgame", callbacks);
+      } catch (error) {
+        console.error("Failed to request midgame ad:", error);
+        resolve();
+      }
+    });
   }
 }
 

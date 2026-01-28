@@ -51,6 +51,7 @@ export class FetchGameMapLoader implements GameMapLoader {
   }
 
   private async loadBinaryFromUrl(url: string) {
+    const startTime = performance.now();
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -58,6 +59,9 @@ export class FetchGameMapLoader implements GameMapLoader {
     }
 
     const data = await response.arrayBuffer();
+    console.log(
+      `[MapLoader] ${url}: ${(performance.now() - startTime).toFixed(0)}ms`,
+    );
     return new Uint8Array(data);
   }
 

@@ -531,7 +531,7 @@ async function startMatchmakingPolling(gm: GameManager) {
             // Wait a few seconds to allow clients to connect.
             console.log(`Starting game ${gameId}`);
             game.start();
-          }, 5000);
+          }, 7000);
         }
       } catch (error) {
         log.error(`Error polling lobby:`, error);

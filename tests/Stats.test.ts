@@ -162,14 +162,14 @@ describe("Stats", () => {
     expect(stats.stats()).toStrictEqual({
       client1: {
         gold: [0n, 1n],
-        conquests: 1n,
+        conquests: [1n],
       },
     });
     stats.goldWar(player1, player2, 1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         gold: [0n, 2n],
-        conquests: 2n,
+        conquests: [2n],
       },
     });
   });

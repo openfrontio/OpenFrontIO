@@ -80,7 +80,7 @@ export class WorkerClient {
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 5000); // 5 second timeout
+      }, 20000); // 20 second timeout
     });
   }
 

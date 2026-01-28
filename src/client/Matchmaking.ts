@@ -3,7 +3,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
-import { getUserMe } from "./Api";
+import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
@@ -240,6 +240,7 @@ export class MatchmakingModal extends BaseModal {
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
   @query("matchmaking-modal") private matchmakingModal?: MatchmakingModal;
+  @state() private isLoggedIn = false;
 
   constructor() {
     super();
@@ -247,6 +248,14 @@ export class MatchmakingButton extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
+    // Listen for user authentication changes
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        const userMeResponse = customEvent.detail as UserMeResponse | false;
+        this.isLoggedIn = hasLinkedAccount(userMeResponse);
+      }
+    });
   }
 
   createRenderRoot() {
@@ -254,17 +263,63 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
+    if (this.isLoggedIn) {
+      return html`
+        <button
+          @click="${this.handleLoggedInClick}"
+          class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
+          title="${translateText("matchmaking_modal.title")}"
+        >
+          <span class="relative z-10 text-2xl">
+            ${translateText("matchmaking_button.play_ranked")}
+          </span>
+          <span
+            class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+          >
+            ${translateText("matchmaking_button.description")}
+          </span>
+        </button>
+
+        <matchmaking-modal></matchmaking-modal>
+      `;
+    }
+
     return html`
-      <div class="z-9999">
-        <o-button
-          @click="${this.open}"
-          translationKey="matchmaking_modal.title"
-          block
-          secondary
-        ></o-button>
-      </div>
+      <button
+        @click="${this.handleLoggedOutClick}"
+        class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
+      >
+        <span class="relative z-10 text-2xl">
+          ${translateText("matchmaking_button.login_required")}
+        </span>
+      </button>
+
       <matchmaking-modal></matchmaking-modal>
     `;
+  }
+
+  private handleLoggedInClick() {
+    const usernameInput = document.querySelector("username-input") as any;
+    const publicLobby = document.querySelector("public-lobby") as any;
+
+    if (usernameInput?.isValid()) {
+      this.open();
+      publicLobby?.leaveLobby();
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput?.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+    }
+  }
+
+  private handleLoggedOutClick() {
+    window.showPage?.("page-account");
   }
 
   private open() {

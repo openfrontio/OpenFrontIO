@@ -10,19 +10,25 @@ const economyRankings = new Set([
   RankType.NavalTrade,
   RankType.TrainTrade,
 ]);
-const tradeRankings = new Set([RankType.NavalTrade, RankType.TrainTrade]);
-const bombRankings = new Set([RankType.Atoms, RankType.Hydros, RankType.MIRV]);
 const warRankings = new Set([
-  RankType.Conquests,
+  RankType.ConquestHumans,
+  RankType.ConquestBots,
   RankType.Atoms,
   RankType.Hydros,
   RankType.MIRV,
+]);
+const tradeRankings = new Set([RankType.NavalTrade, RankType.TrainTrade]);
+const bombRankings = new Set([RankType.Atoms, RankType.Hydros, RankType.MIRV]);
+const conquestRankings = new Set([
+  RankType.ConquestHumans,
+  RankType.ConquestBots,
 ]);
 
 const isEconomyRanking = (t: RankType) => economyRankings.has(t);
 const isTradeRanking = (t: RankType) => tradeRankings.has(t);
 const isBombRanking = (t: RankType) => bombRankings.has(t);
 const isWarRanking = (t: RankType) => warRankings.has(t);
+const isConquestRanking = (t: RankType) => conquestRankings.has(t);
 
 @customElement("ranking-controls")
 export class RankingControls extends LitElement {
@@ -41,7 +47,7 @@ export class RankingControls extends LitElement {
           "game_info_modal.duration",
         )}
         ${this.renderButton(
-          RankType.Conquests,
+          RankType.ConquestHumans,
           isWarRanking(this.rankType),
           "game_info_modal.war",
         )}
@@ -78,8 +84,8 @@ export class RankingControls extends LitElement {
           "game_info_modal.bombs",
         )}
         ${this.renderSubButton(
-          RankType.Conquests,
-          this.rankType === RankType.Conquests,
+          RankType.ConquestHumans,
+          isConquestRanking(this.rankType),
           "game_info_modal.conquests",
         )}
       </div>

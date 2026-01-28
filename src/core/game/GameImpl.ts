@@ -104,6 +104,8 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
   ) {
+    const constructorStart = performance.now();
+
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -124,6 +126,10 @@ export class GameImpl implements Game {
         { cachePaths: true },
       );
     }
+
+    console.log(
+      `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
+    );
   }
 
   private populateTeams() {
