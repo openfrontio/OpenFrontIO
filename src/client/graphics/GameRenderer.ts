@@ -25,6 +25,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NukeRenderUtilLayer } from "./layers/NukeRenderUtilLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
@@ -211,9 +212,6 @@ export function createRenderer(
   }
   headsUpMessage.game = game;
 
-  const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
-
   const performanceOverlay = document.querySelector(
     "performance-overlay",
   ) as PerformanceOverlay;
@@ -244,20 +242,36 @@ export function createRenderer(
   }
   immunityTimer.game = game;
 
+  // Layer for all nuke trajectory and alliance prediction calculations.
+  // Passed onto several other layers down the line for property access.
+  const nukeRenderUtilLayer = new NukeRenderUtilLayer(
+    game,
+    eventBus,
+    uiState,
+    transformHandler,
+  );
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
+    nukeRenderUtilLayer,
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, eventBus, transformHandler),
-    structureLayer,
-    samRadiusLayer,
+    new StructureLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
-    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
+    new StructureIconsLayer(
+      game,
+      eventBus,
+      uiState,
+      transformHandler,
+      nukeRenderUtilLayer,
+    ),
+    new SAMRadiusLayer(game, eventBus, uiState, nukeRenderUtilLayer),
+    new NukeTrajectoryPreviewLayer(game, nukeRenderUtilLayer),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
