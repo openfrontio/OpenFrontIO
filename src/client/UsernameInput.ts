@@ -43,8 +43,10 @@ export class UsernameInput extends LitElement {
     const stored = this.getUsername();
     this.parseAndSetUsername(stored);
     crazyGamesSDK.getUsername().then((username) => {
-      this.parseAndSetUsername(username ?? genAnonUsername());
-      this.requestUpdate();
+      if (username) {
+        this.parseAndSetUsername(username ?? genAnonUsername());
+        this.requestUpdate();
+      }
     });
     crazyGamesSDK.addAuthListener((user) => {
       if (user) {
