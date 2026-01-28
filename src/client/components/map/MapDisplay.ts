@@ -1,8 +1,8 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType } from "../../core/game/Game";
-import { terrainMapFileLoader } from "../TerrainMapFileLoader";
-import { translateText } from "../Utils";
+import { Difficulty, GameMapType } from "../../../core/game/Game";
+import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
+import { translateText } from "../../Utils";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {

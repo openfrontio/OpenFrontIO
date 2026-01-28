@@ -23,6 +23,26 @@ export class Railroad {
     this.from.removeRailroad(this);
     this.to.removeRailroad(this);
   }
+
+  getClosestTileIndex(game: Game, to: TileRef): number {
+    if (this.tiles.length === 0) return -1;
+    const toX = game.x(to);
+    const toY = game.y(to);
+    let closestIndex = 0;
+    let minDistSquared = Infinity;
+    for (let i = 0; i < this.tiles.length; i++) {
+      const tile = this.tiles[i];
+      const dx = game.x(tile) - toX;
+      const dy = game.y(tile) - toY;
+      const distSquared = dx * dx + dy * dy;
+
+      if (distSquared < minDistSquared) {
+        minDistSquared = distSquared;
+        closestIndex = i;
+      }
+    }
+    return closestIndex;
+  }
 }
 
 export function getOrientedRailroad(

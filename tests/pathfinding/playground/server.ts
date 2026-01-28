@@ -8,6 +8,7 @@ import {
   listMaps,
 } from "./api/maps.js";
 import { clearAdapterCaches, computePath } from "./api/pathfinding.js";
+import { computeSpatialQuery } from "./api/spatialQuery.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 5555;
@@ -153,6 +154,58 @@ app.post("/api/pathfind", async (req: Request, res: Response) => {
         message: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+});
+
+/**
+ * POST /api/spatial-query
+ * Compute spatial query for transport ship (closestShoreByWater)
+ *
+ * Request body:
+ * {
+ *   map: string,
+ *   ownedTiles: number[],  // Array of tile indices (y * width + x)
+ *   target: [x, y]
+ * }
+ */
+app.post("/api/spatial-query", async (req: Request, res: Response) => {
+  try {
+    const { map, ownedTiles, target } = req.body;
+
+    if (!map || !ownedTiles || !target) {
+      return res.status(400).json({
+        error: "Invalid request",
+        message: "Missing required fields: map, ownedTiles, target",
+      });
+    }
+
+    if (!Array.isArray(ownedTiles)) {
+      return res.status(400).json({
+        error: "Invalid ownedTiles",
+        message: "ownedTiles must be an array of tile indices",
+      });
+    }
+
+    if (!Array.isArray(target) || target.length !== 2) {
+      return res.status(400).json({
+        error: "Invalid target",
+        message: "target must be [x, y] coordinate array",
+      });
+    }
+
+    const result = await computeSpatialQuery(
+      map,
+      ownedTiles,
+      target as [number, number],
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error computing spatial query:", error);
+    res.status(500).json({
+      error: "Failed to compute spatial query",
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
