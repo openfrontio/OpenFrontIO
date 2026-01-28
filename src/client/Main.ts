@@ -1,7 +1,12 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
+import {
+  GAME_ID_REGEX,
+  GameInfo,
+  GameRecord,
+  GameStartInfo,
+} from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -23,6 +28,7 @@ import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
+import { JoinPublicLobbyModal } from "./JoinPublicLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -41,6 +47,7 @@ import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import { TurnstileManager } from "./TurnstileManager";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -205,6 +212,8 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
+  publicLobbyInfo?: GameInfo;
 }
 
 class Client {
@@ -212,11 +221,16 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
+  private preserveDeepLinkUrl = false;
+  private joinAttemptId = 0;
+  private joinAbortController: AbortController | null = null;
+  private skipNextHashChange = false;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
 
   private joinModal: JoinPrivateLobbyModal;
+  private joinPublicModal: JoinPublicLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
@@ -224,19 +238,30 @@ class Client {
   private matchmakingModal: MatchmakingModal;
 
   private gutterAds: GutterAds;
+  private turnstileManager: TurnstileManager;
+  private serverConfigPrefetch: Promise<
+    Awaited<ReturnType<typeof getServerConfigFromClient>>
+  > | null = null;
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
-
-  constructor() {}
+  constructor() {
+    this.turnstileManager = new TurnstileManager(() =>
+      this.getServerConfigPrefetched(),
+    );
+  }
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // Warm critical join dependencies to avoid blocking on first join.
+    const configPrefetch = getServerConfigFromClient();
+    configPrefetch.catch((error) => {
+      console.warn("Server config prefetch failed", error);
+      if (this.serverConfigPrefetch === configPrefetch) {
+        this.serverConfigPrefetch = null;
+      }
+    });
+    this.serverConfigPrefetch = configPrefetch;
+    // Prefetch turnstile token so it is available when the user joins a lobby.
+    this.turnstileManager.warmup();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -296,7 +321,6 @@ class Client {
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
     );
-
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
@@ -411,6 +435,7 @@ class Client {
         setTimeout(() => {
           this.patternsModal.refresh();
         }, 50);
+        this.turnstileManager.warmup();
       }
     });
 
@@ -555,6 +580,17 @@ class Client {
     if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
       console.warn("Join private lobby modal element not found");
     }
+    this.joinPublicModal = document.querySelector(
+      "join-public-lobby-modal",
+    ) as JoinPublicLobbyModal;
+    if (
+      !this.joinPublicModal ||
+      !(this.joinPublicModal instanceof JoinPublicLobbyModal)
+    ) {
+      console.warn("Join public lobby modal element not found");
+    } else {
+      this.joinPublicModal.eventBus = this.eventBus;
+    }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
@@ -586,8 +622,17 @@ class Client {
     this.handleUrl();
 
     const onHashUpdate = () => {
+      if (this.skipNextHashChange) {
+        this.skipNextHashChange = false;
+        return;
+      }
+      this.cancelJoinInFlight();
       // Reset the UI to its initial state
       this.joinModal?.close();
+      this.joinPublicModal?.close();
+      if (this.gameStop !== null) {
+        this.handleLeaveLobby();
+      }
 
       onJoinChanged();
     };
@@ -605,6 +650,7 @@ class Client {
 
           if (!isConfirmed) {
             // Rollback navigator history
+            this.skipNextHashChange = true;
             history.pushState(null, "", this.currentUrl);
             return;
           }
@@ -658,6 +704,9 @@ class Client {
   }
 
   private handleUrl() {
+    if (this.joinAbortController) {
+      return;
+    }
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
@@ -743,6 +792,7 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
+      this.preserveDeepLinkUrl = true;
       window.showPage?.("page-join-private-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
@@ -762,18 +812,55 @@ class Client {
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
+    const joinAttemptId = ++this.joinAttemptId;
+    this.joinAbortController?.abort();
+    const joinAbortController = (this.joinAbortController =
+      new AbortController());
     console.log(`joining lobby ${lobby.gameID}`);
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop(true);
       document.body.classList.remove("in-game");
     }
-    const config = await getServerConfigFromClient();
-    this.updateJoinUrlForShare(lobby.gameID, config);
-
-    const pattern = this.userSettings.getSelectedPatternName(
-      await fetchCosmetics(),
-    );
+    if (lobby.source === "public") {
+      this.joinModal?.close();
+      this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+    }
+    let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
+    let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
+    let turnstileToken: string | null = null;
+    try {
+      config = await this.getServerConfigPrefetched();
+      const shouldRequestToken =
+        config.env() !== GameEnv.Dev &&
+        lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer;
+      [cosmetics, turnstileToken] = await Promise.all([
+        fetchCosmetics(),
+        shouldRequestToken
+          ? this.turnstileManager.getTokenForJoin()
+          : Promise.resolve(null),
+      ]);
+    } catch (error) {
+      if (joinAbortController.signal.aborted) {
+        return;
+      }
+      if (joinAttemptId === this.joinAttemptId) {
+        this.joinModal?.close();
+        this.joinPublicModal?.closeWithoutLeaving();
+        if (this.joinAbortController === joinAbortController) {
+          this.joinAbortController = null;
+        }
+      }
+      console.error("Failed to prepare join flow:", error);
+      return;
+    }
+    if (
+      joinAttemptId !== this.joinAttemptId ||
+      joinAbortController.signal.aborted
+    ) {
+      return;
+    }
+    const pattern = this.userSettings.getSelectedPatternName(cosmetics);
 
     this.gameStop = joinLobby(
       this.eventBus,
@@ -789,7 +876,7 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
-        turnstileToken: await this.getTurnstileToken(lobby),
+        turnstileToken,
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
@@ -805,6 +892,7 @@ class Client {
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
+        this.joinPublicModal?.closeWithoutLeaving();
         [
           "single-player-modal",
           "host-lobby-modal",
@@ -851,7 +939,12 @@ class Client {
         this.gutterAds.hide();
       },
       () => {
+        this.preserveDeepLinkUrl = false;
+        if (this.joinAbortController === joinAbortController) {
+          this.joinAbortController = null;
+        }
         this.joinModal.close();
+        this.joinPublicModal?.closeWithoutLeaving();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
@@ -862,6 +955,8 @@ class Client {
         crazyGamesSDK.loadingStop();
         crazyGamesSDK.gameplayStart();
         document.body.classList.add("in-game");
+
+        this.updateJoinUrlForShare(lobby.gameID, config);
 
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
@@ -891,8 +986,24 @@ class Client {
     }
   }
 
+  private restoreUrlAfterLeave() {
+    try {
+      if (!this.preserveDeepLinkUrl) {
+        history.replaceState(null, "", "/");
+      }
+    } catch (e) {
+      console.warn("Failed to restore URL on leave:", e);
+    }
+  }
+
   private async handleLeaveLobby(/* event: CustomEvent */) {
+    this.cancelJoinInFlight();
+    this.turnstileManager.clearTokenAndRefresh();
+    this.turnstileManager.warmup();
     if (this.gameStop === null) {
+      this.restoreUrlAfterLeave();
+      document.body.classList.remove("in-game");
+      this.publicLobby.leaveLobby();
       return;
     }
     console.log("leaving lobby, cancelling game");
@@ -900,11 +1011,7 @@ class Client {
     this.gameStop = null;
     this.currentUrl = null;
 
-    try {
-      history.replaceState(null, "", "/");
-    } catch (e) {
-      console.warn("Failed to restore URL on leave:", e);
-    }
+    this.restoreUrlAfterLeave();
 
     document.body.classList.remove("in-game");
 
@@ -954,37 +1061,24 @@ class Client {
     }, 100);
   }
 
-  private async getTurnstileToken(
-    lobby: JoinLobbyEvent,
-  ): Promise<string | null> {
-    const config = await getServerConfigFromClient();
-    if (
-      config.env() === GameEnv.Dev ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
-    ) {
-      return null;
+  private async getServerConfigPrefetched() {
+    const configPromise =
+      this.serverConfigPrefetch ?? getServerConfigFromClient();
+    const config = await configPromise;
+    if (this.serverConfigPrefetch === configPromise) {
+      this.serverConfigPrefetch = null;
     }
+    return config;
+  }
 
-    if (this.turnstileTokenPromise === null) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
-
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
+  private cancelJoinInFlight() {
+    const hasJoinInFlight = Boolean(this.joinAbortController);
+    if (hasJoinInFlight) {
+      this.joinAttemptId++;
+      if (this.joinAbortController) {
+        this.joinAbortController.abort();
+        this.joinAbortController = null;
+      }
     }
   }
 }
@@ -1000,44 +1094,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
-}
-
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
-  }
-
-  const config = await getServerConfigFromClient();
-  const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
-  });
 }

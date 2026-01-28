@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { restoreBaseUrlUnlessDeepLink, translateText } from "../client/Utils";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -8,15 +8,16 @@ import {
   GameInfo,
   GameRecordSchema,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
+import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
@@ -143,26 +144,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
     `;
   }
 
-  private renderConfigItem(
-    label: string,
-    value: string | TemplateResult,
-  ): TemplateResult {
-    return html`
-      <div
-        class="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-center min-w-[100px]"
-      >
-        <span
-          class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
-          >${label}</span
-        >
-        <span
-          class="text-white font-bold text-sm w-full break-words hyphens-auto"
-          >${value}</span
-        >
-      </div>
-    `;
-  }
-
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -180,25 +161,33 @@ export class JoinPrivateLobbyModal extends BaseModal {
 
     return html`
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        ${this.renderConfigItem(translateText("map.map"), mapName)}
-        ${this.renderConfigItem(translateText("host_modal.mode"), modeName)}
-        ${this.renderConfigItem(
-          translateText("difficulty.difficulty"),
-          diffName,
-        )}
-        ${this.renderConfigItem(
-          translateText("host_modal.bots"),
-          c.bots.toString(),
-        )}
+        <lobby-config-item
+          .label=${translateText("map.map")}
+          .value=${mapName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("host_modal.mode")}
+          .value=${modeName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("difficulty.difficulty")}
+          .value=${diffName}
+        ></lobby-config-item>
+        <lobby-config-item
+          .label=${translateText("host_modal.bots")}
+          .value=${c.bots.toString()}
+        ></lobby-config-item>
         ${c.gameMode !== "Free For All" && c.playerTeams
-          ? this.renderConfigItem(
-              typeof c.playerTeams === "string"
-                ? translateText("host_modal.team_type")
-                : translateText("host_modal.team_count"),
-              typeof c.playerTeams === "string"
-                ? translateText("host_modal.teams_" + c.playerTeams)
-                : c.playerTeams.toString(),
-            )
+          ? html`
+              <lobby-config-item
+                .label=${typeof c.playerTeams === "string"
+                  ? translateText("host_modal.team_type")
+                  : translateText("host_modal.team_count")}
+                .value=${typeof c.playerTeams === "string"
+                  ? translateText("host_modal.teams_" + c.playerTeams)
+                  : c.playerTeams.toString()}
+              ></lobby-config-item>
+            `
           : html``}
       </div>
       ${this.renderDisabledUnits()}
@@ -285,8 +274,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
     }
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      // Reset URL to base when modal closes
-      history.replaceState(null, "", window.location.origin + "/");
+      // Reset URL to base when modal closes (unless deep-linked to a game).
+      restoreBaseUrlUnlessDeepLink();
     }
 
     this.hasJoined = false;
@@ -415,13 +404,27 @@ export class JoinPrivateLobbyModal extends BaseModal {
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    if (!response.ok) {
+      return false;
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return false;
+    }
+
+    let gameInfo: { exists?: boolean };
+    try {
+      gameInfo = await response.json();
+    } catch (error) {
+      console.warn("Failed to parse active lobby response", error);
+      return false;
+    }
 
     if (gameInfo.exists) {
       this.showMessage(translateText("private_lobby.joined_waiting"));
       this.message = "";
       this.hasJoined = true;
-      this.currentClientID = generateID();
+      this.currentClientID = getClientIDForGame(lobbyId);
 
       // If the modal closes as part of joining the game, do not leave the lobby
       this.leaveLobbyOnClose = false;
@@ -481,7 +484,10 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
-    this.currentClientID = generateID();
+    // If the modal closes as part of joining the replay, do not leave/reset URL
+    this.leaveLobbyOnClose = false;
+
+    this.currentClientID = getClientIDForGame(lobbyId);
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {

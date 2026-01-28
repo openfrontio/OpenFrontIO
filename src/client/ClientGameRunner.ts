@@ -5,6 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
@@ -96,6 +97,10 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    if (message.type === "lobby_info") {
+      eventBus.emit(new LobbyInfoEvent(message.lobby));
+      return;
+    }
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
