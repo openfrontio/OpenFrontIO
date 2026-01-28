@@ -104,11 +104,17 @@ export class DesktopNavBar extends LitElement {
           data-page="page-news"
           data-i18n="main.news"
         ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500 relative"
-          data-page="page-item-store"
-          data-i18n="main.store"
-        ></button>
+        <div class="relative">
+          <button
+            class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-item-store"
+            data-i18n="main.store"
+          ></button>
+          <span
+            class="absolute -top-3 -right-2 bg-gradient-to-br from-red-600 to-red-700 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded rotate-12 shadow-lg shadow-red-600/50 animate-pulse pointer-events-none"
+            data-i18n="main.store_new_badge"
+          ></span>
+        </div>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-settings"
