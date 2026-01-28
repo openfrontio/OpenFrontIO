@@ -34,11 +34,36 @@ describe("AttackStats", () => {
 
   test("should increase war gold stat when a player is eliminated", () => {
     expect(player1.sharesBorderWith(player2)).toBeTruthy();
+    // Player2 must attack to be considered active (otherwise gold won't transfer)
+    game.addExecution(
+      new AttackExecution(1, player2, game.terraNullius().id()),
+    );
+    game.executeNextTick();
     performAttack(game, player1, player2);
     expectWarGoldStatIsIncreasedAfterKill(game, player1, player2);
   });
 
+  test("should NOT increase war gold stat when a inactive player is eliminated", () => {
+    expect(player1.sharesBorderWith(player2)).toBeTruthy();
+
+    const attackerStatsBefore = game.stats().stats()[player1.clientID()!];
+    const warGoldBefore = attackerStatsBefore?.gold?.[GOLD_INDEX_WAR] ?? 0n;
+
+    performAttack(game, player1, player2);
+
+    const attackerStatsAfter = game.stats().stats()[player1.clientID()!];
+    const warGoldAfter = attackerStatsAfter?.gold?.[GOLD_INDEX_WAR] ?? 0n;
+
+    expect(warGoldAfter).toBe(warGoldBefore);
+  });
+
   test("should increase war gold stat when elimination occurs via territory annexation", () => {
+    // Player2 must attack to be considered active (otherwise gold won't transfer)
+    game.addExecution(
+      new AttackExecution(1, player2, game.terraNullius().id()),
+    );
+    game.executeNextTick();
+
     // Mark every tile on the map as owned by player1
     for (let x = 0; x < game.map().width(); x++) {
       for (let y = 0; y < game.map().height(); y++) {
