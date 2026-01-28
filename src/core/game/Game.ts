@@ -103,7 +103,7 @@ export enum GameMapType {
   Montreal = "Montreal",
   NewYorkCity = "New York City",
   Achiran = "Achiran",
-  BaikalNukeWars = "Baikal (Nuke Wars)",
+  BaikalNukeWars = "Baikal Nuke Wars",
   FourIslands = "Four Islands",
   Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
@@ -213,6 +213,8 @@ export enum GameMapSize {
 export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
+  isCrowded: boolean;
+  startingGold?: number;
 }
 
 export interface UnitInfo {
@@ -756,6 +758,7 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
   setPaused(paused: boolean): void;

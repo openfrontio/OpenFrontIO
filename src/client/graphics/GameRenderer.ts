@@ -305,6 +305,7 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
 
   constructor(
     private game: GameView,
@@ -416,7 +417,28 @@ export class GameRenderer {
   }
 
   tick() {
-    this.layers.forEach((l) => l.tick?.());
+    const nowMs = performance.now();
+
+    for (const layer of this.layers) {
+      if (!layer.tick) {
+        continue;
+      }
+
+      const state = this.layerTickState.get(layer) ?? {
+        lastTickAtMs: -Infinity,
+      };
+
+      const intervalMs = layer.getTickIntervalMs?.() ?? 0;
+      if (intervalMs > 0 && nowMs - state.lastTickAtMs < intervalMs) {
+        this.layerTickState.set(layer, state);
+        continue;
+      }
+
+      state.lastTickAtMs = nowMs;
+      this.layerTickState.set(layer, state);
+
+      layer.tick();
+    }
   }
 
   resize(width: number, height: number): void {

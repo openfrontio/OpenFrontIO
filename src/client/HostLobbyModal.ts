@@ -1,6 +1,6 @@
 import { TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { copyToClipboard, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
@@ -12,10 +12,7 @@ import {
   Quads,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
-import { getCompactMapNationCount } from "../core/game/NationCreation";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -26,16 +23,20 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/LobbyTeamView";
-import "./components/Maps";
+import "./components/LobbyPlayerView";
+import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  renderToggleInputCard,
+  renderToggleInputCardInput,
+} from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
@@ -60,20 +61,21 @@ export class HostLobbyModal extends BaseModal {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
+  @state() private goldMultiplier: boolean = false;
+  @state() private goldMultiplierValue: number | undefined = undefined;
+  @state() private startingGold: boolean = false;
+  @state() private startingGoldValue: number | undefined = undefined;
   @state() private lobbyId = "";
-  @state() private copySuccess = false;
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
   @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
@@ -127,6 +129,35 @@ export class HostLobbyModal extends BaseModal {
   }
 
   render() {
+    const maxTimerHandlers = this.createToggleHandlers(
+      () => this.maxTimer,
+      (val) => (this.maxTimer = val),
+      () => this.maxTimerValue,
+      (val) => (this.maxTimerValue = val),
+      30,
+    );
+    const spawnImmunityHandlers = this.createToggleHandlers(
+      () => this.spawnImmunity,
+      (val) => (this.spawnImmunity = val),
+      () => this.spawnImmunityDurationMinutes,
+      (val) => (this.spawnImmunityDurationMinutes = val),
+      5,
+    );
+    const goldMultiplierHandlers = this.createToggleHandlers(
+      () => this.goldMultiplier,
+      (val) => (this.goldMultiplier = val),
+      () => this.goldMultiplierValue,
+      (val) => (this.goldMultiplierValue = val),
+      2,
+    );
+    const startingGoldHandlers = this.createToggleHandlers(
+      () => this.startingGold,
+      (val) => (this.startingGold = val),
+      () => this.startingGoldValue,
+      (val) => (this.startingGoldValue = val),
+      5000000,
+    );
+
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -140,91 +171,11 @@ export class HostLobbyModal extends BaseModal {
           },
           ariaLabel: translateText("common.back"),
           rightContent: html`
-            <!-- Lobby ID Box -->
-            <div
-              class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-            >
-              <button
-                @click=${() => {
-                  this.lobbyIdVisible = !this.lobbyIdVisible;
-                  this.requestUpdate();
-                }}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("user_setting.toggle_visibility")}"
-              >
-                ${this.lobbyIdVisible
-                  ? html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                      ></path>
-                    </svg>`
-                  : html`<svg
-                      viewBox="0 0 512 512"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                      ></path>
-                      <path
-                        d="M144 256l224 0"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="32"
-                        stroke-linecap="round"
-                      ></path>
-                    </svg>`}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                @dblclick=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.add("select-all");
-                }}
-                @mouseleave=${(e: Event) => {
-                  (e.currentTarget as HTMLElement).classList.remove(
-                    "select-all",
-                  );
-                }}
-                class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider bg-transparent border-0"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                ${this.copySuccess
-                  ? translateText("common.copied")
-                  : this.lobbyIdVisible
-                    ? this.lobbyId
-                    : "••••••••"}
-              </button>
-              <button
-                @click=${this.copyToClipboard}
-                class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                title="${translateText("common.click_to_copy")}"
-                aria-label="${translateText("common.click_to_copy")}"
-                type="button"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  height="16px"
-                  width="16px"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                  />
-                </svg>
-              </button>
-            </div>
+            <copy-button
+              .lobbyId=${this.lobbyId}
+              .lobbySuffix=${this.lobbyUrlSuffix}
+              include-lobby-query
+            ></copy-button>
           `,
         })}
 
@@ -256,80 +207,14 @@ export class HostLobbyModal extends BaseModal {
                   ${translateText("map.map")}
                 </h3>
               </div>
-              <div class="space-y-8">
-                <!-- Use the imported mapCategories -->
-                ${Object.entries(mapCategories).map(
-                  ([categoryKey, maps]) => html`
-                    <div class="w-full">
-                      <h4
-                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                      >
-                        ${translateText(`map_categories.${categoryKey}`)}
-                      </h4>
-                      <div
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                      >
-                        ${maps.map((mapValue) => {
-                          const mapKey = Object.entries(GameMapType).find(
-                            ([, v]) => v === mapValue,
-                          )?.[0];
-                          return html`
-                            <div
-                              @click=${() => this.handleMapSelection(mapValue)}
-                              class="cursor-pointer transition-transform duration-200 active:scale-95"
-                            >
-                              <map-display
-                                .mapKey=${mapKey}
-                                .selected=${!this.useRandomMap &&
-                                this.selectedMap === mapValue}
-                                .translation=${translateText(
-                                  `map.${mapKey?.toLowerCase()}`,
-                                )}
-                              ></map-display>
-                            </div>
-                          `;
-                        })}
-                      </div>
-                    </div>
-                  `,
-                )}
-                <!-- Random Map Card -->
-                <div class="w-full pt-4 border-t border-white/5">
-                  <h4
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                  >
-                    ${translateText("map_categories.special")}
-                  </h4>
-                  <div
-                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                  >
-                    <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleSelectRandomMap}
-                    >
-                      <div
-                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-                      >
-                        <img
-                          src=${randomMap}
-                          alt=${translateText("map.random")}
-                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                        />
-                      </div>
-                      <div class="p-3 text-center border-t border-white/5">
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                        >
-                          ${translateText("map.random")}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <map-picker
+                .selectedMap=${this.selectedMap}
+                .useRandomMap=${this.useRandomMap}
+                .randomMapDivider=${true}
+                .onSelectMap=${(mapValue: GameMapType) =>
+                  this.handleMapSelection(mapValue)}
+                .onSelectRandom=${() => this.handleSelectRandomMap()}
+              ></map-picker>
             </div>
 
             <!-- Difficulty Selection -->
@@ -584,161 +469,79 @@ export class HostLobbyModal extends BaseModal {
                 )}
 
                 <!-- Max Timer -->
-                <div
-                  role="button"
-                  tabindex="0"
-                  @click=${this.createToggleHandlers(
-                    () => this.maxTimer,
-                    (val) => (this.maxTimer = val),
-                    () => this.maxTimerValue,
-                    (val) => (this.maxTimerValue = val),
-                    30,
-                  ).click}
-                  @keydown=${this.createToggleHandlers(
-                    () => this.maxTimer,
-                    (val) => (this.maxTimer = val),
-                    () => this.maxTimerValue,
-                    (val) => (this.maxTimerValue = val),
-                    30,
-                  ).keydown}
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .maxTimer
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
-                >
-                  <div class="flex items-center justify-center w-full mt-1">
-                    <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .maxTimer
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
-                    >
-                      ${this.maxTimer
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
-                    </div>
-                  </div>
-
-                  ${this.maxTimer
-                    ? html`
-                        <input
-                          type="number"
-                          min="0"
-                          max="120"
-                          .value=${String(this.maxTimerValue ?? 0)}
-                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                          @click=${(e: Event) => e.stopPropagation()}
-                          @input=${this.handleMaxTimerValueChanges}
-                          @keydown=${this.handleMaxTimerValueKeyDown}
-                          placeholder=${translateText(
-                            "host_modal.mins_placeholder",
-                          )}
-                        />
-                      `
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
-
-                  <div
-                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
-                      .maxTimer
-                      ? "text-white"
-                      : "text-white/60"}"
-                  >
-                    ${translateText("host_modal.max_timer")}
-                  </div>
-                </div>
+                ${renderToggleInputCard({
+                  labelKey: "host_modal.max_timer",
+                  checked: this.maxTimer,
+                  onClick: maxTimerHandlers.click,
+                  input: renderToggleInputCardInput({
+                    min: 0,
+                    max: 120,
+                    value: this.maxTimerValue ?? 0,
+                    ariaLabel: translateText("host_modal.max_timer"),
+                    placeholder: translateText("host_modal.mins_placeholder"),
+                    onInput: this.handleMaxTimerValueChanges,
+                    onKeyDown: this.handleMaxTimerValueKeyDown,
+                  }),
+                })}
 
                 <!-- Spawn Immunity -->
-                <div
-                  role="button"
-                  tabindex="0"
-                  @click=${this.createToggleHandlers(
-                    () => this.spawnImmunity,
-                    (val) => (this.spawnImmunity = val),
-                    () => this.spawnImmunityDurationMinutes,
-                    (val) => (this.spawnImmunityDurationMinutes = val),
-                    5,
-                  ).click}
-                  @keydown=${this.createToggleHandlers(
-                    () => this.spawnImmunity,
-                    (val) => (this.spawnImmunity = val),
-                    () => this.spawnImmunityDurationMinutes,
-                    (val) => (this.spawnImmunityDurationMinutes = val),
-                    5,
-                  ).keydown}
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .spawnImmunity
-                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-80"}"
-                >
-                  <div class="flex items-center justify-center w-full mt-1">
-                    <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .spawnImmunity
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
-                    >
-                      ${this.spawnImmunity
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
-                    </div>
-                  </div>
+                ${renderToggleInputCard({
+                  labelKey: "host_modal.player_immunity_duration",
+                  checked: this.spawnImmunity,
+                  onClick: spawnImmunityHandlers.click,
+                  input: renderToggleInputCardInput({
+                    min: 0,
+                    max: 120,
+                    step: 1,
+                    value: this.spawnImmunityDurationMinutes ?? 0,
+                    ariaLabel: translateText(
+                      "host_modal.player_immunity_duration",
+                    ),
+                    placeholder: translateText("host_modal.mins_placeholder"),
+                    onInput: this.handleSpawnImmunityDurationInput,
+                    onKeyDown: this.handleSpawnImmunityDurationKeyDown,
+                  }),
+                })}
 
-                  ${this.spawnImmunity
-                    ? html`
-                        <input
-                          type="number"
-                          min="0"
-                          max="120"
-                          step="1"
-                          .value=${String(
-                            this.spawnImmunityDurationMinutes ?? 0,
-                          )}
-                          class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                          @click=${(e: Event) => e.stopPropagation()}
-                          @input=${this.handleSpawnImmunityDurationInput}
-                          @keydown=${this.handleSpawnImmunityDurationKeyDown}
-                          placeholder=${translateText(
-                            "host_modal.mins_placeholder",
-                          )}
-                        />
-                      `
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
+                <!-- Gold Multiplier -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.gold_multiplier",
+                  checked: this.goldMultiplier,
+                  onClick: goldMultiplierHandlers.click,
+                  input: renderToggleInputCardInput({
+                    id: "gold-multiplier-value",
+                    min: 0.1,
+                    max: 1000,
+                    step: "any",
+                    value: this.goldMultiplierValue ?? "",
+                    ariaLabel: translateText("single_modal.gold_multiplier"),
+                    placeholder: translateText(
+                      "single_modal.gold_multiplier_placeholder",
+                    ),
+                    onChange: this.handleGoldMultiplierValueChanges,
+                    onKeyDown: this.handleGoldMultiplierValueKeyDown,
+                  }),
+                })}
 
-                  <div
-                    class="text-[10px] uppercase font-bold tracking-wider text-center w-full leading-tight ${this
-                      .spawnImmunity
-                      ? "text-white"
-                      : "text-white/60"}"
-                  >
-                    ${translateText("host_modal.player_immunity_duration")}
-                  </div>
-                </div>
+                <!-- Starting Gold -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.starting_gold",
+                  checked: this.startingGold,
+                  onClick: startingGoldHandlers.click,
+                  input: renderToggleInputCardInput({
+                    id: "starting-gold-value",
+                    min: 0,
+                    max: 1000000000,
+                    step: 100000,
+                    value: this.startingGoldValue ?? "",
+                    ariaLabel: translateText("single_modal.starting_gold"),
+                    placeholder: translateText(
+                      "single_modal.starting_gold_placeholder",
+                    ),
+                    onInput: this.handleStartingGoldValueChanges,
+                    onKeyDown: this.handleStartingGoldValueKeyDown,
+                  }),
+                })}
               </div>
             </div>
 
@@ -778,33 +581,17 @@ export class HostLobbyModal extends BaseModal {
             </div>
 
             <!-- Player List -->
-            <div class="border-t border-white/10 pt-6">
-              <div class="flex justify-between items-center mb-4">
-                <div
-                  class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                >
-                  ${this.clients.length}
-                  ${this.clients.length === 1
-                    ? translateText("host_modal.player")
-                    : translateText("host_modal.players")}
-                  <span style="margin: 0 8px;">•</span>
-                  ${this.getEffectiveNationCount()}
-                  ${this.getEffectiveNationCount() === 1
-                    ? translateText("host_modal.nation_player")
-                    : translateText("host_modal.nation_players")}
-                </div>
-              </div>
-
-              <lobby-team-view
-                class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                .gameMode=${this.gameMode}
-                .clients=${this.clients}
-                .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                .teamCount=${this.teamCount}
-                .nationCount=${this.getEffectiveNationCount()}
-                .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
-              ></lobby-team-view>
-            </div>
+            <lobby-player-view
+              .gameMode=${this.gameMode}
+              .clients=${this.clients}
+              .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+              .currentClientID=${this.lobbyCreatorClientID}
+              .teamCount=${this.teamCount}
+              .nationCount=${this.nationCount}
+              .disableNations=${this.disableNations}
+              .isCompactMap=${this.compactMap}
+              .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+            ></lobby-player-view>
           </div>
         </div>
 
@@ -841,10 +628,6 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
-    this.lobbyIdVisible = this.userSettings.get(
-      "settings.lobbyIdVisibility",
-      true,
-    );
 
     createLobby(this.lobbyCreatorClientID)
       .then(async (lobby) => {
@@ -963,11 +746,13 @@ export class HostLobbyModal extends BaseModal {
     this.useRandomMap = false;
     this.disabledUnits = [];
     this.lobbyId = "";
-    this.copySuccess = false;
     this.clients = [];
     this.lobbyCreatorClientID = "";
-    this.lobbyIdVisible = true;
     this.nationCount = 0;
+    this.goldMultiplier = false;
+    this.goldMultiplierValue = undefined;
+    this.startingGold = false;
+    this.startingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
   }
@@ -1033,6 +818,44 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
+    this.putGameConfig();
+  }
+
+  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
+    if (["+", "-", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const value = parseFloat(input.value);
+
+    if (isNaN(value) || value < 0.1 || value > 1000) {
+      this.goldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.goldMultiplierValue = value;
+    }
+    this.putGameConfig();
+  }
+
+  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value);
+
+    if (isNaN(value) || value < 0 || value > 1000000000) {
+      this.startingGoldValue = undefined;
+    } else {
+      this.startingGoldValue = value;
+    }
     this.putGameConfig();
   }
 
@@ -1151,6 +974,12 @@ export class HostLobbyModal extends BaseModal {
                 }),
             maxTimerValue:
               this.maxTimer === true ? this.maxTimerValue : undefined,
+            goldMultiplier:
+              this.goldMultiplier === true
+                ? this.goldMultiplierValue
+                : undefined,
+            startingGold:
+              this.startingGold === true ? this.startingGoldValue : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,
@@ -1199,15 +1028,6 @@ export class HostLobbyModal extends BaseModal {
     return response;
   }
 
-  private async copyToClipboard() {
-    const url = await this.buildLobbyUrl();
-    await copyToClipboard(
-      url,
-      () => (this.copySuccess = true),
-      () => (this.copySuccess = false),
-    );
-  }
-
   private async pollPlayers() {
     const config = await getServerConfigFromClient();
     fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
@@ -1234,30 +1054,21 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async loadNationCount() {
+    const currentMap = this.selectedMap;
     try {
-      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const mapData = this.mapLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
-      this.nationCount = manifest.nations.length;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
     } catch (error) {
       console.warn("Failed to load nation count", error);
-      this.nationCount = 0;
+      // Only update if the map hasn't changed
+      if (this.selectedMap === currentMap) {
+        this.nationCount = 0;
+      }
     }
-  }
-
-  /**
-   * Returns the effective nation count for display purposes.
-   * In HumansVsNations mode, this equals the number of human players.
-   * For compact maps, only 25% of nations are used.
-   * Otherwise, it uses the manifest nation count (or 0 if nations are disabled).
-   */
-  private getEffectiveNationCount(): number {
-    if (this.disableNations) {
-      return 0;
-    }
-    if (this.gameMode === GameMode.Team && this.teamCount === HumansVsNations) {
-      return this.clients.length;
-    }
-    return getCompactMapNationCount(this.nationCount, this.compactMap);
   }
 }
 

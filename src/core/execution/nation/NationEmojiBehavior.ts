@@ -6,7 +6,6 @@ import {
   Player,
   PlayerType,
   Relation,
-  Team,
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
@@ -55,6 +54,8 @@ export class NationEmojiBehavior {
   ) {}
 
   maybeSendCasualEmoji() {
+    if (this.gameOver) return;
+
     this.checkOverwhelmedByAttacks();
     this.checkVerySmallAttack();
     this.congratulateWinner();
@@ -107,60 +108,23 @@ export class NationEmojiBehavior {
 
   // Check if game is over - send congratulations
   private congratulateWinner(): void {
-    if (this.gameOver) return;
+    const winner = this.game.getWinner();
+    if (winner === null) return;
 
-    const percentToWin = this.game.config().percentageTilesOwnedToWin();
-    const numTilesWithoutFallout =
-      this.game.numLandTiles() - this.game.numTilesWithFallout();
+    this.gameOver = true;
+
     const isTeamGame =
       this.game.config().gameConfig().gameMode === GameMode.Team;
 
     if (isTeamGame) {
       // Team game: all nations congratulate if another team won
-      const teamToTiles = new Map<Team, number>();
-      for (const player of this.game.players()) {
-        const team = player.team();
-        if (team === null) continue;
-        teamToTiles.set(
-          team,
-          (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
-        );
-      }
-
-      const sorted = Array.from(teamToTiles.entries()).sort(
-        (a, b) => b[1] - a[1],
-      );
-      if (sorted.length === 0) return;
-
-      const [winningTeam, winningTiles] = sorted[0];
-      const winningPercent = (winningTiles / numTilesWithoutFallout) * 100;
-      if (winningPercent < percentToWin) return;
-
-      this.gameOver = true;
-
       // Don't congratulate if it's our own team
-      if (winningTeam === this.player.team()) return;
+      if (winner === this.player.team()) return;
 
       this.sendEmoji(AllPlayers, EMOJI_CONGRATULATE);
     } else {
       // FFA game: The largest nation congratulates if a human player won
-      const sorted = this.game
-        .players()
-        .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-
-      if (sorted.length === 0) return;
-
-      const firstPlace = sorted[0];
-
-      // Check if first place has won (crossed the win threshold)
-      const firstPlacePercent =
-        (firstPlace.numTilesOwned() / numTilesWithoutFallout) * 100;
-      if (firstPlacePercent < percentToWin) return;
-
-      this.gameOver = true;
-
-      // Only send if first place is a human
-      if (firstPlace.type() !== PlayerType.Human) return;
+      if (typeof winner === "string") return; // It's a team, not a player
 
       // Only the largest nation sends the congratulation
       const largestNation = this.game
@@ -169,13 +133,12 @@ export class NationEmojiBehavior {
         .sort((a, b) => b.numTilesOwned() - a.numTilesOwned())[0];
       if (largestNation !== this.player) return;
 
-      this.sendEmoji(firstPlace, EMOJI_CONGRATULATE);
+      this.sendEmoji(winner, EMOJI_CONGRATULATE);
     }
   }
 
   // Brag with our crown
   private brag(): void {
-    if (this.gameOver) return;
     if (!this.random.chance(300)) return;
 
     const sorted = this.game

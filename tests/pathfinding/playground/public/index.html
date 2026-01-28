@@ -118,8 +118,85 @@
         </select>
       </div>
 
+      <div class="mode-switch">
+        <button
+          class="mode-button active"
+          id="modePathfinding"
+          data-mode="pathfinding"
+        >
+          Pathfinding
+        </button>
+        <button class="mode-button" id="modeTransport" data-mode="transport">
+          Transport Ship
+        </button>
+      </div>
+
       <div class="status-section">
         <span id="status">Select a scenario to begin</span>
+      </div>
+    </div>
+
+    <!-- Transport Ship controls (only visible in transport mode) -->
+    <div
+      class="transport-controls"
+      id="transportControls"
+      style="display: none"
+    >
+      <div class="transport-legend">
+        <div class="transport-legend-item">
+          <div
+            class="transport-legend-color"
+            style="background: rgba(66, 135, 245, 0.7)"
+          ></div>
+          <span>Territory</span>
+        </div>
+        <div class="transport-legend-item">
+          <div class="transport-legend-color" style="background: #2a4a6a"></div>
+          <span>Shores</span>
+        </div>
+        <div class="transport-legend-item">
+          <div
+            class="transport-legend-color"
+            style="background: rgba(200, 170, 80, 0.9)"
+          ></div>
+          <span>Candidates</span>
+        </div>
+        <div class="transport-legend-item">
+          <div class="transport-legend-color" style="background: #ff8800"></div>
+          <span>Original</span>
+        </div>
+        <div class="transport-legend-item">
+          <div class="transport-legend-color" style="background: #44ff44"></div>
+          <span>Selected</span>
+        </div>
+        <div class="transport-legend-item">
+          <div
+            class="transport-legend-color"
+            style="background: #00ffff; height: 2px"
+          ></div>
+          <span>Path</span>
+        </div>
+      </div>
+      <div class="transport-control-row">
+        <label>Brush Size:</label>
+        <input
+          type="range"
+          id="brushSize"
+          min="1"
+          max="20"
+          step="1"
+          value="5"
+        />
+        <span id="brushSizeValue">5</span>
+      </div>
+      <div class="transport-control-row">
+        <button id="clearTerritory" class="clear-button">
+          Clear Territory
+        </button>
+      </div>
+      <div class="transport-info">
+        <span>Painted tiles: <strong id="paintedCount">0</strong></span>
+        <span>Shores: <strong id="shoreCount">0</strong></span>
       </div>
     </div>
 
@@ -149,7 +226,7 @@
     <!-- View controls panel (right) -->
     <div class="view-panel">
       <div class="zoom-control">
-        <input type="range" id="zoom" min="0.1" max="5" step="0.1" value="1" />
+        <input type="range" id="zoom" min="0.1" max="10" step="0.1" value="1" />
         <span id="zoomValue">1.0x</span>
       </div>
       <button class="toggle-button" id="showColoredMap" data-active="false">
