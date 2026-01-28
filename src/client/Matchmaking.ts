@@ -263,39 +263,35 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
-    if (this.isLoggedIn) {
-      return html`
-        <button
-          @click="${this.handleLoggedInClick}"
-          class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
-          title="${translateText("matchmaking_modal.title")}"
-        >
-          <span class="relative z-10 text-2xl">
-            ${translateText("matchmaking_button.play_ranked")}
-          </span>
-          <span
-            class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+    const button = this.isLoggedIn
+      ? html`
+          <button
+            @click="${this.handleLoggedInClick}"
+            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
+            title="${translateText("matchmaking_modal.title")}"
           >
-            ${translateText("matchmaking_button.description")}
-          </span>
-        </button>
+            <span class="relative z-10 text-2xl">
+              ${translateText("matchmaking_button.play_ranked")}
+            </span>
+            <span
+              class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+            >
+              ${translateText("matchmaking_button.description")}
+            </span>
+          </button>
+        `
+      : html`
+          <button
+            @click="${this.handleLoggedOutClick}"
+            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
+          >
+            <span class="relative z-10 text-2xl">
+              ${translateText("matchmaking_button.login_required")}
+            </span>
+          </button>
+        `;
 
-        <matchmaking-modal></matchmaking-modal>
-      `;
-    }
-
-    return html`
-      <button
-        @click="${this.handleLoggedOutClick}"
-        class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
-      >
-        <span class="relative z-10 text-2xl">
-          ${translateText("matchmaking_button.login_required")}
-        </span>
-      </button>
-
-      <matchmaking-modal></matchmaking-modal>
-    `;
+    return html` ${button} <matchmaking-modal></matchmaking-modal> `;
   }
 
   private handleLoggedInClick() {
