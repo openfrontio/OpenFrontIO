@@ -294,7 +294,7 @@ export class WinModal extends LitElement implements Layer {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
-          this.isWin = true;
+          this.isWin = this.game.myPlayer()?.isAlive() ?? false;
           crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
