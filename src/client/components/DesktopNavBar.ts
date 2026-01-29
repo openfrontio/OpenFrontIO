@@ -1,8 +1,13 @@
 import { LitElement, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import { getGamesPlayed } from "../Utils";
+
+const HELP_SEEN_KEY = "helpSeen";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
+  @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
+
   createRenderRoot() {
     return this;
   }
@@ -39,6 +44,15 @@ export class DesktopNavBar extends LitElement {
       }
     });
   }
+
+  private showHelpDot(): boolean {
+    return getGamesPlayed() < 10 && !this._helpSeen;
+  }
+
+  private onHelpClick = () => {
+    localStorage.setItem(HELP_SEEN_KEY, "true");
+    this._helpSeen = true;
+  };
 
   render() {
     return html`
@@ -125,11 +139,24 @@ export class DesktopNavBar extends LitElement {
           data-page="page-stats"
           data-i18n="main.stats"
         ></button>
-        <button
-          class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-          data-page="page-help"
-          data-i18n="main.help"
-        ></button>
+        <div class="relative">
+          <button
+            class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+            data-page="page-help"
+            data-i18n="main.help"
+            @click=${this.onHelpClick}
+          ></button>
+          ${this.showHelpDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
+                ></span>
+              `
+            : ""}
+        </div>
         <lang-selector></lang-selector>
         <button
           id="nav-account-button"
