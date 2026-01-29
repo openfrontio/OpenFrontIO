@@ -63,7 +63,8 @@ export class PlayerRow extends LitElement {
   private renderPlayerInfo() {
     switch (this.rankType) {
       case RankType.Lifetime:
-      case RankType.Conquests:
+      case RankType.ConquestHumans:
+      case RankType.ConquestBots:
         return this.renderScoreAsBar();
       case RankType.Atoms:
       case RankType.Hydros:
