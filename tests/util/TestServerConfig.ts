@@ -44,13 +44,13 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   turnIntervalMs(): number {
-    throw new Error("Method not implemented.");
+    return 100;
   }
   spawnPhaseTicks(gameType: GameType): number {
-    throw new Error("Method not implemented.");
+    return gameType === GameType.Singleplayer ? 100 : 300;
   }
   spawnPhaseSeconds(gameType: GameType): number {
-    throw new Error("Method not implemented.");
+    return this.spawnPhaseTicks(gameType) / (1000 / this.turnIntervalMs());
   }
   gameCreationRate(): number {
     throw new Error("Method not implemented.");
