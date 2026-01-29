@@ -59,6 +59,8 @@
     "title": "Release Notes"
   },
   "help_modal": {
+    "video_tutorial": "Video Tutorial",
+    "video_tutorial_title": "OpenFront.io Tutorial",
     "hotkeys": "Hotkeys",
     "table_key": "Key",
     "table_action": "Action",
