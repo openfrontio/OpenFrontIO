@@ -57,7 +57,7 @@ export class DesktopNavBar extends LitElement {
   render() {
     return html`
       <nav
-        class="hidden lg:flex w-full bg-slate-950/70 backdrop-blur-md border-b border-white/10 items-center justify-center gap-8 py-4 shrink-0 transition-opacity z-50 relative"
+        class="hidden lg:flex w-full bg-slate-950/70 backdrop-blur-md border-b border-white/10 items-center justify-center gap-8 py-4 shrink-0 transition-opacity z-10 relative"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8 text-[#2563eb]">

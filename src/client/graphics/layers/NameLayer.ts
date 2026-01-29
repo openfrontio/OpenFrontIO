@@ -80,7 +80,7 @@ export class NameLayer implements Layer {
     this.container.style.left = "50%";
     this.container.style.top = "50%";
     this.container.style.pointerEvents = "none";
-    this.container.style.zIndex = "2";
+    this.container.style.zIndex = "30";
     document.body.appendChild(this.container);
 
     // Add CSS keyframes for traitor icon flashing animation
