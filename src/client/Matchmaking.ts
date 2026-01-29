@@ -9,6 +9,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./components/VideoAd";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
@@ -18,7 +19,12 @@ export class MatchmakingModal extends BaseModal {
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
+  @state() private videoAdComplete = false;
+  @state() private adBlocked = false;
   private elo = "unknown";
+  private adCompleteResolve: (() => void) | null = null;
+  private adMidpointResolve: (() => void) | null = null;
+  private adMidpointReached = false;
 
   constructor() {
     super();
@@ -39,9 +45,89 @@ export class MatchmakingModal extends BaseModal {
     return this;
   }
 
+  private handleAdComplete = () => {
+    this.videoAdComplete = true;
+    if (this.adCompleteResolve) {
+      this.adCompleteResolve();
+      this.adCompleteResolve = null;
+    }
+    this.requestUpdate();
+  };
+
+  private handleAdMidpoint = () => {
+    this.adMidpointReached = true;
+    if (this.adMidpointResolve) {
+      this.adMidpointResolve();
+      this.adMidpointResolve = null;
+    }
+  };
+
+  private handleAdBlocked = () => {
+    console.log("[Matchmaking] Ad blocked detected");
+    this.adBlocked = true;
+    this.requestUpdate();
+  };
+
+  private waitForAdComplete = (): Promise<void> => {
+    // If ad is already complete or ads are disabled, resolve immediately
+    if (this.videoAdComplete || !window.adsEnabled) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.adCompleteResolve = resolve;
+    });
+  };
+
+  private waitForAdMidpoint = (): Promise<void> => {
+    // If midpoint already reached or ads are disabled, resolve immediately
+    if (this.adMidpointReached || !window.adsEnabled) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.adMidpointResolve = resolve;
+    });
+  };
+
+  private renderVideoAd() {
+    console.log(
+      "[Matchmaking] renderVideoAd, adsEnabled:",
+      window.adsEnabled,
+      "videoAdComplete:",
+      this.videoAdComplete,
+      "adBlocked:",
+      this.adBlocked,
+    );
+    if (!window.adsEnabled || this.videoAdComplete) {
+      return html``;
+    }
+    if (this.adBlocked) {
+      return html`
+        <div
+          class="w-full flex flex-col items-center justify-center mb-4 px-6 py-8 bg-red-900/30 border border-red-500/50 rounded-lg"
+        >
+          <p class="text-red-400 text-lg font-semibold text-center mb-2">
+            ${translateText("matchmaking_modal.ad_blocked_title")}
+          </p>
+          <p class="text-white/70 text-sm text-center">
+            ${translateText("matchmaking_modal.ad_blocked_message")}
+          </p>
+        </div>
+      `;
+    }
+    return html`
+      <div class="w-full flex justify-center mb-4 px-6">
+        <video-ad
+          .onComplete="${this.handleAdComplete}"
+          .onMidpoint="${this.handleAdMidpoint}"
+          .onAdBlocked="${this.handleAdBlocked}"
+        ></video-ad>
+      </div>
+    `;
+  }
+
   render() {
     const eloDisplay = html`
-      <p class="text-center mt-2 mb-4 text-white/60">
+      <p class="text-center text-white/60">
         ${translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
@@ -57,8 +143,8 @@ export class MatchmakingModal extends BaseModal {
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-          ${eloDisplay} ${this.renderInner()}
+        <div class="flex-1 flex flex-col items-center gap-4 p-6 pt-2">
+          ${eloDisplay} ${this.renderInner()} ${this.renderVideoAd()}
         </div>
       </div>
     `;
@@ -80,6 +166,10 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private renderInner() {
+    // Don't show spinner/status when ad is blocked
+    if (this.adBlocked) {
+      return html``;
+    }
     if (!this.connected) {
       return html`
         <div class="flex flex-col items-center gap-4">
@@ -131,6 +221,17 @@ export class MatchmakingModal extends BaseModal {
         this.connected = true;
         this.requestUpdate();
       }, 1000);
+
+      // Wait for ad midpoint before sending join request
+      // This is so the ad doesn't get delay game start too long.
+      await this.waitForAdMidpoint();
+
+      // Early return if modal was closed while waiting for ad
+      if (!this.isModalOpen) {
+        this.socket?.close();
+        return;
+      }
+
       this.socket?.send(
         JSON.stringify({
           type: "join",
@@ -156,6 +257,11 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
+    // Reset video ad state for each new matchmaking session
+    this.videoAdComplete = false;
+    this.adMidpointReached = false;
+    this.adBlocked = false;
+
     const userMe = await getUserMe();
 
     // Early return if modal was closed during async operation
@@ -229,6 +335,7 @@ export class MatchmakingModal extends BaseModal {
         detail: {
           gameID: this.gameID,
           clientID: generateID(),
+          waitBeforeJoin: this.waitForAdComplete(),
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,

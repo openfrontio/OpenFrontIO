@@ -178,6 +178,24 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Video ad methods
+      onPlayerReady: (() => void) | null;
+      addUnits: (units: Array<{ type: string }>) => Promise<void>;
+      displayUnits: () => void;
+    };
+    Bolt: {
+      on: (unitType: string, event: string, callback: () => void) => void;
+      BOLT_AD_REQUEST_START: string;
+      BOLT_AD_IMPRESSION: string;
+      BOLT_AD_STARTED: string;
+      BOLT_FIRST_QUARTILE: string;
+      BOLT_MIDPOINT: string;
+      BOLT_THIRD_QUARTILE: string;
+      BOLT_AD_COMPLETE: string;
+      BOLT_AD_ERROR: string;
+      BOLT_AD_PAUSED: string;
+      BOLT_AD_CLICKED: string;
+      SHOW_HIDDEN_CONTAINER: string;
     };
     showPage?: (pageId: string) => void;
   }
@@ -198,6 +216,8 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+
+  waitBeforeJoin?: Promise<void>;
 }
 
 class Client {
@@ -850,6 +870,7 @@ class Client {
         // Store current URL for popstate confirmation
         this.currentUrl = window.location.href;
       },
+      lobby.waitBeforeJoin,
     );
   }
 
