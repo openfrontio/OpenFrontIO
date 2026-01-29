@@ -10,7 +10,6 @@ import {
   Trios,
 } from "../../core/game/Game";
 import { getClientIDForGame, userAuth } from "../Auth";
-import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { renderDuration, translateText } from "../Utils";
@@ -22,7 +21,9 @@ export class RankedMoreSubmenu extends BaseModal {
   @state() private lobbies: GameInfo[] = [];
   @state() private mapImages: Map<GameID, string> = new Map();
 
-  private lobbySocket = new PublicLobbySocket((lobbies) => {
+  private lobbyIDToStart = new Map<GameID, number>();
+  private handleLobbiesUpdate = (e: Event) => {
+    const lobbies = (e as CustomEvent).detail.lobbies as GameInfo[];
     this.lobbies = lobbies;
     this.lobbies.forEach((lobby) => {
       if (lobby.gameConfig && !this.mapImages.has(lobby.gameID)) {
@@ -36,8 +37,7 @@ export class RankedMoreSubmenu extends BaseModal {
       }
     });
     this.requestUpdate();
-  });
-  private lobbyIDToStart = new Map<GameID, number>();
+  };
 
   constructor() {
     super();
@@ -50,12 +50,18 @@ export class RankedMoreSubmenu extends BaseModal {
 
   connectedCallback() {
     super.connectedCallback();
-    this.lobbySocket.start();
+    document.addEventListener(
+      "public-lobbies-update",
+      this.handleLobbiesUpdate,
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.lobbySocket.stop();
+    document.removeEventListener(
+      "public-lobbies-update",
+      this.handleLobbiesUpdate,
+    );
   }
 
   render() {
@@ -327,8 +333,7 @@ export class RankedMoreSubmenu extends BaseModal {
       const config = candidate.gameConfig;
       return (
         config?.gameMode === GameMode.Team &&
-        config.playerTeams === HumansVsNations &&
-        !this.isSpecialLobby(candidate)
+        config.playerTeams === HumansVsNations
       );
     });
   }

@@ -265,6 +265,7 @@ function buildOverridesForCategory(
     case "ffa":
       return {
         mode: GameMode.FFA,
+        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 45_000),
       };
     case "teams":
@@ -276,6 +277,7 @@ function buildOverridesForCategory(
           Trios,
           Quads,
         ]),
+        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "hvn":
@@ -343,7 +345,7 @@ function randomIntInclusive(min: number, max: number): number {
 
 function envAdjustedDelay(config: ServerConfig, ms: number): number {
   if (config.env() === GameEnv.Dev) {
-    return Math.max(1000, Math.round(ms * 0.1));
+    return Math.max(1000, Math.round(ms * 0.2));
   }
   return ms;
 }

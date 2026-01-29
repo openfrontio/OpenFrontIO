@@ -42,12 +42,15 @@ const playlist = new MapPlaylist(true);
 export async function startWorker() {
   log.info(`Worker starting...`);
 
-  setTimeout(
-    () => {
-      startMatchmakingPolling(gm);
-    },
-    1000 + Math.random() * 2000,
-  );
+  // Only start matchmaking polling in prod
+  if (config.env() !== GameEnv.Dev) {
+    setTimeout(
+      () => {
+        startMatchmakingPolling(gm);
+      },
+      1000 + Math.random() * 2000,
+    );
+  }
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);

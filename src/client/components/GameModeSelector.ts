@@ -23,6 +23,7 @@ interface ModeCategory {
   filterFn: (lobby: GameInfo) => boolean;
   fallbackAction: () => void;
   skipLobbyInfo?: boolean;
+  backgroundImage?: string;
 }
 
 @customElement("game-mode-selector")
@@ -60,6 +61,12 @@ export class GameModeSelector extends LitElement {
 
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
     this.lobbies = lobbies;
+
+    document.dispatchEvent(
+      new CustomEvent("public-lobbies-update", {
+        detail: { lobbies },
+      }),
+    );
 
     // Get current lobby IDs
     const currentLobbyIDs = new Set(lobbies.map((l) => l.gameID));
@@ -106,9 +113,7 @@ export class GameModeSelector extends LitElement {
         id: "ffa",
         title: translateText("mode_selector.ffa_title"),
         subtitle: translateText("mode_selector.ffa_subtitle"),
-        filterFn: (lobby) =>
-          lobby.gameConfig?.gameMode === GameMode.FFA &&
-          !this.isSpecialLobby(lobby),
+        filterFn: (lobby) => lobby.gameConfig?.gameMode === GameMode.FFA,
         fallbackAction: () =>
           this.openSinglePlayerModal({ gameMode: GameMode.FFA }),
       },
@@ -120,8 +125,7 @@ export class GameModeSelector extends LitElement {
           const config = lobby.gameConfig;
           return (
             config?.gameMode === GameMode.Team &&
-            config.playerTeams !== HumansVsNations &&
-            !this.isSpecialLobby(lobby)
+            config.playerTeams !== HumansVsNations
           );
         },
         fallbackAction: () =>
@@ -134,6 +138,7 @@ export class GameModeSelector extends LitElement {
         filterFn: () => false,
         fallbackAction: () => this.openSinglePlayerModal(),
         skipLobbyInfo: true,
+        backgroundImage: "/images/GameplayScreenshot.png",
       },
       {
         id: "other-more",
@@ -142,6 +147,7 @@ export class GameModeSelector extends LitElement {
         filterFn: () => false,
         fallbackAction: () => this.openOtherMenu(),
         skipLobbyInfo: true,
+        backgroundImage: "/images/EuropeBackgroundBlurred.webp",
       },
     ];
   }
@@ -163,13 +169,13 @@ export class GameModeSelector extends LitElement {
         });
         const dynamicTitle = this.getLobbyTitle(soonestLobby, category.title);
         cards.push(this.renderLobbyCard(soonestLobby, dynamicTitle));
-      } else {
-        // Add fallback card for this category
+      } else if (category.skipLobbyInfo) {
         cards.push(
-          this.renderFallbackCard(
+          this.renderActionCard(
             category.title,
             category.subtitle,
             category.fallbackAction,
+            category.backgroundImage,
           ),
         );
       }
@@ -289,17 +295,32 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private renderFallbackCard(
+  private renderActionCard(
     title: string,
     subtitle: string,
     onClick: () => void,
+    backgroundImage?: string,
   ) {
     return html`
       <button
         @click=${onClick}
-        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 bg-slate-900/80 backdrop-blur-md hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
+        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${backgroundImage
+          ? "bg-transparent"
+          : "bg-slate-900/80 backdrop-blur-md"} hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
       >
-        <div class="flex flex-col items-center gap-1 text-center">
+        ${backgroundImage
+          ? html`
+              <img
+                src="${backgroundImage}"
+                alt="${title}"
+                class="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div
+                class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"
+              ></div>
+            `
+          : ""}
+        <div class="relative z-10 flex flex-col items-center gap-1 text-center">
           <h3
             class="text-xl lg:text-2xl font-bold text-white uppercase tracking-widest leading-tight"
           >
