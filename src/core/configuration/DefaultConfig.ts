@@ -556,6 +556,7 @@ export class DefaultConfig implements Config {
   attackLogic(
     gm: Game,
     attackTroops: number,
+    attackLossMultiplier: number,
     attacker: Player,
     defender: Player | TerraNullius,
     tileToConquer: TileRef,
@@ -650,7 +651,8 @@ export class DefaultConfig implements Config {
           0.8 *
           largeDefenderAttackDebuff *
           largeAttackBonus *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
+          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1) *
+          attackLossMultiplier,
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
@@ -662,7 +664,8 @@ export class DefaultConfig implements Config {
     } else {
       return {
         attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+          (mag / (attacker.type() === PlayerType.Bot ? 10 : 5)) *
+          attackLossMultiplier,
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,

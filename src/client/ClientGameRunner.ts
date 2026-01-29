@@ -47,6 +47,7 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
+import { resolveAttackSourceTile } from "./attackSource";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
@@ -556,12 +557,7 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        void this.sendAttackIntent(tile);
       } else if (this.canAutoBoat(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
@@ -672,12 +668,7 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        void this.sendAttackIntent(tile);
       }
     });
   }
@@ -717,6 +708,28 @@ export class ClientGameRunner {
       new SendBoatAttackIntentEvent(
         tile,
         this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+      ),
+    );
+  }
+
+  private async sendAttackIntent(tile: TileRef) {
+    if (!this.myPlayer) return;
+
+    const targetId = this.gameView.owner(tile).id();
+    const useLocalAttack = this.renderer.uiState.localAttackHeld;
+    const sourceTile = useLocalAttack
+      ? await resolveAttackSourceTile(
+          this.gameView,
+          this.myPlayer,
+          targetId,
+          tile,
+        )
+      : null;
+    this.eventBus.emit(
+      new SendAttackIntentEvent(
+        targetId,
+        this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+        sourceTile,
       ),
     );
   }
