@@ -343,7 +343,7 @@ function randomIntInclusive(min: number, max: number): number {
 
 function envAdjustedDelay(config: ServerConfig, ms: number): number {
   if (config.env() === GameEnv.Dev) {
-    return Math.max(1000, Math.round(ms * 0.9));
+    return Math.max(1000, Math.round(ms * 0.1));
   }
   return ms;
 }
