@@ -114,10 +114,15 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      crazyGamesSDK.gameplayStop();
+    } else {
+      crazyGamesSDK.gameplayStart();
+    }
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
 
-  private onExitButtonClick() {
+  private async onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
       const isConfirmed = confirm(
@@ -125,10 +130,10 @@ export class GameRightSidebar extends LitElement implements Layer {
       );
       if (!isConfirmed) return;
     }
-    crazyGamesSDK.gameplayStop().then(() => {
-      // redirect to the home page
-      window.location.href = "/";
-    });
+    await crazyGamesSDK.requestMidgameAd();
+    await crazyGamesSDK.gameplayStop();
+    // redirect to the home page
+    window.location.href = "/";
   }
 
   private onSettingsButtonClick() {
