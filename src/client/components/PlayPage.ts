@@ -11,7 +11,7 @@ export class PlayPage extends LitElement {
     return html`
       <div
         id="page-play"
-        class="flex flex-col gap-2 w-full max-w-6xl mx-auto px-0 sm:px-4 transition-all duration-300 my-auto min-h-0"
+        class="flex flex-col gap-2 w-full max-w-[80cm] mx-auto px-0 sm:px-4 transition-all duration-300 my-auto min-h-0"
       >
         <token-login class="absolute"></token-login>
 

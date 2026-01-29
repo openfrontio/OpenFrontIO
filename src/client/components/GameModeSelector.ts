@@ -113,16 +113,14 @@ export class GameModeSelector extends LitElement {
           this.openSinglePlayerModal({ gameMode: GameMode.FFA }),
       },
       {
-        id: "team-standard",
-        title: translateText("mode_selector.teams_one_title"),
-        subtitle: translateText("mode_selector.teams_one_subtitle"),
+        id: "teams",
+        title: translateText("mode_selector.teams_title"),
+        subtitle: translateText("mode_selector.teams_subtitle"),
         filterFn: (lobby) => {
           const config = lobby.gameConfig;
           return (
             config?.gameMode === GameMode.Team &&
-            typeof config.playerTeams === "number" &&
-            config.playerTeams >= 2 &&
-            config.playerTeams <= 7 &&
+            config.playerTeams !== HumansVsNations &&
             !this.isSpecialLobby(lobby)
           );
         },
@@ -130,21 +128,12 @@ export class GameModeSelector extends LitElement {
           this.openSinglePlayerModal({ gameMode: GameMode.Team }),
       },
       {
-        id: "team-preset",
-        title: translateText("mode_selector.teams_two_title"),
-        subtitle: translateText("mode_selector.teams_two_subtitle"),
-        filterFn: (lobby) => {
-          const config = lobby.gameConfig;
-          return (
-            config?.gameMode === GameMode.Team &&
-            (config.playerTeams === Duos ||
-              config.playerTeams === Trios ||
-              config.playerTeams === Quads) &&
-            !this.isSpecialLobby(lobby)
-          );
-        },
-        fallbackAction: () =>
-          this.openSinglePlayerModal({ gameMode: GameMode.Team }),
+        id: "solo",
+        title: translateText("main.solo"),
+        subtitle: translateText("mode_selector.solo_subtitle"),
+        filterFn: () => false,
+        fallbackAction: () => this.openSinglePlayerModal(),
+        skipLobbyInfo: true,
       },
       {
         id: "other-more",
@@ -161,16 +150,19 @@ export class GameModeSelector extends LitElement {
     const categories = this.getModeCategories();
     const cards: TemplateResult[] = [];
 
-    // Generate lobby cards for each category
+    // Generate one card per category
     for (const category of categories) {
       const matchingLobbies = this.lobbies.filter(category.filterFn);
 
       if (matchingLobbies.length > 0) {
-        // Add a card for each matching lobby
-        matchingLobbies.forEach((lobby) => {
-          const dynamicTitle = this.getLobbyTitle(lobby, category.title);
-          cards.push(this.renderLobbyCard(lobby, dynamicTitle));
+        // Pick the lobby starting soonest
+        const soonestLobby = matchingLobbies.reduce((a, b) => {
+          const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
+          const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
+          return aStart < bStart ? a : b;
         });
+        const dynamicTitle = this.getLobbyTitle(soonestLobby, category.title);
+        cards.push(this.renderLobbyCard(soonestLobby, dynamicTitle));
       } else {
         // Add fallback card for this category
         cards.push(

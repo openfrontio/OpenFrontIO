@@ -10,7 +10,7 @@ import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { GameConfigOverrides, MapPlaylist, SpecialPreset } from "./MapPlaylist";
 
-type LobbyCategory = "ffa" | "teamStandard" | "teamPreset" | "hvn" | "special";
+type LobbyCategory = "ffa" | "teams" | "hvn" | "special";
 
 type LobbyMeta = { category: LobbyCategory; preset?: SpecialPreset };
 
@@ -38,8 +38,7 @@ export class LobbyScheduler {
 
     const desired = {
       ffa: 1,
-      teamStandard: 1,
-      teamPreset: 1,
+      teams: 1,
       hvn: 1,
     };
 
@@ -70,10 +69,7 @@ export class LobbyScheduler {
     const requests: LobbyMeta[] = [];
 
     if (counts.ffa < desired.ffa) requests.push({ category: "ffa" });
-    if (counts.teamStandard < desired.teamStandard)
-      requests.push({ category: "teamStandard" });
-    if (counts.teamPreset < desired.teamPreset)
-      requests.push({ category: "teamPreset" });
+    if (counts.teams < desired.teams) requests.push({ category: "teams" });
     if (counts.hvn < desired.hvn) requests.push({ category: "hvn" });
 
     if (specialPresets.length > 0) {
@@ -221,8 +217,7 @@ export class LobbyScheduler {
 function initialCoverageCounts() {
   return {
     ffa: 0,
-    teamStandard: 0,
-    teamPreset: 0,
+    teams: 0,
     hvn: 0,
     special: 0,
     specialByPreset: {
@@ -243,11 +238,8 @@ function incrementCoverage(
     case "ffa":
       counts.ffa += 1;
       return;
-    case "teamStandard":
-      counts.teamStandard += 1;
-      return;
-    case "teamPreset":
-      counts.teamPreset += 1;
+    case "teams":
+      counts.teams += 1;
       return;
     case "hvn":
       counts.hvn += 1;
@@ -273,36 +265,32 @@ function buildOverridesForCategory(
     case "ffa":
       return {
         mode: GameMode.FFA,
-        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 45_000),
       };
-    case "teamStandard":
+    case "teams":
       return {
         mode: GameMode.Team,
-        playerTeams: randomIntInclusive(2, 7),
-        disableSpecialModifiers: true,
-        lobbyStartDelayMs: envAdjustedDelay(config, 90_000),
-      };
-    case "teamPreset":
-      return {
-        mode: GameMode.Team,
-        playerTeams: randomChoice([Duos, Trios, Quads]),
-        disableSpecialModifiers: true,
-        lobbyStartDelayMs: envAdjustedDelay(config, 75_000),
+        playerTeams: randomChoice([
+          randomIntInclusive(2, 7),
+          Duos,
+          Trios,
+          Quads,
+        ]),
+        lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "hvn":
       return {
         mode: GameMode.Team,
         playerTeams: HumansVsNations,
         disableSpecialModifiers: true,
-        lobbyStartDelayMs: envAdjustedDelay(config, 90_000),
+        lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "special":
     default:
       return {
         specialPreset: preset,
         ensureSpecialModifier: true,
-        lobbyStartDelayMs: envAdjustedDelay(config, 75_000),
+        lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
   }
 }
@@ -355,7 +343,7 @@ function randomIntInclusive(min: number, max: number): number {
 
 function envAdjustedDelay(config: ServerConfig, ms: number): number {
   if (config.env() === GameEnv.Dev) {
-    return Math.max(1000, Math.round(ms / 2));
+    return Math.max(1000, Math.round(ms * 0.9));
   }
   return ms;
 }
