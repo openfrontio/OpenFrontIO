@@ -46,10 +46,10 @@ export class TestServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     throw new Error("Method not implemented.");
   }
-  ticksPerSecond(): number {
+  spawnPhaseTicks(gameType: GameType): number {
     throw new Error("Method not implemented.");
   }
-  spawnPhaseTicks(gameType: GameType): number {
+  spawnPhaseSeconds(gameType: GameType): number {
     throw new Error("Method not implemented.");
   }
   gameCreationRate(): number {

@@ -182,15 +182,17 @@ export function buildPreview(
   const winner = parseWinner(publicInfo?.info?.winner, players);
   const duration = publicInfo?.info?.duration;
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
-  const spawnPhaseSeconds =
-    serverConfig.spawnPhaseTicks(
-      gameType === GameType.Singleplayer
-        ? GameType.Singleplayer
-        : GameType.Public,
-    ) / serverConfig.ticksPerSecond();
   const adjustedDuration =
     typeof duration === "number"
-      ? Math.max(0, duration - spawnPhaseSeconds)
+      ? Math.max(
+          0,
+          duration -
+            serverConfig.spawnPhaseSeconds(
+              gameType === GameType.Singleplayer
+                ? GameType.Singleplayer
+                : GameType.Public,
+            ),
+        )
       : undefined;
 
   // Normalize map name to match filesystem (lowercase, no spaces or special chars)

@@ -123,6 +123,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   spawnPhaseTicks(gameType: GameType): number {
     return gameType === GameType.Singleplayer ? 100 : 300;
   }
+  spawnPhaseSeconds(gameType: GameType): number {
+    return this.spawnPhaseTicks(gameType) / this.ticksPerSecond();
+  }
   gameCreationRate(): number {
     return 60 * 1000;
   }

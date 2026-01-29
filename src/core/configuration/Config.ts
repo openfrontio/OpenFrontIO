@@ -28,8 +28,8 @@ export interface ServerConfig {
   turnstileSiteKey(): string;
   turnstileSecretKey(): string;
   turnIntervalMs(): number;
-  ticksPerSecond(): number;
   spawnPhaseTicks(gameType: GameType): number;
+  spawnPhaseSeconds(gameType: GameType): number;
   gameCreationRate(): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
