@@ -13,7 +13,6 @@ import {
   Quads,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
@@ -24,19 +23,23 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
-import "./components/Maps";
+import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
+import {
+  renderToggleInputCard,
+  renderToggleInputCardInput,
+} from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import randomMap from "/images/RandomMap.webp?url";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private disableNations: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -52,6 +55,10 @@ export class SinglePlayerModal extends BaseModal {
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   @state() private userMeResponse: UserMeResponse | false = false;
+  @state() private goldMultiplier: boolean = false;
+  @state() private goldMultiplierValue: number | undefined = undefined;
+  @state() private startingGold: boolean = false;
+  @state() private startingGoldValue: number | undefined = undefined;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -85,6 +92,9 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return html``;
+    }
     return html`<div
       class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0"
     >
@@ -189,84 +199,15 @@ export class SinglePlayerModal extends BaseModal {
                 </h3>
               </div>
 
-              <div class="space-y-8">
-                ${Object.entries(mapCategories).map(
-                  ([categoryKey, maps]) => html`
-                    <div class="w-full">
-                      <h4
-                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                      >
-                        ${translateText(`map_categories.${categoryKey}`)}
-                      </h4>
-                      <div
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                      >
-                        ${maps.map((mapValue) => {
-                          const mapKey = Object.keys(GameMapType).find(
-                            (key) =>
-                              GameMapType[key as keyof typeof GameMapType] ===
-                              mapValue,
-                          );
-                          return html`
-                            <div
-                              @click=${() => this.handleMapSelection(mapValue)}
-                              class="cursor-pointer transition-transform duration-200 active:scale-95"
-                            >
-                              <map-display
-                                .mapKey=${mapKey}
-                                .selected=${!this.useRandomMap &&
-                                this.selectedMap === mapValue}
-                                .showMedals=${this.showAchievements}
-                                .wins=${this.mapWins.get(mapValue) ?? new Set()}
-                                .translation=${translateText(
-                                  `map.${mapKey?.toLowerCase()}`,
-                                )}
-                              ></map-display>
-                            </div>
-                          `;
-                        })}
-                      </div>
-                    </div>
-                  `,
-                )}
-
-                <!-- Random Map Card -->
-                <div class="w-full">
-                  <h4
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                  >
-                    ${translateText("map_categories.special")}
-                  </h4>
-                  <div
-                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                  >
-                    <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleSelectRandomMap}
-                    >
-                      <div
-                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-                      >
-                        <img
-                          src=${randomMap}
-                          alt=${translateText("map.random")}
-                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                        />
-                      </div>
-                      <div class="p-3 text-center border-t border-white/5">
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                        >
-                          ${translateText("map.random")}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <map-picker
+                .selectedMap=${this.selectedMap}
+                .useRandomMap=${this.useRandomMap}
+                .showMedals=${this.showAchievements}
+                .mapWins=${this.mapWins}
+                .onSelectMap=${(mapValue: GameMapType) =>
+                  this.handleMapSelection(mapValue)}
+                .onSelectRandom=${() => this.handleSelectRandomMap()}
+              ></map-picker>
             </div>
 
             <!-- Difficulty Selection -->
@@ -509,22 +450,19 @@ export class SinglePlayerModal extends BaseModal {
                 ${this.renderOptionToggle(
                   "single_modal.compact_map",
                   this.compactMap,
-                  (val) => (this.compactMap = val),
+                  (val) => {
+                    this.compactMap = val;
+                    if (val && this.bots === 400) {
+                      this.bots = 100;
+                    } else if (!val && this.bots === 100) {
+                      this.bots = 400;
+                    }
+                  },
                 )}
-
-                <!-- Toggle with input support for Max Timer -->
-                <div
-                  class="relative p-3 rounded-xl border transition-all duration-200 flex flex-col items-center justify-between gap-2 h-full cursor-pointer min-h-[100px] ${this
-                    .maxTimer
-                    ? "bg-blue-500/20 border-blue-500/50"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                  @click=${(e: Event) => {
-                    // Prevent toggling when clicking the input
-                    if (
-                      (e.target as HTMLElement).tagName.toLowerCase() ===
-                      "input"
-                    )
-                      return;
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.max_timer",
+                  checked: this.maxTimer,
+                  onClick: () => {
                     this.maxTimer = !this.maxTimer;
                     if (!this.maxTimer) {
                       this.maxTimerValue = undefined;
@@ -542,58 +480,102 @@ export class SinglePlayerModal extends BaseModal {
                         }
                       }, 0);
                     }
-                  }}
-                >
-                  <div class="flex items-center justify-center w-full mt-1">
-                    <div
-                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors ${this
-                        .maxTimer
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-white/20 bg-white/5"}"
-                    >
-                      ${this.maxTimer
-                        ? html`<svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 text-white"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>`
-                        : ""}
-                    </div>
-                  </div>
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "end-timer-value",
+                    min: 1,
+                    max: 120,
+                    value: this.maxTimerValue ?? "",
+                    ariaLabel: translateText("single_modal.max_timer"),
+                    placeholder: translateText(
+                      "single_modal.max_timer_placeholder",
+                    ),
+                    onInput: this.handleMaxTimerValueChanges,
+                    onKeyDown: this.handleMaxTimerValueKeyDown,
+                  }),
+                })}
 
-                  ${this.maxTimer
-                    ? html`<input
-                        type="number"
-                        id="end-timer-value"
-                        min="1"
-                        max="120"
-                        .value=${String(this.maxTimerValue ?? "")}
-                        class="w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-blue-500 p-1 my-1"
-                        aria-label=${translateText("single_modal.max_timer")}
-                        @input=${this.handleMaxTimerValueChanges}
-                        @keydown=${this.handleMaxTimerValueKeyDown}
-                        placeholder=${translateText(
-                          "single_modal.max_timer_placeholder",
-                        )}
-                      />`
-                    : html`<div
-                        class="h-[2px] w-4 bg-white/10 rounded my-3"
-                      ></div>`}
-                  <!-- Spacer/Icon placeholder -->
+                <!-- Gold Multiplier -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.gold_multiplier",
+                  checked: this.goldMultiplier,
+                  onClick: () => {
+                    this.goldMultiplier = !this.goldMultiplier;
+                    if (!this.goldMultiplier) {
+                      this.goldMultiplierValue = undefined;
+                    } else {
+                      if (
+                        !this.goldMultiplierValue ||
+                        this.goldMultiplierValue <= 0
+                      ) {
+                        this.goldMultiplierValue = 2;
+                      }
+                      setTimeout(() => {
+                        const input = this.renderRoot.querySelector(
+                          "#gold-multiplier-value",
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 0);
+                    }
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "gold-multiplier-value",
+                    min: 0.1,
+                    max: 1000,
+                    step: "any",
+                    value: this.goldMultiplierValue ?? "",
+                    ariaLabel: translateText("single_modal.gold_multiplier"),
+                    placeholder: translateText(
+                      "single_modal.gold_multiplier_placeholder",
+                    ),
+                    onChange: this.handleGoldMultiplierValueChanges,
+                    onKeyDown: this.handleGoldMultiplierValueKeyDown,
+                  }),
+                })}
 
-                  <div
-                    class="text-[10px] uppercase font-bold text-white/60 tracking-wider text-center w-full leading-tight break-words hyphens-auto"
-                  >
-                    ${translateText("single_modal.max_timer")}
-                  </div>
-                </div>
+                <!-- Starting Gold -->
+                ${renderToggleInputCard({
+                  labelKey: "single_modal.starting_gold",
+                  checked: this.startingGold,
+                  onClick: () => {
+                    this.startingGold = !this.startingGold;
+                    if (!this.startingGold) {
+                      this.startingGoldValue = undefined;
+                    } else {
+                      if (
+                        !this.startingGoldValue ||
+                        this.startingGoldValue < 0
+                      ) {
+                        this.startingGoldValue = 5000000;
+                      }
+                      setTimeout(() => {
+                        const input = this.renderRoot.querySelector(
+                          "#starting-gold-value",
+                        ) as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 0);
+                    }
+                  },
+                  input: renderToggleInputCardInput({
+                    id: "starting-gold-value",
+                    min: 0,
+                    max: 1000000000,
+                    step: 100000,
+                    value: this.startingGoldValue ?? "",
+                    ariaLabel: translateText("single_modal.starting_gold"),
+                    placeholder: translateText(
+                      "single_modal.starting_gold_placeholder",
+                    ),
+                    onInput: this.handleStartingGoldValueChanges,
+                    onKeyDown: this.handleStartingGoldValueKeyDown,
+                  }),
+                })}
               </div>
             </div>
 
@@ -693,7 +675,7 @@ export class SinglePlayerModal extends BaseModal {
   protected onClose(): void {
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Medium;
+    this.selectedDifficulty = Difficulty.Easy;
     this.gameMode = GameMode.FFA;
     this.useRandomMap = false;
     this.disableNations = false;
@@ -707,6 +689,10 @@ export class SinglePlayerModal extends BaseModal {
     this.randomSpawn = false;
     this.teamCount = 2;
     this.disabledUnits = [];
+    this.goldMultiplier = false;
+    this.goldMultiplierValue = undefined;
+    this.startingGold = false;
+    this.startingGoldValue = undefined;
   }
 
   private handleSelectRandomMap() {
@@ -757,6 +743,42 @@ export class SinglePlayerModal extends BaseModal {
       this.maxTimerValue = undefined;
     } else {
       this.maxTimerValue = value;
+    }
+  }
+
+  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
+    if (["+", "-", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const value = parseFloat(input.value);
+
+    if (isNaN(value) || value < 0.1 || value > 1000) {
+      this.goldMultiplierValue = undefined;
+      input.value = "";
+    } else {
+      this.goldMultiplierValue = value;
+    }
+  }
+
+  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldValueChanges(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value);
+
+    if (isNaN(value) || value < 0 || value > 1000000000) {
+      this.startingGoldValue = undefined;
+    } else {
+      this.startingGoldValue = value;
     }
   }
 
@@ -832,6 +854,8 @@ export class SinglePlayerModal extends BaseModal {
 
     const selectedColor = this.userSettings.getSelectedColor();
 
+    await crazyGamesSDK.requestMidgameAd();
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -881,6 +905,12 @@ export class SinglePlayerModal extends BaseModal {
                 : {
                     disableNations: this.disableNations,
                   }),
+              ...(this.goldMultiplier && this.goldMultiplierValue
+                ? { goldMultiplier: this.goldMultiplierValue }
+                : {}),
+              ...(this.startingGold && this.startingGoldValue !== undefined
+                ? { startingGold: this.startingGoldValue }
+                : {}),
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },

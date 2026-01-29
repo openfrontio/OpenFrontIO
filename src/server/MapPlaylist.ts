@@ -62,7 +62,9 @@ const frequency: Partial<Record<GameMapName, number>> = {
   StraitOfHormuz: 4,
   Surrounded: 4,
   DidierFrance: 1,
+  Didier: 1,
   AmazonRiver: 3,
+  Sierpinski: 10,
 };
 
 interface MapWithMode {
@@ -70,18 +72,18 @@ interface MapWithMode {
   mode: GameMode;
 }
 
-const TEAM_COUNTS = [
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  Duos,
-  Trios,
-  Quads,
-  HumansVsNations,
-] as const satisfies TeamCountConfig[];
+const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
+  { config: 2, weight: 10 },
+  { config: 3, weight: 10 },
+  { config: 4, weight: 10 },
+  { config: 5, weight: 10 },
+  { config: 6, weight: 10 },
+  { config: 7, weight: 10 },
+  { config: Duos, weight: 5 },
+  { config: Trios, weight: 7.5 },
+  { config: Quads, weight: 7.5 },
+  { config: HumansVsNations, weight: 20 },
+];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
@@ -94,7 +96,9 @@ export class MapPlaylist {
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    let { isCompact, isRandomSpawn } = this.getRandomPublicGameModifiers();
+    const modifiers = this.getRandomPublicGameModifiers();
+    const { startingGold } = modifiers;
+    let { isCompact, isRandomSpawn, isCrowded } = modifiers;
 
     // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
     if (
@@ -105,8 +109,8 @@ export class MapPlaylist {
       isRandomSpawn = false;
     }
 
-    // Maps with smallest player count < 50 don't support compact map in team games
-    // The smallest player count is the 3rd number in the player counts array
+    // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
+    // (not enough players after 75% player reduction for compact maps)
     if (
       mode === GameMode.Team &&
       !(await this.supportsCompactMapForTeams(map))
@@ -114,19 +118,37 @@ export class MapPlaylist {
       isCompact = false;
     }
 
+    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // set player count to 125 (or 60 if compact map is also enabled)
+    let crowdedMaxPlayers: number | undefined;
+    if (isCrowded) {
+      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+      if (crowdedMaxPlayers === undefined) {
+        isCrowded = false;
+      } else {
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+      }
+    }
+
     // Create the default public game config (from your GameManager)
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
+      maxPlayers:
+        crowdedMaxPlayers ??
+        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
-      publicGameModifiers: { isCompact, isRandomSpawn },
+      publicGameModifiers: {
+        isCompact,
+        isRandomSpawn,
+        isCrowded,
+        startingGold,
+      },
+      startingGold,
       difficulty:
-        playerTeams === HumansVsNations
-          ? Difficulty.Impossible
-          : Difficulty.Easy,
+        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -142,12 +164,11 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const ffaMaps = [
+    const maps = [
       GameMapType.Iceland,
-      GameMapType.World,
-      GameMapType.EuropeClassic,
       GameMapType.Australia,
-      GameMapType.FaroeIslands,
+      GameMapType.Australia,
+      GameMapType.Australia,
       GameMapType.Pangaea,
       GameMapType.Italia,
       GameMapType.FalklandIslands,
@@ -156,7 +177,7 @@ export class MapPlaylist {
     return {
       donateGold: false,
       donateTroops: false,
-      gameMap: ffaMaps[Math.floor(Math.random() * ffaMaps.length)],
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
@@ -167,10 +188,10 @@ export class MapPlaylist {
       maxTimerValue: 10, // 10 minutes
       instantBuild: false,
       randomSpawn: false,
-      disableNations: false,
+      disableNations: true,
       gameMode: GameMode.FFA,
       bots: 100,
-      spawnImmunityDuration: 5 * 10,
+      spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
@@ -191,22 +212,46 @@ export class MapPlaylist {
   }
 
   private getTeamCount(): TeamCountConfig {
-    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
+    const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
+    const roll = Math.random() * totalWeight;
+
+    let cumulativeWeight = 0;
+    for (const { config, weight } of TEAM_WEIGHTS) {
+      cumulativeWeight += weight;
+      if (roll < cumulativeWeight) {
+        return config;
+      }
+    }
+    return TEAM_WEIGHTS[0].config;
   }
 
   private getRandomPublicGameModifiers(): PublicGameModifiers {
     return {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance
+      isCrowded: Math.random() < 0.05, // 5% chance
+      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
     };
   }
 
+  // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
+  // (not enough players after 75% player reduction for compact maps)
   private async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
-    // Maps with smallest player count < 50 don't support compact map in team games
-    // The smallest player count is the 3rd number in the player counts array
     const landTiles = await getMapLandTiles(map);
     const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
     return smallest >= 50;
+  }
+
+  private async getCrowdedMaxPlayers(
+    map: GameMapType,
+    isCompact: boolean,
+  ): Promise<number | undefined> {
+    const landTiles = await getMapLandTiles(map);
+    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    if (firstPlayerCount <= 60) {
+      return isCompact ? 60 : 125;
+    }
+    return undefined;
   }
 
   private async lobbyMaxPlayers(
@@ -224,7 +269,15 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
-    if (numPlayerTeams === undefined) return p;
+    return this.adjustForTeams(p, numPlayerTeams);
+  }
+
+  private adjustForTeams(
+    playerCount: number,
+    numPlayerTeams: TeamCountConfig | undefined,
+  ): number {
+    if (numPlayerTeams === undefined) return playerCount;
+    let p = playerCount;
     switch (numPlayerTeams) {
       case Duos:
         p -= p % 2;
@@ -280,6 +333,8 @@ export class MapPlaylist {
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
     const team1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
+    const team2: GameMapType[] = rand.shuffleArray([...maps]);
+    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
@@ -292,6 +347,14 @@ export class MapPlaylist {
         }
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
+        return false;
+      }
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
+          return false;
+        }
+      }
+      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;
       }
     }

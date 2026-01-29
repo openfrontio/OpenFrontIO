@@ -401,7 +401,11 @@ export class AttackExecution implements Execution {
         } else {
           for (const neighbor of this.mg.neighbors(tile)) {
             const no = this.mg.owner(neighbor);
-            if (no.isPlayer() && no !== this.target) {
+            if (
+              no.isPlayer() &&
+              no !== this.target &&
+              !no.isFriendly(this.target)
+            ) {
               this.mg.player(no.id()).conquer(tile);
               break;
             }

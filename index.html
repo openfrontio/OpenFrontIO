@@ -75,11 +75,11 @@
       defer
     ></script>
 
-    <!-- Publift/Fuse ads -->
-    <script
-      async
-      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
-    ></script>
+    <script data-cfasync="false">
+      window.ramp = window.ramp || {};
+      window.ramp.que = window.ramp.que || [];
+      window.ramp.passiveMode = true;
+    </script>
 
     <script>
       window.googletag = window.googletag || { cmd: [] };
@@ -189,16 +189,16 @@
           inline
           class="hidden w-full h-full page-content"
         ></territory-patterns-modal>
-        <matchmaking-modal
-          id="page-matchmaking"
-          inline
-          class="hidden w-full h-full page-content"
-        ></matchmaking-modal>
         <user-setting
           id="page-settings"
           inline
           class="hidden w-full h-full page-content"
         ></user-setting>
+        <troubleshooting-modal
+          id="page-troubleshooting"
+          inline
+          class="hidden w-full h-full page-content"
+        ></troubleshooting-modal>
         <stats-modal
           id="page-stats"
           inline
@@ -266,6 +266,7 @@
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
+    <in-game-header-ad></in-game-header-ad>
     <game-info-modal></game-info-modal>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
@@ -361,5 +362,12 @@
       data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
     ></script>
     <script type="module" src="/src/client/Main.ts"></script>
+    <footer>
+      <script
+        data-cfasync="false"
+        async
+        src="//cdn.intergient.com/1025558/75940/ramp.js"
+      ></script>
+    </footer>
   </body>
 </html>

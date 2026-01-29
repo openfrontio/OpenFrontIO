@@ -1,5 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, PlayerID } from "../../../core/game/Game";
+import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
@@ -44,18 +44,11 @@ export class PlayerActionHandler {
     );
   }
 
-  handleBoatAttack(
-    player: PlayerView,
-    targetId: PlayerID | null,
-    targetTile: TileRef,
-    spawnTile: TileRef | null,
-  ) {
+  handleBoatAttack(player: PlayerView, targetTile: TileRef) {
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
-        targetId,
         targetTile,
         this.uiState.attackRatio * player.troops(),
-        spawnTile,
       ),
     );
   }

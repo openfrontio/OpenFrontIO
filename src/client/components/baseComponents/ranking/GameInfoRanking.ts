@@ -2,17 +2,24 @@ import { AnalyticsRecord, PlayerRecord } from "../../../../core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
+  PLAYER_INDEX_BOT,
+  PLAYER_INDEX_HUMAN,
+  PLAYER_INDEX_NATION,
 } from "../../../../core/StatsSchemas";
 
 export enum RankType {
-  Conquests = "Conquests",
+  ConquestHumans = "ConquestHumans",
+  ConquestBots = "ConquestBots",
   Atoms = "Atoms",
   Hydros = "Hydros",
   MIRV = "MIRV",
   TotalGold = "TotalGold",
   StolenGold = "StolenGold",
-  TradedGold = "TradedGold",
+  NavalTrade = "NavalTrade",
+  TrainTrade = "TrainTrade",
   ConqueredGold = "ConqueredGold",
   Lifetime = "Lifetime",
 }
@@ -24,7 +31,7 @@ export interface PlayerInfo {
   tag?: string;
   killedAt?: number;
   gold: bigint[];
-  conquests: number;
+  conquests: bigint[];
   flag?: string;
   winner: boolean;
   atoms: number;
@@ -76,12 +83,13 @@ export class Ranking {
         username = match[2];
       }
       const gold = (stats.gold ?? []).map((v) => BigInt(v ?? 0));
+      const conquests = (stats.conquests ?? []).map((v) => BigInt(v ?? 0));
       players[player.clientID] = {
         id: player.clientID,
         rawUsername: player.username,
         username,
         tag: player.clanTag,
-        conquests: Number(stats.conquests) || 0,
+        conquests,
         flag: player.cosmetics?.flag ?? undefined,
         killedAt: stats.killedAt !== null ? Number(stats.killedAt) : undefined,
         gold,
@@ -122,8 +130,13 @@ export class Ranking {
           return (player.killedAt / Math.max(this.duration, 1)) * 10;
         }
         return 100;
-      case RankType.Conquests:
-        return player.conquests;
+      case RankType.ConquestHumans:
+        return Number(player.conquests[PLAYER_INDEX_HUMAN] ?? 0n);
+      case RankType.ConquestBots:
+        return (
+          Number(player.conquests[PLAYER_INDEX_BOT] ?? 0n) +
+          Number(player.conquests[PLAYER_INDEX_NATION] ?? 0n)
+        );
       case RankType.Atoms:
         return player.atoms;
       case RankType.Hydros:
@@ -134,10 +147,15 @@ export class Ranking {
         return Number(player.gold.reduce((sum, gold) => sum + gold, 0n));
       case RankType.StolenGold:
         return Number(player.gold[GOLD_INDEX_STEAL] ?? 0n);
-      case RankType.TradedGold:
+      case RankType.NavalTrade:
         return Number(player.gold[GOLD_INDEX_TRADE] ?? 0n);
       case RankType.ConqueredGold:
         return Number(player.gold[GOLD_INDEX_WAR] ?? 0n);
+      case RankType.TrainTrade: {
+        const ownTrains = player.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
+        const otherTrains = player.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
+        return Number(ownTrains + otherTrains);
+      }
     }
   }
 

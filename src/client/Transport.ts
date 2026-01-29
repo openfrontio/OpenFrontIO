@@ -82,10 +82,8 @@ export class SendAttackIntentEvent implements GameEvent {
 
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
-    public readonly targetID: PlayerID | null,
     public readonly dst: TileRef,
     public readonly troops: number,
-    public readonly src: TileRef | null = null,
   ) {}
 }
 
@@ -500,10 +498,8 @@ export class Transport {
     this.sendIntent({
       type: "boat",
       clientID: this.lobbyConfig.clientID,
-      targetID: event.targetID,
       troops: event.troops,
       dst: event.dst,
-      src: event.src,
     });
   }
 
@@ -727,10 +723,18 @@ export class Transport {
     this.socket.onclose = null;
     this.socket.onerror = null;
 
-    // Close the connection if it's still open
-    if (this.socket.readyState === WebSocket.OPEN) {
-      this.socket.close();
+    // Close the connection if it's still open or still connecting
+    try {
+      if (
+        this.socket.readyState === WebSocket.OPEN ||
+        this.socket.readyState === WebSocket.CONNECTING
+      ) {
+        this.socket.close();
+      }
+    } catch (e) {
+      console.warn("Error while closing WebSocket:", e);
     }
+
     this.socket = null;
   }
 }

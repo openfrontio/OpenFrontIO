@@ -76,6 +76,8 @@ export interface Config {
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
+  goldMultiplier(): number;
+  startingGold(playerInfo: PlayerInfo): Gold;
 
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;

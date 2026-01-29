@@ -18,6 +18,7 @@ import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import boatIcon from "/images/BoatIconWhite.svg?url";
 import buildIcon from "/images/BuildIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
+import checkmarkIcon from "/images/CheckmarkIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
@@ -118,6 +119,14 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   return isFriendly.call(selectedPlayer, params.myPlayer);
 }
 
+function isDisconnectedTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  if (selectedPlayer === null) return false;
+  const isDisconnected = (selectedPlayer as PlayerView).isDisconnected;
+  if (typeof isDisconnected !== "function") return false;
+  return isDisconnected.call(selectedPlayer);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
@@ -211,11 +220,31 @@ const allyBreakElement: MenuElement = {
     !!params.playerActions?.interaction?.canBreakAlliance,
   color: COLORS.breakAlly,
   icon: traitorIcon,
+  subMenu: () => [allyBreakCancelElement, allyBreakConfirmElement],
+};
+
+const allyBreakConfirmElement: MenuElement = {
+  id: "ally_break_confirm",
+  name: "confirm",
+  disabled: () => false,
+  color: COLORS.breakAlly,
+  icon: checkmarkIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
       params.myPlayer,
       params.selected!,
     );
+    params.closeMenu();
+  },
+};
+
+const allyBreakCancelElement: MenuElement = {
+  id: "ally_break_cancel",
+  name: "cancel",
+  disabled: () => false,
+  color: COLORS.info,
+  icon: xIcon,
+  action: (params: MenuElementParams) => {
     params.closeMenu();
   },
 };
@@ -549,17 +578,7 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
-    const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
-      params.myPlayer,
-      params.tile,
-    );
-
-    params.playerActionHandler.handleBoatAttack(
-      params.myPlayer,
-      params.selected?.id() ?? null,
-      params.tile,
-      spawn !== false ? spawn : null,
-    );
+    params.playerActionHandler.handleBoatAttack(params.myPlayer, params.tile);
 
     params.closeMenu();
   },
@@ -573,13 +592,16 @@ export const centerButtonElement: CenterButtonElement = {
       return true;
     }
     if (params.game.inSpawnPhase()) {
+      if (params.game.config().isRandomSpawn()) {
+        return true;
+      }
       if (tileOwner.isPlayer()) {
         return true;
       }
       return false;
     }
 
-    if (isFriendlyTarget(params)) {
+    if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
       return !params.playerActions.interaction?.canDonateTroops;
     }
 
@@ -589,7 +611,7 @@ export const centerButtonElement: CenterButtonElement = {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      if (isFriendlyTarget(params)) {
+      if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
         const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
@@ -645,7 +667,7 @@ export const rootMenuElement: MenuElement = {
         : [
             boatMenuElement,
             ally,
-            isFriendlyTarget(params)
+            isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

@@ -12,6 +12,7 @@ import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { startPolling } from "./PollingLoop";
 import { renderHtml } from "./RenderHtml";
 
 const config = getServerConfigFromServer();
@@ -176,15 +177,12 @@ export async function startMaster() {
           });
         };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+        startPolling(async () => {
+          const lobbies = await fetchLobbies();
+          if (lobbies === 0) {
+            scheduleLobbies();
+          }
+        }, 100);
       }
     }
   });

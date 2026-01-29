@@ -92,6 +92,7 @@ export function createGrid(
         const tile = game.ref(cell.x, cell.y);
         grid[x - scaledBoundingBox.min.x][y - scaledBoundingBox.min.y] =
           game.isLake(tile) ||
+          game.isShore(tile) ||
           game.owner(tile) === player ||
           game.hasFallout(tile);
       }

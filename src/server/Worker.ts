@@ -27,6 +27,7 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -43,7 +44,7 @@ export async function startWorker() {
 
   setTimeout(
     () => {
-      pollLobby(gm);
+      startMatchmakingPolling(gm);
     },
     1000 + Math.random() * 2000,
   );
@@ -483,63 +484,61 @@ export async function startWorker() {
   });
 }
 
-async function pollLobby(gm: GameManager) {
-  try {
-    const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
-    const gameId = generateGameIdForWorker();
-    if (gameId === null) {
-      log.warn(`Failed to generate game ID for worker ${workerId}`);
-      return;
-    }
+async function startMatchmakingPolling(gm: GameManager) {
+  startPolling(
+    async () => {
+      try {
+        const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
+        const gameId = generateGameIdForWorker();
+        if (gameId === null) {
+          log.warn(`Failed to generate game ID for worker ${workerId}`);
+          return;
+        }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": config.apiKey(),
-      },
-      body: JSON.stringify({
-        id: workerId,
-        gameId: gameId,
-        ccu: gm.activeClients(),
-        instanceId: process.env.INSTANCE_ID,
-      }),
-      signal: controller.signal,
-    });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": config.apiKey(),
+          },
+          body: JSON.stringify({
+            id: workerId,
+            gameId: gameId,
+            ccu: gm.activeClients(),
+            instanceId: process.env.INSTANCE_ID,
+          }),
+          signal: controller.signal,
+        });
 
-    clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      log.warn(
-        `Failed to poll lobby: ${response.status} ${response.statusText}`,
-      );
-      return;
-    }
+        if (!response.ok) {
+          log.warn(
+            `Failed to poll lobby: ${response.status} ${response.statusText}`,
+          );
+          return;
+        }
 
-    const data = await response.json();
-    log.info(`Lobby poll successful:`, data);
+        const data = await response.json();
+        log.info(`Lobby poll successful:`, data);
 
-    if (data.assignment) {
-      const gameConfig = playlist.get1v1Config();
-      const game = gm.createGame(gameId, gameConfig);
-      setTimeout(() => {
-        // Wait a few seconds to allow clients to connect.
-        console.log(`Starting game ${gameId}`);
-        game.start();
-      }, 5000);
-    }
-  } catch (error) {
-    log.error(`Error polling lobby:`, error);
-  } finally {
-    setTimeout(
-      () => {
-        pollLobby(gm);
-      },
-      5000 + Math.random() * 1000,
-    );
-  }
+        if (data.assignment) {
+          const gameConfig = playlist.get1v1Config();
+          const game = gm.createGame(gameId, gameConfig);
+          setTimeout(() => {
+            // Wait a few seconds to allow clients to connect.
+            console.log(`Starting game ${gameId}`);
+            game.start();
+          }, 7000);
+        }
+      } catch (error) {
+        log.error(`Error polling lobby:`, error);
+      }
+    },
+    5000 + Math.random() * 1000,
+  );
 }
 
 // TODO: This is a hack to generate a game ID for the worker.

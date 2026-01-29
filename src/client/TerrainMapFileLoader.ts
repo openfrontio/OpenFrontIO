@@ -1,4 +1,6 @@
-import version from "resources/version.txt?raw";
 import { FetchGameMapLoader } from "../core/game/FetchGameMapLoader";
 
-export const terrainMapFileLoader = new FetchGameMapLoader(`/maps`, version);
+export const terrainMapFileLoader = new FetchGameMapLoader(
+  `/maps`,
+  window.GIT_COMMIT,
+);
