@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { GameInfo, spawnPhaseSeconds } from "../core/Schemas";
-import { GameMode } from "../core/game/Game";
+import { ServerConfig } from "../core/configuration/Config";
+import { GameMode, GameType } from "../core/game/Game";
+import { GameInfo } from "../core/Schemas";
 
 export const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
@@ -132,6 +133,7 @@ export function buildPreview(
   workerPath: string,
   lobby: GameInfo | null,
   publicInfo: ExternalGameInfo | null,
+  serverConfig: ServerConfig,
 ): PreviewMeta {
   const isFinished = !!publicInfo?.info?.end;
   const isPrivate = lobby?.gameConfig?.gameType === "Private";
@@ -180,9 +182,15 @@ export function buildPreview(
   const winner = parseWinner(publicInfo?.info?.winner, players);
   const duration = publicInfo?.info?.duration;
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
+  const spawnPhaseSeconds =
+    serverConfig.spawnPhaseTicks(
+      gameType === GameType.Singleplayer
+        ? GameType.Singleplayer
+        : GameType.Public,
+    ) / serverConfig.ticksPerSecond();
   const adjustedDuration =
     typeof duration === "number"
-      ? Math.max(0, duration - spawnPhaseSeconds(gameType))
+      ? Math.max(0, duration - spawnPhaseSeconds)
       : undefined;
 
   // Normalize map name to match filesystem (lowercase, no spaces or special chars)

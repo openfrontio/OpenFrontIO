@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { PublicGameModifiers } from "../../src/core/game/Game";
+import { GameType, PublicGameModifiers } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -44,6 +44,12 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   turnIntervalMs(): number {
+    throw new Error("Method not implemented.");
+  }
+  ticksPerSecond(): number {
+    throw new Error("Method not implemented.");
+  }
+  spawnPhaseTicks(gameType: GameType): number {
     throw new Error("Method not implemented.");
   }
   gameCreationRate(): number {

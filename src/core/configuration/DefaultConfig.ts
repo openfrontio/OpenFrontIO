@@ -4,6 +4,7 @@ import {
   Difficulty,
   Game,
   GameMode,
+  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -17,12 +18,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import {
-  GameConfig,
-  GameID,
-  spawnPhaseTurns,
-  TeamCountConfig,
-} from "../Schemas";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
@@ -120,6 +116,12 @@ export abstract class DefaultServerConfig implements ServerConfig {
   abstract env(): GameEnv;
   turnIntervalMs(): number {
     return 100;
+  }
+  ticksPerSecond(): number {
+    return 1000 / this.turnIntervalMs();
+  }
+  spawnPhaseTicks(gameType: GameType): number {
+    return gameType === GameType.Singleplayer ? 100 : 300;
   }
   gameCreationRate(): number {
     return 60 * 1000;
@@ -546,7 +548,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return spawnPhaseTurns(this._gameConfig);
+    return this._serverConfig.spawnPhaseTicks(this._gameConfig.gameType);
   }
   numBots(): number {
     return this.bots();
