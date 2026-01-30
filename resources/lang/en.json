@@ -362,17 +362,18 @@
     "disabled_units": "Disabled Units"
   },
   "public_lobby": {
+    "starts_in": "Starts in {s}",
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "{team_count} teams of 2 (Duos)",
-    "teams_Trios": "{team_count} teams of 3 (Trios)",
-    "teams_Quads": "{team_count} teams of 4 (Quads)",
+    "teams_Duos": "{team_count} teams (Duos)",
+    "teams_Trios": "{team_count} teams (Trios)",
+    "teams_Quads": "{team_count} teams (Quads)",
     "waiting_for_players": "Waiting for players",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
-    "players_per_team": "of {num}",
+    "players_per_team": "({num} each)",
     "started": "Started"
   },
   "matchmaking_modal": {

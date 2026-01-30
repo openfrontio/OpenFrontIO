@@ -82,7 +82,9 @@ export class PublicLobby extends LitElement {
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
     const isStarting = timeRemaining <= 2;
-    const timeDisplay = renderDuration(timeRemaining);
+    const timeDisplay = translateText("public_lobby.starts_in", {
+      s: renderDuration(timeRemaining),
+    });
 
     const teamCount =
       lobby.gameConfig.gameMode === GameMode.Team
