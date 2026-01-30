@@ -43,7 +43,7 @@ export class Footer extends LitElement {
             </svg>
           </a>
           <a
-            href="https://discord.gg/jRpxXvG42t"
+            href="https://discord.gg/openfront"
             target="_blank"
             rel="noopener noreferrer"
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
