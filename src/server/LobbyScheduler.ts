@@ -40,6 +40,7 @@ export class LobbyScheduler {
       ffa: 1,
       teams: 1,
       hvn: 1,
+      special: 1,
     };
 
     const counts = initialCoverageCounts();
@@ -69,10 +70,8 @@ export class LobbyScheduler {
     if (counts.ffa < desired.ffa) requests.push({ category: "ffa" });
     if (counts.teams < desired.teams) requests.push({ category: "teams" });
     if (counts.hvn < desired.hvn) requests.push({ category: "hvn" });
-
-    if (counts.special < 1) {
+    if (counts.special < desired.special)
       requests.push({ category: "special" });
-    }
 
     for (const req of requests) {
       await this.scheduleCategoryLobby(req);
