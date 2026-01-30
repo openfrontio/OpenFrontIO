@@ -1,14 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameID, GameInfo } from "../../core/Schemas";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  HumansVsNations,
-  Quads,
-  Trios,
-} from "../../core/game/Game";
+import { GameMapType, GameMode, HumansVsNations } from "../../core/game/Game";
 import { getClientIDForGame, userAuth } from "../Auth";
 import { JoinLobbyEvent } from "../Main";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
@@ -65,7 +58,6 @@ export class RankedMoreSubmenu extends BaseModal {
   }
 
   render() {
-    const hvnLobby = this.getHvnLobby();
     const specialLobby = this.getSpecialLobby();
     const content = html`
       <div
@@ -78,22 +70,10 @@ export class RankedMoreSubmenu extends BaseModal {
         })}
         <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            ${hvnLobby
-              ? this.renderLobbyCard(
-                  hvnLobby,
-                  this.getLobbyTitle(
-                    hvnLobby,
-                    translateText("mode_selector.hvn_title"),
-                  ),
-                )
-              : ""}
             ${specialLobby
               ? this.renderLobbyCard(
                   specialLobby,
-                  this.getLobbyTitle(
-                    specialLobby,
-                    translateText("mode_selector.special_title"),
-                  ),
+                  this.getSpecialSubtitle(specialLobby),
                 )
               : ""}
             ${this.renderCard(
@@ -175,7 +155,9 @@ export class RankedMoreSubmenu extends BaseModal {
   }
 
   private renderLobbyCard(lobby: GameInfo, modeTitle: string) {
-    const titleContent = this.isSpecialLobby(lobby)
+    const isSpecial =
+      lobby.publicLobbyCategory === "special" || this.isSpecialLobby(lobby);
+    const titleContent = isSpecial
       ? this.renderStackedTitle(
           translateText("mode_selector.special_title"),
           modeTitle,
@@ -328,19 +310,6 @@ export class RankedMoreSubmenu extends BaseModal {
     modal?.open();
   }
 
-  private getHvnLobby() {
-    return this.lobbies.find((candidate) => {
-      if (candidate.publicLobbyCategory) {
-        return candidate.publicLobbyCategory === "hvn";
-      }
-      const config = candidate.gameConfig;
-      return (
-        config?.gameMode === GameMode.Team &&
-        config.playerTeams === HumansVsNations
-      );
-    });
-  }
-
   private getSpecialLobby() {
     return this.lobbies.find((candidate) => {
       if (candidate.publicLobbyCategory) {
@@ -350,77 +319,33 @@ export class RankedMoreSubmenu extends BaseModal {
     });
   }
 
-  private getLobbyTitle(lobby: GameInfo, fallback: string): string {
+  private getSpecialSubtitle(lobby: GameInfo): string {
     const config = lobby.gameConfig;
-    if (!config) return fallback;
+    if (!config) return "";
 
-    return this.getBaseModeTitle(config, lobby, fallback);
-  }
+    // Check if it's HvN
+    if (
+      config.gameMode === GameMode.Team &&
+      config.playerTeams === HumansVsNations
+    ) {
+      const humanSlots = config.maxPlayers ?? lobby.numClients;
+      if (humanSlots) {
+        return translateText("public_lobby.teams_hvn_detailed", {
+          num: String(humanSlots),
+        });
+      }
+      return translateText("public_lobby.teams_hvn");
+    }
 
-  private getBaseModeTitle(
-    config: GameInfo["gameConfig"],
-    lobby: GameInfo,
-    fallback: string,
-  ): string {
-    if (config?.gameMode === GameMode.FFA) {
+    // For other special modes, show the game mode (FFA or Team)
+    if (config.gameMode === GameMode.FFA) {
       return translateText("mode_selector.ffa_title");
     }
-
-    if (config?.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const formatTeamsOf = (
-        teamCount: number | undefined,
-        playersPerTeam: number | undefined,
-        label?: string,
-      ) => {
-        if (!teamCount) return label ?? fallback;
-        if (playersPerTeam) {
-          return `${teamCount} teams of ${playersPerTeam}${
-            label ? ` (${label})` : ""
-          }`;
-        }
-        return `${teamCount} teams${label ? ` (${label})` : ""}`;
-      };
-
-      switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 2))
-            : undefined;
-          return formatTeamsOf(teamCount, 2, "Duos");
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 3))
-            : undefined;
-          return formatTeamsOf(teamCount, 3, "Trios");
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 4))
-            : undefined;
-          return formatTeamsOf(teamCount, 4, "Quads");
-        }
-        case HumansVsNations: {
-          const humanSlots = config.maxPlayers ?? lobby.numClients;
-          if (humanSlots) {
-            return `${humanSlots} Humans vs ${humanSlots} Nations`;
-          }
-          return "Humans vs Nations";
-        }
-        default:
-          if (typeof config.playerTeams === "number") {
-            const teamCount = config.playerTeams;
-            const playersPerTeam =
-              totalPlayers && teamCount > 0
-                ? Math.max(1, Math.floor(totalPlayers / teamCount))
-                : undefined;
-            return formatTeamsOf(teamCount, playersPerTeam);
-          }
-      }
+    if (config.gameMode === GameMode.Team) {
+      return translateText("mode_selector.teams_title");
     }
 
-    return fallback;
+    return "";
   }
 
   private renderStackedTitle(main: string, sub: string) {

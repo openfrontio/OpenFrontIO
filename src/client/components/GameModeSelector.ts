@@ -475,10 +475,12 @@ export class GameModeSelector extends LitElement {
           {
             const humanSlots = config.maxPlayers ?? lobby.numClients;
             if (humanSlots) {
-              return `${humanSlots} Humans vs ${humanSlots} Nations`;
+              return translateText("public_lobby.teams_hvn_detailed", {
+                num: String(humanSlots),
+              });
             }
           }
-          return "Humans vs Nations";
+          return translateText("public_lobby.teams_hvn");
         default:
           if (typeof config.playerTeams === "number") {
             const teamCount = config.playerTeams;

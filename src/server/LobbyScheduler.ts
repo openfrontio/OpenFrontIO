@@ -10,7 +10,7 @@ import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { GameConfigOverrides, MapPlaylist, SpecialPreset } from "./MapPlaylist";
 
-type LobbyCategory = "ffa" | "teams" | "hvn" | "special";
+type LobbyCategory = "ffa" | "teams" | "special";
 
 type LobbyMeta = { category: LobbyCategory; preset?: SpecialPreset };
 
@@ -39,7 +39,6 @@ export class LobbyScheduler {
     const desired = {
       ffa: 1,
       teams: 1,
-      hvn: 1,
       special: 1,
     };
 
@@ -69,7 +68,6 @@ export class LobbyScheduler {
 
     if (counts.ffa < desired.ffa) requests.push({ category: "ffa" });
     if (counts.teams < desired.teams) requests.push({ category: "teams" });
-    if (counts.hvn < desired.hvn) requests.push({ category: "hvn" });
     if (counts.special < desired.special)
       requests.push({ category: "special" });
 
@@ -211,7 +209,6 @@ function initialCoverageCounts() {
   return {
     ffa: 0,
     teams: 0,
-    hvn: 0,
     special: 0,
   };
 }
@@ -227,9 +224,6 @@ function incrementCoverage(
       return;
     case "teams":
       counts.teams += 1;
-      return;
-    case "hvn":
-      counts.hvn += 1;
       return;
     case "special":
       counts.special += 1;
@@ -258,17 +252,19 @@ function buildOverridesForCategory(
           Duos,
           Trios,
           Quads,
+          HumansVsNations,
         ]),
-        lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
-      };
-    case "hvn":
-      return {
-        mode: GameMode.Team,
-        playerTeams: HumansVsNations,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "special":
     default:
+      if (Math.random() < 0.3) {
+        return {
+          mode: GameMode.Team,
+          playerTeams: HumansVsNations,
+          lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
+        };
+      }
       return {
         specialPreset: preset,
         ensureSpecialModifier: true,
@@ -287,7 +283,7 @@ function randomIntInclusive(min: number, max: number): number {
 
 function envAdjustedDelay(config: ServerConfig, ms: number): number {
   if (config.env() === GameEnv.Dev) {
-    return Math.max(1000, Math.round(ms * 0.2));
+    return Math.max(1000, Math.round(ms * 0.05));
   }
   return ms;
 }
