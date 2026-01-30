@@ -280,35 +280,55 @@ export class MapPlaylist {
     specialPreset?: SpecialPreset;
     ensureSpecial: boolean;
   }): PublicGameModifiers {
-    const modifiers: PublicGameModifiers = {
-      isRandomSpawn: Math.random() < 0.1, // 10% chance
-      isCompact: Math.random() < 0.05, // 5% chance
-      isCrowded: Math.random() < 0.05, // 5% chance
-      startingGold: Math.random() < 0.05 ? 5_000_000 : undefined, // 5% chance
+    const useSpecialRates = options?.ensureSpecial ?? false;
+    const rates = useSpecialRates
+      ? {
+          isRandomSpawn: 0.2,
+          isCompact: 0.3,
+          isCrowded: 0.2,
+          startingGold: 0.2,
+        }
+      : {
+          isRandomSpawn: 0.1,
+          isCompact: 0.05,
+          isCrowded: 0.05,
+          startingGold: 0.05,
+        };
+
+    const rollModifiers = (): PublicGameModifiers => ({
+      isRandomSpawn: Math.random() < rates.isRandomSpawn,
+      isCompact: Math.random() < rates.isCompact,
+      isCrowded: Math.random() < rates.isCrowded,
+      startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
+    });
+
+    const applyPreset = (modifiers: PublicGameModifiers) => {
+      switch (options?.specialPreset) {
+        case "compact":
+          modifiers.isCompact = true;
+          modifiers.isRandomSpawn = false;
+          break;
+        case "startingGold":
+          modifiers.startingGold = 5_000_000;
+          break;
+        case "randomSpawn":
+          modifiers.isRandomSpawn = true;
+          break;
+        case "crowded":
+          modifiers.isCrowded = true;
+          break;
+        default:
+          break;
+      }
     };
 
-    // Force a specific preset if requested
-    switch (options?.specialPreset) {
-      case "compact":
-        modifiers.isCompact = true;
-        modifiers.isRandomSpawn = false;
-        break;
-      case "startingGold":
-        modifiers.startingGold = 5_000_000;
-        break;
-      case "randomSpawn":
-        modifiers.isRandomSpawn = true;
-        break;
-      case "crowded":
-        modifiers.isCrowded = true;
-        break;
-      default:
-        break;
-    }
+    let modifiers = rollModifiers();
+    applyPreset(modifiers);
 
-    // Guarantee at least one modifier when requested
-    if (options?.ensureSpecial && !this.isSpecial(modifiers)) {
-      modifiers.startingGold = 5_000_000;
+    // For special rotations, reroll until we actually land a modifier.
+    while (options?.ensureSpecial && !this.isSpecial(modifiers)) {
+      modifiers = rollModifiers();
+      applyPreset(modifiers);
     }
 
     return modifiers;
