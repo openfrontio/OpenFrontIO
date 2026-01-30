@@ -204,6 +204,10 @@ declare global {
       BOLT_AD_CLICKED: string;
       SHOW_HIDDEN_CONTAINER: string;
     };
+    fusetag?: {
+      que: Array<() => void>;
+      pageInit: (config: { blockingFuseIds: string[] }) => void;
+    };
     showPage?: (pageId: string) => void;
   }
 
@@ -263,6 +267,7 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
+    this.initializeFuseTag();
     // Warm critical join dependencies to avoid blocking on first join.
     const configPrefetch = getServerConfigFromClient();
     configPrefetch.catch((error) => {
@@ -1031,17 +1036,17 @@ class Client {
 
   private initializeFuseTag() {
     const tryInitFuseTag = (): boolean => {
-      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
+      const fusetag = window.fusetag;
+      if (fusetag && typeof fusetag.pageInit === "function") {
         console.log("initializing fuse tag");
-        window.fusetag.que.push(() => {
-          window.fusetag.pageInit({
+        fusetag.que.push(() => {
+          fusetag.pageInit({
             blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
           });
         });
         return true;
-      } else {
-        return false;
       }
+      return false;
     };
 
     const interval = setInterval(() => {
