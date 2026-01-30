@@ -64,6 +64,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
+        lobbyStartDelayMs: this.config.gameCreationRate(),
         difficulty: Difficulty.Medium,
         disableNations: false,
         infiniteGold: false,

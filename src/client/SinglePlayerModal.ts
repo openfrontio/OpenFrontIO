@@ -884,6 +884,7 @@ export class SinglePlayerModal extends BaseModal {
                 ? GameMapSize.Compact
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
+              lobbyStartDelayMs: 0,
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,

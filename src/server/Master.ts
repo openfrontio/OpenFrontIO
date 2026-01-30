@@ -16,7 +16,7 @@ import { startPolling } from "./PollingLoop";
 import { renderHtml } from "./RenderHtml";
 
 const config = getServerConfigFromServer();
-const playlist = new MapPlaylist();
+const playlist = new MapPlaylist(false, config.gameCreationRate());
 const readyWorkers = new Set();
 
 const app = express();

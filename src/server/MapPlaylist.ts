@@ -105,7 +105,10 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
 
-  constructor(private disableTeams: boolean = false) {}
+  constructor(
+    private disableTeams: boolean = false,
+    private defaultLobbyStartDelayMs: number = 60_000,
+  ) {}
 
   public async gameConfig(
     overrides?: GameConfigOverrides,
@@ -188,7 +191,8 @@ export class MapPlaylist {
         startingGold,
       },
       startingGold,
-      lobbyStartDelayMs: overrides?.lobbyStartDelayMs,
+      lobbyStartDelayMs:
+        overrides?.lobbyStartDelayMs ?? this.defaultLobbyStartDelayMs,
       difficulty:
         playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
       infiniteGold: false,
@@ -223,6 +227,7 @@ export class MapPlaylist {
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
+      lobbyStartDelayMs: this.defaultLobbyStartDelayMs,
       difficulty: Difficulty.Easy,
       rankedType: RankedType.OneVOne,
       infiniteGold: false,
