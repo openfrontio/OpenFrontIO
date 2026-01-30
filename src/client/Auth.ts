@@ -2,6 +2,7 @@ import { decodeJwt } from "jose";
 import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
+import { ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getApiBase, getAudience } from "./Api";
 import { generateCryptoRandomUUID } from "./Utils";
@@ -218,7 +219,7 @@ export function getClientIDForGame(gameID: string): string {
   if (
     storedGameID === gameID &&
     storedClientID &&
-    /^[A-Za-z0-9]{8}$/.test(storedClientID)
+    ID.safeParse(storedClientID).success
   ) {
     return storedClientID;
   }
