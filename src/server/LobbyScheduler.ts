@@ -110,11 +110,13 @@ export class LobbyScheduler {
     const lobbyInfos: GameInfo[] = results
       .filter((result) => result !== null)
       .map((gi: GameInfo) => {
+        const meta = this.publicLobbyMeta.get(gi.gameID);
         return {
           gameID: gi.gameID,
           numClients: gi?.clients?.length ?? 0,
           gameConfig: gi.gameConfig,
           msUntilStart: gi.msUntilStart,
+          publicLobbyCategory: meta?.category,
         } as GameInfo;
       });
 

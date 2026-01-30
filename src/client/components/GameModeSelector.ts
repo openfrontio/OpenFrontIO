@@ -113,7 +113,10 @@ export class GameModeSelector extends LitElement {
         id: "ffa",
         title: translateText("mode_selector.ffa_title"),
         subtitle: translateText("mode_selector.ffa_subtitle"),
-        filterFn: (lobby) => lobby.gameConfig?.gameMode === GameMode.FFA,
+        filterFn: (lobby) =>
+          lobby.publicLobbyCategory
+            ? lobby.publicLobbyCategory === "ffa"
+            : lobby.gameConfig?.gameMode === GameMode.FFA,
         fallbackAction: () =>
           this.openSinglePlayerModal({ gameMode: GameMode.FFA }),
       },
@@ -122,6 +125,9 @@ export class GameModeSelector extends LitElement {
         title: translateText("mode_selector.teams_title"),
         subtitle: translateText("mode_selector.teams_subtitle"),
         filterFn: (lobby) => {
+          if (lobby.publicLobbyCategory) {
+            return lobby.publicLobbyCategory === "teams";
+          }
           const config = lobby.gameConfig;
           return (
             config?.gameMode === GameMode.Team &&

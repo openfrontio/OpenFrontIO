@@ -330,6 +330,9 @@ export class RankedMoreSubmenu extends BaseModal {
 
   private getHvnLobby() {
     return this.lobbies.find((candidate) => {
+      if (candidate.publicLobbyCategory) {
+        return candidate.publicLobbyCategory === "hvn";
+      }
       const config = candidate.gameConfig;
       return (
         config?.gameMode === GameMode.Team &&
@@ -339,7 +342,12 @@ export class RankedMoreSubmenu extends BaseModal {
   }
 
   private getSpecialLobby() {
-    return this.lobbies.find((candidate) => this.isSpecialLobby(candidate));
+    return this.lobbies.find((candidate) => {
+      if (candidate.publicLobbyCategory) {
+        return candidate.publicLobbyCategory === "special";
+      }
+      return this.isSpecialLobby(candidate);
+    });
   }
 
   private getLobbyTitle(lobby: GameInfo, fallback: string): string {
