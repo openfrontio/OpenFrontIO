@@ -121,7 +121,7 @@ export class PublicLobby extends LitElement {
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
-        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] hover:scale-[1.01] active:scale-[0.98]"
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#376f9a] hover:scale-[1.01] active:scale-[0.98]"
       >
         <div class="font-sans w-full h-full flex flex-col">
           <!-- Main card gradient - stops before text -->

@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   Duos,
@@ -205,100 +205,7 @@ export class GameModeSelector extends LitElement {
       translateText("mode_selector.special_title"),
       subtitle,
     );
-
-    const mapImageSrc = this.mapImages.get(lobby.gameID);
-    const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
-    const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
-    const timeDisplay = renderDuration(timeRemaining);
-
-    const mapName = translateText(
-      `map.${lobby.gameConfig?.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-    );
-
-    const modifierLabels = this.getModifierLabels(
-      lobby.gameConfig?.publicGameModifiers,
-    );
-
-    return html`
-      <button
-        @click=${() => this.validateAndJoin(lobby)}
-        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${mapImageSrc
-          ? "bg-transparent"
-          : "bg-slate-900/80 backdrop-blur-md"} hover:scale-[1.02] active:scale-[0.98]"
-      >
-        ${mapImageSrc
-          ? html`
-              <img
-                src="${mapImageSrc}"
-                alt="${mapName}"
-                class="absolute inset-0 w-full h-full object-cover object-center"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"
-              ></div>
-            `
-          : ""}
-        <div
-          class="relative z-10 flex flex-col h-full p-4 items-center justify-center gap-2"
-        >
-          <div class="flex flex-col items-center gap-1 text-center">
-            <h3
-              class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight"
-            >
-              ${titleContent}
-            </h3>
-          </div>
-          <div class="flex flex-col gap-2 mt-auto w-full">
-            ${modifierLabels.length > 0
-              ? html`
-                  <div class="flex gap-1 flex-wrap justify-center">
-                    ${modifierLabels.map(
-                      (label) => html`
-                        <span
-                          class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-purple-600 text-white"
-                        >
-                          ${label}
-                        </span>
-                      `,
-                    )}
-                  </div>
-                `
-              : ""}
-            ${mapName
-              ? html`
-                  <p
-                    class="text-xs font-bold text-white/80 uppercase tracking-wider text-center"
-                  >
-                    ${mapName}
-                  </p>
-                `
-              : ""}
-            <div class="flex items-center justify-between w-full text-white">
-              <div class="flex items-center gap-1">
-                <span class="text-xs font-bold uppercase tracking-widest">
-                  ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
-                </span>
-              </div>
-              ${timeRemaining > 0
-                ? html`
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 text-white px-2 py-0.5 rounded"
-                    >
-                      ${timeDisplay}
-                    </span>
-                  `
-                : html`
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest bg-green-600 text-white px-2 py-0.5 rounded animate-pulse"
-                    >
-                      ${translateText("public_lobby.starting_game")}
-                    </span>
-                  `}
-            </div>
-          </div>
-        </div>
-      </button>
-    `;
+    return this.renderLobbyCard(lobby, titleContent);
   }
 
   private renderStackedTitle(main: string, sub: string) {
@@ -344,23 +251,33 @@ export class GameModeSelector extends LitElement {
       <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
-          translateText("mode_selector.solo_subtitle"),
+          "",
           () => this.openSinglePlayerModal(),
+          false,
+          "/images/GameplayScreenshot.png",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           "",
           () => this.openRankedMenu(),
+          false,
+          "/maps/falklandislands/thumbnail.webp",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
-          translateText("mode_selector.create_subtitle"),
+          "",
           () => this.openHostLobby(),
+          false,
+          undefined,
+          false,
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
-          translateText("mode_selector.join_subtitle"),
+          "",
           () => this.openJoinLobby(),
+          false,
+          undefined,
+          false,
         )}
       </div>
     `;
@@ -396,38 +313,56 @@ export class GameModeSelector extends LitElement {
     subtitle: string,
     onClick: () => void,
     disabled: boolean = false,
+    backgroundImage?: string,
+    showTextBackground: boolean = true,
   ) {
     return html`
       <button
         @click=${onClick}
         ?disabled=${disabled}
         class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 ${disabled
-          ? "bg-slate-900/40 cursor-not-allowed"
-          : "bg-slate-900/80 hover:scale-[1.02] active:scale-[0.98]"} backdrop-blur-md p-3 items-center justify-center gap-1"
+          ? "bg-[#376f9a]/40 cursor-not-allowed"
+          : "bg-[#376f9a] hover:scale-[1.02] active:scale-[0.98]"} p-3 items-center justify-center gap-1"
       >
-        <h3
-          class="text-sm lg:text-base font-bold ${disabled
-            ? "text-white/40"
-            : "text-white"} uppercase tracking-wider leading-tight text-center"
-        >
-          ${title}
-        </h3>
-        ${subtitle
+        ${backgroundImage
           ? html`
-              <p
-                class="text-[10px] ${disabled
-                  ? "text-white/30"
-                  : "text-white/60"} uppercase tracking-wider"
-              >
-                ${subtitle}
-              </p>
+              <img
+                src="${backgroundImage}"
+                alt="${title}"
+                class="absolute inset-0 w-full h-full object-cover object-center rounded-xl"
+              />
             `
           : ""}
+        <div class="relative z-10">
+          <h3
+            class="inline-block text-sm lg:text-base font-bold ${disabled
+              ? "text-white/40"
+              : "text-white"} uppercase tracking-wider leading-tight text-center px-3 py-2 rounded ${showTextBackground
+              ? "bg-black/80"
+              : ""}"
+          >
+            ${title}
+          </h3>
+          ${subtitle
+            ? html`
+                <p
+                  class="text-[10px] ${disabled
+                    ? "text-white/30"
+                    : "text-white/60"} uppercase tracking-wider text-center"
+                >
+                  ${subtitle}
+                </p>
+              `
+            : ""}
+        </div>
       </button>
     `;
   }
 
-  private renderLobbyCard(lobby: GameInfo, modeTitle: string) {
+  private renderLobbyCard(
+    lobby: GameInfo,
+    titleContent: string | TemplateResult,
+  ) {
     const mapImageSrc = this.mapImages.get(lobby.gameID);
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
@@ -446,21 +381,16 @@ export class GameModeSelector extends LitElement {
       <button
         @click=${() => this.validateAndJoin(lobby)}
         class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${mapImageSrc
-          ? "bg-transparent"
-          : `bg-slate-900/80 backdrop-blur-md`} hover:scale-[1.02] active:scale-[0.98]"
+          ? "bg-[#376f9a]"
+          : "bg-[#376f9a]"} hover:scale-[1.02] active:scale-[0.98]"
       >
         ${mapImageSrc
           ? html`
-              <!-- Map Image Background -->
               <img
                 src="${mapImageSrc}"
                 alt="${mapName}"
-                class="absolute inset-0 w-full h-full object-cover object-center"
+                class="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
               />
-              <!-- Dark overlay for readability -->
-              <div
-                class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"
-              ></div>
             `
           : ""}
 
@@ -470,14 +400,14 @@ export class GameModeSelector extends LitElement {
           <!-- Title -->
           <div class="flex flex-col items-center gap-1 text-center">
             <h3
-              class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight"
+              class="inline-block text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight px-3 py-2 rounded bg-black/80"
             >
-              ${modeTitle}
+              ${titleContent}
             </h3>
           </div>
 
           <!-- Lobby Info -->
-          <div class="flex flex-col gap-2 mt-auto w-full">
+          <div class="flex flex-col gap-2 mt-auto w-full px-3 py-2">
             <!-- Modifier Badges -->
             ${modifierLabels.length > 0
               ? html`
@@ -497,16 +427,20 @@ export class GameModeSelector extends LitElement {
             ${mapName
               ? html`
                   <p
-                    class="text-xs font-bold text-white/80 uppercase tracking-wider text-center"
+                    class="text-xs font-bold text-white uppercase tracking-wider text-center px-2 py-0.5 rounded bg-black/80 mx-auto"
                   >
                     ${mapName}
                   </p>
                 `
               : ""}
-            <div class="flex items-center justify-between w-full text-white">
+            <div
+              class="flex items-center justify-between w-full text-white -mx-2 -mb-1"
+            >
               <!-- Player Count (bottom left) -->
               <div class="flex items-center gap-1">
-                <span class="text-xs font-bold uppercase tracking-widest">
+                <span
+                  class="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/80"
+                >
                   ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
                 </span>
               </div>

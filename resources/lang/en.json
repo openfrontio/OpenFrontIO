@@ -479,10 +479,7 @@
     "ranked_title": "Ranked",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",
-    "coming_soon": "Coming Soon",
-    "solo_subtitle": "Play Solo",
-    "create_subtitle": "Host custom game",
-    "join_subtitle": "Join with code"
+    "coming_soon": "Coming Soon"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
