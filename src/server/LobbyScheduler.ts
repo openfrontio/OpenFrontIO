@@ -42,8 +42,6 @@ export class LobbyScheduler {
       hvn: 1,
     };
 
-    const specialPresets = getDesiredSpecialPresets();
-
     const counts = initialCoverageCounts();
 
     // Count live lobbies using tracked meta (more reliable than categorising)
@@ -72,13 +70,7 @@ export class LobbyScheduler {
     if (counts.teams < desired.teams) requests.push({ category: "teams" });
     if (counts.hvn < desired.hvn) requests.push({ category: "hvn" });
 
-    if (specialPresets.length > 0) {
-      specialPresets.forEach((preset) => {
-        if ((counts.specialByPreset[preset] ?? 0) < 1) {
-          requests.push({ category: "special", preset });
-        }
-      });
-    } else if (counts.special < 1) {
+    if (counts.special < 1) {
       requests.push({ category: "special" });
     }
 
@@ -220,12 +212,6 @@ function initialCoverageCounts() {
     teams: 0,
     hvn: 0,
     special: 0,
-    specialByPreset: {
-      compact: 0,
-      startingGold: 0,
-      randomSpawn: 0,
-      crowded: 0,
-    } as Record<SpecialPreset, number>,
   };
 }
 
@@ -246,10 +232,6 @@ function incrementCoverage(
       return;
     case "special":
       counts.special += 1;
-      if (category.preset) {
-        counts.specialByPreset[category.preset] =
-          (counts.specialByPreset[category.preset] ?? 0) + 1;
-      }
       return;
     default:
       return;
@@ -291,44 +273,6 @@ function buildOverridesForCategory(
         ensureSpecialModifier: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
-  }
-}
-
-function getDesiredSpecialPresets(): SpecialPreset[] {
-  const raw = process.env.SPECIAL_PRESET_VARIANTS;
-  if (!raw) {
-    return ["compact"];
-  }
-
-  if (raw.toLowerCase().trim() === "none") return [];
-
-  const presets = new Set<SpecialPreset>();
-  raw.split(",").forEach((item) => {
-    const normalized = normaliseSpecialPreset(item);
-    if (normalized) presets.add(normalized);
-  });
-
-  return Array.from(presets);
-}
-
-function normaliseSpecialPreset(value: string): SpecialPreset | null {
-  const trimmed = value.trim().toLowerCase();
-  switch (trimmed) {
-    case "compact":
-    case "compact_map":
-      return "compact";
-    case "startinggold":
-    case "starting_gold":
-    case "gold":
-      return "startingGold";
-    case "random":
-    case "randomspawn":
-    case "random_spawn":
-      return "randomSpawn";
-    case "crowded":
-      return "crowded";
-    default:
-      return null;
   }
 }
 
