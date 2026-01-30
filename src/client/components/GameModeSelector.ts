@@ -251,30 +251,22 @@ export class GameModeSelector extends LitElement {
       <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
-          "",
           () => this.openSinglePlayerModal(),
-          false,
           undefined,
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
-          translateText("mode_selector.ranked_subtitle"),
           () => this.openRankedMenu(),
-          false,
           undefined,
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
-          "",
           () => this.openHostLobby(),
-          false,
           undefined,
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
-          "",
           () => this.openJoinLobby(),
-          false,
           undefined,
         )}
       </div>
@@ -308,19 +300,14 @@ export class GameModeSelector extends LitElement {
 
   private renderSmallActionCard(
     title: string,
-    subtitle: string,
     onClick: () => void,
-    disabled: boolean = false,
     backgroundImage?: string,
     overlayClass: string = "bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]",
   ) {
     return html`
       <button
         @click=${onClick}
-        ?disabled=${disabled}
-        class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 ${disabled
-          ? "bg-[#3f79a8]/40 cursor-not-allowed"
-          : "bg-[#3f79a8] hover:scale-[1.02] active:scale-[0.98]"} p-3 items-center justify-center gap-1"
+        class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 bg-[#3f79a8] hover:scale-[1.02] active:scale-[0.98] p-3 items-center justify-center gap-1"
       >
         ${backgroundImage
           ? html`
@@ -334,23 +321,10 @@ export class GameModeSelector extends LitElement {
         <div class="absolute inset-0 ${overlayClass}"></div>
         <div class="relative z-10">
           <h3
-            class="inline-block text-sm lg:text-base font-bold ${disabled
-              ? "text-white/40"
-              : "text-white"} uppercase tracking-wider leading-tight text-center"
+            class="inline-block text-sm lg:text-base font-bold text-white uppercase tracking-wider leading-tight text-center"
           >
             ${title}
           </h3>
-          ${subtitle
-            ? html`
-                <p
-                  class="text-[10px] ${disabled
-                    ? "text-white/30"
-                    : "text-white/70"} uppercase tracking-wider text-center"
-                >
-                  ${subtitle}
-                </p>
-              `
-            : ""}
         </div>
       </button>
     `;
