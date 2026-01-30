@@ -84,7 +84,6 @@ export type SpecialPreset =
 export interface GameConfigOverrides {
   mode?: GameMode;
   playerTeams?: TeamCountConfig;
-  disableSpecialModifiers?: boolean;
   ensureSpecialModifier?: boolean;
   specialPreset?: SpecialPreset;
   lobbyStartDelayMs?: number;
@@ -111,8 +110,7 @@ export class MapPlaylist {
   public async gameConfig(
     overrides?: GameConfigOverrides,
   ): Promise<GameConfig> {
-    const allowArcade = !(overrides?.disableSpecialModifiers ?? false);
-    const { map, mode: playlistMode } = this.getNextMap(allowArcade);
+    const { map, mode: playlistMode } = this.getNextMap();
 
     const mode = overrides?.mode ?? playlistMode;
 
@@ -121,7 +119,6 @@ export class MapPlaylist {
       (mode === GameMode.Team ? this.getTeamCount() : undefined);
 
     const modifiers = this.getRandomPublicGameModifiers({
-      disableSpecial: overrides?.disableSpecialModifiers ?? false,
       specialPreset: overrides?.specialPreset,
       ensureSpecial: overrides?.ensureSpecialModifier ?? false,
     });
@@ -241,33 +238,23 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  private getNextMap(allowArcade: boolean): MapWithMode {
+  private getNextMap(): MapWithMode {
     if (this.mapsPlaylist.length === 0) {
       const numAttempts = 10000;
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
           log.info(`Generated map playlist in ${i} attempts`);
-          return this.shiftNextPlayableMap(allowArcade);
+          return this.shiftNextPlayableMap();
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
     // Even if it failed, playlist will be partially populated.
-    return this.shiftNextPlayableMap(allowArcade);
+    return this.shiftNextPlayableMap();
   }
 
-  private shiftNextPlayableMap(allowArcade: boolean): MapWithMode {
-    if (allowArcade) {
-      return this.mapsPlaylist.shift()!;
-    }
-
-    const index = this.mapsPlaylist.findIndex(
-      (entry) => !this.isArcadeMap(entry.map),
-    );
-    if (index === -1) {
-      return this.mapsPlaylist.shift()!;
-    }
-    return this.mapsPlaylist.splice(index, 1)[0]!;
+  private shiftNextPlayableMap(): MapWithMode {
+    return this.mapsPlaylist.shift()!;
   }
 
   private getTeamCount(): TeamCountConfig {
@@ -285,20 +272,9 @@ export class MapPlaylist {
   }
 
   private getRandomPublicGameModifiers(options?: {
-    disableSpecial: boolean;
     specialPreset?: SpecialPreset;
     ensureSpecial: boolean;
   }): PublicGameModifiers {
-    // Explicit disable: no special modifiers
-    if (options?.disableSpecial) {
-      return {
-        isRandomSpawn: false,
-        isCompact: false,
-        isCrowded: false,
-        startingGold: undefined,
-      };
-    }
-
     const modifiers: PublicGameModifiers = {
       isRandomSpawn: Math.random() < 0.1, // 10% chance
       isCompact: Math.random() < 0.05, // 5% chance

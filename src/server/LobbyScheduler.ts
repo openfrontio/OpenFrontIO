@@ -265,7 +265,6 @@ function buildOverridesForCategory(
     case "ffa":
       return {
         mode: GameMode.FFA,
-        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 45_000),
       };
     case "teams":
@@ -277,14 +276,12 @@ function buildOverridesForCategory(
           Trios,
           Quads,
         ]),
-        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "hvn":
       return {
         mode: GameMode.Team,
         playerTeams: HumansVsNations,
-        disableSpecialModifiers: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "special":
