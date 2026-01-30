@@ -10,7 +10,7 @@ export class Footer extends LitElement {
   render() {
     return html`
       <footer
-        class="[.in-game_&]:hidden bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
+        class="[.in-game_&]:hidden bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
       >
         <div class="flex items-center justify-center gap-6 pt-2">
           <a
