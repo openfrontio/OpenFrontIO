@@ -258,14 +258,23 @@ function buildOverridesForCategory(
       };
     case "special":
     default:
-      if (Math.random() < 0.3) {
+      if (Math.random() < 0.5) {
         return {
           mode: GameMode.Team,
-          playerTeams: HumansVsNations,
+          playerTeams: randomChoice([
+            randomIntInclusive(2, 7),
+            Duos,
+            Trios,
+            Quads,
+            HumansVsNations,
+          ]),
+          specialPreset: preset,
+          ensureSpecialModifier: true,
           lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
         };
       }
       return {
+        mode: GameMode.FFA,
         specialPreset: preset,
         ensureSpecialModifier: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),

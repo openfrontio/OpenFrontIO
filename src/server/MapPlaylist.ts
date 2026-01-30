@@ -121,58 +121,79 @@ export class MapPlaylist {
       overrides?.playerTeams ??
       (mode === GameMode.Team ? this.getTeamCount() : undefined);
 
-    const modifiers = this.getRandomPublicGameModifiers({
-      specialPreset: overrides?.specialPreset,
-      ensureSpecial: overrides?.ensureSpecialModifier ?? false,
-    });
-    let { startingGold } = modifiers;
-    let { isCompact, isRandomSpawn, isCrowded } = modifiers;
+    const applyModifiers = async (mods: PublicGameModifiers) => {
+      const modifiers: PublicGameModifiers = { ...mods };
 
-    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
-    if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
-    ) {
-      isRandomSpawn = false;
-    }
+      // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
+      if (
+        playerTeams === Duos ||
+        playerTeams === Trios ||
+        playerTeams === Quads
+      ) {
+        modifiers.isRandomSpawn = false;
+      }
 
-    // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
-    // (not enough players after 75% player reduction for compact maps)
-    if (
-      mode === GameMode.Team &&
-      !(await this.supportsCompactMapForTeams(map))
-    ) {
-      isCompact = false;
-    }
+      // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
+      // (not enough players after 75% player reduction for compact maps)
+      if (
+        mode === GameMode.Team &&
+        !(await this.supportsCompactMapForTeams(map))
+      ) {
+        modifiers.isCompact = false;
+      }
 
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to 125 (or 60 if compact map is also enabled)
-    let crowdedMaxPlayers: number | undefined;
-    if (isCrowded) {
-      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
-      if (crowdedMaxPlayers === undefined) {
-        isCrowded = false;
-      } else {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+      // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+      // set player count to 125 (or 60 if compact map is also enabled)
+      let crowdedMaxPlayers: number | undefined;
+      if (modifiers.isCrowded) {
+        crowdedMaxPlayers = await this.getCrowdedMaxPlayers(
+          map,
+          modifiers.isCompact,
+        );
+        if (crowdedMaxPlayers === undefined) {
+          modifiers.isCrowded = false;
+        } else {
+          crowdedMaxPlayers = this.adjustForTeams(
+            crowdedMaxPlayers,
+            playerTeams,
+          );
+        }
+      }
+
+      return {
+        ...modifiers,
+        crowdedMaxPlayers,
+      };
+    };
+
+    const requireSpecial =
+      (overrides?.ensureSpecialModifier ?? false) || this.isArcadeMap(map);
+
+    const rollModifiers = () =>
+      this.getRandomPublicGameModifiers({
+        specialPreset: overrides?.specialPreset,
+        ensureSpecial: requireSpecial,
+      });
+
+    let modifiers = rollModifiers();
+    let adjusted = await applyModifiers(modifiers);
+
+    if (requireSpecial) {
+      let attempts = 0;
+      while (!this.isSpecial(adjusted) && attempts < 10) {
+        modifiers = rollModifiers();
+        adjusted = await applyModifiers(modifiers);
+        attempts += 1;
       }
     }
 
-    // If adjustments removed specials, re-apply a guaranteed one when required
-    if (
-      overrides?.ensureSpecialModifier &&
-      !this.isSpecial({ isCompact, isRandomSpawn, isCrowded, startingGold })
-    ) {
-      startingGold = 5_000_000;
-    }
-
-    // Arcade maps should only appear in special modes.
-    if (
-      this.isArcadeMap(map) &&
-      !this.isSpecial({ isCompact, isRandomSpawn, isCrowded, startingGold })
-    ) {
-      startingGold = 5_000_000;
-    }
+    const {
+      startingGold,
+      isCompact,
+      isRandomSpawn,
+      isCrowded,
+      crowdedMaxPlayers,
+    } = adjusted;
 
     // Create the default public game config (from your GameManager)
     return {
