@@ -1,4 +1,4 @@
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   Duos,
@@ -138,60 +138,292 @@ export class GameModeSelector extends LitElement {
           this.openSinglePlayerModal({ gameMode: GameMode.Team }),
       },
       {
-        id: "solo",
-        title: translateText("main.solo"),
-        subtitle: translateText("mode_selector.solo_subtitle"),
-        filterFn: () => false,
-        fallbackAction: () => this.openSinglePlayerModal(),
-        skipLobbyInfo: true,
-        backgroundImage: "/images/GameplayScreenshot.png",
-      },
-      {
-        id: "other-more",
-        title: translateText("mode_selector.other_title"),
-        subtitle: translateText("mode_selector.other_subtitle"),
-        filterFn: () => false,
-        fallbackAction: () => this.openOtherMenu(),
-        skipLobbyInfo: true,
-        backgroundImage: "/images/EuropeBackgroundBlurred.webp",
+        id: "special",
+        title: translateText("mode_selector.special_title"),
+        subtitle: "",
+        filterFn: (lobby) => lobby.publicLobbyCategory === "special",
+        fallbackAction: () =>
+          this.openSinglePlayerModal({ gameMode: GameMode.Team }),
       },
     ];
   }
 
   render() {
     const categories = this.getModeCategories();
-    const cards: TemplateResult[] = [];
 
-    // Generate one card per category
-    for (const category of categories) {
-      const matchingLobbies = this.lobbies.filter(category.filterFn);
+    // Find lobbies for each category
+    const ffaCategory = categories.find((c) => c.id === "ffa")!;
+    const teamsCategory = categories.find((c) => c.id === "teams")!;
+    const specialCategory = categories.find((c) => c.id === "special")!;
 
-      if (matchingLobbies.length > 0) {
-        // Pick the lobby starting soonest
-        const soonestLobby = matchingLobbies.reduce((a, b) => {
-          const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
-          const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
-          return aStart < bStart ? a : b;
-        });
-        const dynamicTitle = this.getLobbyTitle(soonestLobby, category.title);
-        cards.push(this.renderLobbyCard(soonestLobby, dynamicTitle));
-      } else if (category.skipLobbyInfo) {
-        cards.push(
-          this.renderActionCard(
-            category.title,
-            category.subtitle,
-            category.fallbackAction,
-            category.backgroundImage,
-          ),
-        );
-      }
-    }
+    const ffaLobbies = this.lobbies.filter(ffaCategory.filterFn);
+    const teamsLobbies = this.lobbies.filter(teamsCategory.filterFn);
+    const specialLobbies = this.lobbies.filter(specialCategory.filterFn);
+
+    const getSoonestLobby = (lobbies: GameInfo[]) =>
+      lobbies.length > 0
+        ? lobbies.reduce((a, b) => {
+            const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
+            const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
+            return aStart < bStart ? a : b;
+          })
+        : null;
+
+    const ffaLobby = getSoonestLobby(ffaLobbies);
+    const teamsLobby = getSoonestLobby(teamsLobbies);
+    const specialLobby = getSoonestLobby(specialLobbies);
 
     return html`
       <div class="w-full space-y-6">
-        <!-- Dynamic Game Mode Grid: 2x2 -->
-        <div class="grid grid-cols-2 gap-4">${cards}</div>
+        <div class="grid grid-cols-2 gap-4">
+          <!-- FFA -->
+          ${ffaLobby
+            ? this.renderLobbyCard(
+                ffaLobby,
+                this.getLobbyTitle(ffaLobby, ffaCategory.title),
+              )
+            : ""}
+          <!-- Teams -->
+          ${teamsLobby
+            ? this.renderLobbyCard(
+                teamsLobby,
+                this.getLobbyTitle(teamsLobby, teamsCategory.title),
+              )
+            : ""}
+          <!-- Special 24/7 -->
+          ${specialLobby ? this.renderSpecialLobbyCard(specialLobby) : ""}
+          <!-- Quick Actions section -->
+          ${this.renderQuickActionsSection()}
+        </div>
       </div>
+    `;
+  }
+
+  private renderSpecialLobbyCard(lobby: GameInfo) {
+    const subtitle = this.getSpecialSubtitle(lobby);
+    const titleContent = this.renderStackedTitle(
+      translateText("mode_selector.special_title"),
+      subtitle,
+    );
+
+    const mapImageSrc = this.mapImages.get(lobby.gameID);
+    const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
+    const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
+    const timeDisplay = renderDuration(timeRemaining);
+
+    const mapName = translateText(
+      `map.${lobby.gameConfig?.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+    );
+
+    const modifierLabels = this.getModifierLabels(
+      lobby.gameConfig?.publicGameModifiers,
+    );
+
+    return html`
+      <button
+        @click=${() => this.validateAndJoin(lobby)}
+        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${mapImageSrc
+          ? "bg-transparent"
+          : "bg-slate-900/80 backdrop-blur-md"} hover:scale-[1.02] active:scale-[0.98]"
+      >
+        ${mapImageSrc
+          ? html`
+              <img
+                src="${mapImageSrc}"
+                alt="${mapName}"
+                class="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              <div
+                class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"
+              ></div>
+            `
+          : ""}
+        <div
+          class="relative z-10 flex flex-col h-full p-4 items-center justify-center gap-2"
+        >
+          <div class="flex flex-col items-center gap-1 text-center">
+            <h3
+              class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight"
+            >
+              ${titleContent}
+            </h3>
+          </div>
+          <div class="flex flex-col gap-2 mt-auto w-full">
+            ${modifierLabels.length > 0
+              ? html`
+                  <div class="flex gap-1 flex-wrap justify-center">
+                    ${modifierLabels.map(
+                      (label) => html`
+                        <span
+                          class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-purple-600 text-white"
+                        >
+                          ${label}
+                        </span>
+                      `,
+                    )}
+                  </div>
+                `
+              : ""}
+            ${mapName
+              ? html`
+                  <p
+                    class="text-xs font-bold text-white/80 uppercase tracking-wider text-center"
+                  >
+                    ${mapName}
+                  </p>
+                `
+              : ""}
+            <div class="flex items-center justify-between w-full text-white">
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-bold uppercase tracking-widest">
+                  ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
+                </span>
+              </div>
+              ${timeRemaining > 0
+                ? html`
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 text-white px-2 py-0.5 rounded"
+                    >
+                      ${timeDisplay}
+                    </span>
+                  `
+                : html`
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-widest bg-green-600 text-white px-2 py-0.5 rounded animate-pulse"
+                    >
+                      ${translateText("public_lobby.starting_game")}
+                    </span>
+                  `}
+            </div>
+          </div>
+        </div>
+      </button>
+    `;
+  }
+
+  private renderStackedTitle(main: string, sub: string) {
+    return html`
+      <span class="block">${main}</span>
+      <span class="block text-[0.55em] lg:text-[0.55em] text-white/70">
+        ${sub}
+      </span>
+    `;
+  }
+
+  private getSpecialSubtitle(lobby: GameInfo): string {
+    const config = lobby.gameConfig;
+    if (!config) return "";
+
+    // Check if it's HvN
+    if (
+      config.gameMode === GameMode.Team &&
+      config.playerTeams === HumansVsNations
+    ) {
+      const humanSlots = config.maxPlayers ?? lobby.numClients;
+      if (humanSlots) {
+        return translateText("public_lobby.teams_hvn_detailed", {
+          num: String(humanSlots),
+        });
+      }
+      return translateText("public_lobby.teams_hvn");
+    }
+
+    // For other special modes, show the game mode
+    if (config.gameMode === GameMode.FFA) {
+      return translateText("mode_selector.ffa_title");
+    }
+    if (config.gameMode === GameMode.Team) {
+      return translateText("mode_selector.teams_title");
+    }
+
+    return "";
+  }
+
+  private renderQuickActionsSection() {
+    return html`
+      <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
+        ${this.renderSmallActionCard(
+          translateText("main.solo"),
+          translateText("mode_selector.solo_subtitle"),
+          () => this.openSinglePlayerModal(),
+        )}
+        ${this.renderSmallActionCard(
+          translateText("mode_selector.ranked_title"),
+          "",
+          () => this.openRankedMenu(),
+        )}
+        ${this.renderSmallActionCard(
+          translateText("main.create"),
+          translateText("mode_selector.create_subtitle"),
+          () => this.openHostLobby(),
+        )}
+        ${this.renderSmallActionCard(
+          translateText("main.join"),
+          translateText("mode_selector.join_subtitle"),
+          () => this.openJoinLobby(),
+        )}
+      </div>
+    `;
+  }
+
+  private openRankedMenu() {
+    const id = "page-ranked";
+    const modal = document.getElementById(id) as any;
+
+    if (window.showPage) {
+      window.showPage(id);
+    } else if (modal) {
+      document.getElementById("page-play")?.classList.add("hidden");
+      modal.classList.remove("hidden");
+      modal.classList.add("block");
+    }
+
+    modal?.open?.();
+  }
+
+  private openHostLobby() {
+    const modal = document.querySelector("host-lobby-modal") as any;
+    modal?.open();
+  }
+
+  private openJoinLobby() {
+    const modal = document.querySelector("join-private-lobby-modal") as any;
+    modal?.open();
+  }
+
+  private renderSmallActionCard(
+    title: string,
+    subtitle: string,
+    onClick: () => void,
+    disabled: boolean = false,
+  ) {
+    return html`
+      <button
+        @click=${onClick}
+        ?disabled=${disabled}
+        class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 ${disabled
+          ? "bg-slate-900/40 cursor-not-allowed"
+          : "bg-slate-900/80 hover:scale-[1.02] active:scale-[0.98]"} backdrop-blur-md p-3 items-center justify-center gap-1"
+      >
+        <h3
+          class="text-sm lg:text-base font-bold ${disabled
+            ? "text-white/40"
+            : "text-white"} uppercase tracking-wider leading-tight text-center"
+        >
+          ${title}
+        </h3>
+        ${subtitle
+          ? html`
+              <p
+                class="text-[10px] ${disabled
+                  ? "text-white/30"
+                  : "text-white/60"} uppercase tracking-wider"
+              >
+                ${subtitle}
+              </p>
+            `
+          : ""}
+      </button>
     `;
   }
 
@@ -301,45 +533,6 @@ export class GameModeSelector extends LitElement {
     `;
   }
 
-  private renderActionCard(
-    title: string,
-    subtitle: string,
-    onClick: () => void,
-    backgroundImage?: string,
-  ) {
-    return html`
-      <button
-        @click=${onClick}
-        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${backgroundImage
-          ? "bg-transparent"
-          : "bg-slate-900/80 backdrop-blur-md"} hover:scale-[1.02] active:scale-[0.98] p-6 items-center justify-center gap-3"
-      >
-        ${backgroundImage
-          ? html`
-              <img
-                src="${backgroundImage}"
-                alt="${title}"
-                class="absolute inset-0 w-full h-full object-cover object-center"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"
-              ></div>
-            `
-          : ""}
-        <div class="relative z-10 flex flex-col items-center gap-1 text-center">
-          <h3
-            class="text-xl lg:text-2xl font-bold text-white uppercase tracking-widest leading-tight"
-          >
-            ${title}
-          </h3>
-          <p class="text-xs lg:text-sm text-white/60 uppercase tracking-wider">
-            ${subtitle}
-          </p>
-        </div>
-      </button>
-    `;
-  }
-
   private validateAndJoin(lobby: GameInfo) {
     const usernameInput = document.querySelector("username-input") as any;
     if (
@@ -381,21 +574,6 @@ export class GameModeSelector extends LitElement {
       }
       modal.open();
     }
-  }
-
-  private openOtherMenu() {
-    const id = "page-ranked-more";
-    const submenu = document.getElementById(id) as any;
-
-    if (window.showPage) {
-      window.showPage(id);
-    } else if (submenu) {
-      document.getElementById("page-play")?.classList.add("hidden");
-      submenu.classList.remove("hidden");
-      submenu.classList.add("block");
-    }
-
-    submenu?.open?.();
   }
 
   private getLobbyTitle(lobby: GameInfo, fallback: string): string {

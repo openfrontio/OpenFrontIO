@@ -61,7 +61,7 @@ import "./components/GameModeSelector";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
-import "./components/RankedMoreSubmenu";
+import "./components/RankedModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
