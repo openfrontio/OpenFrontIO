@@ -16,16 +16,6 @@ import { JoinLobbyEvent } from "../Main";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { renderDuration, translateText } from "../Utils";
 
-interface ModeCategory {
-  id: string;
-  title: string;
-  subtitle: string;
-  filterFn: (lobby: GameInfo) => boolean;
-  fallbackAction: () => void;
-  skipLobbyInfo?: boolean;
-  backgroundImage?: string;
-}
-
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: GameInfo[] = [];
@@ -107,94 +97,44 @@ export class GameModeSelector extends LitElement {
     }
   }
 
-  private getModeCategories(): ModeCategory[] {
-    return [
-      {
-        id: "ffa",
-        title: translateText("mode_selector.ffa_title"),
-        subtitle: translateText("mode_selector.ffa_subtitle"),
-        filterFn: (lobby) =>
-          lobby.publicLobbyCategory
-            ? lobby.publicLobbyCategory === "ffa"
-            : lobby.gameConfig?.gameMode === GameMode.FFA,
-        fallbackAction: () =>
-          this.openSinglePlayerModal({ gameMode: GameMode.FFA }),
-      },
-      {
-        id: "teams",
-        title: translateText("mode_selector.teams_title"),
-        subtitle: translateText("mode_selector.teams_subtitle"),
-        filterFn: (lobby) => {
-          if (lobby.publicLobbyCategory) {
-            return lobby.publicLobbyCategory === "teams";
-          }
-          const config = lobby.gameConfig;
-          return (
-            config?.gameMode === GameMode.Team &&
-            config.playerTeams !== HumansVsNations
-          );
-        },
-        fallbackAction: () =>
-          this.openSinglePlayerModal({ gameMode: GameMode.Team }),
-      },
-      {
-        id: "special",
-        title: translateText("mode_selector.special_title"),
-        subtitle: "",
-        filterFn: (lobby) => lobby.publicLobbyCategory === "special",
-        fallbackAction: () =>
-          this.openSinglePlayerModal({ gameMode: GameMode.Team }),
-      },
-    ];
+  private getSoonestLobby(filter: (l: GameInfo) => boolean): GameInfo | null {
+    const lobbies = this.lobbies.filter(filter);
+    if (lobbies.length === 0) return null;
+    return lobbies.reduce((a, b) => {
+      const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
+      const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
+      return aStart < bStart ? a : b;
+    });
   }
 
   render() {
-    const categories = this.getModeCategories();
-
-    // Find lobbies for each category
-    const ffaCategory = categories.find((c) => c.id === "ffa")!;
-    const teamsCategory = categories.find((c) => c.id === "teams")!;
-    const specialCategory = categories.find((c) => c.id === "special")!;
-
-    const ffaLobbies = this.lobbies.filter(ffaCategory.filterFn);
-    const teamsLobbies = this.lobbies.filter(teamsCategory.filterFn);
-    const specialLobbies = this.lobbies.filter(specialCategory.filterFn);
-
-    const getSoonestLobby = (lobbies: GameInfo[]) =>
-      lobbies.length > 0
-        ? lobbies.reduce((a, b) => {
-            const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
-            const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
-            return aStart < bStart ? a : b;
-          })
-        : null;
-
-    const ffaLobby = getSoonestLobby(ffaLobbies);
-    const teamsLobby = getSoonestLobby(teamsLobbies);
-    const specialLobby = getSoonestLobby(specialLobbies);
+    const ffaLobby = this.getSoonestLobby(
+      (l) =>
+        l.publicLobbyCategory === "ffa" ||
+        (!l.publicLobbyCategory && l.gameConfig?.gameMode === GameMode.FFA),
+    );
+    const teamsLobby = this.getSoonestLobby((l) => {
+      if (l.publicLobbyCategory) return l.publicLobbyCategory === "teams";
+      const config = l.gameConfig;
+      return (
+        config?.gameMode === GameMode.Team &&
+        config.playerTeams !== HumansVsNations
+      );
+    });
+    const specialLobby = this.getSoonestLobby(
+      (l) => l.publicLobbyCategory === "special",
+    );
 
     return html`
-      <div class="w-full space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-          <!-- FFA -->
-          ${ffaLobby
-            ? this.renderLobbyCard(
-                ffaLobby,
-                this.getLobbyTitle(ffaLobby, ffaCategory.title),
-              )
-            : ""}
-          <!-- Teams -->
-          ${teamsLobby
-            ? this.renderLobbyCard(
-                teamsLobby,
-                this.getLobbyTitle(teamsLobby, teamsCategory.title),
-              )
-            : ""}
-          <!-- Special 24/7 -->
-          ${specialLobby ? this.renderSpecialLobbyCard(specialLobby) : ""}
-          <!-- Quick Actions section -->
-          ${this.renderQuickActionsSection()}
-        </div>
+      <div class="grid grid-cols-2 gap-4 w-full">
+        ${ffaLobby
+          ? this.renderLobbyCard(ffaLobby, this.getLobbyTitle(ffaLobby))
+          : ""}
+        ${teamsLobby
+          ? this.renderLobbyCard(teamsLobby, this.getLobbyTitle(teamsLobby))
+          : ""}
+        ${specialLobby ? this.renderSpecialLobbyCard(specialLobby) : ""}
+        ${this.renderQuickActionsSection()}
       </div>
     `;
   }
@@ -211,9 +151,7 @@ export class GameModeSelector extends LitElement {
   private renderStackedTitle(main: string, sub: string) {
     return html`
       <span class="block">${main}</span>
-      <span class="block text-[0.55em] lg:text-[0.55em] text-white/70">
-        ${sub}
-      </span>
+      <span class="block text-[0.55em] text-white/70">${sub}</span>
     `;
   }
 
@@ -221,28 +159,22 @@ export class GameModeSelector extends LitElement {
     const config = lobby.gameConfig;
     if (!config) return "";
 
-    // Check if it's HvN
     if (
       config.gameMode === GameMode.Team &&
       config.playerTeams === HumansVsNations
     ) {
       const humanSlots = config.maxPlayers ?? lobby.numClients;
-      if (humanSlots) {
-        return translateText("public_lobby.teams_hvn_detailed", {
-          num: String(humanSlots),
-        });
-      }
-      return translateText("public_lobby.teams_hvn");
+      return humanSlots
+        ? translateText("public_lobby.teams_hvn_detailed", {
+            num: String(humanSlots),
+          })
+        : translateText("public_lobby.teams_hvn");
     }
 
-    // For other special modes, show the game mode
-    if (config.gameMode === GameMode.FFA) {
+    if (config.gameMode === GameMode.FFA)
       return translateText("mode_selector.ffa_title");
-    }
-    if (config.gameMode === GameMode.Team) {
+    if (config.gameMode === GameMode.Team)
       return translateText("mode_selector.teams_title");
-    }
-
     return "";
   }
 
@@ -251,81 +183,59 @@ export class GameModeSelector extends LitElement {
       <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
-          () => this.openSinglePlayerModal(),
-          undefined,
+          this.openSinglePlayerModal,
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
-          () => this.openRankedMenu(),
-          undefined,
+          this.openRankedMenu,
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
-          () => this.openHostLobby(),
-          undefined,
+          this.openHostLobby,
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
-          () => this.openJoinLobby(),
-          undefined,
+          this.openJoinLobby,
         )}
       </div>
     `;
   }
 
-  private openRankedMenu() {
-    const id = "page-ranked";
-    const modal = document.getElementById(id) as any;
-
+  private openRankedMenu = () => {
+    const modal = document.getElementById("page-ranked") as any;
     if (window.showPage) {
-      window.showPage(id);
+      window.showPage("page-ranked");
     } else if (modal) {
       document.getElementById("page-play")?.classList.add("hidden");
       modal.classList.remove("hidden");
       modal.classList.add("block");
     }
-
     modal?.open?.();
-  }
+  };
 
-  private openHostLobby() {
-    const modal = document.querySelector("host-lobby-modal") as any;
-    modal?.open();
-  }
+  private openHostLobby = () => {
+    (document.querySelector("host-lobby-modal") as any)?.open();
+  };
 
-  private openJoinLobby() {
-    const modal = document.querySelector("join-private-lobby-modal") as any;
-    modal?.open();
-  }
+  private openJoinLobby = () => {
+    (document.querySelector("join-private-lobby-modal") as any)?.open();
+  };
 
-  private renderSmallActionCard(
-    title: string,
-    onClick: () => void,
-    backgroundImage?: string,
-    overlayClass: string = "bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]",
-  ) {
+  private renderSmallActionCard(title: string, onClick: () => void) {
     return html`
       <button
         @click=${onClick}
-        class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 bg-[#3f79a8] hover:scale-[1.02] active:scale-[0.98] p-3 items-center justify-center gap-1"
+        class="relative flex items-center justify-center w-full h-full rounded-xl overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98]"
       >
-        ${backgroundImage
-          ? html`
-              <img
-                src="${backgroundImage}"
-                alt="${title}"
-                class="absolute inset-0 w-full h-full object-cover object-center rounded-xl"
-              />
-            `
-          : ""}
-        <div class="absolute inset-0 ${overlayClass}"></div>
-        <div class="relative z-10">
-          <h3
-            class="inline-block text-sm lg:text-base font-bold text-white uppercase tracking-wider leading-tight text-center"
-          >
-            ${title}
-          </h3>
-        </div>
+        <div class="absolute inset-0 scale-110 bg-[#3f79a8]"></div>
+        <div
+          class="absolute inset-0 scale-110 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
+        ></div>
+        <h3
+          class="relative z-10 text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
+        >
+          ${title}
+        </h3>
       </button>
     `;
   }
@@ -343,7 +253,6 @@ export class GameModeSelector extends LitElement {
       `map.${lobby.gameConfig?.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
     );
 
-    // Get modifier labels
     const modifierLabels = this.getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
@@ -351,38 +260,30 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${mapImageSrc
-          ? "bg-[#3f79a8]"
-          : "bg-[#3f79a8]"} hover:scale-[1.02] active:scale-[0.98]"
+        class="relative flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-transform hover:scale-[1.02] active:scale-[0.98]"
       >
+        <div class="absolute inset-0 scale-110 bg-[#3f79a8]"></div>
         ${mapImageSrc
-          ? html`
-              <img
-                src="${mapImageSrc}"
-                alt="${mapName}"
-                class="absolute inset-0 w-full h-full object-cover object-center rounded-2xl"
-              />
-            `
+          ? html`<img
+              src="${mapImageSrc}"
+              alt="${mapName}"
+              class="absolute inset-0 scale-110 w-full h-full object-cover"
+            />`
           : ""}
         <div
-          class="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
+          class="absolute inset-0 scale-110 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
         ></div>
 
         <div
           class="relative z-10 flex flex-col h-full p-4 items-center justify-center gap-2"
         >
-          <!-- Title -->
-          <div class="flex flex-col items-center gap-1 text-center">
-            <h3
-              class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight text-center"
-            >
-              ${titleContent}
-            </h3>
-          </div>
+          <h3
+            class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest text-center"
+          >
+            ${titleContent}
+          </h3>
 
-          <!-- Lobby Info -->
           <div class="flex flex-col gap-2 mt-auto w-full py-2">
-            <!-- Modifier Badges -->
             ${modifierLabels.length > 0
               ? html`
                   <div class="flex gap-1 flex-wrap justify-center">
@@ -399,41 +300,27 @@ export class GameModeSelector extends LitElement {
                 `
               : ""}
             ${mapName
-              ? html`
-                  <p
-                    class="text-xs font-bold text-white uppercase tracking-wider text-center mx-auto"
-                  >
-                    ${mapName}
-                  </p>
-                `
-              : ""}
-            <div
-              class="flex items-center justify-between w-full text-white -mb-1"
-            >
-              <!-- Player Count (bottom left) -->
-              <div class="flex items-center gap-1">
-                <span
-                  class="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded"
+              ? html`<p
+                  class="text-xs font-bold text-white uppercase tracking-wider text-center"
                 >
-                  ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
-                </span>
-              </div>
-              <!-- Timer (bottom right) -->
+                  ${mapName}
+                </p>`
+              : ""}
+            <div class="flex items-center justify-between w-full text-white">
+              <span class="text-xs font-bold uppercase tracking-widest">
+                ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
+              </span>
               ${timeRemaining > 0
-                ? html`
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 text-white px-2 py-0.5 rounded"
-                    >
-                      ${timeDisplay}
-                    </span>
-                  `
-                : html`
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest bg-green-600 text-white px-2 py-0.5 rounded animate-pulse"
-                    >
-                      ${translateText("public_lobby.starting_game")}
-                    </span>
-                  `}
+                ? html`<span
+                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                  >
+                    ${timeDisplay}
+                  </span>`
+                : html`<span
+                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded animate-pulse"
+                  >
+                    ${translateText("public_lobby.starting_game")}
+                  </span>`}
             </div>
           </div>
         </div>
@@ -443,11 +330,7 @@ export class GameModeSelector extends LitElement {
 
   private validateAndJoin(lobby: GameInfo) {
     const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
+    if (usernameInput?.isValid?.() === false) {
       window.dispatchEvent(
         new CustomEvent("show-message", {
           detail: {
@@ -474,48 +357,29 @@ export class GameModeSelector extends LitElement {
     );
   }
 
-  private openSinglePlayerModal(config?: any) {
-    const modal = document.querySelector("single-player-modal") as any;
-    if (modal) {
-      if (config) {
-        modal.setInitialConfig(config);
-      }
-      modal.open();
-    }
-  }
+  private openSinglePlayerModal = () => {
+    (document.querySelector("single-player-modal") as any)?.open();
+  };
 
-  private getLobbyTitle(lobby: GameInfo, fallback: string): string {
+  private getLobbyTitle(lobby: GameInfo): string {
     const config = lobby.gameConfig;
-    if (!config) return fallback;
-    return this.getBaseModeTitle(config, lobby, fallback);
+    if (!config) return "";
+    return this.getBaseModeTitle(config, lobby);
   }
 
-  private getModifierLabels(
-    publicGameModifiers: PublicGameModifiers | undefined,
-  ): string[] {
-    if (!publicGameModifiers) {
-      return [];
-    }
-    const labels: string[] = [];
-    if (publicGameModifiers.isRandomSpawn) {
-      labels.push(translateText("public_game_modifier.random_spawn"));
-    }
-    if (publicGameModifiers.isCompact) {
-      labels.push(translateText("public_game_modifier.compact_map"));
-    }
-    if (publicGameModifiers.isCrowded) {
-      labels.push(translateText("public_game_modifier.crowded"));
-    }
-    if (publicGameModifiers.startingGold) {
-      labels.push(translateText("public_game_modifier.starting_gold"));
-    }
-    return labels;
+  private getModifierLabels(mods: PublicGameModifiers | undefined): string[] {
+    if (!mods) return [];
+    return [
+      mods.isRandomSpawn && translateText("public_game_modifier.random_spawn"),
+      mods.isCompact && translateText("public_game_modifier.compact_map"),
+      mods.isCrowded && translateText("public_game_modifier.crowded"),
+      mods.startingGold && translateText("public_game_modifier.starting_gold"),
+    ].filter((x): x is string => !!x);
   }
 
   private getBaseModeTitle(
     config: GameInfo["gameConfig"],
     lobby: GameInfo,
-    fallback: string,
   ): string {
     if (config?.gameMode === GameMode.FFA) {
       return translateText("mode_selector.ffa_title");
@@ -528,68 +392,53 @@ export class GameModeSelector extends LitElement {
         playersPerTeam: number | undefined,
         label?: string,
       ) => {
-        if (!teamCount) return label ?? fallback;
+        if (!teamCount)
+          return label ?? translateText("mode_selector.teams_title");
         if (playersPerTeam) {
-          return `${teamCount} teams of ${playersPerTeam}${
-            label ? ` (${label})` : ""
-          }`;
+          return `${teamCount} teams of ${playersPerTeam}${label ? ` (${label})` : ""}`;
         }
         return `${teamCount} teams${label ? ` (${label})` : ""}`;
       };
 
       switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 2))
-            : undefined;
-          return formatTeamsOf(teamCount, 2, "Duos");
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 3))
-            : undefined;
-          return formatTeamsOf(teamCount, 3, "Trios");
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.max(1, Math.floor(totalPlayers / 4))
-            : undefined;
-          return formatTeamsOf(teamCount, 4, "Quads");
-        }
-        case HumansVsNations:
-          // maxPlayers in HvN represents human slots; nations fill the same amount
-          {
-            const humanSlots = config.maxPlayers ?? lobby.numClients;
-            if (humanSlots) {
-              return translateText("public_lobby.teams_hvn_detailed", {
+        case Duos:
+          return formatTeamsOf(
+            totalPlayers ? Math.floor(totalPlayers / 2) : undefined,
+            2,
+            "Duos",
+          );
+        case Trios:
+          return formatTeamsOf(
+            totalPlayers ? Math.floor(totalPlayers / 3) : undefined,
+            3,
+            "Trios",
+          );
+        case Quads:
+          return formatTeamsOf(
+            totalPlayers ? Math.floor(totalPlayers / 4) : undefined,
+            4,
+            "Quads",
+          );
+        case HumansVsNations: {
+          const humanSlots = config.maxPlayers ?? lobby.numClients;
+          return humanSlots
+            ? translateText("public_lobby.teams_hvn_detailed", {
                 num: String(humanSlots),
-              });
-            }
-          }
-          return translateText("public_lobby.teams_hvn");
+              })
+            : translateText("public_lobby.teams_hvn");
+        }
         default:
           if (typeof config.playerTeams === "number") {
             const teamCount = config.playerTeams;
             const playersPerTeam =
               totalPlayers && teamCount > 0
-                ? Math.max(1, Math.floor(totalPlayers / teamCount))
+                ? Math.floor(totalPlayers / teamCount)
                 : undefined;
             return formatTeamsOf(teamCount, playersPerTeam);
           }
       }
     }
 
-    return fallback;
-  }
-
-  private isSpecialLobby(lobby: GameInfo): boolean {
-    const mods = lobby.gameConfig?.publicGameModifiers;
-    if (!mods) return false;
-    return !!(
-      mods.isCompact ||
-      mods.isRandomSpawn ||
-      mods.isCrowded ||
-      (mods.startingGold && mods.startingGold > 0)
-    );
+    return "";
   }
 }

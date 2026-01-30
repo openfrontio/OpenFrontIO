@@ -148,9 +148,7 @@ export const GameInfoSchema = z.object({
   numClients: z.number().optional(),
   msUntilStart: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
-  publicLobbyCategory: z
-    .enum(["ffa", "teams", "hvn", "special"])
-    .optional(),
+  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
 });
 
 export interface GameInfo {

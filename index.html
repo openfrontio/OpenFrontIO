@@ -122,12 +122,17 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-row overflow-hidden"
   >
-    <div
-      class="fixed inset-0 w-full h-full -z-50 bg-cover bg-center bg-fixed pointer-events-none brightness-[0.5]"
-      style="
-        background-image: url(&quot;/images/EuropeBackgroundBlurred.webp&quot;);
-      "
-    ></div>
+    <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
+      <div
+        class="absolute inset-0 bg-[radial-gradient(120%_120%_at_20%_10%,#243a5b_0%,#1b2a45_45%,#121d2f_100%)]"
+      ></div>
+      <div
+        class="absolute inset-0 bg-[radial-gradient(80%_80%_at_85%_20%,rgba(92,150,200,0.22),transparent_70%),radial-gradient(70%_70%_at_15%_85%,rgba(68,115,175,0.18),transparent_70%)]"
+      ></div>
+      <div
+        class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent_25%,transparent_75%,rgba(0,0,0,0.35))]"
+      ></div>
+    </div>
 
     <!-- LEFT SIDEBAR MENU -->
 
