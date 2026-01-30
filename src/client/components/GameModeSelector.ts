@@ -202,7 +202,7 @@ export class GameModeSelector extends LitElement {
   private renderSpecialLobbyCard(lobby: GameInfo) {
     const subtitle = this.getSpecialSubtitle(lobby);
     const titleContent = this.renderStackedTitle(
-      translateText("mode_selector.special_title"),
+      translateText("mode_selector.arcade_title"),
       subtitle,
     );
     return this.renderLobbyCard(lobby, titleContent);
