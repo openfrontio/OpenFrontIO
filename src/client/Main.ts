@@ -330,25 +330,22 @@ class Client {
     }
 
     const singlePlayer = document.getElementById("single-player");
-    if (singlePlayer) {
-      singlePlayer.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-single-player");
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("single-player button not present");
-    }
+    if (singlePlayer === null) throw new Error("Missing single-player");
+    singlePlayer.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        window.showPage?.("page-single-player");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+      }
+    });
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
@@ -557,26 +554,23 @@ class Client {
       console.warn("Host private lobby modal element not found");
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
-    if (hostLobbyButton) {
-      hostLobbyButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-host-lobby");
-          this.publicLobby?.leaveLobby();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("host-lobby-button not present");
-    }
+    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
+    hostLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        window.showPage?.("page-host-lobby");
+        this.publicLobby?.leaveLobby();
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+      }
+    });
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
@@ -598,25 +592,22 @@ class Client {
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
-    if (joinPrivateLobbyButton) {
-      joinPrivateLobbyButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-join-private-lobby");
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("join-private-lobby-button not present");
-    }
+    if (joinPrivateLobbyButton === null) throw new Error("Missing join-private-lobby-button");
+    joinPrivateLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        window.showPage?.("page-join-private-lobby");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+      }
+    });
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
