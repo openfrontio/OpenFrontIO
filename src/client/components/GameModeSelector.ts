@@ -254,15 +254,14 @@ export class GameModeSelector extends LitElement {
           "",
           () => this.openSinglePlayerModal(),
           false,
-          "/images/GameplayScreenshot.png",
+          undefined,
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           translateText("mode_selector.ranked_subtitle"),
           () => this.openRankedMenu(),
           false,
-          "/maps/falklandislands/thumbnail.webp",
-          "bg-[linear-gradient(180deg,rgba(88,28,135,0.45),rgba(0,0,0,0.64))]",
+          undefined,
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),

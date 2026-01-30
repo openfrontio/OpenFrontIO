@@ -87,7 +87,7 @@ export class PatternInput extends LitElement {
       return html`
         <button
           id="pattern-input"
-          class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-slate-900/80 rounded-lg overflow-hidden"
+          class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 bg-slate-900 rounded-lg overflow-hidden"
           disabled
         >
           <span
@@ -107,7 +107,7 @@ export class PatternInput extends LitElement {
     return html`
       <button
         id="pattern-input"
-        class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
+        class="pattern-btn m-0 border-0 !p-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900 hover:bg-slate-800 active:bg-slate-800 rounded-lg overflow-hidden"
         title=${buttonTitle}
         @click=${this.onInputClick}
       >
@@ -120,7 +120,7 @@ export class PatternInput extends LitElement {
         </span>
         ${showSelect
           ? html`<span
-              class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full text-center px-1"
+              class="text-[10px] font-black text-white uppercase leading-none break-words w-full text-center px-1"
             >
               ${translateText("territory_patterns.select_skin")}
             </span>`
