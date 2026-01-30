@@ -258,10 +258,11 @@ export class GameModeSelector extends LitElement {
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
-          "",
+          translateText("mode_selector.ranked_subtitle"),
           () => this.openRankedMenu(),
           false,
           "/maps/falklandislands/thumbnail.webp",
+          "bg-[linear-gradient(180deg,rgba(88,28,135,0.45),rgba(0,0,0,0.64))]",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
@@ -269,7 +270,6 @@ export class GameModeSelector extends LitElement {
           () => this.openHostLobby(),
           false,
           undefined,
-          false,
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
@@ -277,7 +277,6 @@ export class GameModeSelector extends LitElement {
           () => this.openJoinLobby(),
           false,
           undefined,
-          false,
         )}
       </div>
     `;
@@ -314,15 +313,15 @@ export class GameModeSelector extends LitElement {
     onClick: () => void,
     disabled: boolean = false,
     backgroundImage?: string,
-    showTextBackground: boolean = true,
+    overlayClass: string = "bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]",
   ) {
     return html`
       <button
         @click=${onClick}
         ?disabled=${disabled}
         class="group relative flex flex-col w-full h-full overflow-hidden rounded-xl transition-all duration-200 ${disabled
-          ? "bg-[#376f9a]/40 cursor-not-allowed"
-          : "bg-[#376f9a] hover:scale-[1.02] active:scale-[0.98]"} p-3 items-center justify-center gap-1"
+          ? "bg-[#3f79a8]/40 cursor-not-allowed"
+          : "bg-[#3f79a8] hover:scale-[1.02] active:scale-[0.98]"} p-3 items-center justify-center gap-1"
       >
         ${backgroundImage
           ? html`
@@ -333,13 +332,12 @@ export class GameModeSelector extends LitElement {
               />
             `
           : ""}
+        <div class="absolute inset-0 ${overlayClass}"></div>
         <div class="relative z-10">
           <h3
             class="inline-block text-sm lg:text-base font-bold ${disabled
               ? "text-white/40"
-              : "text-white"} uppercase tracking-wider leading-tight text-center px-3 py-2 rounded ${showTextBackground
-              ? "bg-black/80"
-              : ""}"
+              : "text-white"} uppercase tracking-wider leading-tight text-center"
           >
             ${title}
           </h3>
@@ -348,7 +346,7 @@ export class GameModeSelector extends LitElement {
                 <p
                   class="text-[10px] ${disabled
                     ? "text-white/30"
-                    : "text-white/60"} uppercase tracking-wider text-center"
+                    : "text-white/70"} uppercase tracking-wider text-center"
                 >
                   ${subtitle}
                 </p>
@@ -381,8 +379,8 @@ export class GameModeSelector extends LitElement {
       <button
         @click=${() => this.validateAndJoin(lobby)}
         class="group relative isolate flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-all duration-200 ${mapImageSrc
-          ? "bg-[#376f9a]"
-          : "bg-[#376f9a]"} hover:scale-[1.02] active:scale-[0.98]"
+          ? "bg-[#3f79a8]"
+          : "bg-[#3f79a8]"} hover:scale-[1.02] active:scale-[0.98]"
       >
         ${mapImageSrc
           ? html`
@@ -393,6 +391,9 @@ export class GameModeSelector extends LitElement {
               />
             `
           : ""}
+        <div
+          class="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
+        ></div>
 
         <div
           class="relative z-10 flex flex-col h-full p-4 items-center justify-center gap-2"
@@ -400,14 +401,14 @@ export class GameModeSelector extends LitElement {
           <!-- Title -->
           <div class="flex flex-col items-center gap-1 text-center">
             <h3
-              class="inline-block text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight px-3 py-2 rounded bg-black/80"
+              class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest leading-tight text-center"
             >
               ${titleContent}
             </h3>
           </div>
 
           <!-- Lobby Info -->
-          <div class="flex flex-col gap-2 mt-auto w-full px-3 py-2">
+          <div class="flex flex-col gap-2 mt-auto w-full py-2">
             <!-- Modifier Badges -->
             ${modifierLabels.length > 0
               ? html`
@@ -427,19 +428,19 @@ export class GameModeSelector extends LitElement {
             ${mapName
               ? html`
                   <p
-                    class="text-xs font-bold text-white uppercase tracking-wider text-center px-2 py-0.5 rounded bg-black/80 mx-auto"
+                    class="text-xs font-bold text-white uppercase tracking-wider text-center mx-auto"
                   >
                     ${mapName}
                   </p>
                 `
               : ""}
             <div
-              class="flex items-center justify-between w-full text-white -mx-2 -mb-1"
+              class="flex items-center justify-between w-full text-white -mb-1"
             >
               <!-- Player Count (bottom left) -->
               <div class="flex items-center gap-1">
                 <span
-                  class="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-black/80"
+                  class="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded"
                 >
                   ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
                 </span>
