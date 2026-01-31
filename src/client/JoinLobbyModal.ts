@@ -48,7 +48,6 @@ export class JoinLobbyModal extends BaseModal {
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
 
-  private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
@@ -572,7 +571,7 @@ export class JoinLobbyModal extends BaseModal {
     }
     const currentMap = this.gameConfig.gameMap;
     try {
-      const mapData = this.mapLoader.getMapData(currentMap);
+      const mapData = terrainMapFileLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
       if (this.gameConfig?.gameMap === currentMap) {
         this.nationCount = manifest.nations.length;
