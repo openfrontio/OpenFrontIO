@@ -4,11 +4,12 @@ type TurnstileToken = { token: string; createdAt: number };
 
 const TURNSTILE_TOKEN_TTL_MS = 3 * 60 * 1000;
 const TURNSTILE_REFRESH_LEEWAY_MS = 30 * 1000;
+const TURNSTILE_CHECK_INTERVAL_MS = 100;
 
 export class TurnstileManager {
   private token: TurnstileToken | null = null;
   private tokenPromise: Promise<TurnstileToken | null> | null = null;
-  private refreshTimeout: number | null = null;
+  private checkInterval: number | null = null;
   private warmupPromise: Promise<void> | null = null;
 
   constructor(private readonly getServerConfig: () => Promise<ServerConfig>) {}
@@ -17,7 +18,7 @@ export class TurnstileManager {
     if (this.warmupPromise) {
       return this.warmupPromise;
     }
-    this.warmupPromise = this.prefetchToken();
+    this.warmupPromise = this.init();
     try {
       await this.warmupPromise;
     } catch (error) {
@@ -29,35 +30,20 @@ export class TurnstileManager {
 
   clearTokenAndRefresh(): void {
     this.token = null;
-    if (this.refreshTimeout !== null) {
-      clearTimeout(this.refreshTimeout);
-      this.refreshTimeout = null;
-    }
+    // interval continues to run and will refetch when needed
   }
 
-  private async prefetchToken(): Promise<void> {
-    try {
-      const config = await this.getServerConfig();
-      if (config.env() === GameEnv.Dev) {
-        return;
-      }
-      if (
-        this.token &&
-        this.isTokenValid(this.token) &&
-        this.timeUntilExpiry(this.token) > TURNSTILE_REFRESH_LEEWAY_MS
-      ) {
-        this.scheduleRefresh(this.getRefreshMs(this.token));
-        return;
-      }
-      if (!this.tokenPromise) {
-        await this.fetchAndStoreToken();
-      }
-    } catch (error) {
-      console.warn("Turnstile warmup failed", error);
-    }
+  async init(): Promise<void> {
+    if (this.checkInterval !== null) return;
+    await this.checkAndRefresh();
+    this.checkInterval = window.setInterval(
+      () => this.checkAndRefresh(),
+      TURNSTILE_CHECK_INTERVAL_MS,
+    );
   }
 
   async getTokenForJoin(): Promise<string | null> {
+    await this.init();
     const token = await this.getToken();
     if (!token) {
       return null;
@@ -67,10 +53,8 @@ export class TurnstileManager {
   }
 
   private async getToken(): Promise<TurnstileToken | null> {
-    if (this.token && this.isTokenValid(this.token)) {
-      this.scheduleRefresh(this.getRefreshMs(this.token));
-      return this.token;
-    }
+    await this.init();
+    if (this.token && this.isTokenValid(this.token)) return this.token;
 
     if (this.tokenPromise) {
       try {
@@ -78,15 +62,27 @@ export class TurnstileManager {
       } catch (error) {
         console.warn("Turnstile token fetch failed", error);
       }
-      if (this.token && this.isTokenValid(this.token)) {
-        this.scheduleRefresh(this.getRefreshMs(this.token));
-        return this.token;
-      }
+      if (this.token && this.isTokenValid(this.token)) return this.token;
       return null;
     }
 
     await this.fetchAndStoreToken();
     return this.token && this.isTokenValid(this.token) ? this.token : null;
+  }
+
+  private async checkAndRefresh() {
+    const config = await this.getServerConfig();
+    if (config.env() === GameEnv.Dev) return;
+
+    const tokenIsFresh =
+      this.token &&
+      this.isTokenValid(this.token) &&
+      this.timeUntilExpiry(this.token) > TURNSTILE_REFRESH_LEEWAY_MS;
+
+    if (tokenIsFresh) return;
+    if (this.tokenPromise) return;
+
+    await this.fetchAndStoreToken();
   }
 
   private async fetchAndStoreToken() {
@@ -95,7 +91,6 @@ export class TurnstileManager {
       const token = await this.tokenPromise;
       if (token && this.isTokenValid(token)) {
         this.token = token;
-        this.scheduleRefresh(this.getRefreshMs(token));
       }
     } catch (error) {
       console.warn("Turnstile token fetch failed", error);
@@ -104,25 +99,8 @@ export class TurnstileManager {
     }
   }
 
-  private scheduleRefresh(refreshInMs: number) {
-    if (this.refreshTimeout !== null) {
-      clearTimeout(this.refreshTimeout);
-    }
-    this.refreshTimeout = window.setTimeout(() => {
-      this.refreshTimeout = null;
-      this.warmup();
-    }, refreshInMs);
-  }
-
   private isTokenValid(token: TurnstileToken) {
     return Date.now() < token.createdAt + TURNSTILE_TOKEN_TTL_MS;
-  }
-
-  private getRefreshMs(token: TurnstileToken) {
-    return Math.max(
-      0,
-      this.timeUntilExpiry(token) - TURNSTILE_REFRESH_LEEWAY_MS,
-    );
   }
 
   private timeUntilExpiry(token: TurnstileToken) {
