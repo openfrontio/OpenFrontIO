@@ -87,6 +87,7 @@ export interface GameConfigOverrides {
   ensureSpecialModifier?: boolean;
   specialPreset?: SpecialPreset;
   lobbyStartDelayMs?: number;
+  maxPlayersScale?: number;
 }
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
@@ -196,13 +197,26 @@ export class MapPlaylist {
     } = adjusted;
 
     // Create the default public game config (from your GameManager)
+    let maxPlayers =
+      crowdedMaxPlayers ??
+      (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact));
+
+    if (
+      overrides?.maxPlayersScale &&
+      overrides.maxPlayersScale > 0 &&
+      !(isCompact && overrides.ensureSpecialModifier)
+    ) {
+      maxPlayers = Math.max(
+        1,
+        Math.round(maxPlayers * overrides.maxPlayersScale),
+      );
+    }
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers:
-        crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      maxPlayers,
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {

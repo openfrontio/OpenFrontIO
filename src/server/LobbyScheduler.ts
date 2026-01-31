@@ -251,6 +251,7 @@ function buildOverridesForCategory(
           specialPreset: preset,
           ensureSpecialModifier: true,
           lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
+          maxPlayersScale: 0.5,
         };
       }
       return {
@@ -258,6 +259,7 @@ function buildOverridesForCategory(
         specialPreset: preset,
         ensureSpecialModifier: true,
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
+        maxPlayersScale: 0.5,
       };
   }
 }

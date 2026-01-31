@@ -15,9 +15,9 @@ export class PlayPage extends LitElement {
       >
         <token-login class="absolute"></token-login>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-6 w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 w-full">
           <div
-            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center bg-slate-900 p-3 rounded-xl relative z-20"
+            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[linear-gradient(135deg,#1f3b57,#0f1f30)] rounded-xl"
           >
             <button
               id="hamburger-btn"

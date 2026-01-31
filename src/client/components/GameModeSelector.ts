@@ -140,41 +140,48 @@ export class GameModeSelector extends LitElement {
   }
 
   private renderSpecialLobbyCard(lobby: GameInfo) {
-    const subtitle = this.getSpecialSubtitle(lobby);
-    const titleContent = this.renderStackedTitle(
-      translateText("mode_selector.special_title"),
-      subtitle,
-    );
+    const subtitle = this.getLobbyTitle(lobby);
+    const mainTitle = translateText("mode_selector.special_title");
+    const titleContent = subtitle
+      ? html`
+          <span class="block">${mainTitle}</span>
+          <span class="block text-[10px] leading-tight text-white/70">
+            ${subtitle}
+          </span>
+        `
+      : mainTitle;
     return this.renderLobbyCard(lobby, titleContent);
-  }
-
-  private renderStackedTitle(main: string, sub: string) {
-    return html`
-      <span class="block">${main}</span>
-      <span class="block text-[0.55em] text-white/70">${sub}</span>
-    `;
   }
 
   private getSpecialSubtitle(lobby: GameInfo): string {
     const config = lobby.gameConfig;
     if (!config) return "";
 
-    if (
-      config.gameMode === GameMode.Team &&
-      config.playerTeams === HumansVsNations
-    ) {
-      const humanSlots = config.maxPlayers ?? lobby.numClients;
-      return humanSlots
-        ? translateText("public_lobby.teams_hvn_detailed", {
-            num: String(humanSlots),
-          })
-        : translateText("public_lobby.teams_hvn");
+    if (config.gameMode === GameMode.Team) {
+      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
+      const teamCount =
+        typeof config.playerTeams === "number" ? config.playerTeams : null;
+
+      if (config.playerTeams === HumansVsNations) {
+        const humanSlots = totalPlayers;
+        return humanSlots
+          ? translateText("public_lobby.teams_hvn_detailed", {
+              num: String(humanSlots),
+            })
+          : translateText("public_lobby.teams_hvn");
+      }
+
+      if (teamCount && totalPlayers && teamCount > 1) {
+        return translateText("mode_selector.teams_title");
+      }
+      if (teamCount && teamCount > 1) {
+        return translateText("mode_selector.teams_title");
+      }
+      return translateText("mode_selector.teams_title");
     }
 
     if (config.gameMode === GameMode.FFA)
       return translateText("mode_selector.ffa_title");
-    if (config.gameMode === GameMode.Team)
-      return translateText("mode_selector.teams_title");
     return "";
   }
 
@@ -184,18 +191,26 @@ export class GameModeSelector extends LitElement {
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
+          "from-[#1f3b57] to-[#0f1f30]",
+          "bg-gradient-to-tl",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
+          "from-[#1f3b57] to-[#0f1f30]",
+          "bg-gradient-to-tr",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
+          "from-[#1f3b57] to-[#0f1f30]",
+          "bg-gradient-to-bl",
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
           this.openJoinLobby,
+          "from-[#1f3b57] to-[#0f1f30]",
+          "bg-gradient-to-br",
         )}
       </div>
     `;
@@ -221,21 +236,18 @@ export class GameModeSelector extends LitElement {
     (document.querySelector("join-private-lobby-modal") as any)?.open();
   };
 
-  private renderSmallActionCard(title: string, onClick: () => void) {
+  private renderSmallActionCard(
+    title: string,
+    onClick: () => void,
+    gradient: string,
+    direction: string,
+  ) {
     return html`
       <button
         @click=${onClick}
-        class="relative flex items-center justify-center w-full h-full rounded-xl overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        class="flex items-center justify-center w-full h-full rounded-xl ${direction} ${gradient} border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
       >
-        <div class="absolute inset-0 scale-110 bg-[#3f79a8]"></div>
-        <div
-          class="absolute inset-0 scale-110 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
-        ></div>
-        <h3
-          class="relative z-10 text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
-        >
-          ${title}
-        </h3>
+        ${title}
       </button>
     `;
   }
@@ -260,69 +272,63 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="relative flex flex-col w-full h-48 lg:h-56 overflow-hidden rounded-2xl transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
       >
-        <div class="absolute inset-0 scale-110 bg-[#3f79a8]"></div>
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${mapName}"
-              class="absolute inset-0 scale-110 w-full h-full object-cover"
-            />`
-          : ""}
         <div
-          class="absolute inset-0 scale-110 bg-[linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.64))]"
-        ></div>
-
-        <div
-          class="relative z-10 flex flex-col h-full p-4 items-center justify-center gap-2"
+          class="relative flex-1 overflow-hidden"
+          style="background: ${mapImageSrc
+            ? `url('${mapImageSrc}') center/cover, `
+            : ""}#4684b4"
         >
-          <h3
-            class="text-lg lg:text-xl font-bold text-white uppercase tracking-widest text-center"
-          >
-            ${titleContent}
-          </h3>
-
-          <div class="flex flex-col gap-2 mt-auto w-full py-2">
-            ${modifierLabels.length > 0
-              ? html`
-                  <div class="flex gap-1 flex-wrap justify-center">
-                    ${modifierLabels.map(
-                      (label) => html`
-                        <span
-                          class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-purple-600 text-white"
-                        >
-                          ${label}
-                        </span>
-                      `,
-                    )}
-                  </div>
-                `
-              : ""}
+          ${modifierLabels.length > 0
+            ? html`<div
+                class="absolute bottom-2 left-2 flex flex-col items-start gap-1"
+              >
+                ${[...modifierLabels]
+                  .sort((a, b) => a.length - b.length)
+                  .map(
+                    (label) =>
+                      html`<span
+                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-purple-600 text-white"
+                        >${label}</span
+                      >`,
+                  )}
+              </div>`
+            : ""}
+          <div class="absolute bottom-2 right-2">
+            ${timeRemaining > 0
+              ? html`<span
+                  class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                  >${timeDisplay}</span
+                >`
+              : html`<span
+                  class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
+                  >${translateText("public_lobby.starting_game")}</span
+                >`}
+          </div>
+        </div>
+        <div
+          class="flex items-center justify-between px-3 py-2 bg-[linear-gradient(90deg,#6f5310_0%,#b88917_55%,#9c7a1c_100%)]"
+        >
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <h3
+              class="text-sm lg:text-base font-bold uppercase tracking-wider text-left leading-tight"
+            >
+              ${titleContent}
+            </h3>
             ${mapName
               ? html`<p
-                  class="text-xs font-bold text-white uppercase tracking-wider text-center"
+                  class="text-[10px] text-white/70 uppercase tracking-wider text-left"
                 >
                   ${mapName}
                 </p>`
               : ""}
-            <div class="flex items-center justify-between w-full text-white">
-              <span class="text-xs font-bold uppercase tracking-widest">
-                ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
-              </span>
-              ${timeRemaining > 0
-                ? html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                  >
-                    ${timeDisplay}
-                  </span>`
-                : html`<span
-                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded animate-pulse"
-                  >
-                    ${translateText("public_lobby.starting_game")}
-                  </span>`}
-            </div>
           </div>
+          <span
+            class="text-xs font-bold uppercase tracking-widest shrink-0 ml-2"
+          >
+            ${lobby.numClients}/${lobby.gameConfig?.maxPlayers}
+          </span>
         </div>
       </button>
     `;
