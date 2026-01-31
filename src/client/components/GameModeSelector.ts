@@ -191,25 +191,25 @@ export class GameModeSelector extends LitElement {
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
           this.openJoinLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
           "",
         )}
       </div>
@@ -272,10 +272,10 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]"
+        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
       >
         <div
-          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]"
+          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
         >
           ${mapImageSrc
             ? html`<img
