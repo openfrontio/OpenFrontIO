@@ -1,4 +1,4 @@
-import { LeaderboardModal } from "../../src/client/LeaderboardModal";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@lit-labs/virtualizer/virtualize.js", async () => {
   const { html } = await import("lit");
@@ -14,6 +14,7 @@ vi.mock("../../src/client/Utils", () => ({
         "Weighted wins based on clan participation and match difficulty",
       "leaderboard_modal.loss_score_tooltip":
         "Weighted losses based on clan participation and match difficulty",
+      "leaderboard_modal.title": "Leaderboard",
       "leaderboard_modal.ranked_tab": "Ranked",
       "leaderboard_modal.clans_tab": "Clans",
       "leaderboard_modal.error": "Something went wrong",
@@ -69,8 +70,54 @@ vi.mock("../../src/client/Api", () => {
   };
 });
 
+const jsonRes = (data: any, ok = true, status = 200) => ({
+  ok,
+  status,
+  json: async () => data,
+});
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: any) => {
+      const url =
+        typeof input === "string" ? input : (input?.url ?? String(input));
+
+      if (url.includes("/public/clans/leaderboard")) {
+        return jsonRes({ start: "...", end: "...", clans: [] });
+      }
+      if (url.includes("/leaderboard/ranked")) {
+        return jsonRes({ "1v1": [] });
+      }
+      return jsonRes({}, false, 404);
+    }),
+  );
+});
+
+import { LeaderboardModal } from "../../src/client/LeaderboardModal";
+
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;
+  const awaitChildUpdate = async (selector: string) => {
+    const el = modal.querySelector(selector) as {
+      updateComplete?: Promise<unknown>;
+    } | null;
+    if (el?.updateComplete) {
+      await el.updateComplete;
+    }
+  };
+  const getClanTable = () =>
+    modal.querySelector("leaderboard-clan-table") as {
+      loadClanLeaderboard: () => Promise<void>;
+      updateComplete: Promise<unknown>;
+    } | null;
+  const getPlayerList = () =>
+    modal.querySelector("leaderboard-player-list") as {
+      loadPlayerLeaderboard: (reset?: boolean) => Promise<void>;
+      updateComplete: Promise<unknown>;
+      playerData: Array<Record<string, unknown>>;
+      currentUserEntry?: { playerId: string } | null;
+    } | null;
 
   beforeEach(async () => {
     vi.stubGlobal("fetch", vi.fn());
@@ -122,10 +169,10 @@ describe("LeaderboardModal", () => {
       });
 
       (modal as unknown as { activeTab: string }).activeTab = "clans";
-      await (
-        modal as unknown as { loadClanLeaderboard: () => Promise<void> }
-      ).loadClanLeaderboard();
-      await modal.updateComplete;
+      const clanTable = getClanTable();
+      expect(clanTable).toBeTruthy();
+      await clanTable!.loadClanLeaderboard();
+      await clanTable!.updateComplete;
 
       const allHeaders = modal.querySelectorAll("th");
       let winScoreHeader: Element | null = null;
@@ -203,16 +250,12 @@ describe("LeaderboardModal", () => {
         }),
       });
 
-      await (
-        modal as unknown as {
-          loadPlayerLeaderboard: (reset: boolean) => Promise<void>;
-        }
-      ).loadPlayerLeaderboard(true);
-      await modal.updateComplete;
+      const playerList = getPlayerList();
+      expect(playerList).toBeTruthy();
+      await playerList!.loadPlayerLeaderboard(true);
+      await playerList!.updateComplete;
 
-      const playerData = (
-        modal as unknown as { playerData: Array<Record<string, unknown>> }
-      ).playerData;
+      const playerData = playerList!.playerData;
 
       expect(playerData).toHaveLength(2);
       expect(playerData[0]).toEqual(
@@ -235,10 +278,7 @@ describe("LeaderboardModal", () => {
           winRate: 0.4,
         }),
       );
-      expect(
-        (modal as unknown as { currentUserEntry?: { playerId: string } | null })
-          .currentUserEntry?.playerId,
-      ).toBe("player-2");
+      expect(playerList!.currentUserEntry?.playerId).toBe("player-2");
     });
   });
 
@@ -287,9 +327,7 @@ describe("LeaderboardModal", () => {
         }),
       });
 
-      const tab = Array.from(modal.querySelectorAll("div")).find(
-        (el) => el.textContent?.trim() === "Clans",
-      );
+      const tab = modal.querySelector("#clan-leaderboard-tab");
       expect(tab).toBeTruthy();
 
       tab!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -302,6 +340,7 @@ describe("LeaderboardModal", () => {
       );
       await Promise.resolve();
       await modal.updateComplete;
+      await awaitChildUpdate("leaderboard-clan-table");
     });
 
     it("should render a no data state for empty clan leaderboard", async () => {
@@ -315,10 +354,10 @@ describe("LeaderboardModal", () => {
       });
 
       (modal as unknown as { activeTab: string }).activeTab = "clans";
-      await (
-        modal as unknown as { loadClanLeaderboard: () => Promise<void> }
-      ).loadClanLeaderboard();
-      await modal.updateComplete;
+      const clanTable = getClanTable();
+      expect(clanTable).toBeTruthy();
+      await clanTable!.loadClanLeaderboard();
+      await clanTable!.updateComplete;
 
       expect(modal.textContent).toContain("No data yet");
       expect(modal.textContent).toContain("No stats");
@@ -332,10 +371,10 @@ describe("LeaderboardModal", () => {
       });
 
       (modal as unknown as { activeTab: string }).activeTab = "clans";
-      await (
-        modal as unknown as { loadClanLeaderboard: () => Promise<void> }
-      ).loadClanLeaderboard();
-      await modal.updateComplete;
+      const clanTable = getClanTable();
+      expect(clanTable).toBeTruthy();
+      await clanTable!.loadClanLeaderboard();
+      await clanTable!.updateComplete;
 
       expect(modal.textContent).toContain("Something went wrong");
       expect(modal.textContent).toContain("Try Again");
