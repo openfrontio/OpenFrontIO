@@ -1,15 +1,28 @@
 import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { renderDuration, renderNumber, translateText } from "../client/Utils";
-import { ClientInfo, GameConfig, GameInfo } from "../core/Schemas";
+import {
+  ClientInfo,
+  GAME_ID_REGEX,
+  GameConfig,
+  GameInfo,
+  GameRecordSchema,
+} from "../core/Schemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
+import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
+import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 
-@customElement("join-public-lobby-modal")
-export class JoinPublicLobbyModal extends BaseModal {
+@customElement("join-lobby-modal")
+export class JoinLobbyModal extends BaseModal {
+  @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
+
   @state() private players: ClientInfo[] = [];
   @state() private playerCount: number = 0;
   @state() private gameConfig: GameConfig | null = null;
@@ -17,11 +30,13 @@ export class JoinPublicLobbyModal extends BaseModal {
   @state() private nationCount: number = 0;
   @state() private lobbyStartAt: number | null = null;
   @state() private isConnecting: boolean = true;
+  @state() private lobbyCreatorClientID: string | null = null;
 
   private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
+
   private readonly handleLobbyInfo = (event: Event) => {
     const lobby = (event as CustomEvent<GameInfo>).detail;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
@@ -41,6 +56,12 @@ export class JoinPublicLobbyModal extends BaseModal {
   };
 
   render() {
+    // Pre-join state: show lobby ID input form
+    if (!this.currentLobbyId) {
+      return this.renderJoinForm();
+    }
+
+    // Post-join state: show lobby info (identical for public & private)
     const secondsRemaining =
       this.lobbyStartAt !== null
         ? Math.max(0, Math.floor((this.lobbyStartAt - Date.now()) / 1000))
@@ -63,6 +84,11 @@ export class JoinPublicLobbyModal extends BaseModal {
           title: translateText("public_lobby.title"),
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
+          rightContent: this.currentLobbyId
+            ? html`
+                <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
+              `
+            : undefined,
         })}
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
@@ -86,6 +112,7 @@ export class JoinPublicLobbyModal extends BaseModal {
                         class="mt-6"
                         .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                         .clients=${this.players}
+                        .lobbyCreatorClientID=${this.lobbyCreatorClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
                         .nationCount=${this.nationCount}
                         .disableNations=${this.gameConfig?.disableNations ??
@@ -147,6 +174,72 @@ export class JoinPublicLobbyModal extends BaseModal {
     `;
   }
 
+  private renderJoinForm() {
+    const content = html`
+      <div
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+      >
+        ${modalHeader({
+          title: translateText("private_lobby.title"),
+          onBack: () => this.closeAndLeave(),
+          ariaLabel: translateText("common.close"),
+        })}
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
+          <div class="flex flex-col gap-3">
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="lobbyIdInput"
+                placeholder=${translateText("private_lobby.enter_id")}
+                @keyup=${this.handleChange}
+                class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm tracking-wider"
+              />
+              <button
+                @click=${this.pasteFromClipboard}
+                class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all group"
+                title=${translateText("common.paste")}
+              >
+                <svg
+                  class="text-white/60 group-hover:text-white transition-colors"
+                  stroke="currentColor"
+                  fill="currentColor"
+                  stroke-width="0"
+                  viewBox="0 0 32 32"
+                  height="18px"
+                  width="18px"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <o-button
+              title=${translateText("private_lobby.join_lobby")}
+              block
+              @click=${this.joinLobbyFromInput}
+            ></o-button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
+    return html`
+      <o-modal
+        ?hideHeader=${true}
+        ?hideCloseButton=${true}
+        ?inline=${this.inline}
+      >
+        ${content}
+      </o-modal>
+    `;
+  }
+
   public open(lobbyId: string = "", lobbyInfo?: GameInfo) {
     super.open();
     if (lobbyId) {
@@ -161,6 +254,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
@@ -197,6 +291,7 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.currentLobbyId = "";
     this.nationCount = 0;
     this.lobbyStartAt = null;
+    this.lobbyCreatorClientID = null;
     this.isConnecting = true;
     this.leaveLobbyOnClose = true;
   }
@@ -221,6 +316,8 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.leaveLobbyOnClose = false;
     this.close();
   }
+
+  // --- Game config rendering ---
 
   private renderConfigItem(
     label: string,
@@ -343,10 +440,13 @@ export class JoinPublicLobbyModal extends BaseModal {
     `;
   }
 
+  // --- Lobby event handling ---
+
   private updateFromLobby(lobby: GameInfo) {
     if (lobby.clients) {
       this.players = lobby.clients;
       this.playerCount = lobby.clients.length;
+      this.lobbyCreatorClientID = lobby.clients[0]?.clientID ?? null;
     } else {
       this.players = [];
       this.playerCount = lobby.numClients ?? 0;
@@ -380,6 +480,8 @@ export class JoinPublicLobbyModal extends BaseModal {
       this.handleLobbyInfo as EventListener,
     );
   }
+
+  // --- Countdown timer ---
 
   private syncCountdownTimer() {
     if (this.lobbyStartAt === null) {
@@ -428,6 +530,8 @@ export class JoinPublicLobbyModal extends BaseModal {
     this.closeAndLeave();
   }
 
+  // --- Nation count ---
+
   private async loadNationCount() {
     if (!this.gameConfig) {
       this.nationCount = 0;
@@ -446,5 +550,187 @@ export class JoinPublicLobbyModal extends BaseModal {
         this.nationCount = 0;
       }
     }
+  }
+
+  // --- Private lobby join flow (lobby ID input) ---
+
+  private isValidLobbyId(value: string): boolean {
+    return GAME_ID_REGEX.test(value);
+  }
+
+  private normalizeLobbyId(input: string): string | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const extracted = this.extractLobbyIdFromUrl(trimmed).trim();
+    if (!this.isValidLobbyId(extracted)) return null;
+    return extracted;
+  }
+
+  private sanitizeForLog(value: string): string {
+    return value.replace(/[\r\n]/g, "");
+  }
+
+  private extractLobbyIdFromUrl(input: string): string {
+    if (!input.startsWith("http")) {
+      return input;
+    }
+
+    try {
+      const url = new URL(input);
+      const match = url.pathname.match(/game\/([^/]+)/);
+      const candidate = match?.[1];
+      if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;
+
+      return input;
+    } catch (error) {
+      console.warn("Failed to parse lobby URL", error);
+      return input;
+    }
+  }
+
+  private setLobbyId(id: string) {
+    if (this.lobbyIdInput) {
+      this.lobbyIdInput.value = this.extractLobbyIdFromUrl(id);
+    }
+  }
+
+  private handleChange(e: Event) {
+    const value = (e.target as HTMLInputElement).value.trim();
+    this.setLobbyId(value);
+  }
+
+  private async pasteFromClipboard() {
+    try {
+      const clipText = await navigator.clipboard.readText();
+      this.setLobbyId(clipText);
+    } catch (err) {
+      console.error("Failed to read clipboard contents: ", err);
+    }
+  }
+
+  private async joinLobbyFromInput(): Promise<void> {
+    const lobbyId = this.normalizeLobbyId(this.lobbyIdInput.value);
+    if (!lobbyId) {
+      this.showMessage(translateText("private_lobby.not_found"), "red");
+      return;
+    }
+
+    this.lobbyIdInput.value = lobbyId;
+    console.log(`Joining lobby with ID: ${this.sanitizeForLog(lobbyId)}`);
+
+    try {
+      const gameExists = await this.checkActiveLobby(lobbyId);
+      if (gameExists) return;
+
+      switch (await this.checkArchivedGame(lobbyId)) {
+        case "success":
+          return;
+        case "not_found":
+          this.showMessage(translateText("private_lobby.not_found"), "red");
+          return;
+        case "version_mismatch":
+          this.showMessage(
+            translateText("private_lobby.version_mismatch"),
+            "red",
+          );
+          return;
+        case "error":
+          this.showMessage(translateText("private_lobby.error"), "red");
+          return;
+      }
+    } catch (error) {
+      console.error("Error checking lobby existence:", error);
+      this.showMessage(translateText("private_lobby.error"), "red");
+    }
+  }
+
+  private showMessage(message: string, color: "green" | "red" = "green") {
+    window.dispatchEvent(
+      new CustomEvent("show-message", {
+        detail: { message, duration: 3000, color },
+      }),
+    );
+  }
+
+  private async checkActiveLobby(lobbyId: string): Promise<boolean> {
+    const config = await getServerConfigFromClient();
+    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const gameInfo = await response.json();
+
+    if (gameInfo.exists) {
+      this.showMessage(translateText("private_lobby.joined_waiting"));
+
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
+            gameID: lobbyId,
+            clientID: getClientIDForGame(lobbyId),
+          } as JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+
+      // Start tracking via lobby-info events (same as public flow)
+      this.startTrackingLobby(lobbyId);
+      return true;
+    }
+
+    return false;
+  }
+
+  private async checkArchivedGame(
+    lobbyId: string,
+  ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
+    const archiveResponse = await fetch(`${getApiBase()}/game/${lobbyId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (archiveResponse.status === 404) {
+      return "not_found";
+    }
+    if (archiveResponse.status !== 200) {
+      return "error";
+    }
+
+    const archiveData = await archiveResponse.json();
+    const parsed = GameRecordSchema.safeParse(archiveData);
+    if (!parsed.success) {
+      return "version_mismatch";
+    }
+
+    if (
+      window.GIT_COMMIT !== "DEV" &&
+      parsed.data.gitCommit !== window.GIT_COMMIT
+    ) {
+      const safeLobbyId = this.sanitizeForLog(lobbyId);
+      console.warn(
+        `Git commit hash mismatch for game ${safeLobbyId}`,
+        archiveData.details,
+      );
+      return "version_mismatch";
+    }
+
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: lobbyId,
+          gameRecord: parsed.data,
+          clientID: getClientIDForGame(lobbyId),
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    return "success";
   }
 }

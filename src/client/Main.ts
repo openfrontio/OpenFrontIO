@@ -25,8 +25,7 @@ import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import { JoinPublicLobbyModal } from "./JoinPublicLobbyModal";
+import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -225,8 +224,7 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
-  private joinPublicModal: JoinPublicLobbyModal;
+  private joinModal: JoinLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
@@ -577,19 +575,10 @@ class Client {
     });
 
     this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
-    ) as JoinPrivateLobbyModal;
-    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
-      console.warn("Join private lobby modal element not found");
-    }
-    this.joinPublicModal = document.querySelector(
-      "join-public-lobby-modal",
-    ) as JoinPublicLobbyModal;
-    if (
-      !this.joinPublicModal ||
-      !(this.joinPublicModal instanceof JoinPublicLobbyModal)
-    ) {
-      console.warn("Join public lobby modal element not found");
+      "join-lobby-modal",
+    ) as JoinLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinLobbyModal)) {
+      console.warn("Join lobby modal element not found");
     }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
@@ -598,7 +587,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-join-private-lobby");
+        window.showPage?.("page-join-lobby");
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -624,7 +613,6 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal?.close();
-      this.joinPublicModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -705,7 +693,7 @@ class Client {
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
       if (lobbyId && GAME_ID_REGEX.test(lobbyId)) {
-        window.showPage?.("page-join-private-lobby");
+        window.showPage?.("page-join-lobby");
         this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -786,7 +774,7 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
-      window.showPage?.("page-join-private-lobby");
+      window.showPage?.("page-join-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
       return;
@@ -814,8 +802,7 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinModal?.close();
-      this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+      this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
     const configPromise = this.getServerConfigPrefetched();
     const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
@@ -837,8 +824,7 @@ class Client {
         if (this.cosmeticsPromise === cosmeticsPromise) {
           this.cosmeticsPromise = null;
         }
-        this.joinModal?.close();
-        this.joinPublicModal?.closeWithoutLeaving();
+        this.joinModal?.closeWithoutLeaving();
       }
       console.error("Failed to prepare join flow:", error);
       return;
@@ -883,11 +869,10 @@ class Client {
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
-        this.joinPublicModal?.closeWithoutLeaving();
+        this.joinModal?.closeWithoutLeaving();
         [
           "single-player-modal",
           "host-lobby-modal",
-          "join-private-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
@@ -930,8 +915,7 @@ class Client {
       },
       () => {
         this.isJoiningLobby = false;
-        this.joinModal.close();
-        this.joinPublicModal?.closeWithoutLeaving();
+        this.joinModal?.closeWithoutLeaving();
         this.publicLobby.stop();
         incrementGamesPlayed();
 
