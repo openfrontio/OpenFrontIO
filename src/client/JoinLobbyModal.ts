@@ -16,7 +16,12 @@ import {
   LobbyInfoEvent,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMapSize, GameMode, HumansVsNations } from "../core/game/Game";
+import {
+  GameMapSize,
+  GameMode,
+  GameType,
+  HumansVsNations,
+} from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { getClientIDForGame } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
@@ -92,11 +97,13 @@ export class JoinLobbyModal extends BaseModal {
           title: translateText("public_lobby.title"),
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
-          rightContent: this.currentLobbyId
-            ? html`
-                <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
-              `
-            : undefined,
+          rightContent:
+            this.currentLobbyId &&
+            this.gameConfig?.gameType === GameType.Private
+              ? html`
+                  <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
+                `
+              : undefined,
         })}
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 mr-1">
           ${this.isConnecting
@@ -134,37 +141,56 @@ export class JoinLobbyModal extends BaseModal {
               `}
         </div>
 
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
-          <div
-            class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
-          >
-            <div class="flex flex-col">
-              <span
-                class="text-[10px] font-bold uppercase tracking-widest text-white/40"
-                >${translateText("public_lobby.status")}</span
+        ${this.gameConfig?.gameType === GameType.Private
+          ? html`
+              <div
+                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
               >
-              <span class="text-sm font-bold text-white">${statusLabel}</span>
-            </div>
-            ${maxPlayers > 0
-              ? html`
-                  <div
-                    class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
-                  >
-                    <span>${playerCount}/${maxPlayers}</span>
-                    <svg
-                      class="w-4 h-4 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+                <button
+                  class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
+                  disabled
+                >
+                  ${translateText("private_lobby.joined_waiting")}
+                </button>
+              </div>
+            `
+          : html`
+              <div
+                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+              >
+                <div
+                  class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
+                >
+                  <div class="flex flex-col">
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-widest text-white/40"
+                      >${translateText("public_lobby.status")}</span
                     >
-                      <path
-                        d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-                      ></path>
-                    </svg>
+                    <span class="text-sm font-bold text-white"
+                      >${statusLabel}</span
+                    >
                   </div>
-                `
-              : html``}
-          </div>
-        </div>
+                  ${maxPlayers > 0
+                    ? html`
+                        <div
+                          class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
+                        >
+                          <span>${playerCount}/${maxPlayers}</span>
+                          <svg
+                            class="w-4 h-4 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                            ></path>
+                          </svg>
+                        </div>
+                      `
+                    : html``}
+                </div>
+              </div>
+            `}
       </div>
     `;
 
