@@ -1,6 +1,23 @@
 export function initNavigation() {
+  const closeMobileSidebar = () => {
+    const sidebar = document.getElementById("sidebar-menu");
+    const backdrop = document.getElementById("mobile-menu-backdrop");
+    if (sidebar?.classList.contains("open")) {
+      sidebar.classList.remove("open");
+      backdrop?.classList.remove("open");
+      document.documentElement.classList.remove("overflow-hidden");
+      sidebar.setAttribute("aria-hidden", "true");
+      backdrop?.setAttribute("aria-hidden", "true");
+      const hb = document.getElementById("hamburger-btn");
+      if (hb) hb.setAttribute("aria-expanded", "false");
+    }
+  };
+
   const showPage = (pageId: string) => {
     (window as any).currentPageId = pageId;
+
+    // Close mobile sidebar if a nav item was clicked
+    closeMobileSidebar();
 
     // Hide only the currently visible modal
     const visibleModal = document.querySelector(".page-content:not(.hidden)");
@@ -106,9 +123,6 @@ export function initNavigation() {
     }
   });
 
-  // Set default page to play if no menu item is active
-  const anyActive = document.querySelector(".nav-menu-item.active");
-  if (!anyActive) {
-    showPage("page-play");
-  }
+  // Ensure Play is the default visible/active page on load.
+  showPage("page-play");
 }

@@ -40,6 +40,11 @@ export class MobileNavBar extends LitElement {
   }
 
   render() {
+    const currentPage = (window as any).currentPageId ?? "page-play";
+    if (!(window as any).currentPageId) {
+      (window as any).currentPageId = currentPage;
+    }
+
     return html`
       <!-- Border Segments (Custom right border with gap for button) -->
       <div
@@ -110,7 +115,10 @@ export class MobileNavBar extends LitElement {
         </div>
         <!-- Mobile Navigation Menu Items -->
         <button
-          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)]"
+          class="nav-menu-item block w-full text-left font-bold uppercase tracking-[0.05em] text-white/70 transition-all duration-200 cursor-pointer hover:text-blue-600 hover:translate-x-2.5 hover:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] text-[clamp(18px,2.8vh,32px)] py-[clamp(0.2rem,0.8vh,0.75rem)] [&.active]:text-blue-600 [&.active]:translate-x-2.5 [&.active]:drop-shadow-[0_0_20px_rgba(37,99,235,0.5)] ${currentPage ===
+          "page-play"
+            ? "active"
+            : ""}"
           data-page="page-play"
           data-i18n="main.play"
         ></button>

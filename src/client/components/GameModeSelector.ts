@@ -191,25 +191,25 @@ export class GameModeSelector extends LitElement {
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
           "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
           this.openJoinLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]",
           "",
         )}
       </div>
@@ -272,48 +272,49 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]"
       >
         <div
-          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
+          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_100%,black)]"
         >
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
                 alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
-                class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05]"
+                draggable="false"
+                class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
               />`
             : null}
-          ${modifierLabels.length > 0
-            ? html`<div
-                class="absolute bottom-2 left-2 flex flex-col items-start gap-1"
-              >
-                ${[...modifierLabels]
-                  .sort((a, b) => a.length - b.length)
-                  .map(
-                    (label) =>
-                      html`<span
-                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
-                        >${label}</span
-                      >`,
-                  )}
-              </div>`
-            : ""}
-          <div class="absolute bottom-2 right-2">
-            ${timeRemaining > 0
-              ? html`<span
-                  class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
-                  >${timeDisplay}</span
-                >`
-              : html`<span
-                  class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
-                  >${translateText("public_lobby.starting_game")}</span
-                >`}
+          <div
+            class="absolute inset-x-2 bottom-2 flex items-end justify-between gap-2"
+          >
+            ${modifierLabels.length > 0
+              ? html`<div class="flex flex-col items-start gap-1">
+                  ${[...modifierLabels]
+                    .sort((a, b) => a.length - b.length)
+                    .map(
+                      (label) =>
+                        html`<span
+                          class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                          >${label}</span
+                        >`,
+                    )}
+                </div>`
+              : html`<div></div>`}
+            <div class="shrink-0">
+              ${timeRemaining > 0
+                ? html`<span
+                    class="text-[10px] font-bold uppercase tracking-widest bg-blue-600 px-2 py-0.5 rounded"
+                    >${timeDisplay}</span
+                  >`
+                : html`<span
+                    class="text-[10px] font-bold uppercase tracking-widest bg-green-600 px-2 py-0.5 rounded"
+                    >${translateText("public_lobby.starting_game")}</span
+                  >`}
+            </div>
           </div>
         </div>
-        <div
-          class="flex items-center justify-between px-3 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
-        >
+        <div class="flex items-center justify-between px-3 py-2">
           <div class="flex flex-col gap-0.5 min-w-0">
             <h3
               class="text-sm lg:text-base font-bold uppercase tracking-wider text-left leading-tight"
