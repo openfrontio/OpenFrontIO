@@ -829,7 +829,7 @@ class Client {
       [cosmetics, turnstileToken] = await Promise.all([
         fetchCosmetics(),
         shouldRequestToken
-          ? this.turnstileManager.getTokenForJoin(lobby.gameStartInfo)
+          ? this.turnstileManager.getTokenForJoin()
           : Promise.resolve(null),
       ]);
     } catch (error) {
@@ -852,7 +852,6 @@ class Client {
     ) {
       return;
     }
-    this.updateJoinUrlForShare(lobby.gameID, config);
     const pattern = this.userSettings.getSelectedPatternName(cosmetics);
 
     this.gameStop = joinLobby(
@@ -1012,7 +1011,6 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-    this.gutterAds.hide();
     this.publicLobby?.leaveLobby();
   }
 
