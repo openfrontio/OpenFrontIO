@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { copyToClipboard, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import {
   ClientInfo,
   GAME_ID_REGEX,
@@ -10,13 +10,14 @@ import {
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameMode } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
+import { GameMapSize, GameMode } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
-import "./components/LobbyTeamView";
+import "./components/LobbyPlayerView";
 import { modalHeader } from "./components/ui/ModalHeader";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends BaseModal {
@@ -26,12 +27,12 @@ export class JoinPrivateLobbyModal extends BaseModal {
   @state() private players: ClientInfo[] = [];
   @state() private gameConfig: GameConfig | null = null;
   @state() private lobbyCreatorClientID: string | null = null;
-  @state() private lobbyIdVisible: boolean = true;
-  @state() private copySuccess: boolean = false;
   @state() private currentLobbyId: string = "";
+  @state() private currentClientID: string = "";
+  @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
-  private userSettings: UserSettings = new UserSettings();
+  private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
 
@@ -50,91 +51,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ariaLabel: translateText("common.close"),
           rightContent: this.hasJoined
             ? html`
-                <!-- Lobby ID Box -->
-                <div
-                  class="flex items-center gap-0.5 bg-white/5 rounded-lg px-2 py-1 border border-white/10 max-w-[220px] flex-nowrap"
-                >
-                  <button
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title="${translateText("user_setting.toggle_visibility")}"
-                  >
-                    ${this.lobbyIdVisible
-                      ? html`<svg
-                          viewBox="0 0 512 512"
-                          height="16px"
-                          width="16px"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                          ></path>
-                        </svg>`
-                      : html`<svg
-                          viewBox="0 0 512 512"
-                          height="16px"
-                          width="16px"
-                          fill="currentColor"
-                        >
-                          <path
-                            d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="32"
-                          ></path>
-                          <path
-                            d="M144 256l224 0"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="32"
-                            stroke-linecap="round"
-                          ></path>
-                        </svg>`}
-                  </button>
-                  <div
-                    @click=${this.copyToClipboard}
-                    @dblclick=${(e: Event) => {
-                      (e.currentTarget as HTMLElement).classList.add(
-                        "select-all",
-                      );
-                    }}
-                    @mouseleave=${(e: Event) => {
-                      (e.currentTarget as HTMLElement).classList.remove(
-                        "select-all",
-                      );
-                    }}
-                    class="font-mono text-xs font-bold text-white px-2 cursor-pointer select-none min-w-[80px] text-center truncate tracking-wider"
-                    title="${translateText("common.click_to_copy")}"
-                  >
-                    ${this.copySuccess
-                      ? translateText("common.copied")
-                      : this.lobbyIdVisible
-                        ? this.currentLobbyId
-                        : "••••••••"}
-                  </div>
-                  <button
-                    @click=${this.copyToClipboard}
-                    class="p-1.5 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                    title="${translateText("common.click_to_copy")}"
-                    aria-label="${translateText("common.click_to_copy")}"
-                    type="button"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      height="16px"
-                      width="16px"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-                      />
-                    </svg>
-                  </button>
-                </div>
+                <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
               `
             : undefined,
         })}
@@ -180,26 +97,18 @@ export class JoinPrivateLobbyModal extends BaseModal {
           ${this.renderGameConfig()}
           ${this.hasJoined && this.players.length > 0
             ? html`
-                <div class="mt-6 border-t border-white/10 pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <div
-                      class="text-xs font-bold text-white/40 uppercase tracking-widest"
-                    >
-                      ${this.players.length}
-                      ${this.players.length === 1
-                        ? translateText("private_lobby.player")
-                        : translateText("private_lobby.players")}
-                    </div>
-                  </div>
-
-                  <lobby-team-view
-                    class="block rounded-lg border border-white/10 bg-white/5 p-2"
-                    .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                    .clients=${this.players}
-                    .lobbyCreatorClientID=${this.lobbyCreatorClientID}
-                    .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                  ></lobby-team-view>
-                </div>
+                <lobby-player-view
+                  class="mt-6"
+                  .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                  .clients=${this.players}
+                  .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                  .currentClientID=${this.currentClientID}
+                  .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                  .nationCount=${this.nationCount}
+                  .disableNations=${this.gameConfig?.disableNations ?? false}
+                  .isCompactMap=${this.gameConfig?.gameMapSize ===
+                  GameMapSize.Compact}
+                ></lobby-player-view>
               `
             : ""}
         </div>
@@ -347,10 +256,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
 
   public open(id: string = "") {
     super.open();
-    this.lobbyIdVisible = this.userSettings.get(
-      "settings.lobbyIdVisibility",
-      true,
-    );
     if (id) {
       this.setLobbyId(id);
       this.joinLobby();
@@ -387,6 +292,8 @@ export class JoinPrivateLobbyModal extends BaseModal {
     this.hasJoined = false;
     this.message = "";
     this.currentLobbyId = "";
+    this.currentClientID = "";
+    this.nationCount = 0;
 
     this.leaveLobbyOnClose = true;
   }
@@ -394,15 +301,6 @@ export class JoinPrivateLobbyModal extends BaseModal {
   public closeAndLeave() {
     this.leaveLobbyOnClose = true;
     this.close();
-  }
-
-  private async copyToClipboard() {
-    const config = await getServerConfigFromClient();
-    await copyToClipboard(
-      `${location.origin}/${config.workerPath(this.currentLobbyId)}/game/${this.currentLobbyId}`,
-      () => (this.copySuccess = true),
-      () => (this.copySuccess = false),
-    );
   }
 
   private isValidLobbyId(value: string): boolean {
@@ -523,6 +421,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
       this.showMessage(translateText("private_lobby.joined_waiting"));
       this.message = "";
       this.hasJoined = true;
+      this.currentClientID = generateID();
 
       // If the modal closes as part of joining the game, do not leave the lobby
       this.leaveLobbyOnClose = false;
@@ -531,7 +430,7 @@ export class JoinPrivateLobbyModal extends BaseModal {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: generateID(),
+            clientID: this.currentClientID,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -582,12 +481,13 @@ export class JoinPrivateLobbyModal extends BaseModal {
       return "version_mismatch";
     }
 
+    this.currentClientID = generateID();
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
           gameRecord: parsed.data,
-          clientID: generateID(),
+          clientID: this.currentClientID,
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -612,11 +512,38 @@ export class JoinPrivateLobbyModal extends BaseModal {
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         if (data.gameConfig) {
+          const mapChanged =
+            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
           this.gameConfig = data.gameConfig;
+          if (mapChanged) {
+            this.loadNationCount();
+          }
         }
       })
       .catch((error) => {
         console.error("Error polling players:", error);
       });
+  }
+
+  private async loadNationCount() {
+    if (!this.gameConfig) {
+      this.nationCount = 0;
+      return;
+    }
+    const currentMap = this.gameConfig.gameMap;
+    try {
+      const mapData = this.mapLoader.getMapData(currentMap);
+      const manifest = await mapData.manifest();
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = manifest.nations.length;
+      }
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      // Only update if the map hasn't changed
+      if (this.gameConfig?.gameMap === currentMap) {
+        this.nationCount = 0;
+      }
+    }
   }
 }

@@ -190,6 +190,8 @@ export const GameConfigSchema = z.object({
     .object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
+      isCrowded: z.boolean(),
+      startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
   disableNations: z.boolean(),
@@ -204,6 +206,8 @@ export const GameConfigSchema = z.object({
   spawnImmunityDuration: z.number().int().min(0).optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
+  goldMultiplier: z.number().min(0.1).max(1000).optional(),
+  startingGold: z.number().int().min(0).max(1000000000).optional(),
 });
 
 export const TeamSchema = z.string();
@@ -244,7 +248,7 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = z
   .string()
-  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .regex(/^[a-zA-Z0-9_ [\]üÜ.]+$/u)
   .min(3)
   .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
@@ -281,10 +285,8 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
-  targetID: ID.nullable(),
   troops: z.number().nonnegative(),
   dst: z.number(),
-  src: z.number().nullable(),
 });
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({

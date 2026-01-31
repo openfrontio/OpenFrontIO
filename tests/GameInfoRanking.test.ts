@@ -13,6 +13,8 @@ import { AnalyticsRecord } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
 } from "../src/core/StatsSchemas";
 
@@ -54,8 +56,8 @@ describe("Ranking class", () => {
             cosmetics: { flag: "USA" },
             stats: {
               units: { port: [2n, 0n, 0n, 2n] },
-              conquests: 5n,
-              gold: [0n, 100n, 20n, 0n], // total 120
+              conquests: [5n],
+              gold: [0n, 100n, 20n, 0n, 15n, 5n], // total 140
               bombs: {
                 abomb: [1n],
                 hbomb: [1n],
@@ -69,8 +71,8 @@ describe("Ranking class", () => {
             username: "Bob",
             stats: {
               units: { city: [2n, 0n, 0n, 2n] },
-              conquests: 8n,
-              gold: [0n, 50n, 10n, 5n], // total 65
+              conquests: [8n],
+              gold: [0n, 50n, 10n, 5n], // total 65, no train trade
               bombs: {
                 abomb: [0n],
                 hbomb: [2n],
@@ -84,9 +86,9 @@ describe("Ranking class", () => {
             username: "Charlie",
             stats: {
               // no units, but has conquests/killedAt to count as played
-              conquests: 8n,
+              conquests: [8n],
               killedAt: BigInt(600),
-              gold: [0n, 10n, 2n, 10n], //  total 22
+              gold: [0n, 10n, 2n, 10n, 0n, 5n], //  total 27
               bombs: {},
             },
             persistentID: null,
@@ -108,21 +110,21 @@ describe("Ranking class", () => {
 
   test("summarizes players correctly", () => {
     const r = new Ranking(makeSession());
-    const players = r.sortedBy(RankType.Conquests);
+    const players = r.sortedBy(RankType.ConquestHumans);
 
     expect(players.length).toBe(3);
 
     const p1 = players.find((p) => p.id === "p1")!;
     expect(p1.username).toBe("Alice");
     expect(p1.flag).toBe("USA");
-    expect(p1.conquests).toBe(5);
+    expect(p1.conquests).toStrictEqual([5n]);
     expect(p1.atoms).toBe(1);
     expect(p1.mirv).toBe(2);
   });
 
   test("correctly identifies winner", () => {
     const r = new Ranking(makeSession());
-    const p2 = r.sortedBy(RankType.Conquests).find((p) => p.id === "p2")!;
+    const p2 = r.sortedBy(RankType.ConquestHumans).find((p) => p.id === "p2")!;
     expect(p2.winner).toBe(true);
   });
 
@@ -155,7 +157,7 @@ describe("Ranking class", () => {
 
   test("lifetime score is percentage of duration", () => {
     const r = new Ranking(makeSession());
-    const p3 = r.sortedBy(RankType.Conquests).find((p) => p.id === "p3")!;
+    const p3 = r.sortedBy(RankType.ConquestHumans).find((p) => p.id === "p3")!;
     const expected = Number(BigInt(600)) / gameDuration;
     expect(r.score(p3, RankType.Lifetime)).toBe(expected);
   });
@@ -168,7 +170,7 @@ describe("Ranking class", () => {
 
   test("winners should be ahead of players with same score", () => {
     const r = new Ranking(makeSession());
-    const sortedPlayers = r.sortedBy(RankType.Conquests);
+    const sortedPlayers = r.sortedBy(RankType.ConquestHumans);
     expect(sortedPlayers[0].id).toBe("p2"); // p2 & p3 same score but winner first
   });
 
@@ -178,8 +180,13 @@ describe("Ranking class", () => {
     expect(r.score(p1, RankType.StolenGold)).toBe(
       Number(p1.gold[GOLD_INDEX_STEAL] ?? 0n),
     );
-    expect(r.score(p1, RankType.TradedGold)).toBe(
+    expect(r.score(p1, RankType.NavalTrade)).toBe(
       Number(p1.gold[GOLD_INDEX_TRADE] ?? 0n),
+    );
+    const ownTrain = p1.gold[GOLD_INDEX_TRAIN_SELF] ?? 0n;
+    const otherTrain = p1.gold[GOLD_INDEX_TRAIN_OTHER] ?? 0n;
+    expect(r.score(p1, RankType.TrainTrade)).toBe(
+      Number(ownTrain + otherTrain),
     );
     expect(r.score(p1, RankType.ConqueredGold)).toBe(
       Number(p1.gold[GOLD_INDEX_WAR] ?? 0n),

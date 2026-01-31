@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
 import {
@@ -21,22 +21,31 @@ export class PlayerStatsTreeView extends LitElement {
   @state() selectedMode: GameMode = GameMode.FFA;
   @state() selectedDifficulty: Difficulty = Difficulty.Medium;
 
+  private get typeNode() {
+    return this.statsTree?.[this.selectedType];
+  }
+
+  private get modeNode() {
+    return this.typeNode?.[this.selectedMode];
+  }
+
+  private get shouldMergeDifficulties() {
+    return this.selectedType === GameType.Public;
+  }
+
   private get availableTypes(): GameType[] {
     if (!this.statsTree) return [];
     return Object.keys(this.statsTree).filter(isGameType);
   }
 
   private get availableModes(): GameMode[] {
-    const typeNode = this.statsTree?.[this.selectedType];
-    if (!typeNode) return [];
-    return Object.keys(typeNode).filter(isGameMode);
+    if (!this.typeNode) return [];
+    return Object.keys(this.typeNode).filter(isGameMode);
   }
 
   private get availableDifficulties(): Difficulty[] {
-    const typeNode = this.statsTree?.[this.selectedType];
-    const modeNode = typeNode?.[this.selectedMode];
-    if (!modeNode) return [];
-    return Object.keys(modeNode).filter(isDifficulty);
+    if (!this.modeNode) return [];
+    return Object.keys(this.modeNode).filter(isDifficulty);
   }
 
   private labelForMode(m: GameMode) {
@@ -50,52 +59,37 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
-    const typeNode = this.statsTree?.[this.selectedType];
-    if (!typeNode) return null;
-    const modeNode = typeNode[this.selectedMode];
+    const modeNode = this.modeNode;
     if (!modeNode) return null;
-    const diffNode = modeNode[this.selectedDifficulty];
-    if (!diffNode) return null;
-    return diffNode;
-  }
 
-  private getDisplayedStats(): PlayerStats | null {
-    const leaf = this.getSelectedLeaf();
-    if (!leaf || !leaf.stats) return null;
-    return leaf.stats;
-  }
-
-  private setGameType(t: GameType) {
-    if (this.selectedType === t) return;
-    this.selectedType = t;
-    const modes = this.availableModes;
-    if (!modes.includes(this.selectedMode)) {
-      this.selectedMode = modes[0] ?? this.selectedMode;
+    if (!this.shouldMergeDifficulties) {
+      return modeNode[this.selectedDifficulty] ?? null;
     }
-    const diffs = this.availableDifficulties;
-    if (!diffs.includes(this.selectedDifficulty)) {
-      this.selectedDifficulty = diffs[0] ?? this.selectedDifficulty;
-    }
-    this.requestUpdate();
+
+    const diffKeys = Object.keys(modeNode).filter(isDifficulty);
+    if (!diffKeys.length) return null;
+
+    return diffKeys.reduce<PlayerStatsLeaf | null>((merged, diffKey) => {
+      const leaf = modeNode[diffKey];
+      if (!leaf) return merged;
+      if (!merged) {
+        return {
+          wins: leaf.wins,
+          losses: leaf.losses,
+          total: leaf.total,
+          stats: this.cloneStats(leaf.stats),
+        };
+      }
+      return {
+        wins: merged.wins + leaf.wins,
+        losses: merged.losses + leaf.losses,
+        total: merged.total + leaf.total,
+        stats: this.mergeStats(merged.stats, leaf.stats),
+      };
+    }, null);
   }
 
-  private setMode(m: GameMode) {
-    if (this.selectedMode === m) return;
-    this.selectedMode = m;
-    const diffs = this.availableDifficulties;
-    if (!diffs.includes(this.selectedDifficulty)) {
-      this.selectedDifficulty = diffs[0] ?? this.selectedDifficulty;
-    }
-    this.requestUpdate();
-  }
-
-  private setDifficulty(d: Difficulty) {
-    if (this.selectedDifficulty === d) return;
-    this.selectedDifficulty = d;
-    this.requestUpdate();
-  }
-
-  render() {
+  private syncSelection(): void {
     const types = this.availableTypes;
     if (types.length && !types.includes(this.selectedType)) {
       this.selectedType = types[0];
@@ -105,10 +99,122 @@ export class PlayerStatsTreeView extends LitElement {
       this.selectedMode = modes[0];
     }
     const diffs = this.availableDifficulties;
-    if (diffs.length && !diffs.includes(this.selectedDifficulty)) {
+    if (
+      !this.shouldMergeDifficulties &&
+      diffs.length &&
+      !diffs.includes(this.selectedDifficulty)
+    ) {
       this.selectedDifficulty = diffs[0];
     }
+  }
 
+  protected willUpdate(changedProperties: PropertyValues) {
+    if (
+      changedProperties.has("statsTree") ||
+      changedProperties.has("selectedType") ||
+      changedProperties.has("selectedMode") ||
+      changedProperties.has("selectedDifficulty")
+    ) {
+      this.syncSelection();
+    }
+  }
+
+  private setGameType(t: GameType) {
+    if (this.selectedType === t) return;
+    this.selectedType = t;
+    this.requestUpdate();
+  }
+
+  private setMode(m: GameMode) {
+    if (this.selectedMode === m) return;
+    this.selectedMode = m;
+    this.requestUpdate();
+  }
+
+  private setDifficulty(d: Difficulty) {
+    if (this.selectedDifficulty === d) return;
+    this.selectedDifficulty = d;
+    this.requestUpdate();
+  }
+
+  private mergeStats(
+    base: PlayerStats | undefined,
+    next: PlayerStats | undefined,
+  ): PlayerStats | undefined {
+    if (!base && !next) return undefined;
+    if (!base) return this.cloneStats(next);
+    if (!next) return this.cloneStats(base);
+
+    return {
+      attacks: this.mergeStatArrays(base.attacks, next.attacks),
+      betrayals: this.mergeStatValue(base.betrayals, next.betrayals),
+      killedAt: this.mergeStatValue(base.killedAt, next.killedAt),
+      conquests: this.mergeStatArrays(base.conquests, next.conquests),
+      boats: this.mergeStatRecord(base.boats, next.boats),
+      bombs: this.mergeStatRecord(base.bombs, next.bombs),
+      gold: this.mergeStatArrays(base.gold, next.gold),
+      units: this.mergeStatRecord(base.units, next.units),
+    };
+  }
+
+  private mergeStatValue(
+    base: bigint | undefined,
+    next: bigint | undefined,
+  ): bigint | undefined {
+    if (base === undefined && next === undefined) return undefined;
+    return (base ?? 0n) + (next ?? 0n);
+  }
+
+  private mergeStatArrays(
+    base: bigint[] | undefined,
+    next: bigint[] | undefined,
+  ): bigint[] | undefined {
+    if (!base && !next) return undefined;
+    const maxLen = Math.max(base?.length ?? 0, next?.length ?? 0);
+    const merged: bigint[] = [];
+    for (let i = 0; i < maxLen; i += 1) {
+      merged[i] = (base?.[i] ?? 0n) + (next?.[i] ?? 0n);
+    }
+    return merged;
+  }
+
+  private mergeStatRecord<T extends string>(
+    base: Partial<Record<T, bigint[]>> | undefined,
+    next: Partial<Record<T, bigint[]>> | undefined,
+  ): Partial<Record<T, bigint[]>> | undefined {
+    if (!base && !next) return undefined;
+    const merged: Partial<Record<T, bigint[]>> = {};
+    const keys = new Set([
+      ...Object.keys(base ?? {}),
+      ...Object.keys(next ?? {}),
+    ]) as Set<T>;
+    keys.forEach((key) => {
+      const mergedArray = this.mergeStatArrays(base?.[key], next?.[key]);
+      if (mergedArray) {
+        merged[key] = mergedArray;
+      }
+    });
+    return Object.keys(merged).length ? merged : undefined;
+  }
+
+  private cloneStats(stats: PlayerStats | undefined): PlayerStats | undefined {
+    if (!stats) return undefined;
+    return {
+      attacks: stats.attacks ? [...stats.attacks] : undefined,
+      betrayals: stats.betrayals,
+      killedAt: stats.killedAt,
+      conquests: stats.conquests ? [...stats.conquests] : undefined,
+      boats: stats.boats ? { ...stats.boats } : undefined,
+      bombs: stats.bombs ? { ...stats.bombs } : undefined,
+      gold: stats.gold ? [...stats.gold] : undefined,
+      units: stats.units ? { ...stats.units } : undefined,
+    };
+  }
+
+  render() {
+    const types = this.availableTypes;
+    const modes = this.availableModes;
+    const diffs = this.availableDifficulties;
     const leaf = this.getSelectedLeaf();
     const wlr = leaf
       ? leaf.losses === 0n
@@ -167,7 +273,7 @@ export class PlayerStatsTreeView extends LitElement {
               : html``}
 
             <!-- Difficulty selector -->
-            ${diffs.length
+            ${!this.shouldMergeDifficulties && diffs.length
               ? html`<div
                   class="flex gap-1 bg-black/20 rounded-md p-1 border border-white/5"
                 >
@@ -209,7 +315,7 @@ export class PlayerStatsTreeView extends LitElement {
 
                 <div class="border-t border-white/10 pt-6">
                   <player-stats-table
-                    .stats=${this.getDisplayedStats()}
+                    .stats=${leaf?.stats ?? null}
                   ></player-stats-table>
                 </div>
               </div>
