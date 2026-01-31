@@ -27,8 +27,7 @@ import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import { JoinPublicLobbyModal } from "./JoinPublicLobbyModal";
+import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -229,9 +228,8 @@ class Client {
   private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
-  private joinModal: JoinPrivateLobbyModal;
-  private joinPublicModal: JoinPublicLobbyModal;
-  private publicLobby: PublicLobby | null = null;
+  private joinModal: JoinLobbyModal;
+  private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
@@ -545,44 +543,33 @@ class Client {
     }
 
     this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
-    ) as JoinPrivateLobbyModal;
-    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
-      console.warn("Join private lobby modal element not found");
-    }
-    this.joinPublicModal = document.querySelector(
-      "join-public-lobby-modal",
-    ) as JoinPublicLobbyModal;
-    if (
-      !this.joinPublicModal ||
-      !(this.joinPublicModal instanceof JoinPublicLobbyModal)
-    ) {
-      console.warn("Join public lobby modal element not found");
+      "join-lobby-modal",
+    ) as JoinLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinLobbyModal)) {
+      console.warn("Join lobby modal element not found");
     } else {
-      this.joinPublicModal.eventBus = this.eventBus;
+      this.joinModal.eventBus = this.eventBus;
     }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
-    if (joinPrivateLobbyButton) {
-      joinPrivateLobbyButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-join-private-lobby");
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("join-private-lobby-button not present");
-    }
+    if (joinPrivateLobbyButton === null)
+      throw new Error("Missing join-private-lobby-button");
+    joinPrivateLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        window.showPage?.("page-join-lobby");
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: this.usernameInput?.validationError,
+              color: "red",
+              duration: 3000,
+            },
+          }),
+        );
+      }
+    });
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
@@ -605,7 +592,6 @@ class Client {
       this.cancelJoinInFlight();
       // Reset the UI to its initial state
       this.joinModal?.close();
-      this.joinPublicModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -683,7 +669,7 @@ class Client {
     }
     // Wait for modal custom elements to be defined
     await Promise.all([
-      customElements.whenDefined("join-private-lobby-modal"),
+      customElements.whenDefined("join-lobby-modal"),
       customElements.whenDefined("host-lobby-modal"),
     ]);
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
@@ -695,7 +681,7 @@ class Client {
         // Wait 2 seconds to ensure all elements are actually loaded,
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        window.showPage?.("page-join-private-lobby");
+        window.showPage?.("page-join-lobby");
         this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -785,7 +771,7 @@ class Client {
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
       this.preserveDeepLinkUrl = true;
-      window.showPage?.("page-join-private-lobby");
+      window.showPage?.("page-join-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
       return;
@@ -815,8 +801,7 @@ class Client {
       document.body.classList.remove("in-game");
     }
     if (lobby.source === "public") {
-      this.joinModal?.close();
-      this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
+      this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
     let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
     let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
@@ -837,8 +822,7 @@ class Client {
         return;
       }
       if (joinAttemptId === this.joinAttemptId) {
-        this.joinModal?.close();
-        this.joinPublicModal?.closeWithoutLeaving();
+        this.joinModal?.closeWithoutLeaving();
         if (this.joinAbortController === joinAbortController) {
           this.joinAbortController = null;
         }
@@ -885,11 +869,10 @@ class Client {
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
-        this.joinPublicModal?.closeWithoutLeaving();
+        this.joinModal?.closeWithoutLeaving();
         [
           "single-player-modal",
           "host-lobby-modal",
-          "join-private-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
@@ -935,9 +918,8 @@ class Client {
         if (this.joinAbortController === joinAbortController) {
           this.joinAbortController = null;
         }
-        this.joinModal.close();
-        this.joinPublicModal?.closeWithoutLeaving();
-        this.publicLobby?.stop();
+        this.joinModal?.closeWithoutLeaving();
+        this.publicLobby.stop();
         incrementGamesPlayed();
 
         document.querySelectorAll(".ad").forEach((ad) => {
