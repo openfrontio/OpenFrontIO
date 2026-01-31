@@ -727,7 +727,6 @@ export class JoinLobbyModal extends BaseModal {
 
       // Start tracking via lobby-info events (same as public flow)
       this.startTrackingLobby(lobbyId);
-      this.startPollingPlayers();
       return true;
     }
 
@@ -787,64 +786,10 @@ export class JoinLobbyModal extends BaseModal {
     return "success";
   }
 
-  // --- Player polling for private lobbies ---
-
-  private startPollingPlayers() {
-    this.clearPlayersInterval();
-    this.pollPlayers();
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
-  }
-
   private clearPlayersInterval() {
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
     }
-  }
-
-  private async pollPlayers() {
-    const lobbyId = this.currentLobbyId;
-    if (!lobbyId) return;
-    const config = await getServerConfigFromClient();
-
-    fetch(`/${config.workerPath(lobbyId)}/api/game/${lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          console.warn(
-            `pollPlayers: request failed with status ${response.status} ${response.statusText}`,
-          );
-          return null;
-        }
-        return response.json();
-      })
-      .then((data: GameInfo | null) => {
-        if (!data) return;
-        this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
-        this.players = data.clients ?? [];
-        this.playerCount = this.players.length;
-        if (data.gameConfig) {
-          const mapChanged =
-            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
-          this.gameConfig = data.gameConfig;
-          if (mapChanged) {
-            this.loadNationCount();
-          }
-        }
-        if (data.msUntilStart !== undefined) {
-          this.lobbyStartAt = data.msUntilStart;
-        }
-        if (this.isConnecting) {
-          this.isConnecting = false;
-        }
-        this.syncCountdownTimer();
-      })
-      .catch((error) => {
-        console.error("Error polling players:", error);
-      });
   }
 }
