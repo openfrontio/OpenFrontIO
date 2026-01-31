@@ -231,7 +231,6 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
-  private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
   private joinAbortController: AbortController | null = null;
   private skipNextHashChange = false;
@@ -767,7 +766,6 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
-      this.preserveDeepLinkUrl = true;
       window.showPage?.("page-join-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
@@ -911,7 +909,6 @@ class Client {
         }
       },
       () => {
-        this.preserveDeepLinkUrl = false;
         if (this.joinAbortController === joinAbortController) {
           this.joinAbortController = null;
         }
@@ -962,9 +959,7 @@ class Client {
 
   private restoreUrlAfterLeave() {
     try {
-      if (!this.preserveDeepLinkUrl) {
-        history.replaceState(null, "", "/");
-      }
+      history.replaceState(null, "", "/");
     } catch (e) {
       console.warn("Failed to restore URL on leave:", e);
     }
