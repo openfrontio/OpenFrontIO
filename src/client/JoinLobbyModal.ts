@@ -808,8 +808,17 @@ export class JoinLobbyModal extends BaseModal {
         "Content-Type": "application/json",
       },
     })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
+      .then((response) => {
+        if (!response.ok) {
+          console.warn(
+            `pollPlayers: request failed with status ${response.status} ${response.statusText}`,
+          );
+          return null;
+        }
+        return response.json();
+      })
+      .then((data: GameInfo | null) => {
+        if (!data) return;
         this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
         this.players = data.clients ?? [];
         this.playerCount = this.players.length;
