@@ -342,7 +342,9 @@
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start...",
-    "elo": "Your ELO: {elo}"
+    "elo": "Your ELO: {elo}",
+    "ad_blocked_title": "Ad Blocker Detected",
+    "ad_blocked_message": "Please disable your ad blocker or make a purchase to play ranked games."
   },
   "username": {
     "enter_username": "Enter your username",
