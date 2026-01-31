@@ -293,7 +293,7 @@ export class GameModeSelector extends LitElement {
                   .map(
                     (label) =>
                       html`<span
-                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-purple-600 text-white"
+                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
                         >${label}</span
                       >`,
                   )}
