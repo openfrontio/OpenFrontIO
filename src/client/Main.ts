@@ -247,7 +247,6 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    this.initializeFuseTag();
     // Warm critical join dependencies to avoid blocking on first join.
     const configPrefetch = getServerConfigFromClient();
     configPrefetch.catch((error) => {
@@ -998,38 +997,6 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
-  }
-
-  private initializeFuseTag() {
-    const MAX_ATTEMPTS = 200;
-    let retryCount = 0;
-    const tryInitFuseTag = (): boolean => {
-      const fusetag = window.fusetag;
-      if (fusetag && typeof fusetag.pageInit === "function") {
-        console.log("initializing fuse tag");
-        fusetag.que.push(() => {
-          fusetag.pageInit({
-            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
-          });
-        });
-        return true;
-      }
-      return false;
-    };
-
-    const interval = setInterval(() => {
-      retryCount += 1;
-      if (retryCount >= MAX_ATTEMPTS) {
-        clearInterval(interval);
-        console.warn(
-          `fusetag init timed out after ${MAX_ATTEMPTS} attempts; stopping retry.`,
-        );
-        return;
-      }
-      if (tryInitFuseTag()) {
-        clearInterval(interval);
-      }
-    }, 100);
   }
 
   private async getServerConfigPrefetched() {
