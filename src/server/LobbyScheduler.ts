@@ -6,8 +6,8 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import { GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { GameInfo, GameInfoSchema } from "../core/Schemas";
+import { generateID, randomChoice, randomIntInclusive } from "../core/Util";
 import { GameConfigOverrides, MapPlaylist, SpecialPreset } from "./MapPlaylist";
 
 type LobbyCategory = "ffa" | "teams" | "special";
@@ -18,6 +18,12 @@ type Logger = {
   info: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
+};
+
+const LOBBY_COVERAGE: Record<LobbyCategory, number> = {
+  ffa: 1,
+  teams: 1,
+  special: 1,
 };
 
 export class LobbyScheduler {
@@ -36,115 +42,120 @@ export class LobbyScheduler {
     const lobbyInfos = await this.fetchLobbies();
     this.onLobbiesUpdate(lobbyInfos);
 
-    const desired = {
-      ffa: 1,
-      teams: 1,
-      special: 1,
-    };
-
-    const counts = initialCoverageCounts();
-
-    // Count live lobbies using tracked meta (more reliable than categorising)
-    this.publicLobbyMeta.forEach((meta, gameID) => {
-      if (this.publicLobbyIDs.has(gameID)) {
-        incrementCoverage(counts, meta);
-      } else {
-        this.publicLobbyMeta.delete(gameID);
-      }
-    });
-
-    // Count in-flight spawns so we don't double-schedule
-    this.spawnInFlight.forEach((key) => {
-      const [cat, preset] = key.split(":");
-      incrementCoverage(
-        counts,
-        cat
-          ? { category: cat as LobbyCategory, preset: preset as SpecialPreset }
-          : null,
-      );
-    });
-
-    const requests: LobbyMeta[] = [];
-
-    if (counts.ffa < desired.ffa) requests.push({ category: "ffa" });
-    if (counts.teams < desired.teams) requests.push({ category: "teams" });
-    if (counts.special < desired.special)
-      requests.push({ category: "special" });
+    const counts = this.countCurrentCoverage();
+    const requests = this.determineNeededLobbies(counts);
 
     for (const req of requests) {
       await this.scheduleCategoryLobby(req);
     }
   }
 
-  private async fetchLobbies(): Promise<GameInfo[]> {
-    const fetchPromises: Promise<GameInfo | null>[] = [];
+  private countCurrentCoverage(): Record<LobbyCategory, number> {
+    const counts: Record<LobbyCategory, number> = {
+      ffa: 0,
+      teams: 0,
+      special: 0,
+    };
 
-    for (const gameID of new Set(this.publicLobbyIDs)) {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      const port = this.config.workerPort(gameID);
-      const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
-        headers: { [this.config.adminHeader()]: this.config.adminToken() },
-        signal: controller.signal,
-      })
-        .then((resp) => resp.json())
-        .then((json) => {
-          return json as GameInfo;
-        })
-        .catch((error) => {
-          this.log.error(`Error fetching game ${gameID}:`, error);
-          // Return null or a placeholder if fetch fails
-          this.publicLobbyIDs.delete(gameID);
-          return null;
-        });
-
-      fetchPromises.push(promise);
+    // Count live lobbies using tracked meta
+    for (const [gameID, meta] of this.publicLobbyMeta) {
+      if (this.publicLobbyIDs.has(gameID)) {
+        counts[meta.category]++;
+      } else {
+        this.publicLobbyMeta.delete(gameID);
+      }
     }
 
-    // Wait for all promises to resolve
-    const results = await Promise.all(fetchPromises);
-
-    // Filter out any null results from failed fetches
-    const lobbyInfos: GameInfo[] = results
-      .filter((result) => result !== null)
-      .map((gi: GameInfo) => {
-        const meta = this.publicLobbyMeta.get(gi.gameID);
-        return {
-          gameID: gi.gameID,
-          numClients: gi?.clients?.length ?? 0,
-          gameConfig: gi.gameConfig,
-          msUntilStart: gi.msUntilStart,
-          publicLobbyCategory: meta?.category,
-        } as GameInfo;
-      });
-
-    lobbyInfos.forEach((l) => {
-      if (
-        "msUntilStart" in l &&
-        l.msUntilStart !== undefined &&
-        l.msUntilStart <= 250
-      ) {
-        this.publicLobbyIDs.delete(l.gameID);
-        this.publicLobbyMeta.delete(l.gameID);
-        return;
+    // Count in-flight spawns so we don't double-schedule
+    for (const key of this.spawnInFlight) {
+      const [cat] = key.split(":");
+      if (cat && cat in counts) {
+        counts[cat as LobbyCategory]++;
       }
+    }
 
-      if (
-        "gameConfig" in l &&
-        l.gameConfig !== undefined &&
-        "maxPlayers" in l.gameConfig &&
-        l.gameConfig.maxPlayers !== undefined &&
-        "numClients" in l &&
-        l.numClients !== undefined &&
-        l.gameConfig.maxPlayers <= l.numClients
-      ) {
-        this.publicLobbyIDs.delete(l.gameID);
-        this.publicLobbyMeta.delete(l.gameID);
-        return;
+    return counts;
+  }
+
+  private determineNeededLobbies(
+    counts: Record<LobbyCategory, number>,
+  ): LobbyMeta[] {
+    const requests: LobbyMeta[] = [];
+
+    for (const category of Object.keys(LOBBY_COVERAGE) as LobbyCategory[]) {
+      if (counts[category] < LOBBY_COVERAGE[category]) {
+        requests.push({ category });
       }
-    });
+    }
 
+    return requests;
+  }
+
+  private async fetchLobbies(): Promise<GameInfo[]> {
+    const rawLobbies = await this.fetchLobbyData();
+    const lobbyInfos = this.transformToGameInfo(rawLobbies);
+    this.pruneStaleLobbies(lobbyInfos);
     return lobbyInfos;
+  }
+
+  private async fetchLobbyData(): Promise<GameInfo[]> {
+    const fetchPromises = [...this.publicLobbyIDs].map((gameID) =>
+      this.fetchSingleLobby(gameID),
+    );
+
+    const results = await Promise.all(fetchPromises);
+    return results.filter((result): result is GameInfo => result !== null);
+  }
+
+  private async fetchSingleLobby(gameID: string): Promise<GameInfo | null> {
+    const port = this.config.workerPort(gameID);
+    try {
+      const resp = await fetch(`http://localhost:${port}/api/game/${gameID}`, {
+        headers: { [this.config.adminHeader()]: this.config.adminToken() },
+        signal: AbortSignal.timeout(5000),
+      });
+      const json = await resp.json();
+      const parsed = GameInfoSchema.safeParse(json);
+      if (!parsed.success) {
+        this.log.error(`Invalid game info for ${gameID}:`, parsed.error);
+        this.publicLobbyIDs.delete(gameID);
+        return null;
+      }
+      return parsed.data;
+    } catch (error) {
+      this.log.error(`Error fetching game ${gameID}:`, error);
+      this.publicLobbyIDs.delete(gameID);
+      return null;
+    }
+  }
+
+  private transformToGameInfo(rawLobbies: GameInfo[]): GameInfo[] {
+    return rawLobbies.map((gi) => {
+      const meta = this.publicLobbyMeta.get(gi.gameID);
+      return {
+        gameID: gi.gameID,
+        numClients: gi.clients?.length ?? 0,
+        gameConfig: gi.gameConfig,
+        msUntilStart: gi.msUntilStart,
+        publicLobbyCategory: meta?.category,
+      } as GameInfo;
+    });
+  }
+
+  private pruneStaleLobbies(lobbies: GameInfo[]): void {
+    for (const lobby of lobbies) {
+      const isStartingSoon =
+        lobby.msUntilStart !== undefined && lobby.msUntilStart <= 250;
+      const isFull =
+        lobby.gameConfig?.maxPlayers !== undefined &&
+        lobby.numClients !== undefined &&
+        lobby.gameConfig.maxPlayers <= lobby.numClients;
+
+      if (isStartingSoon || isFull) {
+        this.publicLobbyIDs.delete(lobby.gameID);
+        this.publicLobbyMeta.delete(lobby.gameID);
+      }
+    }
   }
 
   private async scheduleCategoryLobby(request: LobbyMeta) {
@@ -205,39 +216,22 @@ export class LobbyScheduler {
   }
 }
 
-function initialCoverageCounts() {
-  return {
-    ffa: 0,
-    teams: 0,
-    special: 0,
-  };
-}
-
-function incrementCoverage(
-  counts: ReturnType<typeof initialCoverageCounts>,
-  category: LobbyMeta | null,
-) {
-  if (!category) return;
-  switch (category.category) {
-    case "ffa":
-      counts.ffa += 1;
-      return;
-    case "teams":
-      counts.teams += 1;
-      return;
-    case "special":
-      counts.special += 1;
-      return;
-    default:
-      return;
-  }
-}
-
 function buildOverridesForCategory(
   config: ServerConfig,
   category: LobbyCategory,
   preset?: SpecialPreset,
 ): GameConfigOverrides {
+  const teamsConfig = () => ({
+    mode: GameMode.Team,
+    playerTeams: randomChoice([
+      randomIntInclusive(2, 7),
+      Duos,
+      Trios,
+      Quads,
+      HumansVsNations,
+    ]),
+  });
+
   switch (category) {
     case "ffa":
       return {
@@ -246,28 +240,14 @@ function buildOverridesForCategory(
       };
     case "teams":
       return {
-        mode: GameMode.Team,
-        playerTeams: randomChoice([
-          randomIntInclusive(2, 7),
-          Duos,
-          Trios,
-          Quads,
-          HumansVsNations,
-        ]),
+        ...teamsConfig(),
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
     case "special":
     default:
       if (Math.random() < 0.5) {
         return {
-          mode: GameMode.Team,
-          playerTeams: randomChoice([
-            randomIntInclusive(2, 7),
-            Duos,
-            Trios,
-            Quads,
-            HumansVsNations,
-          ]),
+          ...teamsConfig(),
           specialPreset: preset,
           ensureSpecialModifier: true,
           lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
@@ -280,14 +260,6 @@ function buildOverridesForCategory(
         lobbyStartDelayMs: envAdjustedDelay(config, 120_000),
       };
   }
-}
-
-function randomChoice<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
-function randomIntInclusive(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function envAdjustedDelay(config: ServerConfig, ms: number): number {

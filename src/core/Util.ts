@@ -364,3 +364,11 @@ function clanMatch(name: string): RegExpMatchArray | null {
   }
   return name.match(CLAN_TAG_REGEX);
 }
+
+export function randomChoice<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+export function randomIntInclusive(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
