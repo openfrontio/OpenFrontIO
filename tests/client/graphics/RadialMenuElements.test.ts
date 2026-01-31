@@ -341,7 +341,6 @@ describe("RadialMenuElements", () => {
         isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = allyPlayer;
-      // Set territory to be owned by the ally (not own territory)
       mockGame.owner = vi.fn(() => allyPlayer);
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
