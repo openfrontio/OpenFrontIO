@@ -205,10 +205,6 @@ declare global {
       BOLT_AD_CLICKED: string;
       SHOW_HIDDEN_CONTAINER: string;
     };
-    fusetag?: {
-      que: Array<() => void>;
-      pageInit: (config: { blockingFuseIds: string[] }) => void;
-    };
     showPage?: (pageId: string) => void;
   }
 
