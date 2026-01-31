@@ -235,9 +235,7 @@ class Client {
 
   private gutterAds: GutterAds;
   private turnstileManager: TurnstileManager;
-  private serverConfigPrefetch: Promise<
-    Awaited<ReturnType<typeof getServerConfigFromClient>>
-  > | null = null;
+  private serverConfigPrefetch: Promise<any> | null = null;
 
   constructor() {
     this.turnstileManager = new TurnstileManager(() =>
