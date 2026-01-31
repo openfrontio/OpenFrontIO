@@ -360,7 +360,8 @@ export class NationExecution implements Execution {
         player.addEmbargo(other, false);
       } else if (
         player.relation(other) >= Relation.Neutral &&
-        player.hasEmbargoAgainst(other)
+        player.hasEmbargoAgainst(other) &&
+        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
       }
