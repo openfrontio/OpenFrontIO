@@ -288,17 +288,16 @@ export class GameServer {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
-          this.log.error("Failed to parse client message", error, {
+          this.log.warn(`Failed to parse client message ${error}`, {
             clientID: client.clientID,
           });
           client.ws.send(
             JSON.stringify({
               type: "error",
               error,
-              message,
+              message: `Server could not parse message from client: ${message}`,
             } satisfies ServerErrorMessage),
           );
-          client.ws.close(1002, "ClientMessageSchema");
           return;
         }
         const clientMsg = parsed.data;
