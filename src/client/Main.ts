@@ -1035,6 +1035,8 @@ class Client {
   }
 
   private initializeFuseTag() {
+    const MAX_ATTEMPTS = 200;
+    let retryCount = 0;
     const tryInitFuseTag = (): boolean => {
       const fusetag = window.fusetag;
       if (fusetag && typeof fusetag.pageInit === "function") {
@@ -1050,6 +1052,14 @@ class Client {
     };
 
     const interval = setInterval(() => {
+      retryCount += 1;
+      if (retryCount >= MAX_ATTEMPTS) {
+        clearInterval(interval);
+        console.warn(
+          `fusetag init timed out after ${MAX_ATTEMPTS} attempts; stopping retry.`,
+        );
+        return;
+      }
       if (tryInitFuseTag()) {
         clearInterval(interval);
       }
