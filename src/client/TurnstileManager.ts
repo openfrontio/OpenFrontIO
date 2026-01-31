@@ -30,7 +30,7 @@ export class TurnstileManager {
 
   clearTokenAndRefresh(): void {
     this.token = null;
-    // interval continues to run and will refetch when needed
+    // Interval will pick this up on the next tick.
   }
 
   async init(): Promise<void> {
@@ -42,32 +42,28 @@ export class TurnstileManager {
     );
   }
 
-  async getTokenForJoin(): Promise<string | null> {
+  async getToken(): Promise<string | null> {
     await this.init();
-    const token = await this.getToken();
-    if (!token) {
-      return null;
-    }
-    this.clearTokenAndRefresh();
-    return token.token;
-  }
 
-  private async getToken(): Promise<TurnstileToken | null> {
-    await this.init();
-    if (this.token && this.isTokenValid(this.token)) return this.token;
+    if (this.token && this.isTokenValid(this.token)) {
+      return this.token.token;
+    }
 
     if (this.tokenPromise) {
-      try {
-        await this.tokenPromise;
-      } catch (error) {
-        console.warn("Turnstile token fetch failed", error);
-      }
-      if (this.token && this.isTokenValid(this.token)) return this.token;
-      return null;
+      const existing = await this.tokenPromise;
+      return existing && this.isTokenValid(existing) ? existing.token : null;
     }
 
-    await this.fetchAndStoreToken();
-    return this.token && this.isTokenValid(this.token) ? this.token : null;
+    const fetched = await this.fetchAndStoreToken();
+    return fetched && this.isTokenValid(fetched) ? fetched.token : null;
+  }
+
+  async getTokenForJoin(): Promise<string | null> {
+    const token = await this.getToken();
+    if (token) {
+      this.token = null;
+    }
+    return token;
   }
 
   private async checkAndRefresh() {
@@ -85,15 +81,18 @@ export class TurnstileManager {
     await this.fetchAndStoreToken();
   }
 
-  private async fetchAndStoreToken() {
-    this.tokenPromise = this.fetchToken();
+  private async fetchAndStoreToken(): Promise<TurnstileToken | null> {
+    const fetchPromise = this.fetchToken();
+    this.tokenPromise = fetchPromise;
     try {
-      const token = await this.tokenPromise;
+      const token = await fetchPromise;
       if (token && this.isTokenValid(token)) {
         this.token = token;
       }
+      return this.token;
     } catch (error) {
       console.warn("Turnstile token fetch failed", error);
+      return null;
     } finally {
       this.tokenPromise = null;
     }
