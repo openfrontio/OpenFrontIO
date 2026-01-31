@@ -185,10 +185,6 @@ declare global {
       };
       spaNewPage: (url?: string) => void;
     };
-    fusetag?: {
-      que: Array<() => void>;
-      pageInit: (config: { blockingFuseIds: string[] }) => void;
-    };
     showPage?: (pageId: string) => void;
   }
 
