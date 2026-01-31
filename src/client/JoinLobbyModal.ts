@@ -1,11 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import {
-  renderDuration,
-  renderNumber,
-  restoreBaseUrlUnlessDeepLink,
-  translateText,
-} from "../client/Utils";
+import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -24,6 +19,7 @@ import {
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { getClientIDForGame } from "./Auth";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -320,7 +316,7 @@ export class JoinLobbyModal extends BaseModal {
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      restoreBaseUrlUnlessDeepLink();
+      this.updateHistory("/");
     }
 
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
@@ -345,7 +341,7 @@ export class JoinLobbyModal extends BaseModal {
   public closeAndLeave() {
     this.leaveLobby();
     try {
-      restoreBaseUrlUnlessDeepLink();
+      this.updateHistory("/");
     } catch (error) {
       console.warn("Failed to restore URL on leave:", error);
     }
@@ -356,6 +352,12 @@ export class JoinLobbyModal extends BaseModal {
   public closeWithoutLeaving() {
     this.leaveLobbyOnClose = false;
     this.close();
+  }
+
+  private updateHistory(url: string): void {
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      history.replaceState(null, "", url);
+    }
   }
 
   // --- Game config rendering ---
