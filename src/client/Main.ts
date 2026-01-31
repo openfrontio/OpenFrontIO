@@ -7,7 +7,9 @@ import {
   GameRecord,
   GameStartInfo,
 } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
@@ -259,7 +261,6 @@ class Client {
       }
     });
     this.serverConfigPrefetch = configPrefetch;
-    this.cosmeticsPromise = fetchCosmetics();
     // Prefetch turnstile token so it is available when the user joins a lobby.
     this.turnstileManager.warmup();
 
@@ -857,19 +858,19 @@ class Client {
       this.joinModal?.close();
       this.joinPublicModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const configPromise = this.getServerConfigPrefetched();
-    const cosmeticsPromise = this.cosmeticsPromise ?? fetchCosmetics();
-    const turnstilePromise = this.turnstileManager.getTokenForJoin(
-      lobby.gameStartInfo,
-    );
     let config: Awaited<ReturnType<typeof getServerConfigFromClient>>;
     let cosmetics: Awaited<ReturnType<typeof fetchCosmetics>>;
     let turnstileToken: string | null = null;
     try {
-      [config, cosmetics, turnstileToken] = await Promise.all([
-        configPromise,
-        cosmeticsPromise,
-        turnstilePromise,
+      config = await this.getServerConfigPrefetched();
+      const shouldRequestToken =
+        config.env() !== GameEnv.Dev &&
+        lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer;
+      [cosmetics, turnstileToken] = await Promise.all([
+        fetchCosmetics(),
+        shouldRequestToken
+          ? this.turnstileManager.getTokenForJoin(lobby.gameStartInfo)
+          : Promise.resolve(null),
       ]);
     } catch (error) {
       if (joinAbortController.signal.aborted) {
@@ -890,9 +891,6 @@ class Client {
       joinAbortController.signal.aborted
     ) {
       return;
-    }
-    if (this.cosmeticsPromise === cosmeticsPromise && cosmetics === null) {
-      this.cosmeticsPromise = null;
     }
     this.updateJoinUrlForShare(lobby.gameID, config);
     const pattern = this.userSettings.getSelectedPatternName(cosmetics);
