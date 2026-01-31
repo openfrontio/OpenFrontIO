@@ -340,7 +340,9 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   disconnectedCallback() {
-    this.onClose();
+    this.clearCountdownTimer();
+    this.stopLobbyUpdates();
+    this.clearPlayersInterval();
     super.disconnectedCallback();
   }
 
@@ -835,7 +837,7 @@ export class JoinLobbyModal extends BaseModal {
           }
         }
         if (data.msUntilStart !== undefined) {
-          this.lobbyStartAt = data.msUntilStart + Date.now();
+          this.lobbyStartAt = data.msUntilStart;
         }
         if (this.isConnecting) {
           this.isConnecting = false;
