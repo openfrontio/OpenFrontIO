@@ -279,6 +279,10 @@ export class JoinLobbyModal extends BaseModal {
     super.open();
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
+      // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
+      if (!lobbyInfo) {
+        this.checkActiveLobby(lobbyId);
+      }
     }
   }
 
