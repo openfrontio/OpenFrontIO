@@ -341,6 +341,7 @@ describe("RadialMenuElements", () => {
         isPlayer: vi.fn(() => true),
       } as unknown as PlayerView;
       mockParams.selected = allyPlayer;
+      mockGame.owner = vi.fn(() => allyPlayer);
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
       const allyMenu = subMenu.find((item) => item.id === "ally_break");
