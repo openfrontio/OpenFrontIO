@@ -128,12 +128,14 @@ export class PublicLobby extends LitElement {
           <div class="absolute inset-0 pointer-events-none z-10"></div>
 
           <!-- Map Image Area with gradient overlay -->
-          <div class="flex-1 w-full relative overflow-hidden">
+          <div
+            class="flex-1 w-full relative overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
+          >
             ${mapImageSrc
               ? html`<img
                   src="${mapImageSrc}"
                   alt="${lobby.gameConfig.gameMap}"
-                  class="absolute inset-0 w-full h-full object-cover object-center z-10"
+                  class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] z-10"
                 />`
               : ""}
             <!-- Vignette overlay for dark edges -->

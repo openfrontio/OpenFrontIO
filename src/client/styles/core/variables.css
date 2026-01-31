@@ -6,22 +6,28 @@
   --boxBackgroundColor: #111827cc;
   --fontColor: #202020;
   --fontColorLight: #fff;
-  --primaryColor: #2563eb;
-  --primaryColorHover: #1d4ed8;
+
+  /* Palette: Deep French Blue / Muted Cyan / Black / Forest Teal */
+  --frenchBlue: #1f3a70; /* Deeper French Blue */
+  --cyanBlue: #0f6ca3; /* Muted Cyan secondary */
+  --tealAccent: #1f6c5a; /* Darker Teal accent */
+
+  --primaryColor: var(--frenchBlue);
+  --primaryColorHover: var(--tealAccent);
   --primaryColorDisabled: linear-gradient(
     to right,
     rgb(74, 74, 74),
     rgb(61, 61, 61)
   );
-  --secondaryColor: #dbeafe;
-  --secondaryColorHover: #bfdbfe;
+  --secondaryColor: var(--cyanBlue);
+  --secondaryColorHover: var(--cyanBlue);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --primaryColorDark: #3b82f6;
-  --primaryColorHoverDark: #2563eb;
+  --primaryColorDark: var(--frenchBlue);
+  --primaryColorHoverDark: var(--tealAccent);
   --primaryColorDisabledDark: #4b5563;
-  --secondaryColorDark: #374151;
-  --secondaryColorHoverDark: #4b5563;
+  --secondaryColorDark: var(--tealAccent);
+  --secondaryColorHoverDark: var(--frenchBlue);
   --fontColorDark: #f3f4f6;
 
   /* Achievements */

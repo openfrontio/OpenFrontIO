@@ -191,26 +191,26 @@ export class GameModeSelector extends LitElement {
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
-          "from-[#1f3b57] to-[#0f1f30]",
-          "bg-gradient-to-tl",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
-          "from-[#1f3b57] to-[#0f1f30]",
-          "bg-gradient-to-tr",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
-          "from-[#1f3b57] to-[#0f1f30]",
-          "bg-gradient-to-bl",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
           this.openJoinLobby,
-          "from-[#1f3b57] to-[#0f1f30]",
-          "bg-gradient-to-br",
+          "bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)]",
+          "",
         )}
       </div>
     `;
@@ -275,11 +275,15 @@ export class GameModeSelector extends LitElement {
         class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
       >
         <div
-          class="relative flex-1 overflow-hidden"
-          style="background: ${mapImageSrc
-            ? `url('${mapImageSrc}') center/cover, `
-            : ""}#4684b4"
+          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
         >
+          ${mapImageSrc
+            ? html`<img
+                src="${mapImageSrc}"
+                alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
+                class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05]"
+              />`
+            : null}
           ${modifierLabels.length > 0
             ? html`<div
                 class="absolute bottom-2 left-2 flex flex-col items-start gap-1"
@@ -308,7 +312,7 @@ export class GameModeSelector extends LitElement {
           </div>
         </div>
         <div
-          class="flex items-center justify-between px-3 py-2 bg-[linear-gradient(90deg,#6f5310_0%,#b88917_55%,#9c7a1c_100%)]"
+          class="flex items-center justify-between px-3 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
         >
           <div class="flex flex-col gap-0.5 min-w-0">
             <h3

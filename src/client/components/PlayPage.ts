@@ -17,7 +17,7 @@ export class PlayPage extends LitElement {
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 w-full">
           <div
-            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[linear-gradient(135deg,#1f3b57,#0f1f30)] rounded-xl"
+            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] rounded-xl"
           >
             <button
               id="hamburger-btn"
