@@ -118,7 +118,6 @@ export function createCanvas(): HTMLCanvasElement {
 
   return canvas;
 }
-
 /**
  * A polyfill for crypto.randomUUID that provides fallback implementations
  * for older browsers, particularly Safari versions < 15.4
