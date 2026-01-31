@@ -75,12 +75,6 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
 const findAllyBreak = (items: any[]) =>
   items.find((i) => i && i.id === "ally_break");
 
-const findAllyBreakConfirm = (items: any[]) =>
-  items.find((i) => i && i.id === "ally_break_confirm");
-
-const findAllyBreakCancel = (items: any[]) =>
-  items.find((i) => i && i.id === "ally_break_cancel");
-
 describe("RadialMenuElements ally break", () => {
   test("shows break option with correct color when allied", () => {
     const params = makeParams();
@@ -91,49 +85,17 @@ describe("RadialMenuElements ally break", () => {
     expect(ally.color).toBe(COLORS.breakAlly);
   });
 
-  test("break option opens confirmation submenu", () => {
+  test("break action calls handleBreakAlliance and closes menu", () => {
     const params = makeParams();
     const items = rootMenuElement.subMenu!(params);
     const ally = findAllyBreak(items)!;
 
-    expect(ally.subMenu).toBeDefined();
-    const subMenuItems = ally.subMenu!(params);
-    expect(subMenuItems.length).toBe(2);
-
-    const confirmItem = findAllyBreakConfirm(subMenuItems);
-    const cancelItem = findAllyBreakCancel(subMenuItems);
-    expect(confirmItem).toBeTruthy();
-    expect(cancelItem).toBeTruthy();
-  });
-
-  test("confirm action calls handleBreakAlliance and closes menu", () => {
-    const params = makeParams();
-    const items = rootMenuElement.subMenu!(params);
-    const ally = findAllyBreak(items)!;
-    const subMenuItems = ally.subMenu!(params);
-    const confirmItem = findAllyBreakConfirm(subMenuItems)!;
-
-    confirmItem.action!(params);
+    ally.action!(params);
 
     expect(params.playerActionHandler.handleBreakAlliance).toHaveBeenCalledWith(
       params.myPlayer,
       params.selected,
     );
-    expect(params.closeMenu).toHaveBeenCalled();
-  });
-
-  test("cancel action closes menu without breaking alliance", () => {
-    const params = makeParams();
-    const items = rootMenuElement.subMenu!(params);
-    const ally = findAllyBreak(items)!;
-    const subMenuItems = ally.subMenu!(params);
-    const cancelItem = findAllyBreakCancel(subMenuItems)!;
-
-    cancelItem.action!(params);
-
-    expect(
-      params.playerActionHandler.handleBreakAlliance,
-    ).not.toHaveBeenCalled();
     expect(params.closeMenu).toHaveBeenCalled();
   });
 });
