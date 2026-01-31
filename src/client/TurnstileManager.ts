@@ -118,7 +118,13 @@ export class TurnstileManager {
     }
 
     const config = await this.getServerConfig();
-    const widgetId = window.turnstile.render("#turnstile-container", {
+    const container = document.querySelector("#turnstile-container");
+    if (!container) {
+      console.warn("Turnstile container element not found");
+      return null;
+    }
+
+    const widgetId = window.turnstile.render(container, {
       sitekey: config.turnstileSiteKey(),
       size: "normal",
       appearance: "interaction-only",
