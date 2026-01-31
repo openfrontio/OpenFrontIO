@@ -265,7 +265,6 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    this.initializeFuseTag();
     // Warm critical join dependencies to avoid blocking on first join.
     const configPrefetch = getServerConfigFromClient();
     configPrefetch.catch((error) => {
