@@ -51,7 +51,6 @@ export class JoinLobbyModal extends BaseModal {
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
-  private playersInterval: ReturnType<typeof setInterval> | null = null;
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
@@ -318,7 +317,6 @@ export class JoinLobbyModal extends BaseModal {
   protected onClose(): void {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
-    this.clearPlayersInterval();
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
@@ -341,7 +339,6 @@ export class JoinLobbyModal extends BaseModal {
   disconnectedCallback() {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
-    this.clearPlayersInterval();
     super.disconnectedCallback();
   }
 
@@ -784,12 +781,5 @@ export class JoinLobbyModal extends BaseModal {
       }),
     );
     return "success";
-  }
-
-  private clearPlayersInterval() {
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
   }
 }
