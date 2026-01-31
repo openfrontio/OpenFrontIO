@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "copy": "Copy",
     "back": "Back",
     "available": "Available",
     "preset_max": "Max",
@@ -45,6 +46,7 @@
     "play": "Play",
     "news": "News",
     "store": "Store",
+    "store_new_badge": "NEW",
     "settings": "Settings",
     "keys": "Keys",
     "stats": "Stats",
@@ -52,13 +54,46 @@
     "account": "Account",
     "help": "Help",
     "menu": "Menu",
+    "troubleshooting": "Troubleshooting",
+    "go_to_troubleshooting": "Go to our troubleshooting page",
     "pick_pattern": "Pick a pattern!"
   },
   "news": {
     "github_link": "on GitHub",
     "title": "Release Notes"
   },
+  "troubleshooting": {
+    "title": "Troubleshooting",
+    "loading": "Loading...",
+    "environment": "Environment",
+    "rendering": "Rendering",
+    "power": "Power",
+    "browser": "Browser",
+    "platform": "Platform",
+    "copied_to_clipboard": "Info copied to the clipboard! Feel free to share it on our Discord if you need help.",
+    "os": "OS",
+    "device_pixel_ratio": "Device Pixel Ratio",
+    "chromium_tip": "OpenFront runs best on Chromium-based browsers.",
+    "hardware_acceleration_tip": "Make sure hardware acceleration is enabled in your browser settings for optimal performance.",
+    "renderer": "Renderer",
+    "max_texture_size": "Max Texture Size",
+    "high_precision_shaders": "High Precision Shaders",
+    "gpu": "GPU",
+    "unavailable": "Unavailable",
+    "gpu_tip": "Verify that this is the dedicated GPU, if one is available.",
+    "battery": "Battery",
+    "charging": "Charging",
+    "battery_level": "Battery Level",
+    "power_saving_tip": "Make sure that your browser is not set to power saving mode.",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": "Unknown",
+    "software_rendering": "Software rendering",
+    "canvas_2d_no_gpu": "Canvas 2D (no GPU)"
+  },
   "help_modal": {
+    "video_tutorial": "Video Tutorial",
+    "video_tutorial_title": "OpenFront.io Tutorial",
     "hotkeys": "Hotkeys",
     "table_key": "Key",
     "table_action": "Action",
@@ -142,6 +177,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "player_icons": "Player icons",
+    "troubleshooting_desc": "If you experience performance issues, crashes, or other problems while playing OpenFront, please visit our Troubleshooting page for help diagnosing and fixing common issues:",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - Number 1. This is the top player in the leaderboard.",
     "icon_traitor": "Broken shield - Traitor. This player attacked an ally.",
@@ -167,6 +203,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
@@ -241,7 +278,8 @@
     "naval_trade": "Tradeship",
     "conquest_gold": "Conquered player gold",
     "stolen_gold": "Stolen with warships",
-    "num_of_conquests": "Number of conquered players",
+    "num_of_conquests_humans": "Player kills",
+    "num_of_conquests_bots": "Bot kills",
     "duration": "Duration",
     "survival_time": "Survival time",
     "war": "War",
@@ -254,6 +292,8 @@
   },
   "map": {
     "map": "Map",
+    "featured": "Featured",
+    "all": "All",
     "world": "World",
     "giantworldmap": "Giant World Map",
     "europe": "Europe",
@@ -296,6 +336,7 @@
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
     "sierpinski": "Sierpinski",
+    "thebox": "The Box",
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
     "surrounded": "Surrounded",
@@ -304,6 +345,7 @@
     "amazonriver": "Amazon River"
   },
   "map_categories": {
+    "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
     "fantasy": "Other",
@@ -429,6 +471,7 @@
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "starting_gold": "5M Starting Gold"
   },
   "select_lang": {
@@ -804,9 +847,17 @@
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis",
+    "moderation": "Moderation",
+    "kick": "Kick player",
+    "kicked": "Already kicked",
+    "kick_confirm": "Kick {name}?\n\nThey won't be able to rejoin this game.",
     "arc_up": "Upward arc",
     "arc_down": "Downward arc",
     "flip_rocket_trajectory": "Flip rocket trajectory"
+  },
+  "kick_reason": {
+    "duplicate_session": "Kicked from game (you may have been playing on another tab)",
+    "lobby_creator": "Kicked by lobby creator"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",

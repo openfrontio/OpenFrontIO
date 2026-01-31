@@ -231,6 +231,7 @@ export class LangSelector extends LitElement {
       "leaderboard-modal",
       "flag-input-modal",
       "flag-input",
+      "matchmaking-button",
       "token-login",
     ];
 

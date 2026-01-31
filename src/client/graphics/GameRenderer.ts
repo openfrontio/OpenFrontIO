@@ -6,7 +6,6 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
-import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -20,6 +19,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
+import { InGameHeaderAd } from "./layers/InGameHeaderAd";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -244,6 +244,14 @@ export function createRenderer(
   }
   immunityTimer.game = game;
 
+  const inGameHeaderAd = document.querySelector(
+    "in-game-header-ad",
+  ) as InGameHeaderAd;
+  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
+    console.error("in-game header ad not found");
+  }
+  inGameHeaderAd.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -287,7 +295,7 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    new AdTimer(game),
+    inGameHeaderAd,
     alertFrame,
     performanceOverlay,
   ];
@@ -305,6 +313,7 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
 
   constructor(
     private game: GameView,
@@ -416,7 +425,28 @@ export class GameRenderer {
   }
 
   tick() {
-    this.layers.forEach((l) => l.tick?.());
+    const nowMs = performance.now();
+
+    for (const layer of this.layers) {
+      if (!layer.tick) {
+        continue;
+      }
+
+      const state = this.layerTickState.get(layer) ?? {
+        lastTickAtMs: -Infinity,
+      };
+
+      const intervalMs = layer.getTickIntervalMs?.() ?? 0;
+      if (intervalMs > 0 && nowMs - state.lastTickAtMs < intervalMs) {
+        this.layerTickState.set(layer, state);
+        continue;
+      }
+
+      state.lastTickAtMs = nowMs;
+      this.layerTickState.set(layer, state);
+
+      layer.tick();
+    }
   }
 
   resize(width: number, height: number): void {

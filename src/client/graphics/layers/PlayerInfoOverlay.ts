@@ -504,6 +504,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 </div>
               `
             : ""}
+          ${unit.type() === UnitType.TransportShip
+            ? html`
+                <div class="text-sm">
+                  ${translateText("player_info_overlay.troops")}:
+                  ${renderTroops(unit.troops())}
+                </div>
+              `
+            : ""}
         </div>
       </div>
     `;

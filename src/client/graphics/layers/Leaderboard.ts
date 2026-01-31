@@ -55,12 +55,14 @@ export class Leaderboard extends LitElement implements Layer {
 
   init() {}
 
+  getTickIntervalMs() {
+    return 1000;
+  }
+
   tick() {
     if (this.game === null) throw new Error("Not initialized");
     if (!this.visible) return;
-    if (this.game.ticks() % 10 === 0) {
-      this.updateLeaderboard();
-    }
+    this.updateLeaderboard();
   }
 
   private setSort(key: "tiles" | "gold" | "maxtroops") {
