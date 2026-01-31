@@ -29,8 +29,7 @@ export class LeaderboardModal extends BaseModal {
   private loadActiveTabData() {
     const token = ++this.loadToken;
 
-    void (async () => {
-      await this.updateComplete;
+    const run = async () => {
       if (token !== this.loadToken) return;
 
       if (this.activeTab === "players") {
@@ -46,6 +45,13 @@ export class LeaderboardModal extends BaseModal {
         if (this.activeTab === "players") void this.clanTable?.ensureLoaded();
         else void this.playerList?.ensureLoaded();
       });
+    };
+
+    void (async () => {
+      if (!(this.activeTab === "players" ? this.playerList : this.clanTable)) {
+        await this.updateComplete;
+      }
+      await run();
     })();
   }
 
