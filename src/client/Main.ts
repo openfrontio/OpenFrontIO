@@ -468,49 +468,9 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
-    const matchmakingButton = document.getElementById("matchmaking-button");
-    const matchmakingButtonLoggedOut = document.getElementById(
-      "matchmaking-button-logged-out",
-    );
-
-    const updateMatchmakingButton = (loggedIn: boolean) => {
-      if (!loggedIn) {
-        matchmakingButton?.classList.add("hidden");
-        matchmakingButtonLoggedOut?.classList.remove("hidden");
-      } else {
-        matchmakingButton?.classList.remove("hidden");
-        matchmakingButtonLoggedOut?.classList.add("hidden");
-      }
-    };
-
-    if (matchmakingButton) {
-      matchmakingButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-matchmaking");
-          this.publicLobby?.leaveLobby();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    }
-
-    if (matchmakingButtonLoggedOut) {
-      matchmakingButtonLoggedOut.addEventListener("click", () => {
-        window.showPage?.("page-account");
-      });
-    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       updateAccountNavButton(userMeResponse);
-      updateMatchmakingButton(userMeResponse !== false);
       const hasLinkedAccount =
         !crazyGamesSDK.isOnCrazyGames() &&
         ((userMeResponse || null)?.player?.flares?.length ?? 0) > 0;
