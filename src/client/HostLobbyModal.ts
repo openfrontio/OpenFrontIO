@@ -652,9 +652,6 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyId = generateID();
     this.lobbyCreatorClientID = getClientIDForGame(this.lobbyId);
 
-    // Subscribe to WebSocket lobby_info events
-    this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
-
     createLobby(this.lobbyCreatorClientID, this.lobbyId)
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
@@ -666,6 +663,7 @@ export class HostLobbyModal extends BaseModal {
         this.updateHistory(url);
       })
       .then(() => {
+        this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
