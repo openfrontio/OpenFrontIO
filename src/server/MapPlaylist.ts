@@ -114,7 +114,12 @@ export class MapPlaylist {
   public async gameConfig(
     overrides?: GameConfigOverrides,
   ): Promise<GameConfig> {
-    const { map, mode: playlistMode } = this.getNextMap();
+    let { map, mode: playlistMode } = this.getNextMap();
+
+    // Arcade maps should only appear in special lobbies
+    while (!overrides?.ensureSpecialModifier && this.isArcadeMap(map)) {
+      ({ map, mode: playlistMode } = this.getNextMap());
+    }
 
     const mode = overrides?.mode ?? playlistMode;
 
