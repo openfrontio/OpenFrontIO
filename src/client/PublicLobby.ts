@@ -42,11 +42,6 @@ export class PublicLobby extends LitElement {
 
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
     this.lobbies = lobbies;
-    document.dispatchEvent(
-      new CustomEvent("public-lobbies-update", {
-        detail: { lobbies },
-      }),
-    );
     this.lobbies.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
         const msUntilStart = l.msUntilStart ?? 0;
@@ -231,8 +226,6 @@ export class PublicLobby extends LitElement {
       </button>
     `;
   }
-
-  leaveLobby() {}
 
   public stop() {
     this.lobbySocket.stop();
