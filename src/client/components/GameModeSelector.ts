@@ -149,7 +149,9 @@ export class GameModeSelector extends LitElement {
     );
 
     return html`
-      <div class="grid grid-cols-2 gap-4 w-full">
+      <div
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
+      >
         ${ffaLobby
           ? this.renderLobbyCard(ffaLobby, this.getLobbyTitle(ffaLobby))
           : ""}
@@ -178,7 +180,7 @@ export class GameModeSelector extends LitElement {
 
   private renderQuickActionsSection() {
     return html`
-      <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
+      <div class="grid grid-cols-2 gap-2 h-40 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
@@ -263,7 +265,7 @@ export class GameModeSelector extends LitElement {
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
+        class="group flex flex-col w-full h-40 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
       >
         <div class="relative flex-1 overflow-hidden ${CARD_BG}">
           ${mapImageSrc

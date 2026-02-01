@@ -11,17 +11,19 @@ export class PlayPage extends LitElement {
     return html`
       <div
         id="page-play"
-        class="flex flex-col gap-2 w-full max-w-6xl mx-auto sm:px-4 my-auto min-h-0"
+        class="flex flex-col gap-2 w-full lg:max-w-6xl mx-auto px-0 lg:px-4 lg:my-auto min-h-0"
       >
         <token-login class="absolute"></token-login>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 w-full">
+        <div
+          class="grid grid-cols-1 lg:grid-cols-12 gap-2 w-full sticky top-0 z-30 lg:static pb-4 lg:pb-0"
+        >
           <div
-            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] rounded-xl"
+            class="lg:col-span-9 flex gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] lg:rounded-xl"
           >
             <button
               id="hamburger-btn"
-              class="h-10 sm:h-[50px] shrink-0 aspect-[4/3] lg:hidden flex text-white/90 rounded-md items-center justify-center transition-colors"
+              class="h-10 lg:h-[50px] shrink-0 aspect-[4/3] lg:hidden flex text-white/90 rounded-md items-center justify-center transition-colors"
               data-i18n-aria-label="main.menu"
               aria-expanded="false"
               aria-controls="sidebar-menu"
@@ -45,7 +47,7 @@ export class PlayPage extends LitElement {
             </button>
 
             <username-input
-              class="flex-1 min-w-0 h-10 sm:h-[50px]"
+              class="flex-1 min-w-0 h-10 lg:h-[50px]"
             ></username-input>
 
             <pattern-input
