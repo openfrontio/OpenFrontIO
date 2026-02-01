@@ -17,11 +17,8 @@ export class NewsModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
+        >
         ${modalHeader({
           title: translateText("news.title"),
           onBack: this.close,

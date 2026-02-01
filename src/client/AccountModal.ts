@@ -90,9 +90,7 @@ export class AccountModal extends BaseModal {
     const displayId = publicId || translateText("account_modal.not_found");
 
     return html`
-      <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title,
           onBack: () => this.close(),

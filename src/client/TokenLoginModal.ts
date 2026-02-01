@@ -26,11 +26,8 @@ export class TokenLoginModal extends BaseModal {
   render() {
     const title = translateText("token_login_modal.title");
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
+        >
         ${modalHeader({
           title,
           onBack: () => this.close(),

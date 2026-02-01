@@ -18,9 +18,7 @@ export class RankedModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("mode_selector.ranked_title"),
           onBack: this.close,

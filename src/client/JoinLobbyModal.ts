@@ -84,9 +84,7 @@ export class JoinLobbyModal extends BaseModal {
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
     const playerCount = this.playerCount;
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("public_lobby.title"),
           onBack: () => this.closeAndLeave(),
@@ -205,9 +203,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private renderJoinForm() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("private_lobby.title"),
           onBack: () => this.closeAndLeave(),

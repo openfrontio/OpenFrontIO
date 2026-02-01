@@ -140,9 +140,7 @@ export class SinglePlayerModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",

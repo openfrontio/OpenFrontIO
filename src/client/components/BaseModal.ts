@@ -11,10 +11,18 @@ import { property, query, state } from "lit/decorators.js";
  * - Common inline/modal element handling
  * - Shared open/close logic with hooks for custom behavior
  * - Standardized loading spinner UI
+ * - Consistent modal container styling
  */
 export abstract class BaseModal extends LitElement {
   @state() protected isModalOpen = false;
   @property({ type: Boolean }) inline = false;
+
+  /**
+   * Standard modal container class string.
+   * Provides consistent dark glassmorphic styling across all modals.
+   */
+  protected readonly modalContainerClass =
+    "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10";
 
   @query("o-modal") protected modalEl?: HTMLElement & {
     open: () => void;
@@ -144,7 +152,8 @@ export abstract class BaseModal extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center justify-center p-12 text-white bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 h-full min-h-[400px]"
+        class="flex flex-col items-center justify-center p-12 text-white ${this
+          .modalContainerClass} h-full min-h-[400px]"
       >
         <div
           class="w-12 h-12 border-4 ${colorClasses[

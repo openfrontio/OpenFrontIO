@@ -31,7 +31,7 @@ export class LanguageModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="${this.modalContainerClass}"
       >
         <!-- Header -->
         ${modalHeader({
