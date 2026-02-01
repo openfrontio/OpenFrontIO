@@ -645,9 +645,15 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
-  protected onOpen(): void {
+  /**
+   * Hook called when modal opens. Sets up lobby and subscribes to WebSocket events.
+   */
+  protected override onOpen(): void {
     this.lobbyId = generateID();
     this.lobbyCreatorClientID = getClientIDForGame(this.lobbyId);
+
+    // Subscribe to WebSocket lobby_info events
+    this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
 
     createLobby(this.lobbyCreatorClientID, this.lobbyId)
       .then(async (lobby) => {
@@ -671,12 +677,6 @@ export class HostLobbyModal extends BaseModal {
           }),
         );
       });
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.close();
-      };
-    }
-    this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
     this.loadNationCount();
   }
 
@@ -727,19 +727,17 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  protected onClose(): void {
+  protected override onClose(): void {
     console.log("Closing host lobby modal");
+    this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
+
     if (this.leaveLobbyOnClose) {
-      this.leaveLobby();
+      this.dispatchEvent(new CustomEvent("leave-lobby"));
       this.updateHistory("/"); // Reset URL to base
     }
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
