@@ -109,20 +109,7 @@ export class StatsModal extends BaseModal {
 
   private renderBody() {
     if (this.isLoading) {
-      return html`
-        <div
-          class="flex flex-col items-center justify-center p-12 text-white h-full"
-        >
-          <div
-            class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-6"
-          ></div>
-          <p
-            class="text-blue-200/80 text-sm font-bold tracking-[0.2em] uppercase"
-          >
-            ${translateText("stats_modal.loading")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(translateText("stats_modal.loading"));
     }
 
     if (this.error) {

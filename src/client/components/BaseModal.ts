@@ -1,4 +1,4 @@
-import { LitElement } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 
 /**
@@ -10,6 +10,7 @@ import { property, query, state } from "lit/decorators.js";
  * - Automatic listener lifecycle management
  * - Common inline/modal element handling
  * - Shared open/close logic with hooks for custom behavior
+ * - Standardized loading spinner UI
  */
 export abstract class BaseModal extends LitElement {
   @state() protected isModalOpen = false;
@@ -120,5 +121,44 @@ export abstract class BaseModal extends LitElement {
     } else {
       this.modalEl?.close();
     }
+  }
+
+  /**
+   * Renders a standardized loading spinner with optional custom message.
+   * Use this for consistent loading states across all modals.
+   *
+   * @param message - Optional loading message text. Defaults to no message.
+   * @param spinnerColor - Optional spinner color. Defaults to 'blue'.
+   * @returns TemplateResult of the loading UI
+   */
+  protected renderLoadingSpinner(
+    message?: string,
+    spinnerColor: "blue" | "green" | "yellow" | "white" = "blue",
+  ): TemplateResult {
+    const colorClasses = {
+      blue: "border-blue-500/30 border-t-blue-500",
+      green: "border-green-500/30 border-t-green-500",
+      yellow: "border-yellow-500/30 border-t-yellow-500",
+      white: "border-white/20 border-t-white",
+    };
+
+    return html`
+      <div
+        class="flex flex-col items-center justify-center p-12 text-white bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 h-full min-h-[400px]"
+      >
+        <div
+          class="w-12 h-12 border-4 ${colorClasses[
+            spinnerColor
+          ]} rounded-full animate-spin mb-4"
+        ></div>
+        ${message
+          ? html`<p
+              class="text-white/60 font-medium tracking-wide animate-pulse"
+            >
+              ${message}
+            </p>`
+          : ""}
+      </div>
+    `;
   }
 }

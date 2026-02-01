@@ -71,39 +71,21 @@ export class MatchmakingModal extends BaseModal {
 
   private renderInner() {
     if (!this.connected) {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.connecting")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.connecting"),
+        "blue",
+      );
     }
     if (this.gameID === null) {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.searching")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.searching"),
+        "green",
+      );
     } else {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.waiting_for_game")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.waiting_for_game"),
+        "yellow",
+      );
     }
   }
 

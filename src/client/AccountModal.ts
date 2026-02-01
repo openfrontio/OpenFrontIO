@@ -61,18 +61,9 @@ export class AccountModal extends BaseModal {
 
   render() {
     const content = this.isLoadingUser
-      ? html`
-          <div
-            class="flex flex-col items-center justify-center p-12 text-white bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 h-full min-h-[400px]"
-          >
-            <div
-              class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"
-            ></div>
-            <p class="text-white/60 font-medium tracking-wide animate-pulse">
-              ${translateText("account_modal.fetching_account")}
-            </p>
-          </div>
-        `
+      ? this.renderLoadingSpinner(
+          translateText("account_modal.fetching_account"),
+        )
       : this.renderInner();
 
     if (this.inline) {
