@@ -124,12 +124,9 @@
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
-        class="absolute inset-0 bg-cover bg-center"
-        style="
-          background-image: url(&quot;/images/background.png&quot;);
-          opacity: 0.5;
-          filter: sepia(0.2) saturate(1.2) hue-rotate(180deg) brightness(0.9);
-        "
+        id="background-layer"
+        class="absolute inset-0 bg-cover bg-center opacity-50 [filter:brightness(1.0)] dark:[filter:sepia(0.2)_saturate(1.2)_hue-rotate(180deg)_brightness(0.9)]"
+        style="background-image: url(&quot;/images/background.png&quot;)"
       ></div>
       <div
         class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden md:block"
