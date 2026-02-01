@@ -242,7 +242,7 @@ class Client {
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
-  private publicLobby: PublicLobby;
+  private publicLobby: PublicLobby | null;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
@@ -534,7 +534,7 @@ class Client {
       hostLobbyButton.addEventListener("click", () => {
         if (this.usernameInput?.isValid()) {
           window.showPage?.("page-host-lobby");
-          this.publicLobby?.leaveLobby();
+          this.publicLobby?.stop();
         } else {
           window.dispatchEvent(
             new CustomEvent("show-message", {
