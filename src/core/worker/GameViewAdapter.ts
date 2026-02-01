@@ -1,5 +1,6 @@
 import { Theme } from "../configuration/Config";
 import { Game, UnitType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import { GameView } from "../game/GameView";
 import { TerrainMapData } from "../game/TerrainMapLoader";
@@ -10,8 +11,6 @@ import { TerrainMapData } from "../game/TerrainMapLoader";
  * without requiring the full GameView infrastructure.
  */
 export class GameViewAdapter implements Partial<GameView> {
-  private tileStateCache: Uint16Array | null = null;
-  private terrainDataCache: Uint8Array | null = null;
   private lastUpdate: GameUpdateViewData | null = null;
 
   constructor(
@@ -26,9 +25,6 @@ export class GameViewAdapter implements Partial<GameView> {
    */
   update(gu: GameUpdateViewData): void {
     this.lastUpdate = gu;
-    // Invalidate caches when updated
-    this.tileStateCache = null;
-    this.terrainDataCache = null;
   }
 
   config() {
@@ -43,11 +39,11 @@ export class GameViewAdapter implements Partial<GameView> {
     return this.game.height();
   }
 
-  x(tile: bigint): number {
+  x(tile: TileRef): number {
     return this.game.x(tile);
   }
 
-  y(tile: bigint): number {
+  y(tile: TileRef): number {
     return this.game.y(tile);
   }
 
@@ -56,57 +52,20 @@ export class GameViewAdapter implements Partial<GameView> {
   }
 
   /**
-   * Build tile state view from game.
-   * Cached until next update.
+   * Return the authoritative tile state view.
+   *
+   * Important: this must be the live backing buffer, because GPU update passes
+   * read from it when individual tiles are marked dirty.
    */
   tileStateView(): Uint16Array {
-    if (this.tileStateCache) {
-      return this.tileStateCache;
-    }
-    // Build tile state from game
-    const width = this.game.width();
-    const height = this.game.height();
-    const state = new Uint16Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const tile = this.game.ref(x, y);
-        const owner = this.game.owner(tile);
-        const ownerId = owner ? owner.smallID() : 0;
-        const terrain = this.game.terrain(tile);
-        const terrainType = terrain.type();
-        const terrainMag = terrain.magnitude();
-        // Pack state: ownerId (12 bits) | terrainType (2 bits) | terrainMag (2 bits)
-        state[y * width + x] =
-          (ownerId & 0xfff) |
-          ((terrainType & 0x3) << 12) |
-          ((terrainMag & 0x3) << 14);
-      }
-    }
-    this.tileStateCache = state;
-    return state;
+    return this.game.tileStateView();
   }
 
   /**
-   * Build terrain data view from game.
-   * Cached until next update.
+   * Return the immutable terrain data view.
    */
   terrainDataView(): Uint8Array {
-    if (this.terrainDataCache) {
-      return this.terrainDataCache;
-    }
-    // Build terrain data from game
-    const width = this.game.width();
-    const height = this.game.height();
-    const terrainData = new Uint8Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const tile = this.game.ref(x, y);
-        const terrain = this.game.terrain(tile);
-        terrainData[y * width + x] = terrain.type();
-      }
-    }
-    this.terrainDataCache = terrainData;
-    return terrainData;
+    return this.game.terrainDataView();
   }
 
   /**
@@ -114,16 +73,16 @@ export class GameViewAdapter implements Partial<GameView> {
    * Computes colors from theme directly (no PlayerView needed).
    */
   playerViews(): any[] {
-    const theme = this.game.config().theme();
-    return this.game.players().map((p) => {
-      // Get default colors from theme
-      const defaultTerritoryColor = theme.territoryColor(p as any);
+    const theme = this.theme;
+    return this.game.players().map((player) => {
+      const defaultTerritoryColor = theme.territoryColor(player as any);
       const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
       const territoryRgb = defaultTerritoryColor.toRgb();
       const borderRgb = defaultBorderColor.toRgb();
 
-      return {
-        smallID: () => p.smallID(),
+      const view = {
+        player,
+        smallID: () => player.smallID(),
         territoryColor: () => ({
           rgba: {
             r: Math.round(territoryRgb.r),
@@ -140,7 +99,22 @@ export class GameViewAdapter implements Partial<GameView> {
             a: Math.round((borderRgb.a ?? 1) * 255),
           },
         }),
+        hasEmbargo: (other: any) => {
+          const otherPlayer = other?.player;
+          if (!otherPlayer) return false;
+          return (
+            player.hasEmbargoAgainst(otherPlayer) ||
+            otherPlayer.hasEmbargoAgainst(player)
+          );
+        },
+        isFriendly: (other: any) => {
+          const otherPlayer = other?.player;
+          if (!otherPlayer) return false;
+          return player.isFriendly(otherPlayer);
+        },
       };
+
+      return view;
     });
   }
 
@@ -156,10 +130,16 @@ export class GameViewAdapter implements Partial<GameView> {
   /**
    * Get recently updated tiles from last game update.
    */
-  recentlyUpdatedTiles(): bigint[] {
+  recentlyUpdatedTiles(): TileRef[] {
     if (!this.lastUpdate) {
       return [];
     }
-    return Array.from(this.lastUpdate.packedTileUpdates);
+    // packedTileUpdates encode [tileRef << 16 | state] as bigint.
+    const packed = this.lastUpdate.packedTileUpdates;
+    const out: TileRef[] = new Array(packed.length);
+    for (let i = 0; i < packed.length; i++) {
+      out[i] = Number(packed[i] >> 16n);
+    }
+    return out;
   }
 }

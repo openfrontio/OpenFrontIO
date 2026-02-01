@@ -32,6 +32,7 @@ export class TerritoryRendererProxy {
   private offscreenCanvas: OffscreenCanvas | null = null;
   private worker: WorkerClient | null = null;
   private ready = false;
+  private failed = false;
   private initPromise: Promise<void> | null = null;
   private pendingMessages: any[] = [];
 
@@ -82,7 +83,12 @@ export class TerritoryRendererProxy {
 
   private startInit(): void {
     if (this.initPromise) return;
-    this.initPromise = this.init();
+    this.initPromise = this.init().catch((err) => {
+      this.failed = true;
+      this.pendingMessages = [];
+      console.error("Worker territory renderer init failed:", err);
+      throw err;
+    });
   }
 
   private async init(): Promise<void> {
@@ -120,6 +126,13 @@ export class TerritoryRendererProxy {
         if (message.type === "renderer_ready" && message.id === messageId) {
           clearTimeout(timeout);
           this.worker?.removeMessageHandler(messageId);
+          if (message.ok === false) {
+            reject(
+              new Error(message.error ?? "Renderer initialization failed"),
+            );
+            return;
+          }
+
           this.ready = true;
           // Send any pending messages
           for (const msg of this.pendingMessages) {
@@ -136,6 +149,9 @@ export class TerritoryRendererProxy {
 
   private sendToWorker(message: any): void {
     if (!this.worker) {
+      return;
+    }
+    if (this.failed) {
       return;
     }
     if (!this.ready) {

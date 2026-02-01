@@ -78,7 +78,11 @@ export class WorkerClient {
    * Post a message to the worker with optional transferables.
    */
   postMessage(message: any, transfer?: Transferable[]): void {
-    this.worker.postMessage(message, transfer);
+    if (transfer && transfer.length > 0) {
+      this.worker.postMessage(message, transfer);
+      return;
+    }
+    this.worker.postMessage(message);
   }
 
   initialize(): Promise<void> {
