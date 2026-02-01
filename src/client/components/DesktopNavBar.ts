@@ -1,12 +1,15 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { getCosmeticsHash } from "../Cosmetics";
 import { getGamesPlayed } from "../Utils";
 
 const HELP_SEEN_KEY = "helpSeen";
+const STORE_SEEN_HASH_KEY = "storeSeenHash";
 
 @customElement("desktop-nav-bar")
 export class DesktopNavBar extends LitElement {
   @state() private _helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
+  @state() private _hasNewCosmetics = false;
 
   createRenderRoot() {
     return this;
@@ -23,6 +26,12 @@ export class DesktopNavBar extends LitElement {
         this._updateActiveState(current);
       });
     }
+
+    // Check if cosmetics have changed
+    getCosmeticsHash().then((hash: string | null) => {
+      const seenHash = localStorage.getItem(STORE_SEEN_HASH_KEY);
+      this._hasNewCosmetics = hash !== null && hash !== seenHash;
+    });
   }
 
   disconnectedCallback() {
@@ -46,12 +55,27 @@ export class DesktopNavBar extends LitElement {
   }
 
   private showHelpDot(): boolean {
+    // Only show one dot at a time to prevent
+    // overwhelming users.
     return getGamesPlayed() < 10 && !this._helpSeen;
+  }
+
+  private showStoreDot(): boolean {
+    return this._hasNewCosmetics && !this.showHelpDot();
   }
 
   private onHelpClick = () => {
     localStorage.setItem(HELP_SEEN_KEY, "true");
     this._helpSeen = true;
+  };
+
+  private onStoreClick = () => {
+    this._hasNewCosmetics = false;
+    getCosmeticsHash().then((hash: string | null) => {
+      if (hash !== null) {
+        localStorage.setItem(STORE_SEEN_HASH_KEY, hash);
+      }
+    });
   };
 
   render() {
@@ -123,11 +147,18 @@ export class DesktopNavBar extends LitElement {
             class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
             data-page="page-item-store"
             data-i18n="main.store"
+            @click=${this.onStoreClick}
           ></button>
-          <span
-            class="absolute -top-3 -right-2 bg-gradient-to-br from-red-600 to-red-700 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded rotate-12 shadow-lg shadow-red-600/50 animate-pulse pointer-events-none"
-            data-i18n="main.store_new_badge"
-          ></span>
+          ${this.showStoreDot()
+            ? html`
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"
+                ></span>
+                <span
+                  class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"
+                ></span>
+              `
+            : ""}
         </div>
         <button
           class="nav-menu-item text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
