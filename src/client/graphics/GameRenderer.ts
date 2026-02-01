@@ -6,7 +6,6 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
-import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -21,6 +20,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
+import { InGameHeaderAd } from "./layers/InGameHeaderAd";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -35,6 +35,7 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { SpawnVideoAd } from "./layers/SpawnVideoAd";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -245,6 +246,20 @@ export function createRenderer(
   }
   immunityTimer.game = game;
 
+  const inGameHeaderAd = document.querySelector(
+    "in-game-header-ad",
+  ) as InGameHeaderAd;
+  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
+    console.error("in-game header ad not found");
+  }
+  inGameHeaderAd.game = game;
+
+  const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
+  if (!(spawnVideoAd instanceof SpawnVideoAd)) {
+    console.error("spawn video ad not found");
+  }
+  spawnVideoAd.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -289,7 +304,8 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    new AdTimer(game),
+    inGameHeaderAd,
+    spawnVideoAd,
     alertFrame,
     performanceOverlay,
   ];
@@ -307,6 +323,7 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private layerTickState = new Map<Layer, { lastTickAtMs: number }>();
 
   constructor(
     private game: GameView,
@@ -418,7 +435,28 @@ export class GameRenderer {
   }
 
   tick() {
-    this.layers.forEach((l) => l.tick?.());
+    const nowMs = performance.now();
+
+    for (const layer of this.layers) {
+      if (!layer.tick) {
+        continue;
+      }
+
+      const state = this.layerTickState.get(layer) ?? {
+        lastTickAtMs: -Infinity,
+      };
+
+      const intervalMs = layer.getTickIntervalMs?.() ?? 0;
+      if (intervalMs > 0 && nowMs - state.lastTickAtMs < intervalMs) {
+        this.layerTickState.set(layer, state);
+        continue;
+      }
+
+      state.lastTickAtMs = nowMs;
+      this.layerTickState.set(layer, state);
+
+      layer.tick();
+    }
   }
 
   resize(width: number, height: number): void {

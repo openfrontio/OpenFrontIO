@@ -31,6 +31,9 @@ export enum GamePhase {
   Finished = "FINISHED",
 }
 
+const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
+const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
 
@@ -219,7 +222,7 @@ export class GameServer {
         });
         // Kick the existing client instead of the new one, because this was causing issues when
         // a client wanted to replay the game afterwards.
-        this.kickClient(conflicting.clientID);
+        this.kickClient(conflicting.clientID, KICK_REASON_DUPLICATE_SESSION);
       }
     }
 
@@ -290,17 +293,16 @@ export class GameServer {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
-          this.log.error("Failed to parse client message", error, {
+          this.log.warn(`Failed to parse client message ${error}`, {
             clientID: client.clientID,
           });
           client.ws.send(
             JSON.stringify({
               type: "error",
               error,
-              message,
+              message: `Server could not parse message from client: ${message}`,
             } satisfies ServerErrorMessage),
           );
-          client.ws.close(1002, "ClientMessageSchema");
           return;
         }
         const clientMsg = parsed.data;
@@ -356,7 +358,10 @@ export class GameServer {
                   kickMethod: "websocket",
                 });
 
-                this.kickClient(clientMsg.intent.target);
+                this.kickClient(
+                  clientMsg.intent.target,
+                  KICK_REASON_LOBBY_CREATOR,
+                );
                 return;
               }
               case "update_game_config": {
@@ -776,33 +781,49 @@ export class GameServer {
     return this.gameConfig.gameType === GameType.Public;
   }
 
-  public kickClient(clientID: ClientID): void {
+  public kickClient(
+    clientID: ClientID,
+    reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
+  ): void {
     if (this.kickedClients.has(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
+        reasonKey,
       });
       return;
     }
+
+    if (!this.allClients.has(clientID)) {
+      this.log.warn(`cannot kick client, not found in game`, {
+        clientID,
+        reasonKey,
+      });
+      return;
+    }
+
+    this.kickedClients.add(clientID);
+
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
       this.log.info("Kicking client from game", {
         clientID: client.clientID,
         persistentID: client.persistentID,
+        reasonKey,
       });
       client.ws.send(
         JSON.stringify({
           type: "error",
-          error: "Kicked from game (you may have been playing on another tab)",
+          error: reasonKey,
         } satisfies ServerErrorMessage),
       );
-      client.ws.close(1000, "Kicked from game");
+      client.ws.close(1000, reasonKey);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
-      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
+        reasonKey,
       });
     }
   }

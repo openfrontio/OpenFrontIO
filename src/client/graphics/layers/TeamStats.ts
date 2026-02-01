@@ -42,6 +42,10 @@ export class TeamStats extends LitElement implements Layer {
 
   init() {}
 
+  getTickIntervalMs() {
+    return 1000;
+  }
+
   tick() {
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
 
@@ -52,9 +56,7 @@ export class TeamStats extends LitElement implements Layer {
 
     if (!this.visible) return;
 
-    if (this.game.ticks() % 10 === 0) {
-      this.updateTeamStats();
-    }
+    this.updateTeamStats();
   }
 
   private updateTeamStats() {

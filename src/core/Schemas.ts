@@ -190,6 +190,7 @@ export const GameConfigSchema = z.object({
     .object({
       isCompact: z.boolean(),
       isRandomSpawn: z.boolean(),
+      isCrowded: z.boolean(),
       startingGold: z.number().int().min(0).optional(),
     })
     .optional(),
@@ -247,7 +248,7 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = z
   .string()
-  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .regex(/^[a-zA-Z0-9_ [\]üÜ.]+$/u)
   .min(3)
   .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);

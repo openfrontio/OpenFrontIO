@@ -725,7 +725,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750;
+          return 12_500;
         case Difficulty.Medium:
           return 25_000; // Like humans
         case Difficulty.Hard:
@@ -760,7 +760,7 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.75;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
@@ -787,7 +787,7 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.95;
+          toAdd *= 0.9;
           break;
         case Difficulty.Medium:
           toAdd *= 1; // Like humans

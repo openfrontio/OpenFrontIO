@@ -25,6 +25,16 @@ export abstract class BaseModal extends LitElement {
     return this;
   }
 
+  protected firstUpdated(): void {
+    if (this.modalEl) {
+      this.modalEl.onClose = () => {
+        if (this.isModalOpen) {
+          this.close();
+        }
+      };
+    }
+  }
+
   disconnectedCallback() {
     this.unregisterEscapeHandler();
     super.disconnectedCallback();

@@ -1,9 +1,10 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { PauseGameIntentEvent } from "src/client/Transport";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
@@ -106,8 +107,14 @@ export class SettingsModal extends LitElement implements Layer {
   }
 
   private pauseGame(pause: boolean) {
-    if (this.shouldPause && !this.wasPausedWhenOpened)
+    if (this.shouldPause && !this.wasPausedWhenOpened) {
+      if (pause) {
+        crazyGamesSDK.gameplayStop();
+      } else {
+        crazyGamesSDK.gameplayStart();
+      }
       this.eventBus.emit(new PauseGameIntentEvent(pause));
+    }
   }
 
   private onTerrainButtonClick() {
