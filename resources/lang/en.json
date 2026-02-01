@@ -1007,8 +1007,6 @@
     "recent_games": "Recent Games",
     "game_id": "Game ID",
     "mode": "Mode",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "replay": "Replay",
     "details": "Details",
     "ranking": "Ranking",
@@ -1026,8 +1024,6 @@
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
     "stats_games_played": "Games Played",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "no_stats": "No stats recorded for this selection."
   },
   "matchmaking_button": {
