@@ -27,7 +27,6 @@ export class TokenLoginModal extends BaseModal {
     const title = translateText("token_login_modal.title");
     const content = html`
       <div class="${this.modalContainerClass}">
-        >
         ${modalHeader({
           title,
           onBack: () => this.close(),

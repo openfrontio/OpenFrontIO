@@ -252,7 +252,7 @@ export class TerritoryPatternsModal extends BaseModal {
 
     const content = html`
       <div class="${this.modalContainerClass}">
-        > ${this.renderTabNavigation()}
+        ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"
             ? this.renderPatternGrid()

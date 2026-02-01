@@ -18,7 +18,6 @@ export class NewsModal extends BaseModal {
   render() {
     const content = html`
       <div class="${this.modalContainerClass}">
-        >
         ${modalHeader({
           title: translateText("news.title"),
           onBack: this.close,

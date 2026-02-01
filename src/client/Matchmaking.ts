@@ -38,7 +38,6 @@ export class MatchmakingModal extends BaseModal {
 
     const content = html`
       <div class="${this.modalContainerClass}">
-        >
         ${modalHeader({
           title: translateText("matchmaking_modal.title"),
           onBack: this.close,
