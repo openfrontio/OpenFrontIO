@@ -131,22 +131,18 @@ export class DesktopNavBar extends LitElement {
               />
             </svg>
           </div>
-        </div>
-        <div
-          class="flex flex-col items-center gap-1 text-[#2563eb] text-center"
-        >
-          <button
-            class="nav-menu-item ${currentPage === "page-play"
-              ? "active"
-              : ""} text-white/70 hover:text-blue-500 text-[1.1rem] font-extrabold tracking-[0.15em] uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
-            data-page="page-play"
-            data-i18n="main.play"
-          ></button>
           <div
             id="game-version"
-            class="text-[0.75rem] font-black tracking-widest uppercase text-blue-200"
+            class="l-header__highlightText text-center"
           ></div>
         </div>
+        <button
+          class="nav-menu-item ${currentPage === "page-play"
+            ? "active"
+            : ""} text-white/70 hover:text-blue-500 font-bold tracking-widest uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          data-page="page-play"
+          data-i18n="main.play"
+        ></button>
         <!-- Desktop Navigation Menu Items -->
         <button
           class="nav-menu-item ${currentPage === "page-news"
