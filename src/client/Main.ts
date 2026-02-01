@@ -38,6 +38,7 @@ import "./NewsModal";
 import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
