@@ -74,7 +74,7 @@ export class UserSettings {
   }
 
   coordinateGridEnabled() {
-    return this.get("settings.coordinateGridEnabled", true);
+    return this.get("settings.coordinateGridEnabled", false);
   }
 
   cursorCostLabel() {

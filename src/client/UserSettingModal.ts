@@ -21,6 +21,7 @@ const isMac =
 
 const DefaultKeybinds: Record<string, string> = {
   toggleView: "Space",
+  coordinateGrid: "KeyM",
   buildCity: "Digit1",
   buildFactory: "Digit2",
   buildPort: "Digit3",
@@ -370,13 +371,6 @@ export class UserSettingModal extends BaseModal {
     console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
   }
 
-  private toggleCoordinateGrid(e: CustomEvent<{ checked: boolean }>) {
-    const enabled = e.detail?.checked;
-    if (typeof enabled !== "boolean") return;
-
-    this.userSettings.set("settings.coordinateGridEnabled", enabled);
-  }
-
   private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -479,6 +473,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey="Space"
         .value=${this.getKeyValue("toggleView")}
         .display=${this.getKeyChar("toggleView")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="coordinateGrid"
+        label=${translateText("user_setting.coordinate_grid_label")}
+        description=${translateText("user_setting.coordinate_grid_desc")}
+        defaultKey="KeyM"
+        .value=${this.getKeyValue("coordinateGrid")}
+        .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -880,15 +884,6 @@ export class UserSettingModal extends BaseModal {
         id="territory-patterns-toggle"
         .checked=${this.userSettings.territoryPatterns()}
         @change=${this.toggleTerritoryPatterns}
-      ></setting-toggle>
-
-      <!-- 🧭 Coordinate Grid -->
-      <setting-toggle
-        label="${translateText("user_setting.coordinate_grid_label")}"
-        description="${translateText("user_setting.coordinate_grid_desc")}"
-        id="coordinate-grid-toggle"
-        .checked=${this.userSettings.coordinateGridEnabled()}
-        @change=${this.toggleCoordinateGrid}
       ></setting-toggle>
 
       <!-- 📱 Performance Overlay -->

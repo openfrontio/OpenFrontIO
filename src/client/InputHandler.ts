@@ -129,6 +129,10 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
+export class ToggleCoordinateGridEvent implements GameEvent {
+  constructor(public readonly enabled: boolean) {}
+}
+
 export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
@@ -201,6 +205,7 @@ export class InputHandler {
 
     this.keybinds = {
       toggleView: "Space",
+      coordinateGrid: "KeyM",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -314,6 +319,13 @@ export class InputHandler {
           this.alternateView = true;
           this.eventBus.emit(new AlternateViewEvent(true));
         }
+      }
+
+      if (e.code === this.keybinds.coordinateGrid && !e.repeat) {
+        e.preventDefault();
+        const next = !this.userSettings.coordinateGridEnabled();
+        this.userSettings.set("settings.coordinateGridEnabled", next);
+        this.eventBus.emit(new ToggleCoordinateGridEvent(next));
       }
 
       if (e.code === "Escape") {

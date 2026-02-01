@@ -14,7 +14,6 @@ import darkModeIcon from "/images/DarkModeIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
 import exitIcon from "/images/ExitIconWhite.svg?url";
 import explosionIcon from "/images/ExplosionIconWhite.svg?url";
-import gridIcon from "/images/GridIconWhite.svg?url";
 import mouseIcon from "/images/MouseIconWhite.svg?url";
 import ninjaIcon from "/images/NinjaIconWhite.svg?url";
 import settingsIcon from "/images/SettingIconWhite.svg?url";
@@ -125,11 +124,6 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
-    this.requestUpdate();
-  }
-
-  private onToggleCoordinateGridButtonClick() {
-    this.userSettings.toggleCoordinateGrid();
     this.requestUpdate();
   }
 
@@ -294,26 +288,6 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.alternateView
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-              @click="${this.onToggleCoordinateGridButtonClick}"
-            >
-              <img src=${gridIcon} alt="gridIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.coordinate_grid_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.coordinate_grid_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.coordinateGridEnabled()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

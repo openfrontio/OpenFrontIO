@@ -2,7 +2,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent } from "../../InputHandler";
+import { ToggleCoordinateGridEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -66,7 +66,7 @@ const computeGrid = (width: number, height: number) => {
 };
 
 export class CoordinateGridLayer implements Layer {
-  private isVisible = false;
+  private isVisible = this.userSettings.coordinateGridEnabled();
 
   constructor(
     private game: GameView,
@@ -76,8 +76,8 @@ export class CoordinateGridLayer implements Layer {
   ) {}
 
   init() {
-    this.eventBus.on(AlternateViewEvent, (event) => {
-      this.isVisible = event.alternateView;
+    this.eventBus.on(ToggleCoordinateGridEvent, (event) => {
+      this.isVisible = event.enabled;
     });
   }
 
@@ -86,7 +86,7 @@ export class CoordinateGridLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (!this.isVisible || !this.userSettings.coordinateGridEnabled()) return;
+    if (!this.isVisible) return;
 
     const width = this.game.width();
     const height = this.game.height();
