@@ -22,7 +22,9 @@ export class RankedModal extends BaseModal {
     const userMe = await getUserMe();
     if (userMe) {
       this.isLoggedIn = true;
-      this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "—";
+      this.elo =
+        userMe.player.leaderboard?.oneVone?.elo ??
+        translateText("matchmaking_modal.no_elo");
     }
   }
 
@@ -38,16 +40,13 @@ export class RankedModal extends BaseModal {
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
-        ${this.isLoggedIn
-          ? html`<p class="text-center text-white/60 text-sm -mt-2 mb-2">
-              ${translateText("matchmaking_modal.elo", { elo: this.elo })}
-            </p>`
-          : null}
         <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             ${this.renderCard(
               translateText("mode_selector.ranked_1v1_title"),
-              translateText("mode_selector.ranked_title"),
+              this.isLoggedIn
+                ? translateText("matchmaking_modal.elo", { elo: this.elo })
+                : translateText("mode_selector.ranked_title"),
               () => this.handleRanked(),
             )}
             ${this.renderDisabledCard(
