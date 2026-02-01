@@ -47,34 +47,42 @@ export async function fetchPlayerById(
     return false;
   }
 }
-export async function getUserMe(): Promise<UserMeResponse | false> {
-  try {
-    const userAuthResult = await userAuth();
-    if (!userAuthResult) return false;
-    const { jwt } = userAuthResult;
 
-    // Get the user object
-    const response = await fetch(getApiBase() + "/users/@me", {
-      headers: {
-        authorization: `Bearer ${jwt}`,
-      },
-    });
-    if (response.status === 401) {
-      await logOut();
-      return false;
-    }
-    if (response.status !== 200) return false;
-    const body = await response.json();
-    const result = UserMeResponseSchema.safeParse(body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.error("Invalid response", error);
-      return false;
-    }
-    return result.data;
-  } catch (e) {
-    return false;
+let __userMe: Promise<UserMeResponse | false> | null = null;
+export async function getUserMe(): Promise<UserMeResponse | false> {
+  if (__userMe !== null) {
+    return __userMe;
   }
+  __userMe = (async () => {
+    try {
+      const userAuthResult = await userAuth();
+      if (!userAuthResult) return false;
+      const { jwt } = userAuthResult;
+
+      // Get the user object
+      const response = await fetch(getApiBase() + "/users/@me", {
+        headers: {
+          authorization: `Bearer ${jwt}`,
+        },
+      });
+      if (response.status === 401) {
+        await logOut();
+        return false;
+      }
+      if (response.status !== 200) return false;
+      const body = await response.json();
+      const result = UserMeResponseSchema.safeParse(body);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        console.error("Invalid response", error);
+        return false;
+      }
+      return result.data;
+    } catch (e) {
+      return false;
+    }
+  })();
+  return __userMe;
 }
 
 export async function createCheckoutSession(

@@ -26,6 +26,7 @@ import "./components/FluentSlider";
 import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -91,6 +92,9 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return html``;
+    }
     return html`<div
       class="px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 whitespace-nowrap shrink-0"
     >
@@ -849,6 +853,8 @@ export class SinglePlayerModal extends BaseModal {
       : null;
 
     const selectedColor = this.userSettings.getSelectedColor();
+
+    await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
