@@ -1,4 +1,4 @@
-import { Game, Player, Relation, UnitType } from "../../game/Game";
+import { Game, Player, PlayerType, Relation, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { closestTile, closestTwoTiles } from "../Util";
 
@@ -6,7 +6,7 @@ export function structureSpawnTileValue(
   mg: Game,
   player: Player,
   type: UnitType,
-): (tile: TileRef) => number {
+): ((tile: TileRef) => number) | null {
   const borderTiles = player.borderTiles();
   const otherUnits = player.units(type);
   // Prefer spacing structures out of atom bomb range
@@ -57,6 +57,22 @@ export function structureSpawnTileValue(
       };
     }
     case UnitType.DefensePost: {
+      // Check if we have any non-friendly non-bot neighbors
+      const hasHostileNeighbor =
+        player
+          .neighbors()
+          .filter(
+            (n): n is Player =>
+              n.isPlayer() &&
+              player.isFriendly(n) === false &&
+              n.type() !== PlayerType.Bot,
+          ).length > 0;
+
+      // Don't build defense posts if there is no danger
+      if (!hasHostileNeighbor) {
+        return null;
+      }
+
       return (tile) => {
         let w = 0;
 
@@ -79,6 +95,7 @@ export function structureSpawnTileValue(
             if (id === player.smallID()) continue;
             const neighbor = mg.playerBySmallID(id);
             if (!neighbor.isPlayer()) continue;
+            if (neighbor.type() === PlayerType.Bot) continue;
             neighbors.add(neighbor);
           }
           for (const neighbor of neighbors) {

@@ -62,6 +62,11 @@ export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
 export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
 export const ATTACK_INDEX_CANCEL = 2; // Cancelled attack troops
 
+// Player types
+export const PLAYER_INDEX_HUMAN = 0;
+export const PLAYER_INDEX_NATION = 1;
+export const PLAYER_INDEX_BOT = 2;
+
 // Boats
 export const BOAT_INDEX_SENT = 0; // Boats launched
 export const BOAT_INDEX_ARRIVE = 1; // Boats arrived
@@ -78,6 +83,8 @@ export const GOLD_INDEX_WORK = 0; // Gold earned by workers
 export const GOLD_INDEX_WAR = 1; // Gold earned by conquering players
 export const GOLD_INDEX_TRADE = 2; // Gold earned by trade ships
 export const GOLD_INDEX_STEAL = 3; // Gold earned by capturing trade ships
+export const GOLD_INDEX_TRAIN_SELF = 4; // Gold earned by own trains
+export const GOLD_INDEX_TRAIN_OTHER = 5; // Gold earned by other players trains
 
 // Other Units
 export const OTHER_INDEX_BUILT = 0; // Structures and warships built
@@ -100,7 +107,7 @@ export const PlayerStatsSchema = z
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
     killedAt: BigIntStringSchema.optional(),
-    conquests: BigIntStringSchema.optional(),
+    conquests: AtLeastOneNumberSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),

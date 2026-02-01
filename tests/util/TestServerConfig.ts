@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType, PublicGameModifiers } from "../../src/core/game/Game";
+import { PublicGameModifiers } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -8,9 +8,6 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   turnstileSecretKey(): string {
-    throw new Error("Method not implemented.");
-  }
-  enableMatchmaking(): boolean {
     throw new Error("Method not implemented.");
   }
   apiKey(): string {
@@ -52,7 +49,7 @@ export class TestServerConfig implements ServerConfig {
   gameCreationRate(): number {
     throw new Error("Method not implemented.");
   }
-  lobbyMaxPlayers(map: GameMapType): number {
+  async lobbyMaxPlayers(): Promise<number> {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
@@ -83,9 +80,9 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   getRandomPublicGameModifiers(): PublicGameModifiers {
-    return { isCompact: false, isRandomSpawn: false };
+    return { isCompact: false, isRandomSpawn: false, isCrowded: false };
   }
-  supportsCompactMapForTeams(map: GameMapType): boolean {
+  async supportsCompactMapForTeams(): Promise<boolean> {
     throw new Error("Method not implemented.");
   }
 }

@@ -10,10 +10,12 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { ParabolaPathFinder } from "../pathfinding/PathFinding";
+import { UniversalPathFinding } from "../pathfinding/PathFinder";
+import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
+import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
-import { computeNukeBlastCounts } from "./Util";
+import { listNukeBreakAlliance } from "./Util";
 
 const SPRITE_RADIUS = 16;
 
@@ -22,7 +24,7 @@ export class NukeExecution implements Execution {
   private mg: Game;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-  private pathFinder: ParabolaPathFinder;
+  private pathFinder: ParabolaUniversalPathFinder;
 
   constructor(
     private nukeType: NukeType,
@@ -39,7 +41,11 @@ export class NukeExecution implements Execution {
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
-    this.pathFinder = new ParabolaPathFinder(mg);
+    this.pathFinder = UniversalPathFinding.Parabola(mg, {
+      increment: this.speed,
+      distanceBasedHeight: this.nukeType !== UnitType.MIRVWarhead,
+      directionUp: this.rocketDirectionUp,
+    });
   }
 
   public target(): Player | TerraNullius {
@@ -66,7 +72,7 @@ export class NukeExecution implements Execution {
 
   /**
    * Break alliances with players significantly affected by the nuke strike.
-   * Uses weighted tile counting (inner=1, outer=0.5).
+   * Uses weighted tile counting (inner=1, outer=0.5) OR if any allied structure would be destroyed.
    */
   private maybeBreakAlliances() {
     if (this.nuke === null) {
@@ -78,38 +84,44 @@ export class NukeExecution implements Execution {
     }
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
-    const threshold = this.mg.config().nukeAllianceBreakThreshold();
 
-    // Use shared utility to compute weighted tile counts per player
-    const blastCounts = computeNukeBlastCounts({
-      gm: this.mg,
+    const playersToBreakAllianceWith = listNukeBreakAlliance({
+      game: this.mg,
       targetTile: this.dst,
       magnitude,
+      allySmallIds: new Set(this.player.allies().map((a) => a.smallID())),
+      threshold: this.mg.config().nukeAllianceBreakThreshold(),
     });
 
-    for (const [playerSmallId, totalWeight] of blastCounts) {
-      if (totalWeight > threshold) {
-        const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
-        if (!attackedPlayer.isPlayer()) {
-          continue;
-        }
+    // Automatically reject incoming alliance requests.
+    for (const incoming of this.player.incomingAllianceRequests()) {
+      if (playersToBreakAllianceWith.has(incoming.requestor().smallID())) {
+        incoming.reject();
+      }
+    }
 
-        // Resolves exploit of alliance breaking in which a pending alliance request
-        // was accepted in the middle of a missile attack.
-        const allianceRequest = attackedPlayer
-          .incomingAllianceRequests()
-          .find((ar) => ar.requestor() === this.player);
-        if (allianceRequest) {
-          allianceRequest.reject();
-        }
+    for (const playerSmallId of playersToBreakAllianceWith) {
+      const attackedPlayer = this.mg.playerBySmallID(playerSmallId);
+      if (!attackedPlayer.isPlayer()) {
+        continue;
+      }
 
-        const alliance = this.player.allianceWith(attackedPlayer);
-        if (alliance !== null) {
-          this.player.breakAlliance(alliance);
-        }
-        if (attackedPlayer !== this.player) {
-          attackedPlayer.updateRelation(this.player, -100);
-        }
+      // Resolves exploit of alliance breaking in which a pending alliance request
+      // was accepted in the middle of a missile attack.
+      const outgoingAllianceRequest = attackedPlayer
+        .incomingAllianceRequests()
+        .find((ar) => ar.requestor() === this.player);
+      if (outgoingAllianceRequest) {
+        outgoingAllianceRequest.reject();
+        continue;
+      }
+
+      const alliance = this.player.allianceWith(attackedPlayer);
+      if (alliance !== null) {
+        this.player.breakAlliance(alliance);
+      }
+      if (attackedPlayer !== this.player) {
+        attackedPlayer.updateRelation(this.player, -100);
       }
     }
   }
@@ -123,13 +135,6 @@ export class NukeExecution implements Execution {
         return;
       }
       this.src = spawn;
-      this.pathFinder.computeControlPoints(
-        spawn,
-        this.dst,
-        this.speed,
-        this.nukeType !== UnitType.MIRVWarhead,
-        this.rocketDirectionUp,
-      );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
@@ -186,13 +191,13 @@ export class NukeExecution implements Execution {
     }
 
     // Move to next tile
-    const nextTile = this.pathFinder.nextTile(this.speed);
-    if (nextTile === true) {
+    const result = this.pathFinder.next(this.src!, this.dst, this.speed);
+    if (result.status === PathStatus.COMPLETE) {
       this.detonate();
       return;
-    } else {
+    } else if (result.status === PathStatus.NEXT) {
       this.updateNukeTargetable();
-      this.nuke.move(nextTile);
+      this.nuke.move(result.node);
       // Update index so SAM can interpolate future position
       this.nuke.setTrajectoryIndex(this.pathFinder.currentIndex());
     }
@@ -206,7 +211,7 @@ export class NukeExecution implements Execution {
     const trajectoryTiles: TrajectoryTile[] = [];
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
-    const allTiles: TileRef[] = this.pathFinder.allTiles();
+    const allTiles = this.pathFinder.findPath(this.src!, target) ?? [];
     for (const tile of allTiles) {
       trajectoryTiles.push({
         tile,

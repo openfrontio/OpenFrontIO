@@ -240,13 +240,13 @@ export class NationAllianceBehavior {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return false; // 0% chance to reject on easy
+        return this.random.nextInt(0, 100) < 25; // 25% chance to reject on easy
       case Difficulty.Medium:
-        return this.random.nextInt(0, 100) < 20; // 20% chance to reject on medium
+        return this.random.nextInt(0, 100) < 50; // 50% chance to reject on medium
       case Difficulty.Hard:
-        return this.random.nextInt(0, 100) < 40; // 40% chance to reject on hard
+        return this.random.nextInt(0, 100) < 75; // 75% chance to reject on hard
       case Difficulty.Impossible:
-        return this.random.nextInt(0, 100) < 60; // 60% chance to reject on impossible
+        return true; // 100% chance to reject on impossible
       default:
         assertNever(difficulty);
     }
@@ -258,10 +258,10 @@ export class NationAllianceBehavior {
       case Difficulty.Easy:
         return false; // On easy we never think we have enough alliances
       case Difficulty.Medium:
-        return this.player.alliances().length >= this.random.nextInt(5, 8);
+        return this.player.alliances().length >= this.random.nextInt(4, 6);
       case Difficulty.Hard:
       case Difficulty.Impossible: {
-        // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
+        // On hard and impossible we try to not ally with all our neighbors (If we have 2+ neighbors)
         const borderingPlayers = this.player
           .neighbors()
           .filter(
@@ -271,15 +271,15 @@ export class NationAllianceBehavior {
           (o) => this.player?.isFriendly(o) === true,
         );
         if (
-          borderingPlayers.length >= 3 &&
+          borderingPlayers.length >= 2 &&
           borderingPlayers.includes(otherPlayer)
         ) {
           return borderingPlayers.length <= borderingFriends.length + 1;
         }
         if (difficulty === Difficulty.Hard) {
-          return this.player.alliances().length >= this.random.nextInt(3, 6);
+          return this.player.alliances().length >= this.random.nextInt(3, 5);
         }
-        return this.player.alliances().length >= this.random.nextInt(2, 5);
+        return this.player.alliances().length >= this.random.nextInt(2, 4);
       }
       default:
         assertNever(difficulty);
@@ -310,46 +310,96 @@ export class NationAllianceBehavior {
   // It would make a lot of sense to use nextFloat here, but "there's a chance floats can cause desyncs"
   private isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(60, 70) / 100)
-        );
-      case Difficulty.Medium:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(70, 80) / 100)
-        );
-      case Difficulty.Hard:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(75, 85) / 100)
-        );
-      case Difficulty.Impossible:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * (this.random.nextInt(80, 90) / 100)
-        );
-      default:
-        assertNever(difficulty);
-    }
+    const troopPercentRangeByDifficulty = {
+      [Difficulty.Easy]: [60, 70],
+      [Difficulty.Medium]: [70, 80],
+      [Difficulty.Hard]: [75, 85],
+      [Difficulty.Impossible]: [80, 90],
+    } as const;
+    const tilePercentRangeByDifficulty = {
+      [Difficulty.Easy]: [70, 80],
+      [Difficulty.Medium]: [80, 90],
+      [Difficulty.Hard]: [85, 95],
+      [Difficulty.Impossible]: [90, 100],
+    } as const;
+
+    const troopRange = troopPercentRangeByDifficulty[difficulty];
+    const tileRange = tilePercentRangeByDifficulty[difficulty];
+
+    const playerOutgoingTroops = this.player
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+    const otherOutgoingTroops = otherPlayer
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), 0);
+    const playerTotalTroops = this.player.troops() + playerOutgoingTroops;
+    const otherTotalTroops = otherPlayer.troops() + otherOutgoingTroops;
+
+    const troopThreshold =
+      playerTotalTroops *
+      (this.random.nextInt(troopRange[0], troopRange[1]) / 100);
+    const tileThreshold =
+      this.player.numTilesOwned() *
+      (this.random.nextInt(tileRange[0], tileRange[1]) / 100);
+
+    const hasComparableTroops = otherTotalTroops > troopThreshold;
+    const hasComparableTiles =
+      otherPlayer.numTilesOwned() > tileThreshold &&
+      otherTotalTroops > playerTotalTroops * 0.5;
+    return hasComparableTroops || hasComparableTiles;
   }
 
-  // Betray friends if we have 10 times more troops than them
-  // TODO: Implement better and deeper strategies, for example:
-  // Check impact on relations with other players
-  // Check value of targets territory
-  // Check if target is distracted
-  // Check the targets territory size
-  maybeBetray(otherPlayer: Player): boolean {
+  maybeBetray(otherPlayer: Player, borderingPlayerCount: number): boolean {
+    if (!this.player.isAlliedWith(otherPlayer)) return false;
+
+    const { difficulty } = this.game.config().gameConfig();
+
+    // Betray very weak players (For example MIRVed ones)
+    if (difficulty !== Difficulty.Easy && difficulty !== Difficulty.Medium) {
+      const otherPlayerMaxTroops = this.game.config().maxTroops(otherPlayer);
+      const otherPlayerOutgoingTroops = otherPlayer
+        .outgoingAttacks()
+        .reduce((sum, attack) => sum + attack.troops(), 0);
+      if (
+        otherPlayer.troops() + otherPlayerOutgoingTroops <
+          otherPlayerMaxTroops * 0.2 &&
+        otherPlayer.troops() < this.player.troops()
+      ) {
+        this.betray(otherPlayer);
+        return true;
+      }
+    }
+
+    // Betray very weak players (similar check as above but for the easier difficulties)
+    // This doesn't check for maxTroops and isn't really smart. It opens the nations up for attacks, but that's intended.
     if (
-      this.player.isAlliedWith(otherPlayer) &&
+      (difficulty === Difficulty.Easy || difficulty === Difficulty.Medium) &&
       this.player.troops() >= otherPlayer.troops() * 10
     ) {
       this.betray(otherPlayer);
       return true;
     }
+
+    // Betray traitors who aren't significantly stronger than us
+    if (
+      difficulty !== Difficulty.Easy &&
+      otherPlayer.isTraitor() &&
+      otherPlayer.troops() < this.player.troops() * 1.2
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
+    // Betray our only bordering player if we are much stronger than them
+    if (
+      difficulty !== Difficulty.Easy &&
+      borderingPlayerCount === 1 &&
+      otherPlayer.troops() * 3 < this.player.troops()
+    ) {
+      this.betray(otherPlayer);
+      return true;
+    }
+
     return false;
   }
 

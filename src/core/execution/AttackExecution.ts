@@ -189,9 +189,11 @@ export class AttackExecution implements Execution {
     const deaths = this.attack.troops() * (malusPercent / 100);
     if (deaths) {
       this.mg.displayMessage(
-        `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+        "events_display.attack_cancelled_retreat",
         MessageType.ATTACK_CANCELLED,
         this._owner.id(),
+        undefined,
+        { troops: renderTroops(deaths) },
       );
     }
     if (this.removeTroops === false && this.sourceTile === null) {
@@ -369,7 +371,11 @@ export class AttackExecution implements Execution {
         } else {
           for (const neighbor of this.mg.neighbors(tile)) {
             const no = this.mg.owner(neighbor);
-            if (no.isPlayer() && no !== this.target) {
+            if (
+              no.isPlayer() &&
+              no !== this.target &&
+              !no.isFriendly(this.target)
+            ) {
               this.mg.player(no.id()).conquer(tile);
               break;
             }

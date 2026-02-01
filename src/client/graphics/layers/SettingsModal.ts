@@ -1,9 +1,10 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { PauseGameIntentEvent } from "src/client/Transport";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameIntentEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
@@ -95,20 +96,24 @@ export class SettingsModal extends LitElement implements Layer {
 
   public openModal() {
     this.isVisible = true;
-    document.body.style.overflow = "hidden";
     this.requestUpdate();
   }
 
   public closeModal() {
     this.isVisible = false;
-    document.body.style.overflow = "";
     this.requestUpdate();
     this.pauseGame(false);
   }
 
   private pauseGame(pause: boolean) {
-    if (this.shouldPause && !this.wasPausedWhenOpened)
+    if (this.shouldPause && !this.wasPausedWhenOpened) {
+      if (pause) {
+        crazyGamesSDK.gameplayStop();
+      } else {
+        crazyGamesSDK.gameplayStart();
+      }
       this.eventBus.emit(new PauseGameIntentEvent(pause));
+    }
   }
 
   private onTerrainButtonClick() {
@@ -189,11 +194,11 @@ export class SettingsModal extends LitElement implements Layer {
 
     return html`
       <div
-        class="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
+        class="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto"
         >
           <div
             class="flex items-center justify-between p-4 border-b border-slate-600"

@@ -1,5 +1,5 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
 import { FlagSchema } from "../core/Schemas";
 import { translateText } from "./Utils";
@@ -10,17 +10,12 @@ const flagKey: string = "flag";
 export class FlagInput extends LitElement {
   @state() public flag: string = "";
 
-  static styles = css`
-    @media (max-width: 768px) {
-      .flag-modal {
-        width: 80vw;
-      }
+  @property({ type: Boolean, attribute: "show-select-label" })
+  public showSelectLabel: boolean = false;
 
-      .dropdown-item {
-        width: calc(100% / 3 - 15px);
-      }
-    }
-  `;
+  private isDefaultFlagValue(flag: string): boolean {
+    return !flag || flag === "xx";
+  }
 
   public getCurrentFlag(): string {
     return this.flag;
@@ -52,6 +47,17 @@ export class FlagInput extends LitElement {
     }
   };
 
+  private onInputClick(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.dispatchEvent(
+      new CustomEvent("flag-input-click", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.flag = this.getStoredFlag();
@@ -69,21 +75,31 @@ export class FlagInput extends LitElement {
   }
 
   render() {
+    const isDefaultFlag = this.isDefaultFlagValue(this.flag);
+    const showSelect = this.showSelectLabel && isDefaultFlag;
+    const buttonTitle = showSelect
+      ? translateText("flag_input.title")
+      : translateText("flag_input.button_title");
+
     return html`
-      <div class="flex relative">
-        <button
-          id="flag-input_"
-          class="w-full border rounded-lg flex cursor-pointer border-black/30
-          dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]
-          justify-center aspect-square"
-          title=${translateText("flag_input.button_title")}
-        >
-          <span
-            id="flag-preview"
-            class="block w-full aspect-3/2 bg-[#333] overflow-hidden rounded-md"
-          ></span>
-        </button>
-      </div>
+      <button
+        id="flag-input"
+        class="flag-btn p-0! m-0 border-0 w-full h-full flex cursor-pointer justify-center items-center focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 bg-slate-900/80 hover:bg-slate-800/80 active:bg-slate-800/90 rounded-lg overflow-hidden"
+        title=${buttonTitle}
+        @click=${this.onInputClick}
+      >
+        <span
+          id="flag-preview"
+          class=${showSelect ? "hidden" : "w-full h-full overflow-hidden"}
+        ></span>
+        ${showSelect
+          ? html`<span
+              class="text-[10px] font-black text-white/40 uppercase leading-none break-words w-full text-center px-1"
+            >
+              ${translateText("flag_input.title")}
+            </span>`
+          : null}
+      </button>
     `;
   }
 
@@ -93,6 +109,11 @@ export class FlagInput extends LitElement {
     ) as HTMLElement;
     if (!preview) return;
 
+    if (this.showSelectLabel && this.isDefaultFlagValue(this.flag)) {
+      preview.innerHTML = "";
+      return;
+    }
+
     preview.innerHTML = "";
 
     if (this.flag?.startsWith("!")) {
@@ -100,9 +121,7 @@ export class FlagInput extends LitElement {
     } else {
       const img = document.createElement("img");
       img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.objectFit = "contain";
+      img.className = "w-full h-full object-cover drop-shadow";
       img.onerror = () => {
         if (!img.src.endsWith("/flags/xx.svg")) {
           img.src = "/flags/xx.svg";

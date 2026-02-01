@@ -1,18 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 )
-
-// mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
-var mapsFlag string
 
 // maps defines the registry of available maps to be processed.
 // Each entry contains the folder name and a flag indicating if it's a test map.
@@ -56,6 +55,7 @@ var maps = []struct {
 	{Name: "oceania"},
 	{Name: "pangaea"},
 	{Name: "pluto"},
+	{Name: "sierpinski"},
 	{Name: "southamerica"},
 	{Name: "straitofgibraltar"},
 	{Name: "surrounded"},
@@ -63,14 +63,23 @@ var maps = []struct {
 	{Name: "world"},
 	{Name: "lemnos"},
 	{Name: "twolakes"},
+  {Name: "thebox"},
 	{Name: "didier"},
+	{Name: "didierfrance"},
 	{Name: "amazonriver"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
 	{Name: "plains", IsTest: true},
 	{Name: "giantworldmap", IsTest: true},
+	{Name: "world", IsTest: true},
 }
+
+// mapsFlag holds the comma-separated list of map names passed via the --maps command-line argument.
+var mapsFlag string
+
+// logFlags holds all the flags related to configuring the map-generator logging
+var logFlags LogFlags
 
 // outputMapDir returns the absolute path to the directory where generated map files should be written.
 // It distinguishes between test and production output locations.
@@ -101,7 +110,7 @@ func inputMapDir(isTest bool) (string, error) {
 
 // processMap handles the end-to-end generation for a single map.
 // It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
-func processMap(name string, isTest bool) error {
+func processMap(ctx context.Context, name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
 		return fmt.Errorf("failed to get map directory: %w", err)
@@ -132,7 +141,7 @@ func processMap(name string, isTest bool) error {
 	}
 
 	// Generate maps
-	result, err := GenerateMap(GeneratorArgs{
+	result, err := GenerateMap(ctx, GeneratorArgs{
 		ImageBuffer: imageBuffer,
 		RemoveSmall: !isTest, // Don't remove small islands for test maps
 		Name:        name,
@@ -227,7 +236,11 @@ func loadTerrainMaps() error {
 		mapItem := mapItem
 		go func() {
 			defer wg.Done()
-			if err := processMap(mapItem.Name, mapItem.IsTest); err != nil {
+			mapLogTag := slog.String("map", mapItem.Name)
+			testLogTag := slog.Bool("isTest", mapItem.IsTest)
+			logger := slog.Default().With(mapLogTag).With(testLogTag)
+			ctx := ContextWithLogger(context.Background(), logger)
+			if err := processMap(ctx, mapItem.Name, mapItem.IsTest); err != nil {
 				errChan <- err
 			}
 		}()
@@ -251,7 +264,22 @@ func loadTerrainMaps() error {
 // It parses flags and triggers the map generation process.
 func main() {
 	flag.StringVar(&mapsFlag, "maps", "", "optional comma-separated list of maps to process. ex: --maps=world,eastasia,big_plains")
+	flag.StringVar(&logFlags.logLevel, "log-level", "", "Explicitly sets the log level to one of: ALL, DEBUG, INFO (default), WARN, ERROR.")
+	flag.BoolVar(&logFlags.verbose, "verbose", false, "Adds additional logging and prefixes logs with the [mapname].  Alias of log-level=DEBUG.")
+	flag.BoolVar(&logFlags.verbose, "v", false, "-verbose shorthand")
+	flag.BoolVar(&logFlags.performance, "log-performance", false, "Adds additional logging for performance-based recommendations, sets log-level=DEBUG")
+	flag.BoolVar(&logFlags.removal, "log-removal", false, "Adds additional logging of removed island and lake position/size, sets log-level=DEBUG")
 	flag.Parse()
+
+	logger := slog.New(NewGeneratorLogger(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: DetermineLogLevel(logFlags),
+		},
+		logFlags,
+	))
+
+	slog.SetDefault(logger)
 
 	if err := loadTerrainMaps(); err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)

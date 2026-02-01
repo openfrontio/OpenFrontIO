@@ -62,7 +62,10 @@ export class DonateTroopsExecution implements Execution {
       }
 
       // Only AI nations auto-respond with emojis, human players should not
-      if (this.recipient.type() === PlayerType.Nation) {
+      if (
+        this.recipient.type() === PlayerType.Nation &&
+        this.recipient.canSendEmoji(this.sender)
+      ) {
         this.mg.addExecution(
           new EmojiExecution(
             this.recipient,

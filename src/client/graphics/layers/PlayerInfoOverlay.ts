@@ -210,7 +210,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return !this.game.config().isUnitDisabled(type)
       ? html`<div
           class="flex p-1 w-[calc(50%-0.13rem)] border rounded-md border-gray-500
-                         items-center gap-2 text-sm opacity-80"
+                         items-center gap-2 text-sm"
           translate="no"
         >
           <img
@@ -355,17 +355,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         ${this.showDetails
           ? html`
               ${player.team() !== null
-                ? html`<div class="text-sm opacity-80">
+                ? html`<div class="text-sm">
                     ${translateText("player_info_overlay.team")}:
                     ${player.team()}
                   </div>`
                 : ""}
               <div class="flex text-sm">${playerType} ${relationHtml}</div>
               ${player.troops() >= 1
-                ? html`<div
-                    class="flex gap-2 text-sm opacity-80"
-                    translate="no"
-                  >
+                ? html`<div class="flex gap-2 text-sm" translate="no">
                     ${translateText("player_info_overlay.troops")}
                     <span class="ml-auto mr-0 font-bold">
                       ${renderTroops(player.troops())}
@@ -373,10 +370,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   </div>`
                 : ""}
               ${maxTroops >= 1
-                ? html`<div
-                    class="flex gap-2 text-sm opacity-80"
-                    translate="no"
-                  >
+                ? html`<div class="flex gap-2 text-sm" translate="no">
                     ${translateText("player_info_overlay.maxtroops")}
                     <span class="ml-auto mr-0 font-bold">
                       ${renderTroops(maxTroops)}
@@ -384,10 +378,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   </div>`
                 : ""}
               ${attackingTroops >= 1
-                ? html`<div
-                    class="flex gap-2 text-sm opacity-80"
-                    translate="no"
-                  >
+                ? html`<div class="flex gap-2 text-sm" translate="no">
                     ${translateText("player_info_overlay.a_troops")}
                     <span class="ml-auto mr-0 text-red-400 font-bold">
                       ${renderTroops(attackingTroops)}
@@ -397,7 +388,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
               <div
                 class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
-                          font-bold text-yellow-400 text-sm opacity-80"
+                          font-bold text-yellow-400 text-sm"
                 translate="no"
               >
                 <img
@@ -507,9 +498,17 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
             ? html`
-                <div class="text-sm opacity-80">
+                <div class="text-sm">
                   ${translateText("player_info_overlay.health")}:
                   ${unit.health()}
+                </div>
+              `
+            : ""}
+          ${unit.type() === UnitType.TransportShip
+            ? html`
+                <div class="text-sm">
+                  ${translateText("player_info_overlay.troops")}:
+                  ${renderTroops(unit.troops())}
                 </div>
               `
             : ""}

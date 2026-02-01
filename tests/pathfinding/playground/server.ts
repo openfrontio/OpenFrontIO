@@ -1,0 +1,250 @@
+import compression from "compression";
+import express, { Request, Response } from "express";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import {
+  clearCache as clearMapCache,
+  getMapMetadata,
+  listMaps,
+} from "./api/maps.js";
+import { clearAdapterCaches, computePath } from "./api/pathfinding.js";
+import { computeSpatialQuery } from "./api/spatialQuery.js";
+
+const app = express();
+const PORT = process.env.PORT ?? 5555;
+
+// Middleware
+app.use(compression()); // gzip compression for large responses
+app.use(express.json({ limit: "50mb" })); // JSON body parser with larger limit
+
+// Serve static files from public directory
+const publicDir = join(dirname(fileURLToPath(import.meta.url)), "public");
+app.use(express.static(publicDir));
+
+// API Routes
+
+/**
+ * GET /api/maps
+ * List all available maps
+ */
+app.get("/api/maps", (req: Request, res: Response) => {
+  try {
+    const maps = listMaps();
+    res.json({ maps });
+  } catch (error) {
+    console.error("Error listing maps:", error);
+    res.status(500).json({
+      error: "Failed to list maps",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+/**
+ * GET /api/maps/:name
+ * Get map metadata (map data, dimensions)
+ */
+app.get("/api/maps/:name", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+    const metadata = await getMapMetadata(name);
+    res.json(metadata);
+  } catch (error) {
+    console.error(`Error loading map ${req.params.name}:`, error);
+
+    if (error instanceof Error && error.message.includes("ENOENT")) {
+      res.status(404).json({
+        error: "Map not found",
+        message: `Map "${req.params.name}" does not exist`,
+      });
+    } else {
+      res.status(500).json({
+        error: "Failed to load map",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+});
+
+/**
+ * GET /api/maps/:name/thumbnail
+ * Get map thumbnail image
+ */
+app.get("/api/maps/:name/thumbnail", (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+    const thumbnailPath = join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../resources/maps",
+      name,
+      "thumbnail.webp",
+    );
+    res.sendFile(thumbnailPath);
+  } catch (error) {
+    console.error(`Error loading thumbnail for ${req.params.name}:`, error);
+    res.status(404).json({
+      error: "Thumbnail not found",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+/**
+ * POST /api/pathfind
+ * Compute pathfinding between two points
+ *
+ * Request body:
+ * {
+ *   map: string,
+ *   from: [x, y],
+ *   to: [x, y],
+ *   adapters?: string[]  // Optional: which comparison adapters to run
+ * }
+ *
+ * Response:
+ * {
+ *   primary: { path, length, time, debug: { nodePath, initialPath, timings } },
+ *   comparisons: [{ adapter, path, length, time }, ...]
+ * }
+ */
+app.post("/api/pathfind", async (req: Request, res: Response) => {
+  try {
+    const { map, from, to, adapters } = req.body;
+
+    // Validate request
+    if (!map || !from || !to) {
+      return res.status(400).json({
+        error: "Invalid request",
+        message: "Missing required fields: map, from, to",
+      });
+    }
+
+    if (
+      !Array.isArray(from) ||
+      from.length !== 2 ||
+      !Array.isArray(to) ||
+      to.length !== 2
+    ) {
+      return res.status(400).json({
+        error: "Invalid coordinates",
+        message: "from and to must be [x, y] coordinate arrays",
+      });
+    }
+
+    // Compute paths
+    const result = await computePath(
+      map,
+      from as [number, number],
+      to as [number, number],
+      { adapters },
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error computing path:", error);
+
+    if (error instanceof Error && error.message.includes("is not water")) {
+      res.status(400).json({
+        error: "Invalid coordinates",
+        message: error.message,
+      });
+    } else {
+      res.status(500).json({
+        error: "Failed to compute path",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+});
+
+/**
+ * POST /api/spatial-query
+ * Compute spatial query for transport ship (closestShoreByWater)
+ *
+ * Request body:
+ * {
+ *   map: string,
+ *   ownedTiles: number[],  // Array of tile indices (y * width + x)
+ *   target: [x, y]
+ * }
+ */
+app.post("/api/spatial-query", async (req: Request, res: Response) => {
+  try {
+    const { map, ownedTiles, target } = req.body;
+
+    if (!map || !ownedTiles || !target) {
+      return res.status(400).json({
+        error: "Invalid request",
+        message: "Missing required fields: map, ownedTiles, target",
+      });
+    }
+
+    if (!Array.isArray(ownedTiles)) {
+      return res.status(400).json({
+        error: "Invalid ownedTiles",
+        message: "ownedTiles must be an array of tile indices",
+      });
+    }
+
+    if (!Array.isArray(target) || target.length !== 2) {
+      return res.status(400).json({
+        error: "Invalid target",
+        message: "target must be [x, y] coordinate array",
+      });
+    }
+
+    const result = await computeSpatialQuery(
+      map,
+      ownedTiles,
+      target as [number, number],
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error computing spatial query:", error);
+    res.status(500).json({
+      error: "Failed to compute spatial query",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+/**
+ * POST /api/cache/clear
+ * Clear all caches (useful for development)
+ */
+app.post("/api/cache/clear", (req: Request, res: Response) => {
+  try {
+    clearMapCache();
+    clearAdapterCaches();
+    res.json({ message: "Caches cleared successfully" });
+  } catch (error) {
+    console.error("Error clearing caches:", error);
+    res.status(500).json({
+      error: "Failed to clear caches",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+// Error handling middleware
+app.use((err: Error, req: Request, res: Response, next: any) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({
+    error: "Internal server error",
+    message: err.message,
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`
+╔════════════════════════════════════════════════════════════╗
+║  Pathfinding Playground Server                            ║
+╚════════════════════════════════════════════════════════════╝
+
+Server running at: http://localhost:${PORT}
+
+Press Ctrl+C to stop
+  `);
+});

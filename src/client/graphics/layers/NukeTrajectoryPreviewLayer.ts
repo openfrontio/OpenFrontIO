@@ -1,8 +1,9 @@
 import { EventBus } from "../../../core/EventBus";
+import { listNukeBreakAlliance } from "../../../core/execution/Util";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
-import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
+import { UniversalPathFinding } from "../../../core/pathfinding/PathFinder";
 import {
   GhostStructureChangedEvent,
   MouseMoveEvent,
@@ -211,20 +212,16 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
-    // Calculate trajectory using ParabolaPathFinder with cached spawn tile
-    const pathFinder = new ParabolaPathFinder(this.game);
+    // Calculate trajectory using ParabolaUniversalPathFinder with cached spawn tile
     const speed = this.game.config().defaultNukeSpeed();
-    const distanceBasedHeight = true; // AtomBomb/HydrogenBomb use distance-based height
+    const pathFinder = UniversalPathFinding.Parabola(this.game, {
+      increment: speed,
+      distanceBasedHeight: true, // AtomBomb/HydrogenBomb use distance-based height
+      directionUp: this.uiState.rocketDirectionUp,
+    });
 
-    pathFinder.computeControlPoints(
-      this.cachedSpawnTile,
-      targetTile,
-      speed,
-      distanceBasedHeight,
-      this.uiState.rocketDirectionUp,
-    );
-
-    this.trajectoryPoints = pathFinder.allTiles();
+    this.trajectoryPoints =
+      pathFinder.findPath(this.cachedSpawnTile, targetTile) ?? [];
 
     // NOTE: This is a lot to do in the rendering method, naive
     // But trajectory is already calculated here and needed for prediction.
@@ -262,6 +259,18 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         break;
       }
     }
+    const playersToBreakAllianceWith = listNukeBreakAlliance({
+      game: this.game,
+      targetTile,
+      magnitude: this.game.config().nukeMagnitudes(ghostStructure),
+      allySmallIds: new Set(
+        this.game
+          .myPlayer()
+          ?.allies()
+          .map((a) => a.smallID()),
+      ),
+      threshold: this.game.config().nukeAllianceBreakThreshold(),
+    });
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
     // Check trajectory
@@ -274,7 +283,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       )) {
         if (
           sam.unit.owner().isMe() ||
-          this.game.myPlayer()?.isFriendly(sam.unit.owner())
+          (this.game.myPlayer()?.isFriendly(sam.unit.owner()) &&
+            !playersToBreakAllianceWith.has(sam.unit.owner().smallID()))
         ) {
           continue;
         }

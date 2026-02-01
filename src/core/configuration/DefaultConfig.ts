@@ -2,22 +2,16 @@ import { JWK } from "jose";
 import { z } from "zod";
 import {
   Difficulty,
-  Duos,
   Game,
-  GameMapType,
   GameMode,
   GameType,
   Gold,
-  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
-  PublicGameModifiers,
-  Quads,
   TerrainType,
   TerraNullius,
   Tick,
-  Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -46,53 +40,6 @@ const JwksSchema = z.object({
     .array()
     .min(1),
 });
-
-const numPlayersConfig = {
-  [GameMapType.Africa]: [100, 70, 50],
-  [GameMapType.Asia]: [50, 40, 30],
-  [GameMapType.Australia]: [70, 40, 30],
-  [GameMapType.Achiran]: [40, 36, 30],
-  [GameMapType.Baikal]: [100, 70, 50],
-  [GameMapType.BaikalNukeWars]: [100, 70, 50],
-  [GameMapType.BetweenTwoSeas]: [70, 50, 40],
-  [GameMapType.BlackSea]: [50, 30, 30],
-  [GameMapType.Britannia]: [50, 30, 20],
-  [GameMapType.BritanniaClassic]: [50, 30, 20],
-  [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
-  [GameMapType.EastAsia]: [50, 30, 20],
-  [GameMapType.Europe]: [100, 70, 50],
-  [GameMapType.EuropeClassic]: [50, 30, 30],
-  [GameMapType.FalklandIslands]: [50, 30, 20],
-  [GameMapType.FourIslands]: [20, 15, 10],
-  [GameMapType.FaroeIslands]: [20, 15, 10],
-  [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
-  [GameMapType.GiantWorldMap]: [100, 70, 50],
-  [GameMapType.GulfOfStLawrence]: [60, 40, 30],
-  [GameMapType.Halkidiki]: [100, 50, 40],
-  [GameMapType.Iceland]: [50, 40, 30],
-  [GameMapType.Italia]: [50, 30, 20],
-  [GameMapType.Japan]: [20, 15, 10],
-  [GameMapType.Lisbon]: [50, 40, 30],
-  [GameMapType.Manicouagan]: [60, 40, 30],
-  [GameMapType.Mars]: [70, 40, 30],
-  [GameMapType.Mena]: [70, 50, 40],
-  [GameMapType.Montreal]: [60, 40, 30],
-  [GameMapType.NewYorkCity]: [60, 40, 30],
-  [GameMapType.NorthAmerica]: [70, 40, 30],
-  [GameMapType.Oceania]: [10, 10, 10],
-  [GameMapType.Pangaea]: [20, 15, 10],
-  [GameMapType.Pluto]: [100, 70, 50],
-  [GameMapType.SouthAmerica]: [70, 50, 40],
-  [GameMapType.StraitOfGibraltar]: [100, 70, 50],
-  [GameMapType.Svalmel]: [40, 36, 30],
-  [GameMapType.World]: [50, 30, 20],
-  [GameMapType.Lemnos]: [20, 15, 10],
-  [GameMapType.TwoLakes]: [60, 50, 40],
-  [GameMapType.StraitOfHormuz]: [40, 36, 30],
-  [GameMapType.Surrounded]: [42, 28, 14], // 3, 2, 1 player(s) per island
-  [GameMapType.Didier]: [100, 70, 50],
-  [GameMapType.AmazonRiver]: [50, 40, 30],
-} as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
   turnstileSecretKey(): string {
@@ -174,42 +121,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return 60 * 1000;
   }
 
-  lobbyMaxPlayers(
-    map: GameMapType,
-    mode: GameMode,
-    numPlayerTeams: TeamCountConfig | undefined,
-    isCompactMap?: boolean,
-  ): number {
-    const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
-    const r = Math.random();
-    const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
-    // Apply compact map 75% player reduction
-    if (isCompactMap) {
-      p = Math.max(3, Math.floor(p * 0.25));
-    }
-    if (numPlayerTeams === undefined) return p;
-    switch (numPlayerTeams) {
-      case Duos:
-        p -= p % 2;
-        break;
-      case Trios:
-        p -= p % 3;
-        break;
-      case Quads:
-        p -= p % 4;
-        break;
-      case HumansVsNations:
-        // Half the slots are for humans, the other half will get filled with nations
-        p = Math.floor(p / 2);
-        break;
-      default:
-        p -= p % numPlayerTeams;
-        break;
-    }
-    return p;
-  }
-
   workerIndex(gameID: GameID): number {
     return simpleHash(gameID) % this.numWorkers();
   }
@@ -221,23 +132,6 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
-  }
-  enableMatchmaking(): boolean {
-    return false;
-  }
-
-  getRandomPublicGameModifiers(): PublicGameModifiers {
-    return {
-      isRandomSpawn: Math.random() < 0.1, // 10% chance
-      isCompact: Math.random() < 0.05, // 5% chance
-    };
-  }
-
-  supportsCompactMapForTeams(map: GameMapType): boolean {
-    // Maps with smallest player count < 50 don't support compact map in team games
-    // The smallest player count is the 3rd number in numPlayersConfig
-    const [, , smallest] = numPlayersConfig[map] ?? [50, 30, 20];
-    return smallest >= 50;
   }
 }
 
@@ -333,6 +227,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  disableNavMesh(): boolean {
+    return this._gameConfig.disableNavMesh ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
@@ -348,6 +245,15 @@ export class DefaultConfig implements Config {
   donateTroops(): boolean {
     return this._gameConfig.donateTroops;
   }
+  goldMultiplier(): number {
+    return this._gameConfig.goldMultiplier ?? 1;
+  }
+  startingGold(playerInfo: PlayerInfo): Gold {
+    if (playerInfo.playerType === PlayerType.Bot) {
+      return 0n;
+    }
+    return BigInt(this._gameConfig.startingGold ?? 0);
+  }
 
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
@@ -355,15 +261,21 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
+    const multiplier = this.goldMultiplier();
+    let baseGold: bigint;
     switch (rel) {
       case "ally":
-        return 35_000n;
+        baseGold = 35_000n;
+        break;
       case "team":
       case "other":
-        return 25_000n;
+        baseGold = 25_000n;
+        break;
       case "self":
-        return 10_000n;
+        baseGold = 10_000n;
+        break;
     }
+    return BigInt(Math.floor(Number(baseGold) * multiplier));
   }
 
   trainStationMinRange(): number {
@@ -384,7 +296,8 @@ export class DefaultConfig implements Config {
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
-    return BigInt(Math.floor(baseGold * bonus));
+    const multiplier = this.goldMultiplier();
+    return BigInt(Math.floor(baseGold * bonus * multiplier));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -812,7 +725,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750;
+          return 12_500;
         case Difficulty.Medium:
           return 25_000; // Like humans
         case Difficulty.Hard:
@@ -847,7 +760,7 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.75;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
@@ -874,7 +787,7 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.95;
+          toAdd *= 0.9;
           break;
         case Difficulty.Medium:
           toAdd *= 1; // Like humans
@@ -894,10 +807,14 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
+    const multiplier = this.goldMultiplier();
+    let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
-      return 50n;
+      baseRate = 50n;
+    } else {
+      baseRate = 100n;
     }
-    return 100n;
+    return BigInt(Math.floor(Number(baseRate) * multiplier));
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

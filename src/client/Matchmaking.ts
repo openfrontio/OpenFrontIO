@@ -1,27 +1,29 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
+import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
+import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/PatternButton";
+import { modalHeader } from "./components/ui/ModalHeader";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
-export class MatchmakingModal extends LitElement {
+export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
-  private connected = false;
+  private connectTimeout: ReturnType<typeof setTimeout> | null = null;
+  @state() private connected = false;
   @state() private socket: WebSocket | null = null;
-
   @state() private gameID: string | null = null;
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+  private elo: number | "unknown" = "unknown";
 
   constructor() {
     super();
+    this.id = "page-matchmaking";
   }
 
   createRenderRoot() {
@@ -29,45 +31,109 @@ export class MatchmakingModal extends LitElement {
   }
 
   render() {
+    const eloDisplay = html`
+      <p class="text-center mt-2 mb-4 text-white/60">
+        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+      </p>
+    `;
+
+    const content = html`
+      <div
+        class="h-full flex flex-col ${this.inline
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
+          : ""}"
+      >
+        ${modalHeader({
+          title: translateText("matchmaking_modal.title"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
+        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+          ${eloDisplay} ${this.renderInner()}
+        </div>
+      </div>
+    `;
+
+    if (this.inline) {
+      return content;
+    }
+
     return html`
       <o-modal
         id="matchmaking-modal"
         title="${translateText("matchmaking_modal.title")}"
+        hideCloseButton
+        hideHeader
       >
-        ${this.renderInner()}
+        ${content}
       </o-modal>
     `;
   }
 
   private renderInner() {
     if (!this.connected) {
-      return html`${translateText("matchmaking_modal.connecting")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.connecting")}
+          </p>
+        </div>
+      `;
     }
     if (this.gameID === null) {
-      return html`${translateText("matchmaking_modal.searching")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.searching")}
+          </p>
+        </div>
+      `;
     } else {
-      return html`${translateText("matchmaking_modal.waiting_for_game")}`;
+      return html`
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"
+          ></div>
+          <p class="text-center text-white/80">
+            ${translateText("matchmaking_modal.waiting_for_game")}
+          </p>
+        </div>
+      `;
     }
   }
 
   private async connect() {
     const config = await getServerConfigFromClient();
 
-    this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
+    this.socket = new WebSocket(
+      `${config.jwtIssuer()}/matchmaking/join?instance_id=${window.INSTANCE_ID}`,
+    );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
-      setTimeout(() => {
+      this.connectTimeout = setTimeout(async () => {
+        if (this.socket?.readyState !== WebSocket.OPEN) {
+          console.warn("[Matchmaking] socket not ready");
+          return;
+        }
         // Set a delay so the user can see the "connecting" message,
         // otherwise the "searching" message will be shown immediately.
+        // Also wait so people who back out immediately aren't added
+        // to the matchmaking queue.
+        this.socket.send(
+          JSON.stringify({
+            type: "join",
+            jwt: await getPlayToken(),
+          }),
+        );
         this.connected = true;
         this.requestUpdate();
-      }, 1000);
-      this.socket?.send(
-        JSON.stringify({
-          type: "auth",
-          playToken: await getPlayToken(),
-        }),
-      );
+      }, 2000);
     };
     this.socket.onmessage = (event) => {
       console.log(event.data);
@@ -76,31 +142,60 @@ export class MatchmakingModal extends LitElement {
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
+        this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
     this.socket.onerror = (event: ErrorEvent) => {
       console.error("WebSocket error occurred:", event);
     };
-    this.socket.onclose = (event) => {
+    this.socket.onclose = () => {
       console.log("Matchmaking server closed connection");
     };
   }
 
-  public close() {
+  protected async onOpen(): Promise<void> {
+    const userMe = await getUserMe();
+    // Early return if modal was closed during async operation
+    if (!this.isModalOpen) {
+      return;
+    }
+
+    const isLoggedIn =
+      userMe &&
+      userMe.user &&
+      (userMe.user.discord !== undefined || userMe.user.email !== undefined);
+    if (!isLoggedIn) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("matchmaking_button.must_login"),
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      this.close();
+      return;
+    }
+
+    this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "unknown";
+
+    this.connected = false;
+    this.gameID = null;
+    this.connect();
+  }
+
+  protected onClose(): void {
     this.connected = false;
     this.socket?.close();
-    this.modalEl?.close();
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
-  }
-
-  public async open() {
-    this.modalEl?.open();
-    this.requestUpdate();
-    this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 3000);
   }
 
   private async checkGame() {
@@ -147,8 +242,8 @@ export class MatchmakingModal extends LitElement {
 
 @customElement("matchmaking-button")
 export class MatchmakingButton extends LitElement {
-  @query("matchmaking-modal") private matchmakingModal: MatchmakingModal;
-  @state() private matchmakingEnabled = false;
+  @query("matchmaking-modal") private matchmakingModal?: MatchmakingModal;
+  @state() private isLoggedIn = false;
 
   constructor() {
     super();
@@ -156,8 +251,14 @@ export class MatchmakingButton extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    const config = await getServerConfigFromClient();
-    this.matchmakingEnabled = config.enableMatchmaking();
+    // Listen for user authentication changes
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        const userMeResponse = customEvent.detail as UserMeResponse | false;
+        this.isLoggedIn = hasLinkedAccount(userMeResponse);
+      }
+    });
   }
 
   createRenderRoot() {
@@ -165,22 +266,58 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
-    if (!this.matchmakingEnabled) {
-      return html``;
-    }
+    return this.isLoggedIn
+      ? html`
+          <button
+            @click="${this.handleLoggedInClick}"
+            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center group overflow-hidden relative"
+            title="${translateText("matchmaking_modal.title")}"
+          >
+            <span class="relative z-10 text-2xl">
+              ${translateText("matchmaking_button.play_ranked")}
+            </span>
+            <span
+              class="relative z-10 text-xs font-medium text-purple-100 opacity-90 group-hover:opacity-100 transition-opacity"
+            >
+              ${translateText("matchmaking_button.description")}
+            </span>
+          </button>
+          <matchmaking-modal></matchmaking-modal>
+        `
+      : html`
+          <button
+            @click="${this.handleLoggedOutClick}"
+            class="no-crazygames w-full h-20 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-xl transition-all duration-200 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer"
+          >
+            <span class="relative z-10 text-2xl">
+              ${translateText("matchmaking_button.login_required")}
+            </span>
+          </button>
+        `;
+  }
 
-    return html`
-      <div class="z-9999">
-        <button
-          @click="${this.open}"
-          class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-hidden focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
-          title="${translateText("matchmaking_modal.title")}"
-        >
-          Matchmaking
-        </button>
-      </div>
-      <matchmaking-modal></matchmaking-modal>
-    `;
+  private handleLoggedInClick() {
+    const usernameInput = document.querySelector("username-input") as any;
+    const publicLobby = document.querySelector("public-lobby") as any;
+
+    if (usernameInput?.isValid()) {
+      this.open();
+      publicLobby?.leaveLobby();
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput?.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+    }
+  }
+
+  private handleLoggedOutClick() {
+    window.showPage?.("page-account");
   }
 
   private open() {
