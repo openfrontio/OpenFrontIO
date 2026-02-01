@@ -335,6 +335,10 @@ class Client {
       "update-game-config",
       this.handleUpdateGameConfig.bind(this),
     );
+    document.addEventListener(
+      "open-matchmaking",
+      this.handleOpenMatchmaking.bind(this),
+    );
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
@@ -999,6 +1003,10 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
+  }
+
+  private handleOpenMatchmaking() {
+    this.matchmakingModal?.open();
   }
 
   private handleKickPlayer(event: CustomEvent) {

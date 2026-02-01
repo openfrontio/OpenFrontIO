@@ -128,13 +128,6 @@ export class RankedModal extends BaseModal {
       return;
     }
 
-    // Don't call this.close() as it navigates to page-play for inline modals
-    // Instead, directly open the matchmaking modal which handles its own page display
-    const modal = document.getElementById("page-matchmaking") as any;
-    if (modal?.open) {
-      modal.open();
-    } else if (window.showPage) {
-      window.showPage("page-matchmaking");
-    }
+    document.dispatchEvent(new CustomEvent("open-matchmaking"));
   }
 }
