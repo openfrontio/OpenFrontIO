@@ -233,7 +233,7 @@ export class GameModeSelector extends LitElement {
   };
 
   private openJoinLobby = () => {
-    (document.querySelector("join-private-lobby-modal") as any)?.open();
+    (document.querySelector("join-lobby-modal") as any)?.open();
   };
 
   private renderSmallActionCard(
