@@ -532,6 +532,8 @@ class Client {
     ) as HostPrivateLobbyModal;
     if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
+    } else {
+      this.hostModal.eventBus = this.eventBus;
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton) {

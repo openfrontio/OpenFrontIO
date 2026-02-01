@@ -1,7 +1,8 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -17,6 +18,7 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
@@ -68,18 +70,26 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
 
-  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
+
+  private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
+    if (!this.lobbyId || event.lobby.gameID !== this.lobbyId) {
+      return;
+    }
+    this.clients = event.lobby.clients ?? [];
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -666,7 +676,7 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       };
     }
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+    this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
     this.loadNationCount();
   }
 
@@ -1036,20 +1046,6 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobbyOnClose = true;
     }
     return response;
-  }
-
-  private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.clients = data.clients ?? [];
-      });
   }
 
   private kickPlayer(clientID: string) {
