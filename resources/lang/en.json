@@ -50,6 +50,7 @@
     "settings": "Settings",
     "keys": "Keys",
     "stats": "Stats",
+    "leaderboard": "Leaderboard",
     "account": "Account",
     "help": "Help",
     "menu": "Menu",
@@ -238,15 +239,21 @@
     "enter_email_address": "Please enter an email address",
     "personal_player_id": "Personal Player ID:"
   },
-  "stats_modal": {
-    "title": "Stats",
+  "leaderboard_modal": {
+    "title": "Leaderboard",
+    "title_plural": "Leaderboards",
     "clan_stats": "Clan Stats",
+    "player_stats": "1v1 Ranked Stats",
+    "ranked_tab": "1v1 Ranked",
+    "clans_tab": "Clans",
     "loading": "Loading...",
-    "error": "Error loading clan stats",
-    "no_stats": "No clan stats available",
+    "error": "Error loading leaderboard",
+    "no_stats": "No stats available",
     "no_data_yet": "No Data Yet",
     "clan": "Clan",
+    "player": "Player",
     "games": "Games",
+    "elo": "ELO",
     "win_score": "Win Score",
     "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "loss_score": "Loss Score",
@@ -254,7 +261,8 @@
     "win_loss_ratio": "Win/Loss",
     "ratio": "Ratio",
     "rank": "Rank",
-    "try_again": "Try Again"
+    "try_again": "Try Again",
+    "your_ranking": "Your Ranking"
   },
   "game_info_modal": {
     "title": "Game info",
