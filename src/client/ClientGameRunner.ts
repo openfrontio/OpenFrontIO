@@ -182,8 +182,8 @@ export function joinLobby(
 
     console.log("leaving game");
 
+    currentGameRunner?.stop();
     currentGameRunner = null;
-    transport.leaveGame();
 
     return true;
   };
@@ -513,6 +513,8 @@ export class ClientGameRunner {
     this.isActive = false;
     this.worker.cleanup();
     this.transport.leaveGame();
+    this.renderer.dispose();
+    this.input.destroy();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;

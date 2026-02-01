@@ -461,4 +461,9 @@ export class GameRenderer {
     this.canvas.width = Math.ceil(width / window.devicePixelRatio);
     this.canvas.height = Math.ceil(height / window.devicePixelRatio);
   }
+
+  dispose() {
+    // Clean up all layers
+    this.layers.forEach((l) => l.dispose?.());
+  }
 }

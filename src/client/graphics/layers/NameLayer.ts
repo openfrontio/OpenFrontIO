@@ -45,6 +45,8 @@ export class NameLayer implements Layer {
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private resizeHandler: () => void;
+  private alternateViewHandler: (e: AlternateViewEvent) => void;
 
   constructor(
     private game: GameView,
@@ -72,7 +74,8 @@ export class NameLayer implements Layer {
 
   public init() {
     this.canvas = createCanvas();
-    window.addEventListener("resize", () => this.resizeCanvas());
+    this.resizeHandler = () => this.resizeCanvas();
+    window.addEventListener("resize", this.resizeHandler);
     this.resizeCanvas();
 
     this.container = document.createElement("div");
@@ -98,7 +101,8 @@ export class NameLayer implements Layer {
     `;
     this.container.appendChild(style);
 
-    this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
+    this.alternateViewHandler = (e) => this.onAlternateViewChange(e);
+    this.eventBus.on(AlternateViewEvent, this.alternateViewHandler);
   }
 
   private onAlternateViewChange(event: AlternateViewEvent) {
@@ -538,5 +542,26 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
+  }
+
+  public dispose() {
+    // Remove the container from the DOM
+    if (this.container && this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
+
+    // Remove resize event listener
+    if (this.resizeHandler) {
+      window.removeEventListener("resize", this.resizeHandler);
+    }
+
+    // Remove eventBus listener
+    if (this.alternateViewHandler) {
+      this.eventBus.off(AlternateViewEvent, this.alternateViewHandler);
+    }
+
+    // Clear render data
+    this.renders = [];
+    this.seenPlayers.clear();
   }
 }

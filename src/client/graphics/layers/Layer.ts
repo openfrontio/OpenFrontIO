@@ -7,4 +7,7 @@ export interface Layer {
   renderLayer?: (context: CanvasRenderingContext2D) => void;
   shouldTransform?: () => boolean;
   redraw?: () => void;
+  // Clean up resources when the layer is no longer needed.
+  // This should remove any DOM elements added during init() and release event listeners.
+  dispose?: () => void;
 }
