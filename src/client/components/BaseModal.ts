@@ -152,8 +152,7 @@ export abstract class BaseModal extends LitElement {
 
     return html`
       <div
-        class="flex flex-col items-center justify-center p-12 text-white ${this
-          .modalContainerClass} h-full min-h-[400px]"
+        class="flex flex-col items-center justify-center p-12 text-white h-full min-h-[400px]"
       >
         <div
           class="w-12 h-12 border-4 ${colorClasses[
