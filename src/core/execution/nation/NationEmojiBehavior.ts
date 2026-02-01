@@ -218,7 +218,7 @@ export class NationEmojiBehavior {
     if (nearbyHumans.length === 0) return;
 
     const neighbor = this.random.randElement(nearbyHumans);
-    this.maybeSendEmoji(neighbor, EMOJI_GREET);
+    this.sendEmoji(neighbor, EMOJI_GREET);
   }
 
   maybeSendEmoji(
