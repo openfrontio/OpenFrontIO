@@ -24,6 +24,7 @@ import { TerritoryRenderPass } from "../../client/graphics/webgpu/render/Territo
  */
 export class WorkerTerritoryRenderer {
   private device: WebGPUDevice | null = null;
+  private canvas: OffscreenCanvas | null = null;
   private resources: GroundTruthData | null = null;
   private gameViewAdapter: GameViewAdapter | null = null;
   private ready = false;
@@ -70,6 +71,7 @@ export class WorkerTerritoryRenderer {
     mapData: TerrainMapData,
     theme: Theme,
   ): Promise<void> {
+    this.canvas = offscreenCanvas;
     const game = gameRunner.game;
     this.defensePostRange = game.config().defensePostRange();
 
@@ -218,10 +220,20 @@ export class WorkerTerritoryRenderer {
     const nextWidth = Math.max(1, Math.floor(width));
     const nextHeight = Math.max(1, Math.floor(height));
 
-    // OffscreenCanvas doesn't have width/height properties we can set
-    // The size is managed by the main thread canvas
+    let sizeChanged = true;
+    if (this.canvas) {
+      sizeChanged =
+        nextWidth !== this.canvas.width || nextHeight !== this.canvas.height;
+      if (sizeChanged) {
+        this.canvas.width = nextWidth;
+        this.canvas.height = nextHeight;
+      }
+    }
+
     this.resources.setViewSize(nextWidth, nextHeight);
-    this.device.reconfigure();
+    if (sizeChanged) {
+      this.device.reconfigure();
+    }
 
     if (this.postSmoothingEnabled && this.resources) {
       this.resources.ensurePostSmoothingTextures(
@@ -229,7 +241,6 @@ export class WorkerTerritoryRenderer {
         nextHeight,
         this.device.canvasFormat,
       );
-      this.resources.invalidateHistory();
     }
   }
 
@@ -579,9 +590,8 @@ export class WorkerTerritoryRenderer {
       }
       if (pass === this.territoryRenderPass && this.postSmoothingEnabled) {
         if (!this.resources.getCurrentColorTexture()) {
-          // Use view size from resources (stored via setViewSize)
-          const viewWidth = (this.resources as any).viewWidth ?? 1;
-          const viewHeight = (this.resources as any).viewHeight ?? 1;
+          const viewWidth = this.canvas?.width ?? 1;
+          const viewHeight = this.canvas?.height ?? 1;
           this.resources.ensurePostSmoothingTextures(
             viewWidth,
             viewHeight,

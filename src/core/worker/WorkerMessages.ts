@@ -204,6 +204,8 @@ export interface RenderFrameMessage extends BaseWorkerMessage {
 // Renderer messages from worker to main thread
 export interface RendererReadyMessage extends BaseWorkerMessage {
   type: "renderer_ready";
+  ok: boolean;
+  error?: string;
 }
 
 export interface RendererMetricsMessage extends BaseWorkerMessage {

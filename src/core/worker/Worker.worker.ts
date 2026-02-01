@@ -214,14 +214,17 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         sendMessage({
           type: "renderer_ready",
           id: message.id,
+          ok: true,
         } as RendererReadyMessage);
       } catch (error) {
         console.error("Failed to initialize renderer:", error);
         sendMessage({
           type: "renderer_ready",
           id: message.id,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
         } as RendererReadyMessage);
-        throw error;
+        renderer = null;
       }
       break;
 
