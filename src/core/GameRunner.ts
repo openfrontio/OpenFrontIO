@@ -145,7 +145,7 @@ export class GameRunner {
         console.error("Game tick error:", error);
       }
       this.isExecuting = false;
-      return;
+      return false;
     }
 
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {

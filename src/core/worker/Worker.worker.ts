@@ -48,8 +48,8 @@ async function processPendingTurns() {
 
   isProcessingTurns = true;
   try {
-    while (gr.hasPendingTurns()) {
-      gr.executeNextTick();
+    while (gr.executeNextTick()) {
+      // Keep running until no pending turns.
     }
   } finally {
     isProcessingTurns = false;

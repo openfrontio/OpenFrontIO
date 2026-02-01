@@ -20,13 +20,7 @@ import {
 import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import {
-  defaultReplaySpeedMultiplier,
-  ReplaySpeedMultiplier,
-} from "./utilities/ReplaySpeedMultiplier";
-
-// build a small backlog so MAX can catch up.
-const MAX_REPLAY_BACKLOG_TURNS = 60;
+import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
   // All turns from the game record on replay.
