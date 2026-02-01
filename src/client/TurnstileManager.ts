@@ -45,17 +45,26 @@ export class TurnstileManager {
   async getToken(): Promise<string | null> {
     await this.init();
 
-    if (this.token && this.isTokenValid(this.token)) {
+    if (
+      this.token &&
+      this.isTokenValid(this.token.createdAt + TURNSTILE_TOKEN_TTL_MS)
+    ) {
       return this.token.token;
     }
 
     if (this.tokenPromise) {
       const existing = await this.tokenPromise;
-      return existing && this.isTokenValid(existing) ? existing.token : null;
+      return existing &&
+        this.isTokenValid(existing.createdAt + TURNSTILE_TOKEN_TTL_MS)
+        ? existing.token
+        : null;
     }
 
     const fetched = await this.fetchAndStoreToken();
-    return fetched && this.isTokenValid(fetched) ? fetched.token : null;
+    return fetched &&
+      this.isTokenValid(fetched.createdAt + TURNSTILE_TOKEN_TTL_MS)
+      ? fetched.token
+      : null;
   }
 
   async getTokenForJoin(): Promise<string | null> {
@@ -72,8 +81,9 @@ export class TurnstileManager {
 
     const tokenIsFresh =
       this.token &&
-      this.isTokenValid(this.token) &&
-      this.timeUntilExpiry(this.token) > TURNSTILE_REFRESH_LEEWAY_MS;
+      this.isTokenValid(this.token.createdAt + TURNSTILE_TOKEN_TTL_MS) &&
+      this.timeUntilExpiry(this.token.createdAt + TURNSTILE_TOKEN_TTL_MS) >
+        TURNSTILE_REFRESH_LEEWAY_MS;
 
     if (tokenIsFresh) return;
     if (this.tokenPromise) return;
@@ -86,7 +96,10 @@ export class TurnstileManager {
     this.tokenPromise = fetchPromise;
     try {
       const token = await fetchPromise;
-      if (token && this.isTokenValid(token)) {
+      if (
+        token &&
+        this.isTokenValid(token.createdAt + TURNSTILE_TOKEN_TTL_MS)
+      ) {
         this.token = token;
       }
       return this.token;
@@ -98,12 +111,12 @@ export class TurnstileManager {
     }
   }
 
-  private isTokenValid(token: TurnstileToken) {
-    return Date.now() < token.createdAt + TURNSTILE_TOKEN_TTL_MS;
+  private isTokenValid(expiresAt: number) {
+    return Date.now() < expiresAt;
   }
 
-  private timeUntilExpiry(token: TurnstileToken) {
-    return token.createdAt + TURNSTILE_TOKEN_TTL_MS - Date.now();
+  private timeUntilExpiry(expiresAt: number) {
+    return expiresAt - Date.now();
   }
 
   private async fetchToken(): Promise<TurnstileToken | null> {
