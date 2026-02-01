@@ -386,7 +386,8 @@
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start...",
-    "elo": "Your ELO: {elo}"
+    "elo": "Your ELO: {elo}",
+    "no_elo": "No ELO yet"
   },
   "username": {
     "enter_username": "Enter your username",

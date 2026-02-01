@@ -18,7 +18,7 @@ export class MatchmakingModal extends BaseModal {
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
-  private elo: number | "unknown" = "unknown";
+  private elo: number | string = "...";
 
   constructor() {
     super();
@@ -155,7 +155,9 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "unknown";
+    this.elo =
+      userMe.player.leaderboard?.oneVone?.elo ??
+      translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;
