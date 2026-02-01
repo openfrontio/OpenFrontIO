@@ -124,16 +124,23 @@
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
-        class="absolute inset-0 bg-[radial-gradient(100%_100%_at_0%_5%,#b8860b_0%,#1f3a70_50%,#254060_100%)]"
+        class="absolute inset-0 bg-cover bg-center"
+        style="
+          background-image: url(&quot;/images/background.png&quot;);
+          opacity: 0.5;
+          filter: sepia(0.2) saturate(1.2) hue-rotate(180deg) brightness(0.9);
+        "
       ></div>
       <div
-        class="absolute inset-0 bg-[radial-gradient(60%_60%_at_85%_20%,rgba(184,134,11,0.10),transparent_60%),radial-gradient(70%_70%_at_15%_85%,rgba(31,58,112,0.14),transparent_70%)]"
+        class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden md:block"
+        style="
+          background-image: url(&quot;/images/OpenFront.png&quot;);
+          opacity: 0.25;
+        "
       ></div>
       <div
-        class="absolute inset-0 bg-[linear-gradient(135deg,rgba(31,58,112,0.22)_0%,transparent_70%)]"
-      ></div>
-      <div
-        class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_25%,transparent_75%,rgba(0,0,0,0.25))]"
+        class="absolute inset-0 bg-center bg-no-repeat bg-contain md:hidden"
+        style="background-image: url(&quot;/images/OF.png&quot;); opacity: 0.25"
       ></div>
     </div>
 
