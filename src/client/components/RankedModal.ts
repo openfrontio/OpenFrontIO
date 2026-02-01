@@ -1,5 +1,6 @@
 import { html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
@@ -7,9 +8,22 @@ import { modalHeader } from "./ui/ModalHeader";
 
 @customElement("ranked-modal")
 export class RankedModal extends BaseModal {
+  @state() private elo: number | string = "...";
+  @state() private isLoggedIn = false;
+
   constructor() {
     super();
     this.id = "page-ranked";
+  }
+
+  protected override async onOpen(): Promise<void> {
+    this.elo = "...";
+    this.isLoggedIn = false;
+    const userMe = await getUserMe();
+    if (userMe) {
+      this.isLoggedIn = true;
+      this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "—";
+    }
   }
 
   createRenderRoot() {
@@ -24,6 +38,11 @@ export class RankedModal extends BaseModal {
           onBack: this.close,
           ariaLabel: translateText("common.back"),
         })}
+        ${this.isLoggedIn
+          ? html`<p class="text-center text-white/60 text-sm -mt-2 mb-2">
+              ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+            </p>`
+          : null}
         <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             ${this.renderCard(
