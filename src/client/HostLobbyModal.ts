@@ -732,7 +732,7 @@ export class HostLobbyModal extends BaseModal {
     this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
 
     if (this.leaveLobbyOnClose) {
-      this.dispatchEvent(new CustomEvent("leave-lobby"));
+      this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
     }
     crazyGamesSDK.hideInviteButton();
