@@ -156,7 +156,7 @@ export class NationWarshipBehavior {
         new ConstructionExecution(this.player, UnitType.Warship, tile),
       );
       this.emojiBehavior.maybeSendEmoji(enemy, EMOJI_WARSHIP_RETALIATION);
-      enemy.updateRelation(this.player, reason === "trade" ? -7.5 : -15);
+      this.player.updateRelation(enemy, reason === "trade" ? -7.5 : -15);
     }
   }
 
