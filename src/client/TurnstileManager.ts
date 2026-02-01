@@ -1,4 +1,5 @@
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import type { GameStartInfo } from "../core/Schemas";
 
 type TurnstileToken = { token: string; createdAt: number };

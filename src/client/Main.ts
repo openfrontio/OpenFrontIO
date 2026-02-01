@@ -315,7 +315,6 @@ class Client {
       this.publicLobby = null;
       console.warn("Public lobby element not found");
     }
-
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
@@ -929,7 +928,7 @@ class Client {
           this.joinAbortController = null;
         }
         this.joinModal?.closeWithoutLeaving();
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         incrementGamesPlayed();
 
         document.querySelectorAll(".ad").forEach((ad) => {
@@ -988,7 +987,6 @@ class Client {
     if (this.gameStop === null) {
       this.restoreUrlAfterLeave();
       document.body.classList.remove("in-game");
-      this.publicLobby?.leaveLobby();
       return;
     }
     console.log("leaving lobby, cancelling game");
@@ -1001,7 +999,6 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-    this.publicLobby?.leaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent) {
