@@ -217,6 +217,24 @@ export class GameModeSelector extends LitElement {
   }
 
   private openRankedMenu = () => {
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
+
     const modal = document.getElementById("page-ranked") as any;
     if (window.showPage) {
       window.showPage("page-ranked");
@@ -228,11 +246,69 @@ export class GameModeSelector extends LitElement {
     modal?.open?.();
   };
 
+  private openSinglePlayerModal = () => {
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
+
+    (document.querySelector("single-player-modal") as any)?.open();
+  };
+
   private openHostLobby = () => {
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
+
     (document.querySelector("host-lobby-modal") as any)?.open();
   };
 
   private openJoinLobby = () => {
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
+
     (document.querySelector("join-lobby-modal") as any)?.open();
   };
 
@@ -367,10 +443,6 @@ export class GameModeSelector extends LitElement {
       }),
     );
   }
-
-  private openSinglePlayerModal = () => {
-    (document.querySelector("single-player-modal") as any)?.open();
-  };
 
   private getLobbyTitle(lobby: GameInfo): string {
     const config = lobby.gameConfig;

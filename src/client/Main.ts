@@ -38,7 +38,6 @@ import "./NewsModal";
 import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
-import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
@@ -339,33 +338,6 @@ class Client {
       "open-matchmaking",
       this.handleOpenMatchmaking.bind(this),
     );
-    const spModal = document.querySelector(
-      "single-player-modal",
-    ) as SinglePlayerModal;
-    if (!spModal || !(spModal instanceof SinglePlayerModal)) {
-      console.warn("Singleplayer modal element not found");
-    }
-
-    const singlePlayer = document.getElementById("single-player");
-    if (singlePlayer) {
-      singlePlayer.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-single-player");
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("single-player button not present");
-    }
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
     if (!hlpModal || !(hlpModal instanceof HelpModal)) {
@@ -535,27 +507,6 @@ class Client {
     } else {
       this.hostModal.eventBus = this.eventBus;
     }
-    const hostLobbyButton = document.getElementById("host-lobby-button");
-    if (hostLobbyButton) {
-      hostLobbyButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-host-lobby");
-          this.publicLobby?.stop();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("host-lobby-button not present");
-    }
 
     this.joinModal = document.querySelector(
       "join-lobby-modal",
@@ -564,28 +515,6 @@ class Client {
       console.warn("Join lobby modal element not found");
     } else {
       this.joinModal.eventBus = this.eventBus;
-    }
-    const joinPrivateLobbyButton = document.getElementById(
-      "join-private-lobby-button",
-    );
-    if (joinPrivateLobbyButton) {
-      joinPrivateLobbyButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-join-lobby");
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    } else {
-      console.debug("join-private-lobby-button not present");
     }
 
     if (this.userSettings.darkMode()) {
