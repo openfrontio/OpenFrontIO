@@ -361,6 +361,13 @@ export class NationExecution implements Execution {
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other) &&
+        this.mg.config().gameConfig().difficulty !== Difficulty.Hard &&
+        this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
+      ) {
+        player.stopEmbargo(other);
+      } else if (
+        player.relation(other) >= Relation.Friendly &&
+        player.hasEmbargoAgainst(other) &&
         this.mg.config().gameConfig().difficulty !== Difficulty.Impossible
       ) {
         player.stopEmbargo(other);
