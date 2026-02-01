@@ -468,14 +468,7 @@
     "humans_vs_nations": "Humans vs Nations"
   },
   "mode_selector": {
-    "ffa_title": "Free For All",
-    "ffa_subtitle": "Solo combat",
-    "teams_title": "Teams",
-    "teams_subtitle": "Duo / Trio / Quad / 2-7",
-    "hvn_title": "Humans vs Nations",
     "special_title": "Special Mix",
-    "other_title": "Ranked + More",
-    "other_subtitle": "Ranked, HvN, Special 24/7, Private",
     "ranked_title": "Ranked",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",

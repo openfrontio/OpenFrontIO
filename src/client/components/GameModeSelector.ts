@@ -180,8 +180,7 @@ export class GameModeSelector extends LitElement {
       return translateText("mode_selector.teams_title");
     }
 
-    if (config.gameMode === GameMode.FFA)
-      return translateText("mode_selector.ffa_title");
+    if (config.gameMode === GameMode.FFA) return translateText("game_mode.ffa");
     return "";
   }
 
@@ -465,7 +464,7 @@ export class GameModeSelector extends LitElement {
     lobby: GameInfo,
   ): string {
     if (config?.gameMode === GameMode.FFA) {
-      return translateText("mode_selector.ffa_title");
+      return translateText("game_mode.ffa");
     }
 
     if (config?.gameMode === GameMode.Team) {
