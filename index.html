@@ -145,7 +145,7 @@
 
     <div
       id="mobile-menu-backdrop"
-      class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/60 [&.open]:z-[40000] transition-opacity"
+      class="lg:hidden! in-[.in-game]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/60 [&.open]:z-[40000] transition-opacity"
       role="presentation"
       aria-hidden="true"
     ></div>
@@ -159,14 +159,14 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar -->
       <desktop-nav-bar></desktop-nav-bar>
 
       <div
         id="turnstile-container"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
       <gutter-ads></gutter-ads>
@@ -212,16 +212,16 @@
           inline
           class="hidden w-full h-full page-content"
         ></user-setting>
+        <leaderboard-modal
+          id="page-leaderboard"
+          inline
+          class="hidden w-full h-full page-content"
+        ></leaderboard-modal>
         <troubleshooting-modal
           id="page-troubleshooting"
           inline
           class="hidden w-full h-full page-content"
         ></troubleshooting-modal>
-        <stats-modal
-          id="page-stats"
-          inline
-          class="hidden w-full h-full page-content"
-        ></stats-modal>
         <account-modal
           id="page-account"
           inline

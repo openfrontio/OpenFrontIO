@@ -31,6 +31,7 @@ import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
+import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
@@ -828,7 +829,7 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
-          "stats-button",
+          "leaderboard-button",
           "token-login",
           "matchmaking-modal",
           "lang-selector",
