@@ -106,6 +106,7 @@ export class RankedModal extends BaseModal {
 
   private async handleRanked() {
     if ((await userAuth()) === false) {
+      this.close();
       window.showPage?.("page-account");
       return;
     }
