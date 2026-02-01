@@ -150,7 +150,6 @@ export class GameServer {
   }
 
   public joinClient(client: Client) {
-    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
@@ -161,7 +160,6 @@ export class GameServer {
     const existingClient = this.allClients.get(client.clientID);
     if (existingClient) {
       if (existingClient.persistentID !== client.persistentID) {
-        this.websockets.delete(client.ws);
         client.ws.close(1002, "Client ID already in use");
         return;
       }
@@ -238,6 +236,7 @@ export class GameServer {
     }
 
     // Client connection accepted
+    this.websockets.add(client.ws);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
