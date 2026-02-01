@@ -20,9 +20,10 @@ export abstract class BaseModal extends LitElement {
   /**
    * Standard modal container class string.
    * Provides consistent dark glassmorphic styling across all modals.
+   * No rounding on mobile for full-screen appearance.
    */
   protected readonly modalContainerClass =
-    "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10";
+    "h-full flex flex-col overflow-hidden bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10";
 
   @query("o-modal") protected modalEl?: HTMLElement & {
     open: () => void;
