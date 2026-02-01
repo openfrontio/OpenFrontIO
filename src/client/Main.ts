@@ -26,6 +26,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
+import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
@@ -34,7 +35,6 @@ import "./PatternInput";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
-import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -809,7 +809,7 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
-          "stats-button",
+          "leaderboard-button",
           "token-login",
           "matchmaking-modal",
           "lang-selector",

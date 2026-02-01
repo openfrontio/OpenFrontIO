@@ -223,9 +223,9 @@ export class JoinPrivateLobbyModal extends BaseModal {
       "Atom Bomb": "unit_type.atom_bomb",
       "Hydrogen Bomb": "unit_type.hydrogen_bomb",
       MIRV: "unit_type.mirv",
-      "Trade Ship": "stats_modal.unit.trade",
-      Transport: "stats_modal.unit.trans",
-      "MIRV Warhead": "stats_modal.unit.mirvw",
+      "Trade Ship": "player_stats_table.unit.trade",
+      Transport: "player_stats_table.unit.trans",
+      "MIRV Warhead": "player_stats_table.unit.mirvw",
     };
 
     return html`
