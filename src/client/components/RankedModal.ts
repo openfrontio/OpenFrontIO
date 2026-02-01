@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getUserMe } from "../Api";
+import { UserMeResponse } from "../../core/ApiSchemas";
+import { getUserMe, hasLinkedAccount } from "../Api";
 import { userAuth } from "../Auth";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
@@ -9,23 +10,51 @@ import { modalHeader } from "./ui/ModalHeader";
 @customElement("ranked-modal")
 export class RankedModal extends BaseModal {
   @state() private elo: number | string = "...";
-  @state() private isLoggedIn = false;
+  @state() private userMeResponse: UserMeResponse | false = false;
 
   constructor() {
     super();
     this.id = "page-ranked";
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener(
+      "userMeResponse",
+      this.handleUserMeResponse as EventListener,
+    );
+    super.disconnectedCallback();
+  }
+
+  private handleUserMeResponse = (
+    event: CustomEvent<UserMeResponse | false>,
+  ) => {
+    this.userMeResponse = event.detail;
+    this.updateElo();
+  };
+
+  private updateElo() {
+    if (hasLinkedAccount(this.userMeResponse)) {
+      this.elo =
+        this.userMeResponse &&
+        this.userMeResponse.player.leaderboard?.oneVone?.elo
+          ? this.userMeResponse.player.leaderboard.oneVone.elo
+          : translateText("matchmaking_modal.no_elo");
+    }
+  }
+
   protected override async onOpen(): Promise<void> {
     this.elo = "...";
-    this.isLoggedIn = false;
     const userMe = await getUserMe();
-    if (userMe) {
-      this.isLoggedIn = true;
-      this.elo =
-        userMe.player.leaderboard?.oneVone?.elo ??
-        translateText("matchmaking_modal.no_elo");
-    }
+    this.userMeResponse = userMe;
+    this.updateElo();
   }
 
   createRenderRoot() {
@@ -44,7 +73,7 @@ export class RankedModal extends BaseModal {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             ${this.renderCard(
               translateText("mode_selector.ranked_1v1_title"),
-              this.isLoggedIn
+              hasLinkedAccount(this.userMeResponse)
                 ? translateText("matchmaking_modal.elo", { elo: this.elo })
                 : translateText("mode_selector.ranked_title"),
               () => this.handleRanked(),
