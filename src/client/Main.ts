@@ -186,10 +186,24 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Video ad methods
+      onPlayerReady: (() => void) | null;
+      addUnits: (units: Array<{ type: string }>) => Promise<void>;
+      displayUnits: () => void;
     };
-    fusetag?: {
-      que: Array<() => void>;
-      pageInit: (config: { blockingFuseIds: string[] }) => void;
+    Bolt: {
+      on: (unitType: string, event: string, callback: () => void) => void;
+      BOLT_AD_REQUEST_START: string;
+      BOLT_AD_IMPRESSION: string;
+      BOLT_AD_STARTED: string;
+      BOLT_FIRST_QUARTILE: string;
+      BOLT_MIDPOINT: string;
+      BOLT_THIRD_QUARTILE: string;
+      BOLT_AD_COMPLETE: string;
+      BOLT_AD_ERROR: string;
+      BOLT_AD_PAUSED: string;
+      BOLT_AD_CLICKED: string;
+      SHOW_HIDDEN_CONTAINER: string;
     };
     showPage?: (pageId: string) => void;
   }
@@ -219,7 +233,6 @@ class Client {
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
-  private preserveDeepLinkUrl = false;
   private joinAttemptId = 0;
   private joinAbortController: AbortController | null = null;
   private skipNextHashChange = false;
@@ -237,9 +250,7 @@ class Client {
 
   private gutterAds: GutterAds;
   private turnstileManager: TurnstileManager;
-  private serverConfigPrefetch: Promise<
-    Awaited<ReturnType<typeof getServerConfigFromClient>>
-  > | null = null;
+  private serverConfigPrefetch: Promise<any> | null = null;
 
   constructor() {
     this.turnstileManager = new TurnstileManager(() =>
@@ -249,7 +260,6 @@ class Client {
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    this.initializeFuseTag();
     // Warm critical join dependencies to avoid blocking on first join.
     const configPrefetch = getServerConfigFromClient();
     configPrefetch.catch((error) => {
@@ -770,7 +780,6 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
-      this.preserveDeepLinkUrl = true;
       window.showPage?.("page-join-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
@@ -914,7 +923,6 @@ class Client {
         }
       },
       () => {
-        this.preserveDeepLinkUrl = false;
         if (this.joinAbortController === joinAbortController) {
           this.joinAbortController = null;
         }
@@ -965,9 +973,7 @@ class Client {
 
   private restoreUrlAfterLeave() {
     try {
-      if (!this.preserveDeepLinkUrl) {
-        history.replaceState(null, "", "/");
-      }
+      history.replaceState(null, "", "/");
     } catch (e) {
       console.warn("Failed to restore URL on leave:", e);
     }
@@ -1012,38 +1018,6 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendUpdateGameConfigIntentEvent(config));
     }
-  }
-
-  private initializeFuseTag() {
-    const MAX_ATTEMPTS = 200;
-    let retryCount = 0;
-    const tryInitFuseTag = (): boolean => {
-      const fusetag = window.fusetag;
-      if (fusetag && typeof fusetag.pageInit === "function") {
-        console.log("initializing fuse tag");
-        fusetag.que.push(() => {
-          fusetag.pageInit({
-            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
-          });
-        });
-        return true;
-      }
-      return false;
-    };
-
-    const interval = setInterval(() => {
-      retryCount += 1;
-      if (retryCount >= MAX_ATTEMPTS) {
-        clearInterval(interval);
-        console.warn(
-          `fusetag init timed out after ${MAX_ATTEMPTS} attempts; stopping retry.`,
-        );
-        return;
-      }
-      if (tryInitFuseTag()) {
-        clearInterval(interval);
-      }
-    }, 100);
   }
 
   private async getServerConfigPrefetched() {

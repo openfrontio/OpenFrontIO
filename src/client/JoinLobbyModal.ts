@@ -1,11 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import {
-  renderDuration,
-  renderNumber,
-  restoreBaseUrlUnlessDeepLink,
-  translateText,
-} from "../client/Utils";
+import { renderDuration, renderNumber, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
 import {
   ClientInfo,
@@ -24,6 +19,7 @@ import {
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { getClientIDForGame } from "./Auth";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
@@ -48,11 +44,9 @@ export class JoinLobbyModal extends BaseModal {
   @state() private isConnecting: boolean = true;
   @state() private lobbyCreatorClientID: string | null = null;
 
-  private mapLoader = terrainMapFileLoader;
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
-  private playersInterval: ReturnType<typeof setInterval> | null = null;
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
@@ -279,6 +273,10 @@ export class JoinLobbyModal extends BaseModal {
     super.open();
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
+      // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
+      if (!lobbyInfo) {
+        this.checkActiveLobby(lobbyId);
+      }
     }
   }
 
@@ -315,11 +313,10 @@ export class JoinLobbyModal extends BaseModal {
   protected onClose(): void {
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
-    this.clearPlayersInterval();
 
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
-      restoreBaseUrlUnlessDeepLink();
+      this.updateHistory("/");
     }
 
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
@@ -336,14 +333,15 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   disconnectedCallback() {
-    this.onClose();
+    this.clearCountdownTimer();
+    this.stopLobbyUpdates();
     super.disconnectedCallback();
   }
 
   public closeAndLeave() {
     this.leaveLobby();
     try {
-      restoreBaseUrlUnlessDeepLink();
+      this.updateHistory("/");
     } catch (error) {
       console.warn("Failed to restore URL on leave:", error);
     }
@@ -354,6 +352,12 @@ export class JoinLobbyModal extends BaseModal {
   public closeWithoutLeaving() {
     this.leaveLobbyOnClose = false;
     this.close();
+  }
+
+  private updateHistory(url: string): void {
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      history.replaceState(null, "", url);
+    }
   }
 
   // --- Game config rendering ---
@@ -566,7 +570,7 @@ export class JoinLobbyModal extends BaseModal {
     }
     const currentMap = this.gameConfig.gameMap;
     try {
-      const mapData = this.mapLoader.getMapData(currentMap);
+      const mapData = terrainMapFileLoader.getMapData(currentMap);
       const manifest = await mapData.manifest();
       if (this.gameConfig?.gameMap === currentMap) {
         this.nationCount = manifest.nations.length;
@@ -722,7 +726,6 @@ export class JoinLobbyModal extends BaseModal {
 
       // Start tracking via lobby-info events (same as public flow)
       this.startTrackingLobby(lobbyId);
-      this.startPollingPlayers();
       return true;
     }
 
@@ -780,57 +783,5 @@ export class JoinLobbyModal extends BaseModal {
       }),
     );
     return "success";
-  }
-
-  // --- Player polling for private lobbies ---
-
-  private startPollingPlayers() {
-    this.clearPlayersInterval();
-    this.pollPlayers();
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
-  }
-
-  private clearPlayersInterval() {
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
-  }
-
-  private async pollPlayers() {
-    const lobbyId = this.currentLobbyId;
-    if (!lobbyId) return;
-    const config = await getServerConfigFromClient();
-
-    fetch(`/${config.workerPath(lobbyId)}/api/game/${lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.lobbyCreatorClientID = data.clients?.[0]?.clientID ?? null;
-        this.players = data.clients ?? [];
-        this.playerCount = this.players.length;
-        if (data.gameConfig) {
-          const mapChanged =
-            this.gameConfig?.gameMap !== data.gameConfig.gameMap;
-          this.gameConfig = data.gameConfig;
-          if (mapChanged) {
-            this.loadNationCount();
-          }
-        }
-        if (data.msUntilStart !== undefined) {
-          this.lobbyStartAt = data.msUntilStart + Date.now();
-        }
-        if (this.isConnecting) {
-          this.isConnecting = false;
-        }
-        this.syncCountdownTimer();
-      })
-      .catch((error) => {
-        console.error("Error polling players:", error);
-      });
   }
 }

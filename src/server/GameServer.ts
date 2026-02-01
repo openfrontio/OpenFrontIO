@@ -150,7 +150,6 @@ export class GameServer {
   }
 
   public joinClient(client: Client) {
-    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
@@ -161,7 +160,6 @@ export class GameServer {
     const existingClient = this.allClients.get(client.clientID);
     if (existingClient) {
       if (existingClient.persistentID !== client.persistentID) {
-        this.websockets.delete(client.ws);
         client.ws.close(1002, "Client ID already in use");
         return;
       }
@@ -238,6 +236,7 @@ export class GameServer {
     }
 
     // Client connection accepted
+    this.websockets.add(client.ws);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
@@ -294,7 +293,6 @@ export class GameServer {
   private replaceClientSocket(client: Client, ws: WebSocket) {
     const previousWs = client.ws;
     if (previousWs && previousWs !== ws) {
-      this.websockets.delete(previousWs);
       previousWs.removeAllListeners();
       if (
         previousWs.readyState === WebSocket.OPEN ||
@@ -322,17 +320,16 @@ export class GameServer {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
-          this.log.error("Failed to parse client message", error, {
+          this.log.warn(`Failed to parse client message ${error}`, {
             clientID: client.clientID,
           });
           client.ws.send(
             JSON.stringify({
               type: "error",
               error,
-              message,
+              message: `Server could not parse message from client: ${message}`,
             } satisfies ServerErrorMessage),
           );
-          client.ws.close(1002, "ClientMessageSchema");
           return;
         }
         const clientMsg = parsed.data;

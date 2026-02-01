@@ -14,24 +14,15 @@ import { translateText } from "./Utils";
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends BaseModal {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private connectTimeout: ReturnType<typeof setTimeout> | null = null;
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
-  private elo = "unknown";
+  private elo: number | "unknown" = "unknown";
 
   constructor() {
     super();
     this.id = "page-matchmaking";
-    document.addEventListener("userMeResponse", (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail) {
-        const userMeResponse = customEvent.detail as UserMeResponse;
-        this.elo =
-          userMeResponse.player?.leaderboard?.oneVone?.elo?.toString() ??
-          "unknown";
-        this.requestUpdate();
-      }
-    });
   }
 
   createRenderRoot() {
@@ -124,18 +115,24 @@ export class MatchmakingModal extends BaseModal {
     );
     this.socket.onopen = async () => {
       console.log("Connected to matchmaking server");
-      setTimeout(() => {
+      this.connectTimeout = setTimeout(async () => {
+        if (this.socket?.readyState !== WebSocket.OPEN) {
+          console.warn("[Matchmaking] socket not ready");
+          return;
+        }
         // Set a delay so the user can see the "connecting" message,
         // otherwise the "searching" message will be shown immediately.
+        // Also wait so people who back out immediately aren't added
+        // to the matchmaking queue.
+        this.socket.send(
+          JSON.stringify({
+            type: "join",
+            jwt: await getPlayToken(),
+          }),
+        );
         this.connected = true;
         this.requestUpdate();
-      }, 1000);
-      this.socket?.send(
-        JSON.stringify({
-          type: "join",
-          jwt: await getPlayToken(),
-        }),
-      );
+      }, 2000);
     };
     this.socket.onmessage = (event) => {
       console.log(event.data);
@@ -144,6 +141,7 @@ export class MatchmakingModal extends BaseModal {
         this.socket?.close();
         console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
+        this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
     this.socket.onerror = (event: ErrorEvent) => {
@@ -156,7 +154,6 @@ export class MatchmakingModal extends BaseModal {
 
   protected async onOpen(): Promise<void> {
     const userMe = await getUserMe();
-
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
       return;
@@ -179,15 +176,21 @@ export class MatchmakingModal extends BaseModal {
       this.close();
       return;
     }
+
+    this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "unknown";
+
     this.connected = false;
     this.gameID = null;
     this.connect();
-    this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
   }
 
   protected onClose(): void {
     this.connected = false;
     this.socket?.close();
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
@@ -262,7 +265,7 @@ export class MatchmakingButton extends LitElement {
   }
 
   render() {
-    const button = this.isLoggedIn
+    return this.isLoggedIn
       ? html`
           <button
             @click="${this.handleLoggedInClick}"
@@ -278,6 +281,7 @@ export class MatchmakingButton extends LitElement {
               ${translateText("matchmaking_button.description")}
             </span>
           </button>
+          <matchmaking-modal></matchmaking-modal>
         `
       : html`
           <button
@@ -289,17 +293,13 @@ export class MatchmakingButton extends LitElement {
             </span>
           </button>
         `;
-
-    return html` ${button} <matchmaking-modal></matchmaking-modal> `;
   }
 
   private handleLoggedInClick() {
     const usernameInput = document.querySelector("username-input") as any;
-    const publicLobby = document.querySelector("public-lobby") as any;
 
     if (usernameInput?.isValid()) {
       this.open();
-      publicLobby?.leaveLobby();
     } else {
       window.dispatchEvent(
         new CustomEvent("show-message", {
