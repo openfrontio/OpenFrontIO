@@ -16,6 +16,8 @@ import { JoinLobbyEvent } from "../Main";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { renderDuration, translateText } from "../Utils";
 
+const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
+
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: GameInfo[] = [];
@@ -29,6 +31,27 @@ export class GameModeSelector extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  /**
+   * Validates username input and shows error message if invalid.
+   * Returns true if valid, false otherwise.
+   */
+  private validateUsername(): boolean {
+    const usernameInput = document.querySelector("username-input") as any;
+    if (usernameInput?.isValid?.() === false) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+      return false;
+    }
+    return true;
   }
 
   connectedCallback() {
@@ -69,10 +92,6 @@ export class GameModeSelector extends LitElement {
     for (const gameID of this.lobbyIDToStart.keys()) {
       if (!currentLobbyIDs.has(gameID)) {
         this.lobbyIDToStart.delete(gameID);
-      }
-    }
-    for (const gameID of this.mapImages.keys()) {
-      if (!currentLobbyIDs.has(gameID)) {
         this.mapImages.delete(gameID);
       }
     }
@@ -157,86 +176,31 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, titleContent);
   }
 
-  private getSpecialSubtitle(lobby: GameInfo): string {
-    const config = lobby.gameConfig;
-    if (!config) return "";
-
-    if (config.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const teamCount =
-        typeof config.playerTeams === "number" ? config.playerTeams : null;
-
-      if (config.playerTeams === HumansVsNations) {
-        const humanSlots = totalPlayers;
-        return humanSlots
-          ? translateText("public_lobby.teams_hvn_detailed", {
-              num: String(humanSlots),
-            })
-          : translateText("public_lobby.teams_hvn");
-      }
-
-      if (teamCount && totalPlayers && teamCount > 1) {
-        return translateText("mode_selector.teams_title");
-      }
-      if (teamCount && teamCount > 1) {
-        return translateText("mode_selector.teams_title");
-      }
-      return translateText("mode_selector.teams_title");
-    }
-
-    if (config.gameMode === GameMode.FFA) return translateText("game_mode.ffa");
-    return "";
-  }
-
   private renderQuickActionsSection() {
     return html`
       <div class="grid grid-cols-2 gap-2 h-48 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
-          "",
         )}
         ${this.renderSmallActionCard(
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
-          "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
-          "",
         )}
         ${this.renderSmallActionCard(
           translateText("main.join"),
           this.openJoinLobby,
-          "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]",
-          "",
         )}
       </div>
     `;
   }
 
   private openRankedMenu = () => {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
+    if (!this.validateUsername()) return;
 
     const modal = document.getElementById("page-ranked") as any;
     if (window.showPage) {
@@ -250,81 +214,25 @@ export class GameModeSelector extends LitElement {
   };
 
   private openSinglePlayerModal = () => {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
-
+    if (!this.validateUsername()) return;
     (document.querySelector("single-player-modal") as any)?.open();
   };
 
   private openHostLobby = () => {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
-
+    if (!this.validateUsername()) return;
     (document.querySelector("host-lobby-modal") as any)?.open();
   };
 
   private openJoinLobby = () => {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
-
+    if (!this.validateUsername()) return;
     (document.querySelector("join-lobby-modal") as any)?.open();
   };
 
-  private renderSmallActionCard(
-    title: string,
-    onClick: () => void,
-    gradient: string,
-    direction: string,
-  ) {
+  private renderSmallActionCard(title: string, onClick: () => void) {
     return html`
       <button
         @click=${onClick}
-        class="flex items-center justify-center w-full h-full rounded-xl ${direction} ${gradient} border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
+        class="flex items-center justify-center w-full h-full rounded-xl ${CARD_BG} border-0 transition-transform hover:scale-[1.02] active:scale-[0.98] text-sm lg:text-base font-bold text-white uppercase tracking-wider text-center"
       >
         ${title}
       </button>
@@ -339,27 +247,29 @@ export class GameModeSelector extends LitElement {
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
     const timeDisplay = renderDuration(timeRemaining);
-
-    const mapName = translateText(
-      `map.${lobby.gameConfig?.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
-    );
+    const gameMap = lobby.gameConfig?.gameMap;
+    const mapName = gameMap
+      ? translateText(`map.${gameMap.toLowerCase().replace(/[\s.]+/g, "")}`)
+      : null;
 
     const modifierLabels = this.getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
+    // Sort by length for visual consistency (shorter labels first)
+    if (modifierLabels.length > 1) {
+      modifierLabels.sort((a, b) => a.length - b.length);
+    }
 
     return html`
       <button
         @click=${() => this.validateAndJoin(lobby)}
-        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
+        class="group flex flex-col w-full h-48 lg:h-56 text-white uppercase rounded-2xl overflow-hidden transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${CARD_BG}"
       >
-        <div
-          class="relative flex-1 overflow-hidden bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]"
-        >
+        <div class="relative flex-1 overflow-hidden ${CARD_BG}">
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
-                alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
+                alt="${mapName ?? gameMap ?? "map"}"
                 draggable="false"
                 class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
               />`
@@ -369,15 +279,13 @@ export class GameModeSelector extends LitElement {
           >
             ${modifierLabels.length > 0
               ? html`<div class="flex flex-col items-start gap-1">
-                  ${[...modifierLabels]
-                    .sort((a, b) => a.length - b.length)
-                    .map(
-                      (label) =>
-                        html`<span
-                          class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
-                          >${label}</span
-                        >`,
-                    )}
+                  ${modifierLabels.map(
+                    (label) =>
+                      html`<span
+                        class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-teal-600 text-white shadow-[0_0_6px_rgba(13,148,136,0.35)]"
+                        >${label}</span
+                      >`,
+                  )}
                 </div>`
               : html`<div></div>`}
             <div class="shrink-0">
@@ -419,19 +327,7 @@ export class GameModeSelector extends LitElement {
   }
 
   private validateAndJoin(lobby: GameInfo) {
-    const usernameInput = document.querySelector("username-input") as any;
-    if (usernameInput?.isValid?.() === false) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
+    if (!this.validateUsername()) return;
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
