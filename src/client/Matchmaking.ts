@@ -297,11 +297,9 @@ export class MatchmakingButton extends LitElement {
 
   private handleLoggedInClick() {
     const usernameInput = document.querySelector("username-input") as any;
-    const publicLobby = document.querySelector("public-lobby") as any;
 
     if (usernameInput?.isValid()) {
       this.open();
-      publicLobby?.leaveLobby();
     } else {
       window.dispatchEvent(
         new CustomEvent("show-message", {

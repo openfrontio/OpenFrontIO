@@ -524,7 +524,6 @@ class Client {
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         window.showPage?.("page-host-lobby");
-        this.publicLobby.leaveLobby();
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -972,7 +971,6 @@ class Client {
     if (this.gameStop === null) {
       this.restoreUrlAfterLeave();
       document.body.classList.remove("in-game");
-      this.publicLobby.leaveLobby();
       return;
     }
     console.log("leaving lobby, cancelling game");
@@ -985,7 +983,6 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-    this.publicLobby.leaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent) {
