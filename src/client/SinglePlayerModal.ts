@@ -36,31 +36,59 @@ import {
 } from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
+const DEFAULT_OPTIONS = {
+  selectedMap: GameMapType.World,
+  selectedDifficulty: Difficulty.Easy,
+  disableNations: false,
+  bots: 400,
+  infiniteGold: false,
+  infiniteTroops: false,
+  compactMap: false,
+  maxTimer: false,
+  maxTimerValue: undefined as number | undefined,
+  instantBuild: false,
+  randomSpawn: false,
+  useRandomMap: false,
+  gameMode: GameMode.FFA,
+  teamCount: 2 as TeamCountConfig,
+  goldMultiplier: false,
+  goldMultiplierValue: undefined as number | undefined,
+  startingGold: false,
+  startingGoldValue: undefined as number | undefined,
+  disabledUnits: [] as UnitType[],
+} as const;
+
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
-  @state() private disableNations: boolean = false;
-  @state() private bots: number = 400;
-  @state() private infiniteGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private compactMap: boolean = false;
-  @state() private maxTimer: boolean = false;
-  @state() private maxTimerValue: number | undefined = undefined;
-  @state() private instantBuild: boolean = false;
-  @state() private randomSpawn: boolean = false;
-  @state() private useRandomMap: boolean = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: TeamCountConfig = 2;
+  @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
+  @state() private selectedDifficulty: Difficulty =
+    DEFAULT_OPTIONS.selectedDifficulty;
+  @state() private disableNations: boolean = DEFAULT_OPTIONS.disableNations;
+  @state() private bots: number = DEFAULT_OPTIONS.bots;
+  @state() private infiniteGold: boolean = DEFAULT_OPTIONS.infiniteGold;
+  @state() private infiniteTroops: boolean = DEFAULT_OPTIONS.infiniteTroops;
+  @state() private compactMap: boolean = DEFAULT_OPTIONS.compactMap;
+  @state() private maxTimer: boolean = DEFAULT_OPTIONS.maxTimer;
+  @state() private maxTimerValue: number | undefined =
+    DEFAULT_OPTIONS.maxTimerValue;
+  @state() private instantBuild: boolean = DEFAULT_OPTIONS.instantBuild;
+  @state() private randomSpawn: boolean = DEFAULT_OPTIONS.randomSpawn;
+  @state() private useRandomMap: boolean = DEFAULT_OPTIONS.useRandomMap;
+  @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
+  @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   @state() private userMeResponse: UserMeResponse | false = false;
-  @state() private goldMultiplier: boolean = false;
-  @state() private goldMultiplierValue: number | undefined = undefined;
-  @state() private startingGold: boolean = false;
-  @state() private startingGoldValue: number | undefined = undefined;
+  @state() private goldMultiplier: boolean = DEFAULT_OPTIONS.goldMultiplier;
+  @state() private goldMultiplierValue: number | undefined =
+    DEFAULT_OPTIONS.goldMultiplierValue;
+  @state() private startingGold: boolean = DEFAULT_OPTIONS.startingGold;
+  @state() private startingGoldValue: number | undefined =
+    DEFAULT_OPTIONS.startingGoldValue;
 
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private disabledUnits: UnitType[] = [
+    ...DEFAULT_OPTIONS.disabledUnits,
+  ];
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -655,17 +683,17 @@ export class SinglePlayerModal extends BaseModal {
   // Check if any options other than map and difficulty have been changed from defaults
   private hasOptionsChanged(): boolean {
     return (
-      this.disableNations !== false ||
-      this.bots !== 400 ||
-      this.infiniteGold !== false ||
-      this.infiniteTroops !== false ||
-      this.compactMap !== false ||
-      this.maxTimer !== false ||
-      this.instantBuild !== false ||
-      this.randomSpawn !== false ||
-      this.gameMode !== GameMode.FFA ||
-      this.goldMultiplier !== false ||
-      this.startingGold !== false ||
+      this.disableNations !== DEFAULT_OPTIONS.disableNations ||
+      this.bots !== DEFAULT_OPTIONS.bots ||
+      this.infiniteGold !== DEFAULT_OPTIONS.infiniteGold ||
+      this.infiniteTroops !== DEFAULT_OPTIONS.infiniteTroops ||
+      this.compactMap !== DEFAULT_OPTIONS.compactMap ||
+      this.maxTimer !== DEFAULT_OPTIONS.maxTimer ||
+      this.instantBuild !== DEFAULT_OPTIONS.instantBuild ||
+      this.randomSpawn !== DEFAULT_OPTIONS.randomSpawn ||
+      this.gameMode !== DEFAULT_OPTIONS.gameMode ||
+      this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
+      this.startingGold !== DEFAULT_OPTIONS.startingGold ||
       this.disabledUnits.length > 0
     );
   }
@@ -699,25 +727,25 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onClose(): void {
     // Reset all transient form state to ensure clean slate
-    this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Easy;
-    this.gameMode = GameMode.FFA;
-    this.useRandomMap = false;
-    this.disableNations = false;
-    this.bots = 400;
-    this.infiniteGold = false;
-    this.infiniteTroops = false;
-    this.compactMap = false;
-    this.maxTimer = false;
-    this.maxTimerValue = undefined;
-    this.instantBuild = false;
-    this.randomSpawn = false;
-    this.teamCount = 2;
-    this.disabledUnits = [];
-    this.goldMultiplier = false;
-    this.goldMultiplierValue = undefined;
-    this.startingGold = false;
-    this.startingGoldValue = undefined;
+    this.selectedMap = DEFAULT_OPTIONS.selectedMap;
+    this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
+    this.gameMode = DEFAULT_OPTIONS.gameMode;
+    this.useRandomMap = DEFAULT_OPTIONS.useRandomMap;
+    this.disableNations = DEFAULT_OPTIONS.disableNations;
+    this.bots = DEFAULT_OPTIONS.bots;
+    this.infiniteGold = DEFAULT_OPTIONS.infiniteGold;
+    this.infiniteTroops = DEFAULT_OPTIONS.infiniteTroops;
+    this.compactMap = DEFAULT_OPTIONS.compactMap;
+    this.maxTimer = DEFAULT_OPTIONS.maxTimer;
+    this.maxTimerValue = DEFAULT_OPTIONS.maxTimerValue;
+    this.instantBuild = DEFAULT_OPTIONS.instantBuild;
+    this.randomSpawn = DEFAULT_OPTIONS.randomSpawn;
+    this.teamCount = DEFAULT_OPTIONS.teamCount;
+    this.disabledUnits = [...DEFAULT_OPTIONS.disabledUnits];
+    this.goldMultiplier = DEFAULT_OPTIONS.goldMultiplier;
+    this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
+    this.startingGold = DEFAULT_OPTIONS.startingGold;
+    this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
   }
 
   private handleSelectRandomMap() {
