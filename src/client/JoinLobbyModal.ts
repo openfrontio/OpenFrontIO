@@ -85,7 +85,7 @@ export class JoinLobbyModal extends BaseModal {
     const playerCount = this.playerCount;
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         ${modalHeader({
           title: translateText("public_lobby.title"),
@@ -206,7 +206,7 @@ export class JoinLobbyModal extends BaseModal {
   private renderJoinForm() {
     const content = html`
       <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
+        class="h-full flex flex-col bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         ${modalHeader({
           title: translateText("private_lobby.title"),
