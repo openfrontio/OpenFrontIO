@@ -209,6 +209,7 @@
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game",
+    "options_changed_no_achievements": "Options changed, no achievements possible",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting gold",

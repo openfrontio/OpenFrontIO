@@ -617,7 +617,14 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20">
+        <div class="p-6 border-t border-white/10 bg-black/20">
+          ${hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
+            ? html`<div
+                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+              >
+                ${translateText("single_modal.options_changed_no_achievements")}
+              </div>`
+            : null}
           <button
             @click=${this.startGame}
             class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
@@ -643,6 +650,24 @@ export class SinglePlayerModal extends BaseModal {
         ${content}
       </o-modal>
     `;
+  }
+
+  // Check if any options other than map and difficulty have been changed from defaults
+  private hasOptionsChanged(): boolean {
+    return (
+      this.disableNations !== false ||
+      this.bots !== 400 ||
+      this.infiniteGold !== false ||
+      this.infiniteTroops !== false ||
+      this.compactMap !== false ||
+      this.maxTimer !== false ||
+      this.instantBuild !== false ||
+      this.randomSpawn !== false ||
+      this.gameMode !== GameMode.FFA ||
+      this.goldMultiplier !== false ||
+      this.startingGold !== false ||
+      this.disabledUnits.length > 0
+    );
   }
 
   // Helper for consistent option buttons
