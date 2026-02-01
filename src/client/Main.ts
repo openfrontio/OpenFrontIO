@@ -36,8 +36,6 @@ import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
-import "./PublicLobby";
-import { PublicLobby } from "./PublicLobby";
 import "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
@@ -59,6 +57,7 @@ import {
 import "./components/DesktopNavBar";
 import "./components/Footer";
 import "./components/GameModeSelector";
+import { GameModeSelector } from "./components/GameModeSelector";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
@@ -242,7 +241,7 @@ class Client {
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
-  private publicLobby: PublicLobby | null;
+  private gameModeSelector: GameModeSelector | null;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
@@ -308,12 +307,12 @@ class Client {
       console.warn("Username input element not found");
     }
 
-    const publicLobby = document.querySelector("public-lobby");
-    if (publicLobby instanceof PublicLobby) {
-      this.publicLobby = publicLobby;
+    const gameModeSelector = document.querySelector("game-mode-selector");
+    if (gameModeSelector instanceof GameModeSelector) {
+      this.gameModeSelector = gameModeSelector;
     } else {
-      this.publicLobby = null;
-      console.warn("Public lobby element not found");
+      this.gameModeSelector = null;
+      console.warn("Game mode selector element not found");
     }
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
@@ -844,7 +843,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby?.stop();
+        this.gameModeSelector?.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -864,7 +863,7 @@ class Client {
           this.joinAbortController = null;
         }
         this.joinModal?.closeWithoutLeaving();
-        this.publicLobby?.stop();
+        this.gameModeSelector?.stop();
         incrementGamesPlayed();
 
         document.querySelectorAll(".ad").forEach((ad) => {

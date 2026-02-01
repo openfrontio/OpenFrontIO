@@ -49,6 +49,10 @@ export class GameModeSelector extends LitElement {
     }
   }
 
+  public stop() {
+    this.lobbySocket.stop();
+  }
+
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
     this.lobbies = lobbies;
 
