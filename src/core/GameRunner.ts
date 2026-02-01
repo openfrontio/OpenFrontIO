@@ -181,10 +181,6 @@ export class GameRunner {
     return true;
   }
 
-  public pendingTurns(): number {
-    return Math.max(0, this.turns.length - this.currTurn);
-  }
-
   public playerActions(
     playerID: PlayerID,
     x?: number,
@@ -267,9 +263,5 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.bestTransportShipSpawn(targetTile);
-  }
-
-  public hasPendingTurns(): boolean {
-    return this.currTurn < this.turns.length;
   }
 }

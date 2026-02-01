@@ -42,7 +42,7 @@ async function processPendingTurns() {
   }
 
   const gr = await gameRunner;
-  if (!gr || !gr.hasPendingTurns()) {
+  if (!gr) {
     return;
   }
 
