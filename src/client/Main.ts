@@ -563,23 +563,25 @@ class Client {
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
-    if (joinPrivateLobbyButton === null)
-      throw new Error("Missing join-private-lobby-button");
-    joinPrivateLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-join-lobby");
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
+    if (joinPrivateLobbyButton) {
+      joinPrivateLobbyButton.addEventListener("click", () => {
+        if (this.usernameInput?.isValid()) {
+          window.showPage?.("page-join-lobby");
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: this.usernameInput?.validationError,
+                color: "red",
+                duration: 3000,
+              },
+            }),
+          );
+        }
+      });
+    } else {
+      console.debug("join-private-lobby-button not present");
+    }
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
