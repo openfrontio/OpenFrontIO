@@ -31,7 +31,6 @@ export class TroubleshootingModal extends BaseModal {
   render() {
     const content = html`
       <div class="${this.modalContainerClass}">
-        >
         ${modalHeader({
           titleContent: html` <div
             class="w-full flex flex-col sm:flex-row justify-between gap-2"
