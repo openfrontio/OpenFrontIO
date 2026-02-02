@@ -147,8 +147,10 @@ export class UsernameInput extends LitElement {
   }
 
   private validateAndStore() {
-    // Prevent empty username even if clan tag is present
-    if (!this.baseUsername.trim()) {
+    const trimmedBase = this.baseUsername.trim();
+
+    // Validate base username meets minimum length (clan tag doesn't count)
+    if (trimmedBase.length < MIN_USERNAME_LENGTH) {
       this._isValid = false;
       this.validationError = translateText("username.too_short", {
         min: MIN_USERNAME_LENGTH,
