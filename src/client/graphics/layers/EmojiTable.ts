@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
@@ -24,28 +23,36 @@ export class EmojiTable extends LitElement {
       }
 
       const tile = this.game.ref(cell.x, cell.y);
-      if (!this.game.hasOwner(tile)) {
-        return;
-      }
+      this.game.worker.tileContext(tile).then((ctx) => {
+        if (!ctx.ownerId) {
+          return;
+        }
 
-      const targetPlayer = this.game.owner(tile);
-      // maybe redundant due to owner check but better safe than sorry
-      if (targetPlayer instanceof TerraNulliusImpl) {
-        return;
-      }
+        let targetPlayer: PlayerView | null = null;
+        try {
+          const maybe = this.game.player(ctx.ownerId);
+          targetPlayer =
+            maybe && maybe.isPlayer() ? (maybe as PlayerView) : null;
+        } catch {
+          targetPlayer = null;
+        }
+        if (!targetPlayer) {
+          return;
+        }
 
-      this.showTable((emoji) => {
-        const recipient =
-          targetPlayer === this.game.myPlayer()
-            ? AllPlayers
-            : (targetPlayer as PlayerView);
-        eventBus.emit(
-          new SendEmojiIntentEvent(
-            recipient,
-            flattenedEmojiTable.indexOf(emoji as Emoji),
-          ),
-        );
-        this.hideTable();
+        this.showTable((emoji) => {
+          const recipient =
+            targetPlayer === this.game.myPlayer()
+              ? AllPlayers
+              : (targetPlayer as PlayerView);
+          eventBus.emit(
+            new SendEmojiIntentEvent(
+              recipient,
+              flattenedEmojiTable.indexOf(emoji as Emoji),
+            ),
+          );
+          this.hideTable();
+        });
       });
     });
     eventBus.on(CloseViewEvent, (e) => {

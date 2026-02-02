@@ -271,6 +271,12 @@ export class TerritoryRenderer {
     this.resources.setAlternativeView(enabled);
   }
 
+  // Worker renderer needs this; on main thread this is currently a no-op beyond
+  // forcing a palette refresh (PlayerView colors are not recomputed dynamically).
+  setPatternsEnabled(_enabled: boolean): void {
+    this.refreshPalette();
+  }
+
   setHighlightedOwnerId(ownerSmallId: number | null): void {
     if (!this.resources) {
       return;

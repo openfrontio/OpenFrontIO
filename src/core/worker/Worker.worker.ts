@@ -3,10 +3,13 @@ import { Theme } from "../configuration/Config";
 import { PastelTheme } from "../configuration/PastelTheme";
 import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
+import { PlayerID } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../game/TerrainMapLoader";
 import { createGameRunner, GameRunner } from "../GameRunner";
-import { GameStartInfo } from "../Schemas";
+import { ClientID, GameStartInfo, PlayerCosmetics } from "../Schemas";
+import { DirtyTileQueue } from "./DirtyTileQueue";
+import { WorkerCanvas2DRenderer } from "./WorkerCanvas2DRenderer";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -15,6 +18,7 @@ import {
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
   RendererReadyMessage,
+  TileContextResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
@@ -23,20 +27,38 @@ import { WorkerTerritoryRenderer } from "./WorkerTerritoryRenderer";
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 let gameStartInfo: GameStartInfo | null = null;
+let myClientID: ClientID | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 const MAX_TICKS_PER_HEARTBEAT = 4;
-let renderer: WorkerTerritoryRenderer | null = null;
+let renderer: WorkerTerritoryRenderer | WorkerCanvas2DRenderer | null = null;
 let mapData: TerrainMapData | null = null;
+let dirtyTiles: DirtyTileQueue | null = null;
+let dirtyTilesOverflow = false;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
   if (!("updates" in gu)) {
     return;
   }
-  // Update renderer with game update
-  if (renderer) {
-    renderer.updateGameView(gu);
+
+  // Flush simulation-derived dirty tiles into the renderer before running
+  // compute passes for this tick.
+  if (renderer && dirtyTiles) {
+    if (dirtyTilesOverflow) {
+      dirtyTilesOverflow = false;
+      dirtyTiles.clear();
+      renderer.markAllDirty();
+    } else {
+      const tiles = dirtyTiles.drain(dirtyTiles.pendingCount());
+      for (const tile of tiles) {
+        renderer.markTile(tile);
+      }
+    }
+
+    // Run compute passes at simulation tick cadence (not at render FPS).
+    renderer.tick();
   }
+
   sendMessage({
     type: "game_update",
     gameUpdate: gu,
@@ -67,12 +89,31 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     case "init":
       try {
         gameStartInfo = message.gameStartInfo;
+        myClientID = message.clientID;
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
         ).then((gr) => {
+          const numTiles = gr.game.width() * gr.game.height();
+          // Capacity is bounded; on overflow we fall back to markAllDirty().
+          dirtyTiles = new DirtyTileQueue(numTiles, Math.max(4096, numTiles));
+          dirtyTilesOverflow = false;
+
+          gr.tileUpdateSink = (tile) => {
+            if (!dirtyTiles) {
+              return;
+            }
+            const mark = (t: any) => {
+              if (!dirtyTiles!.mark(t)) {
+                dirtyTilesOverflow = true;
+              }
+            };
+            mark(tile);
+            gr.game.forEachNeighbor(tile, (n) => mark(n));
+          };
+
           sendMessage({
             type: "initialized",
             id: message.id,
@@ -95,6 +136,37 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         await gr.addTurn(message.turn);
       } catch (error) {
         console.error("Failed to process turn:", error);
+        throw error;
+      }
+      break;
+
+    case "tile_context":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+      try {
+        const gr = await gameRunner;
+        const tile = message.tile;
+        const hasOwner = gr.game.hasOwner(tile);
+        const ownerSmallId = hasOwner ? gr.game.ownerID(tile) : null;
+        let ownerId: PlayerID | null = null;
+        if (hasOwner) {
+          const owner = gr.game.owner(tile);
+          ownerId = owner && owner.isPlayer() ? owner.id() : null;
+        }
+        sendMessage({
+          type: "tile_context_result",
+          id: message.id,
+          result: {
+            hasOwner,
+            ownerSmallId,
+            ownerId,
+            hasFallout: gr.game.hasFallout(tile),
+            isDefended: gr.game.isDefended(tile),
+          },
+        } as TileContextResultMessage);
+      } catch (error) {
+        console.error("Failed to fetch tile context:", error);
         throw error;
       }
       break;
@@ -204,6 +276,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         }
         const gr = await gameRunner;
 
+        (renderer as any)?.dispose?.();
+        renderer = null;
+
         // Load map data if not already loaded
         // Use gameStartInfo.config which has the original game map info
         mapData ??= await loadTerrainMap(
@@ -218,9 +293,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           ? new PastelThemeDark()
           : new PastelTheme();
 
-        renderer = new WorkerTerritoryRenderer();
+        const cosmeticsByClientID = new Map<ClientID, PlayerCosmetics>();
+        for (const p of gameStartInfo.players) {
+          cosmeticsByClientID.set(
+            p.clientID,
+            (p.cosmetics ?? {}) as PlayerCosmetics,
+          );
+        }
 
-        await renderer.init(message.offscreenCanvas, gr, mapData, theme);
+        const backend = message.backend ?? "webgpu";
+        renderer =
+          backend === "canvas2d"
+            ? new WorkerCanvas2DRenderer()
+            : new WorkerTerritoryRenderer();
+
+        await renderer.init(
+          message.offscreenCanvas,
+          gr,
+          mapData,
+          theme,
+          myClientID,
+          cosmeticsByClientID,
+        );
 
         sendMessage({
           type: "renderer_ready",
@@ -236,6 +330,25 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           error: error instanceof Error ? error.message : String(error),
         } as RendererReadyMessage);
         renderer = null;
+      }
+      break;
+
+    case "set_patterns_enabled":
+      if (renderer) {
+        renderer.setPatternsEnabled(message.enabled);
+        renderer.tick();
+      }
+      break;
+
+    case "set_palette":
+      if (renderer) {
+        renderer.setPaletteFromBytes(
+          message.paletteWidth,
+          message.maxSmallId,
+          message.row0,
+          message.row1,
+        );
+        renderer.tick();
       }
       break;
 
@@ -269,33 +382,34 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
     case "set_shader_settings":
       if (renderer) {
+        const r: any = renderer as any;
         if (message.territoryShader) {
-          renderer.setTerritoryShader(message.territoryShader);
+          r.setTerritoryShader?.(message.territoryShader);
         }
         if (message.territoryShaderParams0 && message.territoryShaderParams1) {
-          renderer.setTerritoryShaderParams(
+          r.setTerritoryShaderParams?.(
             message.territoryShaderParams0,
             message.territoryShaderParams1,
           );
         }
         if (message.terrainShader) {
-          renderer.setTerrainShader(message.terrainShader);
+          r.setTerrainShader?.(message.terrainShader);
         }
         if (message.terrainShaderParams0 && message.terrainShaderParams1) {
-          renderer.setTerrainShaderParams(
+          r.setTerrainShaderParams?.(
             message.terrainShaderParams0,
             message.terrainShaderParams1,
           );
         }
         if (message.preSmoothing) {
-          renderer.setPreSmoothing(
+          r.setPreSmoothing?.(
             message.preSmoothing.enabled,
             message.preSmoothing.shaderPath,
             message.preSmoothing.params0,
           );
         }
         if (message.postSmoothing) {
-          renderer.setPostSmoothing(
+          r.setPostSmoothing?.(
             message.postSmoothing.enabled,
             message.postSmoothing.shaderPath,
             message.postSmoothing.params0,
@@ -313,12 +427,14 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     case "mark_all_dirty":
       if (renderer) {
         renderer.markAllDirty();
+        renderer.tick();
       }
       break;
 
     case "refresh_palette":
       if (renderer) {
         renderer.refreshPalette();
+        renderer.tick();
       }
       break;
 

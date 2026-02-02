@@ -1,9 +1,11 @@
+import { Colord, colord } from "colord";
 import { Theme } from "../configuration/Config";
 import { Game, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import { GameView } from "../game/GameView";
 import { TerrainMapData } from "../game/TerrainMapLoader";
+import { ClientID, PlayerCosmetics } from "../Schemas";
 
 /**
  * Adapter that makes Game work as GameView for rendering purposes.
@@ -12,12 +14,19 @@ import { TerrainMapData } from "../game/TerrainMapLoader";
  */
 export class GameViewAdapter implements Partial<GameView> {
   private lastUpdate: GameUpdateViewData | null = null;
+  private patternsEnabled = false;
 
   constructor(
     private game: Game,
     private mapData: TerrainMapData,
     private theme: Theme,
+    private readonly myClientId: ClientID | null,
+    private readonly cosmeticsByClientID: Map<ClientID, PlayerCosmetics>,
   ) {}
+
+  setPatternsEnabled(enabled: boolean): void {
+    this.patternsEnabled = enabled;
+  }
 
   /**
    * Update adapter with latest game update data.
@@ -70,15 +79,53 @@ export class GameViewAdapter implements Partial<GameView> {
 
   /**
    * Convert Game players to PlayerView-like objects for rendering.
-   * Computes colors from theme directly (no PlayerView needed).
+   *
+   * Important: this must match the *main-thread* PlayerView color selection,
+   * otherwise the worker-rendered territory will disagree with UI.
    */
   playerViews(): any[] {
     const theme = this.theme;
     return this.game.players().map((player) => {
+      const clientId = player.clientID();
+      const cosmetics =
+        clientId && this.cosmeticsByClientID.has(clientId)
+          ? this.cosmeticsByClientID.get(clientId)!
+          : ({} as PlayerCosmetics);
+
       const defaultTerritoryColor = theme.territoryColor(player as any);
       const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
-      const territoryRgb = defaultTerritoryColor.toRgb();
-      const borderRgb = defaultBorderColor.toRgb();
+
+      const pattern = this.patternsEnabled ? cosmetics.pattern : undefined;
+      if (pattern) {
+        pattern.colorPalette ??= {
+          name: "",
+          primaryColor: defaultTerritoryColor.toHex(),
+          secondaryColor: defaultBorderColor.toHex(),
+        };
+      }
+
+      const territoryColor: Colord =
+        player.team() === null
+          ? colord(
+              cosmetics.color?.color ??
+                pattern?.colorPalette?.primaryColor ??
+                defaultTerritoryColor.toHex(),
+            )
+          : defaultTerritoryColor;
+
+      const maybeFocusedBorderColor =
+        this.myClientId !== null && clientId === this.myClientId
+          ? theme.focusedBorderColor()
+          : defaultBorderColor;
+
+      const borderColor: Colord = colord(
+        pattern?.colorPalette?.secondaryColor ??
+          cosmetics.color?.color ??
+          maybeFocusedBorderColor.toHex(),
+      );
+
+      const territoryRgb = territoryColor.toRgb();
+      const borderRgb = borderColor.toRgb();
 
       const view = {
         player,

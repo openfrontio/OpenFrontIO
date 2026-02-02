@@ -4,6 +4,16 @@ import { PlayerPattern } from "../Schemas";
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
+  getString(key: string, defaultValue: string): string {
+    const value = localStorage.getItem(key);
+    if (value === null) return defaultValue;
+    return value;
+  }
+
+  setString(key: string, value: string): void {
+    localStorage.setItem(key, value);
+  }
+
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -57,6 +67,15 @@ export class UserSettings {
 
   webgpuDebug(): boolean {
     return this.get("settings.webgpuDebug", true);
+  }
+
+  backgroundRenderer(): "webgpu" | "canvas2d" {
+    const raw = this.getString("settings.backgroundRenderer", "webgpu");
+    return raw === "canvas2d" ? "canvas2d" : "webgpu";
+  }
+
+  setBackgroundRenderer(renderer: "webgpu" | "canvas2d"): void {
+    this.setString("settings.backgroundRenderer", renderer);
   }
 
   alertFrame() {

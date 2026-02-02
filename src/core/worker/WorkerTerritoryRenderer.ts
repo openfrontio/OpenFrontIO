@@ -3,6 +3,7 @@ import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import { TerrainMapData } from "../game/TerrainMapLoader";
 import { GameRunner } from "../GameRunner";
+import { ClientID, PlayerCosmetics } from "../Schemas";
 import { GameViewAdapter } from "./GameViewAdapter";
 
 // Import rendering components from client (they should work with adapter)
@@ -61,6 +62,7 @@ export class WorkerTerritoryRenderer {
   private preSmoothingEnabled = false;
   private postSmoothingEnabled = false;
   private defensePostRange: number;
+  private patternsEnabled = false;
 
   /**
    * Initialize renderer with offscreen canvas and game data.
@@ -70,13 +72,22 @@ export class WorkerTerritoryRenderer {
     gameRunner: GameRunner,
     mapData: TerrainMapData,
     theme: Theme,
+    myClientID: ClientID | null,
+    cosmeticsByClientID: Map<ClientID, PlayerCosmetics>,
   ): Promise<void> {
     this.canvas = offscreenCanvas;
     const game = gameRunner.game;
     this.defensePostRange = game.config().defensePostRange();
 
     // Create adapter
-    this.gameViewAdapter = new GameViewAdapter(game, mapData, theme);
+    this.gameViewAdapter = new GameViewAdapter(
+      game,
+      mapData,
+      theme,
+      myClientID,
+      cosmeticsByClientID,
+    );
+    this.gameViewAdapter.setPatternsEnabled(this.patternsEnabled);
 
     // Initialize WebGPU device with offscreen canvas
     const webgpuDevice = await WebGPUDevice.create(offscreenCanvas);
@@ -265,6 +276,13 @@ export class WorkerTerritoryRenderer {
     this.resources.setHighlightedOwnerId(ownerSmallId);
   }
 
+  setPatternsEnabled(enabled: boolean): void {
+    this.patternsEnabled = enabled;
+    this.gameViewAdapter?.setPatternsEnabled(enabled);
+    this.resources?.markPaletteDirty();
+    this.resources?.invalidateHistory();
+  }
+
   setTerritoryShader(shaderPath: string): void {
     this.territoryShaderPath = shaderPath;
     if (this.territoryRenderPass) {
@@ -402,7 +420,18 @@ export class WorkerTerritoryRenderer {
   }
 
   markAllDirty(): void {
-    this.resources?.markDefensePostsDirty();
+    if (!this.resources) {
+      return;
+    }
+    // Full sync points used when the dirty-tile pipeline overflows or when
+    // global settings require a complete rebuild.
+    this.resources.markStateDirty();
+    this.resources.markDefensePostsDirty();
+    this.resources.markDefendedFullRecompute();
+    this.resources.markPaletteDirty();
+    this.resources.invalidateHistory();
+
+    this.terrainComputePass?.markDirty();
   }
 
   refreshPalette(): void {
@@ -410,6 +439,19 @@ export class WorkerTerritoryRenderer {
       return;
     }
     this.resources.markPaletteDirty();
+  }
+
+  setPaletteFromBytes(
+    paletteWidth: number,
+    maxSmallId: number,
+    row0: Uint8Array,
+    row1: Uint8Array,
+  ): void {
+    if (!this.resources) {
+      return;
+    }
+    this.resources.setPaletteOverride(paletteWidth, maxSmallId, row0, row1);
+    this.resources.invalidateHistory();
   }
 
   markDefensePostsDirty(): void {
@@ -428,6 +470,26 @@ export class WorkerTerritoryRenderer {
       this.terrainComputePass.markDirty();
       this.computeTerrainImmediate();
     }
+  }
+
+  dispose(): void {
+    this.ready = false;
+    this.computePasses = [];
+    this.computePassOrder = [];
+    this.frameComputePasses = [];
+    this.renderPasses = [];
+    this.renderPassOrder = [];
+    this.terrainComputePass = null;
+    this.stateUpdatePass = null;
+    this.defendedStrengthFullPass = null;
+    this.defendedStrengthPass = null;
+    this.visualStateSmoothingPass = null;
+    this.territoryRenderPass = null;
+    this.temporalResolvePass = null;
+    this.resources = null;
+    this.gameViewAdapter = null;
+    this.device = null;
+    this.canvas = null;
   }
 
   private computeTerrainImmediate(): void {

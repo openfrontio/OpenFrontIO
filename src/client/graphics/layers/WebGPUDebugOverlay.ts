@@ -3,7 +3,10 @@ import { customElement, property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { WebGPUComputeMetricsEvent } from "../../InputHandler";
+import {
+  RefreshGraphicsEvent,
+  WebGPUComputeMetricsEvent,
+} from "../../InputHandler";
 import {
   TERRAIN_SHADER_KEY,
   TERRAIN_SHADERS,
@@ -306,6 +309,8 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       return null;
     }
 
+    const backgroundRenderer = this.userSettings.backgroundRenderer();
+
     const shaderId = this.selectedShaderId();
     const shader =
       TERRITORY_SHADERS.find((s) => s.id === shaderId) ?? TERRITORY_SHADERS[0];
@@ -326,6 +331,31 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       <div class="overlay">
         <div class="title">
           <div>WebGPU Debug</div>
+        </div>
+
+        <div class="sectionTitle">Renderer</div>
+
+        <div class="row">
+          <div class="label">Background</div>
+          <select
+            .value=${live(backgroundRenderer)}
+            @change=${(e: Event) => {
+              const raw = (e.target as HTMLSelectElement).value;
+              const next =
+                raw === "canvas2d"
+                  ? ("canvas2d" as const)
+                  : ("webgpu" as const);
+              if (next === this.userSettings.backgroundRenderer()) {
+                return;
+              }
+              this.userSettings.setBackgroundRenderer(next);
+              this.eventBus.emit(new RefreshGraphicsEvent());
+              this.requestUpdate();
+            }}
+          >
+            <option value="webgpu">WebGPU (worker)</option>
+            <option value="canvas2d">Canvas2D (worker)</option>
+          </select>
         </div>
 
         <div class="metrics">

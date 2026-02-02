@@ -20,16 +20,12 @@ import {
   TickRendererMessage,
 } from "../../../core/worker/WorkerMessages";
 
-export interface TerritoryWebGLCreateResult {
-  renderer: TerritoryRendererProxy | null;
+export interface Canvas2DCreateResult {
+  renderer: Canvas2DRendererProxy | null;
   reason?: string;
 }
 
-/**
- * Proxy for TerritoryRenderer that forwards calls to worker thread.
- * Manages canvas transfer and message routing.
- */
-export class TerritoryRendererProxy {
+export class Canvas2DRendererProxy {
   public readonly canvas: HTMLCanvasElement;
   private offscreenCanvas: OffscreenCanvas | null = null;
   private worker: WorkerClient | null = null;
@@ -52,32 +48,26 @@ export class TerritoryRendererProxy {
     game: GameView,
     theme: Theme,
     worker: WorkerClient,
-  ): TerritoryWebGLCreateResult {
-    const nav = globalThis.navigator as any;
-    if (!nav?.gpu || typeof nav.gpu.requestAdapter !== "function") {
-      return {
-        renderer: null,
-        reason: "WebGPU not available; GPU renderer disabled.",
-      };
-    }
-
+  ): Canvas2DCreateResult {
     if (typeof OffscreenCanvas === "undefined") {
       return {
         renderer: null,
-        reason: "OffscreenCanvas not supported; GPU renderer disabled.",
+        reason:
+          "OffscreenCanvas not supported; Canvas2D worker renderer disabled.",
       };
     }
-
-    const state = game.tileStateView();
-    const expected = game.width() * game.height();
-    if (state.length !== expected) {
+    if (
+      typeof HTMLCanvasElement.prototype.transferControlToOffscreen !==
+      "function"
+    ) {
       return {
         renderer: null,
-        reason: "Tile state buffer size mismatch; GPU renderer disabled.",
+        reason:
+          "transferControlToOffscreen not supported; Canvas2D worker renderer disabled.",
       };
     }
 
-    const renderer = new TerritoryRendererProxy(game, theme);
+    const renderer = new Canvas2DRendererProxy(game, theme);
     renderer.worker = worker;
     renderer.startInit();
     return { renderer };
@@ -88,7 +78,7 @@ export class TerritoryRendererProxy {
     this.initPromise = this.init().catch((err) => {
       this.failed = true;
       this.pendingMessages = [];
-      console.error("Worker territory renderer init failed:", err);
+      console.error("Worker canvas2d renderer init failed:", err);
       throw err;
     });
   }
@@ -98,27 +88,22 @@ export class TerritoryRendererProxy {
       throw new Error("Worker not set");
     }
 
-    // Transfer canvas control to offscreen
     this.offscreenCanvas = this.canvas.transferControlToOffscreen();
 
-    // Send init message to worker
-    // Determine dark mode from theme (check if it has darkShore property, same as GroundTruthData)
     const themeAny = this.theme as any;
     const darkMode = themeAny.darkShore !== undefined;
 
-    const messageId = `init_renderer_${Date.now()}`;
+    const messageId = `init_renderer_canvas2d_${Date.now()}`;
     const initMessage: InitRendererMessage = {
       type: "init_renderer",
       id: messageId,
       offscreenCanvas: this.offscreenCanvas,
       darkMode: darkMode,
-      backend: "webgpu",
+      backend: "canvas2d",
     };
 
-    // Transfer the offscreen canvas
     this.worker.postMessage(initMessage, [this.offscreenCanvas]);
 
-    // Wait for renderer ready
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.worker?.removeMessageHandler(messageId);
@@ -137,7 +122,6 @@ export class TerritoryRendererProxy {
           }
 
           this.ready = true;
-          // Send any pending messages
           for (const pending of this.pendingMessages) {
             if (pending.transferables) {
               this.worker?.postMessage(pending.message, pending.transferables);
@@ -155,12 +139,8 @@ export class TerritoryRendererProxy {
   }
 
   private sendToWorker(message: any): void {
-    if (!this.worker) {
-      return;
-    }
-    if (this.failed) {
-      return;
-    }
+    if (!this.worker) return;
+    if (this.failed) return;
     if (!this.ready) {
       this.pendingMessages.push({ message });
       return;
@@ -169,12 +149,8 @@ export class TerritoryRendererProxy {
   }
 
   private sendToWorkerWithTransfer(message: any, transferables: any[]): void {
-    if (!this.worker) {
-      return;
-    }
-    if (this.failed) {
-      return;
-    }
+    if (!this.worker) return;
+    if (this.failed) return;
     if (!this.ready) {
       this.pendingMessages.push({ message, transferables });
       return;
@@ -225,100 +201,46 @@ export class TerritoryRendererProxy {
     this.sendToWorker(message);
   }
 
-  setTerritoryShader(shaderPath: string): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      territoryShader: shaderPath,
-    };
-    this.sendToWorker(message);
-  }
-
-  setTerrainShader(shaderPath: string): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      terrainShader: shaderPath,
-    };
-    this.sendToWorker(message);
-  }
-
+  // Shader controls are ignored by the Canvas2D backend but kept for API parity.
+  setTerritoryShader(_shaderPath: string): void {}
+  setTerrainShader(_shaderPath: string): void {}
   setTerritoryShaderParams(
-    params0: Float32Array | number[],
-    params1: Float32Array | number[],
-  ): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      territoryShaderParams0: Array.from(params0),
-      territoryShaderParams1: Array.from(params1),
-    };
-    this.sendToWorker(message);
-  }
-
+    _params0: Float32Array | number[],
+    _params1: Float32Array | number[],
+  ): void {}
   setTerrainShaderParams(
-    params0: Float32Array | number[],
-    params1: Float32Array | number[],
-  ): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      terrainShaderParams0: Array.from(params0),
-      terrainShaderParams1: Array.from(params1),
-    };
-    this.sendToWorker(message);
-  }
-
+    _params0: Float32Array | number[],
+    _params1: Float32Array | number[],
+  ): void {}
   setPreSmoothing(
-    enabled: boolean,
-    shaderPath: string,
-    params0: Float32Array | number[],
-  ): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      preSmoothing: {
-        enabled,
-        shaderPath,
-        params0: Array.from(params0),
-      },
-    };
-    this.sendToWorker(message);
-  }
-
+    _enabled: boolean,
+    _shaderPath: string,
+    _params0: Float32Array | number[],
+  ): void {}
   setPostSmoothing(
-    enabled: boolean,
-    shaderPath: string,
-    params0: Float32Array | number[],
-  ): void {
-    const message: SetShaderSettingsMessage = {
-      type: "set_shader_settings",
-      postSmoothing: {
-        enabled,
-        shaderPath,
-        params0: Array.from(params0),
-      },
-    };
-    this.sendToWorker(message);
-  }
+    _enabled: boolean,
+    _shaderPath: string,
+    _params0: Float32Array | number[],
+  ): void {}
+  setShaderSettings(_settings: SetShaderSettingsMessage): void {}
 
   markTile(tile: TileRef): void {
-    const message: MarkTileMessage = {
-      type: "mark_tile",
-      tile,
-    };
+    const message: MarkTileMessage = { type: "mark_tile", tile };
     this.sendToWorker(message);
   }
 
   markAllDirty(): void {
-    const message: MarkAllDirtyMessage = {
-      type: "mark_all_dirty",
-    };
+    const message: MarkAllDirtyMessage = { type: "mark_all_dirty" };
     this.sendToWorker(message);
   }
 
-  refreshPalette(): void {
-    if (!this.worker) {
-      return;
-    }
+  markDefensePostsDirty(): void {
+    this.markAllDirty();
+  }
 
-    // Build palette on the main thread to avoid order-dependent color allocator
-    // divergence between main and worker.
+  refreshPalette(): void {
+    if (!this.worker) return;
+
     let maxSmallId = 0;
     for (const player of this.game.playerViews()) {
       maxSmallId = Math.max(maxSmallId, player.smallID());
@@ -365,37 +287,24 @@ export class TerritoryRendererProxy {
       row0,
       row1,
     };
-
-    // Transfer buffers to avoid copies; arrays are rebuilt when needed.
     this.sendToWorkerWithTransfer(message, [row0.buffer, row1.buffer]);
 
-    // Back-compat: also mark palette dirty in worker for older code paths.
     const fallback: RefreshPaletteMessage = { type: "refresh_palette" };
     this.sendToWorker(fallback);
   }
 
-  markDefensePostsDirty(): void {
-    this.markAllDirty();
-  }
-
   refreshTerrain(): void {
-    const message: RefreshTerrainMessage = {
-      type: "refresh_terrain",
-    };
+    const message: RefreshTerrainMessage = { type: "refresh_terrain" };
     this.sendToWorker(message);
   }
 
   tick(): void {
-    const message: TickRendererMessage = {
-      type: "tick_renderer",
-    };
+    const message: TickRendererMessage = { type: "tick_renderer" };
     this.sendToWorker(message);
   }
 
   render(): void {
-    const message: RenderFrameMessage = {
-      type: "render_frame",
-    };
+    const message: RenderFrameMessage = { type: "render_frame" };
     this.sendToWorker(message);
   }
 }

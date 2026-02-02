@@ -75,6 +75,12 @@ export class GroundTruthData {
   private tickCount = 0;
   private readonly tickEmaAlpha = 0.2;
   private paletteWidth = 1;
+  private paletteOverride: {
+    paletteWidth: number;
+    maxSmallId: number;
+    row0: Uint8Array;
+    row1: Uint8Array;
+  } | null = null;
   private needsDefensePostsUpload = true;
   private defensePostsTotalCount = 0;
   private defendedDirtyTilesCount = 0;
@@ -715,12 +721,65 @@ export class GroundTruthData {
     this.needsPaletteUpload = false;
 
     let maxSmallId = 0;
-    for (const player of this.game.playerViews()) {
-      maxSmallId = Math.max(maxSmallId, player.smallID());
+    let nextPaletteWidth = 0;
+    let row0: Uint8Array | null = null;
+    let row1: Uint8Array | null = null;
+
+    if (this.paletteOverride) {
+      maxSmallId = this.paletteOverride.maxSmallId;
+      nextPaletteWidth = this.paletteOverride.paletteWidth;
+
+      const expectedRowStride = nextPaletteWidth * 4;
+      if (
+        this.paletteOverride.row0.length === expectedRowStride &&
+        this.paletteOverride.row1.length === expectedRowStride
+      ) {
+        row0 = this.paletteOverride.row0;
+        row1 = this.paletteOverride.row1;
+      } else {
+        // Malformed; fall back to local generation.
+        this.paletteOverride = null;
+      }
     }
+
+    if (!row0 || !row1) {
+      for (const player of this.game.playerViews()) {
+        maxSmallId = Math.max(maxSmallId, player.smallID());
+      }
+      nextPaletteWidth =
+        GroundTruthData.PALETTE_RESERVED_SLOTS + Math.max(1, maxSmallId + 1);
+
+      const rowStride = nextPaletteWidth * 4;
+      row0 = new Uint8Array(rowStride);
+      row1 = new Uint8Array(rowStride);
+
+      // Store special colors in reserved slots (0-9)
+      const falloutIdx = GroundTruthData.PALETTE_FALLOUT_INDEX * 4;
+      row0[falloutIdx] = 120;
+      row0[falloutIdx + 1] = 255;
+      row0[falloutIdx + 2] = 71;
+      row0[falloutIdx + 3] = 255;
+
+      // Store player colors starting at index 10
+      for (const player of this.game.playerViews()) {
+        const id = player.smallID();
+        if (id <= 0) continue;
+        const rgba = player.territoryColor().rgba;
+        const idx = (GroundTruthData.PALETTE_RESERVED_SLOTS + id) * 4;
+        row0[idx] = rgba.r;
+        row0[idx + 1] = rgba.g;
+        row0[idx + 2] = rgba.b;
+        row0[idx + 3] = 255;
+
+        const borderRgba = player.borderColor().rgba;
+        row1[idx] = borderRgba.r;
+        row1[idx + 1] = borderRgba.g;
+        row1[idx + 2] = borderRgba.b;
+        row1[idx + 3] = 255;
+      }
+    }
+
     this.paletteMaxSmallId = maxSmallId;
-    const nextPaletteWidth =
-      GroundTruthData.PALETTE_RESERVED_SLOTS + Math.max(1, maxSmallId + 1);
 
     let textureRecreated = false;
     if (nextPaletteWidth !== this.paletteWidth) {
@@ -738,32 +797,10 @@ export class GroundTruthData {
     }
 
     const rowStride = this.paletteWidth * 4;
-    const row0 = new Uint8Array(rowStride);
-    const row1 = new Uint8Array(rowStride);
-
-    // Store special colors in reserved slots (0-9)
-    const falloutIdx = GroundTruthData.PALETTE_FALLOUT_INDEX * 4;
-    row0[falloutIdx] = 120;
-    row0[falloutIdx + 1] = 255;
-    row0[falloutIdx + 2] = 71;
-    row0[falloutIdx + 3] = 255;
-
-    // Store player colors starting at index 10
-    for (const player of this.game.playerViews()) {
-      const id = player.smallID();
-      if (id <= 0) continue;
-      const rgba = player.territoryColor().rgba;
-      const idx = (GroundTruthData.PALETTE_RESERVED_SLOTS + id) * 4;
-      row0[idx] = rgba.r;
-      row0[idx + 1] = rgba.g;
-      row0[idx + 2] = rgba.b;
-      row0[idx + 3] = 255;
-
-      const borderRgba = player.borderColor().rgba;
-      row1[idx] = borderRgba.r;
-      row1[idx + 1] = borderRgba.g;
-      row1[idx + 2] = borderRgba.b;
-      row1[idx + 3] = 255;
+    if (row0.length !== rowStride || row1.length !== rowStride) {
+      throw new Error(
+        `Palette row size mismatch: expected ${rowStride} bytes, got ${row0.length}/${row1.length}`,
+      );
     }
 
     const bytesPerRow = align(rowStride, 256);
@@ -1250,8 +1287,27 @@ export class GroundTruthData {
     this.needsPaletteUpload = true;
   }
 
+  setPaletteOverride(
+    paletteWidth: number,
+    maxSmallId: number,
+    row0: Uint8Array,
+    row1: Uint8Array,
+  ): void {
+    this.paletteOverride = { paletteWidth, maxSmallId, row0, row1 };
+    this.needsPaletteUpload = true;
+  }
+
   markDefensePostsDirty(): void {
     this.needsDefensePostsUpload = true;
+  }
+
+  markStateDirty(): void {
+    this.needsStateUpload = true;
+  }
+
+  markDefendedFullRecompute(): void {
+    this.needsFullDefendedStrengthRecompute = true;
+    this.defendedDirtyTilesCount = 0;
   }
 
   getState(): Uint16Array {

@@ -86,6 +86,7 @@ export class GameRunner {
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
+  public tileUpdateSink?: (tile: TileRef) => void;
 
   constructor(
     public game: Game,
@@ -167,12 +168,23 @@ export class GameRunner {
     }
 
     // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
+    const tileUpdates = updates[GameUpdateType.Tile];
+    let packedTileUpdates: BigUint64Array;
+    if (this.tileUpdateSink) {
+      for (const u of tileUpdates) {
+        // packed tile updates encode [tileRef << 16 | state] as bigint.
+        const tileRef = Number(u.update >> 16n) as TileRef;
+        this.tileUpdateSink(tileRef);
+      }
+      packedTileUpdates = new BigUint64Array(0);
+    } else {
+      packedTileUpdates = new BigUint64Array(tileUpdates.map((u) => u.update));
+    }
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates,
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,

@@ -62,6 +62,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
   private kickedPlayerIDs = new Set<string>();
+  @state() private otherPlayer: PlayerView | null = null;
 
   @state() private sendTarget: PlayerView | null = null;
   @state() private sendMode: "troops" | "gold" | "none" = "none";
@@ -107,15 +108,29 @@ export class PlayerPanel extends LitElement implements Layer {
 
   async tick() {
     if (this.isVisible && this.tile) {
-      const owner = this.g.owner(this.tile);
-      if (owner && owner.isPlayer()) {
-        const pv = owner as PlayerView;
-        const id = pv.id();
+      const tile = this.tile;
+      try {
+        const ctx = await this.g.worker.tileContext(tile);
+        if (!ctx.ownerId) {
+          this.hide();
+          return;
+        }
+        const owner = this.g.player(ctx.ownerId);
+        if (!owner || !owner.isPlayer()) {
+          this.hide();
+          return;
+        }
+
+        this.otherPlayer = owner as PlayerView;
+
+        const id = this.otherPlayer.id();
         // fetch only if we don't have it or the player changed
         if (this._profileForPlayerId !== Number(id)) {
-          this.otherProfile = await pv.profile();
+          this.otherProfile = await this.otherPlayer.profile();
           this._profileForPlayerId = Number(id);
         }
+      } catch {
+        // If tile context fails (rare), keep the panel as-is.
       }
 
       // Refresh actions & alliance expiry
@@ -146,6 +161,9 @@ export class PlayerPanel extends LitElement implements Layer {
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
     this.tile = tile;
+    this.otherPlayer = null;
+    this.otherProfile = null;
+    this._profileForPlayerId = null;
     this.moderationTarget = null;
     this.isVisible = true;
     this.requestUpdate();
@@ -159,6 +177,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.suppressNextHide = true;
     this.actions = actions;
     this.tile = tile;
+    this.otherPlayer = target;
     this.sendTarget = target;
     this.sendMode = "gold";
     this.moderationTarget = null;
@@ -170,6 +189,11 @@ export class PlayerPanel extends LitElement implements Layer {
     this.isVisible = false;
     this.sendMode = "none";
     this.sendTarget = null;
+    this.tile = null;
+    this.actions = null;
+    this.otherPlayer = null;
+    this.otherProfile = null;
+    this._profileForPlayerId = null;
     this.moderationTarget = null;
     this.requestUpdate();
   }
@@ -859,13 +883,21 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!my) return html``;
     if (!this.tile) return html``;
 
-    const owner = this.g.owner(this.tile);
-    if (!owner || !owner.isPlayer()) {
-      this.hide();
-      console.warn("Tile is not owned by a player");
-      return html``;
+    const other = this.otherPlayer;
+    if (!other) {
+      return html`
+        <div
+          class="fixed inset-0 z-10001 flex items-center justify-center overflow-auto
+                 bg-black/15 backdrop-brightness-110 pointer-events-auto"
+        >
+          <div
+            class="bg-zinc-900/95 text-white rounded-[10px] p-3 ring-1 ring-white/5"
+          >
+            ${translateText("loading")}…
+          </div>
+        </div>
+      `;
     }
-    const other = owner as PlayerView;
     const myGoldNum = my.gold();
     const myTroopsNum = Number(my.troops());
 
