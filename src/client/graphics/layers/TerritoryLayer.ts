@@ -4,11 +4,8 @@ import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import {
-  AlternateViewEvent,
-  MouseOverEvent,
-  WebGPUComputeMetricsEvent,
-} from "../../InputHandler";
+import { AlternateViewEvent, MouseOverEvent } from "../../InputHandler";
+import { Canvas2DRendererProxy } from "../canvas2d/Canvas2DRendererProxy";
 import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import {
@@ -43,11 +40,15 @@ export class TerritoryLayer implements Layer {
 
   private theme: Theme;
 
-  private territoryRenderer: TerritoryRenderer | TerritoryRendererProxy | null =
-    null;
+  private territoryRenderer:
+    | TerritoryRenderer
+    | TerritoryRendererProxy
+    | Canvas2DRendererProxy
+    | null = null;
   private alternativeView = false;
 
   private lastPaletteSignature: string | null = null;
+  private lastPatternsEnabled: boolean | null = null;
   private lastDefensePostsSignature: string | null = null;
   private lastTerrainShaderSignature: string | null = null;
   private lastTerritoryShaderSignature: string | null = null;
@@ -57,6 +58,7 @@ export class TerritoryLayer implements Layer {
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
   private lastHoverUpdateMs = 0;
+  private hoverRequestSeq = 0;
 
   constructor(
     private game: GameView,
@@ -98,20 +100,9 @@ export class TerritoryLayer implements Layer {
     this.applyTerritoryShaderSettings();
     this.applyTerritorySmoothingSettings();
 
-    const updatedTiles = this.game.recentlyUpdatedTiles();
-    for (let i = 0; i < updatedTiles.length; i++) {
-      this.markTile(updatedTiles[i]);
-    }
-
-    // After collecting pending updates and handling palette/theme changes,
-    // invoke the renderer's tick() to process compute passes. This ensures
-    // compute shaders run at the simulation rate rather than every frame.
-    if (this.territoryRenderer) {
-      const start = performance.now();
-      this.territoryRenderer.tick();
-      const computeMs = performance.now() - start;
-      this.eventBus.emit(new WebGPUComputeMetricsEvent(computeMs));
-    }
+    // Renderer tick and dirty-tile marking are driven in the worker from
+    // simulation-derived tile updates (tileUpdateSink). The main thread only
+    // drives render frames + view transforms.
 
     FrameProfiler.end("TerritoryLayer:tick", tickProfile);
   }
@@ -121,17 +112,33 @@ export class TerritoryLayer implements Layer {
   }
 
   private configureRenderer() {
-    // Use proxy to render in worker thread
-    const { renderer, reason } = TerritoryRendererProxy.create(
-      this.game,
-      this.theme,
-      this.game.worker,
-    );
+    const backend = this.userSettings.backgroundRenderer();
+    const create = (b: "webgpu" | "canvas2d") =>
+      b === "canvas2d"
+        ? Canvas2DRendererProxy.create(this.game, this.theme, this.game.worker)
+        : TerritoryRendererProxy.create(
+            this.game,
+            this.theme,
+            this.game.worker,
+          );
+
+    let { renderer, reason } = create(backend);
+    if (!renderer && backend === "webgpu") {
+      // Graceful fallback: allow the game to run even without WebGPU.
+      console.warn(
+        `WebGPU renderer unavailable (${reason ?? "unknown"}); falling back to Canvas2D worker renderer.`,
+      );
+      ({ renderer, reason } = create("canvas2d"));
+    }
+
     if (!renderer) {
-      throw new Error(reason ?? "WebGPU is required for territory rendering.");
+      throw new Error(reason ?? "No supported background renderer available.");
     }
 
     this.territoryRenderer = renderer;
+    const patternsEnabled = this.userSettings.territoryPatterns();
+    this.lastPatternsEnabled = patternsEnabled;
+    this.territoryRenderer.setPatternsEnabled(patternsEnabled);
     this.territoryRenderer.setAlternativeView(this.alternativeView);
     this.territoryRenderer.setHighlightedOwnerId(this.hoveredOwnerSmallId);
     this.applyTerrainShaderSettings(true);
@@ -148,7 +155,7 @@ export class TerritoryLayer implements Layer {
     // Run an initial tick to upload state and build the colour texture. Without
     // this, the first render call may occur before the initial compute pass
     // has been executed, resulting in undefined colours.
-    this.territoryRenderer.tick();
+    // Note: compute passes are ticked in the worker at simulation cadence.
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -165,6 +172,9 @@ export class TerritoryLayer implements Layer {
     }
 
     // Apply user settings even while the game is paused (settings modal).
+    this.refreshPaletteIfNeeded();
+    this.refreshDefensePostsIfNeeded();
+    this.applyTerrainShaderSettings();
     this.applyTerritoryShaderSettings();
     this.applyTerritorySmoothingSettings();
 
@@ -288,40 +298,95 @@ export class TerritoryLayer implements Layer {
     }
     this.lastHoverUpdateMs = now;
 
-    let nextOwnerSmallId: number | null = null;
-    if (this.lastMousePosition) {
-      const cell = this.transformHandler.screenToWorldCoordinates(
-        this.lastMousePosition.x,
-        this.lastMousePosition.y,
-      );
-      if (this.game.isValidCoord(cell.x, cell.y)) {
-        const tile = this.game.ref(cell.x, cell.y);
-        const owner = this.game.owner(tile);
-        if (owner && owner.isPlayer()) {
-          nextOwnerSmallId = owner.smallID();
-        }
+    if (!this.lastMousePosition) {
+      if (this.hoveredOwnerSmallId !== null) {
+        this.hoveredOwnerSmallId = null;
+        this.territoryRenderer.setHighlightedOwnerId(null);
       }
-    }
-
-    if (nextOwnerSmallId === this.hoveredOwnerSmallId) {
       return;
     }
-    this.hoveredOwnerSmallId = nextOwnerSmallId;
-    this.territoryRenderer.setHighlightedOwnerId(nextOwnerSmallId);
+
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      if (this.hoveredOwnerSmallId !== null) {
+        this.hoveredOwnerSmallId = null;
+        this.territoryRenderer.setHighlightedOwnerId(null);
+      }
+      return;
+    }
+
+    const tile = this.game.ref(cell.x, cell.y);
+    const seq = ++this.hoverRequestSeq;
+    this.game.worker
+      .tileContext(tile)
+      .then((ctx) => {
+        if (seq !== this.hoverRequestSeq) {
+          return;
+        }
+        const nextOwnerSmallId = ctx.ownerSmallId;
+        if (nextOwnerSmallId === this.hoveredOwnerSmallId) {
+          return;
+        }
+        this.hoveredOwnerSmallId = nextOwnerSmallId;
+        this.territoryRenderer?.setHighlightedOwnerId(nextOwnerSmallId);
+      })
+      .catch((err) => {
+        // Don't spam; hover is best-effort.
+        console.warn("tileContext hover lookup failed:", err);
+      });
   }
 
   private computePaletteSignature(): string {
-    let maxSmallId = 0;
-    for (const player of this.game.playerViews()) {
-      maxSmallId = Math.max(maxSmallId, player.smallID());
-    }
     const patternsEnabled = this.userSettings.territoryPatterns();
-    return `${this.game.playerViews().length}:${maxSmallId}:${patternsEnabled ? 1 : 0}`;
+    const players = this.game.playerViews();
+
+    const fnvByte = (hash: number, byte: number): number =>
+      Math.imul(hash ^ (byte & 0xff), 16777619) >>> 0;
+
+    const fnv32 = (hash: number, value: number): number => {
+      hash = fnvByte(hash, value);
+      hash = fnvByte(hash, value >>> 8);
+      hash = fnvByte(hash, value >>> 16);
+      hash = fnvByte(hash, value >>> 24);
+      return hash;
+    };
+
+    let hash = patternsEnabled ? 2166136261 : 2166136262;
+    hash = fnv32(hash, players.length);
+
+    let maxSmallId = 0;
+    for (const player of players) {
+      const id = player.smallID();
+      maxSmallId = Math.max(maxSmallId, id);
+
+      hash = fnv32(hash, id);
+
+      const tc = player.territoryColor().rgba;
+      hash = fnvByte(hash, tc.r);
+      hash = fnvByte(hash, tc.g);
+      hash = fnvByte(hash, tc.b);
+
+      const bc = player.borderColor().rgba;
+      hash = fnvByte(hash, bc.r);
+      hash = fnvByte(hash, bc.g);
+      hash = fnvByte(hash, bc.b);
+    }
+    hash = fnv32(hash, maxSmallId);
+
+    return `${hash}`;
   }
 
   private refreshPaletteIfNeeded() {
     if (!this.territoryRenderer) {
       return;
+    }
+    const patternsEnabled = this.userSettings.territoryPatterns();
+    if (patternsEnabled !== this.lastPatternsEnabled) {
+      this.lastPatternsEnabled = patternsEnabled;
+      this.territoryRenderer.setPatternsEnabled(patternsEnabled);
     }
     const signature = this.computePaletteSignature();
     if (signature !== this.lastPaletteSignature) {

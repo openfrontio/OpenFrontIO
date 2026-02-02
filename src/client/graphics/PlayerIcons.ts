@@ -140,12 +140,9 @@ export function getPlayerIcons(
     return isSendingNuke && notMyPlayer && unit.isActive();
   });
 
-  const isMyPlayerTarget = nukesSentByOtherPlayer.some((unit) => {
-    const detonationDst = unit.targetTile();
-    if (!detonationDst || !myPlayer) return false;
-    const targetId = game.owner(detonationDst).id();
-    return targetId === myPlayer.id();
-  });
+  // Main thread does not maintain authoritative tile ownership; treat this icon
+  // as informational only (no "targeted at me" specialization here).
+  const isMyPlayerTarget = false;
 
   if (nukesSentByOtherPlayer.length > 0) {
     const icon = isMyPlayerTarget ? nukeRedIcon : nukeWhiteIcon;

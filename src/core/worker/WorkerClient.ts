@@ -9,7 +9,7 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
-import { WorkerMessage } from "./WorkerMessages";
+import { TileContext, WorkerMessage } from "./WorkerMessages";
 
 export class WorkerClient {
   private worker: Worker;
@@ -282,6 +282,29 @@ export class WorkerClient {
         id: messageId,
         playerID: playerID,
         targetTile: targetTile,
+      });
+    });
+  }
+
+  tileContext(tile: TileRef): Promise<TileContext> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "tile_context_result" && message.result) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "tile_context",
+        id: messageId,
+        tile,
       });
     });
   }

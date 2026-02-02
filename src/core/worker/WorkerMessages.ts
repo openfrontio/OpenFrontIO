@@ -14,6 +14,8 @@ export type WorkerMessageType =
   | "initialized"
   | "turn"
   | "game_update"
+  | "tile_context"
+  | "tile_context_result"
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
@@ -26,6 +28,8 @@ export type WorkerMessageType =
   | "transport_ship_spawn_result"
   | "init_renderer"
   | "renderer_ready"
+  | "set_patterns_enabled"
+  | "set_palette"
   | "set_view_size"
   | "set_view_transform"
   | "set_alternative_view"
@@ -69,6 +73,24 @@ export interface InitializedMessage extends BaseWorkerMessage {
 export interface GameUpdateMessage extends BaseWorkerMessage {
   type: "game_update";
   gameUpdate: GameUpdateViewData;
+}
+
+export interface TileContext {
+  hasOwner: boolean;
+  ownerSmallId: number | null;
+  ownerId: PlayerID | null;
+  hasFallout: boolean;
+  isDefended: boolean;
+}
+
+export interface TileContextMessage extends BaseWorkerMessage {
+  type: "tile_context";
+  tile: TileRef;
+}
+
+export interface TileContextResultMessage extends BaseWorkerMessage {
+  type: "tile_context_result";
+  result: TileContext;
 }
 
 export interface PlayerActionsMessage extends BaseWorkerMessage {
@@ -131,6 +153,20 @@ export interface InitRendererMessage extends BaseWorkerMessage {
   type: "init_renderer";
   offscreenCanvas: OffscreenCanvas;
   darkMode: boolean; // Whether to use dark theme
+  backend?: "webgpu" | "canvas2d";
+}
+
+export interface SetPatternsEnabledMessage extends BaseWorkerMessage {
+  type: "set_patterns_enabled";
+  enabled: boolean;
+}
+
+export interface SetPaletteMessage extends BaseWorkerMessage {
+  type: "set_palette";
+  paletteWidth: number;
+  maxSmallId: number;
+  row0: Uint8Array;
+  row1: Uint8Array;
 }
 
 export interface SetViewSizeMessage extends BaseWorkerMessage {
@@ -218,12 +254,15 @@ export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
+  | TileContextMessage
   | PlayerActionsMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
   | TransportShipSpawnMessage
   | InitRendererMessage
+  | SetPatternsEnabledMessage
+  | SetPaletteMessage
   | SetViewSizeMessage
   | SetViewTransformMessage
   | SetAlternativeViewMessage
@@ -240,6 +279,7 @@ export type MainThreadMessage =
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | TileContextResultMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage

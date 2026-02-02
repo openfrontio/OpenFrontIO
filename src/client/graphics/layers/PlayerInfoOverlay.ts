@@ -18,7 +18,6 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { getHoverInfo } from "../HoverInfo";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -66,6 +65,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private lastMouseUpdate = 0;
 
   private showDetails = true;
+  private hoverSeq = 0;
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -98,20 +98,69 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   public maybeShow(x: number, y: number) {
     this.hide();
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
-    const info = getHoverInfo(this.game, worldCoord);
+    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
+      return;
+    }
 
-    if (info.player) {
-      this.player = info.player;
-      this.player.profile().then((p) => {
-        this.playerProfile = p;
+    const tile = this.game.ref(worldCoord.x, worldCoord.y);
+
+    // Land hover info requires tile ownership/fallout, which is authoritative in
+    // the worker (main thread does not maintain a full tile mirror).
+    if (this.game.isLand(tile)) {
+      const seq = ++this.hoverSeq;
+      this.game.worker
+        .tileContext(tile)
+        .then((ctx) => {
+          if (!this._isActive || seq !== this.hoverSeq) {
+            return;
+          }
+
+          if (ctx.ownerId) {
+            try {
+              const owner = this.game.player(ctx.ownerId);
+              if (owner && owner.isPlayer()) {
+                this.player = owner;
+                this.player.profile().then((p) => {
+                  if (this._isActive && seq === this.hoverSeq) {
+                    this.playerProfile = p;
+                  }
+                });
+                this.setVisible(true);
+              }
+            } catch {
+              // ignore
+            }
+            return;
+          }
+
+          this.isIrradiatedWilderness = ctx.hasFallout;
+          this.isWilderness = !ctx.hasFallout;
+          this.setVisible(true);
+        })
+        .catch(() => {
+          // ignore hover failures
+        });
+      return;
+    }
+
+    // Water hover info can be derived from unit view data (already on main).
+    const units = this.game
+      .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+      .filter((u) => {
+        const dx = worldCoord.x - this.game.x(u.tile());
+        const dy = worldCoord.y - this.game.y(u.tile());
+        return Math.sqrt(dx * dx + dy * dy) < 50;
+      })
+      .sort((a, b) => {
+        const dxA = worldCoord.x - this.game.x(a.tile());
+        const dyA = worldCoord.y - this.game.y(a.tile());
+        const dxB = worldCoord.x - this.game.x(b.tile());
+        const dyB = worldCoord.y - this.game.y(b.tile());
+        return dxA * dxA + dyA * dyA - (dxB * dxB + dyB * dyB);
       });
-      this.setVisible(true);
-    } else if (info.isWilderness || info.isIrradiatedWilderness) {
-      this.isWilderness = info.isWilderness;
-      this.isIrradiatedWilderness = info.isIrradiatedWilderness;
-      this.setVisible(true);
-    } else if (info.unit) {
-      this.unit = info.unit;
+
+    if (units.length > 0) {
+      this.unit = units[0];
       this.setVisible(true);
     }
   }

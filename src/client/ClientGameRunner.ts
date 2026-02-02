@@ -538,11 +538,19 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&
-      !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase() &&
       !this.gameView.config().isRandomSpawn()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(tile));
+      // Main thread no longer maintains authoritative tile ownership. Query the
+      // worker for spawn validation.
+      this.worker
+        .tileContext(tile)
+        .then((ctx) => {
+          if (!ctx.hasOwner) {
+            this.eventBus.emit(new SendSpawnIntentEvent(tile));
+          }
+        })
+        .catch((err) => console.warn("tileContext spawn lookup failed:", err));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -556,12 +564,22 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        this.worker
+          .tileContext(tile)
+          .then((ctx) => {
+            if (!this.myPlayer) {
+              return;
+            }
+            this.eventBus.emit(
+              new SendAttackIntentEvent(
+                ctx.ownerId ?? null,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+              ),
+            );
+          })
+          .catch((err) =>
+            console.warn("tileContext attack lookup failed:", err),
+          );
       } else if (this.canAutoBoat(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
@@ -672,12 +690,22 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        this.worker
+          .tileContext(tile)
+          .then((ctx) => {
+            if (!this.myPlayer) {
+              return;
+            }
+            this.eventBus.emit(
+              new SendAttackIntentEvent(
+                ctx.ownerId ?? null,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+              ),
+            );
+          })
+          .catch((err) =>
+            console.warn("tileContext attack lookup failed:", err),
+          );
       }
     });
   }

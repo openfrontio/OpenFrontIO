@@ -456,10 +456,9 @@ export const deleteUnitElement: MenuElement = {
   name: "delete",
   cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
   disabled: (params: MenuElementParams) => {
-    const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
 
-    if (!tileOwner.isPlayer() || tileOwner.id() !== params.myPlayer.id()) {
+    if (!params.selected || params.selected.id() !== params.myPlayer.id()) {
       return true;
     }
 
@@ -556,7 +555,6 @@ export const boatMenuElement: MenuElement = {
 
 export const centerButtonElement: CenterButtonElement = {
   disabled: (params: MenuElementParams): boolean => {
-    const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
     if (!isLand) {
       return true;
@@ -565,7 +563,7 @@ export const centerButtonElement: CenterButtonElement = {
       if (params.game.config().isRandomSpawn()) {
         return true;
       }
-      if (tileOwner.isPlayer()) {
+      if (params.selected) {
         return true;
       }
       return false;
@@ -614,10 +612,8 @@ export const rootMenuElement: MenuElement = {
       ally = allyBreakElement;
     }
 
-    const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
-      tileOwner.isPlayer() &&
-      (tileOwner as PlayerView).id() === params.myPlayer.id();
+      params.selected !== null && params.selected.id() === params.myPlayer.id();
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
