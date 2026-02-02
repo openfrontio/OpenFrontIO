@@ -150,7 +150,6 @@ export class GameServer {
   }
 
   public joinClient(client: Client) {
-    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
@@ -158,10 +157,16 @@ export class GameServer {
       return;
     }
 
-    if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
-        clientID: client.clientID,
-      });
+    const existingClient = this.allClients.get(client.clientID);
+    if (existingClient) {
+      if (existingClient.persistentID !== client.persistentID) {
+        client.ws.close(1002, "Client ID already in use");
+        return;
+      }
+      this.replaceClientSocket(existingClient, client.ws);
+      if (this._hasStarted) {
+        this.sendStartGameMsg(client.ws, 0);
+      }
       return;
     }
 
@@ -230,6 +235,7 @@ export class GameServer {
     }
 
     // Client connection accepted
+    this.websockets.add(client.ws);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
@@ -248,8 +254,6 @@ export class GameServer {
     persistentID: string,
     msg: ClientRejoinMessage,
   ): void {
-    this.websockets.add(ws);
-
     if (this.kickedClients.has(msg.clientID)) {
       this.log.warn("cannot rejoin client, client has been kicked", {
         clientID: msg.clientID,
@@ -275,20 +279,35 @@ export class GameServer {
       return;
     }
 
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== msg.clientID,
-    );
-    this.activeClients.push(client);
-    client.lastPing = Date.now();
-    this.markClientDisconnected(msg.clientID, false);
-
-    client.ws = ws;
-    this.addListeners(client);
-    this.startLobbyInfoBroadcast();
+    this.replaceClientSocket(client, ws);
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
     }
+  }
+
+  private replaceClientSocket(client: Client, ws: WebSocket) {
+    const previousWs = client.ws;
+    if (previousWs && previousWs !== ws) {
+      previousWs.removeAllListeners();
+      if (
+        previousWs.readyState === WebSocket.OPEN ||
+        previousWs.readyState === WebSocket.CONNECTING
+      ) {
+        previousWs.close(1000, "Replaced by new connection");
+      }
+    }
+
+    client.ws = ws;
+    client.lastPing = Date.now();
+    this.websockets.add(ws);
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== client.clientID,
+    );
+    this.activeClients.push(client);
+    this.markClientDisconnected(client.clientID, false);
+    this.addListeners(client);
+    this.startLobbyInfoBroadcast();
   }
 
   private addListeners(client: Client) {
