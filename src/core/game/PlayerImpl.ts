@@ -174,6 +174,7 @@ export class PlayerImpl implements Player {
               a.expiresAt() <=
               this.mg.ticks() +
                 this.mg.config().allianceExtensionPromptOffset(),
+            otherWantsToExtend: a.hasOtherRequestedExtension(this),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),

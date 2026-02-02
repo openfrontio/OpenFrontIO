@@ -612,6 +612,7 @@ export class GameView implements GameMap {
     this._cosmetics = new Map(
       this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
+
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {

@@ -7,6 +7,7 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AllianceRequestPanel } from "./layers/AllianceRequestPanel";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -122,6 +123,15 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const allianceRequestPanel = document.querySelector(
+    "alliance-request-panel",
+  ) as AllianceRequestPanel;
+  if (!(allianceRequestPanel instanceof AllianceRequestPanel)) {
+    console.error("alliance request panel not found");
+  }
+  allianceRequestPanel.eventBus = eventBus;
+  allianceRequestPanel.game = game;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -276,6 +286,7 @@ export function createRenderer(
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
+    allianceRequestPanel,
     chatDisplay,
     buildMenu,
     new MainRadialMenu(

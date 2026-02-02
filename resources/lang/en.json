@@ -758,6 +758,8 @@
     "alliance_renewed": "Your alliance with {name} has been renewed",
     "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "ignore": "Ignore",
+    "seconds_remaining": "{seconds}s remaining",
+    "wants_to_renew": "✓ Wants to renew!",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
