@@ -977,7 +977,6 @@ class Client {
         this.joinAbortController = null;
       }
     }
-    return config;
   }
 }
 
