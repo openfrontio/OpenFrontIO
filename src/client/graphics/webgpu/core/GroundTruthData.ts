@@ -113,6 +113,10 @@ export class GroundTruthData {
   private paletteMaxSmallId = 0;
   private ownerIndexWidth = 1;
   private relationsSize = 1;
+  private needsRelationsUpload = true;
+  private relationsDenseBySmallId: Uint32Array | null = null;
+  private pendingRelationsPairs: Set<bigint> = new Set();
+  private readonly relationWriteScratch = new Uint8Array(256);
 
   private constructor(
     private readonly device: GPUDevice,
@@ -720,6 +724,8 @@ export class GroundTruthData {
     }
     this.needsPaletteUpload = false;
 
+    const prevMaxSmallId = this.paletteMaxSmallId;
+
     let maxSmallId = 0;
     let nextPaletteWidth = 0;
     let row0: Uint8Array | null = null;
@@ -780,6 +786,10 @@ export class GroundTruthData {
     }
 
     this.paletteMaxSmallId = maxSmallId;
+    if (this.paletteMaxSmallId !== prevMaxSmallId) {
+      // Relations/owner-index textures depend on maxSmallId.
+      this.needsRelationsUpload = true;
+    }
 
     let textureRecreated = false;
     if (nextPaletteWidth !== this.paletteWidth) {
@@ -819,6 +829,16 @@ export class GroundTruthData {
   }
 
   uploadRelations(): boolean {
+    if (!this.needsRelationsUpload && this.pendingRelationsPairs.size > 0) {
+      return this.uploadRelationsPartial();
+    }
+    if (!this.needsRelationsUpload) {
+      return false;
+    }
+
+    this.needsRelationsUpload = false;
+    this.pendingRelationsPairs.clear();
+
     const players = this.game
       .playerViews()
       .filter((p) => p.smallID() > 0)
@@ -852,6 +872,7 @@ export class GroundTruthData {
       dense++;
       denseBySmallId[id] = dense;
     }
+    this.relationsDenseBySmallId = denseBySmallId;
 
     const ownerIndexBytesPerRow = align(this.ownerIndexWidth * 4, 256);
     const ownerIndexPaddedU32 = new Uint32Array(ownerIndexBytesPerRow / 4);
@@ -914,6 +935,69 @@ export class GroundTruthData {
     );
 
     return textureRecreated;
+  }
+
+  private uploadRelationsPartial(): boolean {
+    if (!this.relationsDenseBySmallId || !this.relationsTexture) {
+      // No stable mapping/texture yet: fall back to a full rebuild.
+      this.needsRelationsUpload = true;
+      this.pendingRelationsPairs.clear();
+      return false;
+    }
+
+    const denseBySmallId = this.relationsDenseBySmallId;
+    const size = this.relationsSize;
+    const scratch = this.relationWriteScratch;
+    const bytesPerRow = 256;
+
+    const writeTexel = (x: number, y: number, value: number) => {
+      if (x <= 0 || y <= 0 || x >= size || y >= size) {
+        return;
+      }
+      scratch.fill(0);
+      scratch[0] = value & 0xff;
+      this.device.queue.writeTexture(
+        { texture: this.relationsTexture, origin: { x, y } },
+        scratch,
+        { bytesPerRow, rowsPerImage: 1 },
+        { width: 1, height: 1, depthOrArrayLayers: 1 },
+      );
+    };
+
+    const computeCode = (aSmall: number, bSmall: number): number => {
+      if (aSmall === bSmall) return 0;
+      const aAny: any = (this.game as any).playerBySmallID?.(aSmall);
+      const bAny: any = (this.game as any).playerBySmallID?.(bSmall);
+      if (!aAny || !bAny || !aAny.isPlayer?.() || !bAny.isPlayer?.()) {
+        return 0;
+      }
+      if (aAny.hasEmbargo?.(bAny)) {
+        return 2;
+      }
+      if (aAny.isFriendly?.(bAny) || bAny.isFriendly?.(aAny)) {
+        return 1;
+      }
+      return 0;
+    };
+
+    for (const key of this.pendingRelationsPairs) {
+      const aSmall = Number(key >> 32n);
+      const bSmall = Number(key & 0xffffffffn);
+      const aDense = denseBySmallId[aSmall] ?? 0;
+      const bDense = denseBySmallId[bSmall] ?? 0;
+      if (aDense === 0 || bDense === 0) {
+        continue;
+      }
+
+      const code = computeCode(aSmall, bSmall);
+      writeTexel(aDense, bDense, code);
+      if (aDense !== bDense) {
+        writeTexel(bDense, aDense, code);
+      }
+    }
+
+    this.pendingRelationsPairs.clear();
+    return false;
   }
 
   uploadDefensePosts(): void {
@@ -1285,6 +1369,26 @@ export class GroundTruthData {
 
   markPaletteDirty(): void {
     this.needsPaletteUpload = true;
+  }
+
+  markRelationsDirty(): void {
+    this.needsRelationsUpload = true;
+    this.pendingRelationsPairs.clear();
+  }
+
+  markRelationsPairDirty(aSmallId: number, bSmallId: number): void {
+    if (aSmallId <= 0 || bSmallId <= 0) {
+      return;
+    }
+    if (!this.relationsDenseBySmallId) {
+      // No mapping yet: ensure a full rebuild occurs.
+      this.needsRelationsUpload = true;
+      return;
+    }
+    const a = Math.min(aSmallId, bSmallId);
+    const b = Math.max(aSmallId, bSmallId);
+    const key = (BigInt(a) << 32n) | BigInt(b);
+    this.pendingRelationsPairs.add(key);
   }
 
   setPaletteOverride(
