@@ -13,6 +13,7 @@ import { Layer } from "./Layer";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
 import factoryIcon from "/images/FactoryIconWhite.svg?url";
+import goldCoinIcon from "/images/GoldCoinIcon.svg?url";
 import mirvIcon from "/images/MIRVIcon.svg?url";
 import missileSiloIcon from "/images/MissileSiloIconWhite.svg?url";
 import hydrogenBombIcon from "/images/MushroomCloudIconWhite.svg?url";
@@ -256,11 +257,11 @@ export class UnitDisplay extends LitElement implements Layer {
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
                 </div>
-                <div>
+                <div class="flex items-center justify-center gap-1">
+                  <img src=${goldCoinIcon} width="13" height="13" />
                   <span class="text-yellow-300"
                     >${renderNumber(this.cost(unitType))}</span
                   >
-                  ${translateText("player_info_overlay.gold")}
                 </div>
               </div>
             `
