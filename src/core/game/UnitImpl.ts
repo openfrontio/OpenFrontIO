@@ -346,6 +346,9 @@ export class UnitImpl implements Unit {
   setUnderConstruction(underConstruction: boolean): void {
     if (this._underConstruction !== underConstruction) {
       this._underConstruction = underConstruction;
+      if (this._type === UnitType.DefensePost) {
+        this.mg.refreshDefensePostDefendedState(this);
+      }
       this.mg.addUpdate(this.toUpdate());
     }
   }

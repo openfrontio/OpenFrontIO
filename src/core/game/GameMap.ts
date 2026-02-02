@@ -27,6 +27,10 @@ export interface GameMap {
   setOwnerID(ref: TileRef, playerId: number): void;
   hasFallout(ref: TileRef): boolean;
   setFallout(ref: TileRef, value: boolean): void;
+  isDefended(ref: TileRef): boolean;
+  setDefended(ref: TileRef, value: boolean): void;
+  tileStateView(): Uint16Array;
+  terrainView(): Uint8Array;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
@@ -76,6 +80,7 @@ export class GameMapImpl implements GameMap {
 
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
+  private static readonly DEFENDED_BIT = 12;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
   // Bit 15 still reserved
@@ -209,6 +214,26 @@ export class GameMapImpl implements GameMap {
         this.state[ref] &= ~(1 << GameMapImpl.FALLOUT_BIT);
       }
     }
+  }
+
+  isDefended(ref: TileRef): boolean {
+    return Boolean(this.state[ref] & (1 << GameMapImpl.DEFENDED_BIT));
+  }
+
+  setDefended(ref: TileRef, value: boolean): void {
+    if (value) {
+      this.state[ref] |= 1 << GameMapImpl.DEFENDED_BIT;
+    } else {
+      this.state[ref] &= ~(1 << GameMapImpl.DEFENDED_BIT);
+    }
+  }
+
+  tileStateView(): Uint16Array {
+    return this.state;
+  }
+
+  terrainView(): Uint8Array {
+    return this.terrain;
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {

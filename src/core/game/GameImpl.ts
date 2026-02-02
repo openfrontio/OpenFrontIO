@@ -593,6 +593,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
+    this.updateDefendedStateForTileChange(tile, owner);
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -614,6 +615,9 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
+    if (this._map.isDefended(tile)) {
+      this._map.setDefended(tile, false);
+    }
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -823,15 +827,29 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
   }
   updateUnitTile(u: Unit) {
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
     this.unitGrid.updateUnitCell(u);
+  }
+  refreshDefensePostDefendedState(u: Unit) {
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
   }
 
   hasUnitNearby(
@@ -941,6 +959,12 @@ export class GameImpl implements Game {
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
   }
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+  setDefended(ref: TileRef, value: boolean): void {
+    this._map.setDefended(ref, value);
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }
@@ -998,6 +1022,12 @@ export class GameImpl implements Game {
   }
   updateTile(tu: TileUpdate): TileRef {
     return this._map.updateTile(tu);
+  }
+  tileStateView(): Uint16Array {
+    return this._map.tileStateView();
+  }
+  terrainView(): Uint8Array {
+    return this._map.terrainView();
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
@@ -1117,6 +1147,63 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  /**
+   * Update defended state for border tiles within range of a defense post.
+   */
+  private updateDefendedStateForDefensePost(
+    center: TileRef,
+    owner: PlayerImpl,
+  ) {
+    const range = this.config().defensePostRange();
+    const rangeSq = range * range;
+
+    for (const tile of owner._borderTiles) {
+      if (this._map.euclideanDistSquared(center, tile) <= rangeSq) {
+        const wasDefended = this._map.isDefended(tile);
+        const isDefended = this.unitGrid.hasUnitNearby(
+          tile,
+          range,
+          UnitType.DefensePost,
+          owner.id(),
+        );
+        if (wasDefended !== isDefended) {
+          this._map.setDefended(tile, isDefended);
+          this.addUpdate({
+            type: GameUpdateType.Tile,
+            update: this.toTileUpdate(tile),
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Update defended state when a tile changes ownership.
+   */
+  private updateDefendedStateForTileChange(tile: TileRef, owner: PlayerImpl) {
+    const wasDefended = this._map.isDefended(tile);
+    const isDefended = this.unitGrid.hasUnitNearby(
+      tile,
+      this.config().defensePostRange(),
+      UnitType.DefensePost,
+      owner.id(),
+    );
+    if (wasDefended !== isDefended) {
+      this._map.setDefended(tile, isDefended);
+      this.addUpdate({
+        type: GameUpdateType.Tile,
+        update: this.toTileUpdate(tile),
+      });
+    }
+
+    // If the conquered tile has a defense post, update nearby border tiles
+    if (
+      this.unitGrid.hasUnitNearby(tile, 0, UnitType.DefensePost, owner.id())
+    ) {
+      this.updateDefendedStateForDefensePost(tile, owner);
+    }
   }
 }
 

@@ -587,6 +587,11 @@ export class GameView implements GameMap {
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
+  private updatedOwnerChanges: Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> = [];
 
   private _myPlayer: PlayerView | null = null;
 
@@ -635,8 +640,19 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
+    this.updatedOwnerChanges = [];
     this.lastUpdate.packedTileUpdates.forEach((tu) => {
+      const tileRef = Number(tu >> 16n);
+      const previousOwner = this._map.ownerID(tileRef);
       this.updatedTiles.push(this.updateTile(tu));
+      const newOwner = this._map.ownerID(tileRef);
+      if (previousOwner !== newOwner) {
+        this.updatedOwnerChanges.push({
+          tile: tileRef,
+          previousOwner,
+          newOwner,
+        });
+      }
     });
 
     if (gu.updates === null) {
@@ -693,6 +709,14 @@ export class GameView implements GameMap {
 
   recentlyUpdatedTiles(): TileRef[] {
     return this.updatedTiles;
+  }
+
+  recentlyUpdatedOwnerTiles(): Array<{
+    tile: TileRef;
+    previousOwner: number;
+    newOwner: number;
+  }> {
+    return this.updatedOwnerChanges;
   }
 
   nearbyUnits(
@@ -879,6 +903,18 @@ export class GameView implements GameMap {
   }
   setFallout(ref: TileRef, value: boolean): void {
     return this._map.setFallout(ref, value);
+  }
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+  setDefended(ref: TileRef, value: boolean): void {
+    return this._map.setDefended(ref, value);
+  }
+  tileStateView(): Uint16Array {
+    return this._map.tileStateView();
+  }
+  terrainView(): Uint8Array {
+    return this._map.terrainView();
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
