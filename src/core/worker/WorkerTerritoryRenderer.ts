@@ -441,6 +441,14 @@ export class WorkerTerritoryRenderer {
     this.resources.markPaletteDirty();
   }
 
+  markRelationsDirty(): void {
+    this.resources?.markRelationsDirty();
+  }
+
+  markRelationsPairDirty(aSmallId: number, bSmallId: number): void {
+    this.resources?.markRelationsPairDirty(aSmallId, bSmallId);
+  }
+
   setPaletteFromBytes(
     paletteWidth: number,
     maxSmallId: number,

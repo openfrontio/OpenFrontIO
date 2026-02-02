@@ -4,7 +4,15 @@ import { PastelTheme } from "../configuration/PastelTheme";
 import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { PlayerID } from "../game/Game";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import {
+  AllianceExpiredUpdate,
+  AllianceRequestReplyUpdate,
+  BrokeAllianceUpdate,
+  EmbargoUpdate,
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "../game/GameUpdates";
 import { loadTerrainMap, TerrainMapData } from "../game/TerrainMapLoader";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { ClientID, GameStartInfo, PlayerCosmetics } from "../Schemas";
@@ -41,22 +49,75 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
     return;
   }
 
+  // Keep renderer-side adapter in sync (palette/relations/etc).
+  (renderer as any)?.updateGameView?.(gu);
+
+  // Uploading relations is expensive; only refresh when diplomacy changes,
+  // and only for the affected player pairs.
+  const updates = gu.updates;
+  let relationsChanged = false;
+  if (renderer) {
+    const markPair = (aSmallId: number, bSmallId: number) => {
+      const r: any = renderer as any;
+      if (r?.markRelationsPairDirty) {
+        r.markRelationsPairDirty(aSmallId, bSmallId);
+        relationsChanged = true;
+      } else if (r?.markRelationsDirty) {
+        // Fallback for older/other renderers.
+        r.markRelationsDirty();
+        relationsChanged = true;
+      }
+    };
+
+    for (const e of updates[GameUpdateType.EmbargoEvent] as EmbargoUpdate[]) {
+      markPair(e.playerID, e.embargoedID);
+    }
+    for (const e of updates[
+      GameUpdateType.AllianceRequestReply
+    ] as AllianceRequestReplyUpdate[]) {
+      if (e.accepted) {
+        markPair(e.request.requestorID, e.request.recipientID);
+      }
+    }
+    for (const e of updates[
+      GameUpdateType.BrokeAlliance
+    ] as BrokeAllianceUpdate[]) {
+      markPair(e.traitorID, e.betrayedID);
+    }
+    for (const e of updates[
+      GameUpdateType.AllianceExpired
+    ] as AllianceExpiredUpdate[]) {
+      markPair(e.player1ID, e.player2ID);
+    }
+  }
+
   // Flush simulation-derived dirty tiles into the renderer before running
   // compute passes for this tick.
   if (renderer && dirtyTiles) {
+    let didWork = false;
+    if (relationsChanged) {
+      didWork = true;
+    }
     if (dirtyTilesOverflow) {
       dirtyTilesOverflow = false;
       dirtyTiles.clear();
       renderer.markAllDirty();
+      didWork = true;
     } else {
-      const tiles = dirtyTiles.drain(dirtyTiles.pendingCount());
-      for (const tile of tiles) {
-        renderer.markTile(tile);
+      const pending = dirtyTiles.pendingCount();
+      if (pending > 0) {
+        const tiles = dirtyTiles.drain(pending);
+        for (const tile of tiles) {
+          renderer.markTile(tile);
+        }
+        didWork = true;
       }
     }
 
     // Run compute passes at simulation tick cadence (not at render FPS).
-    renderer.tick();
+    if (didWork) {
+      renderer.tick();
+    }
   }
 
   sendMessage({
