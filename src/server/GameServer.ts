@@ -17,6 +17,7 @@ import {
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -77,6 +78,8 @@ export class GameServer {
   private _hasEnded = false;
 
   public desyncCount = 0;
+
+  private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     public readonly id: string,
@@ -232,6 +235,7 @@ export class GameServer {
     this.markClientDisconnected(client.clientID, false);
     this.allClients.set(client.clientID, client);
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
@@ -280,6 +284,7 @@ export class GameServer {
 
     client.ws = ws;
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
@@ -542,6 +547,47 @@ export class GameServer {
     });
   }
 
+  private startLobbyInfoBroadcast() {
+    if (this._hasStarted || this._hasEnded) {
+      return;
+    }
+    if (this.lobbyInfoIntervalId !== null) {
+      return;
+    }
+    this.broadcastLobbyInfo();
+    this.lobbyInfoIntervalId = setInterval(() => {
+      if (
+        this._hasStarted ||
+        this._hasEnded ||
+        this.activeClients.length === 0
+      ) {
+        this.stopLobbyInfoBroadcast();
+        return;
+      }
+      this.broadcastLobbyInfo();
+    }, 1000);
+  }
+
+  private stopLobbyInfoBroadcast() {
+    if (this.lobbyInfoIntervalId === null) {
+      return;
+    }
+    clearInterval(this.lobbyInfoIntervalId);
+    this.lobbyInfoIntervalId = null;
+  }
+
+  private broadcastLobbyInfo() {
+    const msg = JSON.stringify({
+      type: "lobby_info",
+      lobby: this.gameInfo(),
+    } satisfies ServerLobbyInfoMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
+    });
+  }
+
   public start() {
     if (this._hasStarted || this._hasEnded) {
       return;
@@ -772,7 +818,10 @@ export class GameServer {
       })),
       gameConfig: this.gameConfig,
       msUntilStart: this.isPublic()
-        ? this.createdAt + this.config.gameCreationRate()
+        ? Math.max(
+            0,
+            this.createdAt + this.config.gameCreationRate() - Date.now(),
+          )
         : undefined,
     };
   }

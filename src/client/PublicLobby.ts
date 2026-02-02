@@ -11,21 +11,19 @@ import {
   Trios,
 } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { PublicLobbySocket } from "./LobbySocket";
-import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+
+export interface ShowPublicLobbyModalEvent {
+  lobby: GameInfo;
+}
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
-  @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
   @state() private mapImages: Map<GameID, string> = new Map();
-  @state() private joiningDotIndex: number = 0;
 
-  private joiningInterval: number | null = null;
-  private currLobby: GameInfo | null = null;
   private debounceDelay: number = 150;
   private lobbyIDToStart = new Map<GameID, number>();
   private lobbySocket = new PublicLobbySocket((lobbies) =>
@@ -44,7 +42,6 @@ export class PublicLobby extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.lobbySocket.stop();
-    this.stopJoiningAnimation();
   }
 
   private handleLobbiesUpdate(lobbies: GameInfo[]) {
@@ -124,10 +121,8 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] ${this
-          .isLobbyHighlighted
-          ? "ring-2 ring-blue-600 scale-[1.01] opacity-70"
-          : "hover:scale-[1.01]"} active:scale-[0.98] ${this.isButtonDebounced
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] hover:scale-[1.01] active:scale-[0.98] ${this
+          .isButtonDebounced
           ? "cursor-not-allowed"
           : ""}"
       >
@@ -200,19 +195,10 @@ export class PublicLobby extends LitElement {
               <!-- Header row: Status/Join on left, Player Count on right -->
               <div class="flex items-center justify-between w-full">
                 <div class="text-base uppercase tracking-widest text-white">
-                  ${this.currLobby
-                    ? isStarting
-                      ? html`<span class="text-green-400 animate-pulse"
-                          >${translateText("public_lobby.starting_game")}</span
-                        >`
-                      : html`<span class="text-orange-400"
-                          >${translateText("public_lobby.waiting_for_players")}
-                          ${[0, 1, 2]
-                            .map((i) =>
-                              i === this.joiningDotIndex ? "•" : "·",
-                            )
-                            .join("")}</span
-                        >`
+                  ${isStarting
+                    ? html`<span class="text-green-400 animate-pulse"
+                        >${translateText("public_lobby.starting_game")}</span
+                      >`
                     : html`${translateText("public_lobby.join")}`}
                 </div>
 
@@ -249,34 +235,8 @@ export class PublicLobby extends LitElement {
     `;
   }
 
-  leaveLobby() {
-    this.isLobbyHighlighted = false;
-    this.currLobby = null;
-    this.stopJoiningAnimation();
-  }
-
   public stop() {
     this.lobbySocket.stop();
-    this.isLobbyHighlighted = false;
-    this.currLobby = null;
-    this.stopJoiningAnimation();
-  }
-
-  private startJoiningAnimation() {
-    if (this.joiningInterval !== null) return;
-
-    this.joiningDotIndex = 0;
-    this.joiningInterval = window.setInterval(() => {
-      this.joiningDotIndex = (this.joiningDotIndex + 1) % 3;
-    }, 500);
-  }
-
-  private stopJoiningAnimation() {
-    if (this.joiningInterval !== null) {
-      clearInterval(this.joiningInterval);
-      this.joiningInterval = null;
-    }
-    this.joiningDotIndex = 0;
   }
 
   private getTeamSize(
@@ -391,48 +351,34 @@ export class PublicLobby extends LitElement {
       this.isButtonDebounced = false;
     }, this.debounceDelay);
 
-    if (this.currLobby === null) {
-      // Validate username only when joining a new lobby
-      const usernameInput = document.querySelector("username-input") as any;
-      if (
-        usernameInput &&
-        typeof usernameInput.isValid === "function" &&
-        !usernameInput.isValid()
-      ) {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: usernameInput.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-        return;
-      }
-
-      this.isLobbyHighlighted = true;
-      this.currLobby = lobby;
-      this.startJoiningAnimation();
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
+    // Validate username before opening the modal
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
           detail: {
-            gameID: lobby.gameID,
-            clientID: generateID(),
-          } as JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
         }),
       );
-    } else {
-      this.dispatchEvent(
-        new CustomEvent("leave-lobby", {
-          detail: { lobby: this.currLobby },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this.leaveLobby();
+      return;
     }
+
+    // Dispatch event to show the join lobby modal with this lobby's info
+    this.dispatchEvent(
+      new CustomEvent("show-public-lobby-modal", {
+        detail: {
+          lobby: lobby,
+        } as ShowPublicLobbyModalEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
