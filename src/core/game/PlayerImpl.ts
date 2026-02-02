@@ -423,6 +423,14 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return true;
+    }
+
     const recent = this.pastOutgoingAllianceRequests
       .filter((ar) => ar.recipient() === other)
       .sort((a, b) => b.createdAt() - a.createdAt());
