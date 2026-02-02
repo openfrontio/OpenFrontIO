@@ -38,7 +38,6 @@ import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
 import "./SinglePlayerModal";
-import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
