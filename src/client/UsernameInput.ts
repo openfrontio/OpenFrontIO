@@ -78,7 +78,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleClanTagChange}
           placeholder="${translateText("username.tag")}"
           maxlength="5"
-          class="w-[6rem] bg-transparent border-b border-white/20 text-white placeholder-white/30 text-xl font-bold text-center focus:outline-none focus:border-white/50 transition-colors uppercase shrink-0"
+          class="w-[6rem] text-xl font-bold text-center uppercase shrink-0 bg-transparent text-white placeholder-white/70 focus:placeholder-transparent border-0 border-b border-white/40 focus:outline-none focus:border-white/60"
         />
         <input
           type="text"
@@ -86,7 +86,7 @@ export class UsernameInput extends LitElement {
           @input=${this.handleUsernameChange}
           placeholder="${translateText("username.enter_username")}"
           maxlength="${MAX_USERNAME_LENGTH}"
-          class="flex-1 min-w-0 bg-transparent border-0 text-white placeholder-white/30 text-2xl font-bold text-left focus:outline-none focus:ring-0 transition-colors overflow-x-auto whitespace-nowrap text-ellipsis pr-2"
+          class="flex-1 min-w-0 border-0 text-2xl font-bold text-left text-white placeholder-white/70 focus:outline-none focus:ring-0 overflow-x-auto whitespace-nowrap text-ellipsis pr-2 bg-transparent"
         />
       </div>
       ${this.validationError
@@ -148,18 +148,21 @@ export class UsernameInput extends LitElement {
 
   private validateAndStore() {
     // Prevent empty username even if clan tag is present
-    if (!this.baseUsername.trim()) {
+    const trimmedBase = this.baseUsername.trim();
+    if (!trimmedBase || trimmedBase.length < MIN_USERNAME_LENGTH) {
       this._isValid = false;
-      this.validationError = translateText("username.too_short", {
+      const msg = translateText("username.too_short", {
         min: MIN_USERNAME_LENGTH,
       });
+      this.validationError = msg;
       return;
     }
 
     // Validate clan tag if present
     if (this.clanTag.length > 0 && this.clanTag.length < 2) {
       this._isValid = false;
-      this.validationError = translateText("username.tag_too_short");
+      const msg = translateText("username.tag_too_short");
+      this.validationError = msg;
       return;
     }
 

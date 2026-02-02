@@ -1,7 +1,8 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -17,6 +18,7 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
@@ -68,18 +70,26 @@ export class HostLobbyModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
 
-  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
+
+  private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
+    if (!this.lobbyId || event.lobby.gameID !== this.lobbyId) {
+      return;
+    }
+    this.clients = event.lobby.clients ?? [];
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -168,9 +178,7 @@ export class HostLobbyModal extends BaseModal {
     );
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("host_modal.title"),
@@ -605,7 +613,7 @@ export class HostLobbyModal extends BaseModal {
         </div>
 
         <!-- Player List / footer -->
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
+        <div class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0">
           <button
             class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
             @click=${this.startGame}
@@ -635,7 +643,10 @@ export class HostLobbyModal extends BaseModal {
     `;
   }
 
-  protected onOpen(): void {
+  /**
+   * Hook called when modal opens. Sets up lobby and subscribes to WebSocket events.
+   */
+  protected override onOpen(): void {
     this.lobbyId = generateID();
     this.lobbyCreatorClientID = getClientIDForGame(this.lobbyId);
 
@@ -650,6 +661,7 @@ export class HostLobbyModal extends BaseModal {
         this.updateHistory(url);
       })
       .then(() => {
+        this.eventBus?.on(LobbyInfoEvent, this.handleLobbyInfo);
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
@@ -661,12 +673,6 @@ export class HostLobbyModal extends BaseModal {
           }),
         );
       });
-    if (this.modalEl) {
-      this.modalEl.onClose = () => {
-        this.close();
-      };
-    }
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
@@ -717,8 +723,10 @@ export class HostLobbyModal extends BaseModal {
     );
   }
 
-  protected onClose(): void {
+  protected override onClose(): void {
     console.log("Closing host lobby modal");
+    this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
+
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
@@ -726,10 +734,6 @@ export class HostLobbyModal extends BaseModal {
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
@@ -1036,20 +1040,6 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobbyOnClose = true;
     }
     return response;
-  }
-
-  private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.clients = data.clients ?? [];
-      });
   }
 
   private kickPlayer(clientID: string) {

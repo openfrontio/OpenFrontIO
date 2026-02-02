@@ -18,7 +18,7 @@ export class MatchmakingModal extends BaseModal {
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
-  private elo: number | "unknown" = "unknown";
+  private elo: number | string = "...";
 
   constructor() {
     super();
@@ -37,11 +37,7 @@ export class MatchmakingModal extends BaseModal {
     `;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("matchmaking_modal.title"),
           onBack: this.close,
@@ -71,39 +67,21 @@ export class MatchmakingModal extends BaseModal {
 
   private renderInner() {
     if (!this.connected) {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.connecting")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.connecting"),
+        "blue",
+      );
     }
     if (this.gameID === null) {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.searching")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.searching"),
+        "green",
+      );
     } else {
-      return html`
-        <div class="flex flex-col items-center gap-4">
-          <div
-            class="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"
-          ></div>
-          <p class="text-center text-white/80">
-            ${translateText("matchmaking_modal.waiting_for_game")}
-          </p>
-        </div>
-      `;
+      return this.renderLoadingSpinner(
+        translateText("matchmaking_modal.waiting_for_game"),
+        "yellow",
+      );
     }
   }
 
@@ -177,7 +155,9 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    this.elo = userMe.player.leaderboard?.oneVone?.elo ?? "unknown";
+    this.elo =
+      userMe.player.leaderboard?.oneVone?.elo ??
+      translateText("matchmaking_modal.no_elo");
 
     this.connected = false;
     this.gameID = null;

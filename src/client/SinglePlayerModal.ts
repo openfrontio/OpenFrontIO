@@ -140,9 +140,7 @@ export class SinglePlayerModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",
@@ -618,7 +616,7 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20">
+        <div class="p-6 border-t border-white/10 bg-black/20">
           <button
             @click=${this.startGame}
             class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
@@ -884,6 +882,7 @@ export class SinglePlayerModal extends BaseModal {
                 ? GameMapSize.Compact
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
+              lobbyStartDelayMs: 0,
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,

@@ -394,7 +394,8 @@
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start...",
-    "elo": "Your ELO: {elo}"
+    "elo": "Your ELO: {elo}",
+    "no_elo": "No ELO yet"
   },
   "username": {
     "enter_username": "Enter your username",
@@ -474,6 +475,13 @@
     "ffa": "Free for All",
     "teams": "Teams",
     "humans_vs_nations": "Humans vs Nations"
+  },
+  "mode_selector": {
+    "special_title": "Special Mix",
+    "ranked_title": "Ranked",
+    "ranked_1v1_title": "1v1",
+    "ranked_2v2_title": "2v2",
+    "coming_soon": "Coming Soon"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
@@ -1001,8 +1009,6 @@
     "recent_games": "Recent Games",
     "game_id": "Game ID",
     "mode": "Mode",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "replay": "Replay",
     "details": "Details",
     "ranking": "Ranking",
@@ -1020,8 +1026,6 @@
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
     "stats_games_played": "Games Played",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "no_stats": "No stats recorded for this selection."
   },
   "matchmaking_button": {

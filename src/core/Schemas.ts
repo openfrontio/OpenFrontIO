@@ -148,6 +148,7 @@ export const GameInfoSchema = z.object({
   numClients: z.number().optional(),
   msUntilStart: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
+  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
 });
 
 export interface GameInfo {
@@ -156,6 +157,7 @@ export interface GameInfo {
   numClients?: number;
   msUntilStart?: number;
   gameConfig?: GameConfig;
+  publicLobbyCategory?: "ffa" | "teams" | "hvn" | "special";
 }
 
 export class LobbyInfoEvent implements GameEvent {
@@ -218,6 +220,7 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
+  lobbyStartDelayMs: z.number().int().min(0),
 });
 
 export const TeamSchema = z.string();
