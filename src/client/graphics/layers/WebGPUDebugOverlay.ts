@@ -52,6 +52,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
   private tickComputeMs: number = 0;
 
   private frameTimes: number[] = [];
+  private lastDebugEnabled: boolean | null = null;
 
   static styles = css`
     .overlay {
@@ -81,6 +82,30 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+    }
+
+    .titleLeft {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .closeButton {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 16px;
+      line-height: 16px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .closeButton:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.95);
     }
 
     .metrics {
@@ -158,6 +183,7 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
 
   init() {
     this.eventBus.on(WebGPUComputeMetricsEvent, (e) => {
+      this.syncDebugVisibility();
       if (typeof e.computeMs === "number" && Number.isFinite(e.computeMs)) {
         this.tickComputeMs = e.computeMs;
         this.requestUpdate();
@@ -166,8 +192,17 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private syncDebugVisibility(): boolean {
+    const enabled = !!this.userSettings?.webgpuDebug();
+    if (this.lastDebugEnabled !== enabled) {
+      this.lastDebugEnabled = enabled;
+      this.requestUpdate();
+    }
+    return enabled;
+  }
+
   updateFrameMetrics(frameDurationMs: number): void {
-    if (!this.userSettings || !this.userSettings.webgpuDebug()) {
+    if (!this.syncDebugVisibility()) {
       return;
     }
 
@@ -184,6 +219,14 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
       this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
     this.renderFps = Math.round(1000 / Math.max(1e-6, avgMs));
     this.requestUpdate();
+  }
+
+  private close(): void {
+    if (!this.userSettings) {
+      return;
+    }
+    this.userSettings.set("settings.webgpuDebug", false);
+    this.syncDebugVisibility();
   }
 
   private selectedShaderId() {
@@ -330,7 +373,15 @@ export class WebGPUDebugOverlay extends LitElement implements Layer {
     return html`
       <div class="overlay">
         <div class="title">
-          <div>WebGPU Debug</div>
+          <div class="titleLeft">WebGPU Debug</div>
+          <button
+            class="closeButton"
+            title="Close"
+            aria-label="Close WebGPU Debug overlay"
+            @click=${() => this.close()}
+          >
+            ×
+          </button>
         </div>
 
         <div class="sectionTitle">Renderer</div>
