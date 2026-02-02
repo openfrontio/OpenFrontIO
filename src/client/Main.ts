@@ -2,9 +2,9 @@ import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
+import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
@@ -41,6 +41,7 @@ import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import { TurnstileManager } from "./TurnstileManager";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
@@ -236,19 +237,19 @@ class Client {
   private matchmakingModal: MatchmakingModal;
 
   private gutterAds: GutterAds;
+  private turnstileManager: TurnstileManager;
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
-
-  constructor() {}
+  constructor() {
+    this.turnstileManager = new TurnstileManager(() =>
+      getServerConfigFromClient(),
+    );
+  }
 
   async initialize(): Promise<void> {
     crazyGamesSDK.maybeInit();
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    this.turnstileManager.warmup();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -934,29 +935,7 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
-
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    return this.turnstileManager.getTokenForJoin();
   }
 }
 
@@ -987,44 +966,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
-}
-
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
-  }
-
-  const config = await getServerConfigFromClient();
-  const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
-  });
 }
