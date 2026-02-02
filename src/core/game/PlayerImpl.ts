@@ -402,6 +402,38 @@ export class PlayerImpl implements Player {
     );
   }
 
+  canExtendAlliance(other: Player): boolean {
+    if (other === this) {
+      return false;
+    }
+
+    if (this.isDisconnected() || other.isDisconnected()) {
+      // Disconnected players are marked as not-friendly even if they are allies,
+      // so we need to return early if either player is disconnected.
+      // Otherwise we could end up sending an alliance extension to someone
+      // we are already allied with.
+      return false;
+    }
+    if (!this.allianceWith(other) || !this.isAlive() || !other.isAlive()) {
+      return false;
+    }
+
+    const alliance = this.allianceWith(other);
+
+    if (!alliance) {
+      return false;
+    }
+
+    if (
+      alliance.expiresAt() >
+      this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset()
+    ) {
+      return false;
+    }
+
+    return !alliance.agreedToExtend(this);
+  }
+
   canSendAllianceRequest(other: Player): boolean {
     if (other === this) {
       return false;

@@ -62,6 +62,13 @@ export class AllianceImpl implements MutableAlliance {
     );
   }
 
+  agreedToExtend(player: Player): boolean {
+    return (
+      (this.requestor_ === player && this.extensionRequestedRequestor_) ||
+      (this.recipient_ === player && this.extensionRequestedRecipient_)
+    );
+  }
+
   public id(): number {
     return this.id_;
   }

@@ -209,6 +209,20 @@ const allyRequestElement: MenuElement = {
   },
 };
 
+const allyExtendElement: MenuElement = {
+  id: "ally_extend",
+  name: "extend",
+  disabled: (params: MenuElementParams) => false,
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.canExtendAlliance,
+  color: COLORS.boat,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    params.playerActionHandler.handleExtendAlliance(params.selected!);
+    params.closeMenu();
+  },
+};
+
 const allyBreakElement: MenuElement = {
   id: "ally_break",
   name: "break",
@@ -624,13 +638,16 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const canExtendAlliance =
+      params.playerActions.interaction?.canExtendAlliance;
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
             isAllied ? allyBreakElement : boatMenuElement,
-            allyRequestElement,
+            canExtendAlliance ? allyExtendElement : allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,

@@ -3,6 +3,7 @@ import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
+  SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -61,6 +62,10 @@ export class PlayerActionHandler {
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {
     this.eventBus.emit(new SendAllianceRequestIntentEvent(player, recipient));
+  }
+
+  handleExtendAlliance(recipient: PlayerView) {
+    this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {
