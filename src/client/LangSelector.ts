@@ -203,7 +203,7 @@ export class LangSelector extends LitElement {
     const components = [
       "single-player-modal",
       "host-lobby-modal",
-      "join-private-lobby-modal",
+      "join-lobby-modal",
       "emoji-table",
       "leader-board",
       "leaderboard-tabs",

@@ -21,7 +21,8 @@
     "target_dead_note": "You can't send resources to an eliminated player.",
     "none": "None",
     "copied": "Copied!",
-    "click_to_copy": "Click to copy"
+    "click_to_copy": "Click to copy",
+    "enabled": "Enabled"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -371,18 +372,23 @@
     "disabled_units": "Disabled Units"
   },
   "public_lobby": {
+    "title": "Waiting for Game Start...",
     "join": "Join next Game",
     "waiting": "players waiting",
     "teams_Duos": "{team_count} teams of 2 (Duos)",
     "teams_Trios": "{team_count} teams of 3 (Trios)",
     "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
+    "connecting": "Connecting to lobby...",
+    "starting_in": "Starting in {time}",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "started": "Started"
+    "started": "Started",
+    "status": "Status",
+    "join_timeout": "You didn't enter the game in time."
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",
@@ -467,7 +473,8 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "humans_vs_nations": "Humans vs Nations"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
