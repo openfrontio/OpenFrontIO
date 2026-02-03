@@ -6,17 +6,30 @@ const state = {
   mapHeight: 0,
   startPoint: null,
   endPoint: null,
-  navMeshPath: null,
-  navMeshResult: null, // Store full NavMesh result including timing
-  pfMiniPath: null,
-  pfMiniResult: null, // Store full PF.Mini result including timing
-  graphDebug: null, // Static graph data (gateways, edges, sectorSize) - loaded once per map
-  debugInfo: null, // Per-path debug data (timings, gatewayWaypoints, initialPath)
+  hpaPath: null,
+  hpaResult: null, // Store full HPA* result including timing
+  comparisons: [], // Array of comparison results
+  visibleComparisons: new Set(), // Which comparison paths are visible
+  adapters: [], // Available comparison adapters (loaded from backend)
+  graphDebug: null, // Static graph data (allNodes, edges, clusterSize) - loaded once per map
+  debugInfo: null, // Per-path debug data (timings, nodePath, initialPath)
   isMapLoading: false, // Loading state for map switching
-  isNavMeshLoading: false, // Separate loading state for NavMesh
-  isPfMiniLoading: false, // Separate loading state for PF.Mini
-  showPfMini: false,
+  isHpaLoading: false, // Separate loading state for HPA*
   activeRefreshButton: null, // Track which refresh button is spinning
+  // Transport Ship mode
+  mode: "pathfinding", // "pathfinding" | "transport"
+  paintedTiles: new Set(), // Set of tile indices (y * width + x)
+  brushSize: 5,
+  transportResult: null, // Result from spatial query
+};
+
+// Colors for comparison paths
+const COMPARISON_COLORS = {
+  "hpa.cached": "#00ffff", // cyan
+  hpa: "#ff8800", // orange
+  "a.baseline": "#ff00ff", // magenta
+  "a.generic": "#88ff00", // lime
+  "a.full": "#ffff00", // yellow
 };
 
 // Canvas state
@@ -28,11 +41,13 @@ let dragStartX = 0;
 let dragStartY = 0;
 let dragStartPanX = 0;
 let dragStartPanY = 0;
+let isPainting = false;
+let isErasing = false;
 
 let mapCanvas, overlayCanvas, interactiveCanvas;
 let mapCtx, overlayCtx, interactiveCtx;
 let mapRendered = false;
-let hoveredGateway = null;
+let hoveredNode = null;
 let hoveredPoint = null; // 'start', 'end', or null
 let draggingPoint = null; // 'start', 'end', or null
 let draggingPointPosition = null; // [x, y] canvas position while dragging
@@ -147,21 +162,8 @@ function initializeControls() {
       }
     });
 
-  // PF.Mini request button
-  document.getElementById("requestPfMini").addEventListener("click", () => {
-    if (
-      state.startPoint &&
-      state.endPoint &&
-      !state.pfMiniPath &&
-      !state.isPfMiniLoading
-    ) {
-      state.showPfMini = true;
-      requestPfMiniOnly(state.startPoint, state.endPoint);
-    }
-  });
-
-  // Refresh NavMesh button
-  document.getElementById("refreshNavMesh").addEventListener("click", (e) => {
+  // Refresh HPA* button
+  document.getElementById("refreshHpa").addEventListener("click", (e) => {
     if (state.startPoint && state.endPoint) {
       const btn = e.currentTarget;
       btn.classList.add("spinning");
@@ -170,22 +172,12 @@ function initializeControls() {
     }
   });
 
-  // Refresh PF.Mini button
-  document.getElementById("refreshPfMini").addEventListener("click", (e) => {
-    if (state.startPoint && state.endPoint && state.pfMiniPath) {
-      const btn = e.currentTarget;
-      btn.classList.add("spinning");
-      state.activeRefreshButton = btn;
-      requestPfMiniOnly(state.startPoint, state.endPoint);
-    }
-  });
-
   // Visualization toggles - all buttons
   [
     "showInitialPath",
-    "showUsedGateways",
+    "showUsedNodes",
     "showColoredMap",
-    "showGateways",
+    "showNodes",
     "showSectorGrid",
     "showEdges",
   ].forEach((id) => {
@@ -197,11 +189,11 @@ function initializeControls() {
       if (id === "showColoredMap") {
         renderMapBackground(2);
       }
-      // Static overlays (sectors, edges, all gateways) go on overlay canvas
-      if (["showGateways", "showSectorGrid", "showEdges"].includes(id)) {
+      // Static overlays (sectors, edges, all nodes) go on overlay canvas
+      if (["showNodes", "showSectorGrid", "showEdges"].includes(id)) {
         renderOverlay(2);
       }
-      // Dynamic elements (paths, highlighted gateways) go on interactive canvas
+      // Dynamic elements (paths, highlighted nodes) go on interactive canvas
       renderInteractive();
     });
   });
@@ -218,6 +210,109 @@ function initializeControls() {
   document.getElementById("clearPoints").addEventListener("click", () => {
     clearPoints();
   });
+
+  // Mode switch buttons
+  document.querySelectorAll(".mode-button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const newMode = btn.dataset.mode;
+      if (newMode !== state.mode) {
+        setMode(newMode);
+      }
+    });
+  });
+
+  // Transport controls
+  const brushSizeInput = document.getElementById("brushSize");
+  const brushSizeValue = document.getElementById("brushSizeValue");
+  brushSizeInput.addEventListener("input", (e) => {
+    state.brushSize = parseInt(e.target.value);
+    brushSizeValue.textContent = state.brushSize;
+  });
+
+  document.getElementById("clearTerritory").addEventListener("click", () => {
+    state.paintedTiles.clear();
+    state.transportResult = null;
+    updateTransportInfo();
+    renderInteractive();
+  });
+}
+
+// Set application mode
+function setMode(newMode) {
+  state.mode = newMode;
+
+  // Update UI
+  document.querySelectorAll(".mode-button").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === newMode);
+  });
+
+  const transportControls = document.getElementById("transportControls");
+  const timingsPanel = document.getElementById("timingsPanel");
+  const debugPanel = document.querySelector(".debug-panel");
+
+  if (newMode === "transport") {
+    transportControls.style.display = "block";
+    timingsPanel.style.top = "280px";
+    debugPanel.style.display = "none";
+    setStatus("Paint territory, then click water target");
+  } else {
+    transportControls.style.display = "none";
+    timingsPanel.style.top = "280px";
+    debugPanel.style.display = "flex";
+    if (state.startPoint && state.endPoint) {
+      setStatus("Path computed successfully");
+    } else if (state.startPoint) {
+      setStatus("Click on map to set end point");
+    } else {
+      setStatus("Click on map to set start point");
+    }
+  }
+
+  renderInteractive();
+}
+
+// Update transport info display
+function updateTransportInfo() {
+  const paintedCount = document.getElementById("paintedCount");
+  const shoreCount = document.getElementById("shoreCount");
+
+  paintedCount.textContent = state.paintedTiles.size;
+
+  // Count shore tiles
+  let shores = 0;
+  if (state.mapData) {
+    for (const idx of state.paintedTiles) {
+      if (isLandShore(idx)) {
+        shores++;
+      }
+    }
+  }
+  shoreCount.textContent = shores;
+}
+
+// Check if tile is a land shore (land adjacent to water)
+function isLandShore(tileIdx) {
+  const x = tileIdx % state.mapWidth;
+  const y = Math.floor(tileIdx / state.mapWidth);
+
+  // Must be land
+  if (state.mapData[tileIdx] !== 0) return false;
+
+  // Check 4 neighbors for water
+  const neighbors = [
+    [x - 1, y],
+    [x + 1, y],
+    [x, y - 1],
+    [x, y + 1],
+  ];
+
+  for (const [nx, ny] of neighbors) {
+    if (nx < 0 || nx >= state.mapWidth || ny < 0 || ny >= state.mapHeight)
+      continue;
+    const nIdx = ny * state.mapWidth + nx;
+    if (state.mapData[nIdx] === 1) return true;
+  }
+  return false;
 }
 
 // Helper function to check if mouse is over a start/end point
@@ -258,10 +353,25 @@ function schedulePathRecalc() {
     // Enough time has passed, request immediately
     lastPathRecalcTime = now;
     if (state.startPoint && state.endPoint) {
-      requestPathfinding(state.startPoint, state.endPoint);
+      // Skip comparisons during drag for snappy feel
+      requestPathfinding(state.startPoint, state.endPoint, true);
     }
   }
   // If not enough time has passed, skip this call (throttle)
+}
+
+// Throttled spatial query recalculation (max once per 50ms for heavier computation)
+let lastSpatialQueryTime = 0;
+function scheduleSpatialQueryRecalc() {
+  const now = Date.now();
+  const timeSinceLastCall = now - lastSpatialQueryTime;
+
+  if (timeSinceLastCall >= 50) {
+    lastSpatialQueryTime = now;
+    if (state.endPoint && state.paintedTiles.size > 0) {
+      requestSpatialQuery(state.endPoint);
+    }
+  }
 }
 
 // Initialize drag and click controls
@@ -274,18 +384,49 @@ function initializeDragControls() {
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
 
-    // Check if clicking on a point
+    // Transport mode: check for dragging end point first, then painting
+    if (state.mode === "transport") {
+      // Check if clicking on end point to drag it
+      const pointAtMouse = getPointAtPosition(canvasX, canvasY);
+      if (pointAtMouse === "end") {
+        draggingPoint = "end";
+        wrapper.style.cursor = "move";
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        return;
+      }
+
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+
+      if (
+        tileX >= 0 &&
+        tileX < state.mapWidth &&
+        tileY >= 0 &&
+        tileY < state.mapHeight
+      ) {
+        const tileIdx = tileY * state.mapWidth + tileX;
+        const isLand = state.mapData[tileIdx] === 0;
+
+        if (isLand) {
+          // Start painting (or erasing with ctrl/right-click)
+          isErasing = e.ctrlKey || e.button === 2;
+          isPainting = true;
+          paintAtPosition(tileX, tileY, isErasing);
+          wrapper.style.cursor = isErasing ? "crosshair" : "pointer";
+          return;
+        }
+      }
+      // Fall through to panning if not on land
+    }
+
+    // Pathfinding mode: check if clicking on a point
     const pointAtMouse = getPointAtPosition(canvasX, canvasY);
 
-    if (pointAtMouse) {
+    if (pointAtMouse && state.mode === "pathfinding") {
       // Start dragging the point
       draggingPoint = pointAtMouse;
       wrapper.style.cursor = "move";
-
-      // Invalidate PF.Mini path since we're changing the route
-      state.pfMiniPath = null;
-      state.pfMiniResult = null;
-      updatePfMiniButton();
     } else {
       // Start panning the map
       isDragging = true;
@@ -302,6 +443,53 @@ function initializeDragControls() {
     const rect = wrapper.getBoundingClientRect();
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
+
+    // Transport mode: continue painting
+    if (isPainting && state.mode === "transport") {
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+      paintAtPosition(tileX, tileY, isErasing);
+      return;
+    }
+
+    // Transport mode: dragging end point
+    if (draggingPoint === "end" && state.mode === "transport") {
+      const tileX = Math.floor(canvasX);
+      const tileY = Math.floor(canvasY);
+
+      if (
+        tileX >= 0 &&
+        tileX < state.mapWidth &&
+        tileY >= 0 &&
+        tileY < state.mapHeight
+      ) {
+        const tileIndex = tileY * state.mapWidth + tileX;
+        const isWater = state.mapData[tileIndex] === 1;
+
+        if (isWater) {
+          draggingPointPosition = [tileX, tileY];
+          state.endPoint = [tileX, tileY];
+          renderInteractive();
+
+          // Throttled spatial query recomputation
+          if (state.paintedTiles.size > 0) {
+            scheduleSpatialQueryRecalc();
+          }
+        }
+      }
+      return;
+    }
+
+    // Transport mode: check hover over end point
+    if (state.mode === "transport" && !isDragging) {
+      const pointAtMouse = getPointAtPosition(canvasX, canvasY);
+      if (pointAtMouse !== hoveredPoint) {
+        hoveredPoint = pointAtMouse;
+        renderInteractive();
+        wrapper.style.cursor = hoveredPoint ? "move" : "grab";
+      }
+      return;
+    }
 
     if (draggingPoint) {
       // Dragging a start/end point - snap to water tile
@@ -355,57 +543,53 @@ function initializeDragControls() {
         wrapper.style.cursor = hoveredPoint ? "move" : "grab";
       }
 
-      // Check for gateway hover (only if gateway visualization is enabled)
-      const showGateways =
-        document.getElementById("showGateways").dataset.active === "true";
-      const showUsedGateways =
-        document.getElementById("showUsedGateways").dataset.active === "true";
+      // Check for node hover (only if node visualization is enabled)
+      const showNodes =
+        document.getElementById("showNodes").dataset.active === "true";
+      const showUsedNodes =
+        document.getElementById("showUsedNodes").dataset.active === "true";
 
       if (
-        (showGateways || showUsedGateways) &&
+        (showNodes || showUsedNodes) &&
         state.graphDebug &&
-        state.graphDebug.allGateways
+        state.graphDebug.allNodes
       ) {
-        // Filter gateways based on what's visible
-        let gatewaysToCheck = state.graphDebug.allGateways;
+        // Filter nodes based on what's visible
+        let nodesToCheck = state.graphDebug.allNodes;
         if (
-          showUsedGateways &&
-          !showGateways &&
+          showUsedNodes &&
+          !showNodes &&
           state.debugInfo &&
-          state.debugInfo.gatewayWaypoints
+          state.debugInfo.nodePath
         ) {
-          // Only show tooltips for used gateways
-          // gatewayWaypoints are coordinates [x, y] matching the map format
-          const usedGatewayCoords = new Set(
-            state.debugInfo.gatewayWaypoints.map(([x, y]) => `${x},${y}`),
+          // Only show tooltips for used nodes
+          // nodePath are coordinates [x, y] matching the map format
+          const usedNodeCoords = new Set(
+            state.debugInfo.nodePath.map(([x, y]) => `${x},${y}`),
           );
-          gatewaysToCheck = state.graphDebug.allGateways.filter((gw) =>
-            usedGatewayCoords.has(`${gw.x * 2},${gw.y * 2}`),
+          nodesToCheck = state.graphDebug.allNodes.filter((node) =>
+            usedNodeCoords.has(`${node.x * 2},${node.y * 2}`),
           );
         }
 
-        const foundGateway = findGatewayAtPosition(
-          canvasX,
-          canvasY,
-          gatewaysToCheck,
-        );
+        const foundNode = findNodeAtPosition(canvasX, canvasY, nodesToCheck);
 
-        if (foundGateway !== hoveredGateway) {
-          hoveredGateway = foundGateway;
-          if (hoveredGateway) {
-            showGatewayTooltip(hoveredGateway, e.clientX, e.clientY);
+        if (foundNode !== hoveredNode) {
+          hoveredNode = foundNode;
+          if (hoveredNode) {
+            showNodeTooltip(hoveredNode, e.clientX, e.clientY);
           } else {
             tooltip.classList.remove("visible");
           }
           renderInteractive();
-        } else if (hoveredGateway) {
+        } else if (hoveredNode) {
           tooltip.style.left = e.clientX + 15 + "px";
           tooltip.style.top = e.clientY + 15 + "px";
         }
       } else {
-        // No gateway visualization enabled, clear any existing tooltip
-        if (hoveredGateway) {
-          hoveredGateway = null;
+        // No node visualization enabled, clear any existing tooltip
+        if (hoveredNode) {
+          hoveredNode = null;
           tooltip.classList.remove("visible");
           renderInteractive();
         }
@@ -417,6 +601,26 @@ function initializeDragControls() {
     // Only treat as click if mouse didn't move much
     const dx = Math.abs(e.clientX - dragStartX);
     const dy = Math.abs(e.clientY - dragStartY);
+
+    // Transport mode: finish painting
+    if (isPainting) {
+      isPainting = false;
+      isErasing = false;
+      wrapper.style.cursor = "grab";
+      return;
+    }
+
+    // Transport mode: finish dragging end point
+    if (draggingPoint === "end" && state.mode === "transport") {
+      if (state.endPoint && state.paintedTiles.size > 0) {
+        requestSpatialQuery(state.endPoint);
+      }
+      draggingPoint = null;
+      draggingPointPosition = null;
+      renderInteractive();
+      wrapper.style.cursor = "grab";
+      return;
+    }
 
     if (draggingPoint) {
       // Finished dragging a point
@@ -431,7 +635,11 @@ function initializeDragControls() {
       updateURLState();
     } else if (isDragging && dx < 5 && dy < 5) {
       // Was panning but didn't move much - treat as click
-      handleMapClick(e);
+      if (state.mode === "transport") {
+        handleTransportClick(e);
+      } else {
+        handleMapClick(e);
+      }
     }
 
     isDragging = false;
@@ -441,22 +649,32 @@ function initializeDragControls() {
     const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
     const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
     const pointAtMouse = getPointAtPosition(canvasX, canvasY);
-    wrapper.style.cursor = pointAtMouse ? "move" : "grab";
+    wrapper.style.cursor =
+      pointAtMouse && state.mode === "pathfinding" ? "move" : "grab";
   });
 
   wrapper.addEventListener("mouseleave", () => {
     isDragging = false;
     draggingPoint = null;
     draggingPointPosition = null;
+    isPainting = false;
+    isErasing = false;
     tooltip.classList.remove("visible");
     wrapper.style.cursor = "grab";
 
-    const needsRender = hoveredGateway || hoveredPoint;
-    hoveredGateway = null;
+    const needsRender = hoveredNode || hoveredPoint;
+    hoveredNode = null;
     hoveredPoint = null;
 
     if (needsRender) {
       renderInteractive();
+    }
+  });
+
+  // Prevent context menu on right-click (for erasing)
+  wrapper.addEventListener("contextmenu", (e) => {
+    if (state.mode === "transport") {
+      e.preventDefault();
     }
   });
 
@@ -469,7 +687,7 @@ function initializeDragControls() {
 
     const oldZoom = zoomLevel;
     const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoomLevel = Math.max(0.1, Math.min(5, zoomLevel * zoomDelta));
+    zoomLevel = Math.max(0.1, Math.min(10, zoomLevel * zoomDelta));
 
     panX = mouseX - (mouseX - panX) * (zoomLevel / oldZoom);
     panY = mouseY - (mouseY - panY) * (zoomLevel / oldZoom);
@@ -485,19 +703,12 @@ function initializeDragControls() {
 // Initialize timings panel to default state
 function initializeTimingsPanel() {
   // Set initial state to match "no path" state
-  updateTimingsPanel({ navMesh: null, pfMini: null });
-  updatePfMiniButton();
+  updateTimingsPanel({ primary: null, comparisons: [] });
 }
 
 // Handle map clicks for point selection
 function handleMapClick(e) {
-  if (
-    !state.currentMap ||
-    state.isMapLoading ||
-    state.isNavMeshLoading ||
-    state.isPfMiniLoading
-  )
-    return;
+  if (!state.currentMap || state.isMapLoading || state.isHpaLoading) return;
 
   const wrapper = document.getElementById("canvasWrapper");
   const rect = wrapper.getBoundingClientRect();
@@ -555,17 +766,163 @@ function handleMapClick(e) {
 function clearPoints() {
   state.startPoint = null;
   state.endPoint = null;
-  state.navMeshPath = null;
-  state.navMeshResult = null;
-  state.pfMiniPath = null;
-  state.pfMiniResult = null;
+  state.hpaPath = null;
+  state.hpaResult = null;
+  state.comparisons = [];
   state.debugInfo = null;
-  state.showPfMini = false;
   updatePointDisplay();
   hidePathInfo();
-  updatePfMiniButton();
   updateURLState(); // Remove points from URL
   renderInteractive();
+}
+
+// Paint tiles in a brush area
+function paintAtPosition(centerX, centerY, erase = false) {
+  const radius = Math.floor(state.brushSize / 2);
+  let changed = false;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const x = centerX + dx;
+      const y = centerY + dy;
+
+      if (x < 0 || x >= state.mapWidth || y < 0 || y >= state.mapHeight)
+        continue;
+
+      const idx = y * state.mapWidth + x;
+      const isLand = state.mapData[idx] === 0;
+
+      if (!isLand) continue;
+
+      if (erase) {
+        if (state.paintedTiles.has(idx)) {
+          state.paintedTiles.delete(idx);
+          changed = true;
+        }
+      } else {
+        if (!state.paintedTiles.has(idx)) {
+          state.paintedTiles.add(idx);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    updateTransportInfo();
+    renderInteractive();
+  }
+}
+
+// Handle clicks in transport mode
+function handleTransportClick(e) {
+  if (!state.currentMap || state.isMapLoading) return;
+
+  const wrapper = document.getElementById("canvasWrapper");
+  const rect = wrapper.getBoundingClientRect();
+
+  const canvasX = (e.clientX - rect.left - panX) / zoomLevel;
+  const canvasY = (e.clientY - rect.top - panY) / zoomLevel;
+  const tileX = Math.floor(canvasX);
+  const tileY = Math.floor(canvasY);
+
+  if (
+    tileX < 0 ||
+    tileX >= state.mapWidth ||
+    tileY < 0 ||
+    tileY >= state.mapHeight
+  ) {
+    return;
+  }
+
+  const idx = tileY * state.mapWidth + tileX;
+  const isWater = state.mapData[idx] === 1;
+
+  if (!isWater) {
+    return;
+  }
+
+  // Clicked on water - run spatial query
+  if (state.paintedTiles.size === 0) {
+    showError("Paint some territory first");
+    return;
+  }
+
+  requestSpatialQuery([tileX, tileY]);
+}
+
+// Request spatial query computation
+async function requestSpatialQuery(target) {
+  setStatus("Computing spatial query...", true);
+
+  try {
+    // Only send shore tiles (land adjacent to water) - much smaller payload
+    const ownedTiles = Array.from(state.paintedTiles).filter((idx) =>
+      isLandShore(idx),
+    );
+
+    const response = await fetch("/api/spatial-query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        map: state.currentMap,
+        ownedTiles,
+        target,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Spatial query failed");
+    }
+
+    const result = await response.json();
+    state.transportResult = result;
+    state.endPoint = target;
+
+    renderInteractive();
+    updateTransportTimings(result);
+
+    if (result.selectedShore) {
+      setStatus(
+        `Shore selected: (${result.selectedShore[0]}, ${result.selectedShore[1]})`,
+      );
+    } else {
+      setStatus("No valid shore found");
+    }
+  } catch (error) {
+    showError(`Spatial query failed: ${error.message}`);
+  }
+}
+
+// Update timings panel for transport mode
+function updateTransportTimings(result) {
+  const hpaTimeEl = document.getElementById("hpaTime");
+  const hpaTilesEl = document.getElementById("hpaTiles");
+
+  if (result.path) {
+    hpaTilesEl.textContent = `- ${result.path.length} tiles`;
+  } else {
+    hpaTilesEl.textContent = "";
+  }
+
+  const totalTime =
+    result.debug?.timings?.["SpatialQuery.closestShoreByWater"] ?? 0;
+  if (totalTime > 0) {
+    hpaTimeEl.textContent = `${totalTime.toFixed(2)}ms`;
+    hpaTimeEl.classList.remove("faded");
+  } else {
+    hpaTimeEl.textContent = "0.00ms";
+    hpaTimeEl.classList.add("faded");
+  }
+
+  // Hide pathfinding-specific timing breakdown in transport mode
+  document.getElementById("timingEarlyExit").style.display = "none";
+  document.getElementById("timingFindNodes").style.display = "none";
+  document.getElementById("timingAbstractPath").style.display = "none";
+  document.getElementById("timingInitialPath").style.display = "none";
+  document.getElementById("timingSmoothPath").style.display = "none";
+  document.getElementById("comparisonsSection").style.display = "none";
 }
 
 // Update transform for pan/zoom
@@ -682,19 +1039,17 @@ async function switchMap(mapName, restorePointsFromURL = false) {
     state.mapHeight = data.height;
     state.mapData = data.mapData;
     state.graphDebug = data.graphDebug; // Store static graph debug data
+    state.adapters = data.adapters || []; // Store available comparison adapters
 
     // Clear paths (but don't update URL yet if we're restoring from URL)
     state.startPoint = null;
     state.endPoint = null;
-    state.navMeshPath = null;
-    state.navMeshResult = null;
-    state.pfMiniPath = null;
-    state.pfMiniResult = null;
+    state.hpaPath = null;
+    state.hpaResult = null;
+    state.comparisons = [];
     state.debugInfo = null;
-    state.showPfMini = false;
     updatePointDisplay();
     hidePathInfo();
-    updatePfMiniButton();
 
     // Size canvases
     mapCanvas.width = state.mapWidth * 2;
@@ -779,20 +1134,26 @@ function hideWelcomeScreen() {
   document.getElementById("welcomeScreen").classList.add("hidden");
 }
 
-// Request pathfinding computation (NavMesh only)
-async function requestPathfinding(from, to) {
+// Request pathfinding computation (HPA* primary + comparisons)
+async function requestPathfinding(from, to, skipComparisons = false) {
   setStatus("Computing path...", true);
-  state.isNavMeshLoading = true;
+  state.isHpaLoading = true;
 
   try {
+    const body = {
+      map: state.currentMap,
+      from,
+      to,
+    };
+    // Skip comparisons during drag for snappy feel
+    if (skipComparisons) {
+      body.adapters = [];
+    }
+
     const response = await fetch("/api/pathfind", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        map: state.currentMap,
-        from,
-        to,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -802,195 +1163,104 @@ async function requestPathfinding(from, to) {
 
     const result = await response.json();
 
-    // Update state
-    state.navMeshPath = result.path;
-    state.navMeshResult = result; // Store full result for later use
-    // Don't reset pfMiniPath - preserve it across NavMesh refreshes
+    // Update state with new API format
+    state.hpaPath = result.primary.path;
+    state.hpaResult = result.primary;
+    state.comparisons = result.comparisons;
     state.debugInfo = {
-      initialPath: result.initialPath,
-      gatewayWaypoints: result.gateways,
-      timings: result.timings,
+      initialPath: result.primary.debug.initialPath,
+      nodePath: result.primary.debug.nodePath,
+      timings: result.primary.debug.timings,
     };
 
-    // Update UI - preserve existing PF.Mini if it exists
-    updatePathInfo({ navMesh: result, pfMini: state.pfMiniResult });
+    // Update UI
+    updatePathInfo(result);
     renderInteractive();
 
     setStatus("Path computed successfully");
   } catch (error) {
     showError(`Pathfinding failed: ${error.message}`);
   } finally {
-    state.isNavMeshLoading = false;
+    state.isHpaLoading = false;
     // Stop refresh button spinning
     if (state.activeRefreshButton) {
       state.activeRefreshButton.classList.remove("spinning");
       state.activeRefreshButton = null;
     }
-  }
-}
-
-// Request PF.Mini computation only (without re-computing NavMesh)
-async function requestPfMiniOnly(from, to) {
-  setStatus("Computing PF.Mini path...", true);
-  state.isPfMiniLoading = true;
-  updatePfMiniButton(); // Update button to show loading state
-
-  try {
-    const response = await fetch("/api/pathfind-pfmini", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        map: state.currentMap,
-        from,
-        to,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Pathfinding failed");
-    }
-
-    const result = await response.json();
-
-    // Update only PF.Mini path (preserve existing NavMesh path and debug info)
-    state.pfMiniPath = result.path;
-    state.pfMiniResult = result; // Store full result
-
-    // Update UI (preserve existing NavMesh result)
-    updatePathInfo({ navMesh: state.navMeshResult, pfMini: result });
-    renderInteractive();
-
-    setStatus("PF.Mini path computed successfully");
-  } catch (error) {
-    showError(`PF.Mini pathfinding failed: ${error.message}`);
-  } finally {
-    state.isPfMiniLoading = false;
-    // Stop refresh button spinning
-    if (state.activeRefreshButton) {
-      state.activeRefreshButton.classList.remove("spinning");
-      state.activeRefreshButton = null;
-    }
-    // Update button state
-    updatePfMiniButton();
   }
 }
 
 // Update point display
 function updatePointDisplay() {
-  updatePfMiniButton();
-}
-
-// Update PF.Mini button state
-function updatePfMiniButton() {
-  const button = document.getElementById("requestPfMini");
-  const requestSection = document.getElementById("pfMiniRequestSection");
-
-  if (state.pfMiniPath) {
-    // Hide button when PF.Mini is already computed
-    requestSection.style.display = "none";
-  } else if (state.isPfMiniLoading && !state.activeRefreshButton) {
-    // Show loading spinner when computing PF.Mini (not a refresh)
-    requestSection.style.display = "block";
-    button.disabled = true;
-    button.innerHTML = 'Computing... <span class="loading-spinner"></span>';
-  } else if (state.startPoint && state.endPoint && state.navMeshPath) {
-    // Show and enable button when points are set and NavMesh path exists
-    requestSection.style.display = "block";
-    button.disabled = false;
-    button.textContent = "Request PathFinder.Mini";
-  } else {
-    // Show but disable button when points aren't set
-    requestSection.style.display = "block";
-    button.disabled = true;
-    button.textContent = "Request PathFinder.Mini";
-  }
+  // No-op now, kept for compatibility
 }
 
 // Update path info in UI
 function updatePathInfo(result) {
-  // Update PF.Mini legend visibility
-  if (result.pfMini) {
-    document.getElementById("pfMiniLegend").style.display = "flex";
-  } else {
-    document.getElementById("pfMiniLegend").style.display = "none";
-  }
-
   // Update timings panel
   updateTimingsPanel(result);
-
-  // Update PF.Mini button
-  updatePfMiniButton();
 }
 
 // Update the dedicated timings panel
 function updateTimingsPanel(result) {
-  const navMesh = result.navMesh;
-
-  // Show NavMesh time and path length (or 0.00 in light gray if no data)
-  const navMeshTimeEl = document.getElementById("navMeshTime");
-  if (navMesh && navMesh.time > 0) {
-    navMeshTimeEl.textContent = `${navMesh.time.toFixed(2)}ms`;
-    navMeshTimeEl.classList.remove("faded");
+  const primary = result.primary;
+  const timings = primary && primary.debug ? primary.debug.timings : {};
+  const hpaTilesEl = document.getElementById("hpaTiles");
+  if (primary && primary.length > 0) {
+    hpaTilesEl.textContent = `- ${primary.length} tiles`;
   } else {
-    navMeshTimeEl.textContent = "0.00ms";
-    navMeshTimeEl.classList.add("faded");
-  }
-
-  const navMeshTilesEl = document.getElementById("navMeshTiles");
-  if (navMesh && navMesh.length > 0) {
-    navMeshTilesEl.textContent = `- ${navMesh.length} tiles`;
-  } else {
-    navMeshTilesEl.textContent = "";
+    hpaTilesEl.textContent = "";
   }
 
   // Show timing breakdown - always visible with gray dashes when no data
-  const timings = navMesh && navMesh.timings ? navMesh.timings : {};
-
   // Early Exit
   const earlyExitEl = document.getElementById("timingEarlyExit");
   const earlyExitValueEl = document.getElementById("timingEarlyExitValue");
   earlyExitEl.style.display = "flex";
-  if (timings.earlyExitLocalPath !== undefined) {
-    earlyExitValueEl.textContent = `${timings.earlyExitLocalPath.toFixed(2)}ms`;
+  const earlyExitTime = timings["earlyExit"];
+  if (earlyExitTime !== undefined) {
+    earlyExitValueEl.textContent = `${earlyExitTime.toFixed(2)}ms`;
     earlyExitValueEl.style.color = "#f5f5f5";
   } else {
     earlyExitValueEl.textContent = "—";
     earlyExitValueEl.style.color = "#666";
   }
 
-  // Find Gateways
-  const findGatewaysEl = document.getElementById("timingFindGateways");
-  const findGatewaysValueEl = document.getElementById(
-    "timingFindGatewaysValue",
-  );
-  findGatewaysEl.style.display = "flex";
-  if (timings.findGateways !== undefined) {
-    findGatewaysValueEl.textContent = `${timings.findGateways.toFixed(2)}ms`;
-    findGatewaysValueEl.style.color = "#f5f5f5";
+  // Find Nodes
+  const findNodesEl = document.getElementById("timingFindNodes");
+  const findNodesValueEl = document.getElementById("timingFindNodesValue");
+  findNodesEl.style.display = "flex";
+  const nodeLookupTime = timings["nodeLookup"];
+  if (nodeLookupTime !== undefined) {
+    findNodesValueEl.textContent = `${nodeLookupTime.toFixed(2)}ms`;
+    findNodesValueEl.style.color = "#f5f5f5";
   } else {
-    findGatewaysValueEl.textContent = "—";
-    findGatewaysValueEl.style.color = "#666";
+    findNodesValueEl.textContent = "—";
+    findNodesValueEl.style.color = "#666";
   }
 
-  // Gateway Path
-  const gatewayPathEl = document.getElementById("timingGatewayPath");
-  const gatewayPathValueEl = document.getElementById("timingGatewayPathValue");
-  gatewayPathEl.style.display = "flex";
-  if (timings.findGatewayPath !== undefined) {
-    gatewayPathValueEl.textContent = `${timings.findGatewayPath.toFixed(2)}ms`;
-    gatewayPathValueEl.style.color = "#f5f5f5";
+  // Abstract Path
+  const abstractPathEl = document.getElementById("timingAbstractPath");
+  const abstractPathValueEl = document.getElementById(
+    "timingAbstractPathValue",
+  );
+  abstractPathEl.style.display = "flex";
+  const abstractPathTime = timings["abstractPath"];
+  if (abstractPathTime !== undefined) {
+    abstractPathValueEl.textContent = `${abstractPathTime.toFixed(2)}ms`;
+    abstractPathValueEl.style.color = "#f5f5f5";
   } else {
-    gatewayPathValueEl.textContent = "—";
-    gatewayPathValueEl.style.color = "#666";
+    abstractPathValueEl.textContent = "—";
+    abstractPathValueEl.style.color = "#666";
   }
 
   // Initial Path
   const initialPathEl = document.getElementById("timingInitialPath");
   const initialPathValueEl = document.getElementById("timingInitialPathValue");
   initialPathEl.style.display = "flex";
-  if (timings.buildInitialPath !== undefined) {
-    initialPathValueEl.textContent = `${timings.buildInitialPath.toFixed(2)}ms`;
+  const initialPathTime = timings["initialPath"];
+  if (initialPathTime !== undefined) {
+    initialPathValueEl.textContent = `${initialPathTime.toFixed(2)}ms`;
     initialPathValueEl.style.color = "#f5f5f5";
   } else {
     initialPathValueEl.textContent = "—";
@@ -1001,51 +1271,116 @@ function updateTimingsPanel(result) {
   const smoothPathEl = document.getElementById("timingSmoothPath");
   const smoothPathValueEl = document.getElementById("timingSmoothPathValue");
   smoothPathEl.style.display = "flex";
-  if (timings.buildSmoothPath !== undefined) {
-    smoothPathValueEl.textContent = `${timings.buildSmoothPath.toFixed(2)}ms`;
+  const smoothPathTime = timings["smoothingTransformer"];
+  if (smoothPathTime !== undefined) {
+    smoothPathValueEl.textContent = `${smoothPathTime.toFixed(2)}ms`;
     smoothPathValueEl.style.color = "#f5f5f5";
   } else {
     smoothPathValueEl.textContent = "—";
     smoothPathValueEl.style.color = "#666";
   }
 
-  // Show PF.Mini time and speedup if available
-  if (result.pfMini && result.pfMini.time > 0) {
-    const pfMiniTimeEl = document.getElementById("pfMiniTime");
-    pfMiniTimeEl.textContent = `${result.pfMini.time.toFixed(2)}ms`;
-    pfMiniTimeEl.classList.remove("faded");
+  // Show comparisons section
+  const comparisonsSection = document.getElementById("comparisonsSection");
+  const comparisonsContainer = document.getElementById("comparisonsContainer");
 
-    document.getElementById("pfMiniTiles").textContent =
-      `- ${result.pfMini.length} tiles`;
-    document.getElementById("pfMiniTimingSection").style.display = "block";
-
-    // Calculate and show speedup
-    if (navMesh && navMesh.time > 0) {
-      const speedup = result.pfMini.time / navMesh.time;
-      document.getElementById("speedupValue").textContent =
-        `${speedup.toFixed(1)}x`;
-      document.getElementById("speedupSection").style.display = "block";
-    } else {
-      document.getElementById("speedupSection").style.display = "none";
-    }
-  } else if (result.pfMini) {
-    // PF.Mini exists but time is 0
-    const pfMiniTimeEl = document.getElementById("pfMiniTime");
-    pfMiniTimeEl.textContent = "—";
-    pfMiniTimeEl.classList.add("faded");
-    document.getElementById("pfMiniTiles").textContent = "";
-    document.getElementById("pfMiniTimingSection").style.display = "block";
-    document.getElementById("speedupSection").style.display = "none";
-  } else {
-    document.getElementById("pfMiniTimingSection").style.display = "none";
-    document.getElementById("speedupSection").style.display = "none";
+  // Only show comparisons section if we have adapters loaded
+  if (!state.adapters || state.adapters.length === 0) {
+    comparisonsSection.style.display = "none";
+    return;
   }
+  comparisonsSection.style.display = "block";
+
+  // Build lookup map for comparison data
+  const compMap = {};
+  if (result.comparisons) {
+    for (const comp of result.comparisons) {
+      compMap[comp.adapter] = comp;
+    }
+  }
+
+  // Use total span time from DebugSpan
+  let hpaTime = timings["findPath"] || 0;
+
+  if (compMap["hpa.cached"]) {
+    hpaTime = compMap["hpa.cached"].time;
+  }
+
+  // Show HPA* time and path length (or 0.00 in light gray if no data)
+  const hpaTimeEl = document.getElementById("hpaTime");
+  if (hpaTime > 0) {
+    hpaTimeEl.textContent = `${hpaTime.toFixed(2)}ms`;
+    hpaTimeEl.classList.remove("faded");
+  } else {
+    hpaTimeEl.textContent = "0.00ms";
+    hpaTimeEl.classList.add("faded");
+  }
+
+  // Find fastest time overall (including HPA*) when we have data
+  const compTimes = result.comparisons
+    ? result.comparisons.map((c) => c.time).filter((t) => t > 0)
+    : [];
+  const fastestCompTime =
+    compTimes.length > 0 ? Math.min(...compTimes) : Infinity;
+
+  // Update HPA* time color - green if fastest, red if slower than any comparison
+  const hpaIsFastest = hpaTime > 0 && hpaTime <= fastestCompTime;
+  const hpaSlower = hpaTime > 0 && fastestCompTime < hpaTime;
+  const fastestTime = Math.min(hpaTime || Infinity, fastestCompTime);
+
+  if (hpaIsFastest) {
+    hpaTimeEl.style.color = "#00ff88";
+  } else if (hpaSlower) {
+    hpaTimeEl.style.color = "#ff6666";
+  } else {
+    hpaTimeEl.style.color = "#f5f5f5";
+  }
+
+  // Build comparison rows for all known adapters
+  let html = "";
+  for (const adapter of state.adapters) {
+    const comp = compMap[adapter];
+    const pathColor = COMPARISON_COLORS[adapter] || "#ffffff";
+    const isActive = state.visibleComparisons.has(adapter);
+
+    // Show actual values or placeholders
+    const hasData = comp && comp.time > 0;
+    const isFastest = hasData && comp.time === fastestTime;
+    const timeColor = isFastest ? "#00ff88" : hasData ? "#f5f5f5" : "#666";
+    const tilesText = hasData ? comp.length : "—";
+    const timeText = hasData ? `${comp.time.toFixed(2)}ms` : "—";
+
+    html += `
+      <div class="comparison-row${isActive ? " active" : ""}" data-adapter="${adapter}">
+        <span class="comp-color" style="background: ${pathColor}"></span>
+        <span class="comp-name">${adapter}</span>
+        <span class="comp-tiles" style="color: ${hasData ? "#888" : "#666"}">${tilesText}</span>
+        <span class="comp-time" style="color: ${timeColor}">${timeText}</span>
+      </div>
+    `;
+  }
+  comparisonsContainer.innerHTML = html;
+
+  // Add click handlers to toggle path visibility
+  comparisonsContainer.querySelectorAll(".comparison-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const adapter = row.dataset.adapter;
+      if (state.visibleComparisons.has(adapter)) {
+        state.visibleComparisons.delete(adapter);
+        row.classList.remove("active");
+      } else {
+        state.visibleComparisons.add(adapter);
+        row.classList.add("active");
+      }
+      renderInteractive();
+    });
+  });
 }
 
 // Reset path info to show dashes
 function hidePathInfo() {
   // Don't hide the panel, just reset to show dashes
-  updateTimingsPanel({ navMesh: null, pfMini: null });
+  updateTimingsPanel({ primary: null, comparisons: [] });
 }
 
 // Set status message
@@ -1132,7 +1467,7 @@ function renderMapBackground(scale) {
   mapCtx.putImageData(imageData, 0, 0);
 }
 
-// Render static debug overlays (sectors, edges, all gateways) at map scale
+// Render static debug overlays (clusters, edges, all nodes) at map scale
 function renderOverlay(scale) {
   overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
@@ -1142,19 +1477,19 @@ function renderOverlay(scale) {
     document.getElementById("showSectorGrid").dataset.active === "true";
   const showEdges =
     document.getElementById("showEdges").dataset.active === "true";
-  const showGateways =
-    document.getElementById("showGateways").dataset.active === "true";
+  const showNodes =
+    document.getElementById("showNodes").dataset.active === "true";
 
-  // Draw sector grid (sectorSize is in mini map coords, scale 2x for real map)
-  if (showSectorGrid && state.graphDebug.sectorSize) {
-    const sectorSize = state.graphDebug.sectorSize * 2;
+  // Draw cluster grid (clusterSize is in mini map coords, scale 2x for real map)
+  if (showSectorGrid && state.graphDebug.clusterSize) {
+    const clusterSize = state.graphDebug.clusterSize * 2;
     overlayCtx.strokeStyle = "#777777";
     overlayCtx.lineWidth = scale * 0.5;
     overlayCtx.globalAlpha = 0.7;
     overlayCtx.setLineDash([5 * scale, 5 * scale]);
 
     // Vertical lines
-    for (let x = 0; x <= state.mapWidth; x += sectorSize) {
+    for (let x = 0; x <= state.mapWidth; x += clusterSize) {
       overlayCtx.beginPath();
       overlayCtx.moveTo(x * scale, 0);
       overlayCtx.lineTo(x * scale, state.mapHeight * scale);
@@ -1162,7 +1497,7 @@ function renderOverlay(scale) {
     }
 
     // Horizontal lines
-    for (let y = 0; y <= state.mapHeight; y += sectorSize) {
+    for (let y = 0; y <= state.mapHeight; y += clusterSize) {
       overlayCtx.beginPath();
       overlayCtx.moveTo(0, y * scale);
       overlayCtx.lineTo(state.mapWidth * scale, y * scale);
@@ -1192,17 +1527,17 @@ function renderOverlay(scale) {
     overlayCtx.globalAlpha = 1.0;
   }
 
-  // Draw all gateways
-  if (showGateways && state.graphDebug.allGateways) {
+  // Draw all nodes
+  if (showNodes && state.graphDebug.allNodes) {
     overlayCtx.fillStyle = "#aaaaaa";
-    const gatewayRadius = scale * 1.5;
+    const nodeRadius = scale * 1.5;
 
-    for (const gw of state.graphDebug.allGateways) {
+    for (const node of state.graphDebug.allNodes) {
       overlayCtx.beginPath();
       overlayCtx.arc(
-        (gw.x * 2 + 0.5) * scale,
-        (gw.y * 2 + 0.5) * scale,
-        gatewayRadius,
+        (node.x * 2 + 0.5) * scale,
+        (node.y * 2 + 0.5) * scale,
+        nodeRadius,
         0,
         Math.PI * 2,
       );
@@ -1219,6 +1554,135 @@ function mapToScreen(mapX, mapY) {
   };
 }
 
+// Render transport mode elements
+function renderTransportMode() {
+  const tileSize = Math.max(1, zoomLevel);
+
+  // Draw painted territory
+  if (state.paintedTiles.size > 0) {
+    interactiveCtx.fillStyle = "rgba(66, 135, 245, 0.5)";
+
+    for (const idx of state.paintedTiles) {
+      const x = idx % state.mapWidth;
+      const y = Math.floor(idx / state.mapWidth);
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw all shore tiles (dark blue squares)
+  if (state.transportResult && state.transportResult.shores) {
+    interactiveCtx.fillStyle = "#2a4a6a";
+
+    for (const [x, y] of state.transportResult.shores) {
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw refinement candidates (muted yellow/gold squares)
+  if (state.transportResult?.debug?.candidates) {
+    interactiveCtx.fillStyle = "rgba(200, 170, 80, 0.7)";
+
+    for (const [x, y] of state.transportResult.debug.candidates) {
+      const screen = mapToScreen(x, y);
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw refined path (magenta)
+  if (state.transportResult?.debug?.refinedPath) {
+    interactiveCtx.strokeStyle = "#ff00ff";
+    interactiveCtx.lineWidth = Math.max(1, zoomLevel * 0.8);
+    interactiveCtx.lineCap = "round";
+    interactiveCtx.lineJoin = "round";
+    interactiveCtx.beginPath();
+
+    for (let i = 0; i < state.transportResult.debug.refinedPath.length; i++) {
+      const [x, y] = state.transportResult.debug.refinedPath[i];
+      const screen = mapToScreen(x + 0.5, y + 0.5);
+      if (i === 0) {
+        interactiveCtx.moveTo(screen.x, screen.y);
+      } else {
+        interactiveCtx.lineTo(screen.x, screen.y);
+      }
+    }
+    interactiveCtx.stroke();
+  }
+
+  // Draw full path (cyan)
+  if (state.transportResult && state.transportResult.path) {
+    interactiveCtx.strokeStyle = "#00ffff";
+    interactiveCtx.lineWidth = Math.max(1, zoomLevel);
+    interactiveCtx.lineCap = "round";
+    interactiveCtx.lineJoin = "round";
+    interactiveCtx.beginPath();
+
+    for (let i = 0; i < state.transportResult.path.length; i++) {
+      const [x, y] = state.transportResult.path[i];
+      const screen = mapToScreen(x + 0.5, y + 0.5);
+      if (i === 0) {
+        interactiveCtx.moveTo(screen.x, screen.y);
+      } else {
+        interactiveCtx.lineTo(screen.x, screen.y);
+      }
+    }
+    interactiveCtx.stroke();
+  }
+
+  // Draw original best tile (orange square) if different from new best
+  if (state.transportResult?.debug?.originalBestTile) {
+    const [ox, oy] = state.transportResult.debug.originalBestTile;
+    const newBest = state.transportResult.debug.newBestTile;
+
+    // Only show if different from new best
+    if (!newBest || ox !== newBest[0] || oy !== newBest[1]) {
+      const screen = mapToScreen(ox, oy);
+      interactiveCtx.fillStyle = "#ff8800";
+      interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+    }
+  }
+
+  // Draw selected shore (green square)
+  if (state.transportResult && state.transportResult.selectedShore) {
+    const [sx, sy] = state.transportResult.selectedShore;
+    const screen = mapToScreen(sx, sy);
+    interactiveCtx.fillStyle = "#44ff44";
+    interactiveCtx.fillRect(screen.x, screen.y, tileSize, tileSize);
+  }
+
+  // Draw target point (red circle, matching pathfinding mode style)
+  if (state.endPoint) {
+    const markerSize = Math.max(4, 3 * zoomLevel);
+    let mapX, mapY;
+    if (draggingPoint === "end" && draggingPointPosition) {
+      mapX = draggingPointPosition[0] + 0.5;
+      mapY = draggingPointPosition[1] + 0.5;
+    } else {
+      mapX = state.endPoint[0] + 0.5;
+      mapY = state.endPoint[1] + 0.5;
+    }
+
+    const screen = mapToScreen(mapX, mapY);
+
+    // Highlight ring if hovered
+    if (hoveredPoint === "end") {
+      interactiveCtx.strokeStyle = "#ff4444";
+      interactiveCtx.lineWidth = Math.max(2, zoomLevel * 0.5);
+      interactiveCtx.globalAlpha = 0.5;
+      interactiveCtx.beginPath();
+      interactiveCtx.arc(screen.x, screen.y, markerSize + 3, 0, Math.PI * 2);
+      interactiveCtx.stroke();
+      interactiveCtx.globalAlpha = 1.0;
+    }
+
+    interactiveCtx.fillStyle = "#ff4444";
+    interactiveCtx.beginPath();
+    interactiveCtx.arc(screen.x, screen.y, markerSize, 0, Math.PI * 2);
+    interactiveCtx.fill();
+  }
+}
+
 // Render truly interactive/dynamic overlay (paths, points, highlights) at screen coordinates
 function renderInteractive() {
   // Clear viewport-sized canvas (super fast!)
@@ -1233,25 +1697,26 @@ function renderInteractive() {
 
   const markerSize = Math.max(4, 3 * zoomLevel);
 
+  // Transport mode: render painted territory and results
+  if (state.mode === "transport") {
+    renderTransportMode();
+    return;
+  }
+
   // Check what to show
-  const showUsedGateways =
-    document.getElementById("showUsedGateways").dataset.active === "true";
+  const showUsedNodes =
+    document.getElementById("showUsedNodes").dataset.active === "true";
   const showInitialPath =
     document.getElementById("showInitialPath").dataset.active === "true";
   const showEdges =
     document.getElementById("showEdges").dataset.active === "true";
-  const showGateways =
-    document.getElementById("showGateways").dataset.active === "true";
+  const showNodes =
+    document.getElementById("showNodes").dataset.active === "true";
 
-  // Draw highlighted edges for hovered gateway only
-  if (
-    hoveredGateway &&
-    showEdges &&
-    state.graphDebug &&
-    state.graphDebug.edges
-  ) {
+  // Draw highlighted edges for hovered node only
+  if (hoveredNode && showEdges && state.graphDebug && state.graphDebug.edges) {
     const connectedEdges = state.graphDebug.edges.filter(
-      (e) => e.fromId === hoveredGateway.id || e.toId === hoveredGateway.id,
+      (e) => e.fromId === hoveredNode.id || e.toId === hoveredNode.id,
     );
 
     interactiveCtx.strokeStyle = "#00ffaa";
@@ -1270,31 +1735,30 @@ function renderInteractive() {
     interactiveCtx.globalAlpha = 1.0;
   }
 
-  // Draw highlighted gateways (hovered + connected) only
+  // Draw highlighted nodes (hovered + connected) only
   if (
-    hoveredGateway &&
-    showGateways &&
+    hoveredNode &&
+    showNodes &&
     state.graphDebug &&
-    state.graphDebug.allGateways
+    state.graphDebug.allNodes
   ) {
-    // Get connected gateways
-    let connectedGatewayIds = new Set();
+    // Get connected nodes
+    let connectedNodeIds = new Set();
     if (state.graphDebug.edges) {
       const connectedEdges = state.graphDebug.edges.filter(
-        (e) => e.fromId === hoveredGateway.id || e.toId === hoveredGateway.id,
+        (e) => e.fromId === hoveredNode.id || e.toId === hoveredNode.id,
       );
       connectedEdges.forEach((edge) => {
-        if (edge.fromId !== hoveredGateway.id)
-          connectedGatewayIds.add(edge.fromId);
-        if (edge.toId !== hoveredGateway.id) connectedGatewayIds.add(edge.toId);
+        if (edge.fromId !== hoveredNode.id) connectedNodeIds.add(edge.fromId);
+        if (edge.toId !== hoveredNode.id) connectedNodeIds.add(edge.toId);
       });
     }
 
-    // Draw connected gateways
-    for (const gwId of connectedGatewayIds) {
-      const gw = state.graphDebug.allGateways.find((g) => g.id === gwId);
-      if (gw) {
-        const screen = mapToScreen(gw.x * 2, gw.y * 2);
+    // Draw connected nodes
+    for (const nodeId of connectedNodeIds) {
+      const node = state.graphDebug.allNodes.find((n) => n.id === nodeId);
+      if (node) {
+        const screen = mapToScreen(node.x * 2, node.y * 2);
         interactiveCtx.fillStyle = "#00ff88";
         interactiveCtx.strokeStyle = "#ffffff";
         interactiveCtx.lineWidth = Math.max(1, zoomLevel * 0.3);
@@ -1311,8 +1775,8 @@ function renderInteractive() {
       }
     }
 
-    // Draw hovered gateway on top
-    const screen = mapToScreen(hoveredGateway.x * 2, hoveredGateway.y * 2);
+    // Draw hovered node on top
+    const screen = mapToScreen(hoveredNode.x * 2, hoveredNode.y * 2);
     interactiveCtx.fillStyle = "#ffff00";
     interactiveCtx.strokeStyle = "#ffffff";
     interactiveCtx.lineWidth = Math.max(1, zoomLevel * 0.5);
@@ -1353,16 +1817,43 @@ function renderInteractive() {
     interactiveCtx.stroke();
   }
 
-  // Draw NavMesh path
-  if (state.navMeshPath && state.navMeshPath.length > 0) {
+  // Draw comparison paths (before HPA* so primary is on top)
+  if (state.comparisons && state.visibleComparisons.size > 0) {
+    interactiveCtx.lineCap = "round";
+    interactiveCtx.lineJoin = "round";
+
+    for (const comp of state.comparisons) {
+      if (!state.visibleComparisons.has(comp.adapter)) continue;
+      if (!comp.path || comp.path.length === 0) continue;
+
+      const color = COMPARISON_COLORS[comp.adapter] || "#ffffff";
+      interactiveCtx.strokeStyle = color;
+      interactiveCtx.lineWidth = Math.max(1, zoomLevel);
+      interactiveCtx.beginPath();
+
+      for (let i = 0; i < comp.path.length; i++) {
+        const [x, y] = comp.path[i];
+        const screen = mapToScreen(x + 0.5, y + 0.5);
+        if (i === 0) {
+          interactiveCtx.moveTo(screen.x, screen.y);
+        } else {
+          interactiveCtx.lineTo(screen.x, screen.y);
+        }
+      }
+      interactiveCtx.stroke();
+    }
+  }
+
+  // Draw HPA* path
+  if (state.hpaPath && state.hpaPath.length > 0) {
     interactiveCtx.strokeStyle = "#00ffff";
     interactiveCtx.lineWidth = Math.max(1, zoomLevel);
     interactiveCtx.lineCap = "round";
     interactiveCtx.lineJoin = "round";
     interactiveCtx.beginPath();
 
-    for (let i = 0; i < state.navMeshPath.length; i++) {
-      const [x, y] = state.navMeshPath[i];
+    for (let i = 0; i < state.hpaPath.length; i++) {
+      const [x, y] = state.hpaPath[i];
       const screen = mapToScreen(x + 0.5, y + 0.5);
       if (i === 0) {
         interactiveCtx.moveTo(screen.x, screen.y);
@@ -1373,36 +1864,16 @@ function renderInteractive() {
     interactiveCtx.stroke();
   }
 
-  // Draw PF.Mini path
-  if (state.pfMiniPath && state.pfMiniPath.length > 0) {
-    interactiveCtx.strokeStyle = "#ffaa00";
-    interactiveCtx.lineWidth = Math.max(1, zoomLevel);
-    interactiveCtx.lineCap = "round";
-    interactiveCtx.lineJoin = "round";
-    interactiveCtx.beginPath();
-
-    for (let i = 0; i < state.pfMiniPath.length; i++) {
-      const [x, y] = state.pfMiniPath[i];
-      const screen = mapToScreen(x + 0.5, y + 0.5);
-      if (i === 0) {
-        interactiveCtx.moveTo(screen.x, screen.y);
-      } else {
-        interactiveCtx.lineTo(screen.x, screen.y);
-      }
-    }
-    interactiveCtx.stroke();
-  }
-
-  // Draw used gateways (highlighted)
-  if (showUsedGateways && state.debugInfo && state.debugInfo.gatewayWaypoints) {
+  // Draw used nodes (highlighted)
+  if (showUsedNodes && state.debugInfo && state.debugInfo.nodePath) {
     interactiveCtx.fillStyle = "#ffff00";
-    const usedGatewayRadius = Math.max(3, zoomLevel * 2.5);
+    const usedNodeRadius = Math.max(3, zoomLevel * 2.5);
 
-    for (const [x, y] of state.debugInfo.gatewayWaypoints) {
-      // Gateways are coordinates [x, y] in the same format as path
+    for (const [x, y] of state.debugInfo.nodePath) {
+      // Nodes are coordinates [x, y] in the same format as path
       const screen = mapToScreen(x + 0.5, y + 0.5);
       interactiveCtx.beginPath();
-      interactiveCtx.arc(screen.x, screen.y, usedGatewayRadius, 0, Math.PI * 2);
+      interactiveCtx.arc(screen.x, screen.y, usedNodeRadius, 0, Math.PI * 2);
       interactiveCtx.fill();
     }
   }
@@ -1472,41 +1943,40 @@ function renderInteractive() {
   }
 }
 
-function findGatewayAtPosition(canvasX, canvasY, gatewaysToCheck = null) {
-  const gateways =
-    gatewaysToCheck || (state.graphDebug && state.graphDebug.allGateways);
-  if (!gateways) {
+function findNodeAtPosition(canvasX, canvasY, nodesToCheck = null) {
+  const nodes = nodesToCheck || (state.graphDebug && state.graphDebug.allNodes);
+  if (!nodes) {
     return null;
   }
 
   const threshold = 10;
 
-  for (const gw of gateways) {
-    const gwX = gw.x * 2;
-    const gwY = gw.y * 2;
-    const dx = Math.abs(canvasX - gwX);
-    const dy = Math.abs(canvasY - gwY);
+  for (const node of nodes) {
+    const nodeX = node.x * 2;
+    const nodeY = node.y * 2;
+    const dx = Math.abs(canvasX - nodeX);
+    const dy = Math.abs(canvasY - nodeY);
 
     if (dx < threshold && dy < threshold) {
-      return gw;
+      return node;
     }
   }
 
   return null;
 }
 
-// Show gateway tooltip
-function showGatewayTooltip(gateway, mouseX, mouseY) {
+// Show node tooltip
+function showNodeTooltip(node, mouseX, mouseY) {
   const tooltip = document.getElementById("tooltip");
 
   const connectedEdges = state.graphDebug.edges.filter(
-    (e) => e.fromId === gateway.id || e.toId === gateway.id,
+    (e) => e.fromId === node.id || e.toId === node.id,
   );
 
   const selfLoops = connectedEdges.filter((e) => e.fromId === e.toId);
 
-  let html = `<strong>Gateway ${gateway.id}</strong><br>`;
-  html += `Position: (${gateway.x * 2}, ${gateway.y * 2})<br>`;
+  let html = `<strong>Node ${node.id}</strong><br>`;
+  html += `Position: (${node.x * 2}, ${node.y * 2})<br>`;
   html += `<strong>Edges: ${connectedEdges.length}</strong>`;
 
   if (selfLoops.length > 0) {
@@ -1516,46 +1986,24 @@ function showGatewayTooltip(gateway, mouseX, mouseY) {
   if (connectedEdges.length > 0) {
     html += '<br><div style="margin-top: 5px; font-size: 11px;">';
 
-    const outgoing = connectedEdges.filter(
-      (e) => e.fromId === gateway.id && e.toId !== gateway.id,
-    );
-    const incoming = connectedEdges.filter(
-      (e) => e.toId === gateway.id && e.fromId !== gateway.id,
-    );
+    // Edges are bidirectional now, just show connected nodes
+    const connected = connectedEdges.filter((e) => e.fromId !== e.toId);
 
-    if (outgoing.length > 0) {
-      html += `<div style="color: #88ff88;">Outgoing (${outgoing.length}):</div>`;
-      outgoing.slice(0, 5).forEach((edge) => {
-        const pathLen = edge.path ? edge.path.length : 0;
-        html += `  → GW ${edge.toId}: cost ${edge.cost.toFixed(1)}`;
-        if (pathLen > 0) html += ` (${pathLen} tiles)`;
-        html += "<br>";
+    if (connected.length > 0) {
+      html += `<div style="color: #88ff88;">Connected (${connected.length}):</div>`;
+      connected.slice(0, 8).forEach((edge) => {
+        const otherId = edge.fromId === node.id ? edge.toId : edge.fromId;
+        html += `  ↔ Node ${otherId}: cost ${edge.cost.toFixed(1)}<br>`;
       });
-      if (outgoing.length > 5) {
-        html += `  ... and ${outgoing.length - 5} more<br>`;
-      }
-    }
-
-    if (incoming.length > 0) {
-      html += `<div style="color: #ffaa88;">Incoming (${incoming.length}):</div>`;
-      incoming.slice(0, 5).forEach((edge) => {
-        const pathLen = edge.path ? edge.path.length : 0;
-        html += `  ← GW ${edge.fromId}: cost ${edge.cost.toFixed(1)}`;
-        if (pathLen > 0) html += ` (${pathLen} tiles)`;
-        html += "<br>";
-      });
-      if (incoming.length > 5) {
-        html += `  ... and ${incoming.length - 5} more<br>`;
+      if (connected.length > 8) {
+        html += `  ... and ${connected.length - 8} more<br>`;
       }
     }
 
     if (selfLoops.length > 0) {
       html += `<div style="color: #ff4444;">Self-loops (${selfLoops.length}):</div>`;
       selfLoops.forEach((edge) => {
-        const pathLen = edge.path ? edge.path.length : 0;
-        html += `  ⟲ cost ${edge.cost.toFixed(1)}`;
-        if (pathLen > 0) html += ` (${pathLen} tiles)`;
-        html += "<br>";
+        html += `  ⟲ cost ${edge.cost.toFixed(1)}<br>`;
       });
     }
 

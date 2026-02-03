@@ -1,4 +1,5 @@
 import { renderNumber } from "src/client/Utils";
+import { EventBus } from "src/core/EventBus";
 import { UnitType } from "src/core/game/Game";
 import {
   BonusEventUpdate,
@@ -6,7 +7,9 @@ import {
   GameUpdateType,
 } from "src/core/game/GameUpdates";
 import type { GameView, UnitView } from "../../../core/game/GameView";
+import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
+import { MoveIndicatorUI } from "../ui/MoveIndicatorUI";
 import { NavalTarget } from "../ui/NavalTarget";
 import { NukeTelegraph } from "../ui/NukeTelegraph";
 import { TextIndicator } from "../ui/TextIndicator";
@@ -24,7 +27,17 @@ export class DynamicUILayer implements Layer {
   constructor(
     private readonly game: GameView,
     private transformHandler: TransformHandler,
+    private eventBus: EventBus,
   ) {}
+
+  init() {
+    // Listen for warship move clicks for MoveIndicatorUI
+    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+      const x = this.game.x(e.tile);
+      const y = this.game.y(e.tile);
+      this.uiElements.push(new MoveIndicatorUI(this.transformHandler, x, y));
+    });
+  }
 
   shouldTransform(): boolean {
     return false;
@@ -103,14 +116,25 @@ export class DynamicUILayer implements Layer {
   }
 
   onBombEvent(unit: UnitView) {
-    if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return;
+    }
+    if (
+      this.createdThisTick(unit) &&
+      (unit.owner() === myPlayer || unit.owner().isOnSameTeam(myPlayer))
+    ) {
       const target = new NukeTelegraph(this.transformHandler, this.game, unit);
       this.uiElements.push(target);
     }
   }
 
   onTransportShipEvent(unit: UnitView) {
-    if (this.createdThisTick(unit) && this.isOwnedByPlayer(unit)) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return;
+    }
+    if (this.createdThisTick(unit) && unit.owner() === myPlayer) {
       const target = new NavalTarget(this.transformHandler, this.game, unit);
       this.uiElements.push(target);
     }
@@ -131,11 +155,6 @@ export class DynamicUILayer implements Layer {
         this.uiElements.splice(i, 1);
       }
     }
-  }
-
-  private isOwnedByPlayer(unit: UnitView): boolean {
-    const my = this.game.myPlayer();
-    return my !== null && unit.owner() === my;
   }
 
   private createdThisTick(unit: UnitView): boolean {

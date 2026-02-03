@@ -33,6 +33,10 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   private clickedTile: TileRef | null = null;
 
+  getTickIntervalMs() {
+    return 500;
+  }
+
   constructor(
     private eventBus: EventBus,
     private game: GameView,
@@ -134,7 +138,9 @@ export class MainRadialMenu extends LitElement implements Layer {
     };
 
     const isFriendlyTarget =
-      recipient !== null && recipient.isFriendly(myPlayer);
+      recipient !== null &&
+      recipient.isFriendly(myPlayer) &&
+      !recipient.isDisconnected();
 
     this.radialMenu.setCenterButtonAppearance(
       isFriendlyTarget ? donateTroopIcon : swordIcon,
@@ -154,18 +160,16 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
-    if (this.game.ticks() % 5 === 0) {
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-          );
-        });
-    }
+    this.game
+      .myPlayer()!
+      .actions(this.clickedTile)
+      .then((actions) => {
+        this.updatePlayerActions(
+          this.game.myPlayer()!,
+          actions,
+          this.clickedTile!,
+        );
+      });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {

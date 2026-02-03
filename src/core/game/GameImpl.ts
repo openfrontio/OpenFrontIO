@@ -1,6 +1,11 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { NavMesh } from "../pathfinding/navmesh/NavMesh";
+import {
+  AbstractGraph,
+  AbstractGraphBuilder,
+} from "../pathfinding/algorithms/AbstractGraph";
+import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
+import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -87,7 +92,9 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _isPaused: boolean = false;
-  private _navMesh: NavMesh | null = null;
+  private _winner: Player | Team | null = null;
+  private _miniWaterGraph: AbstractGraph | null = null;
+  private _miniWaterHPA: AStarWaterHierarchical | null = null;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -97,6 +104,8 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
   ) {
+    const constructorStart = performance.now();
+
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -108,9 +117,19 @@ export class GameImpl implements Game {
     this.addPlayers();
 
     if (!_config.disableNavMesh()) {
-      this._navMesh = new NavMesh(this, { cachePaths: true });
-      this._navMesh.initialize();
+      const graphBuilder = new AbstractGraphBuilder(this.miniGameMap);
+      this._miniWaterGraph = graphBuilder.build();
+
+      this._miniWaterHPA = new AStarWaterHierarchical(
+        this.miniGameMap,
+        this._miniWaterGraph,
+        { cachePaths: true },
+      );
     }
+
+    console.log(
+      `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
+    );
   }
 
   private populateTeams() {
@@ -700,11 +719,16 @@ export class GameImpl implements Game {
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+    this._winner = winner;
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  getWinner(): Player | Team | null {
+    return this._winner;
   }
 
   private makeWinner(winner: string | Player): Winner | undefined {
@@ -821,6 +845,24 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       type,
+      playerId,
+      includeUnderConstruction,
+    );
+  }
+
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit) => boolean,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean {
+    return this.unitGrid.anyUnitNearby(
+      tile,
+      searchRange,
+      types,
+      predicate,
       playerId,
       includeUnderConstruction,
     );
@@ -966,8 +1008,79 @@ export class GameImpl implements Game {
   railNetwork(): RailNetwork {
     return this._railNetwork;
   }
-  navMesh(): NavMesh | null {
-    return this._navMesh;
+  miniWaterHPA(): PathFinder<number> | null {
+    return this._miniWaterHPA;
+  }
+  miniWaterGraph(): AbstractGraph | null {
+    return this._miniWaterGraph;
+  }
+  getWaterComponent(tile: TileRef): number | null {
+    // Permissive fallback for tests with disableNavMesh
+    if (!this._miniWaterGraph) return 0;
+
+    const miniX = Math.floor(this._map.x(tile) / 2);
+    const miniY = Math.floor(this._map.y(tile) / 2);
+    const miniTile = this.miniGameMap.ref(miniX, miniY);
+
+    if (this.miniGameMap.isWater(miniTile)) {
+      return this._miniWaterGraph.getComponentId(miniTile);
+    }
+
+    // Shore tile: find water neighbor (expand search for minimap resolution loss)
+    for (const n of this.miniGameMap.neighbors(miniTile)) {
+      if (this.miniGameMap.isWater(n)) {
+        return this._miniWaterGraph.getComponentId(n);
+      }
+    }
+
+    // Extended search: check 2-hop neighbors for narrow straits
+    for (const n of this.miniGameMap.neighbors(miniTile)) {
+      for (const n2 of this.miniGameMap.neighbors(n)) {
+        if (this.miniGameMap.isWater(n2)) {
+          return this._miniWaterGraph.getComponentId(n2);
+        }
+      }
+    }
+    return null;
+  }
+  hasWaterComponent(tile: TileRef, component: number): boolean {
+    // Permissive fallback for tests with disableNavMesh
+    if (!this._miniWaterGraph) return true;
+
+    const miniX = Math.floor(this._map.x(tile) / 2);
+    const miniY = Math.floor(this._map.y(tile) / 2);
+    const miniTile = this.miniGameMap.ref(miniX, miniY);
+
+    // Check miniTile itself (shore in full map may be water in minimap)
+    if (
+      this.miniGameMap.isWater(miniTile) &&
+      this._miniWaterGraph.getComponentId(miniTile) === component
+    ) {
+      return true;
+    }
+
+    // Check neighbors
+    for (const n of this.miniGameMap.neighbors(miniTile)) {
+      if (
+        this.miniGameMap.isWater(n) &&
+        this._miniWaterGraph.getComponentId(n) === component
+      ) {
+        return true;
+      }
+    }
+
+    // Extended search: check 2-hop neighbors for narrow straits
+    for (const n of this.miniGameMap.neighbors(miniTile)) {
+      for (const n2 of this.miniGameMap.neighbors(n)) {
+        if (
+          this.miniGameMap.isWater(n2) &&
+          this._miniWaterGraph.getComponentId(n2) === component
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {

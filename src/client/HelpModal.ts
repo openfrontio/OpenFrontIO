@@ -1,13 +1,15 @@
 import { html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { customElement, query, state } from "lit/decorators.js";
+import { translateText, TUTORIAL_VIDEO_URL } from "../client/Utils";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import "./components/Maps";
+import { modalHeader } from "./components/ui/ModalHeader";
+import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
+  @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
 
   private isKeybindObject(v: unknown): v is { value: string } {
     return (
@@ -49,6 +51,7 @@ export class HelpModal extends BaseModal {
       zoomIn: "KeyE",
       attackRatioDown: "KeyT",
       attackRatioUp: "KeyY",
+      swapDirection: "KeyU",
       shiftKey: "ShiftLeft",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
@@ -98,75 +101,152 @@ export class HelpModal extends BaseModal {
     const content = html`
       <div
         class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
+          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
           : ""}"
       >
-        <div class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2">
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("main.instructions")}
-            </span>
-          </div>
-        </div>
+        ${modalHeader({
+          title: translateText("main.help"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
 
         <div
-          class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-4 space-y-8 mr-1"
+          class="prose prose-invert prose-sm max-w-none overflow-y-auto px-6 py-3 mr-1
+            [&_a]:text-blue-400 [&_a:hover]:text-blue-300 transition-colors
+            [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-white [&_h1]:border-b [&_h1]:border-white/10 [&_h1]:pb-2
+            [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-blue-200
+            [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-blue-100
+            [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1
+            [&_li]:text-gray-300 [&_li]:leading-relaxed
+            [&_p]:text-gray-300 [&_p]:mb-3 [&_strong]:text-white [&_strong]:font-bold
+            scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
         >
+          <!-- Video Tutorial Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("help_modal.video_tutorial")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
+          <section
+            class="bg-white/5 rounded-xl border border-white/10 overflow-hidden mb-8"
+          >
+            <div class="relative w-full h-0 pb-[56.25%]">
+              <iframe
+                id="tutorial-video-iframe"
+                class="absolute top-0 left-0 w-full h-full"
+                src="${TUTORIAL_VIDEO_URL}"
+                title="${translateText("help_modal.video_tutorial_title")}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </section>
+
+          <!-- Troubleshooting Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 20 L12 0 L22 20 L2 20"></path>
+                <line x1="12" y1="8" x2="12" y2="14"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("main.troubleshooting")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
+          <section>
+            <div class="w-full flex flex-col items-center">
+              <p class="mb-6 text-white/70 text-sm">
+                ${translateText("help_modal.troubleshooting_desc")}
+              </p>
+              <button
+                id="troubleshooting-button"
+                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                data-page="page-troubleshooting"
+                @click="${this.openTroubleshooting}"
+                data-i18n="main.go_to_troubleshooting"
+              >
+                <span
+                  class="relative z-10 text-2xl"
+                  data-i18n="main.go_to_troubleshooting"
+                ></span>
+              </button>
+            </div>
+          </section>
           <!-- Hotkeys Section -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="text-blue-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 text-blue-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                <path d="M6 8h.001"></path>
+                <path d="M10 8h.001"></path>
+                <path d="M14 8h.001"></path>
+                <path d="M18 8h.001"></path>
+                <path d="M6 12h.001"></path>
+                <path d="M10 12h.001"></path>
+                <path d="M14 12h.001"></path>
+                <path d="M18 12h.001"></path>
+                <path d="M6 16h12"></path>
+              </svg>
+            </div>
+            <h3
+              class="text-xl font-bold uppercase tracking-widest text-white/90"
+            >
+              ${translateText("help_modal.hotkeys")}
+            </h3>
+            <div
+              class="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-transparent"
+            ></div>
+          </div>
           <section
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
           >
-            <div class="p-4 bg-white/5 border-b border-white/5">
-              <h2
-                class="text-lg font-bold text-white flex items-center gap-2 uppercase tracking-wide"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5 text-blue-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                  <path d="M6 8h.001"></path>
-                  <path d="M10 8h.001"></path>
-                  <path d="M14 8h.001"></path>
-                  <path d="M18 8h.001"></path>
-                  <path d="M6 12h.001"></path>
-                  <path d="M10 12h.001"></path>
-                  <path d="M14 12h.001"></path>
-                  <path d="M18 12h.001"></path>
-                  <path d="M6 16h12"></path>
-                </svg>
-                ${translateText("help_modal.hotkeys")}
-              </h2>
-            </div>
-            <div class="p-4 overflow-x-auto">
+            <div class="pt-2 pb-4 px-4 overflow-x-auto">
               <table class="w-full text-sm border-separate border-spacing-y-1">
                 <thead>
                   <tr
@@ -191,7 +271,7 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 pl-4 border-b border-white/5">
-                      ${this.renderKey("KeyU")}
+                      ${this.renderKey(keybinds.swapDirection)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.bomb_direction")}
@@ -1146,7 +1226,32 @@ export class HelpModal extends BaseModal {
     `;
   }
 
+  openTroubleshooting() {
+    const troubleshootingModal = document.querySelector(
+      "troubleshooting-modal",
+    ) as TroubleshootingModal;
+    if (
+      !troubleshootingModal ||
+      !(troubleshootingModal instanceof TroubleshootingModal)
+    ) {
+      console.warn("Troubleshooting modal element not found");
+      return;
+    }
+    troubleshootingModal.open();
+  }
+
   protected onOpen(): void {
     this.keybinds = this.getKeybinds();
+    // Restore the video src when modal opens
+    if (this.videoIframe) {
+      this.videoIframe.src = TUTORIAL_VIDEO_URL;
+    }
+  }
+
+  protected onClose(): void {
+    // Clear the iframe src to stop video playback
+    if (this.videoIframe) {
+      this.videoIframe.src = "";
+    }
   }
 }

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
 
 @theme {
@@ -545,7 +546,6 @@ label.option-card:hover {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  padding: 0 16px;
 }
 
 /* News Button Notification */

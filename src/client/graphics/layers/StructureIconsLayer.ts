@@ -270,11 +270,11 @@ export class StructureIconsLayer implements Layer {
       myPlayer &&
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
-      // Only check if player has allies
-      const allies = myPlayer.allies();
+      // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
+      const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
       if (allies.length > 0) {
         targetingAlly = wouldNukeBreakAlliance({
-          gm: this.game,
+          game: this.game,
           targetTile: tileRef,
           magnitude: this.game.config().nukeMagnitudes(nukeType),
           allySmallIds: new Set(allies.map((a) => a.smallID())),

@@ -17,6 +17,7 @@ import {
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -30,6 +31,9 @@ export enum GamePhase {
   Active = "ACTIVE",
   Finished = "FINISHED",
 }
+
+const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
+const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -71,7 +75,11 @@ export class GameServer {
     { winner: ClientSendWinnerMessage; ips: Set<string> }
   > = new Map();
 
+  private _hasEnded = false;
+
   public desyncCount = 0;
+
+  private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     public readonly id: string,
@@ -127,13 +135,17 @@ export class GameServer {
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
-
     if (gameConfig.disabledUnits !== undefined) {
       this.gameConfig.disabledUnits = gameConfig.disabledUnits;
     }
-
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
+    if (gameConfig.goldMultiplier !== undefined) {
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+    }
+    if (gameConfig.startingGold !== undefined) {
+      this.gameConfig.startingGold = gameConfig.startingGold;
     }
   }
 
@@ -213,7 +225,7 @@ export class GameServer {
         });
         // Kick the existing client instead of the new one, because this was causing issues when
         // a client wanted to replay the game afterwards.
-        this.kickClient(conflicting.clientID);
+        this.kickClient(conflicting.clientID, KICK_REASON_DUPLICATE_SESSION);
       }
     }
 
@@ -223,6 +235,7 @@ export class GameServer {
     this.markClientDisconnected(client.clientID, false);
     this.allClients.set(client.clientID, client);
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
@@ -271,6 +284,7 @@ export class GameServer {
 
     client.ws = ws;
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
@@ -284,17 +298,16 @@ export class GameServer {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
-          this.log.error("Failed to parse client message", error, {
+          this.log.warn(`Failed to parse client message ${error}`, {
             clientID: client.clientID,
           });
           client.ws.send(
             JSON.stringify({
               type: "error",
               error,
-              message,
+              message: `Server could not parse message from client: ${message}`,
             } satisfies ServerErrorMessage),
           );
-          client.ws.close(1002, "ClientMessageSchema");
           return;
         }
         const clientMsg = parsed.data;
@@ -350,7 +363,10 @@ export class GameServer {
                   kickMethod: "websocket",
                 });
 
-                this.kickClient(clientMsg.intent.target);
+                this.kickClient(
+                  clientMsg.intent.target,
+                  KICK_REASON_LOBBY_CREATOR,
+                );
                 return;
               }
               case "update_game_config": {
@@ -531,8 +547,49 @@ export class GameServer {
     });
   }
 
+  private startLobbyInfoBroadcast() {
+    if (this._hasStarted || this._hasEnded) {
+      return;
+    }
+    if (this.lobbyInfoIntervalId !== null) {
+      return;
+    }
+    this.broadcastLobbyInfo();
+    this.lobbyInfoIntervalId = setInterval(() => {
+      if (
+        this._hasStarted ||
+        this._hasEnded ||
+        this.activeClients.length === 0
+      ) {
+        this.stopLobbyInfoBroadcast();
+        return;
+      }
+      this.broadcastLobbyInfo();
+    }, 1000);
+  }
+
+  private stopLobbyInfoBroadcast() {
+    if (this.lobbyInfoIntervalId === null) {
+      return;
+    }
+    clearInterval(this.lobbyInfoIntervalId);
+    this.lobbyInfoIntervalId = null;
+  }
+
+  private broadcastLobbyInfo() {
+    const msg = JSON.stringify({
+      type: "lobby_info",
+      lobby: this.gameInfo(),
+    } satisfies ServerLobbyInfoMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
+    });
+  }
+
   public start() {
-    if (this._hasStarted) {
+    if (this._hasStarted || this._hasEnded) {
       return;
     }
     this._hasStarted = true;
@@ -635,9 +692,11 @@ export class GameServer {
   }
 
   async end() {
+    this._hasEnded = true;
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
       clearInterval(this.endTurnIntervalID);
+      this.endTurnIntervalID = undefined;
     }
     this.websockets.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -758,43 +817,62 @@ export class GameServer {
         clientID: c.clientID,
       })),
       gameConfig: this.gameConfig,
-      msUntilStart: this.isPublic()
-        ? this.createdAt + this.config.gameCreationRate()
-        : undefined,
+      msUntilStart: this.isPublic() ? this.getMsUntilStart() : undefined,
     };
+  }
+
+  private getMsUntilStart(): number {
+    const startTime = this.createdAt + this.config.gameCreationRate();
+    return Math.max(0, startTime - Date.now());
   }
 
   public isPublic(): boolean {
     return this.gameConfig.gameType === GameType.Public;
   }
 
-  public kickClient(clientID: ClientID): void {
+  public kickClient(
+    clientID: ClientID,
+    reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
+  ): void {
     if (this.kickedClients.has(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
+        reasonKey,
       });
       return;
     }
+
+    if (!this.allClients.has(clientID)) {
+      this.log.warn(`cannot kick client, not found in game`, {
+        clientID,
+        reasonKey,
+      });
+      return;
+    }
+
+    this.kickedClients.add(clientID);
+
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
       this.log.info("Kicking client from game", {
         clientID: client.clientID,
         persistentID: client.persistentID,
+        reasonKey,
       });
       client.ws.send(
         JSON.stringify({
           type: "error",
-          error: "Kicked from game (you may have been playing on another tab)",
+          error: reasonKey,
         } satisfies ServerErrorMessage),
       );
-      client.ws.close(1000, "Kicked from game");
+      client.ws.close(1000, reasonKey);
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
       );
-      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
+        reasonKey,
       });
     }
   }

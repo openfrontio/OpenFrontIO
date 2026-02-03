@@ -29,23 +29,52 @@ export async function handlePurchase(
   window.location.href = url;
 }
 
-export async function fetchCosmetics(): Promise<Cosmetics | null> {
-  try {
-    const response = await fetch(`${getApiBase()}/cosmetics.json`);
-    if (!response.ok) {
-      console.error(`HTTP error! status: ${response.status}`);
-      return null;
-    }
-    const result = CosmeticsSchema.safeParse(await response.json());
-    if (!result.success) {
-      console.error(`Invalid cosmetics: ${result.error.message}`);
-      return null;
-    }
-    return result.data;
-  } catch (error) {
-    console.error("Error getting cosmetics:", error);
-    return null;
+let __cosmetics: Promise<Cosmetics | null> | null = null;
+let __cosmeticsHash: string | null = null;
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
   }
+  return hash.toString(36);
+}
+
+export async function fetchCosmetics(): Promise<Cosmetics | null> {
+  if (__cosmetics !== null) {
+    return __cosmetics;
+  }
+  __cosmetics = (async () => {
+    try {
+      const response = await fetch(`${getApiBase()}/cosmetics.json`);
+      if (!response.ok) {
+        console.error(`HTTP error! status: ${response.status}`);
+        return null;
+      }
+      const result = CosmeticsSchema.safeParse(await response.json());
+      if (!result.success) {
+        console.error(`Invalid cosmetics: ${result.error.message}`);
+        return null;
+      }
+      const patternKeys = Object.keys(result.data.patterns).sort();
+      const hashInput = patternKeys
+        .map((k) => k + (result.data.patterns[k].product ? "sale" : ""))
+        .join(",");
+      __cosmeticsHash = simpleHash(hashInput);
+      return result.data;
+    } catch (error) {
+      console.error("Error getting cosmetics:", error);
+      return null;
+    }
+  })();
+  return __cosmetics;
+}
+
+export async function getCosmeticsHash(): Promise<string | null> {
+  await fetchCosmetics();
+  return __cosmeticsHash;
 }
 
 export function patternRelationship(

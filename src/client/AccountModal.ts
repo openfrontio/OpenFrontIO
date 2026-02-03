@@ -5,6 +5,7 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
 import { discordLogin, logOut, sendMagicLink } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -12,15 +13,16 @@ import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
+import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { copyToClipboard, translateText } from "./Utils";
+import { modalHeader } from "./components/ui/ModalHeader";
+import { translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
-  @state() private showCopied: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -43,17 +45,6 @@ export class AccountModal extends BaseModal {
         this.requestUpdate();
       }
     });
-  }
-
-  private async copyIdToClipboard() {
-    const id = this.userMeResponse?.player?.publicId;
-    if (!id) return;
-
-    await copyToClipboard(
-      id,
-      () => (this.showCopied = true),
-      () => (this.showCopied = false),
-    );
   }
 
   private hasAnyStats(): boolean {
@@ -104,62 +95,33 @@ export class AccountModal extends BaseModal {
   private renderInner() {
     const isLoggedIn = !!this.userMeResponse?.user;
     const title = translateText("account_modal.title");
+    const publicId = this.userMeResponse?.player?.publicId ?? "";
+    const displayId = publicId || translateText("account_modal.not_found");
 
     return html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
       >
-        <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0 p-6"
-        >
-          <div class="flex items-center gap-4 flex-1">
-            <button
-              @click=${() => this.close()}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${title}
-            </span>
-          </div>
-          ${isLoggedIn
+        ${modalHeader({
+          title,
+          onBack: () => this.close(),
+          ariaLabel: translateText("common.back"),
+          rightContent: isLoggedIn
             ? html`
                 <div class="flex items-center gap-2">
                   <span
                     class="text-xs text-blue-400 font-bold uppercase tracking-wider"
-                    >ID:</span
+                    >${translateText("account_modal.personal_player_id")}</span
                   >
-                  <button
-                    @click=${this.copyIdToClipboard}
-                    class="text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                    title="${translateText("common.click_to_copy")}"
-                  >
-                    ${this.showCopied
-                      ? translateText("common.copied")
-                      : (this.userMeResponse?.player?.publicId ??
-                        translateText("account_modal.not_found"))}
-                  </button>
+                  <copy-button
+                    .lobbyId=${publicId}
+                    .copyText=${publicId}
+                    .displayText=${displayId}
+                  ></copy-button>
                 </div>
               `
-            : ""}
-        </div>
+            : undefined,
+        })}
 
         <div class="flex-1 overflow-y-auto custom-scrollbar mr-1">
           ${isLoggedIn ? this.renderAccountInfo() : this.renderLoginOptions()}
@@ -223,7 +185,7 @@ export class AccountModal extends BaseModal {
             </h3>
             <game-list
               .games=${this.recentGames}
-              .onViewGame=${(id: string) => this.viewGame(id)}
+              .onViewGame=${(id: string) => void this.viewGame(id)}
             ></game-list>
           </div>
         </div>
@@ -254,15 +216,16 @@ export class AccountModal extends BaseModal {
     return html``;
   }
 
-  private viewGame(gameId: string): void {
+  private async viewGame(gameId: string): Promise<void> {
     this.close();
-    const path = location.pathname;
-    const { search } = location;
-    const hash = `#join=${encodeURIComponent(gameId)}`;
-    const newUrl = `${path}${search}${hash}`;
+    const config = await getServerConfigFromClient();
+    const encodedGameId = encodeURIComponent(gameId);
+    const newUrl = `/${config.workerPath(gameId)}/game/${encodedGameId}`;
 
     history.pushState({ join: gameId }, "", newUrl);
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    window.dispatchEvent(
+      new CustomEvent("join-changed", { detail: { gameId: encodedGameId } }),
+    );
   }
 
   private renderLogoutButton(): TemplateResult {

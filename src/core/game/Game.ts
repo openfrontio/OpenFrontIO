@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
-import { NavMesh } from "../pathfinding/navmesh/NavMesh";
+import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
+import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
@@ -102,7 +103,7 @@ export enum GameMapType {
   Montreal = "Montreal",
   NewYorkCity = "New York City",
   Achiran = "Achiran",
-  BaikalNukeWars = "Baikal (Nuke Wars)",
+  BaikalNukeWars = "Baikal Nuke Wars",
   FourIslands = "Four Islands",
   Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
@@ -110,6 +111,7 @@ export enum GameMapType {
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
   Sierpinski = "Sierpinski",
+  TheBox = "The Box",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
@@ -176,6 +178,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
   ],
   arcade: [
+    GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
@@ -194,6 +197,11 @@ export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
+
+export enum RankedType {
+  OneVOne = "1v1",
+}
+
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
 
@@ -205,6 +213,8 @@ export enum GameMapSize {
 export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
+  isCrowded: boolean;
+  startingGold?: number;
 }
 
 export interface UnitInfo {
@@ -252,6 +262,8 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.Port,
   UnitType.Factory,
 ]);
+
+export const StructureTypes: readonly UnitType[] = [..._structureTypes];
 
 export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
@@ -746,6 +758,7 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
@@ -758,6 +771,14 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
+    playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
+  ): boolean;
+  anyUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    types: readonly UnitType[],
+    predicate: (unit: Unit) => boolean,
     playerId?: PlayerID,
     includeUnderConstruction?: boolean,
   ): boolean;
@@ -802,7 +823,10 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
-  navMesh(): NavMesh | null;
+  miniWaterHPA(): PathFinder<number> | null;
+  miniWaterGraph(): AbstractGraph | null;
+  getWaterComponent(tile: TileRef): number | null;
+  hasWaterComponent(tile: TileRef, component: number): boolean;
 }
 
 export interface PlayerActions {

@@ -112,7 +112,7 @@ export class PlayerImpl implements Player {
   ) {
     this._name = playerInfo.name;
     this._troops = toInt(startTroops);
-    this._gold = 0n;
+    this._gold = mg.config().startingGold(playerInfo);
     this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
@@ -421,6 +421,14 @@ export class PlayerImpl implements Player {
 
     if (hasPending) {
       return false;
+    }
+
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return true;
     }
 
     const recent = this.pastOutgoingAllianceRequests
@@ -1259,6 +1267,6 @@ export class PlayerImpl implements Player {
   }
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
-    return bestShoreDeploymentSource(this.mg, this, targetTile);
+    return bestShoreDeploymentSource(this.mg, this, targetTile) ?? false;
   }
 }

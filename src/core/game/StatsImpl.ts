@@ -13,6 +13,8 @@ import {
   BOMB_INDEX_LAUNCH,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
+  GOLD_INDEX_TRAIN_OTHER,
+  GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
   GOLD_INDEX_WORK,
   NukeType,
@@ -22,11 +24,14 @@ import {
   OTHER_INDEX_LOST,
   OTHER_INDEX_UPGRADE,
   OtherUnitType,
+  PLAYER_INDEX_BOT,
+  PLAYER_INDEX_HUMAN,
+  PLAYER_INDEX_NATION,
   PlayerStats,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, TerraNullius, UnitType } from "./Game";
+import { Player, PlayerType, TerraNullius, UnitType } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -38,6 +43,12 @@ function _bigint(value: BigIntLike): bigint {
       return BigInt(Math.floor(value));
   }
 }
+
+const conquest_by_type: Record<PlayerType, number> = {
+  [PlayerType.Human]: PLAYER_INDEX_HUMAN,
+  [PlayerType.Nation]: PLAYER_INDEX_NATION,
+  [PlayerType.Bot]: PLAYER_INDEX_BOT,
+};
 
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
@@ -136,14 +147,12 @@ export class StatsImpl implements Stats {
     p.units[type][index] += _bigint(value);
   }
 
-  private _addConquest(player: Player) {
+  private _addConquest(player: Player, index: number) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    if (p.conquests === undefined) {
-      p.conquests = _bigint(1);
-    } else {
-      p.conquests += _bigint(1);
-    }
+    p.conquests ??= [0n];
+    while (p.conquests.length <= index) p.conquests.push(0n);
+    p.conquests[index] += _bigint(1);
   }
 
   private _addPlayerKilled(player: Player, tick: number) {
@@ -247,7 +256,10 @@ export class StatsImpl implements Stats {
 
   goldWar(player: Player, captured: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_WAR, gold);
-    this._addConquest(player);
+    const conquestType = conquest_by_type[captured.type()];
+    if (conquestType !== undefined) {
+      this._addConquest(player, conquestType);
+    }
   }
 
   unitBuild(player: Player, type: OtherUnitType): void {
@@ -272,6 +284,14 @@ export class StatsImpl implements Stats {
 
   playerKilled(player: Player, tick: number): void {
     this._addPlayerKilled(player, tick);
+  }
+
+  trainSelfTrade(player: Player, gold: BigIntLike): void {
+    this._addGold(player, GOLD_INDEX_TRAIN_SELF, gold);
+  }
+
+  trainExternalTrade(player: Player, gold: BigIntLike): void {
+    this._addGold(player, GOLD_INDEX_TRAIN_OTHER, gold);
   }
 
   lobbyFillTime(fillTimeMs: number): void {}

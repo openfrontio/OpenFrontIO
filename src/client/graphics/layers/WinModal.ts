@@ -1,9 +1,10 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   getGamesPlayed,
   isInIframe,
   translateText,
+  TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
@@ -131,9 +132,7 @@ export class WinModal extends LitElement implements Layer {
         <div class="relative w-full pb-[56.25%]">
           <iframe
             class="absolute top-0 left-0 w-full h-full rounded-sm"
-            src="${this.isVisible
-              ? "https://www.youtube.com/embed/EN2oOog3pSs"
-              : ""}"
+            src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
             title="YouTube video player"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -250,6 +249,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    crazyGamesSDK.gameplayStop();
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
@@ -302,6 +302,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
         this._title = translateText("win_modal.nation_won", {
@@ -331,6 +332,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       }
     });

@@ -4,45 +4,39 @@ import {
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFinder, PathFinders, PathStatus } from "../pathfinding/PathFinder";
+import { PathFinding } from "../pathfinding/PathFinder";
+import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
+
 export class TransportShipExecution implements Execution {
-  private lastMove: number;
+  private active = true;
 
   // TODO: make this configurable
   private ticksPerMove = 1;
-
-  private active = true;
+  private lastMove: number;
 
   private mg: Game;
   private target: Player | TerraNullius;
+  private pathFinder: SteppingPathFinder<TileRef>;
 
-  // TODO make private
-  public path: TileRef[];
   private dst: TileRef | null;
-  private dstShore: TileRef | null;
-
+  private src: TileRef | null;
   private boat: Unit;
-
-  private pathFinder: PathFinder;
 
   private originalOwner: Player;
 
   constructor(
     private attacker: Player,
-    private targetID: PlayerID | null,
     private ref: TileRef,
-    private startTroops: number,
-    private src: TileRef | null,
+    private troops: number,
   ) {
     this.originalOwner = this.attacker;
   }
@@ -52,25 +46,16 @@ export class TransportShipExecution implements Execution {
   }
 
   init(mg: Game, ticks: number) {
-    if (this.targetID !== null && !mg.hasPlayer(this.targetID)) {
-      console.warn(`TransportShipExecution: target ${this.targetID} not found`);
-      this.active = false;
-      return;
-    }
     if (!mg.isValidRef(this.ref)) {
       console.warn(`TransportShipExecution: ref ${this.ref} not valid`);
-      this.active = false;
-      return;
-    }
-    if (this.src !== null && !mg.isValidRef(this.src)) {
-      console.warn(`TransportShipExecution: src ${this.src} not valid`);
       this.active = false;
       return;
     }
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinders.Water(mg);
+    this.target = mg.owner(this.ref);
+    this.pathFinder = PathFinding.Water(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -87,98 +72,51 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    if (
-      this.targetID === null ||
-      this.targetID === this.mg.terraNullius().id()
-    ) {
-      this.target = mg.terraNullius();
-    } else {
-      this.target = mg.player(this.targetID);
-    }
     if (this.target.isPlayer() && !this.attacker.canAttackPlayer(this.target)) {
       this.active = false;
       return;
     }
 
-    this.startTroops ??= this.mg
+    this.troops ??= this.mg
       .config()
       .boatAttackAmount(this.attacker, this.target);
+    this.troops = Math.min(this.troops, this.attacker.troops());
 
-    this.startTroops = Math.min(this.startTroops, this.attacker.troops());
+    this.dst = targetTransportTile(this.mg, this.ref);
 
-    this.dstShore = targetTransportTile(this.mg, this.ref);
-    if (this.dstShore === null) {
-      console.warn(
-        `${this.attacker} cannot send ship to ${this.target}, cannot find attack tile`,
-      );
-      this.active = false;
-      return;
-    }
-
-    this.dst = this.adjacentWater(this.dstShore);
     if (this.dst === null) {
       console.warn(
-        `${this.attacker} cannot find water tile adjacent to destination`,
+        `${this.attacker} cannot send ship to ${this.target}, cannot find target tile`,
       );
       this.active = false;
       return;
     }
 
-    const closestTileSrc = this.attacker.canBuild(
-      UnitType.TransportShip,
-      this.dstShore,
-    );
-    if (closestTileSrc === false) {
-      console.warn(`can't build transport ship`);
+    const src = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+
+    if (src === false) {
+      console.warn(
+        `${this.attacker} cannot send ship to ${this.target}, cannot find start tile`,
+      );
       this.active = false;
       return;
     }
 
-    if (this.src === null) {
-      // Only update the src if it's not already set
-      // because we assume that the src is set to the best spawn tile
-      this.src = closestTileSrc;
-    } else {
-      if (
-        this.mg.owner(this.src) !== this.attacker ||
-        !this.mg.isShore(this.src)
-      ) {
-        console.warn(
-          `src is not a shore tile or not owned by: ${this.attacker.name()}`,
-        );
-        this.src = closestTileSrc;
-      }
-    }
+    this.src = src;
 
     this.boat = this.attacker.buildUnit(UnitType.TransportShip, this.src, {
-      troops: this.startTroops,
-      targetTile: this.dst ?? undefined,
+      troops: this.troops,
+      targetTile: this.dst,
     });
 
-    // Move boat from shore to adjacent water for pathfinding
-    const spawnWater = this.adjacentWater(this.src);
-    if (spawnWater === null) {
-      console.warn(`No adjacent water for transport ship spawn`);
-      this.boat.delete(false);
-      this.active = false;
-      return;
-    }
-    this.boat.move(spawnWater);
-
-    if (this.dstShore !== null) {
-      this.boat.setTargetTile(this.dstShore);
-    } else {
-      this.boat.setTargetTile(undefined);
-    }
-
     // Notify the target player about the incoming naval invasion
-    if (this.targetID && this.targetID !== mg.terraNullius().id()) {
+    if (this.target.id() !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
         // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        `Naval invasion incoming from ${this.attacker.displayName()} (${renderTroops(this.boat.troops())})`,
         MessageType.NAVAL_INVASION_INBOUND,
-        this.targetID,
+        this.target.id(),
       );
     }
 
@@ -222,7 +160,6 @@ export class TransportShipExecution implements Execution {
       if (this.mg.owner(this.src!) !== this.attacker) {
         // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
         const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-
         if (newSrc === false) {
           this.src = null;
         } else {
@@ -239,19 +176,10 @@ export class TransportShipExecution implements Execution {
         this.active = false;
         return;
       } else {
-        this.dstShore = this.src;
-        const retreatWater = this.adjacentWater(this.src);
-        if (retreatWater === null) {
-          console.warn(`No adjacent water for retreat destination`);
-          this.attacker.addTroops(this.boat.troops());
-          this.boat.delete(false);
-          this.active = false;
-          return;
-        }
-        this.dst = retreatWater;
+        this.dst = this.src;
 
-        if (this.boat.targetTile() !== this.dstShore) {
-          this.boat.setTargetTile(this.dstShore!);
+        if (this.boat.targetTile() !== this.dst) {
+          this.boat.setTargetTile(this.dst);
         }
       }
     }
@@ -259,7 +187,7 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.next(this.boat.tile(), this.dst);
     switch (result.status) {
       case PathStatus.COMPLETE:
-        if (this.mg.owner(this.dstShore!) === this.attacker) {
+        if (this.mg.owner(this.dst) === this.attacker) {
           const deaths = this.boat.troops() * (malusForRetreat / 100);
           const survivors = this.boat.troops() - deaths;
           this.attacker.addTroops(survivors);
@@ -281,7 +209,7 @@ export class TransportShipExecution implements Execution {
           }
           return;
         }
-        this.attacker.conquer(this.dstShore!);
+        this.attacker.conquer(this.dst);
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
           this.attacker.addTroops(this.boat.troops());
         } else {
@@ -289,8 +217,8 @@ export class TransportShipExecution implements Execution {
             new AttackExecution(
               this.boat.troops(),
               this.attacker,
-              this.targetID,
-              this.dstShore!,
+              this.target.id(),
+              this.dst,
               false,
             ),
           );
@@ -308,13 +236,18 @@ export class TransportShipExecution implements Execution {
         break;
       case PathStatus.PENDING:
         break;
-      case PathStatus.NOT_FOUND:
+      case PathStatus.NOT_FOUND: {
         // TODO: add to poisoned port list
-        console.warn(`path not found to dst`);
+        const map = this.mg.map();
+        const boatTile = this.boat.tile();
+        console.warn(
+          `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.target.id()}`,
+        );
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;
         return;
+      }
     }
   }
 
@@ -324,18 +257,5 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
-  }
-
-  private adjacentWater(tile: TileRef): TileRef | null {
-    if (this.mg.isWater(tile)) {
-      return tile;
-    }
-
-    for (const neighbor of this.mg.neighbors(tile)) {
-      if (this.mg.isWater(neighbor)) {
-        return neighbor;
-      }
-    }
-    return null;
   }
 }

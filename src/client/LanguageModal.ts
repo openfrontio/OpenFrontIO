@@ -3,6 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import { modalHeader } from "./components/ui/ModalHeader";
 
 interface LanguageOption {
   code: string;
@@ -30,47 +31,17 @@ export class LanguageModal extends BaseModal {
   render() {
     const content = html`
       <div
-        class="h-full flex flex-col ${
-          this.inline
-            ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 p-6"
-            : "bg-[#232323] text-white"
-        }"
+        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
       >
         <!-- Header -->
-        <div
-          class="flex items-center mb-6 pb-2 border-b border-white/10 gap-2 shrink-0"
-        >
-          <div class="flex items-center gap-4">
-            <button
-              @click=${this.close}
-              class="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-              aria-label="${translateText("common.back")}"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <span
-              class="text-white text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest break-words hyphens-auto"
-            >
-              ${translateText("select_lang.title")}
-            </span>
-          </div>
-        </div>
+        ${modalHeader({
+          title: translateText("select_lang.title"),
+          onBack: this.close,
+          ariaLabel: translateText("common.back"),
+        })}
 
         <div
-          class="flex-1 overflow-y-auto custom-scrollbar pr-2 mr-1"
+          class="flex-1 overflow-y-auto custom-scrollbar p-2"
         >
           <div
             class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
@@ -86,8 +57,7 @@ export class LanguageModal extends BaseModal {
                 buttonClasses +=
                   " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)] bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600 to-purple-600";
               } else if (isActive) {
-                buttonClasses +=
-                  " bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]";
+                buttonClasses += " bg-blue-500/20 border-blue-500/50";
               } else {
                 buttonClasses +=
                   " bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
@@ -105,13 +75,13 @@ export class LanguageModal extends BaseModal {
                   />
                   <div class="flex flex-col items-start min-w-0">
                     <span
-                      class="text-sm font-bold uppercase tracking-wider truncate w-full text-left ${isActive
+                      class="text-sm font-bold uppercase tracking-wider whitespace-normal break-words w-full text-left ${isActive
                         ? "text-white"
                         : "text-gray-200 group-hover:text-white"}"
                       >${lang.native}</span
                     >
                     <span
-                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors truncate w-full text-left"
+                      class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors whitespace-normal break-words w-full text-left"
                       >${lang.en}</span
                     >
                   </div>
