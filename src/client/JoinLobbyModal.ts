@@ -17,7 +17,6 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
@@ -26,8 +25,8 @@ import {
   HumansVsNations,
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -346,7 +345,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
-    this.currentClientID = generateID();
+    this.currentClientID = getClientIDForGame(lobbyId);
     this.gameConfig = null;
     this.players = [];
     this.playerCount = 0;
