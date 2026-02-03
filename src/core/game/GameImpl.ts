@@ -1123,6 +1123,9 @@ export class GameImpl implements Game {
       );
       conqueror.addGold(gold);
       conquered.removeGold(gold);
+
+      // Record stats
+      this.stats().goldWar(conqueror, conquered, gold);
     }
 
     this.addUpdate({
@@ -1131,11 +1134,6 @@ export class GameImpl implements Game {
       conqueredId: conquered.id(),
       gold,
     });
-
-    // Record stats
-    if (!skipGoldTransfer) {
-      this.stats().goldWar(conqueror, conquered, gold);
-    }
   }
 }
 
