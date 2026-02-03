@@ -91,6 +91,10 @@ export class JoinLobbyModal extends BaseModal {
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
     const playerCount = this.playerCount;
+    const hostClientID =
+      this.gameConfig?.gameType === GameType.Private
+        ? (this.lobbyCreatorClientID ?? "")
+        : "";
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -129,7 +133,7 @@ export class JoinLobbyModal extends BaseModal {
                         class="mt-6"
                         .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                         .clients=${this.players}
-                        .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                        .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
                         .nationCount=${this.nationCount}
@@ -533,7 +537,6 @@ export class JoinLobbyModal extends BaseModal {
     if (lobby.clients) {
       this.players = lobby.clients;
       this.playerCount = lobby.clients.length;
-      this.lobbyCreatorClientID = lobby.clients[0]?.clientID ?? null;
     } else {
       this.players = [];
       this.playerCount = lobby.numClients ?? 0;
@@ -551,6 +554,11 @@ export class JoinLobbyModal extends BaseModal {
         this.loadNationCount();
       }
     }
+
+    const isPrivate = this.gameConfig?.gameType === GameType.Private;
+    this.lobbyCreatorClientID = isPrivate
+      ? (lobby.clients?.[0]?.clientID ?? null)
+      : null;
   }
 
   private startLobbyUpdates() {
