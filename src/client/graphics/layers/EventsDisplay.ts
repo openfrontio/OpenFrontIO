@@ -245,10 +245,6 @@ export class EventsDisplay extends LitElement implements Layer {
       return shouldKeep;
     });
 
-    if (remainingEvents.length > 30) {
-      remainingEvents = remainingEvents.slice(-30);
-    }
-
     if (this.events.length !== remainingEvents.length) {
       this.events = remainingEvents;
       this.requestUpdate();
@@ -343,10 +339,30 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private addEvent(event: GameEvent) {
-    this.events = [...this.events, event];
-    if (this._hidden === true) {
-      this.newEvents++;
+    const category = getMessageCategory(event.type);
+    const next = [...this.events, event];
+
+    // Count how many we have in this category
+    let count = 0;
+    for (const e of next) {
+      if (getMessageCategory(e.type) === category) {
+        count++;
+      }
     }
+
+    // If cap is exeeded > Remove the oldest event of this category
+    if (count > 30) {
+      const idx = next.findIndex(
+        (e) => getMessageCategory(e.type) === category,
+      );
+      if (idx !== -1) {
+        next.splice(idx, 1);
+      }
+    }
+
+    this.events = next;
+
+    if (this._hidden) this.newEvents++;
     this.requestUpdate();
   }
 
