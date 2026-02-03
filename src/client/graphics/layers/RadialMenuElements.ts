@@ -18,7 +18,6 @@ import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import boatIcon from "/images/BoatIconWhite.svg?url";
 import buildIcon from "/images/BuildIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
-import checkmarkIcon from "/images/CheckmarkIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
@@ -220,31 +219,11 @@ const allyBreakElement: MenuElement = {
     !!params.playerActions?.interaction?.canBreakAlliance,
   color: COLORS.breakAlly,
   icon: traitorIcon,
-  subMenu: () => [allyBreakCancelElement, allyBreakConfirmElement],
-};
-
-const allyBreakConfirmElement: MenuElement = {
-  id: "ally_break_confirm",
-  name: "confirm",
-  disabled: () => false,
-  color: COLORS.breakAlly,
-  icon: checkmarkIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
       params.myPlayer,
       params.selected!,
     );
-    params.closeMenu();
-  },
-};
-
-const allyBreakCancelElement: MenuElement = {
-  id: "ally_break_cancel",
-  name: "cancel",
-  disabled: () => false,
-  color: COLORS.info,
-  icon: xIcon,
-  action: (params: MenuElementParams) => {
     params.closeMenu();
   },
 };
@@ -650,10 +629,7 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    let ally = allyRequestElement;
-    if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
-    }
+    const isAllied = params.selected?.isAlliedWith(params.myPlayer);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -663,10 +639,10 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            boatMenuElement,
-            ally,
+            isAllied ? allyBreakElement : boatMenuElement,
+            allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,
