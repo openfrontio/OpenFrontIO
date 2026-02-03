@@ -235,7 +235,7 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
-    let remainingEvents = this.events.filter((event) => {
+    const remainingEvents = this.events.filter((event) => {
       const shouldKeep =
         this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
         !event.shouldDelete?.(this.game);
