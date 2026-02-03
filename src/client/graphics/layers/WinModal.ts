@@ -40,6 +40,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   private patternContent: TemplateResult | null = null;
 
+  @state()
+  private hasDiscord = false;
+
   private _title: string;
 
   private rand = Math.random();
@@ -116,7 +119,10 @@ export class WinModal extends LitElement implements Layer {
     if (this.rand < 0.25) {
       return this.steamWishlist();
     } else if (this.rand < 0.5) {
-      return this.discordDisplay();
+      // If user already has Discord, don't show the "join Discord" promo
+      return this.hasDiscord
+        ? this.renderPatternButton()
+        : this.discordDisplay();
     } else {
       return this.renderPatternButton();
     }
@@ -160,6 +166,7 @@ export class WinModal extends LitElement implements Layer {
   async loadPatternContent() {
     const me = await getUserMe();
     const patterns = await fetchCosmetics();
+    this.hasDiscord = me !== false && me.user.discord !== undefined;
 
     const purchasablePatterns: {
       pattern: Pattern;
