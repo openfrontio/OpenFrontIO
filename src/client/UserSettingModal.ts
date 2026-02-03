@@ -35,6 +35,8 @@ const DefaultKeybinds: Record<string, string> = {
   attackRatioUp: "KeyY",
   boatAttack: "KeyB",
   groundAttack: "KeyG",
+  requestAlliance: "KeyK",
+  breakAlliance: "KeyL",
   swapDirection: "KeyU",
   zoomOut: "KeyQ",
   zoomIn: "KeyE",
@@ -656,6 +658,32 @@ export class UserSettingModal extends BaseModal {
         defaultKey="KeyG"
         .value=${this.getKeyValue("groundAttack")}
         .display=${this.getKeyChar("groundAttack")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.ally_keybinds")}
+      </h2>
+
+      <setting-keybind
+        action="requestAlliance"
+        label=${translateText("user_setting.request_alliance")}
+        description=${translateText("user_setting.request_alliance_desc")}
+        defaultKey="KeyK"
+        .value=${this.getKeyValue("requestAlliance")}
+        .display=${this.getKeyChar("requestAlliance")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="breakAlliance"
+        label=${translateText("user_setting.break_alliance")}
+        description=${translateText("user_setting.break_alliance_desc")}
+        defaultKey="KeyL"
+        .value=${this.getKeyValue("breakAlliance")}
+        .display=${this.getKeyChar("breakAlliance")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
