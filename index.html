@@ -239,16 +239,16 @@
     <div id="app"></div>
 
     <div
-      class="left-0 bottom-0 sm:left-4 sm:bottom-4 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px] fixed pointer-events-none"
+      class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
+      <div class="order-2 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto">
+        <control-panel></control-panel>
+      </div>
       <div
-        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end pointer-events-none"
+        class="order-1 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
-      </div>
-      <div>
-        <control-panel></control-panel>
       </div>
     </div>
 
