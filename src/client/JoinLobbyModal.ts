@@ -557,8 +557,7 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    const isPrivate = this.isPrivateLobby();
-    this.lobbyCreatorClientID = isPrivate
+    this.lobbyCreatorClientID = this.isPrivateLobby()
       ? (lobby.clients?.[0]?.clientID ?? null)
       : null;
   }
