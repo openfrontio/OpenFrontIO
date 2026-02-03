@@ -2,6 +2,8 @@ import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
 import type { LangSelector } from "./LangSelector";
 
+export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
+
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
   const minutes = Math.floor(totalSeconds / 60);
