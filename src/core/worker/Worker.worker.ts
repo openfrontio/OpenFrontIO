@@ -4,6 +4,7 @@ import { PastelTheme } from "../configuration/PastelTheme";
 import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { PlayerID } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -13,7 +14,7 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "../game/GameUpdates";
-import { loadTerrainMap, TerrainMapData } from "../game/TerrainMapLoader";
+
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { ClientID, GameStartInfo, PlayerCosmetics } from "../Schemas";
 import { DirtyTileQueue } from "./DirtyTileQueue";
@@ -39,9 +40,29 @@ let myClientID: ClientID | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 const MAX_TICKS_PER_HEARTBEAT = 4;
 let renderer: WorkerTerritoryRenderer | WorkerCanvas2DRenderer | null = null;
-let mapData: TerrainMapData | null = null;
 let dirtyTiles: DirtyTileQueue | null = null;
 let dirtyTilesOverflow = false;
+let renderTileState: Uint16Array | null = null;
+
+let simPumpScheduled = false;
+function scheduleSimPump(): void {
+  if (simPumpScheduled) {
+    return;
+  }
+  simPumpScheduled = true;
+
+  setTimeout(async () => {
+    simPumpScheduled = false;
+    if (!gameRunner) {
+      return;
+    }
+    const gr = await gameRunner;
+    gr.executeNextTick();
+    if (gr.hasPendingTurns()) {
+      scheduleSimPump();
+    }
+  }, 0);
+}
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -50,7 +71,7 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   }
 
   // Keep renderer-side adapter in sync (palette/relations/etc).
-  (renderer as any)?.updateGameView?.(gu);
+  const viewUpdateDidWork = (renderer as any)?.updateGameView?.(gu) === true;
 
   // Uploading relations is expensive; only refresh when diplomacy changes,
   // and only for the affected player pairs.
@@ -95,6 +116,9 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // compute passes for this tick.
   if (renderer && dirtyTiles) {
     let didWork = false;
+    if (viewUpdateDidWork) {
+      didWork = true;
+    }
     if (relationsChanged) {
       didWork = true;
     }
@@ -135,16 +159,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat": {
-      const gr = await gameRunner;
-      if (!gr) {
-        break;
-      }
-      const ticksToRun = Math.min(gr.pendingTurns(), MAX_TICKS_PER_HEARTBEAT);
-      for (let i = 0; i < ticksToRun; i++) {
-        if (!gr.executeNextTick()) {
-          break;
-        }
-      }
+      // Heartbeat is a high-frequency "wake up" signal from the main thread.
+      // Coalesce it and run simulation work in small slices to avoid backlog.
+      scheduleSimPump();
       break;
     }
     case "init":
@@ -161,10 +178,17 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           // Capacity is bounded; on overflow we fall back to markAllDirty().
           dirtyTiles = new DirtyTileQueue(numTiles, Math.max(4096, numTiles));
           dirtyTilesOverflow = false;
+          renderTileState = new Uint16Array(gr.game.tileStateView());
 
-          gr.tileUpdateSink = (tile) => {
+          gr.tileUpdateSink = (packedUpdate) => {
             if (!dirtyTiles) {
               return;
+            }
+
+            const tile = Number(packedUpdate >> 16n) as TileRef;
+            const state = Number(packedUpdate & 0xffffn);
+            if (renderTileState) {
+              renderTileState[tile] = state;
             }
             const mark = (t: any) => {
               if (!dirtyTiles!.mark(t)) {
@@ -194,7 +218,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
       try {
         const gr = await gameRunner;
-        await gr.addTurn(message.turn);
+        gr.addTurn(message.turn);
+        scheduleSimPump();
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;
@@ -340,14 +365,6 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         (renderer as any)?.dispose?.();
         renderer = null;
 
-        // Load map data if not already loaded
-        // Use gameStartInfo.config which has the original game map info
-        mapData ??= await loadTerrainMap(
-          gameStartInfo.config.gameMap,
-          gameStartInfo.config.gameMapSize,
-          mapLoader,
-        );
-
         // Create theme based on darkMode flag from main thread
         // (can't access userSettings in worker, so it's passed from main thread)
         const theme: Theme = message.darkMode
@@ -368,13 +385,14 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             ? new WorkerCanvas2DRenderer()
             : new WorkerTerritoryRenderer();
 
+        renderTileState ??= new Uint16Array(gr.game.tileStateView());
         await renderer.init(
           message.offscreenCanvas,
           gr,
-          mapData,
           theme,
           myClientID,
           cosmeticsByClientID,
+          renderTileState,
         );
 
         sendMessage({
@@ -519,6 +537,16 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
     case "render_frame":
       if (renderer) {
+        if ("viewSize" in message && message.viewSize) {
+          renderer.setViewSize(message.viewSize.width, message.viewSize.height);
+        }
+        if ("viewTransform" in message && message.viewTransform) {
+          renderer.setViewTransform(
+            message.viewTransform.scale,
+            message.viewTransform.offsetX,
+            message.viewTransform.offsetY,
+          );
+        }
         renderer.render();
       }
       break;

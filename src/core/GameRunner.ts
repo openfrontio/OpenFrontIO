@@ -86,7 +86,14 @@ export class GameRunner {
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
-  public tileUpdateSink?: (tile: TileRef) => void;
+  /**
+   * Optional sink for tile state updates. When set, the runner avoids sending
+   * packed tile updates to the callback (to reduce transfer overhead) and
+   * instead forwards packed updates to the sink.
+   *
+   * Packed encoding: [tileRef << 16 | state] as bigint.
+   */
+  public tileUpdateSink?: (packedTileUpdate: bigint) => void;
 
   constructor(
     public game: Game,
@@ -111,6 +118,11 @@ export class GameRunner {
 
   public addTurn(turn: Turn): void {
     this.turns.push(turn);
+  }
+
+  public executeNextTick(): boolean {
+  public hasPendingTurns(): boolean {
+    return this.currTurn < this.turns.length;
   }
 
   public executeNextTick(): boolean {
@@ -172,9 +184,7 @@ export class GameRunner {
     let packedTileUpdates: BigUint64Array;
     if (this.tileUpdateSink) {
       for (const u of tileUpdates) {
-        // packed tile updates encode [tileRef << 16 | state] as bigint.
-        const tileRef = Number(u.update >> 16n) as TileRef;
-        this.tileUpdateSink(tileRef);
+        this.tileUpdateSink(u.update);
       }
       packedTileUpdates = new BigUint64Array(0);
     } else {

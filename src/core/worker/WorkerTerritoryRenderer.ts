@@ -1,7 +1,6 @@
 import { Theme } from "../configuration/Config";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
-import { TerrainMapData } from "../game/TerrainMapLoader";
 import { GameRunner } from "../GameRunner";
 import { ClientID, PlayerCosmetics } from "../Schemas";
 import { GameViewAdapter } from "./GameViewAdapter";
@@ -70,10 +69,10 @@ export class WorkerTerritoryRenderer {
   async init(
     offscreenCanvas: OffscreenCanvas,
     gameRunner: GameRunner,
-    mapData: TerrainMapData,
     theme: Theme,
     myClientID: ClientID | null,
     cosmeticsByClientID: Map<ClientID, PlayerCosmetics>,
+    tileState: Uint16Array,
   ): Promise<void> {
     this.canvas = offscreenCanvas;
     const game = gameRunner.game;
@@ -81,8 +80,10 @@ export class WorkerTerritoryRenderer {
 
     // Create adapter
     this.gameViewAdapter = new GameViewAdapter(
-      game,
-      mapData,
+      tileState,
+      game.terrainDataView(),
+      game.width(),
+      game.height(),
       theme,
       myClientID,
       cosmeticsByClientID,
@@ -97,11 +98,12 @@ export class WorkerTerritoryRenderer {
     this.device = webgpuDevice;
 
     // Create ground truth data using adapter
-    const state = this.gameViewAdapter.tileStateView();
+    const state = tileState;
     this.resources = GroundTruthData.create(
       webgpuDevice.device,
       this.gameViewAdapter as any,
       theme,
+      this.defensePostRange,
       state,
     );
     this.resources.setTerritoryShaderParams(
@@ -170,10 +172,23 @@ export class WorkerTerritoryRenderer {
   /**
    * Update game view adapter with latest game update.
    */
-  updateGameView(gu: GameUpdateViewData): void {
-    if (this.gameViewAdapter) {
-      this.gameViewAdapter.update(gu);
+  updateGameView(gu: GameUpdateViewData): boolean {
+    if (!this.gameViewAdapter) {
+      return false;
     }
+
+    this.gameViewAdapter.update(gu);
+    const defensePostsDirty = this.gameViewAdapter.consumeDefensePostsDirty();
+    const playersDirty = this.gameViewAdapter.consumePlayersDirty();
+    if (defensePostsDirty) {
+      this.resources?.markDefensePostsDirty();
+    }
+    if (playersDirty) {
+      this.resources?.markPaletteDirty();
+      this.resources?.markRelationsDirty();
+      this.resources?.invalidateHistory();
+    }
+    return defensePostsDirty || playersDirty;
   }
 
   /**
@@ -535,13 +550,6 @@ export class WorkerTerritoryRenderer {
     }
 
     this.resources.updateTickTiming(performance.now() / 1000);
-
-    if (
-      this.gameViewAdapter?.config().defensePostRange() !==
-      this.defensePostRange
-    ) {
-      throw new Error("defensePostRange changed at runtime; unsupported.");
-    }
 
     // Upload palette if needed
     this.resources.uploadPalette();

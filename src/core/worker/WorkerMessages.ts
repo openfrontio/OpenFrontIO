@@ -233,8 +233,25 @@ export interface TickRendererMessage extends BaseWorkerMessage {
   type: "tick_renderer";
 }
 
+export interface ViewSize {
+  width: number;
+  height: number;
+}
+
+export interface ViewTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface RenderFrameMessage extends BaseWorkerMessage {
   type: "render_frame";
+  /**
+   * Optional per-frame view state. This allows the main thread to coalesce
+   * high-frequency camera updates into the existing render message.
+   */
+  viewSize?: ViewSize;
+  viewTransform?: ViewTransform;
 }
 
 // Renderer messages from worker to main thread

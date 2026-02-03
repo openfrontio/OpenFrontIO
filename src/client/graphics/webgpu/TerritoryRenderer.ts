@@ -114,6 +114,7 @@ export class TerritoryRenderer {
       webgpuDevice.device,
       this.game,
       this.theme,
+      this.defensePostRange,
       state,
     );
     this.resources.setTerritoryShaderParams(

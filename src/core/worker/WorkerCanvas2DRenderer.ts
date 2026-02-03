@@ -2,7 +2,7 @@ import { Theme } from "../configuration/Config";
 import { PastelTheme } from "../configuration/PastelTheme";
 import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { TileRef } from "../game/GameMap";
-import { TerrainMapData } from "../game/TerrainMapLoader";
+import { GameUpdateViewData } from "../game/GameUpdates";
 import { GameRunner } from "../GameRunner";
 import { ClientID, PlayerCosmetics } from "../Schemas";
 import { GameViewAdapter } from "./GameViewAdapter";
@@ -17,6 +17,7 @@ export class WorkerCanvas2DRenderer {
   private rasterCtx: Offscreen2D | null = null;
   private rasterImage: ImageData | null = null;
   private terrainBaseRgba: Uint8Array | null = null;
+  private tileState: Uint16Array | null = null;
 
   private gameViewAdapter: GameViewAdapter | null = null;
   private gameRunner: GameRunner | null = null;
@@ -49,10 +50,10 @@ export class WorkerCanvas2DRenderer {
   async init(
     offscreenCanvas: OffscreenCanvas,
     gameRunner: GameRunner,
-    mapData: TerrainMapData,
     theme: Theme,
     myClientID: ClientID | null,
     cosmeticsByClientID: Map<ClientID, PlayerCosmetics>,
+    tileState: Uint16Array,
   ): Promise<void> {
     this.canvas = offscreenCanvas;
     this.ctx = offscreenCanvas.getContext("2d", { alpha: true }) as Offscreen2D;
@@ -62,6 +63,7 @@ export class WorkerCanvas2DRenderer {
 
     this.gameRunner = gameRunner;
     this.theme = theme;
+    this.tileState = tileState;
 
     const mapW = gameRunner.game.width();
     const mapH = gameRunner.game.height();
@@ -69,8 +71,10 @@ export class WorkerCanvas2DRenderer {
     this.mapHeight = mapH;
 
     this.gameViewAdapter = new GameViewAdapter(
-      gameRunner.game,
-      mapData,
+      tileState,
+      gameRunner.game.terrainDataView(),
+      gameRunner.game.width(),
+      gameRunner.game.height(),
       theme,
       myClientID,
       cosmeticsByClientID,
@@ -107,6 +111,20 @@ export class WorkerCanvas2DRenderer {
     this.tick();
   }
 
+  updateGameView(gu: GameUpdateViewData): boolean {
+    if (!this.gameViewAdapter) {
+      return false;
+    }
+    this.gameViewAdapter.update(gu);
+    const playersDirty = this.gameViewAdapter.consumePlayersDirty();
+    if (playersDirty && !this.hasExternalPalette) {
+      this.rebuildPaletteFromGame();
+      this.markAllDirty();
+      return true;
+    }
+    return false;
+  }
+
   dispose(): void {
     this.ready = false;
     this.canvas = null;
@@ -115,6 +133,7 @@ export class WorkerCanvas2DRenderer {
     this.rasterCtx = null;
     this.rasterImage = null;
     this.terrainBaseRgba = null;
+    this.tileState = null;
     this.gameViewAdapter = null;
     this.gameRunner = null;
     this.theme = null;
@@ -217,7 +236,10 @@ export class WorkerCanvas2DRenderer {
     const mapH = this.mapHeight;
     const out = this.rasterImage.data;
     const base = this.terrainBaseRgba;
-    const state = this.gameRunner.game.tileStateView();
+    const state = this.tileState;
+    if (!state) {
+      return;
+    }
     const row0 = this.paletteRow0;
     const maxSmallId = this.paletteMaxSmallId;
 
