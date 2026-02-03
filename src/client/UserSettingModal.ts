@@ -661,6 +661,16 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="swapDirection"
+        label=${translateText("user_setting.swap_direction")}
+        description=${translateText("user_setting.swap_direction_desc")}
+        .defaultKey=${DefaultKeybinds.swapDirection}
+        .value=${this.getKeyValue("swapDirection")}
+        .display=${this.getKeyChar("swapDirection")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -684,16 +694,6 @@ export class UserSettingModal extends BaseModal {
         defaultKey="KeyL"
         .value=${this.getKeyValue("breakAlliance")}
         .display=${this.getKeyChar("breakAlliance")}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="swapDirection"
-        label=${translateText("user_setting.swap_direction")}
-        description=${translateText("user_setting.swap_direction_desc")}
-        .defaultKey=${DefaultKeybinds.swapDirection}
-        .value=${this.getKeyValue("swapDirection")}
-        .display=${this.getKeyChar("swapDirection")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
