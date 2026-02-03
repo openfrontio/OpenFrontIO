@@ -17,7 +17,6 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
