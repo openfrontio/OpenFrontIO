@@ -34,6 +34,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  GameConfigPatch,
   applyHostLobbyGameConfigPatch,
   buildHostLobbyGameConfigPatch,
   buildPrivateLobbyGameConfig,
@@ -148,7 +149,7 @@ export class HostLobbyModal extends BaseModal {
     }
   }
 
-  private handlePresetApply = async (patch: Partial<GameConfig>) => {
+  private handlePresetApply = async (patch: GameConfigPatch) => {
     this.applyGameConfigPatch(patch);
     await this.loadNationCount();
     await this.putGameConfig();
@@ -973,7 +974,7 @@ export class HostLobbyModal extends BaseModal {
     return buildHostLobbyGameConfigPatch(this);
   }
 
-  private applyGameConfigPatch(patch: Partial<GameConfig>): void {
+  private applyGameConfigPatch(patch: GameConfigPatch): void {
     applyHostLobbyGameConfigPatch(this, patch);
   }
 

@@ -1,15 +1,38 @@
 import { z } from "zod";
-import { GameConfig, GameConfigSchema } from "../core/Schemas";
+import { GameConfigSchema } from "../core/Schemas";
 import { generateCryptoRandomUUID } from "./Utils";
 
 const LOBBY_PRESET_STORAGE_KEY = "lobbyPresets.v1";
+
+export const LobbyPresetGameConfigPatchSchema =
+  GameConfigSchema.partial().extend({
+    maxTimerValue: GameConfigSchema.shape.maxTimerValue
+      .unwrap()
+      .nullable()
+      .optional(),
+    goldMultiplier: GameConfigSchema.shape.goldMultiplier
+      .unwrap()
+      .nullable()
+      .optional(),
+    startingGold: GameConfigSchema.shape.startingGold
+      .unwrap()
+      .nullable()
+      .optional(),
+    spawnImmunityDuration: GameConfigSchema.shape.spawnImmunityDuration
+      .unwrap()
+      .nullable()
+      .optional(),
+  });
+export type LobbyPresetGameConfigPatch = z.infer<
+  typeof LobbyPresetGameConfigPatchSchema
+>;
 
 export const LobbyPresetSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(40),
   createdAt: z.number(),
   updatedAt: z.number(),
-  config: GameConfigSchema.partial(),
+  config: LobbyPresetGameConfigPatchSchema,
 });
 export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
 
@@ -75,7 +98,7 @@ export function listPresets(): LobbyPreset[] {
 export function upsertPreset(input: {
   id?: string;
   name: string;
-  config: Partial<GameConfig>;
+  config: LobbyPresetGameConfigPatch;
 }): LobbyPreset {
   const store = loadLobbyPresetStore();
   const now = Date.now();

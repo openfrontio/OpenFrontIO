@@ -12,6 +12,16 @@ import { GameConfig } from "../../core/Schemas";
 
 type FormState = Record<string, any> & { requestUpdate?: () => void };
 
+export type GameConfigPatch = Omit<
+  Partial<GameConfig>,
+  "maxTimerValue" | "goldMultiplier" | "startingGold" | "spawnImmunityDuration"
+> & {
+  maxTimerValue?: number | null;
+  goldMultiplier?: number | null;
+  startingGold?: number | null;
+  spawnImmunityDuration?: number | null;
+};
+
 const TICKS_PER_MINUTE = 60 * 10;
 
 function resetCommonGameConfigFormState(
@@ -72,7 +82,7 @@ function buildCommonGameConfigPatch(state: FormState): Partial<GameConfig> {
 
 function applyCommonGameConfigPatch(
   state: FormState,
-  patch: Partial<GameConfig>,
+  patch: GameConfigPatch,
 ): void {
   if ("gameMap" in patch && patch.gameMap !== undefined) {
     state.selectedMap = patch.gameMap;
@@ -124,18 +134,21 @@ function applyCommonGameConfigPatch(
   }
 
   if ("maxTimerValue" in patch) {
-    state.maxTimer = patch.maxTimerValue !== undefined;
-    state.maxTimerValue = patch.maxTimerValue;
+    const value = patch.maxTimerValue;
+    state.maxTimer = value !== undefined && value !== null;
+    state.maxTimerValue = value === null ? undefined : value;
   }
 
   if ("goldMultiplier" in patch) {
-    state.goldMultiplier = patch.goldMultiplier !== undefined;
-    state.goldMultiplierValue = patch.goldMultiplier;
+    const value = patch.goldMultiplier;
+    state.goldMultiplier = value !== undefined && value !== null;
+    state.goldMultiplierValue = value === null ? undefined : value;
   }
 
   if ("startingGold" in patch) {
-    state.startingGold = patch.startingGold !== undefined;
-    state.startingGoldValue = patch.startingGold;
+    const value = patch.startingGold;
+    state.startingGold = value !== undefined && value !== null;
+    state.startingGoldValue = value === null ? undefined : value;
   }
 }
 
@@ -174,7 +187,7 @@ export function buildHostLobbyGameConfigPatch(
 
 export function applyHostLobbyGameConfigPatch(
   state: FormState,
-  patch: Partial<GameConfig>,
+  patch: GameConfigPatch,
 ): void {
   applyCommonGameConfigPatch(state, patch);
 
@@ -188,9 +201,11 @@ export function applyHostLobbyGameConfigPatch(
 
   if ("spawnImmunityDuration" in patch) {
     const ticks = patch.spawnImmunityDuration;
-    state.spawnImmunity = ticks !== undefined;
+    state.spawnImmunity = ticks !== undefined && ticks !== null;
     state.spawnImmunityDurationMinutes =
-      ticks === undefined ? undefined : ticks / TICKS_PER_MINUTE;
+      ticks === undefined || ticks === null
+        ? undefined
+        : ticks / TICKS_PER_MINUTE;
   }
 
   state.requestUpdate?.();
@@ -215,7 +230,7 @@ export function buildSinglePlayerGameConfigPatch(
 
 export function applySinglePlayerGameConfigPatch(
   state: FormState,
-  patch: Partial<GameConfig>,
+  patch: GameConfigPatch,
 ): void {
   applyCommonGameConfigPatch(state, patch);
   state.requestUpdate?.();

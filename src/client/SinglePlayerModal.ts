@@ -1,4 +1,4 @@
-import { TemplateResult, html } from "lit";
+import { html, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
@@ -34,6 +34,7 @@ import {
   applySinglePlayerGameConfigPatch,
   buildSinglePlayerGameConfig,
   buildSinglePlayerGameConfigPatch,
+  GameConfigPatch,
   resetSinglePlayerGameConfigFormState,
 } from "./utilities/GameConfigFormState";
 import {
@@ -177,7 +178,7 @@ export class SinglePlayerModal extends BaseModal {
     this.mapWins = winsMap;
   }
 
-  private handlePresetApply = async (patch: Partial<GameConfig>) => {
+  private handlePresetApply = async (patch: GameConfigPatch) => {
     this.applyGameConfigPatch(patch);
   };
 
@@ -190,7 +191,7 @@ export class SinglePlayerModal extends BaseModal {
     return buildSinglePlayerGameConfigPatch(this);
   }
 
-  private applyGameConfigPatch(patch: Partial<GameConfig>): void {
+  private applyGameConfigPatch(patch: GameConfigPatch): void {
     applySinglePlayerGameConfigPatch(this, patch);
   }
 

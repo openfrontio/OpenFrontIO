@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { GameConfig } from "../../core/Schemas";
 import {
   LobbyPreset,
+  LobbyPresetGameConfigPatch,
   deletePreset,
   loadLobbyPresetStore,
   setAutoApplyLastUsed,
@@ -10,9 +11,10 @@ import {
   upsertPreset,
 } from "../LobbyPresets";
 import { generateCryptoRandomUUID, translateText } from "../Utils";
+import { GameConfigPatch } from "../utilities/GameConfigFormState";
 
 type GetConfigPatch = () => Partial<GameConfig>;
-type ApplyPreset = (patch: Partial<GameConfig>) => void | Promise<void>;
+type ApplyPreset = (patch: GameConfigPatch) => void | Promise<void>;
 type ResetPreset = () => void | Promise<void>;
 
 @customElement("lobby-preset-controls")
@@ -108,10 +110,19 @@ export class LobbyPresetControls extends LitElement {
     if (!name) return;
     if (!this.getConfigPatch) return;
 
+    const rawPatch = this.getConfigPatch();
+    const config: LobbyPresetGameConfigPatch = {
+      ...rawPatch,
+      maxTimerValue: rawPatch.maxTimerValue ?? null,
+      goldMultiplier: rawPatch.goldMultiplier ?? null,
+      startingGold: rawPatch.startingGold ?? null,
+      spawnImmunityDuration: rawPatch.spawnImmunityDuration ?? null,
+    };
+
     const preset = upsertPreset({
       id: this.selectedPresetId,
       name,
-      config: this.getConfigPatch(),
+      config,
     });
 
     setLastUsedPresetId(preset.id);
