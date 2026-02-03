@@ -447,7 +447,8 @@
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting gold",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold_placeholder": "5000000",
+    "crowded": "Crowded modifier"
   },
   "team_colors": {
     "red": "Red",
