@@ -1,5 +1,4 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
-import { wouldNukeHitTeammateStructure } from "../execution/Util";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -31,6 +30,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -1043,20 +1043,13 @@ export class PlayerImpl implements Player {
       nukeType !== UnitType.MIRV
     ) {
       const magnitude = this.mg.config().nukeMagnitudes(nukeType);
-      const teammateSmallIds = new Set(
-        this.mg
-          .players()
-          .filter((p) => this.isOnSameTeam(p))
-          .map((p) => p.smallID()),
+      const wouldHitTeammate = this.mg.anyUnitNearby(
+        tile,
+        magnitude.outer,
+        StructureTypes,
+        (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
       );
-      if (
-        wouldNukeHitTeammateStructure(
-          this.mg,
-          tile,
-          magnitude,
-          teammateSmallIds,
-        )
-      ) {
+      if (wouldHitTeammate) {
         return false;
       }
     }
