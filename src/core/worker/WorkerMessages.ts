@@ -41,6 +41,7 @@ export type WorkerMessageType =
   | "refresh_terrain"
   | "tick_renderer"
   | "render_frame"
+  | "render_done"
   | "renderer_metrics";
 
 // Base interface for all messages
@@ -255,6 +256,10 @@ export interface RenderFrameMessage extends BaseWorkerMessage {
 }
 
 // Renderer messages from worker to main thread
+export interface RenderDoneMessage extends BaseWorkerMessage {
+  type: "render_done";
+}
+
 export interface RendererReadyMessage extends BaseWorkerMessage {
   type: "renderer_ready";
   ok: boolean;
@@ -302,5 +307,6 @@ export type WorkerMessage =
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage
   | TransportShipSpawnResultMessage
+  | RenderDoneMessage
   | RendererReadyMessage
   | RendererMetricsMessage;

@@ -179,16 +179,20 @@ export class WorkerTerritoryRenderer {
 
     this.gameViewAdapter.update(gu);
     const defensePostsDirty = this.gameViewAdapter.consumeDefensePostsDirty();
+    const rosterDirty = this.gameViewAdapter.consumeRosterDirty();
     const playersDirty = this.gameViewAdapter.consumePlayersDirty();
     if (defensePostsDirty) {
       this.resources?.markDefensePostsDirty();
     }
-    if (playersDirty) {
-      this.resources?.markPaletteDirty();
+    if (rosterDirty) {
       this.resources?.markRelationsDirty();
+      this.resources?.markPaletteDirty();
+      this.resources?.invalidateHistory();
+    } else if (playersDirty) {
+      this.resources?.markPaletteDirty();
       this.resources?.invalidateHistory();
     }
-    return defensePostsDirty || playersDirty;
+    return defensePostsDirty || rosterDirty || playersDirty;
   }
 
   /**

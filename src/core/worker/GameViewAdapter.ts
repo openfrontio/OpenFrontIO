@@ -181,15 +181,18 @@ export class GameViewAdapter implements Partial<GameView> {
   private readonly defensePostsById = new Map<number, DefensePostUnit>();
   private readonly defensePosts: DefensePostUnit[] = [];
 
+  // "Dirty" here means "palette/relations roster may have changed" (not "any player field updated").
   private playersDirty = true;
+  private rosterDirty = true;
   private readonly playersBySmallId = new Map<number, PlayerLiteView>();
   private playerViewsCache: PlayerLiteView[] = [];
-  private playersEpoch = 1;
+  private rosterEpoch = 1;
   private playerViewsCacheEpoch = 0;
   private playerColorsEpoch = 1;
   private readonly playerColorsDirtyEpochBySmallId = new Map<number, number>();
   private readonly embargoPairs = new Set<bigint>();
   private readonly friendlyPairs = new Set<bigint>();
+  private relationsInitialized = false;
   private readonly emptyCosmetics = {} as PlayerCosmetics;
 
   constructor(
@@ -302,13 +305,18 @@ export class GameViewAdapter implements Partial<GameView> {
     return dirty;
   }
 
+  consumeRosterDirty(): boolean {
+    const dirty = this.rosterDirty;
+    this.rosterDirty = false;
+    return dirty;
+  }
+
   setPatternsEnabled(enabled: boolean): void {
     if (this.patternsEnabled === enabled) {
       return;
     }
     this.patternsEnabled = enabled;
     this.playersDirty = true;
-    this.playersEpoch++;
     this.playerColorsEpoch++;
   }
 
@@ -321,7 +329,8 @@ export class GameViewAdapter implements Partial<GameView> {
 
     const playerUpdates = (gu.updates?.[GameUpdateType.Player] ??
       []) as PlayerUpdate[];
-    let playersChanged = false;
+    let rosterChanged = false;
+    let paletteRelevantChanged = false;
     for (const p of playerUpdates) {
       const small = p.smallID;
       if (small <= 0) {
@@ -329,17 +338,42 @@ export class GameViewAdapter implements Partial<GameView> {
       }
       const existing = this.playersBySmallId.get(small);
       if (existing) {
+        const prev = existing.data;
         existing.data = p;
-        existing.markColorsDirty();
+        const teamChanged = (prev.team ?? null) !== (p.team ?? null);
+        const colorRelevantChanged =
+          teamChanged ||
+          prev.clientID !== p.clientID ||
+          prev.playerType !== p.playerType ||
+          prev.isAlive !== p.isAlive ||
+          prev.isDisconnected !== p.isDisconnected;
+        if (colorRelevantChanged) {
+          existing.markColorsDirty();
+          paletteRelevantChanged = true;
+        }
+        if (teamChanged) {
+          // Team changes affect "friendly" relations matrix across many pairs.
+          // Treat it like a roster change to force a full relations rebuild.
+          rosterChanged = true;
+        }
       } else {
         this.playersBySmallId.set(small, new PlayerLiteView(this, p));
+        rosterChanged = true;
+        paletteRelevantChanged = true;
       }
-      playersChanged = true;
     }
-    if (playersChanged) {
-      this.playersDirty = true;
-      this.playersEpoch++;
 
+    if (rosterChanged) {
+      this.rosterDirty = true;
+      this.rosterEpoch++;
+    }
+    if (rosterChanged || paletteRelevantChanged) {
+      this.playersDirty = true;
+    }
+
+    const shouldRebuildRelationsSnapshot =
+      rosterChanged || (!this.relationsInitialized && playerUpdates.length > 0);
+    if (shouldRebuildRelationsSnapshot) {
       // Rebuild relations snapshot from authoritative PlayerUpdate state.
       // This ensures correct initial relations without relying on event history.
       this.embargoPairs.clear();
@@ -367,6 +401,8 @@ export class GameViewAdapter implements Partial<GameView> {
           }
         }
       }
+
+      this.relationsInitialized = true;
     }
 
     const embargoUpdates = (gu.updates?.[GameUpdateType.EmbargoEvent] ??
@@ -478,9 +514,9 @@ export class GameViewAdapter implements Partial<GameView> {
    * otherwise the worker-rendered territory will disagree with UI.
    */
   playerViews(): any[] {
-    if (this.playerViewsCacheEpoch !== this.playersEpoch) {
+    if (this.playerViewsCacheEpoch !== this.rosterEpoch) {
       this.playerViewsCache = [...this.playersBySmallId.values()];
-      this.playerViewsCacheEpoch = this.playersEpoch;
+      this.playerViewsCacheEpoch = this.rosterEpoch;
     }
     return this.playerViewsCache;
   }

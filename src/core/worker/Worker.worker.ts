@@ -26,6 +26,7 @@ import {
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  RenderDoneMessage,
   RendererReadyMessage,
   TileContextResultMessage,
   TransportShipSpawnResultMessage,
@@ -548,6 +549,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           );
         }
         renderer.render();
+        if (message.id) {
+          sendMessage({
+            type: "render_done",
+            id: message.id,
+          } as RenderDoneMessage);
+        }
       }
       break;
 

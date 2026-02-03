@@ -2,6 +2,7 @@ import { createCanvas } from "src/client/Utils";
 import { Theme } from "../../../core/configuration/Config";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
+import { generateID } from "../../../core/Util";
 import { WorkerClient } from "../../../core/worker/WorkerClient";
 import {
   InitRendererMessage,
@@ -42,6 +43,7 @@ export class TerritoryRendererProxy {
   private viewTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private lastSentViewSize: ViewSize | null = null;
   private lastSentViewTransform: ViewTransform | null = null;
+  private renderInFlight = false;
 
   private constructor(
     private readonly game: GameView,
@@ -92,6 +94,7 @@ export class TerritoryRendererProxy {
     if (this.initPromise) return;
     this.initPromise = this.init().catch((err) => {
       this.failed = true;
+      this.renderInFlight = false;
       this.pendingMessages = [];
       console.error("Worker territory renderer init failed:", err);
       throw err;
@@ -390,7 +393,18 @@ export class TerritoryRendererProxy {
   }
 
   render(): void {
+    if (this.failed) {
+      return;
+    }
+    if (this.renderInFlight) {
+      return;
+    }
+
+    this.renderInFlight = true;
+    const renderId = `render_${generateID()}`;
+
     const message: RenderFrameMessage = { type: "render_frame" };
+    message.id = renderId;
 
     if (
       !this.lastSentViewSize ||
@@ -409,6 +423,29 @@ export class TerritoryRendererProxy {
     ) {
       message.viewTransform = this.viewTransform;
       this.lastSentViewTransform = this.viewTransform;
+    }
+
+    const worker = this.worker;
+    if (worker) {
+      const timeout = setTimeout(() => {
+        if (!this.renderInFlight) {
+          worker.removeMessageHandler(renderId);
+          return;
+        }
+        this.renderInFlight = false;
+        worker.removeMessageHandler(renderId);
+      }, 2000);
+
+      worker.addMessageHandler(renderId, (m: any) => {
+        if (m?.type !== "render_done") {
+          return;
+        }
+        clearTimeout(timeout);
+        this.renderInFlight = false;
+      });
+    } else {
+      this.renderInFlight = false;
+      return;
     }
 
     this.sendToWorker(message);
