@@ -2,9 +2,12 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
+import type { WorkerMetricsMessage } from "../../../core/worker/WorkerMessages";
 import {
+  SetWorkerDebugEvent,
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
+  WorkerMetricsEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
@@ -43,6 +46,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private isVisible: boolean = false;
 
   @state()
+  private workerMetrics: WorkerMetricsMessage | null = null;
+
+  @state()
+  private workerMetricsAgeMs: number = 0;
+
+  @state()
+  private workerIncludeTrace: boolean = false;
+
+  @state()
+  private workerIntervalMs: number = 1000;
+
+  @state()
   private isDragging: boolean = false;
 
   @state()
@@ -60,6 +75,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
+  private lastWorkerMetricsWallMs: number = 0;
 
   private copyStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -232,11 +248,24 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
       this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
     });
+    this.eventBus.on(WorkerMetricsEvent, (event: WorkerMetricsEvent) => {
+      this.workerMetrics = event.metrics;
+      this.lastWorkerMetricsWallMs = Date.now();
+      this.workerMetricsAgeMs = 0;
+      this.requestUpdate();
+    });
   }
 
   setVisible(visible: boolean) {
     this.isVisible = visible;
     FrameProfiler.setEnabled(visible);
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: visible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
   }
 
   private handleClose() {
@@ -326,9 +355,20 @@ export class PerformanceOverlay extends LitElement implements Layer {
     // Update FrameProfiler enabled state when visibility changes
     if (wasVisible !== this.isVisible) {
       FrameProfiler.setEnabled(this.isVisible);
+      this.eventBus.emit(
+        new SetWorkerDebugEvent({
+          enabled: this.isVisible,
+          intervalMs: this.workerIntervalMs,
+          includeTrace: this.workerIncludeTrace,
+        }),
+      );
     }
 
     if (!this.isVisible) return;
+
+    if (this.lastWorkerMetricsWallMs > 0) {
+      this.workerMetricsAgeMs = Date.now() - this.lastWorkerMetricsWallMs;
+    }
 
     const now = performance.now();
 
@@ -486,8 +526,97 @@ export class PerformanceOverlay extends LitElement implements Layer {
         executionSamples: [...this.tickExecutionTimes],
         delaySamples: [...this.tickDelayTimes],
       },
+      worker: {
+        enabled: this.isVisible,
+        includeTrace: this.workerIncludeTrace,
+        intervalMs: this.workerIntervalMs,
+        lastMetricsAgeMs: this.workerMetricsAgeMs,
+        metrics: this.workerMetrics,
+      },
       layers: this.layerBreakdown.map((layer) => ({ ...layer })),
     };
+  }
+
+  private getWorkerKeyStats(metrics: WorkerMetricsMessage | null): {
+    loopLagAvg: number;
+    loopLagMax: number;
+    simDelayAvg: number;
+    simDelayMax: number;
+    simExecAvg: number;
+    simExecMax: number;
+    rfQueueAvg: number | null;
+    rfQueueMax: number | null;
+    rfHandlerAvg: number | null;
+    rfHandlerMax: number | null;
+    traceLines: string[];
+  } {
+    if (!metrics) {
+      return {
+        loopLagAvg: 0,
+        loopLagMax: 0,
+        simDelayAvg: 0,
+        simDelayMax: 0,
+        simExecAvg: 0,
+        simExecMax: 0,
+        rfQueueAvg: null,
+        rfQueueMax: null,
+        rfHandlerAvg: null,
+        rfHandlerMax: null,
+        traceLines: [],
+      };
+    }
+
+    const rfQueueAvg = metrics.msgQueueMsAvg?.["render_frame"];
+    const rfQueueMax = metrics.msgQueueMsMax?.["render_frame"];
+    const rfHandlerAvg = metrics.msgHandlerMsAvg?.["render_frame"];
+    const rfHandlerMax = metrics.msgHandlerMsMax?.["render_frame"];
+    const traceLines =
+      metrics.trace && metrics.trace.length > 0 ? metrics.trace.slice(-5) : [];
+
+    return {
+      loopLagAvg: metrics.eventLoopLagMsAvg,
+      loopLagMax: metrics.eventLoopLagMsMax,
+      simDelayAvg: metrics.simPumpDelayMsAvg,
+      simDelayMax: metrics.simPumpDelayMsMax,
+      simExecAvg: metrics.simPumpExecMsAvg,
+      simExecMax: metrics.simPumpExecMsMax,
+      rfQueueAvg: typeof rfQueueAvg === "number" ? rfQueueAvg : null,
+      rfQueueMax: typeof rfQueueMax === "number" ? rfQueueMax : null,
+      rfHandlerAvg: typeof rfHandlerAvg === "number" ? rfHandlerAvg : null,
+      rfHandlerMax: typeof rfHandlerMax === "number" ? rfHandlerMax : null,
+      traceLines,
+    };
+  }
+
+  private formatMs(v: number | null | undefined, digits: number = 1): string {
+    if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+    return `${v.toFixed(digits)}ms`;
+  }
+
+  private onWorkerTraceToggle(e: Event) {
+    const target = e.target as HTMLInputElement;
+    this.workerIncludeTrace = !!target.checked;
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: this.isVisible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
+  }
+
+  private onWorkerIntervalChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const ms = Number.parseInt(target.value, 10);
+    if (!Number.isFinite(ms) || ms <= 0) return;
+    this.workerIntervalMs = ms;
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: this.isVisible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
   }
 
   private clearCopyStatusTimeout() {
@@ -550,6 +679,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         ? Math.max(...this.layerBreakdown.map((l) => l.avg))
         : 1;
 
+    const worker = this.getWorkerKeyStats(this.workerMetrics);
+
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
@@ -595,6 +726,85 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="layers-section">
+          <div class="performance-line">Worker</div>
+          <div class="layer-row" style="margin-top: 4px;">
+            <span class="layer-name">metrics age</span>
+            <span class="layer-metrics"
+              >${this.formatMs(this.workerMetricsAgeMs, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">event loop lag (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.loopLagAvg)} /
+              ${this.formatMs(worker.loopLagMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">sim pump delay (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.simDelayAvg)} /
+              ${this.formatMs(worker.simDelayMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">sim pump exec (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.simExecAvg)} /
+              ${this.formatMs(worker.simExecMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">render_frame queue (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.rfQueueAvg, 0)} /
+              ${this.formatMs(worker.rfQueueMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">render_frame handler (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.rfHandlerAvg, 0)} /
+              ${this.formatMs(worker.rfHandlerMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row" style="margin-top: 4px;">
+            <span class="layer-name">trace</span>
+            <span class="layer-metrics">
+              <label style="cursor: pointer;">
+                <input
+                  type="checkbox"
+                  .checked=${this.workerIncludeTrace}
+                  @change=${this.onWorkerTraceToggle}
+                />
+                include
+              </label>
+              <select
+                style="margin-left: 8px;"
+                .value=${String(this.workerIntervalMs)}
+                @change=${this.onWorkerIntervalChange}
+              >
+                <option value="250">250ms</option>
+                <option value="500">500ms</option>
+                <option value="1000">1000ms</option>
+                <option value="2000">2000ms</option>
+              </select>
+            </span>
+          </div>
+          ${worker.traceLines.length
+            ? html`<div
+                class="performance-line"
+                style="margin-top: 4px; opacity: 0.85;"
+              >
+                <div
+                  style="white-space: pre-wrap; font-size: 10px; line-height: 1.2;"
+                >
+                  ${worker.traceLines.join("\n")}
+                </div>
+              </div>`
+            : html``}
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">

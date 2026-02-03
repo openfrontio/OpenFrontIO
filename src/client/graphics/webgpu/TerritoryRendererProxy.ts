@@ -2,7 +2,6 @@ import { createCanvas } from "src/client/Utils";
 import { Theme } from "../../../core/configuration/Config";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
-import { generateID } from "../../../core/Util";
 import { WorkerClient } from "../../../core/worker/WorkerClient";
 import {
   InitRendererMessage,
@@ -16,7 +15,6 @@ import {
   SetPaletteMessage,
   SetPatternsEnabledMessage,
   SetShaderSettingsMessage,
-  TickRendererMessage,
   ViewSize,
   ViewTransform,
 } from "../../../core/worker/WorkerMessages";
@@ -44,6 +42,8 @@ export class TerritoryRendererProxy {
   private lastSentViewSize: ViewSize | null = null;
   private lastSentViewTransform: ViewTransform | null = null;
   private renderInFlight = false;
+  private renderSeq = 0;
+  private renderCooldownUntilMs = 0;
 
   private constructor(
     private readonly game: GameView,
@@ -386,14 +386,16 @@ export class TerritoryRendererProxy {
   }
 
   tick(): void {
-    const message: TickRendererMessage = {
-      type: "tick_renderer",
-    };
-    this.sendToWorker(message);
+    // No-op: worker renderer ticks from worker-side game_update.
+    // Sending tick messages from the main thread duplicates GPU work and
+    // can stall Firefox badly under load.
   }
 
   render(): void {
     if (this.failed) {
+      return;
+    }
+    if (performance.now() < this.renderCooldownUntilMs) {
       return;
     }
     if (this.renderInFlight) {
@@ -401,10 +403,12 @@ export class TerritoryRendererProxy {
     }
 
     this.renderInFlight = true;
-    const renderId = `render_${generateID()}`;
+    const renderId = `render_${++this.renderSeq}`;
+    const sentAtWallMs = Date.now();
 
     const message: RenderFrameMessage = { type: "render_frame" };
     message.id = renderId;
+    message.sentAtWallMs = sentAtWallMs;
 
     if (
       !this.lastSentViewSize ||
@@ -432,15 +436,84 @@ export class TerritoryRendererProxy {
           worker.removeMessageHandler(renderId);
           return;
         }
-        this.renderInFlight = false;
+
+        console.warn(`render_done timeout (${renderId})`);
         worker.removeMessageHandler(renderId);
-      }, 2000);
+
+        // Recover from lost/blocked frames without flooding the worker.
+        this.renderInFlight = false;
+        this.renderCooldownUntilMs = performance.now() + 250;
+
+        // Force a view resync on the next successful render.
+        this.lastSentViewSize = null;
+        this.lastSentViewTransform = null;
+      }, 15000);
 
       worker.addMessageHandler(renderId, (m: any) => {
         if (m?.type !== "render_done") {
           return;
         }
         clearTimeout(timeout);
+        const startedAt = typeof m.startedAt === "number" ? m.startedAt : NaN;
+        const endedAt = typeof m.endedAt === "number" ? m.endedAt : NaN;
+        const startedAtWallMs =
+          typeof m.startedAtWallMs === "number" ? m.startedAtWallMs : NaN;
+        const endedAtWallMs =
+          typeof m.endedAtWallMs === "number" ? m.endedAtWallMs : NaN;
+        const echoedSentAtWallMs =
+          typeof m.sentAtWallMs === "number" ? m.sentAtWallMs : sentAtWallMs;
+        if (
+          Number.isFinite(startedAt) &&
+          Number.isFinite(endedAt) &&
+          Number.isFinite(startedAtWallMs) &&
+          Number.isFinite(endedAtWallMs) &&
+          Number.isFinite(echoedSentAtWallMs)
+        ) {
+          const queueMs = startedAtWallMs - echoedSentAtWallMs;
+          const renderMs = endedAt - startedAt;
+          const totalMs = endedAtWallMs - echoedSentAtWallMs;
+          const breakdown =
+            typeof m.renderCpuMs === "number" ||
+            typeof m.renderGpuWaitMs === "number" ||
+            typeof m.renderWaitPrevGpuMs === "number" ||
+            typeof m.renderGetTextureMs === "number"
+              ? {
+                  waitPrevGpuMs:
+                    typeof m.renderWaitPrevGpuMs === "number"
+                      ? Math.round(m.renderWaitPrevGpuMs)
+                      : undefined,
+                  waitPrevGpuTimedOut:
+                    typeof m.renderWaitPrevGpuTimedOut === "boolean"
+                      ? m.renderWaitPrevGpuTimedOut
+                      : undefined,
+                  cpuMs:
+                    typeof m.renderCpuMs === "number"
+                      ? Math.round(m.renderCpuMs)
+                      : undefined,
+                  getTextureMs:
+                    typeof m.renderGetTextureMs === "number"
+                      ? Math.round(m.renderGetTextureMs)
+                      : undefined,
+                  gpuWaitMs:
+                    typeof m.renderGpuWaitMs === "number"
+                      ? Math.round(m.renderGpuWaitMs)
+                      : undefined,
+                  gpuWaitTimedOut:
+                    typeof m.renderGpuWaitTimedOut === "boolean"
+                      ? m.renderGpuWaitTimedOut
+                      : undefined,
+                }
+              : undefined;
+          if (totalMs > 1000 || queueMs > 1000 || renderMs > 1000) {
+            console.warn("worker render timing", {
+              id: renderId,
+              queueMs: Math.round(queueMs),
+              renderMs: Math.round(renderMs),
+              totalMs: Math.round(totalMs),
+              breakdown,
+            });
+          }
+        }
         this.renderInFlight = false;
       });
     } else {

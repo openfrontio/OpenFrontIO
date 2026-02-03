@@ -35,7 +35,9 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  SetWorkerDebugEvent,
   TickMetricsEvent,
+  WorkerMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -226,6 +228,12 @@ async function createClientGame(
     lobbyConfig.clientID,
   );
   await worker.initialize();
+  worker.onWorkerMetrics((metrics) => {
+    eventBus.emit(new WorkerMetricsEvent(metrics));
+  });
+  eventBus.on(SetWorkerDebugEvent, (event: SetWorkerDebugEvent) => {
+    worker.setWorkerDebug(event.config);
+  });
   const gameView = new GameView(
     worker,
     config,

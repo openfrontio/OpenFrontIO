@@ -42,12 +42,19 @@ export type WorkerMessageType =
   | "tick_renderer"
   | "render_frame"
   | "render_done"
+  | "set_worker_debug"
+  | "worker_metrics"
   | "renderer_metrics";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
   type: WorkerMessageType;
   id?: string;
+  /**
+   * Cross-thread timestamp (Date.now()) set by the sender when enqueuing the
+   * message. Used for queue latency debugging.
+   */
+  sentAtWallMs?: number;
 }
 
 export interface HeartbeatMessage extends BaseWorkerMessage {
@@ -258,6 +265,36 @@ export interface RenderFrameMessage extends BaseWorkerMessage {
 // Renderer messages from worker to main thread
 export interface RenderDoneMessage extends BaseWorkerMessage {
   type: "render_done";
+  /**
+   * Timestamp (performance.now()) in the worker right before starting work.
+   */
+  startedAt?: number;
+  /**
+   * Timestamp (performance.now()) in the worker right after finishing work.
+   */
+  endedAt?: number;
+  /**
+   * Echo of RenderFrameMessage.sentAtWallMs (if provided) so callers can
+   * compute queue/processing latency without storing state.
+   */
+  sentAtWallMs?: number;
+  /**
+   * Timestamps (Date.now()) in the worker. Use these for cross-thread latency
+   * (Firefox may use a different time origin for performance.now()).
+   */
+  startedAtWallMs?: number;
+  endedAtWallMs?: number;
+
+  /**
+   * Optional breakdown from the worker's renderAsync implementation.
+   * All values are milliseconds.
+   */
+  renderWaitPrevGpuMs?: number;
+  renderCpuMs?: number;
+  renderGetTextureMs?: number;
+  renderGpuWaitMs?: number;
+  renderWaitPrevGpuTimedOut?: boolean;
+  renderGpuWaitTimedOut?: boolean;
 }
 
 export interface RendererReadyMessage extends BaseWorkerMessage {
@@ -269,6 +306,30 @@ export interface RendererReadyMessage extends BaseWorkerMessage {
 export interface RendererMetricsMessage extends BaseWorkerMessage {
   type: "renderer_metrics";
   computeMs: number;
+}
+
+export interface SetWorkerDebugMessage extends BaseWorkerMessage {
+  type: "set_worker_debug";
+  enabled: boolean;
+  intervalMs?: number;
+  includeTrace?: boolean;
+}
+
+export interface WorkerMetricsMessage extends BaseWorkerMessage {
+  type: "worker_metrics";
+  intervalMs: number;
+  eventLoopLagMsAvg: number;
+  eventLoopLagMsMax: number;
+  simPumpDelayMsAvg: number;
+  simPumpDelayMsMax: number;
+  simPumpExecMsAvg: number;
+  simPumpExecMsMax: number;
+  msgCounts: Record<string, number>;
+  msgHandlerMsAvg: Record<string, number>;
+  msgHandlerMsMax: Record<string, number>;
+  msgQueueMsAvg: Record<string, number>;
+  msgQueueMsMax: Record<string, number>;
+  trace?: string[];
 }
 
 // Union types for type safety
@@ -295,6 +356,7 @@ export type MainThreadMessage =
   | RefreshPaletteMessage
   | RefreshTerrainMessage
   | TickRendererMessage
+  | SetWorkerDebugMessage
   | RenderFrameMessage;
 
 // Message send from worker
@@ -309,4 +371,5 @@ export type WorkerMessage =
   | TransportShipSpawnResultMessage
   | RenderDoneMessage
   | RendererReadyMessage
-  | RendererMetricsMessage;
+  | RendererMetricsMessage
+  | WorkerMetricsMessage;
