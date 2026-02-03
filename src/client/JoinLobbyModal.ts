@@ -55,6 +55,10 @@ export class JoinLobbyModal extends BaseModal {
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
 
+  private isPrivateLobby(): boolean {
+    return this.gameConfig?.gameType === GameType.Private;
+  }
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
@@ -91,10 +95,9 @@ export class JoinLobbyModal extends BaseModal {
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
     const playerCount = this.playerCount;
-    const hostClientID =
-      this.gameConfig?.gameType === GameType.Private
-        ? (this.lobbyCreatorClientID ?? "")
-        : "";
+    const hostClientID = this.isPrivateLobby()
+      ? (this.lobbyCreatorClientID ?? "")
+      : "";
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -104,8 +107,7 @@ export class JoinLobbyModal extends BaseModal {
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
           rightContent:
-            this.currentLobbyId &&
-            this.gameConfig?.gameType === GameType.Private
+            this.currentLobbyId && this.isPrivateLobby()
               ? html`
                   <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
                 `
@@ -147,7 +149,7 @@ export class JoinLobbyModal extends BaseModal {
               `}
         </div>
 
-        ${this.gameConfig?.gameType === GameType.Private
+        ${this.isPrivateLobby()
           ? html`
               <div
                 class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
@@ -555,7 +557,7 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    const isPrivate = this.gameConfig?.gameType === GameType.Private;
+    const isPrivate = this.isPrivateLobby();
     this.lobbyCreatorClientID = isPrivate
       ? (lobby.clients?.[0]?.clientID ?? null)
       : null;
