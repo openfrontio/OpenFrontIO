@@ -1,11 +1,10 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
-  GameMapSize,
   GameMapType,
   GameMode,
   HumansVsNations,
@@ -27,49 +26,63 @@ import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyPlayerView";
+import "./components/LobbyPresetControls";
+import type { LobbyPresetControls } from "./components/LobbyPresetControls";
 import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  GameConfigPatch,
+  applyHostLobbyGameConfigPatch,
+  buildHostLobbyGameConfigPatch,
+  buildPrivateLobbyGameConfig,
+  resetHostLobbyGameConfigFormState,
+} from "./utilities/GameConfigFormState";
+import {
   renderToggleInputCard,
   renderToggleInputCardInput,
 } from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
-  @state() private disableNations = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: TeamCountConfig = 2;
+  @query("lobby-preset-controls") private presetControls?: LobbyPresetControls;
+
+  @state() private selectedMap!: GameMapType;
+  @state() private selectedDifficulty!: Difficulty;
+  @state() private disableNations!: boolean;
+  @state() private gameMode!: GameMode;
+  @state() private teamCount!: TeamCountConfig;
 
   constructor() {
     super();
     this.id = "page-host-lobby";
+    this.resetGameSettingsToDefaults();
   }
-  @state() private bots: number = 400;
-  @state() private spawnImmunity: boolean = false;
-  @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
-  @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
-  @state() private maxTimer: boolean = false;
-  @state() private maxTimerValue: number | undefined = undefined;
-  @state() private instantBuild: boolean = false;
-  @state() private randomSpawn: boolean = false;
-  @state() private compactMap: boolean = false;
-  @state() private goldMultiplier: boolean = false;
-  @state() private goldMultiplierValue: number | undefined = undefined;
-  @state() private startingGold: boolean = false;
-  @state() private startingGoldValue: number | undefined = undefined;
+
+  @state() private bots!: number;
+  @state() private spawnImmunity!: boolean;
+  @state() private spawnImmunityDurationMinutes!: number | undefined;
+  @state() private infiniteGold!: boolean;
+  @state() private donateGold!: boolean;
+  @state() private infiniteTroops!: boolean;
+  @state() private donateTroops!: boolean;
+  @state() private maxTimer!: boolean;
+  @state() private maxTimerValue!: number | undefined;
+  @state() private instantBuild!: boolean;
+  @state() private randomSpawn!: boolean;
+  @state() private compactMap!: boolean;
+  @state() private goldMultiplier!: boolean;
+  @state() private goldMultiplierValue!: number | undefined;
+  @state() private startingGold!: boolean;
+  @state() private startingGoldValue!: number | undefined;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
-  @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private useRandomMap!: boolean;
+  @state() private disabledUnits!: UnitType[];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
 
@@ -136,6 +149,19 @@ export class HostLobbyModal extends BaseModal {
     }
   }
 
+  private handlePresetApply = async (patch: GameConfigPatch) => {
+    this.applyGameConfigPatch(patch);
+    await this.loadNationCount();
+    await this.putGameConfig();
+  };
+
+  private handlePresetReset = async () => {
+    this.resetGameSettingsToDefaults();
+    this.requestUpdate();
+    await this.loadNationCount();
+    await this.putGameConfig();
+  };
+
   render() {
     const maxTimerHandlers = this.createToggleHandlers(
       () => this.maxTimer,
@@ -190,6 +216,14 @@ export class HostLobbyModal extends BaseModal {
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
           <div class="max-w-5xl mx-auto space-y-10">
+            <!-- Presets -->
+            <lobby-preset-controls
+              class="block"
+              .getConfigPatch=${() => this.buildGameConfigPatch()}
+              .onApplyPreset=${this.handlePresetApply}
+              .onResetPreset=${this.handlePresetReset}
+            ></lobby-preset-controls>
+
             <!-- Map Selection -->
             <div class="space-y-6">
               <div
@@ -636,8 +670,11 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
+    const autoApplyPreset = this.presetControls?.syncFromStore();
+    if (autoApplyPreset) this.applyGameConfigPatch(autoApplyPreset.config);
 
-    createLobby(this.lobbyCreatorClientID)
+    const initialGameConfig = this.buildFullGameConfig();
+    createLobby(this.lobbyCreatorClientID, initialGameConfig)
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
@@ -658,6 +695,9 @@ export class HostLobbyModal extends BaseModal {
             composed: true,
           }),
         );
+        if (autoApplyPreset) {
+          this.putGameConfig();
+        }
       });
     if (this.modalEl) {
       this.modalEl.onClose = () => {
@@ -734,33 +774,11 @@ export class HostLobbyModal extends BaseModal {
     }
 
     // Reset all transient form state to ensure clean slate
-    this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Easy;
-    this.disableNations = false;
-    this.gameMode = GameMode.FFA;
-    this.teamCount = 2;
-    this.bots = 400;
-    this.spawnImmunity = false;
-    this.spawnImmunityDurationMinutes = undefined;
-    this.infiniteGold = false;
-    this.donateGold = false;
-    this.infiniteTroops = false;
-    this.donateTroops = false;
-    this.maxTimer = false;
-    this.maxTimerValue = undefined;
-    this.instantBuild = false;
-    this.randomSpawn = false;
-    this.compactMap = false;
-    this.useRandomMap = false;
-    this.disabledUnits = [];
+    this.resetGameSettingsToDefaults();
     this.lobbyId = "";
     this.clients = [];
     this.lobbyCreatorClientID = "";
     this.nationCount = 0;
-    this.goldMultiplier = false;
-    this.goldMultiplierValue = undefined;
-    this.startingGold = false;
-    this.startingGoldValue = undefined;
 
     this.leaveLobbyOnClose = true;
   }
@@ -944,51 +962,29 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  private resetGameSettingsToDefaults(): void {
+    resetHostLobbyGameConfigFormState(this);
+  }
+
+  private buildFullGameConfig(): GameConfig {
+    return buildPrivateLobbyGameConfig(this);
+  }
+
+  private buildGameConfigPatch(): Partial<GameConfig> {
+    return buildHostLobbyGameConfigPatch(this);
+  }
+
+  private applyGameConfigPatch(patch: GameConfigPatch): void {
+    applyHostLobbyGameConfigPatch(this, patch);
+  }
+
   private async putGameConfig() {
-    const spawnImmunityTicks = this.spawnImmunityDurationMinutes
-      ? this.spawnImmunityDurationMinutes * 60 * 10
-      : 0;
     const url = await this.constructUrl();
     this.updateHistory(url);
     this.dispatchEvent(
       new CustomEvent("update-game-config", {
         detail: {
-          config: {
-            gameMap: this.selectedMap,
-            gameMapSize: this.compactMap
-              ? GameMapSize.Compact
-              : GameMapSize.Normal,
-            difficulty: this.selectedDifficulty,
-            bots: this.bots,
-            infiniteGold: this.infiniteGold,
-            donateGold: this.donateGold,
-            infiniteTroops: this.infiniteTroops,
-            donateTroops: this.donateTroops,
-            instantBuild: this.instantBuild,
-            randomSpawn: this.randomSpawn,
-            gameMode: this.gameMode,
-            disabledUnits: this.disabledUnits,
-            spawnImmunityDuration: this.spawnImmunity
-              ? spawnImmunityTicks
-              : undefined,
-            playerTeams: this.teamCount,
-            ...(this.gameMode === GameMode.Team &&
-            this.teamCount === HumansVsNations
-              ? {
-                  disableNations: false,
-                }
-              : {
-                  disableNations: this.disableNations,
-                }),
-            maxTimerValue:
-              this.maxTimer === true ? this.maxTimerValue : undefined,
-            goldMultiplier:
-              this.goldMultiplier === true
-                ? this.goldMultiplierValue
-                : undefined,
-            startingGold:
-              this.startingGold === true ? this.startingGoldValue : undefined,
-          } satisfies Partial<GameConfig>,
+          config: this.buildGameConfigPatch(),
         },
         bubbles: true,
         composed: true,
@@ -1080,18 +1076,21 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(creatorClientID: string): Promise<GameInfo> {
-  const config = await getServerConfigFromClient();
+async function createLobby(
+  creatorClientID: string,
+  gameConfig: GameConfig,
+): Promise<GameInfo> {
+  const serverConfig = await getServerConfigFromClient();
   try {
     const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
+      `/${serverConfig.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // body: JSON.stringify(data), // Include this if you need to send data
+        body: JSON.stringify(gameConfig),
       },
     );
 

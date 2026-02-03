@@ -5,13 +5,13 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
-  GameType,
   HumansVsNations,
   PublicGameModifiers,
   Quads,
   RankedType,
   Trios,
 } from "../core/game/Game";
+import { createDefaultPublicGameConfig } from "../core/game/GameConfigDefaults";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
@@ -131,15 +131,15 @@ export class MapPlaylist {
       }
     }
 
-    // Create the default public game config (from your GameManager)
+    const defaultConfig = createDefaultPublicGameConfig();
     return {
+      ...defaultConfig,
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
       maxPlayers:
         crowdedMaxPlayers ??
         (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
-      gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
         isCompact,
@@ -149,18 +149,15 @@ export class MapPlaylist {
       },
       startingGold,
       difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
-      infiniteGold: false,
-      infiniteTroops: false,
-      maxTimerValue: undefined,
-      instantBuild: false,
+        playerTeams === HumansVsNations
+          ? Difficulty.Medium
+          : defaultConfig.difficulty,
       randomSpawn: isRandomSpawn,
       disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
-      bots: isCompact ? 100 : 400,
+      bots: isCompact ? 100 : defaultConfig.bots,
       spawnImmunityDuration: 5 * 10,
-      disabledUnits: [],
     } satisfies GameConfig;
   }
 
@@ -175,25 +172,17 @@ export class MapPlaylist {
       GameMapType.FalklandIslands,
       GameMapType.Sierpinski,
     ];
+    const defaultConfig = createDefaultPublicGameConfig();
     return {
-      donateGold: false,
-      donateTroops: false,
+      ...defaultConfig,
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
-      gameType: GameType.Public,
       gameMapSize: GameMapSize.Compact,
-      difficulty: Difficulty.Easy,
       rankedType: RankedType.OneVOne,
-      infiniteGold: false,
-      infiniteTroops: false,
       maxTimerValue: 10, // 10 minutes
-      instantBuild: false,
-      randomSpawn: false,
       disableNations: true,
-      gameMode: GameMode.FFA,
       bots: 100,
       spawnImmunityDuration: 30 * 10,
-      disabledUnits: [],
     } satisfies GameConfig;
   }
 
