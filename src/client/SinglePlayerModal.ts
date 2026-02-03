@@ -1,21 +1,19 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Difficulty,
   Duos,
-  GameMapSize,
   GameMapType,
   GameMode,
-  GameType,
   HumansVsNations,
   Quads,
   Trios,
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { TeamCountConfig } from "../core/Schemas";
+import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";
@@ -23,6 +21,8 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import "./components/FluentSlider";
+import "./components/LobbyPresetControls";
+import type { LobbyPresetControls } from "./components/LobbyPresetControls";
 import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
@@ -30,6 +30,12 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
+import {
+  applySinglePlayerGameConfigPatch,
+  buildSinglePlayerGameConfig,
+  buildSinglePlayerGameConfigPatch,
+  resetSinglePlayerGameConfigFormState,
+} from "./utilities/GameConfigFormState";
 import {
   renderToggleInputCard,
   renderToggleInputCardInput,
@@ -60,37 +66,38 @@ const DEFAULT_OPTIONS = {
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends BaseModal {
-  @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
-  @state() private selectedDifficulty: Difficulty =
-    DEFAULT_OPTIONS.selectedDifficulty;
-  @state() private disableNations: boolean = DEFAULT_OPTIONS.disableNations;
-  @state() private bots: number = DEFAULT_OPTIONS.bots;
-  @state() private infiniteGold: boolean = DEFAULT_OPTIONS.infiniteGold;
-  @state() private infiniteTroops: boolean = DEFAULT_OPTIONS.infiniteTroops;
-  @state() private compactMap: boolean = DEFAULT_OPTIONS.compactMap;
-  @state() private maxTimer: boolean = DEFAULT_OPTIONS.maxTimer;
-  @state() private maxTimerValue: number | undefined =
-    DEFAULT_OPTIONS.maxTimerValue;
-  @state() private instantBuild: boolean = DEFAULT_OPTIONS.instantBuild;
-  @state() private randomSpawn: boolean = DEFAULT_OPTIONS.randomSpawn;
-  @state() private useRandomMap: boolean = DEFAULT_OPTIONS.useRandomMap;
-  @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
-  @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
+  @query("lobby-preset-controls") private presetControls?: LobbyPresetControls;
+
+  @state() private selectedMap!: GameMapType;
+  @state() private selectedDifficulty!: Difficulty;
+  @state() private disableNations!: boolean;
+  @state() private bots!: number;
+  @state() private infiniteGold!: boolean;
+  @state() private infiniteTroops!: boolean;
+  @state() private compactMap!: boolean;
+  @state() private maxTimer!: boolean;
+  @state() private maxTimerValue!: number | undefined;
+  @state() private instantBuild!: boolean;
+  @state() private randomSpawn!: boolean;
+  @state() private useRandomMap!: boolean;
+  @state() private gameMode!: GameMode;
+  @state() private teamCount!: TeamCountConfig;
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   @state() private userMeResponse: UserMeResponse | false = false;
-  @state() private goldMultiplier: boolean = DEFAULT_OPTIONS.goldMultiplier;
-  @state() private goldMultiplierValue: number | undefined =
-    DEFAULT_OPTIONS.goldMultiplierValue;
-  @state() private startingGold: boolean = DEFAULT_OPTIONS.startingGold;
-  @state() private startingGoldValue: number | undefined =
-    DEFAULT_OPTIONS.startingGoldValue;
+  @state() private goldMultiplier!: boolean;
+  @state() private goldMultiplierValue!: number | undefined;
+  @state() private startingGold!: boolean;
+  @state() private startingGoldValue!: number | undefined;
 
-  @state() private disabledUnits: UnitType[] = [
-    ...DEFAULT_OPTIONS.disabledUnits,
-  ];
+  @state() private disabledUnits!: UnitType[];
 
   private userSettings: UserSettings = new UserSettings();
+
+  constructor() {
+    super();
+    this.resetGameSettingsToDefaults();
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -106,6 +113,11 @@ export class SinglePlayerModal extends BaseModal {
       this.handleUserMeResponse as EventListener,
     );
     super.disconnectedCallback();
+  }
+
+  protected onOpen(): void {
+    const autoApplyPreset = this.presetControls?.syncFromStore();
+    if (autoApplyPreset) this.applyGameConfigPatch(autoApplyPreset.config);
   }
 
   private toggleAchievements = () => {
@@ -165,6 +177,27 @@ export class SinglePlayerModal extends BaseModal {
     this.mapWins = winsMap;
   }
 
+  private handlePresetApply = async (patch: Partial<GameConfig>) => {
+    this.applyGameConfigPatch(patch);
+  };
+
+  private handlePresetReset = async () => {
+    this.resetGameSettingsToDefaults();
+    this.requestUpdate();
+  };
+
+  private buildGameConfigPatch(): Partial<GameConfig> {
+    return buildSinglePlayerGameConfigPatch(this);
+  }
+
+  private applyGameConfigPatch(patch: Partial<GameConfig>): void {
+    applySinglePlayerGameConfigPatch(this, patch);
+  }
+
+  private resetGameSettingsToDefaults(): void {
+    resetSinglePlayerGameConfigFormState(this);
+  }
+
   render() {
     const content = html`
       <div
@@ -201,6 +234,13 @@ export class SinglePlayerModal extends BaseModal {
         <!-- Scrollable Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 mr-1">
           <div class="max-w-5xl mx-auto space-y-6 pt-4">
+            <lobby-preset-controls
+              class="block"
+              .getConfigPatch=${() => this.buildGameConfigPatch()}
+              .onApplyPreset=${this.handlePresetApply}
+              .onResetPreset=${this.handlePresetReset}
+            ></lobby-preset-controls>
+
             <!-- Map Selection -->
             <div class="space-y-6">
               <div
@@ -726,26 +766,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onClose(): void {
-    // Reset all transient form state to ensure clean slate
-    this.selectedMap = DEFAULT_OPTIONS.selectedMap;
-    this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
-    this.gameMode = DEFAULT_OPTIONS.gameMode;
-    this.useRandomMap = DEFAULT_OPTIONS.useRandomMap;
-    this.disableNations = DEFAULT_OPTIONS.disableNations;
-    this.bots = DEFAULT_OPTIONS.bots;
-    this.infiniteGold = DEFAULT_OPTIONS.infiniteGold;
-    this.infiniteTroops = DEFAULT_OPTIONS.infiniteTroops;
-    this.compactMap = DEFAULT_OPTIONS.compactMap;
-    this.maxTimer = DEFAULT_OPTIONS.maxTimer;
-    this.maxTimerValue = DEFAULT_OPTIONS.maxTimerValue;
-    this.instantBuild = DEFAULT_OPTIONS.instantBuild;
-    this.randomSpawn = DEFAULT_OPTIONS.randomSpawn;
-    this.teamCount = DEFAULT_OPTIONS.teamCount;
-    this.disabledUnits = [...DEFAULT_OPTIONS.disabledUnits];
-    this.goldMultiplier = DEFAULT_OPTIONS.goldMultiplier;
-    this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
-    this.startingGold = DEFAULT_OPTIONS.startingGold;
-    this.startingGoldValue = DEFAULT_OPTIONS.startingGoldValue;
+    this.resetGameSettingsToDefaults();
   }
 
   private handleSelectRandomMap() {
@@ -906,6 +927,14 @@ export class SinglePlayerModal extends BaseModal {
       : null;
 
     const selectedColor = this.userSettings.getSelectedColor();
+    const disabledUnits = this.disabledUnits
+      .map((u) => Object.values(UnitType).find((ut) => ut === u))
+      .filter((ut): ut is UnitType => ut !== undefined);
+    const config: GameConfig = {
+      ...buildSinglePlayerGameConfig(this),
+      maxTimerValue: finalMaxTimerValue,
+      disabledUnits,
+    };
 
     await crazyGamesSDK.requestMidgameAd();
 
@@ -930,41 +959,7 @@ export class SinglePlayerModal extends BaseModal {
                 },
               },
             ],
-            config: {
-              gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              maxTimerValue: finalMaxTimerValue,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.gameMode === GameMode.Team,
-              donateTroops: this.gameMode === GameMode.Team,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-              randomSpawn: this.randomSpawn,
-              disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                .filter((ut): ut is UnitType => ut !== undefined),
-              ...(this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
-                ? {
-                    disableNations: false,
-                  }
-                : {
-                    disableNations: this.disableNations,
-                  }),
-              ...(this.goldMultiplier && this.goldMultiplierValue
-                ? { goldMultiplier: this.goldMultiplierValue }
-                : {}),
-              ...(this.startingGold && this.startingGoldValue !== undefined
-                ? { startingGold: this.startingGoldValue }
-                : {}),
-            },
+            config,
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },
         } satisfies JoinLobbyEvent,

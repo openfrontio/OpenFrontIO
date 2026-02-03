@@ -1,13 +1,12 @@
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
-} from "../core/game/Game";
+  createDefaultPrivateGameConfig,
+  createDefaultPublicGameConfig,
+  createDefaultSingleplayerGameConfig,
+} from "../core/game/GameConfigDefaults";
 import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
@@ -53,27 +52,24 @@ export class GameManager {
     gameConfig: GameConfig | undefined,
     creatorClientID?: string,
   ) {
+    const defaultConfig = (() => {
+      switch (gameConfig?.gameType) {
+        case GameType.Public:
+          return createDefaultPublicGameConfig();
+        case GameType.Singleplayer:
+          return createDefaultSingleplayerGameConfig();
+        case GameType.Private:
+        default:
+          return createDefaultPrivateGameConfig();
+      }
+    })();
     const game = new GameServer(
       id,
       this.log,
       Date.now(),
       this.config,
       {
-        donateGold: false,
-        donateTroops: false,
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Easy,
-        disableNations: false,
-        infiniteGold: false,
-        infiniteTroops: false,
-        maxTimerValue: undefined,
-        instantBuild: false,
-        randomSpawn: false,
-        gameMode: GameMode.FFA,
-        bots: 400,
-        disabledUnits: [],
+        ...defaultConfig,
         ...gameConfig,
       },
       creatorClientID,

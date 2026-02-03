@@ -1,14 +1,12 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
-  GameMapSize,
   GameMapType,
   GameMode,
-  GameType,
   HumansVsNations,
   Quads,
   Trios,
@@ -28,81 +26,64 @@ import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyPlayerView";
+import "./components/LobbyPresetControls";
+import type { LobbyPresetControls } from "./components/LobbyPresetControls";
 import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import {
-  deletePreset,
-  loadLobbyPresetStore,
-  setAutoApplyLastUsed,
-  setLastUsedPresetId,
-  upsertPreset,
-} from "./LobbyPresets";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  applyHostLobbyGameConfigPatch,
+  buildHostLobbyGameConfigPatch,
+  buildPrivateLobbyGameConfig,
+  resetHostLobbyGameConfigFormState,
+} from "./utilities/GameConfigFormState";
 import {
   renderToggleInputCard,
   renderToggleInputCardInput,
 } from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
-const DEFAULT_PRIVATE_GAME_CONFIG: GameConfig = {
-  donateGold: false,
-  donateTroops: false,
-  gameMap: GameMapType.World,
-  gameType: GameType.Private,
-  gameMapSize: GameMapSize.Normal,
-  difficulty: Difficulty.Easy,
-  disableNations: false,
-  infiniteGold: false,
-  infiniteTroops: false,
-  maxTimerValue: undefined,
-  instantBuild: false,
-  randomSpawn: false,
-  gameMode: GameMode.FFA,
-  bots: 400,
-  disabledUnits: [],
-};
-
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
-  @state() private disableNations = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: TeamCountConfig = 2;
+  @query("lobby-preset-controls") private presetControls?: LobbyPresetControls;
+
+  @state() private selectedMap!: GameMapType;
+  @state() private selectedDifficulty!: Difficulty;
+  @state() private disableNations!: boolean;
+  @state() private gameMode!: GameMode;
+  @state() private teamCount!: TeamCountConfig;
 
   constructor() {
     super();
     this.id = "page-host-lobby";
+    this.resetGameSettingsToDefaults();
   }
-  @state() private bots: number = 400;
-  @state() private spawnImmunity: boolean = false;
-  @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
-  @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
-  @state() private maxTimer: boolean = false;
-  @state() private maxTimerValue: number | undefined = undefined;
-  @state() private instantBuild: boolean = false;
-  @state() private randomSpawn: boolean = false;
-  @state() private compactMap: boolean = false;
-  @state() private goldMultiplier: boolean = false;
-  @state() private goldMultiplierValue: number | undefined = undefined;
-  @state() private startingGold: boolean = false;
-  @state() private startingGoldValue: number | undefined = undefined;
+
+  @state() private bots!: number;
+  @state() private spawnImmunity!: boolean;
+  @state() private spawnImmunityDurationMinutes!: number | undefined;
+  @state() private infiniteGold!: boolean;
+  @state() private donateGold!: boolean;
+  @state() private infiniteTroops!: boolean;
+  @state() private donateTroops!: boolean;
+  @state() private maxTimer!: boolean;
+  @state() private maxTimerValue!: number | undefined;
+  @state() private instantBuild!: boolean;
+  @state() private randomSpawn!: boolean;
+  @state() private compactMap!: boolean;
+  @state() private goldMultiplier!: boolean;
+  @state() private goldMultiplierValue!: number | undefined;
+  @state() private startingGold!: boolean;
+  @state() private startingGoldValue!: number | undefined;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
-  @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private useRandomMap!: boolean;
+  @state() private disabledUnits!: UnitType[];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
-  @state() private presetOptions: Array<{ id: string; name: string }> = [];
-  @state() private selectedPresetId: string | undefined = undefined;
-  @state() private presetNameInput: string = "";
-  @state() private autoApplyLastUsedPreset: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -167,15 +148,20 @@ export class HostLobbyModal extends BaseModal {
     }
   }
 
+  private handlePresetApply = async (patch: Partial<GameConfig>) => {
+    this.applyGameConfigPatch(patch);
+    await this.loadNationCount();
+    await this.putGameConfig();
+  };
+
+  private handlePresetReset = async () => {
+    this.resetGameSettingsToDefaults();
+    this.requestUpdate();
+    await this.loadNationCount();
+    await this.putGameConfig();
+  };
+
   render() {
-    const presetButtonClass = (enabled: boolean) =>
-      `px-4 py-3 rounded-xl border transition-all duration-200 text-xs font-bold uppercase tracking-wider flex-1 ${
-        enabled
-          ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white"
-          : "bg-white/5 border-white/5 text-white/30 cursor-not-allowed"
-      }`;
-    const hasSelectedPreset = Boolean(this.selectedPresetId);
-    const hasPresetName = this.presetNameInput.trim().length > 0;
     const maxTimerHandlers = this.createToggleHandlers(
       () => this.maxTimer,
       (val) => (this.maxTimer = val),
@@ -230,108 +216,12 @@ export class HostLobbyModal extends BaseModal {
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1">
           <div class="max-w-5xl mx-auto space-y-10">
             <!-- Presets -->
-            <div class="space-y-6">
-              <div
-                class="flex items-center gap-4 pb-2 border-b border-white/10"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-5 h-5"
-                  >
-                    <path
-                      d="M6 4.5A2.25 2.25 0 018.25 2.25h7.5A2.25 2.25 0 0118 4.5v16.191a.75.75 0 01-1.135.65L12 18.382l-4.865 2.959A.75.75 0 016 20.691V4.5z"
-                    />
-                  </svg>
-                </div>
-                <h3
-                  class="text-lg font-bold text-white uppercase tracking-wider"
-                >
-                  ${translateText("host_modal.presets_title")}
-                </h3>
-              </div>
-              <div
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4"
-              >
-                <div class="lg:col-span-4">
-                  <label
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 pl-2 block"
-                    for="preset-select"
-                  >
-                    ${translateText("host_modal.presets_select")}
-                  </label>
-                  <select
-                    id="preset-select"
-                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    @change=${this.handlePresetSelectionChange}
-                  >
-                    <option value="">
-                      ${translateText("host_modal.presets_default")}
-                    </option>
-                    ${this.presetOptions.map(
-                      (preset) => html`
-                        <option
-                          value=${preset.id}
-                          ?selected=${this.selectedPresetId === preset.id}
-                        >
-                          ${preset.name}
-                        </option>
-                      `,
-                    )}
-                  </select>
-                </div>
-                <div class="lg:col-span-4">
-                  <label
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 pl-2 block"
-                    for="preset-name"
-                  >
-                    ${translateText("host_modal.presets_name")}
-                  </label>
-                  <input
-                    id="preset-name"
-                    type="text"
-                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    .value=${this.presetNameInput}
-                    maxlength="40"
-                    placeholder=${translateText(
-                      "host_modal.presets_name_placeholder",
-                    )}
-                    @input=${this.handlePresetNameInput}
-                  />
-                </div>
-                <div class="lg:col-span-4 flex gap-2 items-end">
-                  <button
-                    class=${presetButtonClass(hasPresetName)}
-                    @click=${this.handlePresetSaveClick}
-                    ?disabled=${!hasPresetName}
-                  >
-                    ${translateText("host_modal.presets_save")}
-                  </button>
-                  <button
-                    class=${presetButtonClass(hasSelectedPreset)}
-                    @click=${this.handlePresetDeleteClick}
-                    ?disabled=${!hasSelectedPreset}
-                  >
-                    ${translateText("host_modal.presets_delete")}
-                  </button>
-                </div>
-                <label
-                  class="lg:col-span-12 flex items-center gap-3 text-sm text-white/70"
-                >
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500/50"
-                    .checked=${this.autoApplyLastUsedPreset}
-                    @change=${this.handleAutoApplyPresetChange}
-                  />
-                  <span>${translateText("host_modal.presets_auto_apply")}</span>
-                </label>
-              </div>
-            </div>
+            <lobby-preset-controls
+              class="block"
+              .getConfigPatch=${() => this.buildGameConfigPatch()}
+              .onApplyPreset=${this.handlePresetApply}
+              .onResetPreset=${this.handlePresetReset}
+            ></lobby-preset-controls>
 
             <!-- Map Selection -->
             <div class="space-y-6">
@@ -779,16 +669,8 @@ export class HostLobbyModal extends BaseModal {
 
   protected onOpen(): void {
     this.lobbyCreatorClientID = generateID();
-    const presetStore = this.syncPresetsFromStore();
-    const autoApplyPreset =
-      presetStore.autoApplyLastUsed && presetStore.lastUsedPresetId
-        ? presetStore.presets.find(
-            (preset) => preset.id === presetStore.lastUsedPresetId,
-          )
-        : undefined;
-    if (autoApplyPreset) {
-      this.applyGameConfigPatch(autoApplyPreset.config);
-    }
+    const autoApplyPreset = this.presetControls?.syncFromStore();
+    if (autoApplyPreset) this.applyGameConfigPatch(autoApplyPreset.config);
 
     const initialGameConfig = this.buildFullGameConfig();
     createLobby(this.lobbyCreatorClientID, initialGameConfig)
@@ -896,10 +778,6 @@ export class HostLobbyModal extends BaseModal {
     this.clients = [];
     this.lobbyCreatorClientID = "";
     this.nationCount = 0;
-    this.presetOptions = [];
-    this.selectedPresetId = undefined;
-    this.presetNameInput = "";
-    this.autoApplyLastUsedPreset = false;
 
     this.leaveLobbyOnClose = true;
   }
@@ -1083,241 +961,20 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
-  private async handlePresetSelectionChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    this.selectedPresetId = value || undefined;
-    if (!this.selectedPresetId) {
-      this.presetNameInput = "";
-      setLastUsedPresetId(undefined);
-      this.resetGameSettingsToDefaults();
-      this.requestUpdate();
-      await this.loadNationCount();
-      await this.putGameConfig();
-      return;
-    }
-    const store = loadLobbyPresetStore();
-    const preset = store.presets.find(
-      (candidate) => candidate.id === this.selectedPresetId,
-    );
-    if (!preset) {
-      this.showMessage(translateText("host_modal.presets_not_found"), "red");
-      this.selectedPresetId = undefined;
-      this.presetNameInput = "";
-      setLastUsedPresetId(undefined);
-      this.requestUpdate();
-      return;
-    }
-    this.presetNameInput = preset.name;
-    this.applyGameConfigPatch(preset.config);
-    await this.loadNationCount();
-    await this.putGameConfig();
-    setLastUsedPresetId(preset.id);
-    this.showMessage(
-      translateText("host_modal.presets_applied", { name: preset.name }),
-    );
-  }
-
-  private handlePresetNameInput(e: Event) {
-    this.presetNameInput = (e.target as HTMLInputElement).value;
-  }
-
-  private handlePresetSaveClick() {
-    const name = this.presetNameInput.trim();
-    if (!name) return;
-    const preset = upsertPreset({
-      id: this.selectedPresetId,
-      name,
-      config: this.buildGameConfigPatch(),
-    });
-    setLastUsedPresetId(preset.id);
-    this.syncPresetsFromStore(preset.id);
-    this.showMessage(
-      translateText("host_modal.presets_saved", { name: preset.name }),
-    );
-  }
-
-  private handlePresetDeleteClick() {
-    if (!this.selectedPresetId) return;
-    const store = loadLobbyPresetStore();
-    const preset = store.presets.find(
-      (candidate) => candidate.id === this.selectedPresetId,
-    );
-    deletePreset(this.selectedPresetId);
-    this.syncPresetsFromStore();
-    this.selectedPresetId = undefined;
-    this.presetNameInput = "";
-    this.showMessage(
-      translateText("host_modal.presets_deleted", {
-        name: preset?.name ?? "",
-      }),
-    );
-  }
-
-  private handleAutoApplyPresetChange(e: Event) {
-    this.autoApplyLastUsedPreset = (e.target as HTMLInputElement).checked;
-    setAutoApplyLastUsed(this.autoApplyLastUsedPreset);
-  }
-
-  private syncPresetsFromStore(preferredSelectionId?: string) {
-    const store = loadLobbyPresetStore();
-    this.presetOptions = store.presets.map((preset) => ({
-      id: preset.id,
-      name: preset.name,
-    }));
-    this.autoApplyLastUsedPreset = store.autoApplyLastUsed ?? false;
-    const selectionId =
-      preferredSelectionId ??
-      (this.autoApplyLastUsedPreset ? store.lastUsedPresetId : undefined);
-    const selectedPreset = selectionId
-      ? store.presets.find((preset) => preset.id === selectionId)
-      : undefined;
-    this.selectedPresetId = selectedPreset?.id;
-    this.presetNameInput = selectedPreset?.name ?? "";
-    return store;
-  }
-
-  private showMessage(message: string, color: "green" | "red" = "green") {
-    window.dispatchEvent(
-      new CustomEvent("show-message", {
-        detail: { message, duration: 2000, color },
-      }),
-    );
-  }
-
   private resetGameSettingsToDefaults(): void {
-    this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Easy;
-    this.disableNations = false;
-    this.gameMode = GameMode.FFA;
-    this.teamCount = 2;
-    this.bots = 400;
-    this.spawnImmunity = false;
-    this.spawnImmunityDurationMinutes = undefined;
-    this.infiniteGold = false;
-    this.donateGold = false;
-    this.infiniteTroops = false;
-    this.donateTroops = false;
-    this.maxTimer = false;
-    this.maxTimerValue = undefined;
-    this.instantBuild = false;
-    this.randomSpawn = false;
-    this.compactMap = false;
-    this.useRandomMap = false;
-    this.disabledUnits = [];
-    this.goldMultiplier = false;
-    this.goldMultiplierValue = undefined;
-    this.startingGold = false;
-    this.startingGoldValue = undefined;
+    resetHostLobbyGameConfigFormState(this);
   }
 
   private buildFullGameConfig(): GameConfig {
-    return {
-      ...DEFAULT_PRIVATE_GAME_CONFIG,
-      ...this.buildGameConfigPatch(),
-      gameType: GameType.Private,
-    };
+    return buildPrivateLobbyGameConfig(this);
   }
 
   private buildGameConfigPatch(): Partial<GameConfig> {
-    const spawnImmunityTicks = this.spawnImmunityDurationMinutes
-      ? this.spawnImmunityDurationMinutes * 60 * 10
-      : 0;
-
-    return {
-      gameMap: this.selectedMap,
-      gameMapSize: this.compactMap ? GameMapSize.Compact : GameMapSize.Normal,
-      difficulty: this.selectedDifficulty,
-      bots: this.bots,
-      infiniteGold: this.infiniteGold,
-      donateGold: this.donateGold,
-      infiniteTroops: this.infiniteTroops,
-      donateTroops: this.donateTroops,
-      instantBuild: this.instantBuild,
-      randomSpawn: this.randomSpawn,
-      gameMode: this.gameMode,
-      disabledUnits: this.disabledUnits,
-      spawnImmunityDuration: this.spawnImmunity
-        ? spawnImmunityTicks
-        : undefined,
-      playerTeams: this.teamCount,
-      ...(this.gameMode === GameMode.Team && this.teamCount === HumansVsNations
-        ? {
-            disableNations: false,
-          }
-        : {
-            disableNations: this.disableNations,
-          }),
-      maxTimerValue: this.maxTimer === true ? this.maxTimerValue : undefined,
-      goldMultiplier:
-        this.goldMultiplier === true ? this.goldMultiplierValue : undefined,
-      startingGold:
-        this.startingGold === true ? this.startingGoldValue : undefined,
-    };
+    return buildHostLobbyGameConfigPatch(this);
   }
 
   private applyGameConfigPatch(patch: Partial<GameConfig>): void {
-    if ("gameMap" in patch && patch.gameMap !== undefined) {
-      this.selectedMap = patch.gameMap;
-      this.useRandomMap = false;
-    }
-    if ("gameMapSize" in patch && patch.gameMapSize !== undefined) {
-      this.compactMap = patch.gameMapSize === GameMapSize.Compact;
-    }
-    if ("difficulty" in patch && patch.difficulty !== undefined) {
-      this.selectedDifficulty = patch.difficulty;
-    }
-    if ("disableNations" in patch && patch.disableNations !== undefined) {
-      this.disableNations = patch.disableNations;
-    }
-    if ("bots" in patch && patch.bots !== undefined) {
-      this.bots = patch.bots;
-    }
-    if ("infiniteGold" in patch && patch.infiniteGold !== undefined) {
-      this.infiniteGold = patch.infiniteGold;
-    }
-    if ("donateGold" in patch && patch.donateGold !== undefined) {
-      this.donateGold = patch.donateGold;
-    }
-    if ("infiniteTroops" in patch && patch.infiniteTroops !== undefined) {
-      this.infiniteTroops = patch.infiniteTroops;
-    }
-    if ("donateTroops" in patch && patch.donateTroops !== undefined) {
-      this.donateTroops = patch.donateTroops;
-    }
-    if ("instantBuild" in patch && patch.instantBuild !== undefined) {
-      this.instantBuild = patch.instantBuild;
-    }
-    if ("randomSpawn" in patch && patch.randomSpawn !== undefined) {
-      this.randomSpawn = patch.randomSpawn;
-    }
-    if ("gameMode" in patch && patch.gameMode !== undefined) {
-      this.gameMode = patch.gameMode;
-    }
-    if ("disabledUnits" in patch) {
-      this.disabledUnits = patch.disabledUnits ?? [];
-    }
-    if ("spawnImmunityDuration" in patch) {
-      const ticks = patch.spawnImmunityDuration;
-      this.spawnImmunity = ticks !== undefined;
-      this.spawnImmunityDurationMinutes =
-        ticks === undefined ? undefined : ticks / (60 * 10);
-    }
-    if ("playerTeams" in patch && patch.playerTeams !== undefined) {
-      this.teamCount = patch.playerTeams;
-    }
-    if ("maxTimerValue" in patch) {
-      this.maxTimer = patch.maxTimerValue !== undefined;
-      this.maxTimerValue = patch.maxTimerValue;
-    }
-    if ("goldMultiplier" in patch) {
-      this.goldMultiplier = patch.goldMultiplier !== undefined;
-      this.goldMultiplierValue = patch.goldMultiplier;
-    }
-    if ("startingGold" in patch) {
-      this.startingGold = patch.startingGold !== undefined;
-      this.startingGoldValue = patch.startingGold;
-    }
-    this.requestUpdate();
+    applyHostLobbyGameConfigPatch(this, patch);
   }
 
   private async putGameConfig() {
