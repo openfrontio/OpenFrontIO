@@ -1,4 +1,5 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
+import { wouldNukeHitTeammateStructure } from "../execution/Util";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -20,6 +21,7 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -994,10 +996,10 @@ export class PlayerImpl implements Player {
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -1024,7 +1026,7 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef): TileRef | false {
+  nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
     if (this.mg.isSpawnImmunityActive()) {
       return false;
     }
@@ -1034,6 +1036,31 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
+
+    // Prevent launching nukes that would hit teammate structures (only in team games)
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      nukeType !== UnitType.MIRV
+    ) {
+      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+      const teammateSmallIds = new Set(
+        this.mg
+          .players()
+          .filter((p) => this.isOnSameTeam(p))
+          .map((p) => p.smallID()),
+      );
+      if (
+        wouldNukeHitTeammateStructure(
+          this.mg,
+          tile,
+          magnitude,
+          teammateSmallIds,
+        )
+      ) {
+        return false;
+      }
+    }
+
     // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {

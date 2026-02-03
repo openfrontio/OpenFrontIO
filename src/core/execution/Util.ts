@@ -43,6 +43,26 @@ export interface NukeAllianceCheckParams {
   threshold: number;
 }
 
+// Checks if nuking this tile would destroy any teammate's structure
+export function wouldNukeHitTeammateStructure(
+  game: Game | GameView,
+  targetTile: TileRef,
+  magnitude: NukeMagnitude,
+  teammateSmallIds: Set<number>,
+): boolean {
+  if (teammateSmallIds.size === 0) {
+    return false;
+  }
+
+  return game.anyUnitNearby(
+    targetTile,
+    magnitude.outer,
+    StructureTypes,
+    (unit) =>
+      unit.owner().isPlayer() && teammateSmallIds.has(unit.owner().smallID()),
+  );
+}
+
 // Checks if nuking this tile would break an alliance.
 // Returns true if either:
 // 1. The weighted tile count for any ally exceeds the threshold
