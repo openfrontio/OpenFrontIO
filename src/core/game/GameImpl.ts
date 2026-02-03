@@ -92,6 +92,7 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _isPaused: boolean = false;
+  private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
 
@@ -103,6 +104,8 @@ export class GameImpl implements Game {
     private _config: Config,
     private _stats: Stats,
   ) {
+    const constructorStart = performance.now();
+
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
@@ -123,6 +126,10 @@ export class GameImpl implements Game {
         { cachePaths: true },
       );
     }
+
+    console.log(
+      `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
+    );
   }
 
   private populateTeams() {
@@ -712,11 +719,16 @@ export class GameImpl implements Game {
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
+    this._winner = winner;
     this.addUpdate({
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
       allPlayersStats,
     });
+  }
+
+  getWinner(): Player | Team | null {
+    return this._winner;
   }
 
   private makeWinner(winner: string | Player): Winner | undefined {

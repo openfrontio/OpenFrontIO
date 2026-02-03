@@ -44,11 +44,13 @@ export class ReplayPanel extends LitElement implements Layer {
     }
   }
 
+  getTickIntervalMs() {
+    return 1000;
+  }
+
   tick() {
     if (!this.visible) return;
-    if (this.game!.ticks() % 10 === 0) {
-      this.requestUpdate();
-    }
+    this.requestUpdate();
   }
 
   onReplaySpeedChange(value: ReplaySpeedMultiplier) {

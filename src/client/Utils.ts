@@ -1,6 +1,133 @@
 import IntlMessageFormat from "intl-messageformat";
-import { MessageType } from "../core/game/Game";
+import {
+  Duos,
+  GameMode,
+  HumansVsNations,
+  MessageType,
+  PublicGameModifiers,
+  Quads,
+  Trios,
+} from "../core/game/Game";
+import { GameConfig } from "../core/Schemas";
 import type { LangSelector } from "./LangSelector";
+
+export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/EN2oOog3pSs";
+
+export function normaliseMapKey(mapName: string): string {
+  return mapName.toLowerCase().replace(/[\s.]+/g, "");
+}
+
+/**
+ * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
+ */
+export function getGameModeLabel(gameConfig: GameConfig): string {
+  const { gameMode, playerTeams, maxPlayers } = gameConfig;
+
+  if (gameMode !== GameMode.Team) {
+    return translateText("game_mode.ffa");
+  }
+
+  // Humans vs Nations
+  if (playerTeams === HumansVsNations) {
+    return translateText("public_lobby.teams_hvn_detailed", {
+      num: maxPlayers ?? 0,
+    });
+  }
+
+  // Named team types (Duos, Trios, Quads)
+  if (typeof playerTeams === "string") {
+    const teamKey = `public_lobby.teams_${playerTeams}`;
+    const teamCount = getTeamCount(playerTeams, maxPlayers ?? 0);
+    const translated = translateText(teamKey, { team_count: teamCount });
+    if (translated !== teamKey) {
+      return translated;
+    }
+  }
+
+  // Numeric team count
+  const teamCount =
+    typeof playerTeams === "number"
+      ? playerTeams
+      : getTeamCount(playerTeams, maxPlayers ?? 0);
+  return translateText("public_lobby.teams", { num: teamCount });
+}
+
+function getTeamCount(
+  playerTeams: string | number | undefined,
+  maxPlayers: number,
+): number {
+  if (typeof playerTeams === "number") return playerTeams;
+  const teamSize = getTeamSize(playerTeams, maxPlayers);
+  return teamSize > 0 ? Math.floor(maxPlayers / teamSize) : 0;
+}
+
+function getTeamSize(
+  playerTeams: string | number | undefined,
+  maxPlayers: number,
+): number {
+  if (playerTeams === Duos) return 2;
+  if (playerTeams === Trios) return 3;
+  if (playerTeams === Quads) return 4;
+  if (playerTeams === HumansVsNations) return maxPlayers;
+  if (typeof playerTeams === "number" && playerTeams > 0) {
+    return Math.floor(maxPlayers / playerTeams);
+  }
+  return 0;
+}
+
+export interface ModifierInfo {
+  /** Translation key for detailed label (e.g. "host_modal.random_spawn") */
+  labelKey: string;
+  /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
+  badgeKey: string;
+  /** The raw value if applicable (e.g. startingGold amount) */
+  value?: number;
+}
+
+/**
+ * Returns structured modifier info for both detailed config display and badges.
+ */
+export function getActiveModifiers(
+  modifiers: PublicGameModifiers | undefined,
+): ModifierInfo[] {
+  if (!modifiers) return [];
+  const result: ModifierInfo[] = [];
+  if (modifiers.isRandomSpawn) {
+    result.push({
+      labelKey: "host_modal.random_spawn",
+      badgeKey: "public_game_modifier.random_spawn",
+    });
+  }
+  if (modifiers.isCompact) {
+    result.push({
+      labelKey: "host_modal.compact_map",
+      badgeKey: "public_game_modifier.compact_map",
+    });
+  }
+  if (modifiers.isCrowded) {
+    result.push({
+      labelKey: "host_modal.crowded",
+      badgeKey: "public_game_modifier.crowded",
+    });
+  }
+  if (modifiers.startingGold) {
+    result.push({
+      labelKey: "host_modal.starting_gold",
+      badgeKey: "public_game_modifier.starting_gold",
+      value: modifiers.startingGold,
+    });
+  }
+  return result;
+}
+
+/**
+ * Returns an array of translated modifier labels for badge display.
+ */
+export function getModifierLabels(
+  modifiers: PublicGameModifiers | undefined,
+): string[] {
+  return getActiveModifiers(modifiers).map((m) => translateText(m.badgeKey));
+}
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
