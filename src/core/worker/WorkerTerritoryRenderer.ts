@@ -28,6 +28,7 @@ export class WorkerTerritoryRenderer {
   private resources: GroundTruthData | null = null;
   private gameViewAdapter: GameViewAdapter | null = null;
   private ready = false;
+  private lastGpuWork: Promise<void> | null = null;
 
   // Compute passes
   private computePasses: ComputePass[] = [];
@@ -62,6 +63,10 @@ export class WorkerTerritoryRenderer {
   private postSmoothingEnabled = false;
   private defensePostRange: number;
   private patternsEnabled = false;
+  private tickPending = false;
+  private tickRunning = false;
+  private gpuWaitEnabled = true;
+  private readonly gpuWaitTimeoutMs = 250;
 
   /**
    * Initialize renderer with offscreen canvas and game data.
@@ -548,9 +553,9 @@ export class WorkerTerritoryRenderer {
    * Perform one simulation tick.
    * Runs compute passes to update ground truth data.
    */
-  tick(): void {
+  tick(): boolean {
     if (!this.ready || !this.device || !this.resources) {
-      return;
+      return false;
     }
 
     this.resources.updateTickTiming(performance.now() / 1000);
@@ -579,7 +584,7 @@ export class WorkerTerritoryRenderer {
       (this.defendedStrengthPass?.needsUpdate() ?? false);
 
     if (!needsCompute) {
-      return;
+      return false;
     }
 
     const encoder = this.device.device.createCommandEncoder();
@@ -610,13 +615,61 @@ export class WorkerTerritoryRenderer {
     }
 
     this.device.device.queue.submit([encoder.finish()]);
+    return true;
+  }
+
+  requestTick(): void {
+    this.tickPending = true;
+    if (this.tickRunning) {
+      return;
+    }
+    this.tickRunning = true;
+    void this.runTickLoop();
+  }
+
+  private async runTickLoop(): Promise<void> {
+    try {
+      while (this.tickPending) {
+        this.tickPending = false;
+
+        if (!this.ready || !this.device) {
+          return;
+        }
+
+        if (this.gpuWaitEnabled && this.lastGpuWork) {
+          const r = await this.awaitGpuWork(this.lastGpuWork);
+          if (r.timedOut) {
+            this.gpuWaitEnabled = false;
+          }
+          this.lastGpuWork = null;
+        }
+
+        const submitted = this.tick();
+        const q: any = this.device.device.queue as any;
+        if (submitted && typeof q?.onSubmittedWorkDone === "function") {
+          const p = q.onSubmittedWorkDone() as Promise<void>;
+          this.lastGpuWork = p.catch(() => {});
+          if (this.gpuWaitEnabled) {
+            const r = await this.awaitGpuWork(this.lastGpuWork);
+            if (r.timedOut) {
+              this.gpuWaitEnabled = false;
+              this.lastGpuWork = null;
+            } else {
+              this.lastGpuWork = null;
+            }
+          }
+        }
+      }
+    } finally {
+      this.tickRunning = false;
+    }
   }
 
   /**
    * Render one frame.
    * Runs render passes to draw to the canvas.
    */
-  render(): void {
+  render(onGetTextureMs?: (ms: number) => void): void {
     if (
       !this.ready ||
       !this.device ||
@@ -638,7 +691,11 @@ export class WorkerTerritoryRenderer {
     }
 
     const encoder = this.device.device.createCommandEncoder();
+    const getTexStart = performance.now();
     const swapchainView = this.device.context.getCurrentTexture().createView();
+    if (onGetTextureMs) {
+      onGetTextureMs(performance.now() - getTexStart);
+    }
 
     if (
       this.preSmoothingEnabled &&
@@ -691,5 +748,96 @@ export class WorkerTerritoryRenderer {
     }
 
     this.device.device.queue.submit([encoder.finish()]);
+  }
+
+  async renderAsync(): Promise<{
+    waitPrevGpuMs: number;
+    cpuMs: number;
+    getTextureMs: number;
+    gpuWaitMs: number;
+    waitPrevGpuTimedOut: boolean;
+    gpuWaitTimedOut: boolean;
+  } | null> {
+    if (!this.ready || !this.device) {
+      return null;
+    }
+
+    let waitPrevGpuMs = 0;
+    let cpuMs = 0;
+    let getTextureMs = 0;
+    let gpuWaitMs = 0;
+    let waitPrevGpuTimedOut = false;
+    let gpuWaitTimedOut = false;
+
+    if (this.gpuWaitEnabled && this.lastGpuWork) {
+      const t0 = performance.now();
+      const r = await this.awaitGpuWork(this.lastGpuWork);
+      waitPrevGpuTimedOut = r.timedOut;
+      if (r.timedOut) {
+        this.gpuWaitEnabled = false;
+      }
+      waitPrevGpuMs = performance.now() - t0;
+      this.lastGpuWork = null;
+    }
+
+    const cpuStart = performance.now();
+    this.render((ms) => {
+      getTextureMs = ms;
+    });
+    cpuMs = performance.now() - cpuStart;
+
+    const q: any = this.device.device.queue as any;
+    if (typeof q?.onSubmittedWorkDone !== "function") {
+      this.lastGpuWork = null;
+      return {
+        waitPrevGpuMs,
+        cpuMs,
+        getTextureMs,
+        gpuWaitMs,
+        waitPrevGpuTimedOut,
+        gpuWaitTimedOut,
+      };
+    }
+
+    const gpuStart = performance.now();
+    const p = q.onSubmittedWorkDone() as Promise<void>;
+    this.lastGpuWork = p.catch(() => {});
+    if (this.gpuWaitEnabled) {
+      const r = await this.awaitGpuWork(this.lastGpuWork);
+      gpuWaitTimedOut = r.timedOut;
+      if (r.timedOut) {
+        this.gpuWaitEnabled = false;
+        this.lastGpuWork = null;
+      } else {
+        this.lastGpuWork = null;
+      }
+      gpuWaitMs = performance.now() - gpuStart;
+    }
+
+    return {
+      waitPrevGpuMs,
+      cpuMs,
+      getTextureMs,
+      gpuWaitMs,
+      waitPrevGpuTimedOut,
+      gpuWaitTimedOut,
+    };
+  }
+
+  private async awaitGpuWork(
+    work: Promise<void>,
+  ): Promise<{ timedOut: boolean }> {
+    let timeoutId: any = null;
+    const timeout = new Promise<"timeout">((resolve) => {
+      timeoutId = setTimeout(() => resolve("timeout"), this.gpuWaitTimeoutMs);
+    });
+    const result = await Promise.race([
+      work.then(() => "done" as const),
+      timeout,
+    ]);
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    return { timedOut: result === "timeout" };
   }
 }

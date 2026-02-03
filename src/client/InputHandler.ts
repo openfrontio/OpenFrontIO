@@ -2,6 +2,7 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import type { WorkerMetricsMessage } from "../core/worker/WorkerMessages";
 import { UIState } from "./graphics/UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
@@ -80,6 +81,20 @@ export class CloseViewEvent implements GameEvent {}
 export class RefreshGraphicsEvent implements GameEvent {}
 
 export class TogglePerformanceOverlayEvent implements GameEvent {}
+
+export class SetWorkerDebugEvent implements GameEvent {
+  constructor(
+    public readonly config: {
+      enabled: boolean;
+      intervalMs?: number;
+      includeTrace?: boolean;
+    },
+  ) {}
+}
+
+export class WorkerMetricsEvent implements GameEvent {
+  constructor(public readonly metrics: WorkerMetricsMessage) {}
+}
 
 export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureTypes: UnitType[] | null) {}

@@ -9,7 +9,12 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
-import { TileContext, WorkerMessage } from "./WorkerMessages";
+import {
+  SetWorkerDebugMessage,
+  TileContext,
+  WorkerMessage,
+  WorkerMetricsMessage,
+} from "./WorkerMessages";
 
 export class WorkerClient {
   private worker: Worker;
@@ -18,6 +23,7 @@ export class WorkerClient {
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
+  private workerMetricsCallback?: (metrics: WorkerMetricsMessage) => void;
 
   constructor(
     private gameStartInfo: GameStartInfo,
@@ -43,6 +49,10 @@ export class WorkerClient {
         if (this.gameUpdateCallback && message.gameUpdate) {
           this.gameUpdateCallback(message.gameUpdate);
         }
+        break;
+
+      case "worker_metrics":
+        this.workerMetricsCallback?.(message);
         break;
 
       case "initialized":
@@ -78,11 +88,35 @@ export class WorkerClient {
    * Post a message to the worker with optional transferables.
    */
   postMessage(message: any, transfer?: Transferable[]): void {
+    if (
+      message &&
+      typeof message === "object" &&
+      typeof message.sentAtWallMs !== "number"
+    ) {
+      message.sentAtWallMs = Date.now();
+    }
     if (transfer && transfer.length > 0) {
       this.worker.postMessage(message, transfer);
       return;
     }
     this.worker.postMessage(message);
+  }
+
+  onWorkerMetrics(callback?: (metrics: WorkerMetricsMessage) => void): void {
+    this.workerMetricsCallback = callback;
+  }
+
+  setWorkerDebug(config: {
+    enabled: boolean;
+    intervalMs?: number;
+    includeTrace?: boolean;
+  }): void {
+    this.postMessage({
+      type: "set_worker_debug",
+      enabled: config.enabled,
+      intervalMs: config.intervalMs,
+      includeTrace: config.includeTrace,
+    } satisfies SetWorkerDebugMessage);
   }
 
   initialize(): Promise<void> {
@@ -96,7 +130,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "init",
         id: messageId,
         gameStartInfo: this.gameStartInfo,
@@ -125,14 +159,14 @@ export class WorkerClient {
       throw new Error("Worker not initialized");
     }
 
-    this.worker.postMessage({
+    this.postMessage({
       type: "turn",
       turn,
     });
   }
 
   sendHeartbeat() {
-    this.worker.postMessage({
+    this.postMessage({
       type: "heartbeat",
     });
   }
@@ -155,7 +189,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_profile",
         id: messageId,
         playerID: playerID,
@@ -181,7 +215,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_border_tiles",
         id: messageId,
         playerID: playerID,
@@ -211,7 +245,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_actions",
         id: messageId,
         playerID: playerID,
@@ -247,7 +281,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "attack_average_position",
         id: messageId,
         playerID: playerID,
@@ -277,7 +311,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "transport_ship_spawn",
         id: messageId,
         playerID: playerID,
@@ -301,7 +335,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "tile_context",
         id: messageId,
         tile,
