@@ -2,6 +2,7 @@ import { createCanvas } from "src/client/Utils";
 import { Theme } from "../../../core/configuration/Config";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
+import { generateID } from "../../../core/Util";
 import { WorkerClient } from "../../../core/worker/WorkerClient";
 import {
   InitRendererMessage,
@@ -38,6 +39,7 @@ export class Canvas2DRendererProxy {
   private viewTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private lastSentViewSize: ViewSize | null = null;
   private lastSentViewTransform: ViewTransform | null = null;
+  private renderInFlight = false;
 
   private constructor(
     private readonly game: GameView,
@@ -82,6 +84,7 @@ export class Canvas2DRendererProxy {
     if (this.initPromise) return;
     this.initPromise = this.init().catch((err) => {
       this.failed = true;
+      this.renderInFlight = false;
       this.pendingMessages = [];
       console.error("Worker canvas2d renderer init failed:", err);
       throw err;
@@ -301,7 +304,18 @@ export class Canvas2DRendererProxy {
   }
 
   render(): void {
+    if (this.failed) {
+      return;
+    }
+    if (this.renderInFlight) {
+      return;
+    }
+
+    this.renderInFlight = true;
+    const renderId = `render_${generateID()}`;
+
     const message: RenderFrameMessage = { type: "render_frame" };
+    message.id = renderId;
 
     if (
       !this.lastSentViewSize ||
@@ -320,6 +334,29 @@ export class Canvas2DRendererProxy {
     ) {
       message.viewTransform = this.viewTransform;
       this.lastSentViewTransform = this.viewTransform;
+    }
+
+    const worker = this.worker;
+    if (worker) {
+      const timeout = setTimeout(() => {
+        if (!this.renderInFlight) {
+          worker.removeMessageHandler(renderId);
+          return;
+        }
+        this.renderInFlight = false;
+        worker.removeMessageHandler(renderId);
+      }, 2000);
+
+      worker.addMessageHandler(renderId, (m: any) => {
+        if (m?.type !== "render_done") {
+          return;
+        }
+        clearTimeout(timeout);
+        this.renderInFlight = false;
+      });
+    } else {
+      this.renderInFlight = false;
+      return;
     }
 
     this.sendToWorker(message);
