@@ -88,6 +88,7 @@ export class GameServer {
     private config: ServerConfig,
     public gameConfig: GameConfig,
     private lobbyCreatorID?: string,
+    private startsAt?: number,
   ) {
     this.log = log_.child({ gameID: id });
   }
@@ -506,15 +507,6 @@ export class GameServer {
     return this.activeClients.length;
   }
 
-  public startTime(): number {
-    if (this._startTime !== null && this._startTime > 0) {
-      return this._startTime;
-    } else {
-      //game hasn't started yet, only works for public games
-      return this.createdAt + this.config.gameCreationRate();
-    }
-  }
-
   public prestart() {
     if (this.hasStarted()) {
       return;
@@ -787,8 +779,9 @@ export class GameServer {
       }
     }
 
-    const msSinceCreation = now - this.createdAt;
-    const lessThanLifetime = msSinceCreation < this.config.gameCreationRate();
+    // Public Games
+
+    const lessThanLifetime = Date.now() < this.startsAt!;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
@@ -796,8 +789,7 @@ export class GameServer {
     if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
-    const warmupOver =
-      now > this.createdAt + this.config.gameCreationRate() + 30 * 1000;
+    const warmupOver = now > this.startsAt! + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
@@ -817,13 +809,9 @@ export class GameServer {
         clientID: c.clientID,
       })),
       gameConfig: this.gameConfig,
-      msUntilStart: this.isPublic() ? this.getMsUntilStart() : undefined,
+      startsAt: this.startsAt,
+      serverTime: Date.now(),
     };
-  }
-
-  private getMsUntilStart(): number {
-    const startTime = this.createdAt + this.config.gameCreationRate();
-    return Math.max(0, startTime - Date.now());
   }
 
   public isPublic(): boolean {

@@ -26,6 +26,12 @@ export class GameManager {
     return this.games.get(id) ?? null;
   }
 
+  public publicLobbies(): GameServer[] {
+    return Array.from(this.games.values()).filter(
+      (g) => g.phase() === GamePhase.Lobby && g.isPublic(),
+    );
+  }
+
   joinClient(client: Client, gameID: GameID): boolean {
     const game = this.games.get(gameID);
     if (game) {
@@ -52,6 +58,7 @@ export class GameManager {
     id: GameID,
     gameConfig: GameConfig | undefined,
     creatorClientID?: string,
+    startsAt?: number,
   ) {
     const game = new GameServer(
       id,
@@ -77,6 +84,7 @@ export class GameManager {
         ...gameConfig,
       },
       creatorClientID,
+      startsAt,
     );
     this.games.set(id, game);
     return game;
