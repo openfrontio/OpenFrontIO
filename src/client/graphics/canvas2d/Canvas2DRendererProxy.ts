@@ -15,9 +15,9 @@ import {
   SetPaletteMessage,
   SetPatternsEnabledMessage,
   SetShaderSettingsMessage,
-  SetViewSizeMessage,
-  SetViewTransformMessage,
   TickRendererMessage,
+  ViewSize,
+  ViewTransform,
 } from "../../../core/worker/WorkerMessages";
 
 export interface Canvas2DCreateResult {
@@ -33,6 +33,11 @@ export class Canvas2DRendererProxy {
   private failed = false;
   private initPromise: Promise<void> | null = null;
   private pendingMessages: Array<{ message: any; transferables?: any[] }> = [];
+
+  private viewSize: ViewSize = { width: 1, height: 1 };
+  private viewTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+  private lastSentViewSize: ViewSize | null = null;
+  private lastSentViewTransform: ViewTransform | null = null;
 
   private constructor(
     private readonly game: GameView,
@@ -159,22 +164,14 @@ export class Canvas2DRendererProxy {
   }
 
   setViewSize(width: number, height: number): void {
-    const message: SetViewSizeMessage = {
-      type: "set_view_size",
-      width,
-      height,
+    this.viewSize = {
+      width: Math.max(1, Math.floor(width)),
+      height: Math.max(1, Math.floor(height)),
     };
-    this.sendToWorker(message);
   }
 
   setViewTransform(scale: number, offsetX: number, offsetY: number): void {
-    const message: SetViewTransformMessage = {
-      type: "set_view_transform",
-      scale,
-      offsetX,
-      offsetY,
-    };
-    this.sendToWorker(message);
+    this.viewTransform = { scale, offsetX, offsetY };
   }
 
   setAlternativeView(enabled: boolean): void {
@@ -305,6 +302,26 @@ export class Canvas2DRendererProxy {
 
   render(): void {
     const message: RenderFrameMessage = { type: "render_frame" };
+
+    if (
+      !this.lastSentViewSize ||
+      this.lastSentViewSize.width !== this.viewSize.width ||
+      this.lastSentViewSize.height !== this.viewSize.height
+    ) {
+      message.viewSize = this.viewSize;
+      this.lastSentViewSize = this.viewSize;
+    }
+
+    if (
+      !this.lastSentViewTransform ||
+      this.lastSentViewTransform.scale !== this.viewTransform.scale ||
+      this.lastSentViewTransform.offsetX !== this.viewTransform.offsetX ||
+      this.lastSentViewTransform.offsetY !== this.viewTransform.offsetY
+    ) {
+      message.viewTransform = this.viewTransform;
+      this.lastSentViewTransform = this.viewTransform;
+    }
+
     this.sendToWorker(message);
   }
 }

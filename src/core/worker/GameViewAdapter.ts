@@ -1,11 +1,172 @@
 import { Colord, colord } from "colord";
 import { Theme } from "../configuration/Config";
-import { Game, UnitType } from "../game/Game";
+import { UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import {
+  AllianceExpiredUpdate,
+  AllianceRequestReplyUpdate,
+  BrokeAllianceUpdate,
+  EmbargoUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "../game/GameUpdates";
 import { GameView } from "../game/GameView";
-import { TerrainMapData } from "../game/TerrainMapLoader";
 import { ClientID, PlayerCosmetics } from "../Schemas";
+
+class DefensePostUnit {
+  public index = -1;
+  private readonly ownerView = { smallID: () => this.ownerSmallId };
+
+  constructor(
+    public readonly id: number,
+    private tileRef: TileRef,
+    private ownerSmallId: number,
+  ) {}
+
+  isActive(): boolean {
+    return true;
+  }
+
+  isUnderConstruction(): boolean {
+    return false;
+  }
+
+  tile(): TileRef {
+    return this.tileRef;
+  }
+
+  owner(): { smallID: () => number } {
+    return this.ownerView;
+  }
+
+  set(tileRef: TileRef, ownerSmallId: number): void {
+    this.tileRef = tileRef;
+    this.ownerSmallId = ownerSmallId;
+  }
+}
+
+class PlayerLiteView {
+  private readonly territoryRgba = { r: 0, g: 0, b: 0, a: 255 };
+  private readonly borderRgba = { r: 0, g: 0, b: 0, a: 255 };
+  private readonly territoryObj = { rgba: this.territoryRgba };
+  private readonly borderObj = { rgba: this.borderRgba };
+
+  constructor(
+    private readonly adapter: GameViewAdapter,
+    public data: PlayerUpdate,
+  ) {}
+
+  id(): string {
+    return this.data.id;
+  }
+
+  smallID(): number {
+    return this.data.smallID;
+  }
+
+  clientID(): ClientID | null {
+    return this.data.clientID;
+  }
+
+  team(): any | null {
+    return this.data.team ?? null;
+  }
+
+  type(): any {
+    return this.data.playerType;
+  }
+
+  isPlayer(): boolean {
+    return true;
+  }
+
+  territoryColor(): { rgba: { r: number; g: number; b: number; a: number } } {
+    this.ensureColors();
+    return this.territoryObj;
+  }
+
+  borderColor(): { rgba: { r: number; g: number; b: number; a: number } } {
+    this.ensureColors();
+    return this.borderObj;
+  }
+
+  hasEmbargoAgainst(other: PlayerLiteView): boolean {
+    return this.adapter.hasEmbargoPair(this.smallID(), other.smallID());
+  }
+
+  hasEmbargo(other: PlayerLiteView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
+  }
+
+  isFriendly(other: PlayerLiteView): boolean {
+    const team = this.team();
+    return (
+      (team !== null && team === other.team()) ||
+      this.adapter.hasFriendlyPair(this.smallID(), other.smallID())
+    );
+  }
+
+  markColorsDirty(): void {
+    this.adapter.markPlayerColorsDirty(this.smallID());
+  }
+
+  private ensureColors(): void {
+    if (!this.adapter.consumePlayerColorsDirty(this.smallID())) {
+      return;
+    }
+
+    const theme = this.adapter.getTheme();
+    const defaultTerritoryColor = theme.territoryColor(this as any);
+    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
+
+    const cosmetics = this.adapter.getCosmetics(this.clientID());
+    const pattern = this.adapter.getPatternsEnabled()
+      ? cosmetics.pattern
+      : undefined;
+    if (pattern) {
+      (pattern as any).colorPalette ??= {
+        name: "",
+        primaryColor: defaultTerritoryColor.toHex(),
+        secondaryColor: defaultBorderColor.toHex(),
+      };
+    }
+
+    const territoryColor: Colord =
+      this.team() === null
+        ? colord(
+            cosmetics.color?.color ??
+              (pattern as any)?.colorPalette?.primaryColor ??
+              defaultTerritoryColor.toHex(),
+          )
+        : defaultTerritoryColor;
+
+    const maybeFocusedBorderColor =
+      this.adapter.getMyClientId() !== null &&
+      this.clientID() === this.adapter.getMyClientId()
+        ? theme.focusedBorderColor()
+        : defaultBorderColor;
+
+    const borderColor: Colord = colord(
+      (pattern as any)?.colorPalette?.secondaryColor ??
+        cosmetics.color?.color ??
+        maybeFocusedBorderColor.toHex(),
+    );
+
+    const tc = territoryColor.toRgb();
+    this.territoryRgba.r = Math.round(tc.r);
+    this.territoryRgba.g = Math.round(tc.g);
+    this.territoryRgba.b = Math.round(tc.b);
+    this.territoryRgba.a = 255;
+
+    const bc = borderColor.toRgb();
+    this.borderRgba.r = Math.round(bc.r);
+    this.borderRgba.g = Math.round(bc.g);
+    this.borderRgba.b = Math.round(bc.b);
+    this.borderRgba.a = 255;
+  }
+}
 
 /**
  * Adapter that makes Game work as GameView for rendering purposes.
@@ -16,16 +177,139 @@ export class GameViewAdapter implements Partial<GameView> {
   private lastUpdate: GameUpdateViewData | null = null;
   private patternsEnabled = false;
 
+  private defensePostsDirty = true;
+  private readonly defensePostsById = new Map<number, DefensePostUnit>();
+  private readonly defensePosts: DefensePostUnit[] = [];
+
+  private playersDirty = true;
+  private readonly playersBySmallId = new Map<number, PlayerLiteView>();
+  private playerViewsCache: PlayerLiteView[] = [];
+  private playersEpoch = 1;
+  private playerViewsCacheEpoch = 0;
+  private playerColorsEpoch = 1;
+  private readonly playerColorsDirtyEpochBySmallId = new Map<number, number>();
+  private readonly embargoPairs = new Set<bigint>();
+  private readonly friendlyPairs = new Set<bigint>();
+  private readonly emptyCosmetics = {} as PlayerCosmetics;
+
   constructor(
-    private game: Game,
-    private mapData: TerrainMapData,
+    private tileState: Uint16Array,
+    private terrainData: Uint8Array,
+    private readonly mapWidth: number,
+    private readonly mapHeight: number,
     private theme: Theme,
     private readonly myClientId: ClientID | null,
     private readonly cosmeticsByClientID: Map<ClientID, PlayerCosmetics>,
-  ) {}
+  ) {
+    void 0;
+  }
+
+  getMyClientId(): ClientID | null {
+    return this.myClientId;
+  }
+
+  getTheme(): Theme {
+    return this.theme;
+  }
+
+  getPatternsEnabled(): boolean {
+    return this.patternsEnabled;
+  }
+
+  getCosmetics(clientId: ClientID | null): PlayerCosmetics {
+    if (!clientId) {
+      return this.emptyCosmetics;
+    }
+    return this.cosmeticsByClientID.get(clientId) ?? this.emptyCosmetics;
+  }
+
+  private static pairKey(a: number, b: number): bigint {
+    const lo = Math.min(a, b) >>> 0;
+    const hi = Math.max(a, b) >>> 0;
+    return (BigInt(lo) << 32n) | BigInt(hi);
+  }
+
+  hasEmbargoPair(aSmallId: number, bSmallId: number): boolean {
+    return this.embargoPairs.has(GameViewAdapter.pairKey(aSmallId, bSmallId));
+  }
+
+  hasFriendlyPair(aSmallId: number, bSmallId: number): boolean {
+    return this.friendlyPairs.has(GameViewAdapter.pairKey(aSmallId, bSmallId));
+  }
+
+  markPlayerColorsDirty(smallId: number): void {
+    this.playerColorsDirtyEpochBySmallId.delete(smallId);
+  }
+
+  consumePlayerColorsDirty(smallId: number): boolean {
+    const last = this.playerColorsDirtyEpochBySmallId.get(smallId) ?? 0;
+    if (last === this.playerColorsEpoch) {
+      return false;
+    }
+    this.playerColorsDirtyEpochBySmallId.set(smallId, this.playerColorsEpoch);
+    return true;
+  }
+
+  private upsertDefensePost(
+    id: number,
+    tile: TileRef,
+    ownerSmallId: number,
+  ): void {
+    const existing = this.defensePostsById.get(id);
+    if (existing) {
+      if (
+        existing.tile() !== tile ||
+        existing.owner().smallID() !== ownerSmallId
+      ) {
+        existing.set(tile, ownerSmallId);
+        this.defensePostsDirty = true;
+      }
+      return;
+    }
+
+    const unit = new DefensePostUnit(id, tile, ownerSmallId);
+    unit.index = this.defensePosts.length;
+    this.defensePosts.push(unit);
+    this.defensePostsById.set(id, unit);
+    this.defensePostsDirty = true;
+  }
+
+  private removeDefensePost(id: number): void {
+    const existing = this.defensePostsById.get(id);
+    if (!existing) {
+      return;
+    }
+
+    const idx = existing.index;
+    const last = this.defensePosts.pop();
+    if (last && last !== existing) {
+      this.defensePosts[idx] = last;
+      last.index = idx;
+    }
+    this.defensePostsById.delete(id);
+    this.defensePostsDirty = true;
+  }
+
+  consumeDefensePostsDirty(): boolean {
+    const dirty = this.defensePostsDirty;
+    this.defensePostsDirty = false;
+    return dirty;
+  }
+
+  consumePlayersDirty(): boolean {
+    const dirty = this.playersDirty;
+    this.playersDirty = false;
+    return dirty;
+  }
 
   setPatternsEnabled(enabled: boolean): void {
+    if (this.patternsEnabled === enabled) {
+      return;
+    }
     this.patternsEnabled = enabled;
+    this.playersDirty = true;
+    this.playersEpoch++;
+    this.playerColorsEpoch++;
   }
 
   /**
@@ -34,30 +318,140 @@ export class GameViewAdapter implements Partial<GameView> {
    */
   update(gu: GameUpdateViewData): void {
     this.lastUpdate = gu;
-  }
 
-  config() {
-    return this.game.config();
+    const playerUpdates = (gu.updates?.[GameUpdateType.Player] ??
+      []) as PlayerUpdate[];
+    let playersChanged = false;
+    for (const p of playerUpdates) {
+      const small = p.smallID;
+      if (small <= 0) {
+        continue;
+      }
+      const existing = this.playersBySmallId.get(small);
+      if (existing) {
+        existing.data = p;
+        existing.markColorsDirty();
+      } else {
+        this.playersBySmallId.set(small, new PlayerLiteView(this, p));
+      }
+      playersChanged = true;
+    }
+    if (playersChanged) {
+      this.playersDirty = true;
+      this.playersEpoch++;
+
+      // Rebuild relations snapshot from authoritative PlayerUpdate state.
+      // This ensures correct initial relations without relying on event history.
+      this.embargoPairs.clear();
+      this.friendlyPairs.clear();
+
+      const idToSmall = new Map<string, number>();
+      for (const v of this.playersBySmallId.values()) {
+        idToSmall.set(v.data.id, v.data.smallID);
+      }
+      for (const v of this.playersBySmallId.values()) {
+        const a = v.data.smallID;
+        if (a <= 0) continue;
+
+        for (const b of v.data.allies ?? []) {
+          if (typeof b === "number" && b > 0) {
+            this.friendlyPairs.add(GameViewAdapter.pairKey(a, b));
+          }
+        }
+
+        for (const otherId of v.data.embargoes ?? []) {
+          if (typeof otherId !== "string") continue;
+          const b = idToSmall.get(otherId) ?? 0;
+          if (b > 0) {
+            this.embargoPairs.add(GameViewAdapter.pairKey(a, b));
+          }
+        }
+      }
+    }
+
+    const embargoUpdates = (gu.updates?.[GameUpdateType.EmbargoEvent] ??
+      []) as EmbargoUpdate[];
+    for (const e of embargoUpdates) {
+      const key = GameViewAdapter.pairKey(e.playerID, e.embargoedID);
+      if (e.event === "start") {
+        this.embargoPairs.add(key);
+      } else {
+        this.embargoPairs.delete(key);
+      }
+    }
+
+    const allianceReplies = (gu.updates?.[
+      GameUpdateType.AllianceRequestReply
+    ] ?? []) as AllianceRequestReplyUpdate[];
+    for (const e of allianceReplies) {
+      if (!e.accepted) {
+        continue;
+      }
+      this.friendlyPairs.add(
+        GameViewAdapter.pairKey(e.request.requestorID, e.request.recipientID),
+      );
+    }
+
+    const brokeAllianceUpdates = (gu.updates?.[GameUpdateType.BrokeAlliance] ??
+      []) as BrokeAllianceUpdate[];
+    for (const e of brokeAllianceUpdates) {
+      this.friendlyPairs.delete(
+        GameViewAdapter.pairKey(e.traitorID, e.betrayedID),
+      );
+    }
+
+    const expiredUpdates = (gu.updates?.[GameUpdateType.AllianceExpired] ??
+      []) as AllianceExpiredUpdate[];
+    for (const e of expiredUpdates) {
+      this.friendlyPairs.delete(
+        GameViewAdapter.pairKey(e.player1ID, e.player2ID),
+      );
+    }
+
+    const unitUpdates = (gu.updates?.[GameUpdateType.Unit] ??
+      []) as UnitUpdate[];
+    for (const u of unitUpdates) {
+      if (u.unitType !== UnitType.DefensePost) {
+        continue;
+      }
+
+      const removed =
+        u.markedForDeletion !== false ||
+        !u.isActive ||
+        u.underConstruction === true;
+      if (removed) {
+        this.removeDefensePost(u.id);
+      } else {
+        this.upsertDefensePost(u.id, u.pos, u.ownerID);
+      }
+    }
   }
 
   width(): number {
-    return this.game.width();
+    return this.mapWidth;
   }
 
   height(): number {
-    return this.game.height();
+    return this.mapHeight;
   }
 
   x(tile: TileRef): number {
-    return this.game.x(tile);
+    return tile % this.mapWidth;
   }
 
   y(tile: TileRef): number {
-    return this.game.y(tile);
+    return (tile / this.mapWidth) | 0;
+  }
+
+  playerBySmallID(smallId: number): any | null {
+    return this.playersBySmallId.get(smallId) ?? null;
   }
 
   units(...types: UnitType[]): any[] {
-    return this.game.units(...types);
+    if (types.length === 1 && types[0] === UnitType.DefensePost) {
+      return this.defensePosts;
+    }
+    return [];
   }
 
   /**
@@ -67,14 +461,14 @@ export class GameViewAdapter implements Partial<GameView> {
    * read from it when individual tiles are marked dirty.
    */
   tileStateView(): Uint16Array {
-    return this.game.tileStateView();
+    return this.tileState;
   }
 
   /**
    * Return the immutable terrain data view.
    */
   terrainDataView(): Uint8Array {
-    return this.game.terrainDataView();
+    return this.terrainData;
   }
 
   /**
@@ -84,85 +478,11 @@ export class GameViewAdapter implements Partial<GameView> {
    * otherwise the worker-rendered territory will disagree with UI.
    */
   playerViews(): any[] {
-    const theme = this.theme;
-    return this.game.players().map((player) => {
-      const clientId = player.clientID();
-      const cosmetics =
-        clientId && this.cosmeticsByClientID.has(clientId)
-          ? this.cosmeticsByClientID.get(clientId)!
-          : ({} as PlayerCosmetics);
-
-      const defaultTerritoryColor = theme.territoryColor(player as any);
-      const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
-
-      const pattern = this.patternsEnabled ? cosmetics.pattern : undefined;
-      if (pattern) {
-        pattern.colorPalette ??= {
-          name: "",
-          primaryColor: defaultTerritoryColor.toHex(),
-          secondaryColor: defaultBorderColor.toHex(),
-        };
-      }
-
-      const territoryColor: Colord =
-        player.team() === null
-          ? colord(
-              cosmetics.color?.color ??
-                pattern?.colorPalette?.primaryColor ??
-                defaultTerritoryColor.toHex(),
-            )
-          : defaultTerritoryColor;
-
-      const maybeFocusedBorderColor =
-        this.myClientId !== null && clientId === this.myClientId
-          ? theme.focusedBorderColor()
-          : defaultBorderColor;
-
-      const borderColor: Colord = colord(
-        pattern?.colorPalette?.secondaryColor ??
-          cosmetics.color?.color ??
-          maybeFocusedBorderColor.toHex(),
-      );
-
-      const territoryRgb = territoryColor.toRgb();
-      const borderRgb = borderColor.toRgb();
-
-      const view = {
-        player,
-        smallID: () => player.smallID(),
-        territoryColor: () => ({
-          rgba: {
-            r: Math.round(territoryRgb.r),
-            g: Math.round(territoryRgb.g),
-            b: Math.round(territoryRgb.b),
-            a: Math.round((territoryRgb.a ?? 1) * 255),
-          },
-        }),
-        borderColor: () => ({
-          rgba: {
-            r: Math.round(borderRgb.r),
-            g: Math.round(borderRgb.g),
-            b: Math.round(borderRgb.b),
-            a: Math.round((borderRgb.a ?? 1) * 255),
-          },
-        }),
-        hasEmbargo: (other: any) => {
-          const otherPlayer = other?.player;
-          if (!otherPlayer) return false;
-          return (
-            player.hasEmbargoAgainst(otherPlayer) ||
-            otherPlayer.hasEmbargoAgainst(player)
-          );
-        },
-        isFriendly: (other: any) => {
-          const otherPlayer = other?.player;
-          if (!otherPlayer) return false;
-          return player.isFriendly(otherPlayer);
-        },
-      };
-
-      return view;
-    });
+    if (this.playerViewsCacheEpoch !== this.playersEpoch) {
+      this.playerViewsCache = [...this.playersBySmallId.values()];
+      this.playerViewsCacheEpoch = this.playersEpoch;
+    }
+    return this.playerViewsCache;
   }
 
   /**

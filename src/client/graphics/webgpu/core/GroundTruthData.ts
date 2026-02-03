@@ -86,6 +86,7 @@ export class GroundTruthData {
   private defendedDirtyTilesCount = 0;
   private needsFullDefendedStrengthRecompute = false;
   private lastDefensePostKeys = new Set<string>();
+  private defensePostRange = 0;
   private defenseCircleRange = -1;
   private defenseCircleOffsets: Int16Array = new Int16Array(0); // [dx0, dy0, dx1, dy1, ...]
 
@@ -122,6 +123,7 @@ export class GroundTruthData {
     private readonly device: GPUDevice,
     private readonly game: GameView,
     private readonly theme: Theme,
+    defensePostRange: number,
     state: Uint16Array,
     terrainData: Uint8Array,
     mapWidth: number,
@@ -131,6 +133,7 @@ export class GroundTruthData {
     this.terrainData = terrainData;
     this.mapWidth = mapWidth;
     this.mapHeight = mapHeight;
+    this.defensePostRange = Math.max(0, defensePostRange | 0);
 
     const GPUBufferUsage = (globalThis as any).GPUBufferUsage;
     const GPUTextureUsage = (globalThis as any).GPUTextureUsage;
@@ -247,12 +250,14 @@ export class GroundTruthData {
     device: GPUDevice,
     game: GameView,
     theme: Theme,
+    defensePostRange: number,
     state: Uint16Array,
   ): GroundTruthData {
     return new GroundTruthData(
       device,
       game,
       theme,
+      defensePostRange,
       state,
       game.terrainDataView(),
       game.width(),
@@ -1006,7 +1011,7 @@ export class GroundTruthData {
     }
     this.needsDefensePostsUpload = false;
 
-    const range = this.game.config().defensePostRange();
+    const range = this.defensePostRange;
     const posts = this.collectDefensePosts();
     this.defensePostsTotalCount = posts.length;
 
@@ -1062,7 +1067,7 @@ export class GroundTruthData {
 
   writeStateUpdateParamsBuffer(updateCount: number): void {
     this.stateUpdateParamsData[0] = updateCount >>> 0;
-    this.stateUpdateParamsData[1] = this.game.config().defensePostRange() >>> 0;
+    this.stateUpdateParamsData[1] = this.defensePostRange >>> 0;
     this.stateUpdateParamsData[2] = 0;
     this.stateUpdateParamsData[3] = 0;
     this.device.queue.writeBuffer(
@@ -1074,8 +1079,7 @@ export class GroundTruthData {
 
   writeDefendedStrengthParamsBuffer(dirtyCount: number): void {
     this.defendedStrengthParamsData[0] = dirtyCount >>> 0;
-    this.defendedStrengthParamsData[1] =
-      this.game.config().defensePostRange() >>> 0;
+    this.defendedStrengthParamsData[1] = this.defensePostRange >>> 0;
     this.defendedStrengthParamsData[2] = 0;
     this.defendedStrengthParamsData[3] = 0;
     this.device.queue.writeBuffer(
