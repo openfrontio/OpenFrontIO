@@ -41,6 +41,7 @@ import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
+import { turnstileManager } from "./TurnstileManager";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { genAnonUsername, UsernameInput } from "./UsernameInput";
@@ -162,7 +163,6 @@ declare global {
   interface Window {
     GIT_COMMIT: string;
     INSTANCE_ID: string;
-    turnstile: any;
     adsEnabled: boolean;
     PageOS: {
       session: {
@@ -239,18 +239,12 @@ class Client {
 
   private gutterAds: GutterAds;
 
-  private turnstileTokenPromise: Promise<{
-    token: string;
-    createdAt: number;
-  }> | null = null;
-
   constructor() {}
 
-  async initialize(): Promise<void> {
+  async initialise(): Promise<void> {
     crazyGamesSDK.maybeInit();
-    // Prefetch turnstile token so it is available when
-    // the user joins a lobby.
-    this.turnstileTokenPromise = getTurnstileToken();
+    // Initialise turnstile manager to prefetch and maintain tokens
+    turnstileManager.initialise();
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -954,29 +948,8 @@ class Client {
       return null;
     }
 
-    // Always request a new token on crazygames.
-    if (this.turnstileTokenPromise === null || crazyGamesSDK.isOnCrazyGames()) {
-      console.log("No prefetched turnstile token, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
-
-    const token = await this.turnstileTokenPromise;
-    // Clear promise so a new token is fetched next time
-    this.turnstileTokenPromise = null;
-    if (!token) {
-      console.log("No turnstile token");
-      return null;
-    }
-
-    const tokenTTL = 3 * 60 * 1000;
-    if (Date.now() < token.createdAt + tokenTTL) {
-      console.log("Prefetched turnstile token is valid");
-
-      return token.token;
-    } else {
-      console.log("Turnstile token expired, getting new token");
-      return (await getTurnstileToken())?.token ?? null;
-    }
+    // Use the TurnstileManager to get a token
+    return turnstileManager.getToken();
   }
 }
 
@@ -992,7 +965,7 @@ const hideCrazyGamesElements = () => {
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
   initLayout();
-  new Client().initialize();
+  new Client().initialise();
   initNavigation();
 
   // Hide elements immediately
@@ -1007,44 +980,4 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
-}
-
-async function getTurnstileToken(): Promise<{
-  token: string;
-  createdAt: number;
-}> {
-  // Wait for Turnstile script to load (handles slow connections)
-  let attempts = 0;
-  while (typeof window.turnstile === "undefined" && attempts < 100) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (typeof window.turnstile === "undefined") {
-    throw new Error("Failed to load Turnstile script");
-  }
-
-  const config = await getServerConfigFromClient();
-  const widgetId = window.turnstile.render("#turnstile-container", {
-    sitekey: config.turnstileSiteKey(),
-    size: "normal",
-    appearance: "interaction-only",
-    theme: "light",
-  });
-
-  return new Promise((resolve, reject) => {
-    window.turnstile.execute(widgetId, {
-      callback: (token: string) => {
-        window.turnstile.remove(widgetId);
-        console.log(`Turnstile token received: ${token}`);
-        resolve({ token, createdAt: Date.now() });
-      },
-      "error-callback": (errorCode: string) => {
-        window.turnstile.remove(widgetId);
-        console.error(`Turnstile error: ${errorCode}`);
-        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
-        reject(new Error(`Turnstile failed: ${errorCode}`));
-      },
-    });
-  });
 }
