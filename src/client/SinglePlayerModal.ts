@@ -967,6 +967,7 @@ export class SinglePlayerModal extends BaseModal {
             },
             lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },
+          source: "singleplayer",
         } satisfies JoinLobbyEvent,
         bubbles: true,
         composed: true,
