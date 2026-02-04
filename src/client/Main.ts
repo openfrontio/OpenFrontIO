@@ -922,7 +922,11 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
+    // Abort any in-progress join attempt (before joinLobby() was called)
+    this.joinAttemptId++;
+
     if (this.gameStop === null) {
+      console.log("leaving lobby, no active game to stop");
       return;
     }
     console.log("leaving lobby, cancelling game");
