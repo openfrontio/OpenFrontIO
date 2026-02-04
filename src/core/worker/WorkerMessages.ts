@@ -301,6 +301,16 @@ export interface RenderDoneMessage extends BaseWorkerMessage {
   renderGpuWaitMs?: number;
   renderWaitPrevGpuTimedOut?: boolean;
   renderGpuWaitTimedOut?: boolean;
+
+  /**
+   * Additional optional breakdown for CPU-side render encoding.
+   */
+  renderSubmitted?: boolean;
+  renderFrameComputeMs?: number;
+  renderTerritoryPassMs?: number;
+  renderTemporalResolveMs?: number;
+  renderSubmitMs?: number;
+  renderCpuTotalMs?: number;
 }
 
 export interface RendererReadyMessage extends BaseWorkerMessage {
@@ -330,6 +340,26 @@ export interface WorkerMetricsMessage extends BaseWorkerMessage {
   simPumpDelayMsMax: number;
   simPumpExecMsAvg: number;
   simPumpExecMsMax: number;
+
+  /**
+   * Optional render_frame breakdown collected inside the worker renderer.
+   * Values are based on the last metrics interval.
+   */
+  renderSubmittedCount?: number;
+  renderNoopCount?: number;
+  renderGetTextureMsAvg?: number;
+  renderGetTextureMsMax?: number;
+  renderFrameComputeMsAvg?: number;
+  renderFrameComputeMsMax?: number;
+  renderTerritoryPassMsAvg?: number;
+  renderTerritoryPassMsMax?: number;
+  renderTemporalResolveMsAvg?: number;
+  renderTemporalResolveMsMax?: number;
+  renderSubmitMsAvg?: number;
+  renderSubmitMsMax?: number;
+  renderCpuTotalMsAvg?: number;
+  renderCpuTotalMsMax?: number;
+
   msgCounts: Record<string, number>;
   msgHandlerMsAvg: Record<string, number>;
   msgHandlerMsMax: Record<string, number>;

@@ -85,6 +85,21 @@ class WorkerProfiler {
   private traceHead = 0;
   private readonly traceCap = 160;
 
+  private renderSubmittedCount = 0;
+  private renderNoopCount = 0;
+  private renderGetTextureSum = 0;
+  private renderGetTextureMax = 0;
+  private renderFrameComputeSum = 0;
+  private renderFrameComputeMax = 0;
+  private renderTerritoryPassSum = 0;
+  private renderTerritoryPassMax = 0;
+  private renderTemporalResolveSum = 0;
+  private renderTemporalResolveMax = 0;
+  private renderSubmitSum = 0;
+  private renderSubmitMax = 0;
+  private renderCpuTotalSum = 0;
+  private renderCpuTotalMax = 0;
+
   start(): void {
     if (this.reportTimer) return;
     this.lastReportWallMs = Date.now();
@@ -178,6 +193,60 @@ class WorkerProfiler {
     }
   }
 
+  recordRenderBreakdown(b: {
+    submitted: boolean;
+    getTextureMs?: number;
+    frameComputeMs?: number;
+    territoryPassMs?: number;
+    temporalResolveMs?: number;
+    submitMs?: number;
+    cpuTotalMs?: number;
+  }): void {
+    if (!this.config.enabled) return;
+    if (!b.submitted) {
+      this.renderNoopCount++;
+      return;
+    }
+    this.renderSubmittedCount++;
+
+    if (typeof b.getTextureMs === "number") {
+      this.renderGetTextureSum += b.getTextureMs;
+      this.renderGetTextureMax = Math.max(
+        this.renderGetTextureMax,
+        b.getTextureMs,
+      );
+    }
+    if (typeof b.frameComputeMs === "number") {
+      this.renderFrameComputeSum += b.frameComputeMs;
+      this.renderFrameComputeMax = Math.max(
+        this.renderFrameComputeMax,
+        b.frameComputeMs,
+      );
+    }
+    if (typeof b.territoryPassMs === "number") {
+      this.renderTerritoryPassSum += b.territoryPassMs;
+      this.renderTerritoryPassMax = Math.max(
+        this.renderTerritoryPassMax,
+        b.territoryPassMs,
+      );
+    }
+    if (typeof b.temporalResolveMs === "number") {
+      this.renderTemporalResolveSum += b.temporalResolveMs;
+      this.renderTemporalResolveMax = Math.max(
+        this.renderTemporalResolveMax,
+        b.temporalResolveMs,
+      );
+    }
+    if (typeof b.submitMs === "number") {
+      this.renderSubmitSum += b.submitMs;
+      this.renderSubmitMax = Math.max(this.renderSubmitMax, b.submitMs);
+    }
+    if (typeof b.cpuTotalMs === "number") {
+      this.renderCpuTotalSum += b.cpuTotalMs;
+      this.renderCpuTotalMax = Math.max(this.renderCpuTotalMax, b.cpuTotalMs);
+    }
+  }
+
   trace(line: string): void {
     if (!this.config.enabled || !this.config.includeTrace) return;
     if (this.traceRing.length < this.traceCap) {
@@ -234,6 +303,10 @@ class WorkerProfiler {
       msgCountsObj[k] = c;
     }
 
+    const renderTotal = this.renderSubmittedCount + this.renderNoopCount;
+    const rAvg = (sum: number): number =>
+      this.renderSubmittedCount > 0 ? sum / this.renderSubmittedCount : 0;
+
     const metrics: WorkerMetricsMessage = {
       type: "worker_metrics",
       intervalMs,
@@ -248,6 +321,45 @@ class WorkerProfiler {
       simPumpExecMsAvg:
         this.simExecCount > 0 ? this.simExecSum / this.simExecCount : 0,
       simPumpExecMsMax: this.simExecMax,
+      renderSubmittedCount:
+        renderTotal > 0 ? this.renderSubmittedCount : undefined,
+      renderNoopCount: renderTotal > 0 ? this.renderNoopCount : undefined,
+      renderGetTextureMsAvg:
+        this.renderSubmittedCount > 0
+          ? rAvg(this.renderGetTextureSum)
+          : undefined,
+      renderGetTextureMsMax:
+        this.renderSubmittedCount > 0 ? this.renderGetTextureMax : undefined,
+      renderFrameComputeMsAvg:
+        this.renderSubmittedCount > 0
+          ? rAvg(this.renderFrameComputeSum)
+          : undefined,
+      renderFrameComputeMsMax:
+        this.renderSubmittedCount > 0 ? this.renderFrameComputeMax : undefined,
+      renderTerritoryPassMsAvg:
+        this.renderSubmittedCount > 0
+          ? rAvg(this.renderTerritoryPassSum)
+          : undefined,
+      renderTerritoryPassMsMax:
+        this.renderSubmittedCount > 0 ? this.renderTerritoryPassMax : undefined,
+      renderTemporalResolveMsAvg:
+        this.renderSubmittedCount > 0
+          ? rAvg(this.renderTemporalResolveSum)
+          : undefined,
+      renderTemporalResolveMsMax:
+        this.renderSubmittedCount > 0
+          ? this.renderTemporalResolveMax
+          : undefined,
+      renderSubmitMsAvg:
+        this.renderSubmittedCount > 0 ? rAvg(this.renderSubmitSum) : undefined,
+      renderSubmitMsMax:
+        this.renderSubmittedCount > 0 ? this.renderSubmitMax : undefined,
+      renderCpuTotalMsAvg:
+        this.renderSubmittedCount > 0
+          ? rAvg(this.renderCpuTotalSum)
+          : undefined,
+      renderCpuTotalMsMax:
+        this.renderSubmittedCount > 0 ? this.renderCpuTotalMax : undefined,
       msgCounts: msgCountsObj,
       msgHandlerMsAvg: toAvgRecord(this.msgHandlerSum, this.msgCounts),
       msgHandlerMsMax: toMaxRecord(this.msgHandlerMax),
@@ -268,6 +380,20 @@ class WorkerProfiler {
     this.simExecSum = 0;
     this.simExecCount = 0;
     this.simExecMax = 0;
+    this.renderSubmittedCount = 0;
+    this.renderNoopCount = 0;
+    this.renderGetTextureSum = 0;
+    this.renderGetTextureMax = 0;
+    this.renderFrameComputeSum = 0;
+    this.renderFrameComputeMax = 0;
+    this.renderTerritoryPassSum = 0;
+    this.renderTerritoryPassMax = 0;
+    this.renderTemporalResolveSum = 0;
+    this.renderTemporalResolveMax = 0;
+    this.renderSubmitSum = 0;
+    this.renderSubmitMax = 0;
+    this.renderCpuTotalSum = 0;
+    this.renderCpuTotalMax = 0;
     this.msgCounts.clear();
     this.msgHandlerSum.clear();
     this.msgHandlerMax.clear();
@@ -856,6 +982,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           let renderGpuWaitMs: number | undefined;
           let renderWaitPrevGpuTimedOut: boolean | undefined;
           let renderGpuWaitTimedOut: boolean | undefined;
+          let renderSubmitted: boolean | undefined;
+          let renderFrameComputeMs: number | undefined;
+          let renderTerritoryPassMs: number | undefined;
+          let renderTemporalResolveMs: number | undefined;
+          let renderSubmitMs: number | undefined;
+          let renderCpuTotalMs: number | undefined;
           try {
             if ("viewSize" in message && message.viewSize) {
               renderer.setViewSize(
@@ -872,7 +1004,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             }
             const r: any = renderer as any;
             if (typeof r.renderAsync === "function") {
-              const breakdown = await r.renderAsync();
+              const breakdown = await r.renderAsync(!!profiler.config.enabled);
               if (breakdown) {
                 renderWaitPrevGpuMs = breakdown.waitPrevGpuMs;
                 renderCpuMs = breakdown.cpuMs;
@@ -880,6 +1012,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 renderGpuWaitMs = breakdown.gpuWaitMs;
                 renderWaitPrevGpuTimedOut = breakdown.waitPrevGpuTimedOut;
                 renderGpuWaitTimedOut = breakdown.gpuWaitTimedOut;
+                renderSubmitted = breakdown.submitted;
+                renderFrameComputeMs = breakdown.frameComputeMs;
+                renderTerritoryPassMs = breakdown.territoryPassMs;
+                renderTemporalResolveMs = breakdown.temporalResolveMs;
+                renderSubmitMs = breakdown.submitMs;
+                renderCpuTotalMs = breakdown.cpuTotalMs;
               }
             } else {
               renderer.render();
@@ -890,6 +1028,17 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             const endedAt = performance.now();
             const endedAtWallMs = Date.now();
             if (id) {
+              if (typeof renderSubmitted === "boolean") {
+                profiler.recordRenderBreakdown({
+                  submitted: renderSubmitted,
+                  getTextureMs: renderGetTextureMs,
+                  frameComputeMs: renderFrameComputeMs,
+                  territoryPassMs: renderTerritoryPassMs,
+                  temporalResolveMs: renderTemporalResolveMs,
+                  submitMs: renderSubmitMs,
+                  cpuTotalMs: renderCpuTotalMs,
+                });
+              }
               sendMessage({
                 type: "render_done",
                 id,
@@ -907,6 +1056,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 renderGpuWaitMs,
                 renderWaitPrevGpuTimedOut,
                 renderGpuWaitTimedOut,
+                renderSubmitted,
+                renderFrameComputeMs,
+                renderTerritoryPassMs,
+                renderTemporalResolveMs,
+                renderSubmitMs,
+                renderCpuTotalMs,
               } as RenderDoneMessage);
             }
           }

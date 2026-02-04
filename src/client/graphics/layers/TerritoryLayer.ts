@@ -1,6 +1,5 @@
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
@@ -49,11 +48,13 @@ export class TerritoryLayer implements Layer {
 
   private lastPaletteSignature: string | null = null;
   private lastPatternsEnabled: boolean | null = null;
-  private lastDefensePostsSignature: string | null = null;
   private lastTerrainShaderSignature: string | null = null;
   private lastTerritoryShaderSignature: string | null = null;
   private lastPreSmoothingSignature: string | null = null;
   private lastPostSmoothingSignature: string | null = null;
+
+  private lastPaletteSyncMs = 0;
+  private lastUserSettingsSyncMs = 0;
 
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
@@ -97,11 +98,9 @@ export class TerritoryLayer implements Layer {
       this.redraw();
     }
 
-    this.refreshPaletteIfNeeded();
-    this.refreshDefensePostsIfNeeded();
-    this.applyTerrainShaderSettings();
-    this.applyTerritoryShaderSettings();
-    this.applyTerritorySmoothingSettings();
+    const now = performance.now();
+    this.syncUserSettingsMaybe(now);
+    this.syncPaletteMaybe(now);
 
     // Renderer tick and dirty-tile marking are driven in the worker from
     // simulation-derived tile updates (tileUpdateSink). The main thread only
@@ -151,10 +150,6 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer.refreshPalette();
     this.lastPaletteSignature = this.computePaletteSignature();
 
-    this.lastDefensePostsSignature = this.computeDefensePostsSignature();
-    // Ensure defense posts buffer is uploaded on first tick.
-    this.territoryRenderer.markDefensePostsDirty();
-
     // Run an initial tick to upload state and build the colour texture. Without
     // this, the first render call may occur before the initial compute pass
     // has been executed, resulting in undefined colours.
@@ -174,12 +169,11 @@ export class TerritoryLayer implements Layer {
       this.redraw();
     }
 
-    // Apply user settings even while the game is paused (settings modal).
-    this.refreshPaletteIfNeeded();
-    this.refreshDefensePostsIfNeeded();
-    this.applyTerrainShaderSettings();
-    this.applyTerritoryShaderSettings();
-    this.applyTerritorySmoothingSettings();
+    // Apply user settings even while the game is paused (settings modal), but
+    // avoid heavy polling work in the RAF hot path.
+    const now = performance.now();
+    this.syncUserSettingsMaybe(now);
+    this.syncPaletteMaybe(now);
 
     this.ensureTerritoryCanvasAttached(context.canvas);
     this.updateHoverHighlight();
@@ -377,7 +371,6 @@ export class TerritoryLayer implements Layer {
   }
 
   private computePaletteSignature(): string {
-    const patternsEnabled = this.userSettings.territoryPatterns();
     const players = this.game.playerViews();
 
     const fnvByte = (hash: number, byte: number): number =>
@@ -391,7 +384,7 @@ export class TerritoryLayer implements Layer {
       return hash;
     };
 
-    let hash = patternsEnabled ? 2166136261 : 2166136262;
+    let hash = 2166136261;
     hash = fnv32(hash, players.length);
 
     let maxSmallId = 0;
@@ -416,20 +409,47 @@ export class TerritoryLayer implements Layer {
     return `${hash}`;
   }
 
-  private refreshPaletteIfNeeded() {
+  private syncPaletteMaybe(nowMs: number, force: boolean = false) {
     if (!this.territoryRenderer) {
       return;
     }
-    const patternsEnabled = this.userSettings.territoryPatterns();
-    if (patternsEnabled !== this.lastPatternsEnabled) {
-      this.lastPatternsEnabled = patternsEnabled;
-      this.territoryRenderer.setPatternsEnabled(patternsEnabled);
+
+    // Palette rebuild is relatively expensive (builds & transfers full rows),
+    // so only check periodically. The worker handles most palette dirtiness,
+    // but the main thread still owns the theme-derived colour mapping.
+    if (!force && nowMs - this.lastPaletteSyncMs < 500) {
+      return;
     }
+    this.lastPaletteSyncMs = nowMs;
+
     const signature = this.computePaletteSignature();
     if (signature !== this.lastPaletteSignature) {
       this.lastPaletteSignature = signature;
       this.territoryRenderer.refreshPalette();
     }
+  }
+
+  private syncUserSettingsMaybe(nowMs: number, force: boolean = false) {
+    if (!this.territoryRenderer) {
+      return;
+    }
+
+    // Shader settings are user-driven and change rarely; avoid allocating
+    // signatures and arrays every RAF.
+    if (!force && nowMs - this.lastUserSettingsSyncMs < 250) {
+      return;
+    }
+    this.lastUserSettingsSyncMs = nowMs;
+
+    const patternsEnabled = this.userSettings.territoryPatterns();
+    if (patternsEnabled !== this.lastPatternsEnabled) {
+      this.lastPatternsEnabled = patternsEnabled;
+      this.territoryRenderer.setPatternsEnabled(patternsEnabled);
+    }
+
+    this.applyTerrainShaderSettings();
+    this.applyTerritoryShaderSettings();
+    this.applyTerritorySmoothingSettings();
   }
 
   private applyTerritoryShaderSettings(force: boolean = false) {
@@ -505,31 +525,6 @@ export class TerritoryLayer implements Layer {
         postParams.shaderPath,
         postParams.params0,
       );
-    }
-  }
-
-  private computeDefensePostsSignature(): string {
-    // Active + completed posts only.
-    const parts: string[] = [];
-    for (const u of this.game.units(UnitType.DefensePost)) {
-      if (!u.isActive() || u.isUnderConstruction()) continue;
-      const tile = u.tile();
-      parts.push(
-        `${u.owner().smallID()},${this.game.x(tile)},${this.game.y(tile)}`,
-      );
-    }
-    parts.sort();
-    return parts.join("|");
-  }
-
-  private refreshDefensePostsIfNeeded() {
-    if (!this.territoryRenderer) {
-      return;
-    }
-    const signature = this.computeDefensePostsSignature();
-    if (signature !== this.lastDefensePostsSignature) {
-      this.lastDefensePostsSignature = signature;
-      this.territoryRenderer.markDefensePostsDirty();
     }
   }
 }

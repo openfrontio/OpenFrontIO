@@ -746,7 +746,16 @@ export class WorkerTerritoryRenderer {
    * Render one frame.
    * Runs render passes to draw to the canvas.
    */
-  render(onGetTextureMs?: (ms: number) => void): boolean {
+  render(
+    onGetTextureMs?: (ms: number) => void,
+    profile?: {
+      cpuTotalMs: number;
+      frameComputeMs: number;
+      territoryPassMs: number;
+      temporalResolveMs: number;
+      submitMs: number;
+    },
+  ): boolean {
     if (
       !this.ready ||
       !this.device ||
@@ -756,9 +765,12 @@ export class WorkerTerritoryRenderer {
       return false;
     }
 
+    // Without post-smoothing, stable frames can simply be skipped.
     if (!this.frameDirty && !this.postSmoothingEnabled) {
       return false;
     }
+
+    const cpuStart = profile ? performance.now() : 0;
 
     const nowSec = performance.now() / 1000;
     this.resources.writeTemporalUniformBuffer(nowSec);
@@ -770,10 +782,12 @@ export class WorkerTerritoryRenderer {
       onGetTextureMs(performance.now() - getTexStart);
     }
 
+    let frameComputeMs = 0;
     if (
       this.preSmoothingEnabled &&
       this.resources.consumeVisualStateSyncNeeded()
     ) {
+      const start = profile ? performance.now() : 0;
       const visualStateTexture = this.resources.getVisualStateTexture();
       if (visualStateTexture) {
         encoder.copyTextureToTexture(
@@ -786,20 +800,36 @@ export class WorkerTerritoryRenderer {
           },
         );
       }
+      if (profile) {
+        frameComputeMs += performance.now() - start;
+      }
     }
 
     for (const pass of this.frameComputePasses) {
       if (!pass.needsUpdate()) {
         continue;
       }
+      const start = profile ? performance.now() : 0;
       pass.execute(encoder, this.resources);
+      if (profile) {
+        frameComputeMs += performance.now() - start;
+      }
+    }
+    if (profile) {
+      profile.frameComputeMs = frameComputeMs;
     }
 
-    // Execute render passes in dependency order
+    let territoryPassMs = 0;
+    let temporalResolveMs = 0;
+
+    // Execute render passes in dependency order.
     for (const pass of this.renderPassOrder) {
       if (!pass.needsUpdate()) {
         continue;
       }
+
+      const passStart = profile ? performance.now() : 0;
+
       if (pass === this.territoryRenderPass && this.postSmoothingEnabled) {
         if (!this.resources.getCurrentColorTexture()) {
           const viewWidth = this.canvas?.width ?? 1;
@@ -810,27 +840,56 @@ export class WorkerTerritoryRenderer {
             this.device.canvasFormat,
           );
         }
+
         const currentTexture = this.resources.getCurrentColorTexture();
         if (currentTexture) {
           pass.execute(encoder, this.resources, currentTexture.createView());
+        }
+
+        if (profile) {
+          territoryPassMs += performance.now() - passStart;
         }
         continue;
       }
 
       pass.execute(encoder, this.resources, swapchainView);
+
+      if (profile) {
+        const dt = performance.now() - passStart;
+        if (pass === this.territoryRenderPass) {
+          territoryPassMs += dt;
+        } else if (pass === this.temporalResolvePass) {
+          temporalResolveMs += dt;
+        }
+      }
     }
 
+    const submitStart = profile ? performance.now() : 0;
     this.device.device.queue.submit([encoder.finish()]);
+
+    if (profile) {
+      profile.territoryPassMs = territoryPassMs;
+      profile.temporalResolveMs = temporalResolveMs;
+      profile.submitMs = performance.now() - submitStart;
+      profile.cpuTotalMs = performance.now() - cpuStart;
+    }
+
     if (!this.postSmoothingEnabled) {
       this.frameDirty = false;
     }
     return true;
   }
 
-  async renderAsync(): Promise<{
+  async renderAsync(profilePhases: boolean = false): Promise<{
     waitPrevGpuMs: number;
     cpuMs: number;
     getTextureMs: number;
+    submitted: boolean;
+    frameComputeMs?: number;
+    territoryPassMs?: number;
+    temporalResolveMs?: number;
+    submitMs?: number;
+    cpuTotalMs?: number;
     gpuWaitMs: number;
     waitPrevGpuTimedOut: boolean;
     gpuWaitTimedOut: boolean;
@@ -842,6 +901,12 @@ export class WorkerTerritoryRenderer {
     const waitPrevGpuMs = 0;
     let cpuMs = 0;
     let getTextureMs = 0;
+    let submitted = false;
+    let frameComputeMs: number | undefined;
+    let territoryPassMs: number | undefined;
+    let temporalResolveMs: number | undefined;
+    let submitMs: number | undefined;
+    let cpuTotalMs: number | undefined;
     const gpuWaitMs = 0;
     const waitPrevGpuTimedOut = false;
     const gpuWaitTimedOut = false;
@@ -851,9 +916,19 @@ export class WorkerTerritoryRenderer {
     this.lastGpuWork = null;
 
     const cpuStart = performance.now();
-    const submitted = this.render((ms) => {
+    const profile = profilePhases
+      ? {
+          cpuTotalMs: 0,
+          frameComputeMs: 0,
+          territoryPassMs: 0,
+          temporalResolveMs: 0,
+          submitMs: 0,
+        }
+      : undefined;
+
+    submitted = this.render((ms) => {
       getTextureMs = ms;
-    });
+    }, profile);
     cpuMs = performance.now() - cpuStart;
 
     if (!submitted) {
@@ -862,6 +937,7 @@ export class WorkerTerritoryRenderer {
         waitPrevGpuMs,
         cpuMs,
         getTextureMs,
+        submitted,
         gpuWaitMs,
         waitPrevGpuTimedOut,
         gpuWaitTimedOut,
@@ -875,10 +951,24 @@ export class WorkerTerritoryRenderer {
         waitPrevGpuMs,
         cpuMs,
         getTextureMs,
+        submitted,
+        frameComputeMs,
+        territoryPassMs,
+        temporalResolveMs,
+        submitMs,
+        cpuTotalMs,
         gpuWaitMs,
         waitPrevGpuTimedOut,
         gpuWaitTimedOut,
       };
+    }
+
+    if (profile) {
+      frameComputeMs = profile.frameComputeMs;
+      territoryPassMs = profile.territoryPassMs;
+      temporalResolveMs = profile.temporalResolveMs;
+      submitMs = profile.submitMs;
+      cpuTotalMs = profile.cpuTotalMs;
     }
 
     const p = q.onSubmittedWorkDone() as Promise<void>;
@@ -888,6 +978,12 @@ export class WorkerTerritoryRenderer {
       waitPrevGpuMs,
       cpuMs,
       getTextureMs,
+      submitted,
+      frameComputeMs,
+      territoryPassMs,
+      temporalResolveMs,
+      submitMs,
+      cpuTotalMs,
       gpuWaitMs,
       waitPrevGpuTimedOut,
       gpuWaitTimedOut,

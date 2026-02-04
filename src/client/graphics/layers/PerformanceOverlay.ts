@@ -549,6 +549,20 @@ export class PerformanceOverlay extends LitElement implements Layer {
     rfQueueMax: number | null;
     rfHandlerAvg: number | null;
     rfHandlerMax: number | null;
+    renderSubmittedCount: number | null;
+    renderNoopCount: number | null;
+    renderCpuTotalAvg: number | null;
+    renderCpuTotalMax: number | null;
+    renderGetTextureAvg: number | null;
+    renderGetTextureMax: number | null;
+    renderFrameComputeAvg: number | null;
+    renderFrameComputeMax: number | null;
+    renderTerritoryPassAvg: number | null;
+    renderTerritoryPassMax: number | null;
+    renderTemporalResolveAvg: number | null;
+    renderTemporalResolveMax: number | null;
+    renderSubmitAvg: number | null;
+    renderSubmitMax: number | null;
     traceLines: string[];
     topMsgs: Array<{
       type: string;
@@ -572,6 +586,20 @@ export class PerformanceOverlay extends LitElement implements Layer {
         rfQueueMax: null,
         rfHandlerAvg: null,
         rfHandlerMax: null,
+        renderSubmittedCount: null,
+        renderNoopCount: null,
+        renderCpuTotalAvg: null,
+        renderCpuTotalMax: null,
+        renderGetTextureAvg: null,
+        renderGetTextureMax: null,
+        renderFrameComputeAvg: null,
+        renderFrameComputeMax: null,
+        renderTerritoryPassAvg: null,
+        renderTerritoryPassMax: null,
+        renderTemporalResolveAvg: null,
+        renderTemporalResolveMax: null,
+        renderSubmitAvg: null,
+        renderSubmitMax: null,
         traceLines: [],
         topMsgs: [],
       };
@@ -620,6 +648,62 @@ export class PerformanceOverlay extends LitElement implements Layer {
       rfQueueMax: typeof rfQueueMax === "number" ? rfQueueMax : null,
       rfHandlerAvg: typeof rfHandlerAvg === "number" ? rfHandlerAvg : null,
       rfHandlerMax: typeof rfHandlerMax === "number" ? rfHandlerMax : null,
+      renderSubmittedCount:
+        typeof metrics.renderSubmittedCount === "number"
+          ? metrics.renderSubmittedCount
+          : null,
+      renderNoopCount:
+        typeof metrics.renderNoopCount === "number"
+          ? metrics.renderNoopCount
+          : null,
+      renderCpuTotalAvg:
+        typeof metrics.renderCpuTotalMsAvg === "number"
+          ? metrics.renderCpuTotalMsAvg
+          : null,
+      renderCpuTotalMax:
+        typeof metrics.renderCpuTotalMsMax === "number"
+          ? metrics.renderCpuTotalMsMax
+          : null,
+      renderGetTextureAvg:
+        typeof metrics.renderGetTextureMsAvg === "number"
+          ? metrics.renderGetTextureMsAvg
+          : null,
+      renderGetTextureMax:
+        typeof metrics.renderGetTextureMsMax === "number"
+          ? metrics.renderGetTextureMsMax
+          : null,
+      renderFrameComputeAvg:
+        typeof metrics.renderFrameComputeMsAvg === "number"
+          ? metrics.renderFrameComputeMsAvg
+          : null,
+      renderFrameComputeMax:
+        typeof metrics.renderFrameComputeMsMax === "number"
+          ? metrics.renderFrameComputeMsMax
+          : null,
+      renderTerritoryPassAvg:
+        typeof metrics.renderTerritoryPassMsAvg === "number"
+          ? metrics.renderTerritoryPassMsAvg
+          : null,
+      renderTerritoryPassMax:
+        typeof metrics.renderTerritoryPassMsMax === "number"
+          ? metrics.renderTerritoryPassMsMax
+          : null,
+      renderTemporalResolveAvg:
+        typeof metrics.renderTemporalResolveMsAvg === "number"
+          ? metrics.renderTemporalResolveMsAvg
+          : null,
+      renderTemporalResolveMax:
+        typeof metrics.renderTemporalResolveMsMax === "number"
+          ? metrics.renderTemporalResolveMsMax
+          : null,
+      renderSubmitAvg:
+        typeof metrics.renderSubmitMsAvg === "number"
+          ? metrics.renderSubmitMsAvg
+          : null,
+      renderSubmitMax:
+        typeof metrics.renderSubmitMsMax === "number"
+          ? metrics.renderSubmitMsMax
+          : null,
       traceLines,
       topMsgs,
     };
@@ -813,6 +897,63 @@ export class PerformanceOverlay extends LitElement implements Layer {
               ${this.formatMs(worker.rfHandlerMax, 0)}</span
             >
           </div>
+          ${worker.renderSubmittedCount !== null ||
+          worker.renderNoopCount !== null
+            ? html`<div class="layer-row">
+                <span class="layer-name">render submits / noops</span>
+                <span class="layer-metrics"
+                  >${worker.renderSubmittedCount ?? 0} /
+                  ${worker.renderNoopCount ?? 0}</span
+                >
+              </div>`
+            : html``}
+          ${worker.renderCpuTotalAvg !== null
+            ? html`<div class="performance-line" style="margin-top: 6px;">
+                  render CPU breakdown (avg/max, submitted frames)
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">cpu total</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderCpuTotalAvg)} /
+                    ${this.formatMs(worker.renderCpuTotalMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">getCurrentTexture</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderGetTextureAvg)} /
+                    ${this.formatMs(worker.renderGetTextureMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">frame compute</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderFrameComputeAvg)} /
+                    ${this.formatMs(worker.renderFrameComputeMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">territory pass</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderTerritoryPassAvg)} /
+                    ${this.formatMs(worker.renderTerritoryPassMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">temporal resolve</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderTemporalResolveAvg)} /
+                    ${this.formatMs(worker.renderTemporalResolveMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">submit</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderSubmitAvg)} /
+                    ${this.formatMs(worker.renderSubmitMax, 0)}</span
+                  >
+                </div>`
+            : html``}
           ${worker.topMsgs.length
             ? html`<div class="performance-line" style="margin-top: 6px;">
                   top msgs (count | queue avg/max | handler avg/max)
