@@ -94,7 +94,9 @@ class TurnstileManager {
   private async acquireToken(): Promise<TokenData | null> {
     // If we have a valid cached token, return it
     if (this.currentToken && this.isTokenValid(this.currentToken)) {
-      console.log("TurnstileManager using cached valid token");
+      console.log(
+        `TurnstileManager using cached valid token: ${this.currentToken.token.substring(0, 10)}...`,
+      );
       return this.currentToken;
     }
 
@@ -158,7 +160,9 @@ class TurnstileManager {
         window.turnstile.execute(widgetId, {
           callback: (token: string) => {
             window.turnstile.remove(widgetId);
-            console.log("TurnstileManager token received");
+            console.log(
+              `TurnstileManager token received: ${token.substring(0, 10)}...`,
+            );
             resolve({ token, createdAt: Date.now() });
           },
           "error-callback": (errorCode: string) => {
