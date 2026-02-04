@@ -120,7 +120,6 @@ export class GameRunner {
     this.turns.push(turn);
   }
 
-  public executeNextTick(): boolean {
   public hasPendingTurns(): boolean {
     return this.currTurn < this.turns.length;
   }
