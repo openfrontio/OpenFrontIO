@@ -160,9 +160,45 @@ export class GameServer {
     }
 
     if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
+      // Client is reconnecting (e.g., after page refresh)
+      const existingClient = this.allClients.get(client.clientID)!;
+
+      // Validate persistentID to prevent session hijacking
+      if (existingClient.persistentID !== client.persistentID) {
+        this.log.error("persistent ids do not match on reconnect", {
+          clientID: client.clientID,
+          clientPersistentID: client.persistentID,
+          existingPersistentID: existingClient.persistentID,
+        });
+        return;
+      }
+
+      this.log.info("client reconnecting", {
         clientID: client.clientID,
       });
+
+      // Close old WebSocket to prevent resource leaks (don't remove from Set, cleanup happens in end())
+      existingClient.ws.removeAllListeners();
+      existingClient.ws.close();
+
+      // Update the WebSocket reference
+      existingClient.ws = client.ws;
+      existingClient.lastPing = Date.now();
+      this.markClientDisconnected(client.clientID, false);
+
+      // Re-add to activeClients if not already there
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== client.clientID,
+      );
+      this.activeClients.push(existingClient);
+
+      this.addListeners(existingClient);
+      this.startLobbyInfoBroadcast();
+
+      // Send start message if game has already started
+      if (this._hasStarted) {
+        this.sendStartGameMsg(existingClient.ws, 0);
+      }
       return;
     }
 
