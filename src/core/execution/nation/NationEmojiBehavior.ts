@@ -42,6 +42,7 @@ export const EMOJI_BORED = (["🥱"] as const).map(emojiId);
 export const EMOJI_HANDSHAKE = (["🤝"] as const).map(emojiId);
 export const EMOJI_DONATION_OK = (["👍"] as const).map(emojiId);
 export const EMOJI_DONATION_TOO_SMALL = (["❓", "🥱"] as const).map(emojiId);
+export const EMOJI_GREET = (["👋"] as const).map(emojiId);
 
 export class NationEmojiBehavior {
   private readonly lastEmojiSent = new Map<Player, Tick>();
@@ -63,6 +64,7 @@ export class NationEmojiBehavior {
     this.charmAllies();
     this.annoyTraitors();
     this.findRat();
+    this.greetNearbyPlayers();
   }
 
   private checkOverwhelmedByAttacks(): void {
@@ -201,6 +203,22 @@ export class NationEmojiBehavior {
 
     const smallPlayer = this.random.randElement(smallPlayers);
     this.sendEmoji(smallPlayer, EMOJI_RAT);
+  }
+
+  private greetNearbyPlayers(): void {
+    if (this.game.ticks() > 600) return; // Only in the first minute
+    if (!this.random.chance(250)) return;
+
+    const nearbyHumans = this.player
+      .neighbors()
+      .filter(
+        (p): p is Player => p.isPlayer() && p.type() === PlayerType.Human,
+      );
+
+    if (nearbyHumans.length === 0) return;
+
+    const neighbor = this.random.randElement(nearbyHumans);
+    this.sendEmoji(neighbor, EMOJI_GREET);
   }
 
   maybeSendEmoji(

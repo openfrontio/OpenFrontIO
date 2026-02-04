@@ -17,6 +17,7 @@ import {
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -78,6 +79,8 @@ export class GameServer {
 
   public desyncCount = 0;
 
+  private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -85,6 +88,7 @@ export class GameServer {
     private config: ServerConfig,
     public gameConfig: GameConfig,
     private lobbyCreatorID?: string,
+    private startsAt?: number,
   ) {
     this.log = log_.child({ gameID: id });
   }
@@ -232,6 +236,7 @@ export class GameServer {
     this.markClientDisconnected(client.clientID, false);
     this.allClients.set(client.clientID, client);
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
@@ -280,6 +285,7 @@ export class GameServer {
 
     client.ws = ws;
     this.addListeners(client);
+    this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, msg.lastTurn);
@@ -293,17 +299,16 @@ export class GameServer {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
-          this.log.error("Failed to parse client message", error, {
+          this.log.warn(`Failed to parse client message ${error}`, {
             clientID: client.clientID,
           });
           client.ws.send(
             JSON.stringify({
               type: "error",
               error,
-              message,
+              message: `Server could not parse message from client: ${message}`,
             } satisfies ServerErrorMessage),
           );
-          client.ws.close(1002, "ClientMessageSchema");
           return;
         }
         const clientMsg = parsed.data;
@@ -502,15 +507,6 @@ export class GameServer {
     return this.activeClients.length;
   }
 
-  public startTime(): number {
-    if (this._startTime !== null && this._startTime > 0) {
-      return this._startTime;
-    } else {
-      //game hasn't started yet, only works for public games
-      return this.createdAt + this.config.gameCreationRate();
-    }
-  }
-
   public prestart() {
     if (this.hasStarted()) {
       return;
@@ -540,6 +536,47 @@ export class GameServer {
         persistentID: c.persistentID,
       });
       c.ws.send(msg);
+    });
+  }
+
+  private startLobbyInfoBroadcast() {
+    if (this._hasStarted || this._hasEnded) {
+      return;
+    }
+    if (this.lobbyInfoIntervalId !== null) {
+      return;
+    }
+    this.broadcastLobbyInfo();
+    this.lobbyInfoIntervalId = setInterval(() => {
+      if (
+        this._hasStarted ||
+        this._hasEnded ||
+        this.activeClients.length === 0
+      ) {
+        this.stopLobbyInfoBroadcast();
+        return;
+      }
+      this.broadcastLobbyInfo();
+    }, 1000);
+  }
+
+  private stopLobbyInfoBroadcast() {
+    if (this.lobbyInfoIntervalId === null) {
+      return;
+    }
+    clearInterval(this.lobbyInfoIntervalId);
+    this.lobbyInfoIntervalId = null;
+  }
+
+  private broadcastLobbyInfo() {
+    const msg = JSON.stringify({
+      type: "lobby_info",
+      lobby: this.gameInfo(),
+    } satisfies ServerLobbyInfoMessage);
+    this.activeClients.forEach((c) => {
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(msg);
+      }
     });
   }
 
@@ -742,8 +779,9 @@ export class GameServer {
       }
     }
 
-    const msSinceCreation = now - this.createdAt;
-    const lessThanLifetime = msSinceCreation < this.config.gameCreationRate();
+    // Public Games
+
+    const lessThanLifetime = Date.now() < this.startsAt!;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
@@ -751,8 +789,7 @@ export class GameServer {
     if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
-    const warmupOver =
-      now > this.createdAt + this.config.gameCreationRate() + 30 * 1000;
+    const warmupOver = now > this.startsAt! + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
@@ -772,9 +809,8 @@ export class GameServer {
         clientID: c.clientID,
       })),
       gameConfig: this.gameConfig,
-      msUntilStart: this.isPublic()
-        ? this.createdAt + this.config.gameCreationRate()
-        : undefined,
+      startsAt: this.startsAt,
+      serverTime: Date.now(),
     };
   }
 

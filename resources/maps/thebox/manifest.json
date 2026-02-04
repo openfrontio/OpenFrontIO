@@ -1,0 +1,85 @@
+{
+  "map": {
+    "height": 2048,
+    "num_land_tiles": 4194304,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 512,
+    "num_land_tiles": 262144,
+    "width": 512
+  },
+  "map4x": {
+    "height": 1024,
+    "num_land_tiles": 1048576,
+    "width": 1024
+  },
+  "name": "The Box",
+  "nations": [
+    {
+      "coordinates": [10, 10],
+      "flag": "",
+      "name": "King of the Corner"
+    },
+    {
+      "coordinates": [1024, 300],
+      "flag": "",
+      "name": "Suspicious Ally"
+    },
+    {
+      "coordinates": [1650, 400],
+      "flag": "",
+      "name": "Evan The Dev"
+    },
+    {
+      "coordinates": [1024, 1024],
+      "flag": "",
+      "name": "Middle Defender"
+    },
+    {
+      "coordinates": [350, 1024],
+      "flag": "",
+      "name": "Punch Merchant"
+    },
+    {
+      "coordinates": [1700, 1024],
+      "flag": "",
+      "name": "Nuke Thrower"
+    },
+    {
+      "coordinates": [400, 1650],
+      "flag": "",
+      "name": "Fullsender"
+    },
+    {
+      "coordinates": [1024, 1750],
+      "flag": "",
+      "name": "Factory Builder"
+    },
+    {
+      "coordinates": [1650, 1650],
+      "flag": "",
+      "name": "Front Manager"
+    },
+    {
+      "coordinates": [700, 700],
+      "flag": "",
+      "name": "Box Fighter"
+    },
+    {
+      "coordinates": [1350, 700],
+      "flag": "",
+      "name": "Cage Liberator"
+    },
+    {
+      "coordinates": [700, 1350],
+      "flag": "",
+      "name": "Train Trader"
+    },
+    {
+      "coordinates": [1350, 1350],
+      "flag": "",
+      "name": "Non-peaceful Bot"
+    }
+  ]
+}
