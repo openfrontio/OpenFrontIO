@@ -599,6 +599,9 @@ class Client {
     };
 
     const onJoinChanged = () => {
+      // Always abort any in-progress join attempt, even if gameStop isn't set yet
+      this.joinAttemptId++;
+
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
