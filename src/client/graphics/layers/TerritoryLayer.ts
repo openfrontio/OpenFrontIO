@@ -108,8 +108,8 @@ export class TerritoryLayer implements Layer {
     this.syncPaletteMaybe(now);
 
     // Renderer tick and dirty-tile marking are driven in the worker from
-    // simulation-derived tile updates (tileUpdateSink). The main thread only
-    // drives render frames + view transforms.
+    // simulation-derived tile mutations (onTileStateChanged). The main thread
+    // only drives render frames + view transforms.
 
     FrameProfiler.end("TerritoryLayer:tick", tickProfile);
   }

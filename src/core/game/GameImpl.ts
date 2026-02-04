@@ -84,6 +84,7 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
+  public onTileStateChanged?: (tile: TileRef) => void;
 
   private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
@@ -234,6 +235,17 @@ export class GameImpl implements Game {
     (this.updates[update.type] as GameUpdate[]).push(update);
   }
 
+  private reportTileStateChanged(tile: TileRef): void {
+    if (this.onTileStateChanged) {
+      this.onTileStateChanged(tile);
+      return;
+    }
+    this.addUpdate({
+      type: GameUpdateType.Tile,
+      update: this.toTileUpdate(tile),
+    });
+  }
+
   nextUnitID(): number {
     const old = this._nextUnitID;
     this._nextUnitID++;
@@ -248,10 +260,7 @@ export class GameImpl implements Game {
       return;
     }
     this._map.setFallout(tile, value);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.reportTileStateChanged(tile);
   }
 
   units(...types: UnitType[]): Unit[] {
@@ -594,10 +603,7 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.reportTileStateChanged(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -615,10 +621,7 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
-    this.addUpdate({
-      type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
-    });
+    this.reportTileStateChanged(tile);
   }
 
   private updateBorders(tile: TileRef) {
@@ -951,7 +954,8 @@ export class GameImpl implements Game {
     return this._map.hasOwner(ref);
   }
   setOwnerID(ref: TileRef, playerId: number): void {
-    return this._map.setOwnerID(ref, playerId);
+    this._map.setOwnerID(ref, playerId);
+    this.reportTileStateChanged(ref);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
@@ -961,6 +965,7 @@ export class GameImpl implements Game {
   }
   setDefended(ref: TileRef, value: boolean): void {
     this._map.setDefended(ref, value);
+    this.reportTileStateChanged(ref);
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);

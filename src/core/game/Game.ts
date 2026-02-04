@@ -733,6 +733,12 @@ export interface Game extends GameMap {
     callback: (neighbor: TileRef) => void,
   ): void;
 
+  /**
+   * Optional hook for tile state changes. When set, tile mutations should call
+   * this instead of emitting GameUpdateType.Tile updates.
+   */
+  onTileStateChanged?: (tile: TileRef) => void;
+
   // Player Management
   player(id: PlayerID): Player;
   players(): Player[];

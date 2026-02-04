@@ -4,7 +4,6 @@ import { PastelTheme } from "../configuration/PastelTheme";
 import { PastelThemeDark } from "../configuration/PastelThemeDark";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { PlayerID } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -575,9 +574,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             // Capacity is bounded; on overflow we fall back to markAllDirty().
             dirtyTiles = new DirtyTileQueue(numTiles, Math.max(4096, numTiles));
             dirtyTilesOverflow = false;
-            renderTileState = new Uint16Array(gr.game.tileStateView());
+            renderTileState = gr.game.tileStateView();
 
-            gr.tileUpdateSink = (packedUpdate) => {
+            gr.game.onTileStateChanged = (tile) => {
               if (!dirtyTiles) {
                 return;
               }
@@ -585,11 +584,6 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 return;
               }
 
-              const tile = Number(packedUpdate >> 16n) as TileRef;
-              const state = Number(packedUpdate & 0xffffn);
-              if (renderTileState) {
-                renderTileState[tile] = state;
-              }
               const mark = (t: any) => {
                 if (!dirtyTiles!.mark(t)) {
                   dirtyTilesOverflow = true;
@@ -798,7 +792,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
               ? new WorkerCanvas2DRenderer()
               : new WorkerTerritoryRenderer();
 
-          renderTileState ??= new Uint16Array(gr.game.tileStateView());
+          renderTileState ??= gr.game.tileStateView();
           await renderer.init(
             message.offscreenCanvas,
             gr,
