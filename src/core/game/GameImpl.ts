@@ -7,6 +7,7 @@ import {
 import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHierarchical";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { ATTACK_INDEX_SENT } from "../StatsSchemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -1097,26 +1098,48 @@ export class GameImpl implements Game {
       }
     }
 
-    const gold = conquered.gold();
-    this.displayMessage(
-      `Conquered ${conquered.displayName()} received ${renderNumber(
+    // Don't transfer gold when the conquered player didn't play (never attacked anyone)
+    // This is especially important when starting gold is enabled
+    const stats = this._stats.getPlayerStats(conquered);
+    const attacksSent = stats?.attacks?.[ATTACK_INDEX_SENT] ?? 0n;
+    const skipGoldTransfer =
+      attacksSent === 0n && conquered.type() === PlayerType.Human;
+    const gold = skipGoldTransfer ? 0n : conquered.gold();
+
+    if (skipGoldTransfer) {
+      this.displayMessage(
+        "events_display.conquered_no_gold",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
+        undefined,
+        {
+          name: conquered.displayName(),
+        },
+      );
+    } else {
+      this.displayMessage(
+        "events_display.received_gold_from_conquest",
+        MessageType.CONQUERED_PLAYER,
+        conqueror.id(),
         gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      conqueror.id(),
-      gold,
-    );
-    conqueror.addGold(gold);
-    conquered.removeGold(gold);
+        {
+          gold: renderNumber(gold),
+          name: conquered.displayName(),
+        },
+      );
+      conqueror.addGold(gold);
+      conquered.removeGold(gold);
+
+      // Record stats
+      this.stats().goldWar(conqueror, conquered, gold);
+    }
+
     this.addUpdate({
       type: GameUpdateType.ConquestEvent,
       conquerorId: conqueror.id(),
       conqueredId: conquered.id(),
       gold,
     });
-
-    // Record stats
-    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 
