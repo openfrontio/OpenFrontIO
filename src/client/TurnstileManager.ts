@@ -97,9 +97,7 @@ class TurnstileManager {
     if (this.currentToken && this.isTokenValid(this.currentToken)) {
       const token = this.currentToken;
       this.currentToken = null; // Immediately clear to prevent reuse
-      console.log(
-        `TurnstileManager consuming cached token: ${token.token.substring(0, 10)}...`,
-      );
+      console.log(`TurnstileManager consuming cached token: ${token.token}`);
       return token;
     }
 
@@ -168,9 +166,7 @@ class TurnstileManager {
         window.turnstile.execute(widgetId, {
           callback: (token: string) => {
             window.turnstile.remove(widgetId);
-            console.log(
-              `TurnstileManager token received: ${token.substring(0, 10)}...`,
-            );
+            console.log(`TurnstileManager token received: ${token}`);
             resolve({ token, createdAt: Date.now() });
           },
           "error-callback": (errorCode: string) => {
