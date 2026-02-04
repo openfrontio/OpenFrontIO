@@ -115,6 +115,13 @@ export class GameLeftSidebar extends LitElement implements Layer {
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
             @click=${this.toggleLeaderboard}
+            role="button"
+            tabindex="0"
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                this.toggleLeaderboard();
+              }
+            }}
           >
             <img
               src=${this.isLeaderboardShow
@@ -130,6 +137,17 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 <div
                   class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
                   @click=${this.toggleTeamLeaderboard}
+                  role="button"
+                  tabindex="0"
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (
+                      e.key === "Enter" ||
+                      e.key === " " ||
+                      e.code === "Space"
+                    ) {
+                      this.toggleTeamLeaderboard();
+                    }
+                  }}
                 >
                   <img
                     src=${this.isTeamLeaderboardShow
