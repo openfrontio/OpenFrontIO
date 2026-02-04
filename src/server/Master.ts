@@ -5,19 +5,16 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
-import { WebSocket, WebSocketServer } from "ws";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
-import { startPolling } from "./PollingLoop";
+import { MasterLobbyService } from "./MasterLobbyService";
 import { renderHtml } from "./RenderHtml";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
-const readyWorkers = new Set();
+let lobbyService: MasterLobbyService;
 
 const app = express();
 const server = http.createServer(app);
@@ -68,33 +65,6 @@ app.use(
   }),
 );
 
-let publicLobbiesData: { lobbies: GameInfo[] } = { lobbies: [] };
-
-const publicLobbyIDs: Set<string> = new Set();
-const connectedClients: Set<WebSocket> = new Set();
-
-// Broadcast lobbies to all connected clients
-function broadcastLobbies() {
-  const message = JSON.stringify({
-    type: "lobbies_update",
-    data: publicLobbiesData,
-  });
-
-  const clientsToRemove: WebSocket[] = [];
-
-  connectedClients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    } else {
-      clientsToRemove.push(client);
-    }
-  });
-
-  clientsToRemove.forEach((client) => {
-    connectedClients.delete(client);
-  });
-}
-
 // Start the master process
 export async function startMaster() {
   if (!cluster.isPrimary) {
@@ -106,36 +76,7 @@ export async function startMaster() {
   log.info(`Primary ${process.pid} is running`);
   log.info(`Setting up ${config.numWorkers()} workers...`);
 
-  // Setup WebSocket server for clients
-  const wss = new WebSocketServer({ server, path: "/lobbies" });
-
-  wss.on("connection", (ws: WebSocket) => {
-    connectedClients.add(ws);
-
-    // Send current lobbies immediately (always send, even if empty)
-    ws.send(
-      JSON.stringify({ type: "lobbies_update", data: publicLobbiesData }),
-    );
-
-    ws.on("close", () => {
-      connectedClients.delete(ws);
-    });
-
-    ws.on("error", (error) => {
-      log.error(`WebSocket error:`, error);
-      connectedClients.delete(ws);
-      try {
-        if (
-          ws.readyState === WebSocket.OPEN ||
-          ws.readyState === WebSocket.CONNECTING
-        ) {
-          ws.close(1011, "WebSocket internal error");
-        }
-      } catch (closeError) {
-        log.error("Error while closing WebSocket after error:", closeError);
-      }
-    });
-  });
+  lobbyService = new MasterLobbyService(config, playlist, log);
 
   // Generate admin token for worker authentication
   const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
@@ -157,43 +98,20 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
+    lobbyService.registerWorker(i, worker);
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
-
-  cluster.on("message", (worker, message) => {
-    if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
-      readyWorkers.add(workerId);
-      log.info(
-        `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
-      );
-      // Start scheduling when all workers are ready
-      if (readyWorkers.size === config.numWorkers()) {
-        log.info("All workers ready, starting game scheduling");
-
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
-
-        startPolling(async () => {
-          const lobbies = await fetchLobbies();
-          if (lobbies === 0) {
-            scheduleLobbies();
-          }
-        }, 100);
-      }
-    }
-  });
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
     const workerId = (worker as any).process?.env?.WORKER_ID;
-    if (!workerId) {
+    if (workerId === undefined) {
       log.error(`worker crashed could not find id`);
       return;
     }
+
+    const workerIdNum = parseInt(workerId);
+    lobbyService.removeWorker(workerIdNum);
 
     log.warn(
       `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
@@ -207,6 +125,7 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
+    lobbyService.registerWorker(workerIdNum, newWorker);
     log.info(
       `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
     );
@@ -225,115 +144,6 @@ app.get("/api/env", async (req, res) => {
   if (!envConfig.game_env) return res.sendStatus(500);
   res.json(envConfig);
 });
-
-// Add lobbies endpoint to list public games for this worker
-app.get("/api/public_lobbies", async (req, res) => {
-  res.json(publicLobbiesData);
-});
-
-async function fetchLobbies(): Promise<number> {
-  const fetchPromises: Promise<GameInfo | null>[] = [];
-
-  for (const gameID of new Set(publicLobbyIDs)) {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    const port = config.workerPort(gameID);
-    const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
-      headers: { [config.adminHeader()]: config.adminToken() },
-      signal: controller.signal,
-    })
-      .then((resp) => resp.json())
-      .then((json) => {
-        return json as GameInfo;
-      })
-      .catch((error) => {
-        log.error(`Error fetching game ${gameID}:`, error);
-        // Return null or a placeholder if fetch fails
-        publicLobbyIDs.delete(gameID);
-        return null;
-      });
-
-    fetchPromises.push(promise);
-  }
-
-  // Wait for all promises to resolve
-  const results = await Promise.all(fetchPromises);
-
-  // Filter out any null results from failed fetches
-  const lobbyInfos: GameInfo[] = results
-    .filter((result) => result !== null)
-    .map((gi: GameInfo) => {
-      return {
-        gameID: gi.gameID,
-        numClients: gi?.clients?.length ?? 0,
-        gameConfig: gi.gameConfig,
-        msUntilStart: gi.msUntilStart,
-      } as GameInfo;
-    });
-
-  lobbyInfos.forEach((l) => {
-    if (
-      "msUntilStart" in l &&
-      l.msUntilStart !== undefined &&
-      l.msUntilStart <= 250
-    ) {
-      publicLobbyIDs.delete(l.gameID);
-      return;
-    }
-
-    if (
-      "gameConfig" in l &&
-      l.gameConfig !== undefined &&
-      "maxPlayers" in l.gameConfig &&
-      l.gameConfig.maxPlayers !== undefined &&
-      "numClients" in l &&
-      l.numClients !== undefined &&
-      l.gameConfig.maxPlayers <= l.numClients
-    ) {
-      publicLobbyIDs.delete(l.gameID);
-      return;
-    }
-  });
-
-  // Update the lobbies data
-  publicLobbiesData = {
-    lobbies: lobbyInfos,
-  };
-
-  broadcastLobbies();
-
-  return publicLobbyIDs.size;
-}
-
-// Function to schedule a new public game
-async function schedulePublicGame(playlist: MapPlaylist) {
-  const gameID = generateID();
-  publicLobbyIDs.add(gameID);
-
-  const workerPath = config.workerPath(gameID);
-
-  // Send request to the worker to start the game
-  try {
-    const response = await fetch(
-      `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          [config.adminHeader()]: config.adminToken(),
-        },
-        body: JSON.stringify(await playlist.gameConfig()),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to schedule public game: ${response.statusText}`);
-    }
-  } catch (error) {
-    log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
-    throw error;
-  }
-}
 
 // SPA fallback route
 app.get("*", async function (_req, res) {
