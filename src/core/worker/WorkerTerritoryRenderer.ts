@@ -29,6 +29,15 @@ export class WorkerTerritoryRenderer {
   private gameViewAdapter: GameViewAdapter | null = null;
   private ready = false;
   private lastGpuWork: Promise<void> | null = null;
+  private frameDirty = true;
+
+  private lastViewWidth = 0;
+  private lastViewHeight = 0;
+  private lastViewScale = NaN;
+  private lastViewOffsetX = NaN;
+  private lastViewOffsetY = NaN;
+  private lastAlternativeViewEnabled: boolean | null = null;
+  private lastHighlightedOwnerSmallId: number | null = null;
 
   // Compute passes
   private computePasses: ComputePass[] = [];
@@ -126,7 +135,12 @@ export class WorkerTerritoryRenderer {
 
     // Create compute passes
     this.terrainComputePass = new TerrainComputePass();
-    void this.terrainComputePass.setShader(this.terrainShaderPath);
+    void this.terrainComputePass
+      .setShader(this.terrainShaderPath)
+      .then(() => {
+        this.computeTerrainImmediate();
+      })
+      .catch(() => {});
     this.stateUpdatePass = new StateUpdatePass();
     this.defendedStrengthFullPass = new DefendedStrengthFullPass();
     this.defendedStrengthPass = new DefendedStrengthPass();
@@ -197,7 +211,11 @@ export class WorkerTerritoryRenderer {
       this.resources?.markPaletteDirty();
       this.resources?.invalidateHistory();
     }
-    return defensePostsDirty || rosterDirty || playersDirty;
+    const didWork = defensePostsDirty || rosterDirty || playersDirty;
+    if (didWork) {
+      this.frameDirty = true;
+    }
+    return didWork;
   }
 
   /**
@@ -255,6 +273,16 @@ export class WorkerTerritoryRenderer {
     const nextWidth = Math.max(1, Math.floor(width));
     const nextHeight = Math.max(1, Math.floor(height));
 
+    if (
+      nextWidth === this.lastViewWidth &&
+      nextHeight === this.lastViewHeight
+    ) {
+      return;
+    }
+    this.lastViewWidth = nextWidth;
+    this.lastViewHeight = nextHeight;
+    this.frameDirty = true;
+
     let sizeChanged = true;
     if (this.canvas) {
       sizeChanged =
@@ -283,6 +311,17 @@ export class WorkerTerritoryRenderer {
     if (!this.resources) {
       return;
     }
+    if (
+      scale === this.lastViewScale &&
+      offsetX === this.lastViewOffsetX &&
+      offsetY === this.lastViewOffsetY
+    ) {
+      return;
+    }
+    this.lastViewScale = scale;
+    this.lastViewOffsetX = offsetX;
+    this.lastViewOffsetY = offsetY;
+    this.frameDirty = true;
     this.resources.setViewTransform(scale, offsetX, offsetY);
   }
 
@@ -290,6 +329,11 @@ export class WorkerTerritoryRenderer {
     if (!this.resources) {
       return;
     }
+    if (enabled === this.lastAlternativeViewEnabled) {
+      return;
+    }
+    this.lastAlternativeViewEnabled = enabled;
+    this.frameDirty = true;
     this.resources.setAlternativeView(enabled);
   }
 
@@ -297,6 +341,11 @@ export class WorkerTerritoryRenderer {
     if (!this.resources) {
       return;
     }
+    if (ownerSmallId === this.lastHighlightedOwnerSmallId) {
+      return;
+    }
+    this.lastHighlightedOwnerSmallId = ownerSmallId;
+    this.frameDirty = true;
     this.resources.setHighlightedOwnerId(ownerSmallId);
   }
 
@@ -305,6 +354,7 @@ export class WorkerTerritoryRenderer {
     this.gameViewAdapter?.setPatternsEnabled(enabled);
     this.resources?.markPaletteDirty();
     this.resources?.invalidateHistory();
+    this.frameDirty = true;
   }
 
   setTerritoryShader(shaderPath: string): void {
@@ -313,6 +363,7 @@ export class WorkerTerritoryRenderer {
       void this.territoryRenderPass.setShader(shaderPath);
     }
     this.resources?.invalidateHistory();
+    this.frameDirty = true;
   }
 
   setTerrainShader(shaderPath: string): void {
@@ -323,6 +374,7 @@ export class WorkerTerritoryRenderer {
     void this.terrainComputePass.setShader(shaderPath).then(() => {
       this.refreshTerrain();
     });
+    this.frameDirty = true;
   }
 
   setTerritoryShaderParams(
@@ -342,6 +394,7 @@ export class WorkerTerritoryRenderer {
       this.territoryShaderParams1,
     );
     this.resources.invalidateHistory();
+    this.frameDirty = true;
   }
 
   setTerrainShaderParams(
@@ -361,6 +414,7 @@ export class WorkerTerritoryRenderer {
       this.terrainShaderParams1,
     );
     this.refreshTerrain();
+    this.frameDirty = true;
   }
 
   setPreSmoothing(
@@ -376,6 +430,7 @@ export class WorkerTerritoryRenderer {
       this.preSmoothingParams0[i] = Number(params0[i] ?? 0);
     }
     this.applyPreSmoothingConfig();
+    this.frameDirty = true;
   }
 
   setPostSmoothing(
@@ -391,6 +446,7 @@ export class WorkerTerritoryRenderer {
       this.postSmoothingParams0[i] = Number(params0[i] ?? 0);
     }
     this.applyPostSmoothingConfig();
+    this.frameDirty = true;
   }
 
   private applyPreSmoothingConfig(): void {
@@ -427,6 +483,19 @@ export class WorkerTerritoryRenderer {
           1,
           this.device.canvasFormat,
         );
+        const w =
+          (this.canvas?.width ?? this.lastViewWidth ?? 0) > 0
+            ? (this.canvas?.width ?? this.lastViewWidth)
+            : 1;
+        const h =
+          (this.canvas?.height ?? this.lastViewHeight ?? 0) > 0
+            ? (this.canvas?.height ?? this.lastViewHeight)
+            : 1;
+        this.resources.ensurePostSmoothingTextures(
+          w,
+          h,
+          this.device.canvasFormat,
+        );
       }
     } else {
       this.temporalResolvePass.setEnabled(false);
@@ -456,6 +525,7 @@ export class WorkerTerritoryRenderer {
     this.resources.invalidateHistory();
 
     this.terrainComputePass?.markDirty();
+    this.frameDirty = true;
   }
 
   refreshPalette(): void {
@@ -463,14 +533,17 @@ export class WorkerTerritoryRenderer {
       return;
     }
     this.resources.markPaletteDirty();
+    this.frameDirty = true;
   }
 
   markRelationsDirty(): void {
     this.resources?.markRelationsDirty();
+    this.frameDirty = true;
   }
 
   markRelationsPairDirty(aSmallId: number, bSmallId: number): void {
     this.resources?.markRelationsPairDirty(aSmallId, bSmallId);
+    this.frameDirty = true;
   }
 
   setPaletteFromBytes(
@@ -484,6 +557,7 @@ export class WorkerTerritoryRenderer {
     }
     this.resources.setPaletteOverride(paletteWidth, maxSmallId, row0, row1);
     this.resources.invalidateHistory();
+    this.frameDirty = true;
   }
 
   markDefensePostsDirty(): void {
@@ -491,6 +565,7 @@ export class WorkerTerritoryRenderer {
       return;
     }
     this.resources.markDefensePostsDirty();
+    this.frameDirty = true;
   }
 
   refreshTerrain(): void {
@@ -502,6 +577,7 @@ export class WorkerTerritoryRenderer {
       this.terrainComputePass.markDirty();
       this.computeTerrainImmediate();
     }
+    this.frameDirty = true;
   }
 
   dispose(): void {
@@ -615,6 +691,7 @@ export class WorkerTerritoryRenderer {
     }
 
     this.device.device.queue.submit([encoder.finish()]);
+    this.frameDirty = true;
     return true;
   }
 
@@ -669,26 +746,22 @@ export class WorkerTerritoryRenderer {
    * Render one frame.
    * Runs render passes to draw to the canvas.
    */
-  render(onGetTextureMs?: (ms: number) => void): void {
+  render(onGetTextureMs?: (ms: number) => void): boolean {
     if (
       !this.ready ||
       !this.device ||
       !this.resources ||
       !this.territoryRenderPass
     ) {
-      return;
+      return false;
+    }
+
+    if (!this.frameDirty && !this.postSmoothingEnabled) {
+      return false;
     }
 
     const nowSec = performance.now() / 1000;
     this.resources.writeTemporalUniformBuffer(nowSec);
-
-    // If terrain needs recomputation, trigger it asynchronously
-    if (this.terrainComputePass?.needsUpdate()) {
-      this.resources.uploadTerrainParams();
-      const computeEncoder = this.device.device.createCommandEncoder();
-      this.terrainComputePass.execute(computeEncoder, this.resources);
-      this.device.device.queue.submit([computeEncoder.finish()]);
-    }
 
     const encoder = this.device.device.createCommandEncoder();
     const getTexStart = performance.now();
@@ -748,6 +821,10 @@ export class WorkerTerritoryRenderer {
     }
 
     this.device.device.queue.submit([encoder.finish()]);
+    if (!this.postSmoothingEnabled) {
+      this.frameDirty = false;
+    }
+    return true;
   }
 
   async renderAsync(): Promise<{
@@ -762,29 +839,34 @@ export class WorkerTerritoryRenderer {
       return null;
     }
 
-    let waitPrevGpuMs = 0;
+    const waitPrevGpuMs = 0;
     let cpuMs = 0;
     let getTextureMs = 0;
-    let gpuWaitMs = 0;
-    let waitPrevGpuTimedOut = false;
-    let gpuWaitTimedOut = false;
+    const gpuWaitMs = 0;
+    const waitPrevGpuTimedOut = false;
+    const gpuWaitTimedOut = false;
 
-    if (this.gpuWaitEnabled && this.lastGpuWork) {
-      const t0 = performance.now();
-      const r = await this.awaitGpuWork(this.lastGpuWork);
-      waitPrevGpuTimedOut = r.timedOut;
-      if (r.timedOut) {
-        this.gpuWaitEnabled = false;
-      }
-      waitPrevGpuMs = performance.now() - t0;
-      this.lastGpuWork = null;
-    }
+    // Keep render_frame handlers cheap: do not await GPU progress here.
+    // Backpressure is handled on the main thread (one in-flight render).
+    this.lastGpuWork = null;
 
     const cpuStart = performance.now();
-    this.render((ms) => {
+    const submitted = this.render((ms) => {
       getTextureMs = ms;
     });
     cpuMs = performance.now() - cpuStart;
+
+    if (!submitted) {
+      this.lastGpuWork = null;
+      return {
+        waitPrevGpuMs,
+        cpuMs,
+        getTextureMs,
+        gpuWaitMs,
+        waitPrevGpuTimedOut,
+        gpuWaitTimedOut,
+      };
+    }
 
     const q: any = this.device.device.queue as any;
     if (typeof q?.onSubmittedWorkDone !== "function") {
@@ -799,20 +881,8 @@ export class WorkerTerritoryRenderer {
       };
     }
 
-    const gpuStart = performance.now();
     const p = q.onSubmittedWorkDone() as Promise<void>;
     this.lastGpuWork = p.catch(() => {});
-    if (this.gpuWaitEnabled) {
-      const r = await this.awaitGpuWork(this.lastGpuWork);
-      gpuWaitTimedOut = r.timedOut;
-      if (r.timedOut) {
-        this.gpuWaitEnabled = false;
-        this.lastGpuWork = null;
-      } else {
-        this.lastGpuWork = null;
-      }
-      gpuWaitMs = performance.now() - gpuStart;
-    }
 
     return {
       waitPrevGpuMs,
