@@ -1,12 +1,7 @@
 import version from "resources/version.txt?raw";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import {
-  GAME_ID_REGEX,
-  GameInfo,
-  GameRecord,
-  GameStartInfo,
-} from "../core/Schemas";
+import { GAME_ID_REGEX, GameRecord, GameStartInfo } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
@@ -223,7 +218,6 @@ export interface JoinLobbyEvent {
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
-  publicLobbyInfo?: GameInfo;
 }
 
 class Client {
@@ -773,7 +767,7 @@ class Client {
     }
     const config = await getServerConfigFromClient();
     // Only update URL immediately for private lobbies, not public ones
-    if (!lobby.publicLobbyInfo && lobby.source !== "public") {
+    if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
 
@@ -908,7 +902,7 @@ class Client {
 
     // Open the join lobby modal page and pass the lobby info
     window.showPage?.("page-join-lobby");
-    this.joinModal?.open(lobby.gameID, lobby);
+    this.joinModal?.open(lobby.gameID, true);
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {

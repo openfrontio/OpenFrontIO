@@ -17,7 +17,6 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
@@ -26,6 +25,7 @@ import {
   HumansVsNations,
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -70,7 +70,7 @@ export class JoinLobbyModal extends BaseModal {
     }
     this.updateFromLobby({
       ...lobby,
-      msUntilStart: lobby.msUntilStart ?? undefined,
+      startsAt: lobby.startsAt ?? undefined,
     });
   };
 
@@ -94,7 +94,7 @@ export class JoinLobbyModal extends BaseModal {
             })
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
-    const playerCount = this.playerCount;
+    const playerCount = this.players?.length ?? 0;
     const hostClientID = this.isPrivateLobby()
       ? (this.lobbyCreatorClientID ?? "")
       : "";
@@ -283,13 +283,13 @@ export class JoinLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "", lobbyInfo?: GameInfo) {
+  public open(lobbyId: string = "", isPublic: boolean = false) {
     super.open();
     if (lobbyId) {
-      this.startTrackingLobby(lobbyId, lobbyInfo);
+      this.startTrackingLobby(lobbyId);
       // If opened with lobbyInfo (public lobby case), auto-join the lobby
-      if (lobbyInfo) {
-        this.joinPublicLobby(lobbyId, lobbyInfo);
+      if (isPublic) {
+        this.joinPublicLobby(lobbyId);
       } else {
         // If opened with lobbyId but no lobbyInfo (URL join case), check if active and join
         this.handleUrlJoin(lobbyId);
@@ -329,14 +329,13 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private joinPublicLobby(lobbyId: string, lobbyInfo: GameInfo) {
+  private joinPublicLobby(lobbyId: string) {
     // Dispatch join-lobby event to actually connect to the lobby
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
           clientID: this.currentClientID,
-          publicLobbyInfo: lobbyInfo,
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -346,10 +345,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
-    this.currentClientID = generateID();
+    this.currentClientID = getClientIDForGame(lobbyId);
     this.gameConfig = null;
     this.players = [];
-    this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
     this.lobbyCreatorClientID = null;
@@ -397,7 +395,6 @@ export class JoinLobbyModal extends BaseModal {
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
     this.gameConfig = null;
     this.players = [];
-    this.playerCount = 0;
     this.currentLobbyId = "";
     this.currentClientID = "";
     this.nationCount = 0;
@@ -536,18 +533,8 @@ export class JoinLobbyModal extends BaseModal {
   // --- Lobby event handling ---
 
   private updateFromLobby(lobby: GameInfo) {
-    if (lobby.clients) {
-      this.players = lobby.clients;
-      this.playerCount = lobby.clients.length;
-    } else {
-      this.players = [];
-      this.playerCount = lobby.numClients ?? 0;
-    }
-    if (lobby.msUntilStart !== undefined) {
-      this.lobbyStartAt = lobby.msUntilStart + Date.now();
-    } else {
-      this.lobbyStartAt = null;
-    }
+    this.players = lobby.clients ?? [];
+    this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
