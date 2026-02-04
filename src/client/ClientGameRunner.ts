@@ -703,7 +703,8 @@ export class ClientGameRunner {
     const tile = this.getTileUnderCursor();
     if (tile === null) return;
 
-    const myPlayer = this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
+    const myPlayer =
+      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
     if (myPlayer === null) return;
     this.myPlayer = myPlayer;
 
@@ -713,7 +714,9 @@ export class ClientGameRunner {
 
     myPlayer.actions(tile).then((actions) => {
       if (actions.interaction?.canSendAllianceRequest) {
-        this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, recipient));
+        this.eventBus.emit(
+          new SendAllianceRequestIntentEvent(myPlayer, recipient),
+        );
       }
     });
   }
@@ -722,7 +725,8 @@ export class ClientGameRunner {
     const tile = this.getTileUnderCursor();
     if (tile === null) return;
 
-    const myPlayer = this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
+    const myPlayer =
+      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
     if (myPlayer === null) return;
     this.myPlayer = myPlayer;
 
@@ -732,7 +736,9 @@ export class ClientGameRunner {
 
     myPlayer.actions(tile).then((actions) => {
       if (actions.interaction?.canBreakAlliance) {
-        this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, recipient));
+        this.eventBus.emit(
+          new SendBreakAllianceIntentEvent(myPlayer, recipient),
+        );
       }
     });
   }
