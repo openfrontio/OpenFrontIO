@@ -769,12 +769,6 @@ class Client {
     }
 
     const config = await getServerConfigFromClient();
-    // Check if this join was superseded by another
-    if (this.joinAttemptId !== thisAttemptId) {
-      console.log("Join attempt superseded, aborting");
-      return;
-    }
-
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
@@ -783,12 +777,9 @@ class Client {
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
     );
-    if (this.joinAttemptId !== thisAttemptId) {
-      console.log("Join attempt superseded, aborting");
-      return;
-    }
-
     const turnstileToken = await this.getTurnstileToken(lobby);
+
+    // Check if this join was superseded (user left or started another join)
     if (this.joinAttemptId !== thisAttemptId) {
       console.log("Join attempt superseded, aborting");
       return;
