@@ -538,6 +538,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   private getWorkerKeyStats(metrics: WorkerMetricsMessage | null): {
+    intervalMs: number;
     loopLagAvg: number;
     loopLagMax: number;
     simDelayAvg: number;
@@ -549,9 +550,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
     rfHandlerAvg: number | null;
     rfHandlerMax: number | null;
     traceLines: string[];
+    topMsgs: Array<{
+      type: string;
+      count: number;
+      queueAvg: number | null;
+      queueMax: number | null;
+      handlerAvg: number | null;
+      handlerMax: number | null;
+    }>;
   } {
     if (!metrics) {
       return {
+        intervalMs: 0,
         loopLagAvg: 0,
         loopLagMax: 0,
         simDelayAvg: 0,
@@ -563,6 +573,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
         rfHandlerAvg: null,
         rfHandlerMax: null,
         traceLines: [],
+        topMsgs: [],
       };
     }
 
@@ -573,7 +584,32 @@ export class PerformanceOverlay extends LitElement implements Layer {
     const traceLines =
       metrics.trace && metrics.trace.length > 0 ? metrics.trace.slice(-5) : [];
 
+    const topMsgs = Object.entries(metrics.msgCounts ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([type, count]) => ({
+        type,
+        count,
+        queueAvg:
+          typeof metrics.msgQueueMsAvg?.[type] === "number"
+            ? metrics.msgQueueMsAvg[type]
+            : null,
+        queueMax:
+          typeof metrics.msgQueueMsMax?.[type] === "number"
+            ? metrics.msgQueueMsMax[type]
+            : null,
+        handlerAvg:
+          typeof metrics.msgHandlerMsAvg?.[type] === "number"
+            ? metrics.msgHandlerMsAvg[type]
+            : null,
+        handlerMax:
+          typeof metrics.msgHandlerMsMax?.[type] === "number"
+            ? metrics.msgHandlerMsMax[type]
+            : null,
+      }));
+
     return {
+      intervalMs: metrics.intervalMs,
       loopLagAvg: metrics.eventLoopLagMsAvg,
       loopLagMax: metrics.eventLoopLagMsMax,
       simDelayAvg: metrics.simPumpDelayMsAvg,
@@ -585,6 +621,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       rfHandlerAvg: typeof rfHandlerAvg === "number" ? rfHandlerAvg : null,
       rfHandlerMax: typeof rfHandlerMax === "number" ? rfHandlerMax : null,
       traceLines,
+      topMsgs,
     };
   }
 
@@ -736,6 +773,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
             >
           </div>
           <div class="layer-row">
+            <span class="layer-name">metrics interval (worker)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.intervalMs, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
             <span class="layer-name">event loop lag (avg / max)</span>
             <span class="layer-metrics"
               >${this.formatMs(worker.loopLagAvg)} /
@@ -770,6 +813,30 @@ export class PerformanceOverlay extends LitElement implements Layer {
               ${this.formatMs(worker.rfHandlerMax, 0)}</span
             >
           </div>
+          ${worker.topMsgs.length
+            ? html`<div class="performance-line" style="margin-top: 6px;">
+                  top msgs (count | queue avg/max | handler avg/max)
+                </div>
+                ${worker.topMsgs.map(
+                  (m) =>
+                    html`<div class="layer-row">
+                      <span class="layer-name" title=${m.type}
+                        >${m.type} (${m.count})
+                      </span>
+                      <span class="layer-metrics"
+                        >${this.formatMs(m.queueAvg, 0)}/${this.formatMs(
+                          m.queueMax,
+                          0,
+                        )}
+                        |
+                        ${this.formatMs(m.handlerAvg, 0)}/${this.formatMs(
+                          m.handlerMax,
+                          0,
+                        )}
+                      </span>
+                    </div>`,
+                )}`
+            : html``}
           <div class="layer-row" style="margin-top: 4px;">
             <span class="layer-name">trace</span>
             <span class="layer-metrics">

@@ -59,6 +59,9 @@ export class TerritoryLayer implements Layer {
   private hoveredOwnerSmallId: number | null = null;
   private lastHoverUpdateMs = 0;
   private hoverRequestSeq = 0;
+  private hoverTile: TileRef | null = null;
+  private hoverQueryInFlight = false;
+  private pendingHoverTile: TileRef | null = null;
 
   constructor(
     private game: GameView,
@@ -299,6 +302,8 @@ export class TerritoryLayer implements Layer {
     this.lastHoverUpdateMs = now;
 
     if (!this.lastMousePosition) {
+      this.hoverTile = null;
+      this.pendingHoverTile = null;
       if (this.hoveredOwnerSmallId !== null) {
         this.hoveredOwnerSmallId = null;
         this.territoryRenderer.setHighlightedOwnerId(null);
@@ -311,6 +316,8 @@ export class TerritoryLayer implements Layer {
       this.lastMousePosition.y,
     );
     if (!this.game.isValidCoord(cell.x, cell.y)) {
+      this.hoverTile = null;
+      this.pendingHoverTile = null;
       if (this.hoveredOwnerSmallId !== null) {
         this.hoveredOwnerSmallId = null;
         this.territoryRenderer.setHighlightedOwnerId(null);
@@ -319,24 +326,54 @@ export class TerritoryLayer implements Layer {
     }
 
     const tile = this.game.ref(cell.x, cell.y);
-    const seq = ++this.hoverRequestSeq;
-    this.game.worker
-      .tileContext(tile)
-      .then((ctx) => {
-        if (seq !== this.hoverRequestSeq) {
-          return;
-        }
-        const nextOwnerSmallId = ctx.ownerSmallId;
-        if (nextOwnerSmallId === this.hoveredOwnerSmallId) {
-          return;
-        }
-        this.hoveredOwnerSmallId = nextOwnerSmallId;
-        this.territoryRenderer?.setHighlightedOwnerId(nextOwnerSmallId);
-      })
-      .catch((err) => {
-        // Don't spam; hover is best-effort.
-        console.warn("tileContext hover lookup failed:", err);
-      });
+
+    // Only query on tile changes; keep at most one query in flight.
+    if (this.hoverTile === tile && this.pendingHoverTile === null) {
+      return;
+    }
+    this.hoverTile = tile;
+    this.pendingHoverTile = tile;
+
+    if (this.hoverQueryInFlight) {
+      return;
+    }
+
+    const doQuery = () => {
+      const nextTile = this.pendingHoverTile;
+      if (nextTile === null) {
+        this.hoverQueryInFlight = false;
+        return;
+      }
+      this.pendingHoverTile = null;
+      this.hoverQueryInFlight = true;
+
+      const seq = ++this.hoverRequestSeq;
+      this.game.worker
+        .tileContext(nextTile)
+        .then((ctx) => {
+          if (seq !== this.hoverRequestSeq) {
+            return;
+          }
+          const nextOwnerSmallId = ctx.ownerSmallId;
+          if (nextOwnerSmallId === this.hoveredOwnerSmallId) {
+            return;
+          }
+          this.hoveredOwnerSmallId = nextOwnerSmallId;
+          this.territoryRenderer?.setHighlightedOwnerId(nextOwnerSmallId);
+        })
+        .catch((err) => {
+          // Hover is best-effort; avoid spamming logs.
+          console.warn("tileContext hover lookup failed:", err);
+        })
+        .finally(() => {
+          this.hoverQueryInFlight = false;
+          if (this.pendingHoverTile !== null) {
+            doQuery();
+          }
+        });
+    };
+
+    doQuery();
   }
 
   private computePaletteSignature(): string {

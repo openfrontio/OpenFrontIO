@@ -25,6 +25,10 @@ export class WorkerClient {
   ) => void;
   private workerMetricsCallback?: (metrics: WorkerMetricsMessage) => void;
 
+  private pendingTurns: Turn[] = [];
+  private turnFlushScheduled = false;
+  private readonly maxTurnsPerBatch = 256;
+
   constructor(
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID,
@@ -154,15 +158,43 @@ export class WorkerClient {
     this.gameUpdateCallback = gameUpdate;
   }
 
+  private scheduleTurnFlush(): void {
+    if (this.turnFlushScheduled) return;
+    this.turnFlushScheduled = true;
+    setTimeout(() => {
+      this.turnFlushScheduled = false;
+      this.flushTurns();
+    }, 0);
+  }
+
+  private flushTurns(): void {
+    while (this.pendingTurns.length > 0) {
+      const batch = this.pendingTurns.splice(0, this.maxTurnsPerBatch);
+      this.postMessage({
+        type: "turn_batch",
+        turns: batch,
+      });
+    }
+  }
+
   sendTurn(turn: Turn) {
     if (!this.isInitialized) {
       throw new Error("Worker not initialized");
     }
 
-    this.postMessage({
-      type: "turn",
-      turn,
-    });
+    this.pendingTurns.push(turn);
+    this.scheduleTurnFlush();
+  }
+
+  sendTurnBatch(turns: Turn[]) {
+    if (!this.isInitialized) {
+      throw new Error("Worker not initialized");
+    }
+    if (turns.length === 0) return;
+
+    // Preserve order with any already queued turns.
+    this.pendingTurns.push(...turns);
+    this.scheduleTurnFlush();
   }
 
   sendHeartbeat() {

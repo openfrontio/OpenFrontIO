@@ -58,8 +58,12 @@ export class GroundTruthData {
   private readonly state: Uint16Array;
   private readonly terrainData: Uint8Array;
   private needsStateUpload = true;
+  private stateUploadScratch: Uint32Array | null = null;
+  private stateUploadScratchStrideU32 = 0;
   private needsPaletteUpload = true;
   private needsTerrainDataUpload = true;
+  private terrainDataUploadScratch: Uint8Array | null = null;
+  private terrainDataUploadScratchBytesPerRow = 0;
   private needsTerrainParamsUpload = true;
   private useVisualStateTexture = false;
   private visualStateNeedsSync = false;
@@ -514,41 +518,42 @@ export class GroundTruthData {
     }
     this.needsStateUpload = false;
 
-    // Convert 16-bit CPU state to 32-bit array
-    const u32State = new Uint32Array(this.state.length);
-    for (let i = 0; i < this.state.length; i++) {
-      u32State[i] = this.state[i];
-    }
-
     const bytesPerTexel = Uint32Array.BYTES_PER_ELEMENT;
     const fullBytesPerRow = this.mapWidth * bytesPerTexel;
+    const bytesPerRow = align(fullBytesPerRow, 256);
+    const strideU32 = bytesPerRow / 4;
+    const required = strideU32 * this.mapHeight;
 
-    if (fullBytesPerRow % 256 === 0) {
-      this.device.queue.writeTexture(
-        { texture: this.stateTexture },
-        u32State,
-        { bytesPerRow: fullBytesPerRow, rowsPerImage: this.mapHeight },
-        {
-          width: this.mapWidth,
-          height: this.mapHeight,
-          depthOrArrayLayers: 1,
-        },
-      );
-    } else {
-      // Fallback: upload row-by-row with padding
-      const paddedBytesPerRow = align(fullBytesPerRow, 256);
-      const scratch = new Uint32Array(paddedBytesPerRow / 4);
-      for (let y = 0; y < this.mapHeight; y++) {
-        const start = y * this.mapWidth;
-        scratch.set(u32State.subarray(start, start + this.mapWidth), 0);
-        this.device.queue.writeTexture(
-          { texture: this.stateTexture, origin: { x: 0, y } },
-          scratch,
-          { bytesPerRow: paddedBytesPerRow, rowsPerImage: 1 },
-          { width: this.mapWidth, height: 1, depthOrArrayLayers: 1 },
-        );
+    if (
+      !this.stateUploadScratch ||
+      this.stateUploadScratchStrideU32 !== strideU32 ||
+      this.stateUploadScratch.length < required
+    ) {
+      this.stateUploadScratch = new Uint32Array(required);
+      this.stateUploadScratchStrideU32 = strideU32;
+    }
+
+    const dst = this.stateUploadScratch;
+    const src = this.state;
+    const w = this.mapWidth;
+    for (let y = 0; y < this.mapHeight; y++) {
+      const srcBase = y * w;
+      const dstBase = y * strideU32;
+      for (let x = 0; x < w; x++) {
+        dst[dstBase + x] = src[srcBase + x];
       }
     }
+
+    this.device.queue.writeTexture(
+      { texture: this.stateTexture },
+      dst,
+      { bytesPerRow, rowsPerImage: this.mapHeight },
+      {
+        width: this.mapWidth,
+        height: this.mapHeight,
+        depthOrArrayLayers: 1,
+      },
+    );
   }
 
   /**
@@ -589,36 +594,36 @@ export class GroundTruthData {
     }
     this.needsTerrainDataUpload = false;
 
-    const bytesPerRow = this.mapWidth;
-    const paddedBytesPerRow = align(bytesPerRow, 256);
-
-    if (paddedBytesPerRow === bytesPerRow) {
-      // Direct upload if already aligned
-      this.device.queue.writeTexture(
-        { texture: this.terrainDataTexture },
-        this.terrainData,
-        { bytesPerRow, rowsPerImage: this.mapHeight },
-        {
-          width: this.mapWidth,
-          height: this.mapHeight,
-          depthOrArrayLayers: 1,
-        },
-      );
-    } else {
-      // Row-by-row upload with padding
-      const row = new Uint8Array(paddedBytesPerRow);
-      for (let y = 0; y < this.mapHeight; y++) {
-        row.fill(0);
-        const start = y * this.mapWidth;
-        row.set(this.terrainData.subarray(start, start + this.mapWidth), 0);
-        this.device.queue.writeTexture(
-          { texture: this.terrainDataTexture, origin: { x: 0, y } },
-          row,
-          { bytesPerRow: paddedBytesPerRow, rowsPerImage: 1 },
-          { width: this.mapWidth, height: 1, depthOrArrayLayers: 1 },
-        );
-      }
+    const bytesPerRow = align(this.mapWidth, 256);
+    const required = bytesPerRow * this.mapHeight;
+    if (
+      !this.terrainDataUploadScratch ||
+      this.terrainDataUploadScratchBytesPerRow !== bytesPerRow ||
+      this.terrainDataUploadScratch.length < required
+    ) {
+      this.terrainDataUploadScratch = new Uint8Array(required);
+      this.terrainDataUploadScratchBytesPerRow = bytesPerRow;
     }
+
+    const dst = this.terrainDataUploadScratch;
+    const src = this.terrainData;
+    const w = this.mapWidth;
+    for (let y = 0; y < this.mapHeight; y++) {
+      const srcStart = y * w;
+      const dstStart = y * bytesPerRow;
+      dst.set(src.subarray(srcStart, srcStart + w), dstStart);
+    }
+
+    this.device.queue.writeTexture(
+      { texture: this.terrainDataTexture },
+      dst,
+      { bytesPerRow, rowsPerImage: this.mapHeight },
+      {
+        width: this.mapWidth,
+        height: this.mapHeight,
+        depthOrArrayLayers: 1,
+      },
+    );
   }
 
   uploadTerrainParams(): void {

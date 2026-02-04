@@ -16,7 +16,7 @@ import {
 } from "../game/GameUpdates";
 
 import { createGameRunner, GameRunner } from "../GameRunner";
-import { ClientID, GameStartInfo, PlayerCosmetics } from "../Schemas";
+import { ClientID, GameStartInfo, PlayerCosmetics, Turn } from "../Schemas";
 import { DirtyTileQueue } from "./DirtyTileQueue";
 import { WorkerCanvas2DRenderer } from "./WorkerCanvas2DRenderer";
 import {
@@ -45,6 +45,7 @@ let renderer: WorkerTerritoryRenderer | WorkerCanvas2DRenderer | null = null;
 let dirtyTiles: DirtyTileQueue | null = null;
 let dirtyTilesOverflow = false;
 let renderTileState: Uint16Array | null = null;
+const pendingTurns: Turn[] = [];
 
 type WorkerDebugConfig = {
   enabled: boolean;
@@ -282,24 +283,36 @@ class WorkerProfiler {
 const profiler = new WorkerProfiler();
 
 let simPumpScheduled = false;
+
 function scheduleSimPump(): void {
   if (simPumpScheduled) {
     return;
   }
   simPumpScheduled = true;
-
   const scheduledAtWallMs = Date.now();
   setTimeout(async () => {
     simPumpScheduled = false;
     if (!gameRunner) {
       return;
     }
+
     const gr = await gameRunner;
     profiler.recordSimDelay(Date.now() - scheduledAtWallMs);
     const execStart = performance.now();
+    if (pendingTurns.length > 0) {
+      // Drain turns into GameRunner's queue in chunks so we don't block
+      // the worker event loop for too long (important for Firefox).
+      const maxDrain = 256;
+      for (let i = 0; i < maxDrain && pendingTurns.length > 0; i++) {
+        const t = pendingTurns.shift();
+        if (t) {
+          gr.addTurn(t);
+        }
+      }
+    }
     gr.executeNextTick();
     profiler.recordSimExec(performance.now() - execStart);
-    if (gr.hasPendingTurns()) {
+    if (pendingTurns.length > 0 || gr.hasPendingTurns()) {
       scheduleSimPump();
     }
   }, 0);
@@ -442,6 +455,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
               if (!dirtyTiles) {
                 return;
               }
+              if (dirtyTilesOverflow) {
+                return;
+              }
 
               const tile = Number(packedUpdate >> 16n) as TileRef;
               const state = Number(packedUpdate & 0xffffn);
@@ -475,11 +491,24 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         }
 
         try {
-          const gr = await gameRunner;
-          gr.addTurn(message.turn);
+          pendingTurns.push(message.turn);
           scheduleSimPump();
         } catch (error) {
           console.error("Failed to process turn:", error);
+          throw error;
+        }
+        break;
+
+      case "turn_batch":
+        if (!gameRunner) {
+          throw new Error("Game runner not initialized");
+        }
+
+        try {
+          pendingTurns.push(...message.turns);
+          scheduleSimPump();
+        } catch (error) {
+          console.error("Failed to process turn batch:", error);
           throw error;
         }
         break;

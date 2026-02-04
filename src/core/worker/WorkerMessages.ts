@@ -13,6 +13,7 @@ export type WorkerMessageType =
   | "init"
   | "initialized"
   | "turn"
+  | "turn_batch"
   | "game_update"
   | "tile_context"
   | "tile_context_result"
@@ -71,6 +72,11 @@ export interface InitMessage extends BaseWorkerMessage {
 export interface TurnMessage extends BaseWorkerMessage {
   type: "turn";
   turn: Turn;
+}
+
+export interface TurnBatchMessage extends BaseWorkerMessage {
+  type: "turn_batch";
+  turns: Turn[];
 }
 
 // Messages from worker to main thread
@@ -337,6 +343,7 @@ export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
+  | TurnBatchMessage
   | TileContextMessage
   | PlayerActionsMessage
   | PlayerProfileMessage

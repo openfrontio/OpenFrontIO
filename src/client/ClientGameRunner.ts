@@ -9,6 +9,7 @@ import {
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
+  Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
@@ -435,20 +436,43 @@ export class ClientGameRunner {
           goToPlayer();
         }
 
-        for (const turn of message.turns) {
+        const normalizeTurn = (turn: Turn): Turn =>
+          this.gameView.config().isReplay()
+            ? {
+                ...turn,
+                intents: turn.intents.filter((i) => i.type !== "toggle_pause"),
+              }
+            : turn;
+
+        // Firefox in particular suffers from a storm of thousands of tiny
+        // postMessage() calls on reconnect. Batch turns to keep the worker
+        // event loop responsive for render_frame and sim scheduling.
+        const batchSize = 256;
+        let batch: Turn[] = [];
+        const flush = () => {
+          if (batch.length === 0) return;
+          this.worker.sendTurnBatch(batch);
+          batch = [];
+        };
+
+        for (const rawTurn of message.turns as Turn[]) {
+          const turn = normalizeTurn(rawTurn);
           if (turn.turnNumber < this.turnsSeen) {
             continue;
           }
           while (turn.turnNumber - 1 > this.turnsSeen) {
-            this.worker.sendTurn({
+            batch.push({
               turnNumber: this.turnsSeen,
               intents: [],
             });
             this.turnsSeen++;
+            if (batch.length >= batchSize) flush();
           }
-          this.worker.sendTurn(turn);
+          batch.push(turn);
           this.turnsSeen++;
+          if (batch.length >= batchSize) flush();
         }
+        flush();
       }
       if (message.type === "desync") {
         if (this.lobby.gameStartInfo === undefined) {
