@@ -5,6 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
@@ -96,6 +97,10 @@ export function joinLobby(
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    if (message.type === "lobby_info") {
+      eventBus.emit(new LobbyInfoEvent(message.lobby));
+      return;
+    }
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
@@ -770,6 +775,9 @@ function showErrorModal(
     return;
   }
 
+  const translatedError = translateText(error);
+  const displayError = translatedError === error ? error : translatedError;
+
   const modal = document.createElement("div");
   modal.id = "error-modal";
 
@@ -778,7 +786,7 @@ function showErrorModal(
     translateText(heading),
     `game id: ${gameID}`,
     `client id: ${clientID}`,
-    `Error: ${error}`,
+    `Error: ${displayError}`,
     message ? `Message: ${message}` : null,
   ]
     .filter(Boolean)

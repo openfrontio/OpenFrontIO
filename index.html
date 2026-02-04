@@ -75,11 +75,11 @@
       defer
     ></script>
 
-    <!-- Publift/Fuse ads -->
-    <script
-      async
-      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
-    ></script>
+    <script data-cfasync="false">
+      window.ramp = window.ramp || {};
+      window.ramp.que = window.ramp.que || [];
+      window.ramp.passiveMode = true;
+    </script>
 
     <script>
       window.googletag = window.googletag || { cmd: [] };
@@ -133,14 +133,14 @@
 
     <div
       id="mobile-menu-backdrop"
-      class="lg:!hidden [.in-game_&]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/60 [&.open]:z-[40000] transition-opacity"
+      class="lg:hidden! in-[.in-game]:hidden hidden pointer-events-none [&.open]:block [&.open]:pointer-events-auto [&.open]:fixed [&.open]:inset-0 [&.open]:bg-black/60 [&.open]:z-[40000] transition-opacity"
       role="presentation"
       aria-hidden="true"
     ></div>
 
     <mobile-nav-bar
       id="sidebar-menu"
-      class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
+      class="peer in-[.in-game]:hidden z-40001 fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
       role="dialog"
       data-i18n-aria-label="main.menu"
       aria-hidden="true"
@@ -148,14 +148,14 @@
 
     <!-- MAIN CONTENT AREA -->
     <div
-      class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar -->
       <desktop-nav-bar></desktop-nav-bar>
 
       <div
         id="turnstile-container"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
       ></div>
 
       <gutter-ads></gutter-ads>
@@ -179,31 +179,31 @@
           inline
           class="hidden w-full h-full page-content"
         ></host-lobby-modal>
-        <join-private-lobby-modal
-          id="page-join-private-lobby"
+        <join-lobby-modal
+          id="page-join-lobby"
           inline
           class="hidden w-full h-full page-content"
-        ></join-private-lobby-modal>
+        ></join-lobby-modal>
         <territory-patterns-modal
           id="page-item-store"
           inline
           class="hidden w-full h-full page-content"
         ></territory-patterns-modal>
-        <matchmaking-modal
-          id="page-matchmaking"
-          inline
-          class="hidden w-full h-full page-content"
-        ></matchmaking-modal>
         <user-setting
           id="page-settings"
           inline
           class="hidden w-full h-full page-content"
         ></user-setting>
-        <stats-modal
-          id="page-stats"
+        <leaderboard-modal
+          id="page-leaderboard"
           inline
           class="hidden w-full h-full page-content"
-        ></stats-modal>
+        ></leaderboard-modal>
+        <troubleshooting-modal
+          id="page-troubleshooting"
+          inline
+          class="hidden w-full h-full page-content"
+        ></troubleshooting-modal>
         <account-modal
           id="page-account"
           inline
@@ -239,16 +239,16 @@
     <div id="app"></div>
 
     <div
-      class="left-0 bottom-0 sm:left-4 sm:bottom-4 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px] fixed pointer-events-none"
+      class="fixed left-0 bottom-0 min-[1200px]:left-4 min-[1200px]:bottom-4 w-full flex flex-col sm:flex-row sm:items-end z-50 pointer-events-none"
     >
+      <div class="order-2 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto">
+        <control-panel></control-panel>
+      </div>
       <div
-        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end pointer-events-none"
+        class="order-1 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
-      </div>
-      <div>
-        <control-panel></control-panel>
       </div>
     </div>
 
@@ -266,6 +266,8 @@
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
     <immunity-timer></immunity-timer>
+    <in-game-header-ad></in-game-header-ad>
+    <spawn-video-ad></spawn-video-ad>
     <game-info-modal></game-info-modal>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
@@ -361,5 +363,12 @@
       data-cf-beacon='{"token": "03d93e6fefb349c28ee69b408fa25a13"}'
     ></script>
     <script type="module" src="/src/client/Main.ts"></script>
+    <footer>
+      <script
+        data-cfasync="false"
+        async
+        src="//cdn.intergient.com/1025558/75940/ramp.js"
+      ></script>
+    </footer>
   </body>
 </html>

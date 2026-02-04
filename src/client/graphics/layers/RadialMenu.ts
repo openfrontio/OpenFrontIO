@@ -907,9 +907,12 @@ export class RadialMenu implements Layer {
       .select(".center-button-hitbox")
       .style("cursor", enabled ? "pointer" : "not-allowed");
 
+    // Use default color for back button, otherwise use the current center button color
+    const buttonColor =
+      state === "back" ? this.defaultCenterButtonColor : this.centerButtonColor;
     centerButton
       .select(".center-button-visible")
-      .attr("fill", enabled ? this.centerButtonColor : "#999999");
+      .attr("fill", enabled ? buttonColor : "#999999");
 
     centerButton
       .select(".center-button-icon")
