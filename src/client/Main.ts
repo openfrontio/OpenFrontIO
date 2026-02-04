@@ -755,6 +755,26 @@ class Client {
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
     }
+
+    // Handle requeue parameter for ranked matchmaking
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("requeue")) {
+      // Remove the requeue parameter from URL
+      history.replaceState(null, "", "/");
+      // Open matchmaking modal after a short delay to ensure page is ready
+      setTimeout(() => {
+        // Try to open the matchmaking modal directly first
+        if (this.matchmakingModal) {
+          this.matchmakingModal.open();
+        } else {
+          // Fallback: simulate a click on the matchmaking button
+          const matchmakingButton = document.querySelector(
+            "matchmaking-button button",
+          ) as HTMLButtonElement;
+          matchmakingButton?.click();
+        }
+      }, 500);
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
