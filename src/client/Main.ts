@@ -222,6 +222,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: ((force?: boolean) => boolean) | null = null;
+  private joinAttemptId = 0;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -754,12 +755,23 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
+
+    // any previous in-progress join will see this and abort
+    const thisAttemptId = ++this.joinAttemptId;
+
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop(true);
       document.body.classList.remove("in-game");
     }
+
     const config = await getServerConfigFromClient();
+    // Check if this join was superseded by another
+    if (this.joinAttemptId !== thisAttemptId) {
+      console.log("Join attempt superseded, aborting");
+      return;
+    }
+
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
@@ -768,6 +780,16 @@ class Client {
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
     );
+    if (this.joinAttemptId !== thisAttemptId) {
+      console.log("Join attempt superseded, aborting");
+      return;
+    }
+
+    const turnstileToken = await this.getTurnstileToken(lobby);
+    if (this.joinAttemptId !== thisAttemptId) {
+      console.log("Join attempt superseded, aborting");
+      return;
+    }
 
     this.gameStop = joinLobby(
       this.eventBus,
@@ -783,7 +805,7 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
-        turnstileToken: await this.getTurnstileToken(lobby),
+        turnstileToken,
         playerName:
           this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
         clientID: lobby.clientID,
