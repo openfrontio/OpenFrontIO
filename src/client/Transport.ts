@@ -379,8 +379,32 @@ export class Transport {
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
       if (event.code === 1002) {
-        // TODO: make this a modal
-        alert(`connection refused: ${event.reason}`);
+        // Connection refused - typically auth/turnstile issues
+        if (event.reason.includes("Turnstile")) {
+          console.error(
+            "Turnstile verification failed. This can happen if you joined too quickly. Please try again.",
+          );
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: "Security verification expired. Please try again.",
+                color: "red",
+                duration: 5000,
+              },
+            }),
+          );
+        } else {
+          console.error(`Connection refused: ${event.reason}`);
+          window.dispatchEvent(
+            new CustomEvent("show-message", {
+              detail: {
+                message: `Connection refused: ${event.reason}`,
+                color: "red",
+                duration: 5000,
+              },
+            }),
+          );
+        }
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();

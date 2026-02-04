@@ -92,18 +92,26 @@ class TurnstileManager {
   }
 
   private async acquireToken(): Promise<TokenData | null> {
-    // If we have a valid cached token, return it
+    // If we have a valid cached token, consume it immediately
+    // (clear from cache so it can never be reused - tokens are single-use)
     if (this.currentToken && this.isTokenValid(this.currentToken)) {
+      const token = this.currentToken;
+      this.currentToken = null; // Immediately clear to prevent reuse
       console.log(
-        `TurnstileManager using cached valid token: ${this.currentToken.token.substring(0, 10)}...`,
+        `TurnstileManager consuming cached token: ${token.token.substring(0, 10)}...`,
       );
-      return this.currentToken;
+      return token;
     }
 
     // If a fetch is already in progress, wait for it
     if (this.state === "fetching" && this.pendingPromise) {
       console.log("TurnstileManager waiting for pending token request");
-      return this.pendingPromise;
+      const token = await this.pendingPromise;
+      // Clear if this is the current token (another waiter might have already cleared it)
+      if (token && this.currentToken === token) {
+        this.currentToken = null;
+      }
+      return token;
     }
 
     // Need to fetch a new token
