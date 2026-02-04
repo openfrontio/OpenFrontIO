@@ -280,7 +280,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <!-- Left: Gold & Troop bar -->
         <div class="flex flex-col gap-1 shrink-0 w-28">
           <div
-            class="flex items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-28"
+            class="flex items-center justify-center p-1 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-28 lg:gap-1"
             translate="no"
           >
             <img src=${goldCoinIcon} width="13" height="13" />
@@ -452,7 +452,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 lg:top-[10px] left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="fixed top-0 lg:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div

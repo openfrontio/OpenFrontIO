@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameMapType } from "../core/game/Game";
-import { GameID, GameInfo } from "../core/Schemas";
+import { GameID, PublicGameInfo, PublicGames } from "../core/Schemas";
 import { PublicLobbySocket } from "./LobbySocket";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
@@ -13,16 +13,19 @@ import {
 } from "./Utils";
 
 export interface ShowPublicLobbyModalEvent {
-  lobby: GameInfo;
+  lobby: PublicGameInfo;
 }
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
-  @state() private lobbies: GameInfo[] = [];
+  @state() private publicGames: PublicGames | null = null;
+  @state() public isLobbyHighlighted: boolean = false;
   @state() private mapImages: Map<GameID, string> = new Map();
+
   private lobbyIDToStart = new Map<GameID, number>();
-  private lobbySocket = new PublicLobbySocket((lobbies) =>
-    this.handleLobbiesUpdate(lobbies),
+  private serverTimeOffset = 0;
+  private lobbySocket = new PublicLobbySocket((data) =>
+    this.handleLobbiesUpdate(data),
   );
 
   createRenderRoot() {
@@ -39,12 +42,18 @@ export class PublicLobby extends LitElement {
     this.lobbySocket.stop();
   }
 
-  private handleLobbiesUpdate(lobbies: GameInfo[]) {
-    this.lobbies = lobbies;
-    this.lobbies.forEach((l) => {
+  private handleLobbiesUpdate(publicGames: PublicGames) {
+    this.publicGames = publicGames;
+
+    // Calculate offset between server time and client time
+    if (this.publicGames) {
+      this.serverTimeOffset = this.publicGames.serverTime - Date.now();
+    }
+    this.publicGames.games.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
-        const msUntilStart = l.msUntilStart ?? 0;
-        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
+        // Convert server's startsAt to client time by subtracting offset
+        const startsAt = l.startsAt ?? Date.now();
+        this.lobbyIDToStart.set(l.gameID, startsAt - this.serverTimeOffset);
       }
 
       if (l.gameConfig && !this.mapImages.has(l.gameID)) {
@@ -66,9 +75,9 @@ export class PublicLobby extends LitElement {
   }
 
   render() {
-    if (this.lobbies.length === 0) return html``;
+    if (!this.publicGames) return html``;
 
-    const lobby = this.lobbies[0];
+    const lobby = this.publicGames.games[0];
     if (!lobby?.gameConfig) return html``;
 
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
@@ -200,7 +209,7 @@ export class PublicLobby extends LitElement {
     this.lobbySocket.stop();
   }
 
-  private lobbyClicked(lobby: GameInfo) {
+  private lobbyClicked(lobby: PublicGameInfo) {
     // Validate username before opening the modal
     const usernameInput = document.querySelector("username-input") as any;
     if (
