@@ -71,6 +71,12 @@ export class InGameHeaderAd extends LitElement implements Layer {
   private hideHeaderAd(): void {
     this.shouldShow = false;
     this.adLoaded = false;
+    try {
+      window.ramp.destroyUnits(HEADER_AD_TYPE);
+      console.log("successfully destroyed in game header ad");
+    } catch (e) {
+      console.error("error destroying in game header ad", e);
+    }
     this.requestUpdate();
   }
 

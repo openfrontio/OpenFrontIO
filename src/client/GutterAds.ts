@@ -50,6 +50,16 @@ export class GutterAds extends LitElement {
     });
   }
 
+  public close(): void {
+    try {
+      window.ramp.destroyUnits(this.leftAdType);
+      window.ramp.destroyUnits(this.rightAdType);
+      console.log("successfully destroyed gutter ads");
+    } catch (e) {
+      console.error("error destroying gutter ads", e);
+    }
+  }
+
   private loadAds(): void {
     console.log("loading ramp ads");
     // Ensure the container elements exist before loading ads
