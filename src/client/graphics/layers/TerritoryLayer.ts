@@ -33,6 +33,7 @@ export class TerritoryLayer implements Layer {
   }
 
   private attachedTerritoryCanvas: HTMLCanvasElement | null = null;
+  private attachedMainCanvas: HTMLCanvasElement | null = null;
 
   private overlayWrapper: HTMLElement | null = null;
   private overlayResizeObserver: ResizeObserver | null = null;
@@ -55,6 +56,10 @@ export class TerritoryLayer implements Layer {
 
   private lastPaletteSyncMs = 0;
   private lastUserSettingsSyncMs = 0;
+
+  private lastViewWidth = 0;
+  private lastViewHeight = 0;
+  private viewTransformSynced = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
   private hoveredOwnerSmallId: number | null = null;
@@ -138,6 +143,11 @@ export class TerritoryLayer implements Layer {
     }
 
     this.territoryRenderer = renderer;
+    this.attachedTerritoryCanvas = null;
+    this.attachedMainCanvas = null;
+    this.lastViewWidth = 0;
+    this.lastViewHeight = 0;
+    this.viewTransformSynced = false;
     const patternsEnabled = this.userSettings.territoryPatterns();
     this.lastPatternsEnabled = patternsEnabled;
     this.territoryRenderer.setPatternsEnabled(patternsEnabled);
@@ -175,20 +185,32 @@ export class TerritoryLayer implements Layer {
     this.syncUserSettingsMaybe(now);
     this.syncPaletteMaybe(now);
 
-    this.ensureTerritoryCanvasAttached(context.canvas);
+    if (
+      this.attachedMainCanvas !== context.canvas ||
+      !this.attachedTerritoryCanvas ||
+      !this.attachedTerritoryCanvas.isConnected
+    ) {
+      this.attachedMainCanvas = context.canvas;
+      this.ensureTerritoryCanvasAttached(context.canvas);
+    }
     this.updateHoverHighlight();
 
     const renderTerritoryStart = FrameProfiler.start();
-    this.territoryRenderer.setViewSize(
-      context.canvas.width,
-      context.canvas.height,
-    );
-    const viewOffset = this.transformHandler.viewOffset();
-    this.territoryRenderer.setViewTransform(
-      this.transformHandler.scale,
-      viewOffset.x,
-      viewOffset.y,
-    );
+    const w = context.canvas.width;
+    const h = context.canvas.height;
+    if (w !== this.lastViewWidth || h !== this.lastViewHeight) {
+      this.lastViewWidth = w;
+      this.lastViewHeight = h;
+      this.territoryRenderer.setViewSize(w, h);
+    }
+    if (!this.viewTransformSynced || this.transformHandler.hasChanged()) {
+      this.viewTransformSynced = true;
+      this.territoryRenderer.setViewTransform(
+        this.transformHandler.scale,
+        this.transformHandler.getOffsetX(),
+        this.transformHandler.getOffsetY(),
+      );
+    }
     this.territoryRenderer.render();
     FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
   }
@@ -209,6 +231,7 @@ export class TerritoryLayer implements Layer {
     if (this.attachedTerritoryCanvas !== canvas) {
       this.attachedTerritoryCanvas?.remove();
       this.attachedTerritoryCanvas = canvas;
+      this.attachedMainCanvas = mainCanvas;
 
       // Configure overlay canvas styles once. Avoid per-frame style reads/writes.
       canvas.style.pointerEvents = "none";
