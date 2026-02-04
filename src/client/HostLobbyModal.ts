@@ -655,6 +655,7 @@ export class HostLobbyModal extends BaseModal {
             detail: {
               gameID: this.lobbyId,
               clientID: this.lobbyCreatorClientID,
+              source: "host",
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,

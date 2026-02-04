@@ -336,6 +336,7 @@ export class JoinLobbyModal extends BaseModal {
         detail: {
           gameID: lobbyId,
           clientID: this.currentClientID,
+          source: "public",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -776,6 +777,7 @@ export class JoinLobbyModal extends BaseModal {
           detail: {
             gameID: lobbyId,
             clientID: this.currentClientID,
+            source: "private",
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -834,6 +836,7 @@ export class JoinLobbyModal extends BaseModal {
           gameID: lobbyId,
           gameRecord: parsed.data,
           clientID: this.currentClientID,
+          source: "private",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,

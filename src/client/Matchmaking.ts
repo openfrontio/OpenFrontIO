@@ -231,6 +231,7 @@ export class MatchmakingModal extends BaseModal {
         detail: {
           gameID: this.gameID,
           clientID: getClientIDForGame(this.gameID),
+          source: "matchmaking",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
