@@ -27,6 +27,7 @@ import {
 import { getApiBase } from "./Api";
 import { getClientIDForGame } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
