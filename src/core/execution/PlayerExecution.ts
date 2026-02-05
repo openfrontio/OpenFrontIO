@@ -211,11 +211,12 @@ export class PlayerExecution implements Execution {
         const owner = this.mg.owner(n);
         if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
           hasEnemy = true;
-          const cell = this.mg.cell(n);
-          minX = Math.min(minX, cell.x);
-          minY = Math.min(minY, cell.y);
-          maxX = Math.max(maxX, cell.x);
-          maxY = Math.max(maxY, cell.y);
+          const x = this.mg.x(n);
+          const y = this.mg.y(n);
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
         }
       });
     }
