@@ -761,19 +761,19 @@ class Client {
     if (searchParams.has("requeue")) {
       // Remove the requeue parameter from URL
       history.replaceState(null, "", "/");
-      // Open matchmaking modal after a short delay to ensure page is ready
-      setTimeout(() => {
-        // Try to open the matchmaking modal directly first
-        if (this.matchmakingModal) {
-          this.matchmakingModal.open();
+      // Wait for matchmaking button to be defined, then click it
+      customElements.whenDefined("matchmaking-button").then(() => {
+        const matchmakingButton = document.querySelector(
+          "matchmaking-button button",
+        ) as HTMLButtonElement | null;
+        if (matchmakingButton) {
+          matchmakingButton.click();
         } else {
-          // Fallback: simulate a click on the matchmaking button
-          const matchmakingButton = document.querySelector(
-            "matchmaking-button button",
-          ) as HTMLButtonElement;
-          matchmakingButton?.click();
+          console.warn(
+            "Requeue requested, but matchmaking button not found in DOM.",
+          );
         }
-      }, 500);
+      });
     }
   }
 

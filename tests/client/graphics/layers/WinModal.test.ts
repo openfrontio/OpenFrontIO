@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RankedType } from "../../../../src/core/game/Game";
 
 vi.mock("../../../../src/client/Utils", () => ({
@@ -30,6 +30,7 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: {
     happytime: vi.fn(),
     requestAd: vi.fn(),
+    gameplayStop: vi.fn(),
   },
 }));
 
@@ -63,8 +64,7 @@ describe("WinModal Requeue", () => {
       const gameConfig = {
         rankedType: RankedType.OneVOne,
       };
-      const isRankedGame =
-        gameConfig.rankedType === RankedType.OneVOne;
+      const isRankedGame = gameConfig.rankedType === RankedType.OneVOne;
       expect(isRankedGame).toBe(true);
     });
 
@@ -72,8 +72,7 @@ describe("WinModal Requeue", () => {
       const gameConfig = {
         rankedType: undefined,
       };
-      const isRankedGame =
-        gameConfig.rankedType === RankedType.OneVOne;
+      const isRankedGame = gameConfig.rankedType === RankedType.OneVOne;
       expect(isRankedGame).toBe(false);
     });
   });
