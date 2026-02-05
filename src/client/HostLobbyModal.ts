@@ -1121,7 +1121,7 @@ export class HostLobbyModal extends BaseModal {
 async function createLobby(gameID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   // Send JWT token for creator identification - server extracts persistentID from it
-  // Never expose persistentID directly to the network
+  // persistentID should never be exposed to other clients
   const token = await getPlayToken();
   try {
     const response = await fetch(
