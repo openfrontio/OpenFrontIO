@@ -29,12 +29,13 @@ import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 export class NationExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private emojiBehavior: NationEmojiBehavior | null = null;
-  private mirvBehavior: NationMIRVBehavior | null = null;
-  private attackBehavior: AiAttackBehavior | null = null;
-  private allianceBehavior: NationAllianceBehavior | null = null;
-  private warshipBehavior: NationWarshipBehavior | null = null;
-  private nukeBehavior: NationNukeBehavior | null = null;
+  private behaviorsInitialized = false;
+  private emojiBehavior!: NationEmojiBehavior;
+  private mirvBehavior!: NationMIRVBehavior;
+  private attackBehavior!: AiAttackBehavior;
+  private allianceBehavior!: NationAllianceBehavior;
+  private warshipBehavior!: NationWarshipBehavior;
+  private nukeBehavior!: NationNukeBehavior;
   private mg: Game;
   private player: Player | null = null;
 
@@ -89,7 +90,7 @@ export class NationExecution implements Execution {
   tick(ticks: number) {
     // Ship tracking
     if (
-      this.warshipBehavior !== null &&
+      this.behaviorsInitialized &&
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy
@@ -133,56 +134,8 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (
-      this.emojiBehavior === null ||
-      this.mirvBehavior === null ||
-      this.attackBehavior === null ||
-      this.allianceBehavior === null ||
-      this.warshipBehavior === null ||
-      this.nukeBehavior === null
-    ) {
-      this.emojiBehavior = new NationEmojiBehavior(
-        this.random,
-        this.mg,
-        this.player,
-      );
-      this.mirvBehavior = new NationMIRVBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.allianceBehavior = new NationAllianceBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.warshipBehavior = new NationWarshipBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.attackBehavior = new AiAttackBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.triggerRatio,
-        this.reserveRatio,
-        this.expandRatio,
-        this.allianceBehavior,
-        this.emojiBehavior,
-      );
-      this.nukeBehavior = new NationNukeBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.attackBehavior,
-        this.emojiBehavior,
-      );
-
-      // Send an attack on the first tick
+    if (!this.behaviorsInitialized) {
+      this.initializeBehaviors();
       this.attackBehavior.forceSendAttack(this.mg.terraNullius());
       return;
     }
@@ -197,6 +150,52 @@ export class NationExecution implements Execution {
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();
+  }
+
+  private initializeBehaviors(): void {
+    if (this.player === null) throw new Error("Player not initialized");
+
+    this.emojiBehavior = new NationEmojiBehavior(
+      this.random,
+      this.mg,
+      this.player,
+    );
+    this.mirvBehavior = new NationMIRVBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.allianceBehavior = new NationAllianceBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.warshipBehavior = new NationWarshipBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.attackBehavior = new AiAttackBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.triggerRatio,
+      this.reserveRatio,
+      this.expandRatio,
+      this.allianceBehavior,
+      this.emojiBehavior,
+    );
+    this.nukeBehavior = new NationNukeBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.attackBehavior,
+      this.emojiBehavior,
+    );
+    this.behaviorsInitialized = true;
   }
 
   private randomSpawnLand(): TileRef | null {
@@ -250,7 +249,6 @@ export class NationExecution implements Execution {
   }
 
   private handleUnits() {
-    if (this.warshipBehavior === null) throw new Error("not initialized");
     const hasCoastalTiles = this.hasCoastalTiles();
     const isTeamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
     return (
