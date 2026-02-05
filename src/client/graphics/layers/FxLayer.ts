@@ -260,6 +260,7 @@ export class FxLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     if (this.game.config().userSettings()?.fxLayer()) {
+      const nowMs = performance.now();
       const hasFx = this.allFx.length > 0;
       if (!hasFx) {
         if (this.hasBufferedFrame) {
@@ -268,11 +269,15 @@ export class FxLayer implements Layer {
           this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.hasBufferedFrame = false;
         }
+        this.lastRefreshMs = nowMs;
         return;
       }
 
-      const nowMs = performance.now();
-      if (nowMs > this.lastRefreshMs + this.refreshRate) {
+      // Avoid a huge first delta after the layer has been idle for a while.
+      if (!this.hasBufferedFrame) {
+        this.lastRefreshMs = nowMs;
+        this.renderAllFx(0);
+      } else if (nowMs > this.lastRefreshMs + this.refreshRate) {
         const delta = nowMs - this.lastRefreshMs;
         this.renderAllFx(delta);
         this.lastRefreshMs = nowMs;
