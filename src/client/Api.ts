@@ -247,10 +247,7 @@ export async function fetchPlayerLeaderboard(
     const parsed = RankedLeaderboardResponseSchema.safeParse(json);
     if (!parsed.success) {
       // Handle "Page must be between X and Y" error as end of list
-      if (
-        res.status === 200 &&
-        json?.message?.includes("Page must be between")
-      ) {
+      if (json?.message?.includes?.("Page must be between")) {
         return "reached_limit";
       }
       console.warn(
