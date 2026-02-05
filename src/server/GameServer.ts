@@ -65,8 +65,6 @@ export class GameServer {
 
   private _hasPrestarted = false;
 
-  private kickedClients: Set<ClientID> = new Set();
-  // Track kicked persistentIDs to prevent rejoining with new clientID
   private kickedPersistentIds: Set<string> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
@@ -157,11 +155,18 @@ export class GameServer {
     }
   }
 
+  private isKicked(clientID: ClientID): boolean {
+    const persistentID = this.allClients.get(clientID)?.persistentID;
+    return (
+      persistentID !== undefined && this.kickedPersistentIds.has(persistentID)
+    );
+  }
+
   // Get existing clientID for this persistentID, or null if new player
   public getClientIdForPersistentId(persistentID: string): ClientID | null {
     const clientID = this.persistentIdToClientId.get(persistentID);
     if (!clientID) return null;
-    if (this.kickedClients.has(clientID)) return null;
+    if (this.kickedPersistentIds.has(persistentID)) return null;
     return clientID;
   }
 
@@ -193,7 +198,7 @@ export class GameServer {
 
   public joinClient(client: Client) {
     this.websockets.add(client.ws);
-    if (this.kickedClients.has(client.clientID)) {
+    if (this.isKicked(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
       });
@@ -338,7 +343,7 @@ export class GameServer {
       return;
     }
 
-    if (this.kickedClients.has(clientID)) {
+    if (this.isKicked(clientID)) {
       this.log.warn("cannot rejoin client, client has been kicked", {
         clientID,
       });
@@ -946,7 +951,7 @@ export class GameServer {
     clientID: ClientID,
     reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
   ): void {
-    if (this.kickedClients.has(clientID)) {
+    if (this.isKicked(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
         reasonKey,
@@ -954,7 +959,8 @@ export class GameServer {
       return;
     }
 
-    if (!this.allClients.has(clientID)) {
+    const clientToKick = this.allClients.get(clientID);
+    if (!clientToKick) {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
         reasonKey,
@@ -962,13 +968,7 @@ export class GameServer {
       return;
     }
 
-    this.kickedClients.add(clientID);
-
-    // Also track the persistentID to prevent rejoining with a new clientID
-    const clientToKick = this.allClients.get(clientID);
-    if (clientToKick) {
-      this.kickedPersistentIds.add(clientToKick.persistentID);
-    }
+    this.kickedPersistentIds.add(clientToKick.persistentID);
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {
@@ -1171,7 +1171,7 @@ export class GameServer {
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
     if (
       this.outOfSyncClients.has(client.clientID) ||
-      this.kickedClients.has(client.clientID) ||
+      this.isKicked(client.clientID) ||
       this.winner !== null ||
       client.reportedWinner !== null
     ) {
