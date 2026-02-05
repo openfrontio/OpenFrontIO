@@ -204,28 +204,20 @@ export class Cluster {
     player: Player,
     random: PseudoRandom,
   ): TrainStation | null {
-    let eligibleCount = 0;
+    let selected: TrainStation | null = null;
+    let eligibleSeen = 0;
+
     for (const station of this.tradeStations) {
-      if (station.tradeAvailable(player)) {
-        eligibleCount++;
+      if (!station.tradeAvailable(player)) continue;
+      eligibleSeen++;
+
+      // Reservoir sampling: keep each eligible station with probability 1/eligibleSeen.
+      if (random.nextInt(0, eligibleSeen) === 0) {
+        selected = station;
       }
-    }
-    if (eligibleCount === 0) {
-      return null;
     }
 
-    const targetIndex = random.nextInt(0, eligibleCount);
-    let i = 0;
-    for (const station of this.tradeStations) {
-      if (station.tradeAvailable(player)) {
-        if (i === targetIndex) {
-          return station;
-        }
-        i++;
-      }
-    }
-    // Should be unreachable since eligibleCount > 0 and the second pass mirrors the first.
-    return null;
+    return selected;
   }
 
   availableForTrade(player: Player): Set<TrainStation> {
