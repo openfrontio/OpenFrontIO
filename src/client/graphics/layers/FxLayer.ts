@@ -259,33 +259,30 @@ export class FxLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.game.config().userSettings()?.fxLayer()) {
-      const nowMs = performance.now();
-      const hasFx = this.allFx.length > 0;
-      if (!hasFx) {
-        if (this.hasBufferedFrame) {
-          // Clear stale pixels once when fx ends; the main renderer clears its
-          // overlay each frame, so we can skip drawing entirely when empty.
-          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-          this.hasBufferedFrame = false;
-        }
-        this.lastRefreshMs = nowMs;
-        return;
-      }
+    const nowMs = performance.now();
 
-      // Avoid a huge first delta after the layer has been idle for a while.
-      if (!this.hasBufferedFrame) {
-        this.lastRefreshMs = nowMs;
-        this.renderAllFx(0);
-      } else if (nowMs > this.lastRefreshMs + this.refreshRate) {
-        const delta = nowMs - this.lastRefreshMs;
-        this.renderAllFx(delta);
-        this.lastRefreshMs = nowMs;
+    const hasFx = this.allFx.length > 0;
+    if (!this.game.config().userSettings()?.fxLayer() || !hasFx) {
+      if (this.hasBufferedFrame) {
+        // Clear stale pixels once when fx ends/disabled so re-enabling doesn't
+        // flash old frames.
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.hasBufferedFrame = false;
       }
-
-      this.hasBufferedFrame = true;
-      this.drawVisibleFx(context);
+      this.lastRefreshMs = nowMs;
+      return;
     }
+
+    const needsRefresh =
+      !this.hasBufferedFrame || nowMs > this.lastRefreshMs + this.refreshRate;
+    if (needsRefresh) {
+      const delta = this.hasBufferedFrame ? nowMs - this.lastRefreshMs : 0;
+      this.renderAllFx(delta);
+      this.lastRefreshMs = nowMs;
+      this.hasBufferedFrame = true;
+    }
+
+    this.drawVisibleFx(context);
   }
 
   private drawVisibleFx(context: CanvasRenderingContext2D) {
