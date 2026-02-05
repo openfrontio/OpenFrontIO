@@ -18,13 +18,14 @@ export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
-  private lastRefresh: number = 0;
+  private lastRefreshMs: number = 0;
   private refreshRate: number = 10;
   private theme: Theme;
   private animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private hasBufferedFrame = false;
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -254,28 +255,125 @@ export class FxLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    const now = Date.now();
     if (this.game.config().userSettings()?.fxLayer()) {
-      if (now > this.lastRefresh + this.refreshRate) {
-        const delta = now - this.lastRefresh;
-        this.renderAllFx(context, delta);
-        this.lastRefresh = now;
+      const hasFx = this.allFx.length > 0;
+      if (!hasFx) {
+        if (this.hasBufferedFrame) {
+          // Clear stale pixels once when fx ends; the main renderer clears its
+          // overlay each frame, so we can skip drawing entirely when empty.
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.hasBufferedFrame = false;
+        }
+        return;
       }
-      context.drawImage(
-        this.canvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
+
+      const nowMs = performance.now();
+      if (nowMs > this.lastRefreshMs + this.refreshRate) {
+        const delta = nowMs - this.lastRefreshMs;
+        this.renderAllFx(delta);
+        this.lastRefreshMs = nowMs;
+      }
+
+      this.hasBufferedFrame = true;
+      this.drawVisibleFx(context);
     }
   }
 
-  renderAllFx(context: CanvasRenderingContext2D, delta: number) {
-    if (this.allFx.length > 0) {
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.renderContextFx(delta);
+  private drawVisibleFx(context: CanvasRenderingContext2D) {
+    const mapW = this.game.width();
+    const mapH = this.game.height();
+
+    const vis = this.visibleMapRect(context, mapW, mapH);
+    if (!vis) {
+      context.drawImage(this.canvas, -mapW / 2, -mapH / 2, mapW, mapH);
+      return;
     }
+
+    context.drawImage(
+      this.canvas,
+      vis.srcX,
+      vis.srcY,
+      vis.srcW,
+      vis.srcH,
+      vis.dstX,
+      vis.dstY,
+      vis.dstW,
+      vis.dstH,
+    );
+  }
+
+  private visibleMapRect(
+    context: CanvasRenderingContext2D,
+    mapW: number,
+    mapH: number,
+  ): {
+    srcX: number;
+    srcY: number;
+    srcW: number;
+    srcH: number;
+    dstX: number;
+    dstY: number;
+    dstW: number;
+    dstH: number;
+  } | null {
+    const getTransform = (context as any).getTransform as
+      | (() => DOMMatrix)
+      | undefined;
+    if (!getTransform) {
+      return null;
+    }
+
+    let inv: DOMMatrix;
+    try {
+      inv = getTransform.call(context).inverse();
+    } catch {
+      return null;
+    }
+
+    const toWorld = (sx: number, sy: number): { x: number; y: number } => ({
+      x: inv.a * sx + inv.c * sy + inv.e,
+      y: inv.b * sx + inv.d * sy + inv.f,
+    });
+
+    const cw = context.canvas.width;
+    const ch = context.canvas.height;
+    const p0 = toWorld(0, 0);
+    const p1 = toWorld(cw, 0);
+    const p2 = toWorld(0, ch);
+    const p3 = toWorld(cw, ch);
+
+    const minWorldX = Math.min(p0.x, p1.x, p2.x, p3.x);
+    const maxWorldX = Math.max(p0.x, p1.x, p2.x, p3.x);
+    const minWorldY = Math.min(p0.y, p1.y, p2.y, p3.y);
+    const maxWorldY = Math.max(p0.y, p1.y, p2.y, p3.y);
+
+    const pad = 2;
+    const left = Math.max(0, Math.floor(minWorldX + mapW / 2 - pad));
+    const top = Math.max(0, Math.floor(minWorldY + mapH / 2 - pad));
+    const right = Math.min(mapW, Math.ceil(maxWorldX + mapW / 2 + pad));
+    const bottom = Math.min(mapH, Math.ceil(maxWorldY + mapH / 2 + pad));
+
+    const width = Math.max(0, right - left);
+    const height = Math.max(0, bottom - top);
+    if (width === 0 || height === 0) {
+      return null;
+    }
+
+    return {
+      srcX: left,
+      srcY: top,
+      srcW: width,
+      srcH: height,
+      dstX: -mapW / 2 + left,
+      dstY: -mapH / 2 + top,
+      dstW: width,
+      dstH: height,
+    };
+  }
+
+  private renderAllFx(delta: number) {
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.renderContextFx(delta);
   }
 
   renderContextFx(duration: number) {
