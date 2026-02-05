@@ -34,10 +34,10 @@ export class GameManager {
 
   // Check if this is a reconnecting client (exists with matching persistentID)
   // Used to skip authorization on page refresh
-  isReconnectingClient(gameID: GameID, persistentID: string): boolean {
+  hasPreviousConnection(gameID: GameID, persistentID: string): boolean {
     const game = this.games.get(gameID);
     if (!game) return false;
-    return game.isReconnectingClient(persistentID);
+    return game.hasPreviousConnection(persistentID);
   }
 
   // Get existing clientID for this persistentID (no side effects)

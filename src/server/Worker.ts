@@ -343,7 +343,7 @@ export async function startWorker() {
 
         // Check if this is a reconnecting client (e.g., page refresh)
         // If so, skip all authorization - they're already authenticated
-        if (gm.isReconnectingClient(clientMsg.gameID, persistentId)) {
+        if (gm.hasPreviousConnection(clientMsg.gameID, persistentId)) {
           const existingClientID = gm.getClientIdForPersistentId(
             clientMsg.gameID,
             persistentId,

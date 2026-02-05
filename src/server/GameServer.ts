@@ -171,7 +171,7 @@ export class GameServer {
   }
 
   // Check if this persistentID has an existing client (valid reconnection)
-  public isReconnectingClient(persistentID: string): boolean {
+  public hasPreviousConnection(persistentID: string): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
     const client = this.allClients.get(clientID);
