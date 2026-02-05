@@ -1,6 +1,7 @@
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
 import { AllPlayers, Cell, nukeTypes, PlayerID } from "../../../core/game/Game";
+import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { AlternateViewEvent } from "../../InputHandler";
 import { renderTroops } from "../../Utils";
@@ -52,7 +53,7 @@ type PlayerIconsSharedState = {
 };
 
 type PlayerRenderCache = {
-  lastUpdatedAtMs: number;
+  lastTick: number;
   lastFont: string;
   lastName: string;
   lastTroops: bigint | number;
@@ -70,8 +71,22 @@ export class NameLayer implements Layer {
   private theme: Theme = this.game.config().theme();
   private isVisible: boolean = true;
   private readonly sharedStateRefreshMs = 200;
-  private readonly playerCacheRefreshMs = 200;
   private readonly customFlagRefreshMs = 120;
+  private readonly nukeTypeSet = new Set(nukeTypes);
+
+  private lastTickDerivedAt = -1;
+  private tickFirstPlaceId: PlayerID | null = null;
+  private tickTransitiveTargets: ReadonlySet<PlayerView> | null = null;
+
+  private nukeStateInitialized = false;
+  private nukeUnitState = new Map<
+    number,
+    { ownerId: PlayerID; targetingMe: boolean }
+  >();
+  private nukingCounts = new Map<PlayerID, number>();
+  private nukesTargetingMeCounts = new Map<PlayerID, number>();
+  private nukingPlayers = new Set<PlayerID>();
+  private nukesTargetingMe = new Set<PlayerID>();
 
   constructor(
     private game: GameView,
@@ -102,6 +117,7 @@ export class NameLayer implements Layer {
     }
 
     const nowMs = performance.now();
+    this.processTickDerivedState();
     const sharedState = this.getSharedState(nowMs);
     this.renderPlayers(mainContex, sharedState, nowMs);
   }
@@ -111,59 +127,212 @@ export class NameLayer implements Layer {
       this.sharedState !== null &&
       nowMs - this.lastSharedStateUpdatedAtMs < this.sharedStateRefreshMs
     ) {
+      this.sharedState.firstPlaceId = this.tickFirstPlaceId;
+      this.sharedState.transitiveTargets = this.tickTransitiveTargets;
+      this.sharedState.nukingPlayers = this.nukingPlayers;
+      this.sharedState.nukesTargetingMe = this.nukesTargetingMe;
       return this.sharedState;
     }
 
     this.lastSharedStateUpdatedAtMs = nowMs;
 
-    const myPlayer = this.game.myPlayer();
     const userSettings = this.game.config().userSettings();
     const isDarkMode = userSettings?.darkMode() ?? false;
     const emojisEnabled = userSettings?.emojis() ?? false;
 
-    let firstPlace: PlayerView | null = null;
+    this.sharedState = {
+      firstPlaceId: this.tickFirstPlaceId,
+      transitiveTargets: this.tickTransitiveTargets,
+      nukingPlayers: this.nukingPlayers,
+      nukesTargetingMe: this.nukesTargetingMe,
+      isDarkMode,
+      emojisEnabled,
+    };
+
+    return this.sharedState;
+  }
+
+  private processTickDerivedState(): void {
+    const tick = this.game.ticks();
+    if (tick === this.lastTickDerivedAt) return;
+
+    if (tick < this.lastTickDerivedAt) {
+      this.resetTickDerivedState();
+    }
+
+    this.lastTickDerivedAt = tick;
+
+    const myPlayer = this.game.myPlayer();
+    this.tickTransitiveTargets =
+      myPlayer !== null ? new Set(myPlayer.transitiveTargets()) : null;
+
+    let firstPlaceId: PlayerID | null = null;
     let firstTiles = -Infinity;
     for (const player of this.game.playerViews()) {
       if (!player.isAlive()) continue;
       const tiles = player.numTilesOwned();
       if (tiles > firstTiles) {
         firstTiles = tiles;
-        firstPlace = player;
+        firstPlaceId = player.id();
       }
     }
 
-    const nukingPlayers = new Set<PlayerID>();
-    const nukesTargetingMe = new Set<PlayerID>();
+    this.tickFirstPlaceId = firstPlaceId;
+    this.ensureNukeStateInitialized();
+    this.applyNukeUnitUpdates();
+  }
+
+  private resetTickDerivedState(): void {
+    this.tickFirstPlaceId = null;
+    this.tickTransitiveTargets = null;
+    this.nukeStateInitialized = false;
+    this.nukeUnitState.clear();
+    this.nukingCounts.clear();
+    this.nukesTargetingMeCounts.clear();
+    this.nukingPlayers.clear();
+    this.nukesTargetingMe.clear();
+  }
+
+  private ensureNukeStateInitialized(): void {
+    if (this.nukeStateInitialized) return;
+    this.nukeStateInitialized = true;
+
+    const myPlayer = this.game.myPlayer();
     for (const unit of this.game.units(...nukeTypes)) {
       if (!unit.isActive()) continue;
       const owner = unit.owner();
       if (myPlayer && owner.id() === myPlayer.id()) continue;
-      nukingPlayers.add(owner.id());
 
+      let targetingMe = false;
       if (myPlayer) {
-        const detonationDst = unit.targetTile();
-        if (detonationDst) {
-          const targetId = this.game.owner(detonationDst).id();
-          if (targetId === myPlayer.id()) {
-            nukesTargetingMe.add(owner.id());
+        const target = unit.targetTile();
+        if (target !== undefined) {
+          const targetOwner = this.game.owner(target);
+          if (
+            targetOwner instanceof PlayerView &&
+            targetOwner.id() === myPlayer.id()
+          ) {
+            targetingMe = true;
           }
         }
       }
+
+      this.upsertNukeUnit(unit.id(), owner.id(), targetingMe);
+    }
+  }
+  private applyNukeUnitUpdates(): void {
+    const updates = this.game.updatesSinceLastTick();
+    if (updates === null) return;
+
+    const unitUpdates = updates[GameUpdateType.Unit] as
+      | UnitUpdate[]
+      | undefined;
+    if (!unitUpdates || unitUpdates.length === 0) return;
+
+    const myPlayer = this.game.myPlayer();
+    const myPlayerId = myPlayer?.id() ?? null;
+
+    for (const update of unitUpdates) {
+      if (!this.nukeTypeSet.has(update.unitType)) continue;
+
+      const ownerEntity = this.game.playerBySmallID(update.ownerID);
+      if (!(ownerEntity instanceof PlayerView)) {
+        this.removeNukeUnit(update.id);
+        continue;
+      }
+
+      const ownerId = ownerEntity.id();
+      const isOwnNuke = myPlayerId !== null && ownerId === myPlayerId;
+      const isActive = update.isActive && !isOwnNuke;
+
+      if (!isActive) {
+        this.removeNukeUnit(update.id);
+        continue;
+      }
+
+      let targetingMe = false;
+      if (myPlayer && update.targetTile !== undefined) {
+        const targetOwner = this.game.owner(update.targetTile);
+        if (
+          targetOwner instanceof PlayerView &&
+          targetOwner.id() === myPlayerId
+        ) {
+          targetingMe = true;
+        }
+      }
+
+      this.upsertNukeUnit(update.id, ownerId, targetingMe);
+    }
+  }
+
+  private upsertNukeUnit(
+    unitId: number,
+    ownerId: PlayerID,
+    targetingMe: boolean,
+  ): void {
+    const prev = this.nukeUnitState.get(unitId);
+    if (prev) {
+      if (prev.ownerId === ownerId && prev.targetingMe === targetingMe) {
+        return;
+      }
+      this.decCount(this.nukingCounts, this.nukingPlayers, prev.ownerId);
+      if (prev.targetingMe) {
+        this.decCount(
+          this.nukesTargetingMeCounts,
+          this.nukesTargetingMe,
+          prev.ownerId,
+        );
+      }
     }
 
-    const transitiveTargets =
-      myPlayer !== null ? new Set(myPlayer.transitiveTargets()) : null;
+    this.nukeUnitState.set(unitId, { ownerId, targetingMe });
+    this.incCount(this.nukingCounts, this.nukingPlayers, ownerId);
+    if (targetingMe) {
+      this.incCount(
+        this.nukesTargetingMeCounts,
+        this.nukesTargetingMe,
+        ownerId,
+      );
+    }
+  }
 
-    this.sharedState = {
-      firstPlaceId: firstPlace?.id() ?? null,
-      transitiveTargets,
-      nukingPlayers,
-      nukesTargetingMe,
-      isDarkMode,
-      emojisEnabled,
-    };
+  private removeNukeUnit(unitId: number): void {
+    const prev = this.nukeUnitState.get(unitId);
+    if (!prev) return;
+    this.nukeUnitState.delete(unitId);
+    this.decCount(this.nukingCounts, this.nukingPlayers, prev.ownerId);
+    if (prev.targetingMe) {
+      this.decCount(
+        this.nukesTargetingMeCounts,
+        this.nukesTargetingMe,
+        prev.ownerId,
+      );
+    }
+  }
 
-    return this.sharedState;
+  private incCount(
+    map: Map<PlayerID, number>,
+    set: Set<PlayerID>,
+    id: PlayerID,
+  ): void {
+    const next = (map.get(id) ?? 0) + 1;
+    map.set(id, next);
+    if (next === 1) set.add(id);
+  }
+
+  private decCount(
+    map: Map<PlayerID, number>,
+    set: Set<PlayerID>,
+    id: PlayerID,
+  ): void {
+    const prev = map.get(id) ?? 0;
+    const next = prev - 1;
+    if (next <= 0) {
+      map.delete(id);
+      set.delete(id);
+      return;
+    }
+    map.set(id, next);
   }
 
   private renderPlayers(
@@ -173,6 +342,7 @@ export class NameLayer implements Layer {
   ): void {
     const fontFamily = this.theme.font();
     const scale = this.transformHandler.scale;
+    const tick = this.game.ticks();
 
     for (const player of this.game.playerViews()) {
       if (!player.isAlive()) {
@@ -218,7 +388,7 @@ export class NameLayer implements Layer {
       ctx.textBaseline = "middle";
       ctx.textAlign = "left";
 
-      const cache = this.getPlayerCache(player, ctx, nowMs);
+      const cache = this.getPlayerCache(player, ctx, tick);
 
       const iconsY = Math.round(y - fontPx * 1.1 - iconPx * 0.6);
       this.renderPlayerIcons(
@@ -276,27 +446,48 @@ export class NameLayer implements Layer {
   private getPlayerCache(
     player: PlayerView,
     ctx: CanvasRenderingContext2D,
-    nowMs: number,
+    tick: number,
   ): PlayerRenderCache {
     const id = player.id();
-    const name = player.name();
-    const troops = player.troops();
     const font = ctx.font;
 
     const existing = this.playerCache.get(id);
-    if (
-      existing &&
-      nowMs - existing.lastUpdatedAtMs < this.playerCacheRefreshMs &&
-      existing.lastFont === font &&
-      existing.lastName === name &&
-      existing.lastTroops === troops
-    ) {
+    if (existing && existing.lastTick === tick) {
+      if (existing.lastFont !== font) {
+        existing.lastFont = font;
+        existing.nameTextWidth = ctx.measureText(existing.lastName).width;
+        existing.troopsTextWidth = ctx.measureText(existing.troopsText).width;
+      }
       return existing;
     }
 
+    const name = player.name();
+    const troops = player.troops();
     const troopsText = renderTroops(troops);
+
+    if (existing) {
+      if (existing.lastName !== name) {
+        existing.lastName = name;
+        existing.nameTextWidth = ctx.measureText(name).width;
+      } else if (existing.lastFont !== font) {
+        existing.nameTextWidth = ctx.measureText(name).width;
+      }
+
+      if (existing.troopsText !== troopsText) {
+        existing.troopsText = troopsText;
+        existing.troopsTextWidth = ctx.measureText(troopsText).width;
+      } else if (existing.lastFont !== font) {
+        existing.troopsTextWidth = ctx.measureText(troopsText).width;
+      }
+
+      existing.lastTick = tick;
+      existing.lastFont = font;
+      existing.lastTroops = troops;
+      return existing;
+    }
+
     const next: PlayerRenderCache = {
-      lastUpdatedAtMs: nowMs,
+      lastTick: tick,
       lastFont: font,
       lastName: name,
       lastTroops: troops,
