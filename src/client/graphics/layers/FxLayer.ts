@@ -13,6 +13,7 @@ import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -27,7 +28,10 @@ export class FxLayer implements Layer {
   private allFx: Fx[] = [];
   private hasBufferedFrame = false;
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -283,92 +287,29 @@ export class FxLayer implements Layer {
     const mapW = this.game.width();
     const mapH = this.game.height();
 
-    const vis = this.visibleMapRect(context, mapW, mapH);
-    if (!vis) {
-      context.drawImage(this.canvas, -mapW / 2, -mapH / 2, mapW, mapH);
-      return;
-    }
-
-    context.drawImage(
-      this.canvas,
-      vis.srcX,
-      vis.srcY,
-      vis.srcW,
-      vis.srcH,
-      vis.dstX,
-      vis.dstY,
-      vis.dstW,
-      vis.dstH,
-    );
-  }
-
-  private visibleMapRect(
-    context: CanvasRenderingContext2D,
-    mapW: number,
-    mapH: number,
-  ): {
-    srcX: number;
-    srcY: number;
-    srcW: number;
-    srcH: number;
-    dstX: number;
-    dstY: number;
-    dstW: number;
-    dstH: number;
-  } | null {
-    const getTransform = (context as any).getTransform as
-      | (() => DOMMatrix)
-      | undefined;
-    if (!getTransform) {
-      return null;
-    }
-
-    let inv: DOMMatrix;
-    try {
-      inv = getTransform.call(context).inverse();
-    } catch {
-      return null;
-    }
-
-    const toWorld = (sx: number, sy: number): { x: number; y: number } => ({
-      x: inv.a * sx + inv.c * sy + inv.e,
-      y: inv.b * sx + inv.d * sy + inv.f,
-    });
-
-    const cw = context.canvas.width;
-    const ch = context.canvas.height;
-    const p0 = toWorld(0, 0);
-    const p1 = toWorld(cw, 0);
-    const p2 = toWorld(0, ch);
-    const p3 = toWorld(cw, ch);
-
-    const minWorldX = Math.min(p0.x, p1.x, p2.x, p3.x);
-    const maxWorldX = Math.max(p0.x, p1.x, p2.x, p3.x);
-    const minWorldY = Math.min(p0.y, p1.y, p2.y, p3.y);
-    const maxWorldY = Math.max(p0.y, p1.y, p2.y, p3.y);
-
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
     const pad = 2;
-    const left = Math.max(0, Math.floor(minWorldX + mapW / 2 - pad));
-    const top = Math.max(0, Math.floor(minWorldY + mapH / 2 - pad));
-    const right = Math.min(mapW, Math.ceil(maxWorldX + mapW / 2 + pad));
-    const bottom = Math.min(mapH, Math.ceil(maxWorldY + mapH / 2 + pad));
+
+    const left = Math.max(0, Math.floor(topLeft.x - pad));
+    const top = Math.max(0, Math.floor(topLeft.y - pad));
+    const right = Math.min(mapW, Math.ceil(bottomRight.x + pad));
+    const bottom = Math.min(mapH, Math.ceil(bottomRight.y + pad));
 
     const width = Math.max(0, right - left);
     const height = Math.max(0, bottom - top);
-    if (width === 0 || height === 0) {
-      return null;
-    }
+    if (width === 0 || height === 0) return;
 
-    return {
-      srcX: left,
-      srcY: top,
-      srcW: width,
-      srcH: height,
-      dstX: -mapW / 2 + left,
-      dstY: -mapH / 2 + top,
-      dstW: width,
-      dstH: height,
-    };
+    context.drawImage(
+      this.canvas,
+      left,
+      top,
+      width,
+      height,
+      -mapW / 2 + left,
+      -mapH / 2 + top,
+      width,
+      height,
+    );
   }
 
   private renderAllFx(delta: number) {
