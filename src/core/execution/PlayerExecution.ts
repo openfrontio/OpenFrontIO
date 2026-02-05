@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Cell, Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -139,11 +139,12 @@ export class PlayerExecution implements Execution {
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
-    this.player.largestClusterBoundingBox = calculateBoundingBox(
-      this.mg,
+    const largestClusterBox = calculateBoundingBox(this.mg, largestCluster);
+    this.player.largestClusterBoundingBox = largestClusterBox;
+    const surroundedBy = this.surroundedBySamePlayer(
       largestCluster,
+      largestClusterBox,
     );
-    const surroundedBy = this.surroundedBySamePlayer(largestCluster);
     if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(largestCluster);
     }
@@ -158,7 +159,10 @@ export class PlayerExecution implements Execution {
     }
   }
 
-  private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
+  private surroundedBySamePlayer(
+    cluster: Set<TileRef>,
+    clusterBox: { min: Cell; max: Cell },
+  ): false | Player {
     const enemies = new Set<number>();
     for (const tile of cluster) {
       let hasUnownedNeighbor = false;
@@ -187,7 +191,6 @@ export class PlayerExecution implements Execution {
     }
     const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
     const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
     if (inscribed(enemyBox, clusterBox)) {
       return enemy;
     }
@@ -195,7 +198,11 @@ export class PlayerExecution implements Execution {
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {
-    const enemyTiles = new Set<TileRef>();
+    let hasEnemy = false;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const tr of cluster) {
       if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
         return false;
@@ -203,27 +210,30 @@ export class PlayerExecution implements Execution {
       this.mg.forEachNeighbor(tr, (n) => {
         const owner = this.mg.owner(n);
         if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
-          enemyTiles.add(n);
+          hasEnemy = true;
+          const cell = this.mg.cell(n);
+          minX = Math.min(minX, cell.x);
+          minY = Math.min(minY, cell.y);
+          maxX = Math.max(maxX, cell.x);
+          maxY = Math.max(maxY, cell.y);
         }
       });
     }
-    if (enemyTiles.size === 0) {
+    if (!hasEnemy) {
       return false;
     }
-    const enemyBox = calculateBoundingBox(this.mg, enemyTiles);
     const clusterBox = calculateBoundingBox(this.mg, cluster);
+    const enemyBox = { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
     return inscribed(enemyBox, clusterBox);
   }
 
   private removeCluster(cluster: Set<TileRef>) {
-    if (
-      Array.from(cluster).some(
-        (t) => this.mg?.ownerID(t) !== this.player?.smallID(),
-      )
-    ) {
-      // Other removeCluster operations could change tile owners,
-      // so double check.
-      return;
+    for (const t of cluster) {
+      if (this.mg?.ownerID(t) !== this.player?.smallID()) {
+        // Other removeCluster operations could change tile owners,
+        // so double check.
+        return;
+      }
     }
 
     const capturing = this.getCapturingPlayer(cluster);
