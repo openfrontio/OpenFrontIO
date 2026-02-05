@@ -32,6 +32,31 @@ export class GameManager {
     );
   }
 
+  // Check if this is a reconnecting client (exists with matching persistentID)
+  // Used to skip authorization on page refresh
+  isReconnectingClient(gameID: GameID, persistentID: string): boolean {
+    const game = this.games.get(gameID);
+    if (!game) return false;
+    return game.isReconnectingClient(persistentID);
+  }
+
+  // Get existing clientID for this persistentID (no side effects)
+  getClientIdForPersistentId(
+    gameID: GameID,
+    persistentID: string,
+  ): string | null {
+    const game = this.games.get(gameID);
+    if (!game) return null;
+    return game.getClientIdForPersistentId(persistentID);
+  }
+
+  // Get or create a clientID for this persistentID in the given game
+  getOrCreateClientId(gameID: GameID, persistentID: string): string | null {
+    const game = this.games.get(gameID);
+    if (!game) return null;
+    return game.getOrCreateClientId(persistentID);
+  }
+
   joinClient(client: Client, gameID: GameID): boolean {
     const game = this.games.get(gameID);
     if (game) {
@@ -57,7 +82,7 @@ export class GameManager {
   createGame(
     id: GameID,
     gameConfig: GameConfig | undefined,
-    creatorClientID?: string,
+    creatorPersistentID?: string,
     startsAt?: number,
   ) {
     const game = new GameServer(
@@ -83,7 +108,7 @@ export class GameManager {
         disabledUnits: [],
         ...gameConfig,
       },
-      creatorClientID,
+      creatorPersistentID,
       startsAt,
     );
     this.games.set(id, game);

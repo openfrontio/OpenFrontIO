@@ -4,12 +4,12 @@ import {
   AllPlayersStats,
   ClientMessage,
   ClientSendWinnerMessage,
-  Intent,
   PartialGameRecordSchema,
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessage,
   Turn,
+  TurnIntent,
 } from "../core/Schemas";
 import {
   createPartialGameRecord,
@@ -34,7 +34,7 @@ export class LocalServer {
 
   private turns: Turn[] = [];
 
-  private intents: Intent[] = [];
+  private intents: TurnIntent[] = [];
   private startedAt: number;
 
   private paused = false;
@@ -102,34 +102,53 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
+    const clientID =
+      this.lobbyConfig.clientID ??
+      this.lobbyConfig.gameStartInfo.players[0]?.clientID;
+    if (!clientID) {
+      throw new Error("missing clientID");
+    }
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
+      yourClientID: clientID,
     } satisfies ServerStartGameMessage);
   }
 
   onMessage(clientMsg: ClientMessage) {
     if (clientMsg.type === "rejoin") {
+      const clientID =
+        this.lobbyConfig.clientID ??
+        this.lobbyConfig.gameStartInfo?.players[0]?.clientID;
+      if (!clientID) {
+        throw new Error("missing clientID");
+      }
       this.clientMessage({
         type: "start",
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
+        yourClientID: clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {
-      if (clientMsg.intent.type === "toggle_pause") {
-        if (clientMsg.intent.paused) {
+      // Server stamps clientID - client doesn't send it
+      const stampedIntent = {
+        ...clientMsg.intent,
+        clientID: this.lobbyConfig.clientID!,
+      };
+      if (stampedIntent.type === "toggle_pause") {
+        if (stampedIntent.paused) {
           // Pausing: add intent and end turn before pause takes effect
-          this.intents.push(clientMsg.intent);
+          this.intents.push(stampedIntent);
           this.endTurn();
           this.paused = true;
         } else {
           // Unpausing: clear pause flag before adding intent so next turn can execute
           this.paused = false;
-          this.intents.push(clientMsg.intent);
+          this.intents.push(stampedIntent);
           this.endTurn();
         }
         return;
@@ -139,7 +158,7 @@ export class LocalServer {
         return;
       }
 
-      this.intents.push(clientMsg.intent);
+      this.intents.push(stampedIntent);
     }
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
@@ -224,8 +243,8 @@ export class LocalServer {
       {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
-        clientID: this.lobbyConfig.clientID,
-        stats: this.allPlayersStats[this.lobbyConfig.clientID],
+        clientID: this.lobbyConfig.clientID!,
+        stats: this.allPlayersStats[this.lobbyConfig.clientID!],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
         clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },

@@ -13,7 +13,6 @@ import {
   GameInfo,
   GameStartInfo,
   GameStartInfoSchema,
-  Intent,
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
@@ -22,8 +21,9 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   Turn,
+  TurnIntent,
 } from "../core/Schemas";
-import { createPartialGameRecord, getClanTag } from "../core/Util";
+import { createPartialGameRecord, generateID, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -43,9 +43,11 @@ export class GameServer {
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
   private turns: Turn[] = [];
-  private intents: Intent[] = [];
+  private intents: TurnIntent[] = [];
   public activeClients: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
+  // Map persistentID to clientID for reconnection lookup
+  private persistentIdToClientId: Map<string, ClientID> = new Map();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
@@ -64,6 +66,8 @@ export class GameServer {
   private _hasPrestarted = false;
 
   private kickedClients: Set<ClientID> = new Set();
+  // Track kicked persistentIDs to prevent rejoining with new clientID
+  private kickedPersistentIds: Set<string> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
   private isPaused = false;
@@ -87,11 +91,14 @@ export class GameServer {
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
-    private lobbyCreatorID?: string,
+    private creatorPersistentID?: string,
     private startsAt?: number,
   ) {
     this.log = log_.child({ gameID: id });
   }
+
+  // Lobby creator clientID - set when the creator joins
+  private lobbyCreatorID?: string;
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
@@ -150,6 +157,40 @@ export class GameServer {
     }
   }
 
+  // Get existing clientID for this persistentID, or null if new player
+  public getClientIdForPersistentId(persistentID: string): ClientID | null {
+    const clientID = this.persistentIdToClientId.get(persistentID);
+    if (!clientID) return null;
+    if (this.kickedClients.has(clientID)) return null;
+    return clientID;
+  }
+
+  // Check if this persistentID has an existing client (valid reconnection)
+  public isReconnectingClient(persistentID: string): boolean {
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (!clientID) return false;
+    const client = this.allClients.get(clientID);
+    return client?.persistentID === persistentID;
+  }
+
+  // Get existing clientID or create a new one for this persistentID
+  // Returns null if this persistentID has been kicked
+  public getOrCreateClientId(persistentID: string): ClientID | null {
+    // Check if this persistentID has been kicked
+    if (this.kickedPersistentIds.has(persistentID)) {
+      return null;
+    }
+
+    const existingClientID = this.getClientIdForPersistentId(persistentID);
+    if (existingClientID) {
+      return existingClientID;
+    }
+    // Generate new clientID for new player
+    const newClientID = generateID();
+    this.persistentIdToClientId.set(persistentID, newClientID);
+    return newClientID;
+  }
+
   public joinClient(client: Client) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
@@ -160,9 +201,23 @@ export class GameServer {
     }
 
     if (this.allClients.has(client.clientID)) {
-      this.log.warn("cannot add client, already in game", {
+      // Client already exists - check if this is a valid reconnection
+      const existingClient = this.allClients.get(client.clientID)!;
+
+      if (existingClient.persistentID !== client.persistentID) {
+        this.log.error("cannot reconnect, persistent IDs do not match", {
+          clientID: client.clientID,
+          clientPersistentID: client.persistentID,
+          existingPersistentID: existingClient.persistentID,
+        });
+        return;
+      }
+
+      // Valid reconnection - reuse existing client, skip authorization
+      this.log.info("client reconnecting via join", {
         clientID: client.clientID,
       });
+      this.reconnectExistingClient(existingClient, client.ws);
       return;
     }
 
@@ -183,11 +238,18 @@ export class GameServer {
       return;
     }
 
-    // Log when lobby creator joins private game
-    if (client.clientID === this.lobbyCreatorID) {
+    // Check if this client is the lobby creator (by persistentID)
+    // Server-assigned clientID becomes the lobbyCreatorID
+    if (
+      this.creatorPersistentID &&
+      client.persistentID === this.creatorPersistentID &&
+      !this.lobbyCreatorID
+    ) {
+      this.lobbyCreatorID = client.clientID;
       this.log.info("Lobby creator joined", {
         gameID: this.id,
         creatorID: this.lobbyCreatorID,
+        persistentID: client.persistentID,
       });
     }
     this.log.info("client joining game", {
@@ -251,44 +313,81 @@ export class GameServer {
   ): void {
     this.websockets.add(ws);
 
-    if (this.kickedClients.has(msg.clientID)) {
+    // Look up clientID from persistentID (server is authoritative)
+    const clientID = this.getClientIdForPersistentId(persistentID);
+    if (!clientID) {
+      this.log.info("rejoin client not found, client should use join", {
+        persistentID,
+      });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "rejoin-not-found",
+        } satisfies ServerErrorMessage),
+      );
+      return;
+    }
+
+    if (this.kickedClients.has(clientID)) {
       this.log.warn("cannot rejoin client, client has been kicked", {
-        clientID: msg.clientID,
+        clientID,
       });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "rejoin-kicked",
+        } satisfies ServerErrorMessage),
+      );
       return;
     }
 
-    const client = this.allClients.get(msg.clientID);
+    const client = this.allClients.get(clientID);
     if (!client) {
-      this.log.warn("cannot rejoin client, existing client not found", {
-        clientID: msg.clientID,
+      this.log.info("rejoin client not found in allClients", {
+        clientID,
       });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "rejoin-not-found",
+        } satisfies ServerErrorMessage),
+      );
       return;
     }
 
-    if (client.persistentID !== persistentID) {
-      this.log.error("persistent ids do not match", {
-        clientID: msg.clientID,
-        clientPersistentID: persistentID,
-        existingIP: ipAnonymize(client.ip),
-        existingPersistentID: client.persistentID,
-      });
-      return;
+    this.log.info("client rejoining", {
+      clientID,
+      lastTurn: msg.lastTurn,
+    });
+
+    this.reconnectExistingClient(client, ws, msg.lastTurn);
+  }
+
+  // Common reconnection logic used by both joinClient (page refresh) and rejoinClient (in-game reconnect)
+  private reconnectExistingClient(
+    client: Client,
+    ws: WebSocket,
+    lastTurn: number = 0,
+  ): void {
+    // Close old WebSocket to prevent resource leaks
+    if (client.ws !== ws) {
+      client.ws.removeAllListeners();
+      client.ws.close();
     }
 
     this.activeClients = this.activeClients.filter(
-      (c) => c.clientID !== msg.clientID,
+      (c) => c.clientID !== client.clientID,
     );
     this.activeClients.push(client);
     client.lastPing = Date.now();
-    this.markClientDisconnected(msg.clientID, false);
+    this.markClientDisconnected(client.clientID, false);
 
     client.ws = ws;
     this.addListeners(client);
     this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, msg.lastTurn);
+      this.sendStartGameMsg(client.ws, lastTurn);
     }
   }
 
@@ -321,13 +420,12 @@ export class GameServer {
             break;
           }
           case "intent": {
-            if (clientMsg.intent.clientID !== client.clientID) {
-              this.log.warn(
-                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-              );
-              return;
-            }
-            switch (clientMsg.intent.type) {
+            // Server stamps clientID from the authenticated connection
+            const stampedIntent = {
+              ...clientMsg.intent,
+              clientID: client.clientID,
+            };
+            switch (stampedIntent.type) {
               case "mark_disconnected": {
                 this.log.warn(
                   `Should not receive mark_disconnected intent from client`,
@@ -342,14 +440,14 @@ export class GameServer {
                   this.log.warn(`Only lobby creator can kick players`, {
                     clientID: client.clientID,
                     creatorID: this.lobbyCreatorID,
-                    target: clientMsg.intent.target,
+                    target: stampedIntent.target,
                     gameID: this.id,
                   });
                   return;
                 }
 
                 // Don't allow lobby creator to kick themselves
-                if (client.clientID === clientMsg.intent.target) {
+                if (client.clientID === stampedIntent.target) {
                   this.log.warn(`Cannot kick yourself`, {
                     clientID: client.clientID,
                   });
@@ -359,13 +457,13 @@ export class GameServer {
                 // Log and execute the kick
                 this.log.info(`Lobby creator initiated kick of player`, {
                   creatorID: client.clientID,
-                  target: clientMsg.intent.target,
+                  target: stampedIntent.target,
                   gameID: this.id,
                   kickMethod: "websocket",
                 });
 
                 this.kickClient(
-                  clientMsg.intent.target,
+                  stampedIntent.target,
                   KICK_REASON_LOBBY_CREATOR,
                 );
                 return;
@@ -400,7 +498,7 @@ export class GameServer {
                   return;
                 }
 
-                if (clientMsg.intent.config.gameType === GameType.Public) {
+                if (stampedIntent.config.gameType === GameType.Public) {
                   this.log.warn(`Cannot update game to public via WebSocket`, {
                     gameID: this.id,
                     clientID: client.clientID,
@@ -416,7 +514,7 @@ export class GameServer {
                   },
                 );
 
-                this.updateGameConfig(clientMsg.intent.config);
+                this.updateGameConfig(stampedIntent.config);
                 return;
               }
               case "toggle_pause": {
@@ -430,15 +528,15 @@ export class GameServer {
                   return;
                 }
 
-                if (clientMsg.intent.paused) {
+                if (stampedIntent.paused) {
                   // Pausing: send intent and complete current turn before pause takes effect
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                   this.endTurn();
                   this.isPaused = true;
                 } else {
                   // Unpausing: clear pause flag before sending intent so next turn can execute
                   this.isPaused = false;
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                   this.endTurn();
                 }
 
@@ -451,7 +549,7 @@ export class GameServer {
               default: {
                 // Don't process intents while game is paused
                 if (!this.isPaused) {
-                  this.addIntent(clientMsg.intent);
+                  this.addIntent(stampedIntent);
                 }
                 break;
               }
@@ -501,6 +599,17 @@ export class GameServer {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
+
+    // Check if WebSocket already closed before we added the listener (race condition)
+    if (client.ws.readyState >= 2) {
+      this.log.info("client WebSocket already closing/closed, removing", {
+        clientID: client.clientID,
+        readyState: client.ws.readyState,
+      });
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== client.clientID,
+      );
+    }
   }
 
   public numClients(): number {
@@ -569,12 +678,14 @@ export class GameServer {
   }
 
   private broadcastLobbyInfo() {
-    const msg = JSON.stringify({
-      type: "lobby_info",
-      lobby: this.gameInfo(),
-    } satisfies ServerLobbyInfoMessage);
+    const lobbyInfo = this.gameInfo();
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
+        const msg = JSON.stringify({
+          type: "lobby_info",
+          lobby: lobbyInfo,
+          yourClientID: c.clientID,
+        } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
       }
     });
@@ -621,7 +732,7 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: Intent) {
+  private addIntent(intent: TurnIntent) {
     this.intents.push(intent);
   }
 
@@ -646,6 +757,7 @@ export class GameServer {
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
+          yourClientID: client.clientID,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -839,6 +951,12 @@ export class GameServer {
     }
 
     this.kickedClients.add(clientID);
+
+    // Also track the persistentID to prevent rejoining with a new clientID
+    const clientToKick = this.allClients.get(clientID);
+    if (clientToKick) {
+      this.kickedPersistentIds.add(clientToKick.persistentID);
+    }
 
     const client = this.activeClients.find((c) => c.clientID === clientID);
     if (client) {

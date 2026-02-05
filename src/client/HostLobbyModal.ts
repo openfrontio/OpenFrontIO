@@ -1,7 +1,8 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -17,11 +18,12 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getClientIDForGame } from "./Auth";
+import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -74,12 +76,27 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
 
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
+
+  private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
+    const lobby = event.lobby;
+    if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
+      return;
+    }
+    if (event.yourClientID) {
+      this.lobbyCreatorClientID = event.yourClientID;
+    }
+    if (lobby.clients) {
+      this.clients = lobby.clients;
+    }
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -135,6 +152,21 @@ export class HostLobbyModal extends BaseModal {
     if (!crazyGamesSDK.isOnCrazyGames()) {
       history.replaceState(null, "", url);
     }
+  }
+
+  private startLobbyUpdates() {
+    this.stopLobbyUpdates();
+    if (!this.eventBus) {
+      console.warn(
+        "HostLobbyModal: eventBus not set, cannot subscribe to lobby updates",
+      );
+      return;
+    }
+    this.eventBus.on(LobbyInfoEvent, this.handleLobbyInfo);
+  }
+
+  private stopLobbyUpdates() {
+    this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
   render() {
@@ -636,10 +668,13 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
+    this.startLobbyUpdates();
     this.lobbyId = generateID();
-    this.lobbyCreatorClientID = getClientIDForGame(this.lobbyId);
+    // Note: clientID will be assigned by server when we join the lobby
+    // lobbyCreatorClientID stays empty until then
 
-    createLobby(this.lobbyCreatorClientID, this.lobbyId)
+    // Pass auth token for creator identification (server extracts persistentID from it)
+    createLobby(this.lobbyId)
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
@@ -654,7 +689,6 @@ export class HostLobbyModal extends BaseModal {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: this.lobbyCreatorClientID,
               source: "host",
             } as JoinLobbyEvent,
             bubbles: true,
@@ -720,6 +754,7 @@ export class HostLobbyModal extends BaseModal {
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
+    this.stopLobbyUpdates();
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
@@ -1083,20 +1118,20 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(
-  creatorClientID: string,
-  gameID: string,
-): Promise<GameInfo> {
+async function createLobby(gameID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
+  // Send JWT token for creator identification - server extracts persistentID from it
+  // Never expose persistentID directly to the network
+  const token = await getPlayToken();
   try {
     const response = await fetch(
-      `/${config.workerPath(gameID)}/api/create_game/${gameID}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
+      `/${config.workerPath(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        // body: JSON.stringify(data), // Include this if you need to send data
       },
     );
 

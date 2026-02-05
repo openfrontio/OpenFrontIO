@@ -12,7 +12,6 @@ import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
-  ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -125,12 +124,20 @@ export async function startWorker() {
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;
-    const creatorClientID = (() => {
-      if (typeof req.query.creatorClientID !== "string") return undefined;
 
-      const trimmed = req.query.creatorClientID.trim();
-      return ID.safeParse(trimmed).success ? trimmed : undefined;
-    })();
+    // Extract persistentID from Authorization header token
+    // Never accept persistentID directly from client
+    let creatorPersistentID: string | undefined;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.substring("Bearer ".length);
+      const result = await verifyClientToken(token, config);
+      if (result.type === "success") {
+        creatorPersistentID = result.persistentId;
+      } else {
+        log.warn(`Invalid creator token: ${result.message}`);
+      }
+    }
 
     if (!id) {
       log.warn(`cannot create game, id not found`);
@@ -164,11 +171,11 @@ export async function startWorker() {
       return res.status(400).json({ error: "Worker, game id mismatch" });
     }
 
-    // Pass creatorClientID to createGame
-    const game = gm.createGame(id, gc, creatorClientID);
+    // Pass creatorPersistentID to createGame
+    const game = gm.createGame(id, gc, creatorPersistentID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -311,12 +318,9 @@ export async function startWorker() {
         const result = await verifyClientToken(clientMsg.token, config);
         if (result.type === "error") {
           log.warn(`Invalid token: ${result.message}`, {
-            clientID: clientMsg.clientID,
+            gameID: clientMsg.gameID,
           });
-          ws.close(
-            1002,
-            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
-          );
+          ws.close(1002, `Unauthorized: invalid token`);
           return;
         }
         const { persistentId, claims } = result;
@@ -324,7 +328,6 @@ export async function startWorker() {
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
             gameID: clientMsg.gameID,
-            clientID: clientMsg.clientID,
             persistentID: persistentId,
           });
           const wasFound = gm.rejoinClient(ws, persistentId, clientMsg);
@@ -336,6 +339,40 @@ export async function startWorker() {
             ws.close(1002, "Game not found");
           }
           return;
+        }
+
+        // Check if this is a reconnecting client (e.g., page refresh)
+        // If so, skip all authorization - they're already authenticated
+        if (gm.isReconnectingClient(clientMsg.gameID, persistentId)) {
+          const existingClientID = gm.getClientIdForPersistentId(
+            clientMsg.gameID,
+            persistentId,
+          );
+          if (!existingClientID) {
+            log.warn("reconnecting clientID missing, continuing with auth", {
+              gameID: clientMsg.gameID,
+              persistentID: persistentId,
+            });
+          } else {
+            log.info("client reconnecting via join (skipping authorization)", {
+              gameID: clientMsg.gameID,
+              clientID: existingClientID,
+            });
+            // Create minimal client for reconnection - existing client data will be reused
+            const client = new Client(
+              existingClientID,
+              persistentId,
+              claims,
+              undefined, // roles - not needed for reconnection
+              undefined, // flares - not needed for reconnection
+              ip,
+              clientMsg.username,
+              ws,
+              undefined, // cosmetics - will use existing
+            );
+            gm.joinClient(client, clientMsg.gameID);
+            return;
+          }
         }
 
         let roles: string[] | undefined;
@@ -353,12 +390,10 @@ export async function startWorker() {
           const result = await getUserMe(clientMsg.token, config);
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
-              clientID: clientMsg.clientID,
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
             });
-            ws.close(
-              1002,
-              `Unauthorized: user me fetch failed for client ${clientMsg.clientID}`,
-            );
+            ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
           roles = result.response.player.roles;
@@ -384,7 +419,8 @@ export async function startWorker() {
 
         if (cosmeticResult.type === "forbidden") {
           log.warn(`Forbidden: ${cosmeticResult.reason}`, {
-            clientID: clientMsg.clientID,
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
           });
           ws.close(1002, cosmeticResult.reason);
           return;
@@ -401,7 +437,8 @@ export async function startWorker() {
               break;
             case "rejected":
               log.warn("Unauthorized: Turnstile token rejected", {
-                clientID: clientMsg.clientID,
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
               ws.close(1002, "Unauthorized: Turnstile token rejected");
@@ -409,15 +446,29 @@ export async function startWorker() {
             case "error":
               // Fail open, allow the client to join.
               log.error("Turnstile token error", {
-                clientID: clientMsg.clientID,
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
           }
         }
 
+        // Get or create clientID for this persistentID after authorization succeeds
+        // Server is authoritative over clientID assignment
+        const clientID = gm.getOrCreateClientId(clientMsg.gameID, persistentId);
+        if (clientID === null) {
+          // Could be game not found OR user was kicked - don't reveal which
+          log.warn(`client cannot join game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Cannot join game");
+          return;
+        }
+
         // Create client and add to game
         const client = new Client(
-          clientMsg.clientID,
+          clientID,
           persistentId,
           claims,
           roles,
