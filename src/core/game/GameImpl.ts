@@ -622,31 +622,46 @@ export class GameImpl implements Game {
   }
 
   private updateBorders(tile: TileRef) {
-    const tiles: TileRef[] = [];
-    tiles.push(tile);
-    this.neighbors(tile).forEach((t) => tiles.push(t));
-
-    for (const t of tiles) {
+    const updateBorderStatus = (t: TileRef) => {
       if (!this.hasOwner(t)) {
-        continue;
+        return;
       }
+      const owner = this.owner(t) as PlayerImpl;
       if (this.calcIsBorder(t)) {
-        (this.owner(t) as PlayerImpl)._borderTiles.add(t);
+        owner._borderTiles.add(t);
       } else {
-        (this.owner(t) as PlayerImpl)._borderTiles.delete(t);
+        owner._borderTiles.delete(t);
       }
-    }
+    };
+
+    updateBorderStatus(tile);
+    this.forEachNeighbor(tile, updateBorderStatus);
   }
 
   private calcIsBorder(tile: TileRef): boolean {
     if (!this.hasOwner(tile)) {
       return false;
     }
-    for (const neighbor of this.neighbors(tile)) {
-      const bordersEnemy = this.owner(tile) !== this.owner(neighbor);
-      if (bordersEnemy) {
-        return true;
-      }
+    const ownerId = this.ownerID(tile);
+    const x = this.x(tile);
+    const y = this.y(tile);
+    if (x > 0 && this.ownerID(this._map.ref(x - 1, y)) !== ownerId) {
+      return true;
+    }
+    if (
+      x + 1 < this._width &&
+      this.ownerID(this._map.ref(x + 1, y)) !== ownerId
+    ) {
+      return true;
+    }
+    if (y > 0 && this.ownerID(this._map.ref(x, y - 1)) !== ownerId) {
+      return true;
+    }
+    if (
+      y + 1 < this._height &&
+      this.ownerID(this._map.ref(x, y + 1)) !== ownerId
+    ) {
+      return true;
     }
     return false;
   }
