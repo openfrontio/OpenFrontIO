@@ -210,6 +210,16 @@ export class GameServer {
           clientPersistentID: client.persistentID,
           existingPersistentID: existingClient.persistentID,
         });
+        try {
+          if (client.ws) {
+            client.ws.close(1008, "persistent-id-mismatch");
+          }
+        } catch (error) {
+          this.log.warn("error closing client websocket on mismatch", {
+            clientID: client.clientID,
+            error,
+          });
+        }
         return;
       }
 
@@ -338,6 +348,7 @@ export class GameServer {
           error: "rejoin-kicked",
         } satisfies ServerErrorMessage),
       );
+      ws.close(1008, "rejoin-kicked");
       return;
     }
 
@@ -352,6 +363,7 @@ export class GameServer {
           error: "rejoin-not-found",
         } satisfies ServerErrorMessage),
       );
+      ws.close(1008, "rejoin-not-found");
       return;
     }
 
