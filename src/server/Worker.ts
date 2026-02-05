@@ -136,6 +136,7 @@ export async function startWorker() {
         creatorPersistentID = result.persistentId;
       } else {
         log.warn(`Invalid creator token: ${result.message}`);
+        return res.status(401).json({ error: "Invalid creator token" });
       }
     }
 
