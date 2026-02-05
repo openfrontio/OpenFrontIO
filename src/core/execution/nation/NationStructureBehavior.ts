@@ -1,6 +1,5 @@
 import {
   Game,
-  GameMode,
   Gold,
   Player,
   PlayerType,
@@ -13,6 +12,42 @@ import { ConstructionExecution } from "../ConstructionExecution";
 import { closestTile, closestTwoTiles } from "../Util";
 import { randTerritoryTileArray } from "./NationUtils";
 
+/**
+ * Configuration for how many structures of each type a nation should build
+ * relative to the number of cities it owns.
+ */
+interface StructureRatioConfig {
+  /** How many of this structure per city (e.g., 0.75 means 3 ports for every 4 cities) */
+  ratioPerCity: number;
+  /** Perceived cost increase percentage per owned structure (e.g., 0.1 = 10% more expensive per owned) */
+  perceivedCostIncreasePerOwned: number;
+}
+
+/**
+ * Default structure ratios relative to city count.
+ * Cities are always prioritized and built first.
+ */
+const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
+  // Structures that nations should build
+  [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 0.1 },
+  [UnitType.Factory]: { ratioPerCity: 0.5, perceivedCostIncreasePerOwned: 0.1 },
+  [UnitType.DefensePost]: {
+    ratioPerCity: 1.0,
+    perceivedCostIncreasePerOwned: 0.15,
+  },
+  [UnitType.SAMLauncher]: {
+    ratioPerCity: 0.5,
+    perceivedCostIncreasePerOwned: 0.2,
+  },
+  [UnitType.MissileSilo]: {
+    ratioPerCity: 0.25,
+    perceivedCostIncreasePerOwned: 0.25,
+  },
+};
+
+/** Perceived cost increase percentage per city owned */
+const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 0.1;
+
 export class NationStructureBehavior {
   constructor(
     private random: PseudoRandom,
@@ -21,21 +56,75 @@ export class NationStructureBehavior {
   ) {}
 
   handleUnits(): boolean {
+    const cityCount = this.player.unitsOwned(UnitType.City);
     const hasCoastalTiles = this.hasCoastalTiles();
-    const isTeamGame =
-      this.game.config().gameConfig().gameMode === GameMode.Team;
-    return (
-      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) =>
-        hasCoastalTiles ? num * 3 : num,
-      ) ||
-      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) =>
-        isTeamGame ? num : num ** 2,
-      ) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
-    );
+
+    // Build order for non-city structures (priority order)
+    const buildOrder: UnitType[] = [
+      UnitType.DefensePost,
+      UnitType.Port,
+      UnitType.Factory,
+      UnitType.SAMLauncher,
+      UnitType.MissileSilo,
+    ];
+
+    for (const structureType of buildOrder) {
+      // Skip ports if no coastal tiles
+      if (structureType === UnitType.Port && !hasCoastalTiles) {
+        continue;
+      }
+
+      if (this.shouldBuildStructure(structureType, cityCount)) {
+        if (this.maybeSpawnStructure(structureType)) {
+          return true;
+        }
+      }
+    }
+
+    if (this.maybeSpawnCity()) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Determines if we should build more of this structure type based on
+   * the current city count and the configured ratio.
+   */
+  private shouldBuildStructure(type: UnitType, cityCount: number): boolean {
+    const config = STRUCTURE_RATIOS[type];
+    if (config === undefined) {
+      return false;
+    }
+
+    const owned = this.player.unitsOwned(type);
+    const targetCount = Math.floor(cityCount * config.ratioPerCity);
+
+    return owned < targetCount;
+  }
+
+  /**
+   * Calculates the perceived cost for a structure type.
+   * The perceived cost increases by a percentage for each structure of that type already owned.
+   * This makes nations save up gold for MIRVs.
+   */
+  private getPerceivedCost(type: UnitType): Gold {
+    const realCost = this.cost(type);
+    const owned = this.player.unitsOwned(type);
+
+    let increasePerOwned: number;
+    if (type === UnitType.City) {
+      increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
+    } else {
+      const config = STRUCTURE_RATIOS[type];
+      increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
+    }
+
+    // Each owned structure makes the next one feel more expensive
+    // Formula: realCost * (1 + increasePerOwned * owned)
+    const multiplier = 1 + increasePerOwned * owned;
+    return BigInt(Math.ceil(Number(realCost) * multiplier));
   }
 
   private hasCoastalTiles(): boolean {
@@ -45,14 +134,27 @@ export class NationStructureBehavior {
     return false;
   }
 
-  private maybeSpawnStructure(
-    type: UnitType,
-    multiplier: (num: number) => number,
-  ): boolean {
-    const owned = this.player.unitsOwned(type);
-    const perceivedCostMultiplier = multiplier(owned + 1);
-    const realCost = this.cost(type);
-    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
+  private maybeSpawnCity(): boolean {
+    const perceivedCost = this.getPerceivedCost(UnitType.City);
+    if (this.player.gold() < perceivedCost) {
+      return false;
+    }
+    const tile = this.structureSpawnTile(UnitType.City);
+    if (tile === null) {
+      return false;
+    }
+    const canBuild = this.player.canBuild(UnitType.City, tile);
+    if (canBuild === false) {
+      return false;
+    }
+    this.game.addExecution(
+      new ConstructionExecution(this.player, UnitType.City, tile),
+    );
+    return true;
+  }
+
+  private maybeSpawnStructure(type: UnitType): boolean {
+    const perceivedCost = this.getPerceivedCost(type);
     if (this.player.gold() < perceivedCost) {
       return false;
     }
