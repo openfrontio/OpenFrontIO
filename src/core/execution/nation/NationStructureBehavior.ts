@@ -1,6 +1,120 @@
-import { Game, Player, PlayerType, Relation, UnitType } from "../../game/Game";
+import {
+  Game,
+  GameMode,
+  Gold,
+  Player,
+  PlayerType,
+  Relation,
+  UnitType,
+} from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { PseudoRandom } from "../../PseudoRandom";
+import { ConstructionExecution } from "../ConstructionExecution";
 import { closestTile, closestTwoTiles } from "../Util";
+import { randTerritoryTileArray } from "./NationUtils";
+
+export class NationStructureBehavior {
+  constructor(
+    private random: PseudoRandom,
+    private game: Game,
+    private player: Player,
+  ) {}
+
+  handleUnits(): boolean {
+    const hasCoastalTiles = this.hasCoastalTiles();
+    const isTeamGame =
+      this.game.config().gameConfig().gameMode === GameMode.Team;
+    return (
+      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
+      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
+      this.maybeSpawnStructure(UnitType.Factory, (num) =>
+        hasCoastalTiles ? num * 3 : num,
+      ) ||
+      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) =>
+        isTeamGame ? num : num ** 2,
+      ) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
+    );
+  }
+
+  private hasCoastalTiles(): boolean {
+    for (const tile of this.player.borderTiles()) {
+      if (this.game.isOceanShore(tile)) return true;
+    }
+    return false;
+  }
+
+  private maybeSpawnStructure(
+    type: UnitType,
+    multiplier: (num: number) => number,
+  ): boolean {
+    const owned = this.player.unitsOwned(type);
+    const perceivedCostMultiplier = multiplier(owned + 1);
+    const realCost = this.cost(type);
+    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
+    if (this.player.gold() < perceivedCost) {
+      return false;
+    }
+    const tile = this.structureSpawnTile(type);
+    if (tile === null) {
+      return false;
+    }
+    const canBuild = this.player.canBuild(type, tile);
+    if (canBuild === false) {
+      return false;
+    }
+    this.game.addExecution(new ConstructionExecution(this.player, type, tile));
+    return true;
+  }
+
+  private structureSpawnTile(type: UnitType): TileRef | null {
+    const tiles =
+      type === UnitType.Port
+        ? this.randCoastalTileArray(25)
+        : randTerritoryTileArray(this.random, this.game, this.player, 25);
+    if (tiles.length === 0) return null;
+    const valueFunction = structureSpawnTileValue(this.game, this.player, type);
+    if (valueFunction === null) return null;
+    let bestTile: TileRef | null = null;
+    let bestValue = 0;
+    for (const t of tiles) {
+      const v = valueFunction(t);
+      if (v <= bestValue && bestTile !== null) continue;
+      if (!this.player.canBuild(type, t)) continue;
+      // Found a better tile
+      bestTile = t;
+      bestValue = v;
+    }
+    return bestTile;
+  }
+
+  private randCoastalTileArray(numTiles: number): TileRef[] {
+    const tiles = Array.from(this.player.borderTiles()).filter((t) =>
+      this.game.isOceanShore(t),
+    );
+    return Array.from(this.arraySampler(tiles, numTiles));
+  }
+
+  private *arraySampler<T>(a: T[], sampleSize: number): Generator<T> {
+    if (a.length <= sampleSize) {
+      // Return all elements
+      yield* a;
+    } else {
+      // Sample `sampleSize` elements
+      const remaining = new Set<T>(a);
+      while (sampleSize--) {
+        const t = this.random.randFromSet(remaining);
+        remaining.delete(t);
+        yield t;
+      }
+    }
+  }
+
+  private cost(type: UnitType): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player);
+  }
+}
 
 export function structureSpawnTileValue(
   mg: Game,

@@ -2,27 +2,22 @@ import {
   Difficulty,
   Execution,
   Game,
-  GameMode,
-  Gold,
   Nation,
   Player,
   PlayerID,
   Relation,
   TerrainType,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { assertNever, simpleHash } from "../Util";
-import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
-import { randTerritoryTileArray } from "./nation/NationUtils";
+import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
-import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
@@ -36,6 +31,7 @@ export class NationExecution implements Execution {
   private allianceBehavior!: NationAllianceBehavior;
   private warshipBehavior!: NationWarshipBehavior;
   private nukeBehavior!: NationNukeBehavior;
+  private structureBehavior!: NationStructureBehavior;
   private mg: Game;
   private player: Player | null = null;
 
@@ -145,7 +141,8 @@ export class NationExecution implements Execution {
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
     this.mirvBehavior.considerMIRV();
-    this.handleUnits();
+    this.structureBehavior.handleUnits();
+    this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
@@ -194,6 +191,11 @@ export class NationExecution implements Execution {
       this.player,
       this.attackBehavior,
       this.emojiBehavior,
+    );
+    this.structureBehavior = new NationStructureBehavior(
+      this.random,
+      this.mg,
+      this.player,
     );
     this.behaviorsInitialized = true;
   }
@@ -248,101 +250,6 @@ export class NationExecution implements Execution {
     });
   }
 
-  private handleUnits() {
-    const hasCoastalTiles = this.hasCoastalTiles();
-    const isTeamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
-    return (
-      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
-      this.warshipBehavior.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) =>
-        hasCoastalTiles ? num * 3 : num,
-      ) ||
-      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) =>
-        isTeamGame ? num : num ** 2,
-      ) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
-    );
-  }
-
-  private hasCoastalTiles(): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    for (const tile of this.player.borderTiles()) {
-      if (this.mg.isOceanShore(tile)) return true;
-    }
-    return false;
-  }
-
-  private maybeSpawnStructure(
-    type: UnitType,
-    multiplier: (num: number) => number,
-  ) {
-    if (this.player === null) throw new Error("not initialized");
-    const owned = this.player.unitsOwned(type);
-    const perceivedCostMultiplier = multiplier(owned + 1);
-    const realCost = this.cost(type);
-    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
-    if (this.player.gold() < perceivedCost) {
-      return false;
-    }
-    const tile = this.structureSpawnTile(type);
-    if (tile === null) {
-      return false;
-    }
-    const canBuild = this.player.canBuild(type, tile);
-    if (canBuild === false) {
-      return false;
-    }
-    this.mg.addExecution(new ConstructionExecution(this.player, type, tile));
-    return true;
-  }
-
-  private structureSpawnTile(type: UnitType): TileRef | null {
-    if (this.mg === undefined) throw new Error("Not initialized");
-    if (this.player === null) throw new Error("Not initialized");
-    const tiles =
-      type === UnitType.Port
-        ? this.randCoastalTileArray(25)
-        : randTerritoryTileArray(this.random, this.mg, this.player, 25);
-    if (tiles.length === 0) return null;
-    const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
-    if (valueFunction === null) return null;
-    let bestTile: TileRef | null = null;
-    let bestValue = 0;
-    for (const t of tiles) {
-      const v = valueFunction(t);
-      if (v <= bestValue && bestTile !== null) continue;
-      if (!this.player.canBuild(type, t)) continue;
-      // Found a better tile
-      bestTile = t;
-      bestValue = v;
-    }
-    return bestTile;
-  }
-
-  private randCoastalTileArray(numTiles: number): TileRef[] {
-    const tiles = Array.from(this.player!.borderTiles()).filter((t) =>
-      this.mg.isOceanShore(t),
-    );
-    return Array.from(this.arraySampler(tiles, numTiles));
-  }
-
-  private *arraySampler<T>(a: T[], sampleSize: number): Generator<T> {
-    if (a.length <= sampleSize) {
-      // Return all elements
-      yield* a;
-    } else {
-      // Sample `sampleSize` elements
-      const remaining = new Set<T>(a);
-      while (sampleSize--) {
-        const t = this.random.randFromSet(remaining);
-        remaining.delete(t);
-        yield t;
-      }
-    }
-  }
-
   private handleEmbargoesToHostileNations() {
     const player = this.player;
     if (player === null) return;
@@ -371,11 +278,6 @@ export class NationExecution implements Execution {
         player.stopEmbargo(other);
       }
     });
-  }
-
-  private cost(type: UnitType): Gold {
-    if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
   isActive(): boolean {
