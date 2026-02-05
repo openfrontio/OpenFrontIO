@@ -398,6 +398,7 @@ export const QuickChatIntentSchema = z.object({
 
 export const MarkDisconnectedIntentSchema = z.object({
   type: z.literal("mark_disconnected"),
+  clientID: ID,
   isDisconnected: z.boolean(),
 });
 
