@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
+  ClientID,
   ClientMessage,
   ClientSendWinnerMessage,
   PartialGameRecordSchema,
@@ -40,6 +41,7 @@ export class LocalServer {
   private paused = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
 
+  private clientID: ClientID | undefined;
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
 
@@ -102,10 +104,8 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const clientID =
-      this.lobbyConfig.clientID ??
-      this.lobbyConfig.gameStartInfo.players[0]?.clientID;
-    if (!clientID) {
+    this.clientID = this.lobbyConfig.gameStartInfo.players[0]?.clientID;
+    if (!this.clientID) {
       throw new Error("missing clientID");
     }
     this.clientMessage({
@@ -113,16 +113,13 @@ export class LocalServer {
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
-      myClientID: clientID,
+      myClientID: this.clientID,
     } satisfies ServerStartGameMessage);
   }
 
   onMessage(clientMsg: ClientMessage) {
     if (clientMsg.type === "rejoin") {
-      const clientID =
-        this.lobbyConfig.clientID ??
-        this.lobbyConfig.gameStartInfo?.players[0]?.clientID;
-      if (!clientID) {
+      if (!this.clientID) {
         throw new Error("missing clientID");
       }
       this.clientMessage({
@@ -130,14 +127,14 @@ export class LocalServer {
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
-        myClientID: clientID,
+        myClientID: this.clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {
       // Server stamps clientID - client doesn't send it
       const stampedIntent = {
         ...clientMsg.intent,
-        clientID: this.lobbyConfig.clientID!,
+        clientID: this.clientID!,
       };
       if (stampedIntent.type === "toggle_pause") {
         if (stampedIntent.paused) {
@@ -243,8 +240,8 @@ export class LocalServer {
       {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
-        clientID: this.lobbyConfig.clientID!,
-        stats: this.allPlayersStats[this.lobbyConfig.clientID!],
+        clientID: this.clientID!,
+        stats: this.allPlayersStats[this.clientID!],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
         clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },
