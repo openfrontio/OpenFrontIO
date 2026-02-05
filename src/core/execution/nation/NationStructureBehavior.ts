@@ -90,6 +90,13 @@ export class NationStructureBehavior {
     return false;
   }
 
+  private hasCoastalTiles(): boolean {
+    for (const tile of this.player.borderTiles()) {
+      if (this.game.isOceanShore(tile)) return true;
+    }
+    return false;
+  }
+
   /**
    * Determines if we should build more of this structure type based on
    * the current city count and the configured ratio.
@@ -140,11 +147,8 @@ export class NationStructureBehavior {
     return BigInt(Math.ceil(Number(realCost) * multiplier));
   }
 
-  private hasCoastalTiles(): boolean {
-    for (const tile of this.player.borderTiles()) {
-      if (this.game.isOceanShore(tile)) return true;
-    }
-    return false;
+  private cost(type: UnitType): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player);
   }
 
   private maybeSpawnCity(): boolean {
@@ -189,7 +193,7 @@ export class NationStructureBehavior {
         ? this.randCoastalTileArray(25)
         : randTerritoryTileArray(this.random, this.game, this.player, 25);
     if (tiles.length === 0) return null;
-    const valueFunction = structureSpawnTileValue(this.game, this.player, type);
+    const valueFunction = this.structureSpawnTileValue(type);
     if (valueFunction === null) return null;
     let bestTile: TileRef | null = null;
     let bestValue = 0;
@@ -226,175 +230,178 @@ export class NationStructureBehavior {
     }
   }
 
-  private cost(type: UnitType): Gold {
-    return this.game.unitInfo(type).cost(this.game, this.player);
-  }
-}
+  private structureSpawnTileValue(
+    type: UnitType,
+  ): ((tile: TileRef) => number) | null {
+    const mg = this.game;
+    const player = this.player;
+    const borderTiles = player.borderTiles();
+    const otherUnits = player.units(type);
+    // Prefer spacing structures out of atom bomb range
+    const borderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+    const structureSpacing = borderSpacing * 2;
+    switch (type) {
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.MissileSilo: {
+        return (tile) => {
+          let w = 0;
 
-export function structureSpawnTileValue(
-  mg: Game,
-  player: Player,
-  type: UnitType,
-): ((tile: TileRef) => number) | null {
-  const borderTiles = player.borderTiles();
-  const otherUnits = player.units(type);
-  // Prefer spacing structures out of atom bomb range
-  const borderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
-  const structureSpacing = borderSpacing * 2;
-  switch (type) {
-    case UnitType.City:
-    case UnitType.Factory:
-    case UnitType.MissileSilo: {
-      return (tile) => {
-        let w = 0;
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
 
-        // Prefer higher elevations
-        w += mg.magnitude(tile);
+          // Prefer to be away from the border
+          const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
+          w += Math.min(closestBorderDist, borderSpacing);
 
-        // Prefer to be away from the border
-        const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
-        w += Math.min(closestBorderDist, borderSpacing);
-
-        // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
-          w += Math.min(d, structureSpacing);
-        }
-
-        // TODO: Cities and factories should consider train range limits
-        return w;
-      };
-    }
-    case UnitType.Port: {
-      return (tile) => {
-        let w = 0;
-
-        // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
-        w += Math.min(closestOtherDist, structureSpacing);
-
-        return w;
-      };
-    }
-    case UnitType.DefensePost: {
-      // Check if we have any non-friendly non-bot neighbors
-      const hasHostileNeighbor =
-        player
-          .neighbors()
-          .filter(
-            (n): n is Player =>
-              n.isPlayer() &&
-              player.isFriendly(n) === false &&
-              n.type() !== PlayerType.Bot,
-          ).length > 0;
-
-      // Don't build defense posts if there is no danger
-      if (!hasHostileNeighbor) {
-        return null;
-      }
-
-      return (tile) => {
-        let w = 0;
-
-        // Prefer higher elevations
-        w += mg.magnitude(tile);
-
-        const [closest, closestBorderDist] = closestTile(mg, borderTiles, tile);
-        if (closest !== null) {
-          // Prefer to be borderSpacing tiles from the border
-          w += Math.max(
-            0,
-            borderSpacing - Math.abs(borderSpacing - closestBorderDist),
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
           );
-
-          // Prefer adjacent players who are hostile
-          const neighbors: Set<Player> = new Set();
-          for (const tile of mg.neighbors(closest)) {
-            if (!mg.isLand(tile)) continue;
-            const id = mg.ownerID(tile);
-            if (id === player.smallID()) continue;
-            const neighbor = mg.playerBySmallID(id);
-            if (!neighbor.isPlayer()) continue;
-            if (neighbor.type() === PlayerType.Bot) continue;
-            neighbors.add(neighbor);
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
           }
-          for (const neighbor of neighbors) {
-            w +=
-              borderSpacing * (Relation.Friendly - player.relation(neighbor));
-          }
-        }
 
-        // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
-          w += Math.min(d, structureSpacing);
-        }
-
-        return w;
-      };
-    }
-    case UnitType.SAMLauncher: {
-      const protectTiles: Set<TileRef> = new Set();
-      for (const unit of player.units()) {
-        switch (unit.type()) {
-          case UnitType.City:
-          case UnitType.Factory:
-          case UnitType.MissileSilo:
-          case UnitType.Port:
-            protectTiles.add(unit.tile());
-        }
+          // TODO: Cities and factories should consider train range limits
+          return w;
+        };
       }
-      const range = mg.config().defaultSamRange();
-      const rangeSquared = range * range;
-      return (tile) => {
-        let w = 0;
+      case UnitType.Port: {
+        return (tile) => {
+          let w = 0;
 
-        // Prefer higher elevations
-        w += mg.magnitude(tile);
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
+          otherTiles.delete(tile);
+          const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
+          w += Math.min(closestOtherDist, structureSpacing);
 
-        // Prefer to be away from the border
-        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-        if (closestBorder !== null) {
-          const d = mg.manhattanDist(closestBorder.x, tile);
-          w += Math.min(d, borderSpacing);
+          return w;
+        };
+      }
+      case UnitType.DefensePost: {
+        // Check if we have any non-friendly non-bot neighbors
+        const hasHostileNeighbor =
+          player
+            .neighbors()
+            .filter(
+              (n): n is Player =>
+                n.isPlayer() &&
+                player.isFriendly(n) === false &&
+                n.type() !== PlayerType.Bot,
+            ).length > 0;
+
+        // Don't build defense posts if there is no danger
+        if (!hasHostileNeighbor) {
+          return null;
         }
 
-        // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
-          w += Math.min(d, structureSpacing);
-        }
+        return (tile) => {
+          let w = 0;
 
-        // Prefer to be in range of other structures
-        for (const maybeProtected of protectTiles) {
-          const distanceSquared = mg.euclideanDistSquared(tile, maybeProtected);
-          if (distanceSquared > rangeSquared) continue;
-          w += structureSpacing;
-        }
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
 
-        return w;
-      };
+          const [closest, closestBorderDist] = closestTile(
+            mg,
+            borderTiles,
+            tile,
+          );
+          if (closest !== null) {
+            // Prefer to be borderSpacing tiles from the border
+            w += Math.max(
+              0,
+              borderSpacing - Math.abs(borderSpacing - closestBorderDist),
+            );
+
+            // Prefer adjacent players who are hostile
+            const neighbors: Set<Player> = new Set();
+            for (const tile of mg.neighbors(closest)) {
+              if (!mg.isLand(tile)) continue;
+              const id = mg.ownerID(tile);
+              if (id === player.smallID()) continue;
+              const neighbor = mg.playerBySmallID(id);
+              if (!neighbor.isPlayer()) continue;
+              if (neighbor.type() === PlayerType.Bot) continue;
+              neighbors.add(neighbor);
+            }
+            for (const neighbor of neighbors) {
+              w +=
+                borderSpacing * (Relation.Friendly - player.relation(neighbor));
+            }
+          }
+
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
+          }
+
+          return w;
+        };
+      }
+      case UnitType.SAMLauncher: {
+        const protectTiles: Set<TileRef> = new Set();
+        for (const unit of player.units()) {
+          switch (unit.type()) {
+            case UnitType.City:
+            case UnitType.Factory:
+            case UnitType.MissileSilo:
+            case UnitType.Port:
+              protectTiles.add(unit.tile());
+          }
+        }
+        const range = mg.config().defaultSamRange();
+        const rangeSquared = range * range;
+        return (tile) => {
+          let w = 0;
+
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
+
+          // Prefer to be away from the border
+          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+          if (closestBorder !== null) {
+            const d = mg.manhattanDist(closestBorder.x, tile);
+            w += Math.min(d, borderSpacing);
+          }
+
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
+          }
+
+          // Prefer to be in range of other structures
+          for (const maybeProtected of protectTiles) {
+            const distanceSquared = mg.euclideanDistSquared(
+              tile,
+              maybeProtected,
+            );
+            if (distanceSquared > rangeSquared) continue;
+            w += structureSpacing;
+          }
+
+          return w;
+        };
+      }
+      default:
+        throw new Error(`Value function not implemented for ${type}`);
     }
-    default:
-      throw new Error(`Value function not implemented for ${type}`);
   }
 }
