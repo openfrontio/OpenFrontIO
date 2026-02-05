@@ -45,7 +45,9 @@ export class TrainStationExecution implements Execution {
       this.active = false;
       return;
     }
-    this.spawnTrain(this.station, ticks);
+    if (this.spawnTrains) {
+      this.spawnTrain(this.station, ticks);
+    }
   }
 
   private shouldSpawnTrain(): boolean {
@@ -69,8 +71,8 @@ export class TrainStationExecution implements Execution {
     if (cluster === null) {
       return;
     }
-    const availableForTrade = cluster.availableForTrade(this.unit.owner());
-    if (availableForTrade.size === 0) {
+    const owner = this.unit.owner();
+    if (!cluster.hasAnyTradeDestination(owner)) {
       return;
     }
     if (!this.shouldSpawnTrain()) {
@@ -79,20 +81,20 @@ export class TrainStationExecution implements Execution {
 
     // Pick a destination randomly.
     // Could be improved to pick a lucrative trip
-    const destination: TrainStation =
-      this.random.randFromSet(availableForTrade);
-    if (destination !== station) {
-      this.mg.addExecution(
-        new TrainExecution(
-          this.mg.railNetwork(),
-          this.unit.owner(),
-          station,
-          destination,
-          this.numCars,
-        ),
-      );
-      this.lastSpawnTick = currentTick;
-    }
+    const destination = cluster.randomTradeDestination(owner, this.random);
+    if (destination === null) return;
+    if (destination === station) return;
+
+    this.mg.addExecution(
+      new TrainExecution(
+        this.mg.railNetwork(),
+        owner,
+        station,
+        destination,
+        this.numCars,
+      ),
+    );
+    this.lastSpawnTick = currentTick;
   }
 
   activeDuringSpawnPhase(): boolean {
