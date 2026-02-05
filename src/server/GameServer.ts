@@ -696,7 +696,7 @@ export class GameServer {
         const msg = JSON.stringify({
           type: "lobby_info",
           lobby: lobbyInfo,
-          yourClientID: c.clientID,
+          myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
       }
@@ -769,7 +769,7 @@ export class GameServer {
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
-          yourClientID: client.clientID,
+          myClientID: client.clientID,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {

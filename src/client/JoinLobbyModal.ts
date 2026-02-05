@@ -63,8 +63,8 @@ export class JoinLobbyModal extends BaseModal {
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
       return;
     }
-    if (event.yourClientID) {
-      this.currentClientID = event.yourClientID;
+    if (event.myClientID) {
+      this.currentClientID = event.myClientID;
     }
     // Only stop showing spinner when we have player info
     if (this.isConnecting && lobby.clients) {

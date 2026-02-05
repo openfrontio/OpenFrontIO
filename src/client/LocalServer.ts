@@ -113,7 +113,7 @@ export class LocalServer {
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
-      yourClientID: clientID,
+      myClientID: clientID,
     } satisfies ServerStartGameMessage);
   }
 
@@ -130,7 +130,7 @@ export class LocalServer {
         gameStartInfo: this.lobbyConfig.gameStartInfo!,
         turns: this.turns,
         lobbyCreatedAt: this.lobbyConfig.gameStartInfo!.lobbyCreatedAt,
-        yourClientID: clientID,
+        myClientID: clientID,
       } satisfies ServerStartGameMessage);
     }
     if (clientMsg.type === "intent") {

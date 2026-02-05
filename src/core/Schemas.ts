@@ -168,7 +168,7 @@ export const PublicGamesSchema = z.object({
 export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
-    public yourClientID?: ClientID,
+    public myClientID?: ClientID,
   ) {}
 }
 
@@ -544,7 +544,7 @@ export const ServerStartGameMessageSchema = z.object({
   gameStartInfo: GameStartInfoSchema,
   lobbyCreatedAt: z.number(),
   // The clientID assigned to this connection by the server
-  yourClientID: ID,
+  myClientID: ID,
 });
 
 export const ServerDesyncSchema = z.object({
@@ -566,7 +566,7 @@ export const ServerLobbyInfoMessageSchema = z.object({
   type: z.literal("lobby_info"),
   lobby: GameInfoSchema,
   // The clientID assigned to this connection by the server
-  yourClientID: ID,
+  myClientID: ID,
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [

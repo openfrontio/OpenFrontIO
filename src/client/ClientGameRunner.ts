@@ -93,13 +93,11 @@ export function joinLobby(
   const onmessage = (message: ServerMessage) => {
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
-      if (message.yourClientID) {
-        lobbyConfig.clientID = message.yourClientID;
-        console.log(
-          `Received server-assigned clientID: ${message.yourClientID}`,
-        );
+      if (message.myClientID) {
+        lobbyConfig.clientID = message.myClientID;
+        console.log(`Received server-assigned clientID: ${message.myClientID}`);
       }
-      eventBus.emit(new LobbyInfoEvent(message.lobby, message.yourClientID));
+      eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       return;
     }
     if (message.type === "prestart") {
@@ -120,11 +118,9 @@ export function joinLobby(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
-      if (message.yourClientID) {
-        lobbyConfig.clientID = message.yourClientID;
-        console.log(
-          `Received server-assigned clientID: ${message.yourClientID}`,
-        );
+      if (message.myClientID) {
+        lobbyConfig.clientID = message.myClientID;
+        console.log(`Received server-assigned clientID: ${message.myClientID}`);
       }
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
