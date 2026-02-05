@@ -1,8 +1,8 @@
 import { Cosmetics } from "./CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
-  rainbow: 4000,
-  "bright-rainbow": 4000,
+  rainbow: 7000,
+  "bright-rainbow": 7000,
   "copper-glow": 3000,
   "silver-glow": 3000,
   "gold-glow": 3000,
@@ -18,11 +18,6 @@ export function renderPlayerFlag(
   target: HTMLElement,
   cosmetics: Cosmetics | undefined = undefined,
 ) {
-  if (cosmetics === undefined) {
-    console.warn("No cosmetics provided for flag", flag);
-    return;
-  }
-
   if (!flag.startsWith("!")) return;
 
   const code = flag.slice("!".length);
