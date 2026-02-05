@@ -242,8 +242,8 @@ export class TerritoryLayer implements Layer {
       canvas.style.display = "block";
     }
 
-    const parent = mainCanvas.parentElement;
-    if (!parent) {
+    const currentParent = mainCanvas.parentElement;
+    if (!currentParent) {
       // Fallback: if the canvas isn't in the DOM yet, append to body.
       if (!canvas.isConnected) {
         document.body.appendChild(canvas);
@@ -254,8 +254,7 @@ export class TerritoryLayer implements Layer {
     // Ensure the main canvas is wrapped in a positioned container so the
     // territory canvas can overlay it without mirroring computed styles.
     let wrapper: HTMLElement;
-    const currentParent = mainCanvas.parentElement;
-    if (currentParent && currentParent.dataset.territoryOverlay === "1") {
+    if (currentParent.dataset.territoryOverlay === "1") {
       wrapper = currentParent;
     } else {
       wrapper = document.createElement("div");
@@ -265,7 +264,7 @@ export class TerritoryLayer implements Layer {
       wrapper.style.lineHeight = "0";
 
       // Replace mainCanvas with wrapper, then re-insert mainCanvas inside wrapper.
-      parent.replaceChild(wrapper, mainCanvas);
+      currentParent.replaceChild(wrapper, mainCanvas);
       wrapper.appendChild(mainCanvas);
     }
 
@@ -301,10 +300,6 @@ export class TerritoryLayer implements Layer {
     const h = rect.height > 0 ? rect.height : mainCanvas.clientHeight;
     if (w > 0) wrapper.style.width = `${w}px`;
     if (h > 0) wrapper.style.height = `${h}px`;
-  }
-
-  private markTile(tile: TileRef) {
-    this.territoryRenderer?.markTile(tile);
   }
 
   private updateHoverHighlight() {

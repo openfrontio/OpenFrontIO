@@ -45,10 +45,6 @@ export class TransformHandler {
     return this._boundingRect;
   }
 
-  viewOffset(): { x: number; y: number } {
-    return { x: this.offsetX, y: this.offsetY };
-  }
-
   getOffsetX(): number {
     return this.offsetX;
   }
