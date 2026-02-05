@@ -74,7 +74,9 @@ export class NationStructureBehavior {
         continue;
       }
 
-      if (this.shouldBuildStructure(structureType, cityCount)) {
+      if (
+        this.shouldBuildStructure(structureType, cityCount, hasCoastalTiles)
+      ) {
         if (this.maybeSpawnStructure(structureType)) {
           return true;
         }
@@ -92,14 +94,25 @@ export class NationStructureBehavior {
    * Determines if we should build more of this structure type based on
    * the current city count and the configured ratio.
    */
-  private shouldBuildStructure(type: UnitType, cityCount: number): boolean {
+  private shouldBuildStructure(
+    type: UnitType,
+    cityCount: number,
+    hasCoastalTiles: boolean,
+  ): boolean {
     const config = STRUCTURE_RATIOS[type];
     if (config === undefined) {
       return false;
     }
 
+    let ratio = config.ratioPerCity;
+
+    // Heavily reduce factory spawning if we have coastal tiles
+    if (type === UnitType.Factory && hasCoastalTiles) {
+      ratio *= 0.25;
+    }
+
     const owned = this.player.unitsOwned(type);
-    const targetCount = Math.floor(cityCount * config.ratioPerCity);
+    const targetCount = Math.floor(cityCount * ratio);
 
     return owned < targetCount;
   }
