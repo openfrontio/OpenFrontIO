@@ -759,9 +759,15 @@ class Client {
     // Handle requeue parameter for ranked matchmaking
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has("requeue")) {
-      // Remove the requeue parameter from URL
-      history.replaceState(null, "", "/");
-      // Wait for matchmaking button to be defined, then click it
+      // Remove only the requeue parameter, preserving other params and hash
+      searchParams.delete("requeue");
+      const newUrl =
+        window.location.pathname +
+        (searchParams.toString() ? "?" + searchParams.toString() : "") +
+        window.location.hash;
+      history.replaceState(null, "", newUrl);
+      // Wait for matchmaking button to be defined, then trigger its click handler
+      // This goes through username validation instead of bypassing it
       customElements.whenDefined("matchmaking-button").then(() => {
         const matchmakingButton = document.querySelector(
           "matchmaking-button button",
