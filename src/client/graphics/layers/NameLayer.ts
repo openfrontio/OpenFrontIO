@@ -45,6 +45,15 @@ type PlayerRenderCache = {
   troopsTextWidth: number;
 };
 
+type PlayerIconRender =
+  | { kind: "image"; src: string; alpha?: number }
+  | {
+      kind: "alliance-progress";
+      fraction: number;
+      hasExtensionRequest: boolean;
+    }
+  | { kind: "emoji"; text: string };
+
 export class NameLayer implements Layer {
   private lastSharedStateUpdatedAtMs = 0;
   private sharedState: PlayerIconsSharedState | null = null;
@@ -329,7 +338,8 @@ export class NameLayer implements Layer {
     const maxX = bottomRight.x;
     const minY = topLeft.y;
     const maxY = bottomRight.y;
-    const fontCache = new Map<number, string>();
+    const fontCache = new Map<string, string>();
+    const iconsRowOpacity = 0.8;
 
     for (const player of this.game.playerViews()) {
       if (!player.isAlive()) {
@@ -352,12 +362,19 @@ export class NameLayer implements Layer {
 
       const worldX = nameLocation.x;
       const worldY = nameLocation.y;
-      if (worldX <= minX || worldX >= maxX || worldY <= minY || worldY >= maxY) {
+      if (
+        worldX <= minX ||
+        worldX >= maxX ||
+        worldY <= minY ||
+        worldY >= maxY
+      ) {
         continue;
       }
 
-      const canvasPos =
-        this.transformHandler.worldToCanvasCoordinatesXY(worldX, worldY);
+      const canvasPos = this.transformHandler.worldToCanvasCoordinatesXY(
+        worldX,
+        worldY,
+      );
       const x = Math.round(canvasPos.x);
       const y = Math.round(canvasPos.y);
 
@@ -365,16 +382,18 @@ export class NameLayer implements Layer {
       const visualScale = scale * elementScale;
 
       const fontBase = Math.max(4, Math.floor(baseSize * 0.4));
-      const fontPx = Math.max(4, Math.round(fontBase * visualScale));
+      const fontPx = Math.max(4, fontBase * visualScale);
 
       const iconBasePx = Math.min(fontBase * 1.5, 48);
-      const iconPx = Math.max(8, Math.round(iconBasePx * visualScale));
+      const iconPx = iconBasePx * visualScale;
+      const iconGapPx = 4 * visualScale;
 
       ctx.save();
-      let font = fontCache.get(fontPx);
+      const fontKey = fontPx.toFixed(3);
+      let font = fontCache.get(fontKey);
       if (!font) {
-        font = `${fontPx}px ${fontFamily}`;
-        fontCache.set(fontPx, font);
+        font = `${fontKey}px ${fontFamily}`;
+        fontCache.set(fontKey, font);
       }
       ctx.font = font;
       ctx.fillStyle = this.theme.textColor(player);
@@ -383,45 +402,49 @@ export class NameLayer implements Layer {
 
       const cache = this.getPlayerCache(player, ctx, tick);
 
-      const iconsY = Math.round(y - fontPx * 1.1 - iconPx * 0.6);
-      this.renderPlayerIcons(
-        ctx,
-        player,
-        sharedState,
-        x,
-        iconsY,
-        iconPx,
-        fontFamily,
-        nowMs,
-      );
+      const icons = this.collectPlayerIcons(player, sharedState, nowMs);
+      const hasIcons = icons.length > 0;
+      const iconRowWidth = hasIcons
+        ? icons.length * iconPx + (icons.length - 1) * iconGapPx
+        : 0;
+      const iconRowHeight = hasIcons ? iconPx : 0;
 
       const flag = player.cosmetics.flag ?? null;
       const hasFlag = flag !== null && flag !== "" && !flag.startsWith("!");
-      const flagW = hasFlag ? Math.round((fontPx * 3) / 4) : 0;
+      const flagW = hasFlag ? (fontPx * 3) / 4 : 0;
       const flagH = hasFlag ? fontPx : 0;
-      const gapPx = hasFlag ? Math.max(2, Math.round(fontPx * 0.18)) : 0;
 
-      const totalNameW = flagW + gapPx + cache.nameTextWidth;
-      const nameLeftX = x - totalNameW / 2;
+      const nameRowWidth = flagW + cache.nameTextWidth;
+      const troopsRowWidth = cache.troopsTextWidth;
+      const elementWidth = Math.max(iconRowWidth, nameRowWidth, troopsRowWidth);
+      const marginTop = -0.05 * elementWidth;
+      const totalHeight = iconRowHeight + fontPx + fontPx + marginTop;
 
-      if (hasFlag) {
-        this.drawImage(
+      const top = y - totalHeight / 2;
+      const iconRowX = x - iconRowWidth / 2;
+      const iconCenterY = top + iconRowHeight / 2;
+
+      const nameRowY = top + iconRowHeight;
+      const nameCenterY = nameRowY + fontPx / 2;
+      const nameLeftX = x - nameRowWidth / 2;
+
+      if (hasIcons) {
+        this.drawPlayerIcons(
           ctx,
-          `/flags/${flag}.svg`,
-          nameLeftX,
-          y - flagH / 2,
-          flagW,
-          flagH,
+          icons,
+          iconRowX,
+          iconCenterY,
+          iconPx,
+          iconGapPx,
+          fontFamily,
+          iconsRowOpacity,
         );
       }
 
-      ctx.fillText(cache.lastName, nameLeftX + flagW + gapPx, y);
-
-      ctx.textAlign = "center";
-      ctx.fillText(cache.troopsText, x, Math.round(y + fontPx * 1.05));
-
       if (sharedState.transitiveTargets?.has(player) ?? false) {
-        const targetSize = Math.round(iconPx * 1.1);
+        const targetSize = iconPx;
+        ctx.save();
+        ctx.globalAlpha *= iconsRowOpacity;
         this.drawImage(
           ctx,
           targetIcon,
@@ -430,7 +453,26 @@ export class NameLayer implements Layer {
           targetSize,
           targetSize,
         );
+        ctx.restore();
       }
+
+      if (hasFlag) {
+        this.drawImage(
+          ctx,
+          `/flags/${flag}.svg`,
+          nameLeftX,
+          nameCenterY - flagH / 2,
+          flagW,
+          flagH,
+        );
+      }
+
+      ctx.fillText(cache.lastName, nameLeftX + flagW, nameCenterY);
+
+      const troopsRowY = top + iconRowHeight + fontPx + marginTop;
+      const troopsCenterY = troopsRowY + fontPx / 2;
+      ctx.textAlign = "center";
+      ctx.fillText(cache.troopsText, x, troopsCenterY);
 
       ctx.restore();
     }
@@ -492,27 +534,14 @@ export class NameLayer implements Layer {
     return next;
   }
 
-  private renderPlayerIcons(
-    ctx: CanvasRenderingContext2D,
+  private collectPlayerIcons(
     player: PlayerView,
     shared: PlayerIconsSharedState,
-    centerX: number,
-    centerY: number,
-    iconPx: number,
-    fontFamily: string,
     nowMs: number,
-  ): void {
+  ): PlayerIconRender[] {
     const myPlayer = this.game.myPlayer();
 
-    const icons: Array<
-      | { kind: "image"; src: string; alpha?: number }
-      | {
-          kind: "alliance-progress";
-          fraction: number;
-          hasExtensionRequest: boolean;
-        }
-      | { kind: "emoji"; text: string }
-    > = [];
+    const icons: PlayerIconRender[] = [];
 
     if (shared.firstPlaceId !== null && player.id() === shared.firstPlaceId) {
       icons.push({ kind: "image", src: crownIcon });
@@ -593,23 +622,34 @@ export class NameLayer implements Layer {
       });
     }
 
-    if (icons.length === 0) {
-      return;
-    }
+    return icons;
+  }
 
-    const gap = Math.max(2, Math.round(iconPx * 0.18));
-    const totalW = icons.length * iconPx + (icons.length - 1) * gap;
-    let x = centerX - totalW / 2;
+  private drawPlayerIcons(
+    ctx: CanvasRenderingContext2D,
+    icons: PlayerIconRender[],
+    startX: number,
+    centerY: number,
+    iconPx: number,
+    gapPx: number,
+    fontFamily: string,
+    rowOpacity: number,
+  ): void {
+    if (icons.length === 0) return;
+
+    let x = startX;
+    ctx.save();
+    ctx.globalAlpha *= rowOpacity;
 
     for (const icon of icons) {
       if (icon.kind === "emoji") {
         ctx.save();
-        ctx.font = `${iconPx}px ${fontFamily}`;
+        ctx.font = `${iconPx.toFixed(3)}px ${fontFamily}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(icon.text, x + iconPx / 2, centerY);
         ctx.restore();
-        x += iconPx + gap;
+        x += iconPx + gapPx;
         continue;
       }
 
@@ -622,7 +662,7 @@ export class NameLayer implements Layer {
           icon.fraction,
           icon.hasExtensionRequest,
         );
-        x += iconPx + gap;
+        x += iconPx + gapPx;
         continue;
       }
 
@@ -637,8 +677,10 @@ export class NameLayer implements Layer {
         ctx.restore();
       }
 
-      x += iconPx + gap;
+      x += iconPx + gapPx;
     }
+
+    ctx.restore();
   }
 
   private drawAllianceProgressIcon(
@@ -666,10 +708,7 @@ export class NameLayer implements Layer {
     }
   }
 
-  private getTraitorIconAlpha(
-    remainingSeconds: number,
-    nowMs: number,
-  ): number {
+  private getTraitorIconAlpha(remainingSeconds: number, nowMs: number): number {
     if (remainingSeconds > 15) return 1;
 
     const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
