@@ -32,16 +32,6 @@ export class GameManager {
     );
   }
 
-  // Get existing clientID for this persistentID (no side effects)
-  getClientIdForPersistentId(
-    gameID: GameID,
-    persistentID: string,
-  ): string | null {
-    const game = this.games.get(gameID);
-    if (!game) return null;
-    return game.getClientIdForPersistentId(persistentID);
-  }
-
   // Get or create a clientID for this persistentID in the given game
   getOrCreateClientId(gameID: GameID, persistentID: string): string | null {
     const game = this.games.get(gameID);

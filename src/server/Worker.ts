@@ -460,7 +460,7 @@ export async function startWorker() {
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          // Handle game not found case
+          ws.close(1002, "Game not found");
         }
 
         // Handle other message types
