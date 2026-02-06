@@ -17,7 +17,6 @@ import {
   GameRecordSchema,
   LobbyInfoEvent,
 } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   GameMapSize,
@@ -26,6 +25,7 @@ import {
   HumansVsNations,
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { getClientIDForGame } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -55,6 +55,10 @@ export class JoinLobbyModal extends BaseModal {
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
 
+  private isPrivateLobby(): boolean {
+    return this.gameConfig?.gameType === GameType.Private;
+  }
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
@@ -66,7 +70,7 @@ export class JoinLobbyModal extends BaseModal {
     }
     this.updateFromLobby({
       ...lobby,
-      msUntilStart: lobby.msUntilStart ?? undefined,
+      startsAt: lobby.startsAt ?? undefined,
     });
   };
 
@@ -90,7 +94,10 @@ export class JoinLobbyModal extends BaseModal {
             })
           : translateText("public_lobby.started");
     const maxPlayers = this.gameConfig?.maxPlayers ?? 0;
-    const playerCount = this.playerCount;
+    const playerCount = this.players?.length ?? 0;
+    const hostClientID = this.isPrivateLobby()
+      ? (this.lobbyCreatorClientID ?? "")
+      : "";
     const content = html`
       <div
         class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
@@ -100,8 +107,7 @@ export class JoinLobbyModal extends BaseModal {
           onBack: () => this.closeAndLeave(),
           ariaLabel: translateText("common.close"),
           rightContent:
-            this.currentLobbyId &&
-            this.gameConfig?.gameType === GameType.Private
+            this.currentLobbyId && this.isPrivateLobby()
               ? html`
                   <copy-button .lobbyId=${this.currentLobbyId}></copy-button>
                 `
@@ -129,7 +135,7 @@ export class JoinLobbyModal extends BaseModal {
                         class="mt-6"
                         .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                         .clients=${this.players}
-                        .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+                        .lobbyCreatorClientID=${hostClientID}
                         .currentClientID=${this.currentClientID}
                         .teamCount=${this.gameConfig?.playerTeams ?? 2}
                         .nationCount=${this.nationCount}
@@ -143,7 +149,7 @@ export class JoinLobbyModal extends BaseModal {
               `}
         </div>
 
-        ${this.gameConfig?.gameType === GameType.Private
+        ${this.isPrivateLobby()
           ? html`
               <div
                 class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
@@ -277,13 +283,13 @@ export class JoinLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "", lobbyInfo?: GameInfo) {
+  public open(lobbyId: string = "", isPublic: boolean = false) {
     super.open();
     if (lobbyId) {
-      this.startTrackingLobby(lobbyId, lobbyInfo);
+      this.startTrackingLobby(lobbyId);
       // If opened with lobbyInfo (public lobby case), auto-join the lobby
-      if (lobbyInfo) {
-        this.joinPublicLobby(lobbyId, lobbyInfo);
+      if (isPublic) {
+        this.joinPublicLobby(lobbyId);
       } else {
         // If opened with lobbyId but no lobbyInfo (URL join case), check if active and join
         this.handleUrlJoin(lobbyId);
@@ -323,14 +329,14 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private joinPublicLobby(lobbyId: string, lobbyInfo: GameInfo) {
+  private joinPublicLobby(lobbyId: string) {
     // Dispatch join-lobby event to actually connect to the lobby
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
           clientID: this.currentClientID,
-          publicLobbyInfo: lobbyInfo,
+          source: "public",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -340,10 +346,9 @@ export class JoinLobbyModal extends BaseModal {
 
   private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
-    this.currentClientID = generateID();
+    this.currentClientID = getClientIDForGame(lobbyId);
     this.gameConfig = null;
     this.players = [];
-    this.playerCount = 0;
     this.nationCount = 0;
     this.lobbyStartAt = null;
     this.lobbyCreatorClientID = null;
@@ -391,7 +396,6 @@ export class JoinLobbyModal extends BaseModal {
     if (this.lobbyIdInput) this.lobbyIdInput.value = "";
     this.gameConfig = null;
     this.players = [];
-    this.playerCount = 0;
     this.currentLobbyId = "";
     this.currentClientID = "";
     this.nationCount = 0;
@@ -530,19 +534,8 @@ export class JoinLobbyModal extends BaseModal {
   // --- Lobby event handling ---
 
   private updateFromLobby(lobby: GameInfo) {
-    if (lobby.clients) {
-      this.players = lobby.clients;
-      this.playerCount = lobby.clients.length;
-      this.lobbyCreatorClientID = lobby.clients[0]?.clientID ?? null;
-    } else {
-      this.players = [];
-      this.playerCount = lobby.numClients ?? 0;
-    }
-    if (lobby.msUntilStart !== undefined) {
-      this.lobbyStartAt = lobby.msUntilStart + Date.now();
-    } else {
-      this.lobbyStartAt = null;
-    }
+    this.players = lobby.clients ?? [];
+    this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
@@ -551,6 +544,10 @@ export class JoinLobbyModal extends BaseModal {
         this.loadNationCount();
       }
     }
+
+    this.lobbyCreatorClientID = this.isPrivateLobby()
+      ? (lobby.clients?.[0]?.clientID ?? null)
+      : null;
   }
 
   private startLobbyUpdates() {
@@ -780,6 +777,7 @@ export class JoinLobbyModal extends BaseModal {
           detail: {
             gameID: lobbyId,
             clientID: this.currentClientID,
+            source: "private",
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -838,6 +836,7 @@ export class JoinLobbyModal extends BaseModal {
           gameID: lobbyId,
           gameRecord: parsed.data,
           clientID: this.currentClientID,
+          source: "private",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,

@@ -1,6 +1,5 @@
-import { GameInfo } from "../core/Schemas";
-
-type LobbyUpdateHandler = (lobbies: GameInfo[]) => void;
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { PublicGames, PublicGamesSchema } from "../core/Schemas";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -8,36 +7,39 @@ interface LobbySocketOptions {
   pollIntervalMs?: number;
 }
 
+function getRandomWorkerPath(numWorkers: number): string {
+  const workerIndex = Math.floor(Math.random() * numWorkers);
+  return `/w${workerIndex}`;
+}
+
 export class PublicLobbySocket {
   private ws: WebSocket | null = null;
   private wsReconnectTimeout: number | null = null;
-  private fallbackPollInterval: number | null = null;
   private wsConnectionAttempts = 0;
   private wsAttemptCounted = false;
+  private workerPath: string = "";
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
-  private readonly pollIntervalMs: number;
-  private readonly onLobbiesUpdate: LobbyUpdateHandler;
 
   constructor(
-    onLobbiesUpdate: LobbyUpdateHandler,
+    private onLobbiesUpdate: (data: PublicGames) => void,
     options?: LobbySocketOptions,
   ) {
-    this.onLobbiesUpdate = onLobbiesUpdate;
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
-    this.pollIntervalMs = options?.pollIntervalMs ?? 1000;
   }
 
-  start() {
+  async start() {
     this.wsConnectionAttempts = 0;
+    // Get config to determine number of workers, then pick a random one
+    const config = await getServerConfigFromClient();
+    this.workerPath = getRandomWorkerPath(config.numWorkers());
     this.connectWebSocket();
   }
 
   stop() {
     this.disconnectWebSocket();
-    this.stopFallbackPolling();
   }
 
   private connectWebSocket() {
@@ -49,7 +51,7 @@ export class PublicLobbySocket {
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/lobbies`;
+      const wsUrl = `${protocol}//${window.location.host}${this.workerPath}/lobbies`;
 
       this.ws = new WebSocket(wsUrl);
       this.wsAttemptCounted = false;
@@ -70,15 +72,14 @@ export class PublicLobbySocket {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
     }
-    this.stopFallbackPolling();
   }
 
   private handleMessage(event: MessageEvent) {
     try {
-      const message = JSON.parse(event.data as string);
-      if (message.type === "lobbies_update") {
-        this.onLobbiesUpdate(message.data?.lobbies ?? []);
-      }
+      const publicGames = PublicGamesSchema.parse(
+        JSON.parse(event.data as string),
+      );
+      this.onLobbiesUpdate(publicGames);
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -101,10 +102,7 @@ export class PublicLobbySocket {
       this.wsConnectionAttempts++;
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-      console.log(
-        "Max WebSocket attempts reached, falling back to HTTP polling",
-      );
-      this.startFallbackPolling();
+      console.error("Max WebSocket attempts reached");
     } else {
       this.scheduleReconnect();
     }
@@ -121,7 +119,7 @@ export class PublicLobbySocket {
       this.wsConnectionAttempts++;
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-      this.startFallbackPolling();
+      alert("error connecting to game service");
     } else {
       this.scheduleReconnect();
     }
@@ -143,35 +141,6 @@ export class PublicLobbySocket {
     if (this.wsReconnectTimeout !== null) {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
-    }
-  }
-
-  private startFallbackPolling() {
-    if (this.fallbackPollInterval !== null) return;
-    console.log("Starting HTTP fallback polling");
-    this.fetchLobbiesHTTP();
-    this.fallbackPollInterval = window.setInterval(() => {
-      this.fetchLobbiesHTTP();
-    }, this.pollIntervalMs);
-  }
-
-  private stopFallbackPolling() {
-    if (this.fallbackPollInterval !== null) {
-      clearInterval(this.fallbackPollInterval);
-      this.fallbackPollInterval = null;
-    }
-  }
-
-  private async fetchLobbiesHTTP() {
-    try {
-      const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      this.onLobbiesUpdate(data.lobbies as GameInfo[]);
-    } catch (error) {
-      console.error("Error fetching lobbies via HTTP:", error);
     }
   }
 }
