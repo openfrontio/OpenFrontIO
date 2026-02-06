@@ -457,6 +457,8 @@ export class NameLayer implements Layer {
       }
 
       if (hasFlag) {
+        ctx.save();
+        ctx.globalAlpha *= 0.8;
         this.drawImage(
           ctx,
           `/flags/${flag}.svg`,
@@ -465,6 +467,7 @@ export class NameLayer implements Layer {
           flagW,
           flagH,
         );
+        ctx.restore();
       }
 
       ctx.fillText(cache.lastName, nameLeftX + flagW, nameCenterY);
