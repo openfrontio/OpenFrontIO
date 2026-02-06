@@ -91,27 +91,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
-        ${this.isPlayerTeamLabelVisible
-          ? html`
-              <div
-                class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
-                @contextmenu=${(e: Event) => e.preventDefault()}
-              >
-                ${translateText("help_modal.ui_your_team")}
-                <span
-                  style="--color: ${this.playerColor.toRgbString()}"
-                  class="text-(--color)"
-                >
-                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
-                </span>
-              </div>
-            `
-          : null}
-        <div
-          class=${`flex items-center gap-4 lg:gap-6 xl:gap-8 text-white ${this.isTeamGame ? "ml-8" : ""} ${
-            this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
-          }`}
-        >
+        <div class="flex items-center gap-4 lg:gap-4 xl:gap-6 text-white">
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
             @click=${this.toggleLeaderboard}
@@ -161,6 +141,22 @@ export class GameLeftSidebar extends LitElement implements Layer {
               `
             : null}
         </div>
+        ${this.isPlayerTeamLabelVisible
+          ? html`
+              <div
+                class="flex items-center w-full text-white"
+                @contextmenu=${(e: Event) => e.preventDefault()}
+              >
+                ${translateText("help_modal.ui_your_team")}
+                <span
+                  style="--color: ${this.playerColor.toRgbString()}"
+                  class="text-(--color)"
+                >
+                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
+                </span>
+              </div>
+            `
+          : null}
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
