@@ -50,11 +50,8 @@ const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
+/** If we have more than this many total structures per 1000 tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1000;
-
-/** Maximum number of structures a nation can build or upgrade per tick */
-const MAX_STRUCTURES_PER_TICK = 10;
 
 export class NationStructureBehavior {
   constructor(
@@ -64,7 +61,8 @@ export class NationStructureBehavior {
   ) {}
 
   handleUnits(): boolean {
-    let built = 0;
+    const cityCount = this.player.unitsOwned(UnitType.City);
+    const hasCoastalTiles = this.hasCoastalTiles();
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
@@ -75,40 +73,26 @@ export class NationStructureBehavior {
       UnitType.MissileSilo,
     ];
 
-    // Keep looping until we can't build anything or hit the MAX_STRUCTURES_PER_TICK cap
-    let builtThisPass = true;
-    while (builtThisPass && built < MAX_STRUCTURES_PER_TICK) {
-      builtThisPass = false;
-      const cityCount = this.player.unitsOwned(UnitType.City);
-      const hasCoastalTiles = this.hasCoastalTiles();
-
-      for (const structureType of buildOrder) {
-        if (built >= MAX_STRUCTURES_PER_TICK) break;
-
-        // Skip ports if no coastal tiles
-        if (structureType === UnitType.Port && !hasCoastalTiles) {
-          continue;
-        }
-
-        if (
-          this.shouldBuildStructure(structureType, cityCount, hasCoastalTiles)
-        ) {
-          if (this.maybeSpawnStructure(structureType)) {
-            built++;
-            builtThisPass = true;
-          }
-        }
+    for (const structureType of buildOrder) {
+      // Skip ports if no coastal tiles
+      if (structureType === UnitType.Port && !hasCoastalTiles) {
+        continue;
       }
 
-      if (built < MAX_STRUCTURES_PER_TICK) {
-        if (this.maybeSpawnStructure(UnitType.City)) {
-          built++;
-          builtThisPass = true;
+      if (
+        this.shouldBuildStructure(structureType, cityCount, hasCoastalTiles)
+      ) {
+        if (this.maybeSpawnStructure(structureType)) {
+          return true;
         }
       }
     }
 
-    return built > 0;
+    if (this.maybeSpawnStructure(UnitType.City)) {
+      return true;
+    }
+
+    return false;
   }
 
   private hasCoastalTiles(): boolean {
