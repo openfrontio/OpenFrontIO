@@ -13,20 +13,25 @@ import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
-  private lastRefresh: number = 0;
+  private lastRefreshMs: number = 0;
   private refreshRate: number = 10;
   private theme: Theme;
   private animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private hasBufferedFrame = false;
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -254,28 +259,64 @@ export class FxLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    const now = Date.now();
-    if (this.game.config().userSettings()?.fxLayer()) {
-      if (now > this.lastRefresh + this.refreshRate) {
-        const delta = now - this.lastRefresh;
-        this.renderAllFx(context, delta);
-        this.lastRefresh = now;
+    const nowMs = performance.now();
+
+    const hasFx = this.allFx.length > 0;
+    if (!this.game.config().userSettings()?.fxLayer() || !hasFx) {
+      if (this.hasBufferedFrame) {
+        // Clear stale pixels once when fx ends/disabled so re-enabling doesn't
+        // flash old frames.
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.hasBufferedFrame = false;
       }
-      context.drawImage(
-        this.canvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
+      this.lastRefreshMs = nowMs;
+      return;
     }
+
+    const needsRefresh =
+      !this.hasBufferedFrame || nowMs > this.lastRefreshMs + this.refreshRate;
+    if (needsRefresh) {
+      const delta = this.hasBufferedFrame ? nowMs - this.lastRefreshMs : 0;
+      this.renderAllFx(delta);
+      this.lastRefreshMs = nowMs;
+      this.hasBufferedFrame = true;
+    }
+
+    this.drawVisibleFx(context);
   }
 
-  renderAllFx(context: CanvasRenderingContext2D, delta: number) {
-    if (this.allFx.length > 0) {
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.renderContextFx(delta);
-    }
+  private drawVisibleFx(context: CanvasRenderingContext2D) {
+    const mapW = this.game.width();
+    const mapH = this.game.height();
+
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const pad = 2;
+
+    const left = Math.max(0, Math.floor(topLeft.x - pad));
+    const top = Math.max(0, Math.floor(topLeft.y - pad));
+    const right = Math.min(mapW, Math.ceil(bottomRight.x + pad));
+    const bottom = Math.min(mapH, Math.ceil(bottomRight.y + pad));
+
+    const width = Math.max(0, right - left);
+    const height = Math.max(0, bottom - top);
+    if (width === 0 || height === 0) return;
+
+    context.drawImage(
+      this.canvas,
+      left,
+      top,
+      width,
+      height,
+      -mapW / 2 + left,
+      -mapH / 2 + top,
+      width,
+      height,
+    );
+  }
+
+  private renderAllFx(delta: number) {
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.renderContextFx(delta);
   }
 
   renderContextFx(duration: number) {
