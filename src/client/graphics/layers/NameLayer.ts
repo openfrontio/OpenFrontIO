@@ -26,23 +26,6 @@ type CachedImage = {
   src: string;
 };
 
-type CustomFlagLayer = {
-  maskSrc: string;
-  colorKey: string;
-};
-
-type CustomFlagRenderCache = {
-  w: number;
-  h: number;
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  scratch: HTMLCanvasElement;
-  scratchCtx: CanvasRenderingContext2D;
-  layers: CustomFlagLayer[];
-  isAnimated: boolean;
-  lastRenderedAtMs: number;
-};
-
 type PlayerIconsSharedState = {
   firstPlaceId: PlayerID | null;
   transitiveTargets: ReadonlySet<PlayerView> | null;
@@ -66,12 +49,10 @@ export class NameLayer implements Layer {
   private lastSharedStateUpdatedAtMs = 0;
   private sharedState: PlayerIconsSharedState | null = null;
   private imageCache = new Map<string, CachedImage>();
-  private customFlagCache = new Map<string, CustomFlagRenderCache>();
   private playerCache = new Map<PlayerID, PlayerRenderCache>();
   private theme: Theme = this.game.config().theme();
   private isVisible: boolean = true;
   private readonly sharedStateRefreshMs = 200;
-  private readonly customFlagRefreshMs = 120;
   private readonly nukeTypeSet = new Set(nukeTypes);
 
   private lastTickDerivedAt = -1;
@@ -402,7 +383,7 @@ export class NameLayer implements Layer {
       );
 
       const flag = player.cosmetics.flag ?? null;
-      const hasFlag = flag !== null && flag !== "";
+      const hasFlag = flag !== null && flag !== "" && !flag.startsWith("!");
       const flagW = hasFlag ? Math.round((fontPx * 3) / 4) : 0;
       const flagH = hasFlag ? fontPx : 0;
       const gapPx = hasFlag ? Math.max(2, Math.round(fontPx * 0.18)) : 0;
@@ -411,14 +392,13 @@ export class NameLayer implements Layer {
       const nameLeftX = x - totalNameW / 2;
 
       if (hasFlag) {
-        this.drawPlayerFlag(
+        this.drawImage(
           ctx,
-          flag,
+          `/flags/${flag}.svg`,
           nameLeftX,
           y - flagH / 2,
           flagW,
           flagH,
-          nowMs,
         );
       }
 
@@ -497,261 +477,6 @@ export class NameLayer implements Layer {
     };
     this.playerCache.set(id, next);
     return next;
-  }
-
-  private drawPlayerFlag(
-    ctx: CanvasRenderingContext2D,
-    flag: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    nowMs: number,
-  ): void {
-    if (flag.startsWith("!")) {
-      const custom = this.getCustomFlagCanvas(flag, w, h);
-      if (!custom) return;
-      this.renderCustomFlag(custom, nowMs);
-      ctx.drawImage(custom.canvas, x, y, w, h);
-      return;
-    }
-
-    this.drawImage(ctx, `/flags/${flag}.svg`, x, y, w, h);
-  }
-
-  private getCustomFlagCanvas(
-    flag: string,
-    w: number,
-    h: number,
-  ): CustomFlagRenderCache | null {
-    const bucketW = Math.max(2, Math.round(w / 4) * 4);
-    const bucketH = Math.max(2, Math.round(h / 4) * 4);
-    const key = `${flag}@${bucketW}x${bucketH}`;
-
-    const existing = this.customFlagCache.get(key);
-    if (existing) return existing;
-
-    const layers = this.parseCustomFlag(flag);
-    if (layers === null || layers.length === 0) return null;
-
-    let isAnimated = false;
-    for (const layer of layers) {
-      if (this.isSpecialFlagColor(layer.colorKey)) {
-        isAnimated = true;
-        break;
-      }
-    }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = bucketW;
-    canvas.height = bucketH;
-    const canvasCtx = canvas.getContext("2d");
-    if (!canvasCtx) return null;
-
-    const scratch = document.createElement("canvas");
-    scratch.width = bucketW;
-    scratch.height = bucketH;
-    const scratchCtx = scratch.getContext("2d");
-    if (!scratchCtx) return null;
-
-    const next: CustomFlagRenderCache = {
-      w: bucketW,
-      h: bucketH,
-      canvas,
-      ctx: canvasCtx,
-      scratch,
-      scratchCtx,
-      layers,
-      isAnimated,
-      lastRenderedAtMs: -Infinity,
-    };
-    this.customFlagCache.set(key, next);
-    return next;
-  }
-
-  private parseCustomFlag(flag: string): CustomFlagLayer[] | null {
-    if (!flag.startsWith("!")) return null;
-    const code = flag.slice(1);
-    if (code.length === 0) return null;
-
-    const layers: CustomFlagLayer[] = [];
-    for (const segment of code.split("_")) {
-      const [layerKey, colorKey] = segment.split("-");
-      if (!layerKey || !colorKey) continue;
-      if (!/^[a-zA-Z0-9_-]+$/.test(layerKey)) continue;
-      if (!/^[a-zA-Z0-9#_-]+$/.test(colorKey)) continue;
-      layers.push({
-        maskSrc: `/flags/custom/${layerKey}.svg`,
-        colorKey,
-      });
-    }
-    return layers.length > 0 ? layers : null;
-  }
-
-  private renderCustomFlag(cache: CustomFlagRenderCache, nowMs: number): void {
-    if (!cache.isAnimated && cache.lastRenderedAtMs !== -Infinity) return;
-    if (
-      cache.isAnimated &&
-      nowMs - cache.lastRenderedAtMs < this.customFlagRefreshMs
-    ) {
-      return;
-    }
-
-    for (const layer of cache.layers) {
-      const mask = this.getImage(layer.maskSrc);
-      if (!mask.complete || mask.naturalWidth === 0) {
-        return;
-      }
-    }
-
-    cache.lastRenderedAtMs = nowMs;
-    cache.ctx.clearRect(0, 0, cache.w, cache.h);
-
-    for (const layer of cache.layers) {
-      const mask = this.getImage(layer.maskSrc);
-      cache.scratchCtx.clearRect(0, 0, cache.w, cache.h);
-      cache.scratchCtx.globalCompositeOperation = "source-over";
-      cache.scratchCtx.drawImage(mask, 0, 0, cache.w, cache.h);
-      cache.scratchCtx.globalCompositeOperation = "source-in";
-
-      cache.scratchCtx.fillStyle = this.resolveFlagColor(layer.colorKey, nowMs);
-      cache.scratchCtx.fillRect(0, 0, cache.w, cache.h);
-      cache.scratchCtx.globalCompositeOperation = "source-over";
-
-      cache.ctx.drawImage(cache.scratch, 0, 0);
-    }
-  }
-
-  private isSpecialFlagColor(colorKey: string): boolean {
-    if (colorKey.startsWith("#")) return false;
-    return !/^([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(colorKey);
-  }
-
-  private resolveFlagColor(colorKey: string, nowMs: number): string {
-    if (!this.isSpecialFlagColor(colorKey)) {
-      if (colorKey.startsWith("#")) return colorKey;
-      if (/^([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(colorKey)) {
-        return `#${colorKey}`;
-      }
-      return colorKey;
-    }
-
-    switch (colorKey) {
-      case "rainbow":
-        return this.sampleKeyframedColor(nowMs, 7000, [
-          [0, "#990033"],
-          [0.16, "#996600"],
-          [0.32, "#336600"],
-          [0.48, "#008080"],
-          [0.64, "#1c3f99"],
-          [0.8, "#5e0099"],
-          [1, "#990033"],
-        ]);
-      case "bright-rainbow":
-        return this.sampleKeyframedColor(nowMs, 7000, [
-          [0, "#ff0000"],
-          [0.16, "#ffa500"],
-          [0.32, "#ffff00"],
-          [0.48, "#00ff00"],
-          [0.64, "#00ffff"],
-          [0.8, "#0000ff"],
-          [1, "#ff0000"],
-        ]);
-      case "copper-glow":
-        return this.sampleKeyframedColor(nowMs, 3000, [
-          [0, "#b87333"],
-          [0.5, "#cd7f32"],
-          [1, "#b87333"],
-        ]);
-      case "silver-glow":
-        return this.sampleKeyframedColor(nowMs, 3000, [
-          [0, "#c0c0c0"],
-          [0.5, "#e0e0e0"],
-          [1, "#c0c0c0"],
-        ]);
-      case "gold-glow":
-        return this.sampleKeyframedColor(nowMs, 3000, [
-          [0, "#ffd700"],
-          [0.5, "#fff8dc"],
-          [1, "#ffd700"],
-        ]);
-      case "neon":
-        return this.sampleKeyframedColor(nowMs, 3000, [
-          [0, "#39ff14"],
-          [0.25, "#2aff60"],
-          [0.5, "#00ff88"],
-          [0.75, "#2aff60"],
-          [1, "#39ff14"],
-        ]);
-      case "water":
-        return this.sampleKeyframedColor(nowMs, 6200, [
-          [0, "#00bfff"],
-          [0.12, "#1e90ff"],
-          [0.27, "#87cefa"],
-          [0.45, "#4682b4"],
-          [0.63, "#87cefa"],
-          [0.8, "#1e90ff"],
-          [1, "#00bfff"],
-        ]);
-      case "lava":
-        return this.sampleKeyframedColor(nowMs, 6000, [
-          [0, "#ff4500"],
-          [0.2, "#ff6347"],
-          [0.4, "#ff8c00"],
-          [0.6, "#ff4500"],
-          [0.8, "#ff0000"],
-          [1, "#ff4500"],
-        ]);
-      default:
-        return "#ffffff";
-    }
-  }
-
-  private sampleKeyframedColor(
-    nowMs: number,
-    durationMs: number,
-    stops: Array<[t: number, hex: string]>,
-  ): string {
-    const t = ((nowMs % durationMs) / durationMs) % 1;
-    let a = stops[0];
-    let b = stops[stops.length - 1];
-
-    for (let i = 0; i < stops.length - 1; i++) {
-      const s0 = stops[i];
-      const s1 = stops[i + 1];
-      if (t >= s0[0] && t <= s1[0]) {
-        a = s0;
-        b = s1;
-        break;
-      }
-    }
-
-    const span = Math.max(1e-6, b[0] - a[0]);
-    const u = Math.max(0, Math.min(1, (t - a[0]) / span));
-    return this.lerpHex(a[1], b[1], u);
-  }
-
-  private lerpHex(a: string, b: string, t: number): string {
-    const ar = this.hexToRgb(a);
-    const br = this.hexToRgb(b);
-    const r = Math.round(ar.r + (br.r - ar.r) * t);
-    const g = Math.round(ar.g + (br.g - ar.g) * t);
-    const bl = Math.round(ar.b + (br.b - ar.b) * t);
-    return `rgb(${r}, ${g}, ${bl})`;
-  }
-
-  private hexToRgb(hex: string): { r: number; g: number; b: number } {
-    const h = hex.replace("#", "");
-    if (h.length === 3) {
-      const r = parseInt(h[0] + h[0], 16);
-      const g = parseInt(h[1] + h[1], 16);
-      const b = parseInt(h[2] + h[2], 16);
-      return { r, g, b };
-    }
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return { r, g, b };
   }
 
   private renderPlayerIcons(
