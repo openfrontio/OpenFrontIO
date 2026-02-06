@@ -140,7 +140,7 @@ export class NationStructureBehavior {
     }
 
     // Check if we should upgrade instead of building new
-    if (this.tryUpgradeInsteadOfBuilding(this.player.units(type))) {
+    if (this.maybeUpgradeStructure(this.player.units(type))) {
       return true;
     }
 
@@ -193,7 +193,7 @@ export class NationStructureBehavior {
    * @param structures The pool of structures to consider for upgrading
    * @returns true if an upgrade was initiated, false otherwise
    */
-  private tryUpgradeInsteadOfBuilding(structures: Unit[]): boolean {
+  private maybeUpgradeStructure(structures: Unit[]): boolean {
     if (this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
       return false;
     }
@@ -219,7 +219,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     let totalStructures = 0;
     for (const type of StructureTypes) {
-      totalStructures += this.player.unitsOwned(type);
+      totalStructures += this.player.units(type).length; // ignoring levels
     }
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0 ? totalStructures / tilesOwned : 0;
