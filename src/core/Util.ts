@@ -259,12 +259,39 @@ export function assertNever(x: never): never {
   throw new Error("Unexpected value: " + x);
 }
 
+export const ID_ALPHABET =
+  "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+
 export function generateID(): GameID {
-  const nanoid = customAlphabet(
-    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
-    8,
-  );
+  const nanoid = customAlphabet(ID_ALPHABET, 8);
   return nanoid();
+}
+
+/**
+ * Generates a GameID that is guaranteed to map to the specified worker index.
+ * Uses a deterministic suffix search which is O(1) (max 58 checks) instead of brute-force rejection sampling.
+ */
+export function generateGameIDForWorker(
+  targetWorkerIndex: number,
+  numWorkers: number,
+): GameID {
+  // Generate 7 chars randomly
+  const base = customAlphabet(ID_ALPHABET, 7)();
+
+  // "Pre-calculate" hash of the base to save time?
+  // simpleHash is fast enough, but we can just loop.
+  // We need to find a char 'c' such that simpleHash(base + c) % numWorkers === targetWorkerIndex
+
+  for (const char of ID_ALPHABET) {
+    const candidate = base + char;
+    if (simpleHash(candidate) % numWorkers === targetWorkerIndex) {
+      return candidate;
+    }
+  }
+
+  // Extremely unlikely to fail (requires 1/20 chance to fail 58 times in a row -> 5%^58 ~= 0)
+  // But strictly speaking, it's possible. Recurse or retry.
+  return generateGameIDForWorker(targetWorkerIndex, numWorkers);
 }
 
 export function toInt(num: number): bigint {

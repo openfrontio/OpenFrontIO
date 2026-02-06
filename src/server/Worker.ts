@@ -11,12 +11,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameID,
   ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
-import { generateID, replacer } from "../core/Util";
+import { generateGameIDForWorker, replacer } from "../core/Util";
+
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -488,11 +488,7 @@ async function startMatchmakingPolling(gm: GameManager) {
     async () => {
       try {
         const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
-        const gameId = generateGameIdForWorker();
-        if (gameId === null) {
-          log.warn(`Failed to generate game ID for worker ${workerId}`);
-          return;
-        }
+        const gameId = generateGameIDForWorker(workerId, config.numWorkers());
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -538,19 +534,4 @@ async function startMatchmakingPolling(gm: GameManager) {
     },
     5000 + Math.random() * 1000,
   );
-}
-
-// TODO: This is a hack to generate a game ID for the worker.
-// It should be replaced with a more robust solution.
-function generateGameIdForWorker(): GameID | null {
-  let attempts = 1000;
-  while (attempts > 0) {
-    const gameId = generateID();
-    if (workerId === config.workerIndex(gameId)) {
-      return gameId;
-    }
-    attempts--;
-  }
-  log.warn(`Failed to generate game ID for worker ${workerId}`);
-  return null;
 }
