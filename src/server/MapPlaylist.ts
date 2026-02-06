@@ -199,16 +199,9 @@ export class MapPlaylist {
 
   private getNextMap(): MapWithMode {
     if (this.mapsPlaylist.length === 0) {
-      const numAttempts = 10000;
-      for (let i = 0; i < numAttempts; i++) {
-        if (this.shuffleMapsPlaylist()) {
-          log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
-        }
-      }
-      log.error("Failed to generate a valid map playlist");
+      this.generatePlaylist();
     }
-    // Even if it failed, playlist will be partially populated.
+    // Even if it failed to perfect shuffle, playlist will be populated.
     return this.mapsPlaylist.shift()!;
   }
 
@@ -321,7 +314,8 @@ export class MapPlaylist {
     ];
   }
 
-  private shuffleMapsPlaylist(): boolean {
+  private generatePlaylist() {
+    log.info("Generating new map playlist");
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
       for (let i = 0; i < (frequency[key] ?? 0); i++) {
@@ -331,55 +325,69 @@ export class MapPlaylist {
 
     const rand = new PseudoRandom(Date.now());
 
-    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
-    const team1: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const team2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
+    // Create pools for each slot type
+    const pools = [
+      { mode: GameMode.FFA, maps: rand.shuffleArray([...maps]) },
+      { mode: GameMode.Team, maps: rand.shuffleArray([...maps]) },
+      { mode: GameMode.FFA, maps: rand.shuffleArray([...maps]) },
+      { mode: GameMode.Team, maps: rand.shuffleArray([...maps]) },
+      { mode: GameMode.FFA, maps: rand.shuffleArray([...maps]) },
+    ];
 
     this.mapsPlaylist = [];
-    for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
-          return false;
+
+    // All pools have same length (maps.length)
+    const totalRounds = maps.length;
+
+    for (let i = 0; i < totalRounds; i++) {
+      for (const pool of pools) {
+        if (this.disableTeams && pool.mode === GameMode.Team) {
+          continue;
         }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
-          return false;
-        }
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
-        return false;
+        this.addNextMapBestEffort(this.mapsPlaylist, pool.maps, pool.mode);
       }
     }
-    return true;
   }
 
-  private addNextMap(
+  private addNextMapBestEffort(
     playlist: MapWithMode[],
-    nextEls: GameMapType[],
+    availableMaps: GameMapType[],
     mode: GameMode,
-  ): boolean {
-    const nonConsecutiveNum = 5;
-    const lastEls = playlist
-      .slice(playlist.length - nonConsecutiveNum)
-      .map((m) => m.map);
-    for (let i = 0; i < nextEls.length; i++) {
-      const next = nextEls[i];
-      if (lastEls.includes(next)) {
-        continue;
+  ) {
+    // Try to find a map that hasn't been played in the last N turns.
+    // We start with strict constraint (5) and relax it if we can't find a match.
+    const maxLookback = 5;
+
+    let chosenIndex = -1;
+
+    for (let lookback = maxLookback; lookback >= 0; lookback--) {
+      // Get the maps to avoid
+      const avoidMaps = new Set(
+        playlist
+          .slice(Math.max(0, playlist.length - lookback))
+          .map((m) => m.map),
+      );
+
+      // Find first map in avail that is NOT in avoidMaps
+      chosenIndex = availableMaps.findIndex((m) => !avoidMaps.has(m));
+
+      if (chosenIndex !== -1) {
+        break;
       }
-      nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
-      return true;
     }
-    return false;
+
+    // If still -1 (should essentially never happen if lookback goes to 0,
+    // unless availableMaps is empty which shouldn't happen by logic),
+    // default to 0.
+    if (chosenIndex === -1 && availableMaps.length > 0) {
+      chosenIndex = 0;
+    }
+
+    if (chosenIndex !== -1) {
+      const map = availableMaps.splice(chosenIndex, 1)[0];
+      playlist.push({ map, mode });
+    } else {
+      log.error("Failed to find map in pool during generation (pool empty?)");
+    }
   }
 }
