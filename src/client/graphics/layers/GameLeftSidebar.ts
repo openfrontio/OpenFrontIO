@@ -108,7 +108,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
             `
           : null}
         <div
-          class=${`flex items-center gap-2 text-white ${
+          class=${`flex items-center gap-4 lg:gap-6 xl:gap-8 text-white ${this.isTeamGame ? "ml-8" : ""} ${
             this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
           }`}
         >
