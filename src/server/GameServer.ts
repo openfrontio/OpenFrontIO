@@ -189,43 +189,6 @@ export class GameServer {
 
   public joinClient(client: Client) {
     this.websockets.add(client.ws);
-    if (this.isKicked(client.clientID)) {
-      this.log.warn(`cannot add client, already kicked`, {
-        clientID: client.clientID,
-      });
-      return;
-    }
-
-    if (this.allClients.has(client.clientID)) {
-      // Client already exists - check if this is a valid reconnection
-      const existingClient = this.allClients.get(client.clientID)!;
-
-      if (existingClient.persistentID !== client.persistentID) {
-        this.log.error("cannot reconnect, persistent IDs do not match", {
-          clientID: client.clientID,
-          clientPersistentID: client.persistentID,
-          existingPersistentID: existingClient.persistentID,
-        });
-        try {
-          if (client.ws) {
-            client.ws.close(1008, "persistent-id-mismatch");
-          }
-        } catch (error) {
-          this.log.warn("error closing client websocket on mismatch", {
-            clientID: client.clientID,
-            error,
-          });
-        }
-        return;
-      }
-
-      // Valid reconnection - reuse existing client, skip authorization
-      this.log.info("client reconnecting via join", {
-        clientID: client.clientID,
-      });
-      this.reconnectExistingClient(existingClient, client.ws);
-      return;
-    }
 
     if (
       this.gameConfig.maxPlayers &&
@@ -326,16 +289,7 @@ export class GameServer {
 
     this.websockets.add(ws);
     this.log.info("client rejoining", { clientID, lastTurn });
-    this.reconnectExistingClient(client, ws, lastTurn);
-    return true;
-  }
 
-  // Common reconnection logic used by both joinClient (page refresh) and rejoinClient (in-game reconnect)
-  private reconnectExistingClient(
-    client: Client,
-    ws: WebSocket,
-    lastTurn: number = 0,
-  ): void {
     // Close old WebSocket to prevent resource leaks
     if (client.ws !== ws) {
       client.ws.removeAllListeners();
@@ -356,6 +310,7 @@ export class GameServer {
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, lastTurn);
     }
+    return true;
   }
 
   private addListeners(client: Client) {
