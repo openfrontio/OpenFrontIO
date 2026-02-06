@@ -1,6 +1,6 @@
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes, PlayerID } from "../../../core/game/Game";
+import { AllPlayers, nukeTypes, PlayerID } from "../../../core/game/Game";
 import { GameUpdateType, UnitUpdate } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { AlternateViewEvent } from "../../InputHandler";
@@ -324,6 +324,12 @@ export class NameLayer implements Layer {
     const fontFamily = this.theme.font();
     const scale = this.transformHandler.scale;
     const tick = this.game.ticks();
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const minX = topLeft.x;
+    const maxX = bottomRight.x;
+    const minY = topLeft.y;
+    const maxY = bottomRight.y;
+    const fontCache = new Map<number, string>();
 
     for (const player of this.game.playerViews()) {
       if (!player.isAlive()) {
@@ -344,15 +350,16 @@ export class NameLayer implements Layer {
         continue;
       }
 
-      const worldCell = new Cell(nameLocation.x, nameLocation.y);
-      if (!this.transformHandler.isOnScreen(worldCell)) {
+      const worldX = nameLocation.x;
+      const worldY = nameLocation.y;
+      if (worldX <= minX || worldX >= maxX || worldY <= minY || worldY >= maxY) {
         continue;
       }
 
-      const screenPos =
-        this.transformHandler.worldToScreenCoordinates(worldCell);
-      const x = Math.round(screenPos.x);
-      const y = Math.round(screenPos.y);
+      const canvasPos =
+        this.transformHandler.worldToCanvasCoordinatesXY(worldX, worldY);
+      const x = Math.round(canvasPos.x);
+      const y = Math.round(canvasPos.y);
 
       const elementScale = Math.min(baseSize * 0.25, 3);
       const visualScale = scale * elementScale;
@@ -364,7 +371,12 @@ export class NameLayer implements Layer {
       const iconPx = Math.max(8, Math.round(iconBasePx * visualScale));
 
       ctx.save();
-      ctx.font = `${fontPx}px ${fontFamily}`;
+      let font = fontCache.get(fontPx);
+      if (!font) {
+        font = `${fontPx}px ${fontFamily}`;
+        fontCache.set(fontPx, font);
+      }
+      ctx.font = font;
       ctx.fillStyle = this.theme.textColor(player);
       ctx.textBaseline = "middle";
       ctx.textAlign = "left";
@@ -380,6 +392,7 @@ export class NameLayer implements Layer {
         iconsY,
         iconPx,
         fontFamily,
+        nowMs,
       );
 
       const flag = player.cosmetics.flag ?? null;
@@ -487,6 +500,7 @@ export class NameLayer implements Layer {
     centerY: number,
     iconPx: number,
     fontFamily: string,
+    nowMs: number,
   ): void {
     const myPlayer = this.game.myPlayer();
 
@@ -510,7 +524,7 @@ export class NameLayer implements Layer {
       icons.push({
         kind: "image",
         src: traitorIcon,
-        alpha: this.getTraitorIconAlpha(remainingSeconds),
+        alpha: this.getTraitorIconAlpha(remainingSeconds, nowMs),
       });
     }
 
@@ -652,7 +666,10 @@ export class NameLayer implements Layer {
     }
   }
 
-  private getTraitorIconAlpha(remainingSeconds: number): number {
+  private getTraitorIconAlpha(
+    remainingSeconds: number,
+    nowMs: number,
+  ): number {
     if (remainingSeconds > 15) return 1;
 
     const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
@@ -662,7 +679,7 @@ export class NameLayer implements Layer {
     const minDuration = 0.2;
     const duration = minDuration + (maxDuration - minDuration) * easedProgress;
 
-    const t = performance.now() / 1000;
+    const t = nowMs / 1000;
     const phase = (t % duration) / duration;
     const triangle = phase < 0.5 ? phase * 2 : 2 - phase * 2;
     return 0.3 + 0.7 * triangle;

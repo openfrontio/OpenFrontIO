@@ -70,11 +70,15 @@ export class TransformHandler {
     );
   }
 
-  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
+  worldToCanvasCoordinates(cell: Cell): { x: number; y: number } {
+    return this.worldToCanvasCoordinatesXY(cell.x, cell.y);
+  }
+
+  worldToCanvasCoordinatesXY(x: number, y: number): { x: number; y: number } {
     // Step 1: Convert from Cell coordinates to game coordinates
     // (reverse of Math.floor operation - we'll use the exact values)
-    const gameX = cell.x;
-    const gameY = cell.y;
+    const gameX = x;
+    const gameY = y;
 
     // Step 2: Reverse the game center offset calculation
     // Original: gameX = centerX + this.game.width() / 2
@@ -90,10 +94,15 @@ export class TransformHandler {
     const canvasY =
       (centerY - this.offsetY) * this.scale + this.game.height() / 2;
 
+    return { x: canvasX, y: canvasY };
+  }
+
+  worldToScreenCoordinates(cell: Cell): { x: number; y: number } {
     // Step 4: Convert canvas coordinates back to screen coordinates
+    const canvasPos = this.worldToCanvasCoordinates(cell);
     const canvasRect = this.boundingRect();
-    const screenX = canvasX + canvasRect.left;
-    const screenY = canvasY + canvasRect.top;
+    const screenX = canvasPos.x + canvasRect.left;
+    const screenY = canvasPos.y + canvasRect.top;
     return { x: screenX, y: screenY };
   }
 
