@@ -617,10 +617,7 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    let ally = allyRequestElement;
-    if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
-    }
+    const isAllied = params.selected?.isAlliedWith(params.myPlayer);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -630,10 +627,10 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            boatMenuElement,
-            ally,
+            isAllied ? allyBreakElement : boatMenuElement,
+            allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,

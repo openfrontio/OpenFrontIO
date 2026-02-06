@@ -1,9 +1,10 @@
-import { LitElement, TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   getGamesPlayed,
   isInIframe,
   translateText,
+  TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
@@ -78,7 +79,7 @@ export class WinModal extends LitElement implements Layer {
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${this.isWin
+            ${this.game.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
           </button>
@@ -131,9 +132,7 @@ export class WinModal extends LitElement implements Layer {
         <div class="relative w-full pb-[56.25%]">
           <iframe
             class="absolute top-0 left-0 w-full h-full rounded-sm"
-            src="${this.isVisible
-              ? "https://www.youtube.com/embed/EN2oOog3pSs"
-              : ""}"
+            src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
             title="YouTube video player"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -250,6 +249,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    crazyGamesSDK.gameplayStop();
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
