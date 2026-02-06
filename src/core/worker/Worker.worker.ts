@@ -40,6 +40,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       (await gameRunner)?.executeNextTick();
       break;
     case "init":
+      console.log("Worker received init message:", message);
       try {
         gameRunner = createGameRunner(
           message.gameStartInfo,
@@ -47,6 +48,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           mapLoader,
           gameUpdate,
         ).then((gr) => {
+          console.log("Worker sending initialized message");
           sendMessage({
             type: "initialized",
             id: message.id,

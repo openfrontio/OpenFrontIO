@@ -389,12 +389,25 @@ export class Transport {
   }
 
   joinGame() {
+    // Get party info and add party code as clan tag
+    const partyModal = document.querySelector("party-modal") as any;
+    const party = partyModal?.getParty();
+    let username = this.lobbyConfig.playerName;
+
+    // If in a party, add party code as clan tag
+    if (party && party.code) {
+      // Remove existing clan tag if present
+      username = username.replace(/\[[a-zA-Z0-9]{2,5}\]/, "");
+      // Add party code as clan tag
+      username = `[${party.code}]${username}`;
+    }
+
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
       token: this.lobbyConfig.token,
-      username: this.lobbyConfig.playerName,
+      username: username,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
     } satisfies ClientJoinMessage);

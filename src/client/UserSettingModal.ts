@@ -206,6 +206,22 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
+  private togglePerformanceMode = (e: CustomEvent<{ checked: boolean }>) => {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") {
+      console.warn("Unexpected toggle event payload", e);
+      return;
+    }
+    this.userSettings.set("settings.performanceMode", enabled);
+    // Emit event to reload textures
+    this.dispatchEvent(
+      new CustomEvent("performance-mode-changed", {
+        detail: { performanceMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
   private handleKeybindChange(
     e: CustomEvent<{ action: string; value: string; key: string }>,
   ) {
@@ -362,6 +378,15 @@ export class UserSettingModal extends LitElement {
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+
+      <!-- 📈 Performance Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.performance_mode_label")}"
+        description="${translateText("user_setting.performance_mode_desc")}"
+        id="performance-mode-toggle"
+        .checked=${this.userSettings.performanceMode()}
+        @change=${this.togglePerformanceMode}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->

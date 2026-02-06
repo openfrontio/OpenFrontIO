@@ -61,10 +61,16 @@ export class MatchmakingModal extends LitElement {
         this.connected = true;
         this.requestUpdate();
       }, 1000);
+
+      // Get party info if in a party
+      const partyModal = document.querySelector("party-modal") as any;
+      const party = partyModal?.getParty();
+
       this.socket?.send(
         JSON.stringify({
           type: "auth",
           playToken: getPlayToken(),
+          partyCode: party?.code,
         }),
       );
     };

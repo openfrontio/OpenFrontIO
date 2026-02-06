@@ -41,6 +41,10 @@ export class UserSettings {
     return this.get("settings.performanceOverlay", false);
   }
 
+  performanceMode() {
+    return this.get("settings.performanceMode", false);
+  }
+
   alertFrame() {
     return this.get("settings.alertFrame", true);
   }
@@ -94,7 +98,9 @@ export class UserSettings {
   togglePerformanceOverlay() {
     this.set("settings.performanceOverlay", !this.performanceOverlay());
   }
-
+  togglePerformanceMode() {
+    this.set("settings.performanceMode", !this.performanceMode());
+  }
   toggleAlertFrame() {
     this.set("settings.alertFrame", !this.alertFrame());
   }

@@ -26,6 +26,7 @@ import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
+import { PartyManager } from "./PartyManager";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -35,6 +36,7 @@ const config = getServerConfigFromServer();
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist(true);
+const partyManager = new PartyManager(log);
 
 // Worker setup
 export async function startWorker() {
@@ -286,6 +288,105 @@ export async function startWorker() {
 
     game.kickClient(clientID);
     res.status(200).send("Player kicked successfully");
+  });
+
+  // Party endpoints
+  app.post("/api/party/create", async (req, res) => {
+    try {
+      const { persistentID, username } = req.body;
+      if (!persistentID || !username) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const party = partyManager.createParty(persistentID, username);
+      res.json({
+        code: party.code,
+        members: Array.from(party.members.values()),
+        leaderPersistentID: party.leaderPersistentID,
+      });
+    } catch (error) {
+      log.error("Error creating party:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/party/join", async (req, res) => {
+    try {
+      const { code, persistentID, username } = req.body;
+      if (!code || !persistentID || !username) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const result = partyManager.joinParty(code, persistentID, username);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        code: result.party!.code,
+        members: Array.from(result.party!.members.values()),
+        leaderPersistentID: result.party!.leaderPersistentID,
+      });
+    } catch (error) {
+      log.error("Error joining party:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/party/leave", async (req, res) => {
+    try {
+      const { persistentID } = req.body;
+      if (!persistentID) {
+        return res.status(400).json({ error: "Missing persistentID" });
+      }
+
+      const success = partyManager.leaveParty(persistentID);
+      res.json({ success });
+    } catch (error) {
+      log.error("Error leaving party:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/party/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const party = partyManager.getParty(code);
+
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+
+      res.json({
+        code: party.code,
+        members: Array.from(party.members.values()),
+        leaderPersistentID: party.leaderPersistentID,
+      });
+    } catch (error) {
+      log.error("Error getting party:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/party/member/:persistentID", async (req, res) => {
+    try {
+      const { persistentID } = req.params;
+      const party = partyManager.getPartyByMember(persistentID);
+
+      if (!party) {
+        return res.json({ inParty: false });
+      }
+
+      res.json({
+        inParty: true,
+        code: party.code,
+        members: Array.from(party.members.values()),
+        leaderPersistentID: party.leaderPersistentID,
+      });
+    } catch (error) {
+      log.error("Error getting party by member:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   // WebSocket handling

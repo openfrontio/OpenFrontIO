@@ -26,6 +26,10 @@ import { LanguageModal } from "./LanguageModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import "./NewsModal";
+import "./PartyButton";
+import { PartyButton } from "./PartyButton";
+import "./PartyModal";
+import { PartyModal } from "./PartyModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -105,6 +109,8 @@ class Client {
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
   private matchmakingModal: MatchmakingModal;
+  private partyModal: PartyModal | null = null;
+  private partyButton: PartyButton | null = null;
 
   private gutterAds: GutterAds;
 
@@ -265,6 +271,32 @@ class Client {
     ) {
       console.warn("Matchmaking modal element not found");
     }
+
+    // Party system setup
+    this.partyModal = document.querySelector("party-modal") as PartyModal;
+    if (!this.partyModal || !(this.partyModal instanceof PartyModal)) {
+      console.warn("Party modal element not found");
+    }
+
+    this.partyButton = document.querySelector("party-button") as PartyButton;
+    if (!this.partyButton || !(this.partyButton instanceof PartyButton)) {
+      console.warn("Party button element not found");
+    }
+
+    document.addEventListener("open-party-modal", () => {
+      if (this.usernameInput?.isValid()) {
+        this.partyModal?.open();
+      }
+    });
+
+    document.addEventListener("party-changed", ((e: CustomEvent) => {
+      const party = e.detail.party;
+      if (party) {
+        this.partyButton?.updatePartyInfo(party.members.length, party.code);
+      } else {
+        this.partyButton?.updatePartyInfo(0, "");
+      }
+    }) as EventListener);
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(

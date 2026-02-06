@@ -250,6 +250,19 @@
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start..."
   },
+  "party_modal": {
+    "title": "Party",
+    "create_party": "Create New Party",
+    "join_party": "Join Party",
+    "leave_party": "Leave Party",
+    "party_code": "Party Code",
+    "copy_code": "Copy",
+    "enter_code": "Enter party code",
+    "members": "Members",
+    "party_full": "Party is full",
+    "party_not_found": "Party not found",
+    "or": "or"
+  },
   "username": {
     "enter_username": "Enter your username",
     "not_string": "Username must be a string.",
@@ -418,7 +431,9 @@
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
     "background_music_volume": "Background Music Volume",
-    "sound_effects_volume": "Sound Effects Volume"
+    "sound_effects_volume": "Sound Effects Volume",
+    "performance_mode_label": "Performance Mode",
+    "performance_mode_desc": "Enable performance optimizations that may reduce visual quality but improve frame rate"
   },
   "chat": {
     "title": "Quick Chat",

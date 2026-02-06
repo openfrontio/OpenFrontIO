@@ -57,14 +57,17 @@ export class WorkerClient {
   initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
       const messageId = generateID();
+      console.log("Initializing worker with message ID:", messageId);
 
       this.messageHandlers.set(messageId, (message) => {
         if (message.type === "initialized") {
+          console.log("Worker initialized successfully");
           this.isInitialized = true;
           resolve();
         }
       });
 
+      console.log("Sending init message to worker");
       this.worker.postMessage({
         type: "init",
         id: messageId,
@@ -75,10 +78,11 @@ export class WorkerClient {
       // Add timeout for initialization
       setTimeout(() => {
         if (!this.isInitialized) {
+          console.error("Worker initialization timeout after 15 seconds");
           this.messageHandlers.delete(messageId);
           reject(new Error("Worker initialization timeout"));
         }
-      }, 5000); // 5 second timeout
+      }, 15000); // Increase to 15 seconds
     });
   }
 

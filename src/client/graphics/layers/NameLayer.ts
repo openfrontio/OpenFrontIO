@@ -123,6 +123,7 @@ export class NameLayer implements Layer {
 
     if (
       !this.isVisible ||
+      this.userSettings.performanceMode() ||
       size < 7 ||
       (this.transformHandler.scale > maxZoomScale && size > 100) ||
       !isOnScreen

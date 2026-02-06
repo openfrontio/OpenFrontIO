@@ -76,16 +76,21 @@ export async function genTerrainFromBin(
   mapData: MapMetadata,
   data: Uint8Array,
 ): Promise<GameMap> {
-  if (data.length !== mapData.width * mapData.height) {
+  const expectedSize = mapData.width * mapData.height;
+  // Allow for 4 extra bytes for dimension metadata
+  if (data.length !== expectedSize && data.length !== expectedSize + 4) {
     throw new Error(
-      `Invalid data: buffer size ${data.length} incorrect for ${mapData.width}x${mapData.height} terrain plus 4 bytes for dimensions.`,
+      `Invalid data: buffer size ${data.length} incorrect for ${mapData.width}x${mapData.height} terrain (expected ${expectedSize} or ${expectedSize + 4} bytes).`,
     );
   }
+
+  // Skip the first 4 bytes if they contain dimension metadata
+  const terrainData = data.length === expectedSize + 4 ? data.slice(4) : data;
 
   return new GameMapImpl(
     mapData.width,
     mapData.height,
-    data,
+    terrainData,
     mapData.num_land_tiles,
   );
 }

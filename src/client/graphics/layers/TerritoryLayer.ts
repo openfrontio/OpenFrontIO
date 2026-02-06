@@ -499,16 +499,16 @@ export class TerritoryLayer implements Layer {
       this.clearTile(tile);
       return;
     }
-    const owner = this.game.owner(tile) as PlayerView;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isHighlighted =
-      this.highlightedTerritory &&
-      this.highlightedTerritory.id() === owner.id();
+    const owner = this.game.owner(tile);
+    // Ensure owner is a PlayerView before proceeding
+    if (!(owner instanceof PlayerView)) {
+      this.clearTile(tile);
+      return;
+    }
+
     const myPlayer = this.game.myPlayer();
 
     if (this.game.isBorder(tile)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (myPlayer) {
         const alternativeColor = this.alternateViewColor(owner);
         this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
@@ -541,6 +541,10 @@ export class TerritoryLayer implements Layer {
     }
     if (other.smallID() === myPlayer.smallID()) {
       return this.theme.selfColor();
+    }
+    // Check if other is actually a PlayerView before calling isFriendly
+    if (typeof other.isFriendly !== "function") {
+      return this.theme.neutralColor();
     }
     if (other.isFriendly(myPlayer)) {
       return this.theme.allyColor();

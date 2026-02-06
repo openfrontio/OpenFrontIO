@@ -164,11 +164,17 @@ async function createClientGame(
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
+
+  console.log("Creating client game...");
+
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
     userSettings,
     lobbyConfig.gameRecord !== undefined,
   );
+
+  console.log("Config loaded, loading terrain...");
+
   let gameMap: TerrainMapData | null = null;
 
   if (terrainLoad) {
@@ -180,11 +186,23 @@ async function createClientGame(
       mapLoader,
     );
   }
+
+  console.log("Terrain loaded, creating worker...");
+
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
   );
-  await worker.initialize();
+
+  console.log("Worker created, initializing...");
+
+  try {
+    await worker.initialize();
+    console.log("Worker initialized successfully");
+  } catch (error) {
+    console.error("Worker initialization failed:", error);
+    throw new Error(`Failed to initialize game worker: ${error}`);
+  }
   const gameView = new GameView(
     worker,
     config,
