@@ -21,6 +21,7 @@ import {
   isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { getClientIDForGame } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
@@ -635,9 +636,10 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
-    this.lobbyCreatorClientID = generateID();
+    this.lobbyId = generateID();
+    this.lobbyCreatorClientID = getClientIDForGame(this.lobbyId);
 
-    createLobby(this.lobbyCreatorClientID)
+    createLobby(this.lobbyCreatorClientID, this.lobbyId)
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
@@ -653,6 +655,7 @@ export class HostLobbyModal extends BaseModal {
             detail: {
               gameID: this.lobbyId,
               clientID: this.lobbyCreatorClientID,
+              source: "host",
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -1080,12 +1083,14 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(creatorClientID: string): Promise<GameInfo> {
+async function createLobby(
+  creatorClientID: string,
+  gameID: string,
+): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
-    const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
+      `/${config.workerPath(gameID)}/api/create_game/${gameID}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
         method: "POST",
         headers: {

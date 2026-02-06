@@ -155,6 +155,12 @@ export class TrainStation {
  */
 export class Cluster {
   public stations: Set<TrainStation> = new Set();
+  private tradeStations: Set<TrainStation> = new Set();
+
+  private isTradeStation(station: TrainStation): boolean {
+    const type = station.unit.type();
+    return type === UnitType.City || type === UnitType.Port;
+  }
 
   has(station: TrainStation) {
     return this.stations.has(station);
@@ -162,11 +168,15 @@ export class Cluster {
 
   addStation(station: TrainStation) {
     this.stations.add(station);
+    if (this.isTradeStation(station)) {
+      this.tradeStations.add(station);
+    }
     station.setCluster(this);
   }
 
   removeStation(station: TrainStation) {
     this.stations.delete(station);
+    this.tradeStations.delete(station);
   }
 
   addStations(stations: Set<TrainStation>) {
@@ -181,14 +191,39 @@ export class Cluster {
     }
   }
 
+  hasAnyTradeDestination(player: Player): boolean {
+    for (const station of this.tradeStations) {
+      if (station.tradeAvailable(player)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  randomTradeDestination(
+    player: Player,
+    random: PseudoRandom,
+  ): TrainStation | null {
+    let selected: TrainStation | null = null;
+    let eligibleSeen = 0;
+
+    for (const station of this.tradeStations) {
+      if (!station.tradeAvailable(player)) continue;
+      eligibleSeen++;
+
+      // Reservoir sampling: keep each eligible station with probability 1/eligibleSeen.
+      if (random.nextInt(0, eligibleSeen) === 0) {
+        selected = station;
+      }
+    }
+
+    return selected;
+  }
+
   availableForTrade(player: Player): Set<TrainStation> {
     const tradingStations = new Set<TrainStation>();
-    for (const station of this.stations) {
-      if (
-        (station.unit.type() === UnitType.City ||
-          station.unit.type() === UnitType.Port) &&
-        station.tradeAvailable(player)
-      ) {
+    for (const station of this.tradeStations) {
+      if (station.tradeAvailable(player)) {
         tradingStations.add(station);
       }
     }
@@ -201,6 +236,7 @@ export class Cluster {
 
   clear() {
     this.stations.clear();
+    this.tradeStations.clear();
   }
 }
 

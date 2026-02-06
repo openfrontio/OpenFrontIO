@@ -447,7 +447,8 @@
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting gold",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold_placeholder": "5000000",
+    "crowded": "Crowded modifier"
   },
   "team_colors": {
     "red": "Red",
@@ -781,6 +782,8 @@
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_trade": "Received {gold} gold from trade with {name}",
+    "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
+    "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
     "missile_intercepted": "Missile intercepted {unit}",
     "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
