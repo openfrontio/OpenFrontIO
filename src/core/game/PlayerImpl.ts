@@ -20,6 +20,7 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -29,6 +30,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -421,6 +423,14 @@ export class PlayerImpl implements Player {
 
     if (hasPending) {
       return false;
+    }
+
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return true;
     }
 
     const recent = this.pastOutgoingAllianceRequests
@@ -986,10 +996,10 @@ export class PlayerImpl implements Player {
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -1016,7 +1026,7 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef): TileRef | false {
+  nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
     if (this.mg.isSpawnImmunityActive()) {
       return false;
     }
@@ -1026,6 +1036,24 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
+
+    // Prevent launching nukes that would hit teammate structures (only in team games)
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      nukeType !== UnitType.MIRV
+    ) {
+      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+      const wouldHitTeammate = this.mg.anyUnitNearby(
+        tile,
+        magnitude.outer,
+        StructureTypes,
+        (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
+      );
+      if (wouldHitTeammate) {
+        return false;
+      }
+    }
+
     // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {

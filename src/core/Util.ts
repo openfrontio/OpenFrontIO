@@ -80,13 +80,14 @@ export function calculateBoundingBox(
     maxX = -Infinity,
     maxY = -Infinity;
 
-  borderTiles.forEach((tile: TileRef) => {
-    const cell = gm.cell(tile);
-    minX = Math.min(minX, cell.x);
-    minY = Math.min(minY, cell.y);
-    maxX = Math.max(maxX, cell.x);
-    maxY = Math.max(maxY, cell.y);
-  });
+  for (const tile of borderTiles) {
+    const x = gm.x(tile);
+    const y = gm.y(tile);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
 
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }

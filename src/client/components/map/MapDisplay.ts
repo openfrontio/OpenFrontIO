@@ -14,6 +14,7 @@ export class MapDisplay extends LitElement {
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
+  @state() private hasNations = true;
 
   createRenderRoot() {
     return this;
@@ -32,7 +33,10 @@ export class MapDisplay extends LitElement {
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
-      this.mapName = (await data.manifest()).name;
+      const manifest = await data.manifest();
+      this.mapName = manifest.name;
+      this.hasNations =
+        Array.isArray(manifest.nations) && manifest.nations.length > 0;
     } catch (error) {
       console.error("Failed to load map data:", error);
     } finally {
@@ -85,7 +89,7 @@ export class MapDisplay extends LitElement {
               >
                 ${translateText("map_component.error")}
               </div>`}
-        ${this.showMedals
+        ${this.showMedals && this.hasNations
           ? html`<div class="flex gap-1 justify-center w-full">
               ${this.renderMedals()}
             </div>`

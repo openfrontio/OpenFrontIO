@@ -21,7 +21,8 @@ export class InGameHeaderAd extends LitElement implements Layer {
   }
 
   init() {
-    this.showHeaderAd();
+    // TODO: move ad and re-enable.
+    // this.showHeaderAd();
   }
 
   private showHeaderAd(): void {
