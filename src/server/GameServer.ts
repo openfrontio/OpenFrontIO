@@ -276,6 +276,8 @@ export class GameServer {
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.
+  // Only the WebSocket is updated — username, cosmetics, etc. are preserved
+  // from the original join to maintain consistency throughout the game session.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
@@ -283,7 +285,6 @@ export class GameServer {
   ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
     if (!clientID) return false;
-    if (this.isKicked(clientID)) return false;
     const client = this.allClients.get(clientID);
     if (!client) return false;
 
