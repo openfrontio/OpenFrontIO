@@ -13,6 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
+import { TestSkinExecution } from "../core/execution/TestSkinExecution";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -40,7 +41,6 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { TestSkinExecution } from "./TestSkinExecution";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -52,6 +52,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
 import SoundManager from "./sound/SoundManager";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
@@ -364,7 +365,6 @@ export class ClientGameRunner {
       // Start a fresh TestSkinExecution which manages its own modal timeout
       this.testSkinExecution = new TestSkinExecution(
         this.gameView,
-        this.eventBus,
         this.lobby.clientID,
         () => this.isActive,
         () => {
@@ -372,6 +372,12 @@ export class ClientGameRunner {
           // clean up resources first.
           this.stop();
         },
+        (targetID, troops) =>
+          this.eventBus.emit(new SendAttackIntentEvent(targetID, troops)),
+        (patternName, colorPalette) =>
+          this.eventBus.emit(
+            new ShowSkinTestModalEvent(patternName, colorPalette),
+          ),
       );
       this.testSkinExecution.start();
     }

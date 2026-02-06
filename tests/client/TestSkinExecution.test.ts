@@ -1,14 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ShowSkinTestModalEvent } from "../../src/client/graphics/layers/SkinTestWinModal";
-import { TestSkinExecution } from "../../src/client/TestSkinExecution";
-import { SendAttackIntentEvent } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
+import { TestSkinExecution } from "../../src/core/execution/TestSkinExecution";
 
 describe("TestSkinExecution", () => {
-  let eventBus: EventBus;
-
   beforeEach(() => {
-    eventBus = new EventBus();
     vi.useFakeTimers();
   });
 
@@ -17,7 +11,7 @@ describe("TestSkinExecution", () => {
     vi.restoreAllMocks();
   });
 
-  it("showModal emits ShowSkinTestModalEvent and prevents scheduled initial attack", () => {
+  it("showModal calls onShowModal and prevents scheduled initial attack", () => {
     const fakePlayer = {
       cosmetics: { pattern: { name: "pattern1", colorPalette: { name: "p" } } },
       troops: () => 100,
@@ -27,15 +21,17 @@ describe("TestSkinExecution", () => {
       playerByClientID: (_: any) => fakePlayer,
     } as any;
 
-    const spyEmit = vi.spyOn(eventBus, "emit");
     const onShowModalRequested = vi.fn();
+    const onAttackIntent = vi.fn();
+    const onShowModal = vi.fn();
 
     const exec = new TestSkinExecution(
       gameView,
-      eventBus,
       "client1" as any,
       () => true,
       onShowModalRequested,
+      onAttackIntent,
+      onShowModal,
     );
 
     exec.start();
@@ -46,21 +42,12 @@ describe("TestSkinExecution", () => {
     // Should have requested runner to stop
     expect(onShowModalRequested).toHaveBeenCalled();
 
-    // Should have emitted the ShowSkinTestModalEvent once with the right payload
-    const emitted = spyEmit.mock.calls.map((c) => c[0]);
-    expect(emitted.some((e) => e instanceof ShowSkinTestModalEvent)).toBe(true);
-    const modalEvent = emitted.find(
-      (e) => e instanceof ShowSkinTestModalEvent,
-    ) as ShowSkinTestModalEvent;
-    expect(modalEvent).toBeDefined();
-    expect(modalEvent.patternName).toBe("pattern1");
+    // Should have called onShowModal with the right payload
+    expect(onShowModal).toHaveBeenCalledWith("pattern1", { name: "p" });
 
-    // Advance timers past the initial attack delay; since showModal cleared timeouts, no SendAttackIntentEvent should be emitted
+    // Advance timers past the initial attack delay; since showModal cleared timeouts, no attack should fire
     vi.advanceTimersByTime(500);
-    const emittedAfter = spyEmit.mock.calls.map((c) => c[0]);
-    expect(emittedAfter.some((e) => e instanceof SendAttackIntentEvent)).toBe(
-      false,
-    );
+    expect(onAttackIntent).not.toHaveBeenCalled();
   });
 
   it("start schedules initial attack if not cancelled", () => {
@@ -73,13 +60,14 @@ describe("TestSkinExecution", () => {
       playerByClientID: (_: any) => fakePlayer,
     } as any;
 
-    const spyEmit = vi.spyOn(eventBus, "emit");
+    const onAttackIntent = vi.fn();
 
     const exec = new TestSkinExecution(
       gameView,
-      eventBus,
       "client1" as any,
       () => true,
+      () => {},
+      onAttackIntent,
       () => {},
     );
 
@@ -88,9 +76,7 @@ describe("TestSkinExecution", () => {
     // advance past initial attack delay
     vi.advanceTimersByTime(200);
 
-    // initial attack should have emitted a SendAttackIntentEvent
-    expect(
-      spyEmit.mock.calls.some((c) => c[0] instanceof SendAttackIntentEvent),
-    ).toBe(true);
+    // initial attack should have called the onAttackIntent callback
+    expect(onAttackIntent).toHaveBeenCalledWith(null, 50);
   });
 });

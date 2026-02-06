@@ -1,23 +1,37 @@
-import { EventBus } from "../core/EventBus";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { ClientID } from "../core/Schemas";
-import { ShowSkinTestModalEvent } from "./graphics/layers/SkinTestWinModal";
-import { SendAttackIntentEvent } from "./Transport";
+import { ColorPalette } from "../CosmeticSchemas";
+import { Execution, Game, PlayerID } from "../game/Game";
+import { GameView, PlayerView } from "../game/GameView";
+import { ClientID } from "../Schemas";
 
-export class TestSkinExecution {
+export class TestSkinExecution implements Execution {
   private myPlayer: PlayerView | null = null;
   private initialAttackTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private modalTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private active = true;
 
   constructor(
     private gameView: GameView,
-    private eventBus: EventBus,
     private clientID: ClientID,
-
-    private isActive: () => boolean,
-    // callback to request the runner stop the game before showing the modal
+    private isRunnerActive: () => boolean,
     private onShowModalRequested: () => void,
+    private onAttackIntent: (targetID: PlayerID | null, troops: number) => void,
+    private onShowModal: (
+      patternName: string,
+      colorPalette: ColorPalette | null,
+    ) => void,
   ) {}
+
+  isActive(): boolean {
+    return this.active;
+  }
+
+  activeDuringSpawnPhase(): boolean {
+    return false;
+  }
+
+  init(_mg: Game, _ticks: number): void {}
+
+  tick(_ticks: number): void {}
 
   public start() {
     // schedule the initial attack
@@ -30,12 +44,13 @@ export class TestSkinExecution {
     }
     this.modalTimeoutId = setTimeout(() => {
       this.modalTimeoutId = null;
-      if (!this.isActive()) return;
+      if (!this.isRunnerActive()) return;
       this.showModal();
     }, 120000);
   }
 
   public stop() {
+    this.active = false;
     if (this.initialAttackTimeoutId !== null) {
       clearTimeout(this.initialAttackTimeoutId);
       this.initialAttackTimeoutId = null;
@@ -74,7 +89,7 @@ export class TestSkinExecution {
     const patternName = myPlayer.cosmetics.pattern.name;
     const colorPalette = myPlayer.cosmetics.pattern.colorPalette ?? null;
 
-    this.eventBus.emit(new ShowSkinTestModalEvent(patternName, colorPalette));
+    this.onShowModal(patternName, colorPalette);
   }
 
   private scheduleInitialAttack(delayMs: number) {
@@ -84,13 +99,13 @@ export class TestSkinExecution {
     }
     this.initialAttackTimeoutId = setTimeout(() => {
       this.initialAttackTimeoutId = null;
-      if (!this.isActive()) return;
+      if (!this.isRunnerActive()) return;
       this.initialAttack();
     }, delayMs);
   }
 
   private initialAttack() {
-    if (!this.isActive()) return;
+    if (!this.isRunnerActive()) return;
 
     if (this.myPlayer === null) {
       const myPlayer = this.gameView.playerByClientID(this.clientID);
@@ -103,8 +118,6 @@ export class TestSkinExecution {
     }
 
     const troopCount = this.myPlayer.troops() ?? 1000000;
-    this.eventBus.emit(
-      new SendAttackIntentEvent(null, Math.floor(troopCount / 2)),
-    );
+    this.onAttackIntent(null, Math.floor(troopCount / 2));
   }
 }
