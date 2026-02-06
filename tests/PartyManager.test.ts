@@ -26,6 +26,8 @@ describe("PartyManager", () => {
       expect(party.leaderPersistentID).toBe("player1");
       expect(party.members.size).toBe(1);
       expect(party.members.get("player1")?.username).toBe("Alice");
+      expect(party.isQueueing).toBe(false);
+      expect(party.queueStartedAt).toBeNull();
     });
 
     test("should leave existing party when creating a new one", () => {
@@ -227,6 +229,89 @@ describe("PartyManager", () => {
 
       const updatedParty = partyManager.getParty(party.code);
       expect(updatedParty?.lastActivity).toBeGreaterThan(initialActivity);
+    });
+  });
+
+  describe("queueing", () => {
+    test("should allow party leader to start queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+
+      const success = partyManager.startQueueing("player1");
+
+      expect(success).toBe(true);
+      const updatedParty = partyManager.getParty(party.code);
+      expect(updatedParty?.isQueueing).toBe(true);
+      expect(updatedParty?.queueStartedAt).toBeDefined();
+      expect(updatedParty?.queueStartedAt).toBeGreaterThan(0);
+    });
+
+    test("should not allow non-leader to start queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+      partyManager.joinParty(party.code, "player2", "Bob");
+
+      const success = partyManager.startQueueing("player2");
+
+      expect(success).toBe(false);
+      const updatedParty = partyManager.getParty(party.code);
+      expect(updatedParty?.isQueueing).toBe(false);
+    });
+
+    test("should allow stopping queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+      partyManager.startQueueing("player1");
+
+      const success = partyManager.stopQueueing("player1");
+
+      expect(success).toBe(true);
+      const updatedParty = partyManager.getParty(party.code);
+      expect(updatedParty?.isQueueing).toBe(false);
+      expect(updatedParty?.queueStartedAt).toBeNull();
+    });
+
+    test("should check if party is queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+
+      expect(partyManager.isQueueing(party.code)).toBe(false);
+
+      partyManager.startQueueing("player1");
+      expect(partyManager.isQueueing(party.code)).toBe(true);
+
+      partyManager.stopQueueing("player1");
+      expect(partyManager.isQueueing(party.code)).toBe(false);
+    });
+
+    test("should return false when starting queue for non-existent party", () => {
+      const success = partyManager.startQueueing("nonexistent");
+      expect(success).toBe(false);
+    });
+
+    test("should return false when stopping queue for non-existent party", () => {
+      const success = partyManager.stopQueueing("nonexistent");
+      expect(success).toBe(false);
+    });
+
+    test("should update activity when starting queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+      const initialActivity = party.lastActivity;
+
+      jest.advanceTimersByTime(1000);
+      partyManager.startQueueing("player1");
+
+      const updatedParty = partyManager.getParty(party.code);
+      expect(updatedParty?.lastActivity).toBeGreaterThan(initialActivity);
+    });
+
+    test("should update activity when stopping queueing", () => {
+      const party = partyManager.createParty("player1", "Alice");
+      partyManager.startQueueing("player1");
+
+      jest.advanceTimersByTime(1000);
+      const beforeStop = party.lastActivity;
+
+      partyManager.stopQueueing("player1");
+
+      const updatedParty = partyManager.getParty(party.code);
+      expect(updatedParty?.lastActivity).toBeGreaterThan(beforeStop);
     });
   });
 });

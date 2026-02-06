@@ -382,9 +382,55 @@ export async function startWorker() {
         code: party.code,
         members: Array.from(party.members.values()),
         leaderPersistentID: party.leaderPersistentID,
+        isQueueing: party.isQueueing,
+        queueStartedAt: party.queueStartedAt,
       });
     } catch (error) {
       log.error("Error getting party by member:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/party/queue/start", async (req, res) => {
+    try {
+      const { persistentID } = req.body;
+
+      if (!persistentID) {
+        return res.status(400).json({ error: "persistentID is required" });
+      }
+
+      const success = partyManager.startQueueing(persistentID);
+
+      if (!success) {
+        return res
+          .status(403)
+          .json({ error: "Only party leader can start queueing" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      log.error("Error starting party queue:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/party/queue/stop", async (req, res) => {
+    try {
+      const { persistentID } = req.body;
+
+      if (!persistentID) {
+        return res.status(400).json({ error: "persistentID is required" });
+      }
+
+      const success = partyManager.stopQueueing(persistentID);
+
+      if (!success) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      log.error("Error stopping party queue:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

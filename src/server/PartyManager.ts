@@ -16,6 +16,8 @@ export interface Party {
   members: Map<string, PartyMember>;
   createdAt: number;
   lastActivity: number;
+  isQueueing: boolean;
+  queueStartedAt: number | null;
 }
 
 export class PartyManager {
@@ -40,6 +42,8 @@ export class PartyManager {
       members: new Map(),
       createdAt: Date.now(),
       lastActivity: Date.now(),
+      isQueueing: false,
+      queueStartedAt: null,
     };
 
     party.members.set(leaderPersistentID, {
@@ -188,5 +192,43 @@ export class PartyManager {
       return [persistentID];
     }
     return Array.from(party.members.keys());
+  }
+
+  startQueueing(persistentID: string): boolean {
+    const party = this.getPartyByMember(persistentID);
+    if (!party) {
+      return false;
+    }
+
+    // Only the leader can start queueing for the party
+    if (party.leaderPersistentID !== persistentID) {
+      return false;
+    }
+
+    party.isQueueing = true;
+    party.queueStartedAt = Date.now();
+    party.lastActivity = Date.now();
+
+    this.log.info(`Party ${party.code} started queueing`);
+    return true;
+  }
+
+  stopQueueing(persistentID: string): boolean {
+    const party = this.getPartyByMember(persistentID);
+    if (!party) {
+      return false;
+    }
+
+    party.isQueueing = false;
+    party.queueStartedAt = null;
+    party.lastActivity = Date.now();
+
+    this.log.info(`Party ${party.code} stopped queueing`);
+    return true;
+  }
+
+  isQueueing(code: string): boolean {
+    const party = this.getParty(code);
+    return party?.isQueueing ?? false;
   }
 }

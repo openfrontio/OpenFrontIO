@@ -66,6 +66,11 @@ export class MatchmakingModal extends LitElement {
       const partyModal = document.querySelector("party-modal") as any;
       const party = partyModal?.getParty();
 
+      // Notify server that party leader is queueing
+      if (party) {
+        this.notifyPartyQueueStart();
+      }
+
       this.socket?.send(
         JSON.stringify({
           type: "auth",
@@ -99,6 +104,51 @@ export class MatchmakingModal extends LitElement {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
+
+    // Notify server that party stopped queueing
+    this.notifyPartyQueueStop();
+  }
+
+  private async notifyPartyQueueStart() {
+    try {
+      const config = await getServerConfigFromClient();
+      const persistentID = this.getPersistentID();
+
+      await fetch(`/${config.workerPath("0")}/api/party/queue/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ persistentID }),
+      });
+    } catch (error) {
+      console.error("Error notifying party queue start:", error);
+    }
+  }
+
+  private async notifyPartyQueueStop() {
+    try {
+      const config = await getServerConfigFromClient();
+      const persistentID = this.getPersistentID();
+
+      await fetch(`/${config.workerPath("0")}/api/party/queue/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ persistentID }),
+      });
+    } catch (error) {
+      console.error("Error notifying party queue stop:", error);
+    }
+  }
+
+  private getPersistentID(): string {
+    const COOKIE_NAME = "player_persistent_id";
+    const cookies = document.cookie.split(";");
+    for (const cookie of cookies) {
+      const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
+      if (cookieName === COOKIE_NAME) {
+        return cookieValue;
+      }
+    }
+    return "";
   }
 
   public async open() {

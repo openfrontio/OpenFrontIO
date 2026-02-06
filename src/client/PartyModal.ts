@@ -14,6 +14,8 @@ interface PartyInfo {
   code: string;
   members: PartyMember[];
   leaderPersistentID: string;
+  isQueueing?: boolean;
+  queueStartedAt?: number | null;
 }
 
 @customElement("party-modal")
@@ -31,6 +33,7 @@ export class PartyModal extends LitElement {
 
   private persistentID: string;
   private username: string;
+  private hasAutoQueued: boolean = false;
 
   constructor() {
     super();
@@ -302,10 +305,51 @@ export class PartyModal extends LitElement {
       }
 
       const data = await response.json();
+      const wasQueueing = this.party.isQueueing;
       this.party = data;
+
+      // If party just started queueing and this is not the leader, auto-join matchmaking
+      if (
+        !wasQueueing &&
+        data.isQueueing &&
+        data.leaderPersistentID !== this.persistentID &&
+        !this.hasAutoQueued
+      ) {
+        this.hasAutoQueued = true;
+        console.log(
+          "Party leader started queueing, auto-joining matchmaking...",
+        );
+        this.autoJoinMatchmaking();
+      }
+
+      // Reset auto-queue flag when party stops queueing
+      if (!data.isQueueing) {
+        this.hasAutoQueued = false;
+      }
+
       this.dispatchPartyEvent();
     } catch (error) {
       console.error("Error polling party:", error);
+    }
+  }
+
+  private autoJoinMatchmaking() {
+    // Find and open the matchmaking modal
+    const matchmakingButton = document.querySelector(
+      "matchmaking-button",
+    ) as any;
+    if (matchmakingButton && typeof matchmakingButton.open === "function") {
+      // Close party modal first
+      this.close();
+      // Open matchmaking
+      setTimeout(() => {
+        const matchmakingModal = document.querySelector(
+          "matchmaking-modal",
+        ) as any;
+        if (matchmakingModal && typeof matchmakingModal.open === "function") {
+          matchmakingModal.open();
+        }
+      }, 100);
     }
   }
 
@@ -333,6 +377,7 @@ export class PartyModal extends LitElement {
   public close() {
     this.modalEl?.close();
     this.stopPolling();
+    this.hasAutoQueued = false;
   }
 
   private async checkExistingParty() {
