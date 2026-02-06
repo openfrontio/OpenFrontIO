@@ -168,7 +168,7 @@ export const PublicGamesSchema = z.object({
 export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
-    public myClientID?: ClientID,
+    public myClientID: ClientID,
   ) {}
 }
 

@@ -90,9 +90,7 @@ export class HostLobbyModal extends BaseModal {
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
       return;
     }
-    if (event.myClientID) {
-      this.lobbyCreatorClientID = event.myClientID;
-    }
+    this.lobbyCreatorClientID = event.myClientID;
     if (lobby.clients) {
       this.clients = lobby.clients;
     }

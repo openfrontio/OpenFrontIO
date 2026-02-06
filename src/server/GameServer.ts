@@ -335,13 +335,6 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         switch (clientMsg.type) {
-          case "rejoin": {
-            // Client is already connected, no auth required, send start game message if game has started
-            if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
-            }
-            break;
-          }
           case "intent": {
             // Server stamps clientID from the authenticated connection
             const stampedIntent = {
