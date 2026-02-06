@@ -138,6 +138,12 @@ export async function startWorker() {
         log.warn(`Invalid creator token: ${result.message}`);
         return res.status(401).json({ error: "Invalid creator token" });
       }
+    } else if (
+      !req.headers[config.adminHeader()] // Public games use admin token instead
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Authorization header required to create a game" });
     }
 
     if (!id) {
