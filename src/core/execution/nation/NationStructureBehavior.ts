@@ -54,32 +54,16 @@ const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1000;
 
 /** Maximum number of structures a nation can build or upgrade per tick */
-const MAX_STRUCTURES_PER_TICK = 5;
+const MAX_STRUCTURES_PER_TICK = 10;
 
 export class NationStructureBehavior {
-  /**
-   * Tracks gold committed to queued constructions/upgrades this tick.
-   * Since addExecution() defers gold deduction to a later tick, we need
-   * to track spending locally to avoid overspending.
-   */
-  private goldCommitted: Gold = 0n;
-
   constructor(
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
   ) {}
 
-  /**
-   * Returns the player's gold minus gold already committed to queued
-   * constructions/upgrades this tick.
-   */
-  private availableGold(): Gold {
-    return this.player.gold() - this.goldCommitted;
-  }
-
   handleUnits(): boolean {
-    this.goldCommitted = 0n;
     let built = 0;
 
     // Build order for non-city structures (priority order)
@@ -167,18 +151,13 @@ export class NationStructureBehavior {
 
   private maybeSpawnStructure(type: UnitType): boolean {
     const perceivedCost = this.getPerceivedCost(type);
-    if (this.availableGold() < perceivedCost) {
+    if (this.player.gold() < perceivedCost) {
       return false;
     }
 
     // Check if we should upgrade instead of building new
     if (this.maybeUpgradeStructure(this.player.units(type))) {
       return true;
-    }
-
-    const realCost = this.cost(type);
-    if (this.availableGold() < realCost) {
-      return false;
     }
 
     const tile = this.structureSpawnTile(type);
@@ -190,7 +169,6 @@ export class NationStructureBehavior {
       return false;
     }
     this.game.addExecution(new ConstructionExecution(this.player, type, tile));
-    this.goldCommitted += realCost;
     return true;
   }
 
@@ -206,7 +184,7 @@ export class NationStructureBehavior {
     // If we can afford both MIRV and Hydrogen Bomb, no need to save up anymore
     const mirvCost = this.cost(UnitType.MIRV);
     const hydroCost = this.cost(UnitType.HydrogenBomb);
-    if (this.availableGold() >= mirvCost + hydroCost) {
+    if (this.player.gold() >= mirvCost + hydroCost) {
       return realCost;
     }
 
@@ -243,14 +221,9 @@ export class NationStructureBehavior {
       structureToUpgrade !== null &&
       this.player.canUpgradeUnit(structureToUpgrade)
     ) {
-      const upgradeCost = this.cost(structureToUpgrade.type());
-      if (this.availableGold() < upgradeCost) {
-        return false;
-      }
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
-      this.goldCommitted += upgradeCost;
       return true;
     }
     return false;
