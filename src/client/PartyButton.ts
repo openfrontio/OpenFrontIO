@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "./Utils";
 
 @customElement("party-button")
 export class PartyButton extends LitElement {
@@ -17,8 +18,8 @@ export class PartyButton extends LitElement {
         class="c-button c-button--block"
         style="position: relative; background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); border: none;"
       >
-        <span style="margin-right: 8px;"></span>
-        <span>Party</span>
+        <span style="margin-right: 8px;">🎉</span>
+        <span>${translateText("party_modal.title")}</span>
         ${this.partySize > 0
           ? html`
               <span

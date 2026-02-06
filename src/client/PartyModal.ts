@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, translateText } from "./Utils";
 import "./components/baseComponents/Modal";
 
 interface PartyMember {
@@ -69,7 +69,7 @@ export class PartyModal extends LitElement {
 
   render() {
     return html`
-      <o-modal id="party-modal" title="Party">
+      <o-modal id="party-modal" translationKey="party_modal.title">
         <div class="space-y-4">
           ${this.party ? this.renderPartyView() : this.renderJoinCreate()}
         </div>
@@ -81,12 +81,14 @@ export class PartyModal extends LitElement {
     return html`
       <div class="bg-gray-800 rounded-lg p-4">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-bold text-white">Party Code</h3>
+          <h3 class="text-xl font-bold text-white">
+            ${translateText("party_modal.party_code")}
+          </h3>
           <button
             @click=${this.copyPartyCode}
             class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
           >
-            Copy
+            ${translateText("party_modal.copy_code")}
           </button>
         </div>
         <div
@@ -96,7 +98,8 @@ export class PartyModal extends LitElement {
         </div>
 
         <h4 class="text-lg font-semibold text-white mb-2">
-          Members (${this.party!.members.length}/4)
+          ${translateText("party_modal.members")}
+          (${this.party!.members.length}/4)
         </h4>
         <div class="space-y-2">
           ${this.party!.members.map(
@@ -119,7 +122,7 @@ export class PartyModal extends LitElement {
           @click=${this.leaveParty}
           class="w-full mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-semibold"
         >
-          Leave Party
+          ${translateText("party_modal.leave_party")}
         </button>
       </div>
     `;
@@ -129,7 +132,9 @@ export class PartyModal extends LitElement {
     return html`
       <div class="space-y-4">
         <div>
-          <label class="block text-white font-semibold mb-2">Join Party</label>
+          <label class="block text-white font-semibold mb-2">
+            ${translateText("party_modal.join_party")}
+          </label>
           <div class="flex gap-2">
             <input
               type="text"
@@ -138,7 +143,7 @@ export class PartyModal extends LitElement {
                 (this.partyCode = (
                   e.target as HTMLInputElement
                 ).value.toUpperCase())}
-              placeholder="Enter party code"
+              placeholder="${translateText("party_modal.enter_code")}"
               maxlength="6"
               class="flex-1 px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none uppercase font-mono"
             />
@@ -147,19 +152,21 @@ export class PartyModal extends LitElement {
               ?disabled=${this.isLoading || this.partyCode.length !== 6}
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded font-semibold"
             >
-              Join
+              ${translateText("party_modal.join_party")}
             </button>
           </div>
         </div>
 
-        <div class="text-center text-gray-400">or</div>
+        <div class="text-center text-gray-400">
+          ${translateText("party_modal.or")}
+        </div>
 
         <button
           @click=${this.createParty}
           ?disabled=${this.isLoading}
           class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded font-semibold"
         >
-          Create New Party
+          ${translateText("party_modal.create_party")}
         </button>
 
         ${this.errorMessage
