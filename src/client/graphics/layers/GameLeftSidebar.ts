@@ -16,8 +16,11 @@ export class GameLeftSidebar extends LitElement implements Layer {
   private isLeaderboardShow = false;
   @state()
   private isTeamLeaderboardShow = false;
+  @state()
   private isVisible = false;
+  @state()
   private isPlayerTeamLabelVisible = false;
+  @state()
   private playerTeam: string | null = null;
 
   private playerColor: Colord = new Colord("#FFFFFF");
@@ -59,7 +62,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
       this.requestUpdate();
     }
 
-    if (!this.game.inSpawnPhase()) {
+    if (!this.game.inSpawnPhase() && this.isPlayerTeamLabelVisible) {
       this.isPlayerTeamLabelVisible = false;
       this.requestUpdate();
     }
@@ -91,7 +94,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
-        <div class="flex items-center gap-4 lg:gap-4 xl:gap-6 text-white">
+        <div class="flex items-center gap-4 xl:gap-6 text-white">
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
             @click=${this.toggleLeaderboard}
@@ -107,7 +110,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
                 : leaderboardRegularIcon}
-              alt="treeIcon"
+              alt="Player Leaderboard Icon"
               width="20"
               height="20"
             />
@@ -133,7 +136,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
                     src=${this.isTeamLeaderboardShow
                       ? teamSolidIcon
                       : teamRegularIcon}
-                    alt="treeIcon"
+                    alt="Team Leaderboard Icon"
                     width="20"
                     height="20"
                   />
