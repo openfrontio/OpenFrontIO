@@ -112,7 +112,17 @@ export class GameLeftSidebar extends LitElement implements Layer {
             this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
           }`}
         >
-          <div class="cursor-pointer" @click=${this.toggleLeaderboard}>
+          <div
+            class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+            @click=${this.toggleLeaderboard}
+            role="button"
+            tabindex="0"
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                this.toggleLeaderboard();
+              }
+            }}
+          >
             <img
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
@@ -125,8 +135,19 @@ export class GameLeftSidebar extends LitElement implements Layer {
           ${this.isTeamGame
             ? html`
                 <div
-                  class="cursor-pointer"
+                  class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
                   @click=${this.toggleTeamLeaderboard}
+                  role="button"
+                  tabindex="0"
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (
+                      e.key === "Enter" ||
+                      e.key === " " ||
+                      e.code === "Space"
+                    ) {
+                      this.toggleTeamLeaderboard();
+                    }
+                  }}
                 >
                   <img
                     src=${this.isTeamLeaderboardShow
