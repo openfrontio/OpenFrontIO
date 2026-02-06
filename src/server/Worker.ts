@@ -331,8 +331,12 @@ export async function startWorker() {
             gameID: clientMsg.gameID,
             persistentID: persistentId,
           });
-          const wasFound = gm.rejoinClient(ws, persistentId, clientMsg);
-
+          const wasFound = gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
           if (!wasFound) {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
@@ -342,38 +346,10 @@ export async function startWorker() {
           return;
         }
 
-        // Check if this is a reconnecting client (e.g., page refresh)
-        // If so, skip all authorization - they're already authenticated
-        if (gm.hasPreviousConnection(clientMsg.gameID, persistentId)) {
-          const existingClientID = gm.getClientIdForPersistentId(
-            clientMsg.gameID,
-            persistentId,
-          );
-          if (!existingClientID) {
-            log.warn("reconnecting clientID missing, continuing with auth", {
-              gameID: clientMsg.gameID,
-              persistentID: persistentId,
-            });
-          } else {
-            log.info("client reconnecting via join (skipping authorization)", {
-              gameID: clientMsg.gameID,
-              clientID: existingClientID,
-            });
-            // Create minimal client for reconnection - existing client data will be reused
-            const client = new Client(
-              existingClientID,
-              persistentId,
-              claims,
-              undefined, // roles - not needed for reconnection
-              undefined, // flares - not needed for reconnection
-              ip,
-              clientMsg.username,
-              ws,
-              undefined, // cosmetics - will use existing
-            );
-            gm.joinClient(client, clientMsg.gameID);
-            return;
-          }
+        // Try to reconnect an existing client (e.g., page refresh)
+        // If successful, skip all authorization
+        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID)) {
+          return;
         }
 
         let roles: string[] | undefined;

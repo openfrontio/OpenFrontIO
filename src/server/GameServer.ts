@@ -7,7 +7,6 @@ import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
-  ClientRejoinMessage,
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
@@ -170,14 +169,6 @@ export class GameServer {
     return clientID;
   }
 
-  // Check if this persistentID has an existing client (valid reconnection)
-  public hasPreviousConnection(persistentID: string): boolean {
-    const clientID = this.getClientIdForPersistentId(persistentID);
-    if (!clientID) return false;
-    const client = this.allClients.get(clientID);
-    return client?.persistentID === persistentID;
-  }
-
   // Get existing clientID or create a new one for this persistentID
   // Returns null if this persistentID has been kicked
   public getOrCreateClientId(persistentID: string): ClientID | null {
@@ -321,63 +312,22 @@ export class GameServer {
     }
   }
 
+  // Attempt to reconnect a client by persistentID. Returns true if successful.
   public rejoinClient(
     ws: WebSocket,
     persistentID: string,
-    msg: ClientRejoinMessage,
-  ): void {
-    this.websockets.add(ws);
-
-    // Look up clientID from persistentID (server is authoritative)
+    lastTurn: number = 0,
+  ): boolean {
     const clientID = this.getClientIdForPersistentId(persistentID);
-    if (!clientID) {
-      this.log.info("rejoin client not found, client should use join", {
-        persistentID,
-      });
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "rejoin-not-found",
-        } satisfies ServerErrorMessage),
-      );
-      return;
-    }
-
-    if (this.isKicked(clientID)) {
-      this.log.warn("cannot rejoin client, client has been kicked", {
-        clientID,
-      });
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "rejoin-kicked",
-        } satisfies ServerErrorMessage),
-      );
-      ws.close(1008, "rejoin-kicked");
-      return;
-    }
-
+    if (!clientID) return false;
+    if (this.isKicked(clientID)) return false;
     const client = this.allClients.get(clientID);
-    if (!client) {
-      this.log.info("rejoin client not found in allClients", {
-        clientID,
-      });
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "rejoin-not-found",
-        } satisfies ServerErrorMessage),
-      );
-      ws.close(1008, "rejoin-not-found");
-      return;
-    }
+    if (!client) return false;
 
-    this.log.info("client rejoining", {
-      clientID,
-      lastTurn: msg.lastTurn,
-    });
-
-    this.reconnectExistingClient(client, ws, msg.lastTurn);
+    this.websockets.add(ws);
+    this.log.info("client rejoining", { clientID, lastTurn });
+    this.reconnectExistingClient(client, ws, lastTurn);
+    return true;
   }
 
   // Common reconnection logic used by both joinClient (page refresh) and rejoinClient (in-game reconnect)

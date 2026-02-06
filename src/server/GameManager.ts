@@ -8,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
+import { GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -30,14 +30,6 @@ export class GameManager {
     return Array.from(this.games.values()).filter(
       (g) => g.phase() === GamePhase.Lobby && g.isPublic(),
     );
-  }
-
-  // Check if this is a reconnecting client (exists with matching persistentID)
-  // Used to skip authorization on page refresh
-  hasPreviousConnection(gameID: GameID, persistentID: string): boolean {
-    const game = this.games.get(gameID);
-    if (!game) return false;
-    return game.hasPreviousConnection(persistentID);
   }
 
   // Get existing clientID for this persistentID (no side effects)
@@ -69,14 +61,12 @@ export class GameManager {
   rejoinClient(
     ws: WebSocket,
     persistentID: string,
-    msg: ClientRejoinMessage,
+    gameID: GameID,
+    lastTurn: number = 0,
   ): boolean {
-    const game = this.games.get(msg.gameID);
-    if (game) {
-      game.rejoinClient(ws, persistentID, msg);
-      return true;
-    }
-    return false;
+    const game = this.games.get(gameID);
+    if (!game) return false;
+    return game.rejoinClient(ws, persistentID, lastTurn);
   }
 
   createGame(
