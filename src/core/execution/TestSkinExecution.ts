@@ -29,8 +29,8 @@ export class TestSkinExecution implements Execution {
     return false;
   }
 
+  // Not driven by the game engine tick loop — managed externally via start()/stop().
   init(_mg: Game, _ticks: number): void {}
-
   tick(_ticks: number): void {}
 
   public start() {
@@ -68,7 +68,7 @@ export class TestSkinExecution implements Execution {
       // ignore
     }
 
-    // Clear running timeouts to avoid duplicate work
+    // Safety net: clear our own timeouts in case onShowModalRequested threw
     this.stop();
 
     // Resolve player and emit modal event

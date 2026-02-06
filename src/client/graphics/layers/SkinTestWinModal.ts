@@ -17,32 +17,37 @@ export class ShowSkinTestModalEvent {
 @customElement("skin-test-win-modal")
 export class SkinTestWinModal extends LitElement implements Layer {
   private _eventBus?: EventBus;
+  private _onShowEvent?: (e: ShowSkinTestModalEvent) => void;
+
   public set eventBus(eb: EventBus | undefined) {
+    // Unsubscribe previous listener to avoid duplicates on re-assignment
+    if (this._eventBus && this._onShowEvent) {
+      this._eventBus.off(ShowSkinTestModalEvent, this._onShowEvent);
+    }
+
     this._eventBus = eb;
     if (!this._eventBus) return;
 
     // Subscribe to show requests and handle fetch/display logic here so
     // ClientGameRunner doesn't need to know implementation details.
-    this._eventBus.on(
-      ShowSkinTestModalEvent,
-      async (e: ShowSkinTestModalEvent) => {
-        try {
-          const cosmetics = await fetchCosmetics();
-          if (!cosmetics) {
-            console.error("Failed to fetch cosmetics");
-            return;
-          }
-          const pattern = cosmetics.patterns[e.patternName];
-          if (pattern) {
-            this.show(pattern, e.colorPalette ?? null);
-          } else {
-            console.error("Pattern not found in cosmetics:", e.patternName);
-          }
-        } catch (err) {
-          console.error("Error showing skin test modal", err);
+    this._onShowEvent = async (e: ShowSkinTestModalEvent) => {
+      try {
+        const cosmetics = await fetchCosmetics();
+        if (!cosmetics) {
+          console.error("Failed to fetch cosmetics");
+          return;
         }
-      },
-    );
+        const pattern = cosmetics.patterns[e.patternName];
+        if (pattern) {
+          this.show(pattern, e.colorPalette ?? null);
+        } else {
+          console.error("Pattern not found in cosmetics:", e.patternName);
+        }
+      } catch (err) {
+        console.error("Error showing skin test modal", err);
+      }
+    };
+    this._eventBus.on(ShowSkinTestModalEvent, this._onShowEvent);
   }
 
   public get eventBus(): EventBus | undefined {
@@ -86,7 +91,7 @@ export class SkinTestWinModal extends LitElement implements Layer {
 
   private _handleRate(rating: "up" | "down") {
     this.rated = rating;
-    // Here we could send an event to the server to record the rating
+    // TODO: send rating event to the server
   }
 
   render() {

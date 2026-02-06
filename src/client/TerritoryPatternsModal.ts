@@ -207,10 +207,7 @@ export class TerritoryPatternsModal extends BaseModal {
     `;
   }
 
-  private async startTestGame(
-    pattern: Pattern,
-    colorPalette: ColorPalette | null,
-  ) {
+  private startTestGame(pattern: Pattern, colorPalette: ColorPalette | null) {
     if (!this.userMeResponse) return;
     const clientID = this.userMeResponse.player.publicId;
     const gameID = pattern.name;
@@ -238,6 +235,7 @@ export class TerritoryPatternsModal extends BaseModal {
           clientID: clientID,
           gameID: gameID,
           isSkinTest: true,
+          source: "singleplayer",
           gameStartInfo: {
             gameID: gameID,
             players: [
