@@ -73,9 +73,7 @@ export function joinLobby(
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
 
-  console.log(
-    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${clientID}`,
-  );
+  console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
