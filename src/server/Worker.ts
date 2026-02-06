@@ -525,12 +525,11 @@ async function startMatchmakingPolling(gm: GameManager) {
 
         if (data.assignment) {
           const gameConfig = playlist.get1v1Config();
-          const game = gm.createGame(gameId, gameConfig);
-          setTimeout(() => {
-            // Wait a few seconds to allow clients to connect.
-            console.log(`Starting game ${gameId}`);
-            game.start();
-          }, 7000);
+          gm.createGame(gameId, gameConfig);
+          log.info(
+            `Created matchmaking game ${gameId}, waiting for players...`,
+          );
+          // Game will be started by GameManager when full.
         }
       } catch (error) {
         log.error(`Error polling lobby:`, error);

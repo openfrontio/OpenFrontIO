@@ -112,16 +112,36 @@ export class GameManager {
 
   tick() {
     const active = new Map<GameID, GameServer>();
+    const now = Date.now();
+
     for (const [id, game] of this.games) {
       const phase = game.phase();
+
+      // Clean up stale lobbies (older than 2 minutes and not started)
+      if (
+        phase === GamePhase.Lobby &&
+        !game.hasStarted() &&
+        now - game.createdAt > 2 * 60 * 1000
+      ) {
+        this.log.info(`Destroying stale lobby ${id}`, {
+          createdAt: game.createdAt,
+          activeClients: game.activeClients.length,
+        });
+        game.end(); // Clean up resources
+        continue;
+      }
+
       if (phase === GamePhase.Active) {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
-          // Start game on delay to allow time for clients to connect.
+          // Start game on delay to allow time for clients to connect/load.
           setTimeout(() => {
             try {
-              game.start();
+              // Double check game is still valid/active before starting
+              if (!game.hasStarted()) {
+                game.start();
+              }
             } catch (error) {
               this.log.error(`error starting game ${id}: ${error}`);
             }

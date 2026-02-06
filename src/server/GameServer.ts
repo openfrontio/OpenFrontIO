@@ -781,12 +781,14 @@ export class GameServer {
 
     // Public Games
 
-    const lessThanLifetime = Date.now() < this.startsAt!;
+    const lessThanLifetime =
+      this.startsAt !== undefined && Date.now() < this.startsAt;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
       this.activeClients.length < this.gameConfig.maxPlayers;
-    if (lessThanLifetime && notEnoughPlayers) {
+
+    if (lessThanLifetime || notEnoughPlayers) {
       return GamePhase.Lobby;
     }
     const warmupOver = now > this.startsAt! + 30 * 1000;
@@ -795,6 +797,30 @@ export class GameServer {
     }
 
     return GamePhase.Active;
+  }
+
+  /**
+   * Checks if the game is ready to transition from Lobby to Active/Starting state.
+   */
+  public isReadyToStart(): boolean {
+    if (this._hasStarted || this._hasEnded) return false;
+
+    // If explicit start time is set and passed
+    if (this.startsAt !== undefined && Date.now() >= this.startsAt) {
+      return true;
+    }
+
+    // If matchmaking/public game with max players setup
+    // We wait until the lobby is full.
+    if (
+      this.gameConfig.gameType === GameType.Public &&
+      this.gameConfig.maxPlayers
+    ) {
+      return this.activeClients.length >= this.gameConfig.maxPlayers;
+    }
+
+    // Default for other types: waiting for explicit start command or other logic
+    return false;
   }
 
   hasStarted(): boolean {
