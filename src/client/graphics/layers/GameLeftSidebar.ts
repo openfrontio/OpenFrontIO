@@ -102,6 +102,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
             tabindex="0"
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                e.preventDefault();
                 this.toggleLeaderboard();
               }
             }}
@@ -128,6 +129,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
                       e.key === " " ||
                       e.code === "Space"
                     ) {
+                      e.preventDefault();
                       this.toggleTeamLeaderboard();
                     }
                   }}
