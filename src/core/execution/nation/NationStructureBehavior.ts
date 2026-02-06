@@ -4,11 +4,13 @@ import {
   Player,
   PlayerType,
   Relation,
+  Unit,
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { ConstructionExecution } from "../ConstructionExecution";
+import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTile, closestTwoTiles } from "../Util";
 import { randTerritoryTileArray } from "./NationUtils";
 
@@ -28,25 +30,27 @@ interface StructureRatioConfig {
  * Cities are always prioritized and built first.
  */
 const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
-  // Structures that nations should build
-  [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 0.1 },
-  [UnitType.Factory]: { ratioPerCity: 0.5, perceivedCostIncreasePerOwned: 0.1 },
+  [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
+  [UnitType.Factory]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
   [UnitType.DefensePost]: {
-    ratioPerCity: 1.0,
-    perceivedCostIncreasePerOwned: 0.15,
+    ratioPerCity: 0.25,
+    perceivedCostIncreasePerOwned: 1,
   },
   [UnitType.SAMLauncher]: {
-    ratioPerCity: 0.5,
-    perceivedCostIncreasePerOwned: 0.2,
+    ratioPerCity: 0.25,
+    perceivedCostIncreasePerOwned: 1,
   },
   [UnitType.MissileSilo]: {
     ratioPerCity: 0.25,
-    perceivedCostIncreasePerOwned: 0.25,
+    perceivedCostIncreasePerOwned: 1,
   },
 };
 
 /** Perceived cost increase percentage per city owned */
-const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 0.1;
+const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
+
+/** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
+const UPGRADE_DENSITY_THRESHOLD = 1 / 2000;
 
 export class NationStructureBehavior {
   constructor(
@@ -124,29 +128,6 @@ export class NationStructureBehavior {
     return owned < targetCount;
   }
 
-  /**
-   * Calculates the perceived cost for a structure type.
-   * The perceived cost increases by a percentage for each structure of that type already owned.
-   * This makes nations save up gold for MIRVs.
-   */
-  private getPerceivedCost(type: UnitType): Gold {
-    const realCost = this.cost(type);
-    const owned = this.player.unitsOwned(type);
-
-    let increasePerOwned: number;
-    if (type === UnitType.City) {
-      increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
-    } else {
-      const config = STRUCTURE_RATIOS[type];
-      increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
-    }
-
-    // Each owned structure makes the next one feel more expensive
-    // Formula: realCost * (1 + increasePerOwned * owned)
-    const multiplier = 1 + increasePerOwned * owned;
-    return BigInt(Math.ceil(Number(realCost) * multiplier));
-  }
-
   private cost(type: UnitType): Gold {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
@@ -175,6 +156,28 @@ export class NationStructureBehavior {
     if (this.player.gold() < perceivedCost) {
       return false;
     }
+
+    // Check if we should upgrade instead of building new
+    const existingStructures = this.player.units(type);
+    const tilesOwned = this.player.numTilesOwned();
+    const density = existingStructures.length / tilesOwned;
+
+    if (density > UPGRADE_DENSITY_THRESHOLD && existingStructures.length > 0) {
+      // Try to upgrade an existing structure instead
+      const structureToUpgrade =
+        this.findBestStructureToUpgrade(existingStructures);
+      if (
+        structureToUpgrade !== null &&
+        this.player.canUpgradeUnit(structureToUpgrade)
+      ) {
+        this.game.addExecution(
+          new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
+        );
+        return true;
+      }
+      // Fall through to build new if we can't upgrade
+    }
+
     const tile = this.structureSpawnTile(type);
     if (tile === null) {
       return false;
@@ -185,6 +188,79 @@ export class NationStructureBehavior {
     }
     this.game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
+  }
+
+  /**
+   * Calculates the perceived cost for a structure type.
+   * The perceived cost increases by a percentage for each structure of that type already owned.
+   * This makes nations save up gold for MIRVs.
+   */
+  private getPerceivedCost(type: UnitType): Gold {
+    const realCost = this.cost(type);
+    const owned = this.player.unitsOwned(type);
+
+    let increasePerOwned: number;
+    if (type === UnitType.City) {
+      increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
+    } else {
+      const config = STRUCTURE_RATIOS[type];
+      increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
+    }
+
+    // Each owned structure makes the next one feel more expensive
+    // Formula: realCost * (1 + increasePerOwned * owned)
+    const multiplier = 1 + increasePerOwned * owned;
+    return BigInt(Math.ceil(Number(realCost) * multiplier));
+  }
+
+  /**
+   * Finds the best structure to upgrade, preferring structures protected by a SAM.
+   */
+  private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
+    if (structures.length === 0) {
+      return null;
+    }
+
+    const samLaunchers = this.player.units(UnitType.SAMLauncher);
+    const samRange = this.game.config().defaultSamRange();
+    const samRangeSquared = samRange * samRange;
+
+    // Score each structure based on SAM protection
+    let bestStructure: Unit | null = null;
+    let bestScore = -1;
+
+    for (const structure of structures) {
+      if (!this.player.canUpgradeUnit(structure)) {
+        continue;
+      }
+
+      let score = 0;
+
+      // Check if protected by any SAM
+      for (const sam of samLaunchers) {
+        const distSquared = this.game.euclideanDistSquared(
+          structure.tile(),
+          sam.tile(),
+        );
+        if (distSquared <= samRangeSquared) {
+          // Protected by this SAM, add score based on SAM level
+          score += 10;
+          if (sam.level() > 1) {
+            score += (sam.level() - 1) * 7.5;
+          }
+        }
+      }
+
+      // Add small random factor to break ties
+      score += this.random.nextInt(0, 5);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestStructure = structure;
+      }
+    }
+
+    return bestStructure;
   }
 
   private structureSpawnTile(type: UnitType): TileRef | null {
