@@ -49,8 +49,8 @@ const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
-const UPGRADE_DENSITY_THRESHOLD = 1 / 2000;
+/** If we have more than this many structures per this tiles, prefer upgrading over building */
+const UPGRADE_DENSITY_THRESHOLD = 1 / 1000;
 
 export class NationStructureBehavior {
   constructor(
@@ -194,9 +194,18 @@ export class NationStructureBehavior {
    * Calculates the perceived cost for a structure type.
    * The perceived cost increases by a percentage for each structure of that type already owned.
    * This makes nations save up gold for MIRVs.
+   * Once the nation can afford both a MIRV and a Hydrogen Bomb, stop inflating costs.
    */
   private getPerceivedCost(type: UnitType): Gold {
     const realCost = this.cost(type);
+
+    // If we can afford both MIRV and Hydrogen Bomb, no need to save up anymore
+    const mirvCost = this.cost(UnitType.MIRV);
+    const hydroCost = this.cost(UnitType.HydrogenBomb);
+    if (this.player.gold() >= mirvCost + hydroCost) {
+      return realCost;
+    }
+
     const owned = this.player.unitsOwned(type);
 
     let increasePerOwned: number;
