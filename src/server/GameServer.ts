@@ -19,8 +19,6 @@ import {
   ServerErrorMessage,
   ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
-  ServerStartGameMessage,
-  ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
@@ -42,7 +40,7 @@ export class GameServer {
 
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
-  private turns: Turn[] = [];
+  private turns: string[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
@@ -640,14 +638,19 @@ export class GameServer {
     });
 
     try {
-      ws.send(
-        JSON.stringify({
-          type: "start",
-          turns: this.turns.slice(lastTurn),
-          gameStartInfo: this.gameStartInfo,
-          lobbyCreatedAt: this.createdAt,
-        } satisfies ServerStartGameMessage),
-      );
+      const turnsStr = "[" + this.turns.slice(lastTurn).join(",") + "]";
+
+      // We manually construct the message to avoid deserializing the turns
+      // and checking them against the schema which would be expensive.
+      const metadata = JSON.stringify({
+        type: "start",
+        gameStartInfo: this.gameStartInfo,
+        lobbyCreatedAt: this.createdAt,
+      });
+
+      const msg = metadata.slice(0, -1) + ',"turns":' + turnsStr + "}";
+
+      ws.send(msg);
     } catch (error) {
       throw new Error(
         `error sending start message for game ${this.id}, ${error}`.substring(
@@ -668,16 +671,17 @@ export class GameServer {
       turnNumber: this.turns.length,
       intents: this.intents,
     };
-    this.turns.push(pastTurn);
+
+    // Optimize: serialize once, store string, send string (embedded)
+    const pastTurnStr = JSON.stringify(pastTurn);
+    this.turns.push(pastTurnStr);
     this.intents = [];
 
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    const msg = JSON.stringify({
-      type: "turn",
-      turn: pastTurn,
-    } satisfies ServerTurnMessage);
+    const msg = '{"type":"turn","turn":' + pastTurnStr + "}";
+
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
@@ -927,7 +931,7 @@ export class GameServer {
           this.id,
           this.gameStartInfo.config,
           playerRecords,
-          this.turns,
+          this.turns.map((t) => JSON.parse(t)),
           this._startTime ?? 0,
           Date.now(),
           this.winner?.winner,
@@ -954,7 +958,11 @@ export class GameServer {
     this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
-      this.turns[lastHashTurn].hash = mostCommonHash;
+      if (mostCommonHash !== null) {
+        const turnObj = JSON.parse(this.turns[lastHashTurn]);
+        turnObj.hash = mostCommonHash;
+        this.turns[lastHashTurn] = JSON.stringify(turnObj);
+      }
       return;
     }
 
