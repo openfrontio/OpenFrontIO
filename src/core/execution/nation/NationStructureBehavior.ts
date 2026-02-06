@@ -4,6 +4,7 @@ import {
   Player,
   PlayerType,
   Relation,
+  StructureTypes,
   Unit,
   UnitType,
 } from "../../game/Game";
@@ -49,7 +50,7 @@ const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** If we have more than this many structures per this tiles, prefer upgrading over building */
+/** If we have more than this many total structures per 1000 tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1000;
 
 export class NationStructureBehavior {
@@ -87,7 +88,7 @@ export class NationStructureBehavior {
       }
     }
 
-    if (this.maybeSpawnCity()) {
+    if (this.maybeSpawnStructure(UnitType.City)) {
       return true;
     }
 
@@ -132,25 +133,6 @@ export class NationStructureBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 
-  private maybeSpawnCity(): boolean {
-    const perceivedCost = this.getPerceivedCost(UnitType.City);
-    if (this.player.gold() < perceivedCost) {
-      return false;
-    }
-    const tile = this.structureSpawnTile(UnitType.City);
-    if (tile === null) {
-      return false;
-    }
-    const canBuild = this.player.canBuild(UnitType.City, tile);
-    if (canBuild === false) {
-      return false;
-    }
-    this.game.addExecution(
-      new ConstructionExecution(this.player, UnitType.City, tile),
-    );
-    return true;
-  }
-
   private maybeSpawnStructure(type: UnitType): boolean {
     const perceivedCost = this.getPerceivedCost(type);
     if (this.player.gold() < perceivedCost) {
@@ -158,24 +140,8 @@ export class NationStructureBehavior {
     }
 
     // Check if we should upgrade instead of building new
-    const existingStructures = this.player.units(type);
-    const tilesOwned = this.player.numTilesOwned();
-    const density = existingStructures.length / tilesOwned;
-
-    if (density > UPGRADE_DENSITY_THRESHOLD && existingStructures.length > 0) {
-      // Try to upgrade an existing structure instead
-      const structureToUpgrade =
-        this.findBestStructureToUpgrade(existingStructures);
-      if (
-        structureToUpgrade !== null &&
-        this.player.canUpgradeUnit(structureToUpgrade)
-      ) {
-        this.game.addExecution(
-          new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
-        );
-        return true;
-      }
-      // Fall through to build new if we can't upgrade
+    if (this.tryUpgradeInsteadOfBuilding(this.player.units(type))) {
+      return true;
     }
 
     const tile = this.structureSpawnTile(type);
@@ -220,6 +186,43 @@ export class NationStructureBehavior {
     // Formula: realCost * (1 + increasePerOwned * owned)
     const multiplier = 1 + increasePerOwned * owned;
     return BigInt(Math.ceil(Number(realCost) * multiplier));
+  }
+
+  /**
+   * Tries to upgrade an existing structure if density threshold is exceeded.
+   * @param structures The pool of structures to consider for upgrading
+   * @returns true if an upgrade was initiated, false otherwise
+   */
+  private tryUpgradeInsteadOfBuilding(structures: Unit[]): boolean {
+    if (this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
+      return false;
+    }
+    if (structures.length === 0) {
+      return false;
+    }
+    const structureToUpgrade = this.findBestStructureToUpgrade(structures);
+    if (
+      structureToUpgrade !== null &&
+      this.player.canUpgradeUnit(structureToUpgrade)
+    ) {
+      this.game.addExecution(
+        new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Calculates total structure density across player's territory.
+   */
+  private getTotalStructureDensity(): number {
+    let totalStructures = 0;
+    for (const type of StructureTypes) {
+      totalStructures += this.player.unitsOwned(type);
+    }
+    const tilesOwned = this.player.numTilesOwned();
+    return tilesOwned > 0 ? totalStructures / tilesOwned : 0;
   }
 
   /**
