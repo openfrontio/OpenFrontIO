@@ -4,9 +4,12 @@ import { GameView, PlayerView } from "../game/GameView";
 import { ClientID } from "../Schemas";
 
 export class TestSkinExecution implements Execution {
+  private static readonly MAX_INITIAL_ATTACK_RETRIES = 50;
+
   private myPlayer: PlayerView | null = null;
   private initialAttackTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private modalTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private initialAttackRetries = 0;
   private active = true;
 
   constructor(
@@ -110,7 +113,18 @@ export class TestSkinExecution implements Execution {
     if (this.myPlayer === null) {
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) {
-        // try again shortly
+        this.initialAttackRetries++;
+        if (
+          this.initialAttackRetries >=
+          TestSkinExecution.MAX_INITIAL_ATTACK_RETRIES
+        ) {
+          console.error(
+            "TestSkinExecution: gave up finding player after",
+            this.initialAttackRetries,
+            "retries",
+          );
+          return;
+        }
         this.scheduleInitialAttack(100);
         return;
       }

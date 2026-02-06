@@ -176,8 +176,10 @@ export class TerritoryPatternsModal extends BaseModal {
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
               handlePurchase(p, colorPalette)}
-            .onTest=${(p: Pattern, colorPalette: ColorPalette | null) =>
-              this.startTestGame(p, colorPalette)}
+            .onTest=${hasLinkedAccount(this.userMeResponse)
+              ? (p: Pattern, colorPalette: ColorPalette | null) =>
+                  this.startTestGame(p, colorPalette)
+              : undefined}
           ></pattern-button>
         `);
       }
@@ -208,7 +210,17 @@ export class TerritoryPatternsModal extends BaseModal {
   }
 
   private startTestGame(pattern: Pattern, colorPalette: ColorPalette | null) {
-    if (!this.userMeResponse) return;
+    if (!this.userMeResponse) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("territory_patterns.not_logged_in"),
+            duration: 3000,
+          },
+        }),
+      );
+      return;
+    }
     const clientID = this.userMeResponse.player.publicId;
     const gameID = pattern.name;
 
