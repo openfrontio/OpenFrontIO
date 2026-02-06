@@ -485,6 +485,12 @@ export class GameServer {
             this.handleWinner(client, clientMsg);
             break;
           }
+          case "rejoin": {
+            if (this._hasStarted) {
+              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+            }
+            break;
+          }
           default: {
             this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
               clientID: client.clientID,
