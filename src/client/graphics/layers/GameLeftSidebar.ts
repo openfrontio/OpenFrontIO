@@ -111,7 +111,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
                 : leaderboardRegularIcon}
-              alt=${translateText("help_modal.icon_alt_player_leaderboard") || "Player Leaderboard Icon"}
+              alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
+              "Player Leaderboard Icon"}
               width="20"
               height="20"
             />
@@ -138,7 +139,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
                     src=${this.isTeamLeaderboardShow
                       ? teamSolidIcon
                       : teamRegularIcon}
-                    alt=${translateText("help_modal.icon_alt_team_leaderboard") || "Team Leaderboard Icon"}
+                    alt=${translateText(
+                      "help_modal.icon_alt_team_leaderboard",
+                    ) || "Team Leaderboard Icon"}
                     width="20"
                     height="20"
                   />
