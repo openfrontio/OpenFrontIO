@@ -426,6 +426,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   cosmetics: PlayerCosmeticsSchema.optional(),
+  partyCode: z.string().optional(),
 });
 
 export const GameStartInfoSchema = z.object({

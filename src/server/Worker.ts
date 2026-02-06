@@ -534,6 +534,10 @@ export async function startWorker() {
           }
         }
 
+        // Get party code if player is in a party
+        const party = partyManager.getPartyByMember(persistentId);
+        const partyCode = party?.code;
+
         // Create client and add to game
         const client = new Client(
           clientMsg.clientID,
@@ -545,6 +549,8 @@ export async function startWorker() {
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
+          false, // isRejoin
+          partyCode,
         );
 
         const wasFound = gm.joinClient(client, clientMsg.gameID);

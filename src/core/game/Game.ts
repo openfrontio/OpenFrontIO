@@ -415,6 +415,7 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nationStrength?: number,
+    public readonly partyCode?: string,
   ) {
     this.clan = getClanTag(name);
   }

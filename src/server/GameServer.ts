@@ -461,6 +461,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
         cosmetics: c.cosmetics,
+        partyCode: c.partyCode,
       })),
     });
     if (!result.success) {

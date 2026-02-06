@@ -21,5 +21,6 @@ export class Client {
     public ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly isRejoin: boolean = false,
+    public readonly partyCode?: string,
   ) {}
 }

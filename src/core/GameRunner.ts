@@ -54,6 +54,8 @@ export async function createGameRunner(
       PlayerType.Human,
       p.clientID,
       random.nextID(),
+      undefined, // nationStrength
+      p.partyCode,
     );
   });
 

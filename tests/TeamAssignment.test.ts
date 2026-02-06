@@ -4,13 +4,19 @@ import { assignTeams } from "../src/core/game/TeamAssignment";
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 
 describe("assignTeams", () => {
-  const createPlayer = (id: string, clan?: string): PlayerInfo => {
+  const createPlayer = (
+    id: string,
+    clan?: string,
+    partyCode?: string,
+  ): PlayerInfo => {
     const name = clan ? `[${clan}]Player ${id}` : `Player ${id}`;
     return new PlayerInfo(
       name,
       PlayerType.Human,
       null, // clientID (null for testing)
       id,
+      undefined, // nationStrength
+      partyCode,
     );
   };
 
@@ -162,5 +168,157 @@ describe("assignTeams", () => {
     expect(result.get(players[11])).toEqual(ColoredTeams.Green);
     expect(result.get(players[12])).toEqual(ColoredTeams.Purple);
     expect(result.get(players[13])).toEqual(ColoredTeams.Orange);
+  });
+
+  describe("party-aware team assignment", () => {
+    it("should keep party members together on the same team", () => {
+      const players = [
+        createPlayer("1", undefined, "PARTY1"),
+        createPlayer("2", undefined, "PARTY1"),
+        createPlayer("3", undefined, "PARTY2"),
+        createPlayer("4", undefined, "PARTY2"),
+      ];
+
+      const result = assignTeams(players, teams);
+
+      // Check that party members are on the same team
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+      expect(result.get(players[2])).toEqual(result.get(players[3]));
+      expect(result.get(players[0])).not.toEqual(result.get(players[2]));
+    });
+
+    it("should prioritize party grouping over clan grouping", () => {
+      const players = [
+        createPlayer("1", "CLANA", "PARTY1"),
+        createPlayer("2", "CLANA", "PARTY1"),
+        createPlayer("3", "CLANA", "PARTY2"),
+        createPlayer("4", "CLANA", "PARTY2"),
+      ];
+
+      const result = assignTeams(players, teams);
+
+      // Party members should be together, even if they're in the same clan
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+      expect(result.get(players[2])).toEqual(result.get(players[3]));
+      expect(result.get(players[0])).not.toEqual(result.get(players[2]));
+    });
+
+    it("should handle party overflow by splitting across teams", () => {
+      const players = [
+        createPlayer("1", undefined, "PARTY1"),
+        createPlayer("2", undefined, "PARTY1"),
+        createPlayer("3", undefined, "PARTY1"),
+        createPlayer("4", undefined, "PARTY1"),
+        createPlayer("5"),
+        createPlayer("6"),
+      ];
+
+      const result = assignTeams(players, teams, 3);
+
+      // First 3 party members should be on one team
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+      expect(result.get(players[1])).toEqual(result.get(players[2]));
+
+      // 4th party member should overflow to another team
+      expect(result.get(players[3])).not.toEqual(result.get(players[0]));
+      expect(result.get(players[3])).not.toEqual("kicked");
+
+      // Non-party players should fill remaining spots
+      expect(result.get(players[4])).not.toEqual("kicked");
+      expect(result.get(players[5])).not.toEqual("kicked");
+    });
+
+    it("should handle mixed party and non-party players", () => {
+      const players = [
+        createPlayer("1", undefined, "PARTY1"),
+        createPlayer("2", undefined, "PARTY1"),
+        createPlayer("3"),
+        createPlayer("4"),
+      ];
+
+      const result = assignTeams(players, teams);
+
+      // Party members should be together
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+
+      // Non-party players should balance teams
+      expect(result.get(players[2])).not.toEqual(result.get(players[0]));
+      expect(result.get(players[3])).not.toEqual(result.get(players[0]));
+    });
+
+    it("should handle multiple parties of different sizes", () => {
+      const players = [
+        createPlayer("1", undefined, "PARTY1"),
+        createPlayer("2", undefined, "PARTY1"),
+        createPlayer("3", undefined, "PARTY1"),
+        createPlayer("4", undefined, "PARTY2"),
+        createPlayer("5", undefined, "PARTY2"),
+        createPlayer("6", undefined, "PARTY3"),
+      ];
+
+      const result = assignTeams(players, teams);
+
+      // Larger party should be assigned first
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+      expect(result.get(players[1])).toEqual(result.get(players[2]));
+
+      // Second party should be together
+      expect(result.get(players[3])).toEqual(result.get(players[4]));
+
+      // Parties should be on different teams
+      expect(result.get(players[0])).not.toEqual(result.get(players[3]));
+    });
+
+    it("should handle party + clan + solo players correctly", () => {
+      const players = [
+        createPlayer("1", "CLANA", "PARTY1"),
+        createPlayer("2", "CLANA", "PARTY1"),
+        createPlayer("3", "CLANB"),
+        createPlayer("4", "CLANB"),
+        createPlayer("5"),
+        createPlayer("6"),
+      ];
+
+      const result = assignTeams(players, teams);
+
+      // Party members should be together (highest priority)
+      expect(result.get(players[0])).toEqual(result.get(players[1]));
+
+      // Clan members without party should be together
+      expect(result.get(players[2])).toEqual(result.get(players[3]));
+
+      // All players should be assigned
+      expect(result.get(players[4])).not.toEqual("kicked");
+      expect(result.get(players[5])).not.toEqual("kicked");
+    });
+
+    it("should kick overflow players when all teams are full", () => {
+      const players = [
+        createPlayer("1", undefined, "PARTY1"),
+        createPlayer("2", undefined, "PARTY1"),
+        createPlayer("3", undefined, "PARTY1"),
+        createPlayer("4", undefined, "PARTY1"),
+        createPlayer("5", undefined, "PARTY2"),
+        createPlayer("6", undefined, "PARTY2"),
+        createPlayer("7"),
+      ];
+
+      const result = assignTeams(players, teams, 3);
+
+      // First 3 party members should be on one team
+      expect(result.get(players[0])).not.toEqual("kicked");
+      expect(result.get(players[1])).not.toEqual("kicked");
+      expect(result.get(players[2])).not.toEqual("kicked");
+
+      // 4th party member should overflow to another team
+      expect(result.get(players[3])).not.toEqual("kicked");
+
+      // Second party should fill remaining spots
+      expect(result.get(players[4])).not.toEqual("kicked");
+      expect(result.get(players[5])).not.toEqual("kicked");
+
+      // Solo player should be kicked when teams are full
+      expect(result.get(players[6])).toEqual("kicked");
+    });
   });
 });
