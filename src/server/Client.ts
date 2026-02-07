@@ -23,5 +23,5 @@ export class Client {
     public readonly isRejoin: boolean = false,
   ) {}
 
-  public viewCenter: { x: number; y: number } | null = null;
+  public viewPos: [number, number] = [0, 0];
 }
