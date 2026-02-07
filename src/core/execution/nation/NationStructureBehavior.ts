@@ -1,4 +1,5 @@
 import {
+  Difficulty,
   Game,
   Gold,
   Player,
@@ -10,6 +11,7 @@ import {
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
+import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTile, closestTwoTiles } from "../Util";
@@ -42,7 +44,7 @@ const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
     perceivedCostIncreasePerOwned: 1,
   },
   [UnitType.MissileSilo]: {
-    ratioPerCity: 0.25,
+    ratioPerCity: 0.2,
     perceivedCostIncreasePerOwned: 1,
   },
 };
@@ -268,12 +270,42 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Finds the best structure to upgrade, preferring structures protected by a SAM.
+   * Finds the best structure to upgrad25e, preferring structures protected by a SAM.
    * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
     if (structures.length === 0) {
       return null;
+    }
+
+    // Filter to only upgradable structures
+    const upgradable = structures.filter((s) => this.player.canUpgradeUnit(s));
+    if (upgradable.length === 0) {
+      return null;
+    }
+
+    // Based on difficulty, chance to just pick a random structure
+    const { difficulty } = this.game.config().gameConfig();
+    let randomChance: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        randomChance = 70;
+        break;
+      case Difficulty.Medium:
+        randomChance = 40;
+        break;
+      case Difficulty.Hard:
+        randomChance = 25;
+        break;
+      case Difficulty.Impossible:
+        randomChance = 10;
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    if (this.random.nextInt(0, 100) < randomChance) {
+      return this.random.randElement(upgradable);
     }
 
     const samLaunchers = this.player.units(UnitType.SAMLauncher);
