@@ -158,7 +158,7 @@ export class NationStructureBehavior {
       return false;
     }
 
-    // Density cap on defense posts
+    // Density cap on defense posts (can't be upgraded so a new one would be built - problematic if it's a game with high starting gold)
     if (type === UnitType.DefensePost) {
       const tilesOwned = this.player.numTilesOwned();
       if (
@@ -485,7 +485,6 @@ export class NationStructureBehavior {
             w += Math.min(d, structureSpacing);
           }
 
-          // TODO: Cities and factories should consider train range limits
           return w;
         };
       }
@@ -541,9 +540,9 @@ export class NationStructureBehavior {
 
             // Prefer adjacent players who are hostile
             const neighbors: Set<Player> = new Set();
-            for (const tile of mg.neighbors(closest)) {
-              if (!mg.isLand(tile)) continue;
-              const id = mg.ownerID(tile);
+            for (const neighborTile of mg.neighbors(closest)) {
+              if (!mg.isLand(neighborTile)) continue;
+              const id = mg.ownerID(neighborTile);
               if (id === player.smallID()) continue;
               const neighbor = mg.playerBySmallID(id);
               if (!neighbor.isPlayer()) continue;
