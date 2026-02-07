@@ -65,7 +65,12 @@ export interface MenuElement {
     iconSize: number,
     disabled: boolean,
     params: MenuElementParams,
+    update?: boolean, // true when refreshing existing render
   ) => void;
+  customRenderStateKey?: (
+    disabled: boolean,
+    params: MenuElementParams,
+  ) => string;
 
   timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
@@ -247,6 +252,12 @@ const allyExtendElement: MenuElement = {
     );
     return Math.max(0, Math.min(1, remaining / window));
   },
+  customRenderStateKey: (disabled: boolean, params: MenuElementParams) => {
+    const interaction = params.playerActions?.interaction;
+    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
+    return `${disabled}:${myAgreed}:${otherAgreed}`;
+  },
   customRender: (
     content: SVGGElement,
     cx: number,
@@ -254,7 +265,11 @@ const allyExtendElement: MenuElement = {
     iconSize: number,
     disabled: boolean,
     params: MenuElementParams,
+    update?: boolean,
   ) => {
+    if (update) {
+      while (content.firstChild) content.removeChild(content.firstChild);
+    }
     const interaction = params.playerActions?.interaction;
     const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
     const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;

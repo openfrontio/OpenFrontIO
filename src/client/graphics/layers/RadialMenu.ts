@@ -591,6 +591,10 @@ export class RadialMenu implements Layer {
         const disabled = this.isItemDisabled(d.data);
 
         if (d.data.customRender && this.params) {
+          if (d.data.customRenderStateKey) {
+            const stateKey = d.data.customRenderStateKey(disabled, this.params);
+            content.attr("data-prev-state", stateKey);
+          }
           d.data.customRender(
             content.node()! as SVGGElement,
             arc.centroid(d)[0],
@@ -1125,18 +1129,38 @@ export class RadialMenu implements Layer {
         const icon = this.menuIcons.get(itemId);
         if (icon) {
           if (item.customRender && this.params) {
-            // Re-invoke customRender with stored centroid coords
-            const cx = parseFloat(icon.attr("data-cx") || "0");
-            const cy = parseFloat(icon.attr("data-cy") || "0");
-            icon.selectAll("*").remove();
-            item.customRender(
-              icon.node()! as SVGGElement,
-              cx,
-              cy,
-              this.config.iconSize,
-              disabled,
-              this.params,
-            );
+            if (item.customRenderStateKey) {
+              const stateKey = item.customRenderStateKey(disabled, this.params);
+              const prevState = icon.attr("data-prev-state");
+              if (stateKey === prevState) {
+                // State unchanged, skip re-render to preserve animations
+              } else {
+                icon.attr("data-prev-state", stateKey);
+                const cx = parseFloat(icon.attr("data-cx") || "0");
+                const cy = parseFloat(icon.attr("data-cy") || "0");
+                item.customRender(
+                  icon.node()! as SVGGElement,
+                  cx,
+                  cy,
+                  this.config.iconSize,
+                  disabled,
+                  this.params,
+                  true,
+                );
+              }
+            } else {
+              const cx = parseFloat(icon.attr("data-cx") || "0");
+              const cy = parseFloat(icon.attr("data-cy") || "0");
+              icon.selectAll("*").remove();
+              item.customRender(
+                icon.node()! as SVGGElement,
+                cx,
+                cy,
+                this.config.iconSize,
+                disabled,
+                this.params,
+              );
+            }
           } else {
             // Update text opacity
             const textElement = icon.select("text");
