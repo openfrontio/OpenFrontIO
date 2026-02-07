@@ -282,15 +282,6 @@
   color: #000000;
 }
 
-.setting-input.select {
-  width: 120px;
-  padding: 6px 8px;
-  border: 1px solid #aaa;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #000000;
-}
-
 .switch {
   position: relative;
   display: inline-block;
