@@ -185,8 +185,20 @@ export class NationStructureBehavior {
     }
 
     // Check if we should upgrade instead of building new
-    if (this.maybeUpgradeStructure(this.player.units(type))) {
-      return true;
+    const structures = this.player.units(type);
+    if (
+      this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
+      type !== UnitType.DefensePost
+    ) {
+      if (this.maybeUpgradeStructure(structures)) {
+        return true;
+      }
+      // Density too high but couldn't upgrade (e.g. all under construction) — don't build new, wait for construction (most relevant for SAMs)
+      if (structures.length > 0) {
+        return false;
+      }
+      // No structures of this type exist yet — fall through to build the first one
+      // (even if density is high - the nation is probably on a tiny island and we need to use all building spots we can find)
     }
 
     const tile = this.structureSpawnTile(type);
@@ -303,7 +315,7 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Finds the best structure to upgrad25e, preferring structures protected by a SAM.
+   * Finds the best structure to upgrade, preferring structures protected by a SAM.
    * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
