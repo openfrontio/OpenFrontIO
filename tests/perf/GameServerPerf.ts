@@ -112,6 +112,7 @@ function simulateTurnActivity(server: GameServer, numIntents: number) {
 suite.add("GameServer.endTurn (100 clients, 100 intents)", () => {
   simulateTurnActivity(serverTurn, 100);
   (serverTurn as any).endTurn();
+  (serverTurn as any).turnsAsJSON = [];
 });
 
 // Scenario 2: Message Parsing (Throughput)

@@ -299,13 +299,12 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
-        // Fast-path: avoid Zod parsing for high-frequency messages (intent, ping, hash)
+        // Fast-path: avoid Zod parsing for high-frequency messages (ping, hash, update_view)
         // We use a safe cast or raw access.
         const raw = JSON.parse(message);
         let clientMsg: any = raw;
 
         if (
-          raw.type !== "intent" &&
           raw.type !== "ping" &&
           raw.type !== "hash" &&
           raw.type !== "update_view"
@@ -486,6 +485,20 @@ export class GameServer {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
             break;
           }
+          case "update_view": {
+            if (this.clientGrid) {
+              const [oldX, oldY] = client.viewPos;
+              this.clientGrid.updateClient(
+                client,
+                oldX,
+                oldY,
+                clientMsg.x,
+                clientMsg.y,
+              );
+            }
+            client.viewPos = [clientMsg.x, clientMsg.y];
+            break;
+          }
           case "winner": {
             this.handleWinner(client, clientMsg);
             break;
@@ -605,29 +618,20 @@ export class GameServer {
       this.log.error("Failed to load map manifest for ClientGrid");
       return;
     }
-    // Handle compact/normal size logic if needed.
-    // TerrainMapLoader logic:
-    // Normal: uses manifest.map
-    // Compact: uses manifest.map4x (which is smaller resolution, but covers same area? No, compact is smaller map)
-    // Wait, compact map is literally smaller.
-    // If mapSize is Compact, we should use map4x dimensions?
-    // Let's check TerrainMapLoader again.
-    // loadTerrainMap: if Normal -> manifest.map. if Compact -> manifest.map4x.
-    // Yes.
 
-    let width = manifest.map.width;
-    let height = manifest.map.height;
+    const mapData =
+      this.gameConfig.gameMapSize === GameMapSize.Compact
+        ? manifest.map4x
+        : manifest.map;
 
-    if (this.gameConfig.gameMapSize === GameMapSize.Compact) {
-      width = manifest.map4x.width;
-      height = manifest.map4x.height;
-    }
-    this.clientGrid = new ClientGrid(width, height);
-    this.log.info(`ClientGrid initialized with size ${width}x${height}`);
+    this.clientGrid = new ClientGrid(mapData.width, mapData.height);
+    this.log.info(
+      `ClientGrid initialized with size ${mapData.width}x${mapData.height}`,
+    );
   }
 
-  public start() {
-    this.initClientGrid().catch((e) =>
+  public async start() {
+    await this.initClientGrid().catch((e) =>
       this.log.error("Failed to init ClientGrid", e),
     );
 

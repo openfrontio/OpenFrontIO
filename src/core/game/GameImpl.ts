@@ -61,6 +61,17 @@ export function createGame(
   return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
 }
 
+// Helper to dynamically cover all enum variants
+const createGameUpdatesMap = (): GameUpdates => {
+  const updates: any = {};
+  for (const type of Object.values(GameUpdateType)) {
+    if (typeof type === "number") {
+      updates[type] = [];
+    }
+  }
+  return updates as GameUpdates;
+};
+
 export type CellString = string;
 
 export class GameImpl implements Game {
@@ -130,7 +141,7 @@ export class GameImpl implements Game {
     }
 
     // Initialize cached hash
-    this._cachedHash = this.computeFullHash();
+    this._cachedHash = this.computeFullHash() | 0;
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -389,6 +400,12 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
+
+    // Periodically recompute full hash to prevent drift
+    if (this._ticks % 100 === 0) {
+      this.recomputeFullHash();
+    }
+
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
@@ -428,24 +445,25 @@ export class GameImpl implements Game {
   }
 
   private hash(): number {
-    return this._cachedHash;
+    return this._cachedHash | 0;
   }
 
   private computeFullHash(): number {
     let hash = 1;
     this._players.forEach((p) => {
-      hash += p.hash();
+      hash = (hash + p.hash()) | 0;
     });
-    return hash;
+    return hash | 0;
   }
 
   // Incremental hash update methods - O(1) instead of O(N)
   updatePlayerHash(oldHash: number, newHash: number): void {
-    this._cachedHash = this._cachedHash - oldHash + newHash;
+    // Use bitwise OR to force 32-bit integer arithmetic and prevent floating point drift
+    this._cachedHash = (this._cachedHash - (oldHash | 0) + (newHash | 0)) | 0;
   }
 
-  updateUnitHash(oldHash: number, newHash: number): void {
-    this._cachedHash = this._cachedHash - oldHash + newHash;
+  recomputeFullHash(): void {
+    this._cachedHash = this.computeFullHash();
   }
 
   terraNullius(): TerraNullius {
@@ -1201,29 +1219,3 @@ export class GameImpl implements Game {
     });
   }
 }
-
-// Or a more dynamic approach that will catch new enum values:
-const createGameUpdatesMap = (): GameUpdates => {
-  return {
-    [GameUpdateType.Tile]: [],
-    [GameUpdateType.Unit]: [],
-    [GameUpdateType.Player]: [],
-    [GameUpdateType.DisplayEvent]: [],
-    [GameUpdateType.DisplayChatEvent]: [],
-    [GameUpdateType.AllianceRequest]: [],
-    [GameUpdateType.AllianceRequestReply]: [],
-    [GameUpdateType.BrokeAlliance]: [],
-    [GameUpdateType.AllianceExpired]: [],
-    [GameUpdateType.AllianceExtension]: [],
-    [GameUpdateType.TargetPlayer]: [],
-    [GameUpdateType.Emoji]: [],
-    [GameUpdateType.Win]: [],
-    [GameUpdateType.Hash]: [],
-    [GameUpdateType.UnitIncoming]: [],
-    [GameUpdateType.BonusEvent]: [],
-    [GameUpdateType.RailroadEvent]: [],
-    [GameUpdateType.ConquestEvent]: [],
-    [GameUpdateType.EmbargoEvent]: [],
-    [GameUpdateType.GamePaused]: [],
-  };
-};

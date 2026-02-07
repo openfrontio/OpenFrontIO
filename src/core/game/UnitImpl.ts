@@ -361,10 +361,13 @@ export class UnitImpl implements Unit {
 
   hash(): number {
     // Include owner ID to detect unit captures in synchronization
+    // Confine to 32-bit integer range
+    const typeHash = simpleHash(this.type()) | 0;
     return (
-      this.tile() +
-      simpleHash(this.type()) * this._id +
-      this._owner.smallID() * 1000000
+      (this.tile() +
+        Math.imul(typeHash, this._id) +
+        Math.imul(this._owner.smallID(), 1000000)) |
+      0
     );
   }
 

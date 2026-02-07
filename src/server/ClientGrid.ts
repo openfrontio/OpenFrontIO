@@ -1,4 +1,3 @@
-import { GameMap } from "../core/game/GameMap";
 import { Client } from "./Client";
 
 export class ClientGrid {
@@ -6,11 +5,11 @@ export class ClientGrid {
   private grid: Set<Client>[][];
   private readonly cellSize = 100; // Adjust cell size as needed
 
-  constructor(private gm: GameMap) {
-    this.grid = Array(Math.ceil(gm.height() / this.cellSize))
+  constructor(width: number, height: number) {
+    this.grid = Array(Math.ceil(height / this.cellSize))
       .fill(null)
       .map(() =>
-        Array(Math.ceil(gm.width() / this.cellSize))
+        Array(Math.ceil(width / this.cellSize))
           .fill(null)
           .map(() => new Set<Client>()),
       );
@@ -67,8 +66,11 @@ export class ClientGrid {
 
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        for (const client of this.grid[cy][cx]) {
-          clients.add(client);
+        // Ensure we access valid grid cells
+        if (this.isValidCell(cx, cy)) {
+          for (const client of this.grid[cy][cx]) {
+            clients.add(client);
+          }
         }
       }
     }
@@ -77,22 +79,15 @@ export class ClientGrid {
 
   private getCellsInRange(x: number, y: number, range: number) {
     const cellSize = this.cellSize;
-    const [gridX, gridY] = this.getGridCoords(x, y);
-    const startGridX = Math.max(
-      0,
-      gridX - Math.ceil((range - (x % cellSize)) / cellSize),
-    );
+    const startGridX = Math.max(0, Math.floor((x - range) / cellSize));
     const endGridX = Math.min(
       this.grid[0].length - 1,
-      gridX + Math.ceil((range - (cellSize - (x % cellSize))) / cellSize),
+      Math.floor((x + range) / cellSize),
     );
-    const startGridY = Math.max(
-      0,
-      gridY - Math.ceil((range - (y % cellSize)) / cellSize),
-    );
+    const startGridY = Math.max(0, Math.floor((y - range) / cellSize));
     const endGridY = Math.min(
       this.grid.length - 1,
-      gridY + Math.ceil((range - (cellSize - (y % cellSize))) / cellSize),
+      Math.floor((y + range) / cellSize),
     );
 
     return { startGridX, endGridX, startGridY, endGridY };

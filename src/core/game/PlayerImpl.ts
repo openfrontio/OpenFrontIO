@@ -913,6 +913,8 @@ export class PlayerImpl implements Player {
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
 
+    this.recalculateAndNotifyHash();
+
     return b;
   }
 
@@ -960,6 +962,7 @@ export class PlayerImpl implements Player {
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
+    this.recalculateAndNotifyHash();
   }
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
@@ -1197,10 +1200,12 @@ export class PlayerImpl implements Player {
   }
 
   private computeHash(): number {
-    return (
-      simpleHash(this.id()) * (Number(this.troops()) + this.numTilesOwned()) +
-      this._units.reduce((acc, unit) => acc + unit.hash(), 0)
+    const term1 = Math.imul(
+      simpleHash(this.id()),
+      (Number(this.troops()) + this.numTilesOwned()) | 0,
     );
+    const term2 = this._units.reduce((acc, unit) => (acc + unit.hash()) | 0, 0);
+    return (term1 + term2) | 0;
   }
 
   // Notify game of hash changes - O(1) incremental update

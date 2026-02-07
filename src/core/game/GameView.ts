@@ -883,6 +883,9 @@ export class GameView implements GameMap {
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }
+  forEachNeighbor(ref: TileRef, fn: (neighbor: TileRef) => void): void {
+    return this._map.forEachNeighbor(ref, fn);
+  }
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
   }
