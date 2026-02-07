@@ -301,7 +301,7 @@ const allyExtendElement: MenuElement = {
     if (!myAgreed) {
       const animLeft = document.createElementNS(ns, "animate");
       animLeft.setAttribute("attributeName", "opacity");
-      animLeft.setAttribute("values", "1;0.2;1");
+      animLeft.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
       animLeft.setAttribute("dur", "1.5s");
       animLeft.setAttribute("repeatCount", "indefinite");
       leftImg.appendChild(animLeft);
