@@ -28,26 +28,41 @@ interface StructureRatioConfig {
   perceivedCostIncreasePerOwned: number;
 }
 
+/** SAM launcher ratio per city, keyed by difficulty */
+const SAM_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0.15,
+  [Difficulty.Medium]: 0.2,
+  [Difficulty.Hard]: 0.25,
+  [Difficulty.Impossible]: 0.3,
+};
+
 /**
- * Default structure ratios relative to city count.
+ * Returns structure ratios relative to city count, adjusted by difficulty.
  * Cities are always prioritized and built first.
  */
-const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
-  [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
-  [UnitType.Factory]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
-  [UnitType.DefensePost]: {
-    ratioPerCity: 0.25,
-    perceivedCostIncreasePerOwned: 1,
-  },
-  [UnitType.SAMLauncher]: {
-    ratioPerCity: 0.25,
-    perceivedCostIncreasePerOwned: 1,
-  },
-  [UnitType.MissileSilo]: {
-    ratioPerCity: 0.2,
-    perceivedCostIncreasePerOwned: 1,
-  },
-};
+function getStructureRatios(
+  difficulty: Difficulty,
+): Partial<Record<UnitType, StructureRatioConfig>> {
+  return {
+    [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
+    [UnitType.Factory]: {
+      ratioPerCity: 0.75,
+      perceivedCostIncreasePerOwned: 1,
+    },
+    [UnitType.DefensePost]: {
+      ratioPerCity: 0.25,
+      perceivedCostIncreasePerOwned: 1,
+    },
+    [UnitType.SAMLauncher]: {
+      ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
+      perceivedCostIncreasePerOwned: 1,
+    },
+    [UnitType.MissileSilo]: {
+      ratioPerCity: 0.2,
+      perceivedCostIncreasePerOwned: 1,
+    },
+  };
+}
 
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
@@ -119,7 +134,9 @@ export class NationStructureBehavior {
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
-    const config = STRUCTURE_RATIOS[type];
+    const { difficulty } = this.game.config().gameConfig();
+    const ratios = getStructureRatios(difficulty);
+    const config = ratios[type];
     if (config === undefined) {
       return false;
     }
@@ -193,7 +210,9 @@ export class NationStructureBehavior {
     if (type === UnitType.City) {
       increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
     } else {
-      const config = STRUCTURE_RATIOS[type];
+      const { difficulty } = this.game.config().gameConfig();
+      const ratios = getStructureRatios(difficulty);
+      const config = ratios[type];
       increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
     }
 
