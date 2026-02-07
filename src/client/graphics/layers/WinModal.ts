@@ -8,6 +8,7 @@ import {
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
+import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
@@ -36,6 +37,9 @@ export class WinModal extends LitElement implements Layer {
 
   @state()
   private isWin = false;
+
+  @state()
+  private isRankedGame = false;
 
   @state()
   private patternContent: TemplateResult | null = null;
@@ -75,11 +79,21 @@ export class WinModal extends LitElement implements Layer {
           >
             ${translateText("win_modal.exit")}
           </button>
+          ${this.isRankedGame
+            ? html`
+                <button
+                  @click=${this._handleRequeue}
+                  class="flex-1 px-3 py-3 text-base cursor-pointer bg-purple-600 text-white border-0 rounded-sm transition-all duration-200 hover:bg-purple-500 hover:-translate-y-px active:translate-y-px"
+                >
+                  ${translateText("win_modal.requeue")}
+                </button>
+              `
+            : null}
           <button
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${this.isWin
+            ${this.game.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
           </button>
@@ -251,6 +265,9 @@ export class WinModal extends LitElement implements Layer {
   async show() {
     crazyGamesSDK.gameplayStop();
     await this.loadPatternContent();
+    // Check if this is a ranked game
+    this.isRankedGame =
+      this.game.config().gameConfig().rankedType === RankedType.OneVOne;
     this.isVisible = true;
     this.requestUpdate();
     setTimeout(() => {
@@ -268,6 +285,12 @@ export class WinModal extends LitElement implements Layer {
   private _handleExit() {
     this.hide();
     window.location.href = "/";
+  }
+
+  private _handleRequeue() {
+    this.hide();
+    // Navigate to homepage and open matchmaking modal
+    window.location.href = "/?requeue";
   }
 
   init() {}
