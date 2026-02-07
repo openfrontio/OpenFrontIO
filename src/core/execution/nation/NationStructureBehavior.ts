@@ -501,7 +501,7 @@ export class NationStructureBehavior {
    * Prefers high elevation, distance from border, and spacing from same-type structures.
    */
   private interiorStructureValue(type: UnitType): (tile: TileRef) => number {
-    const mg = this.game;
+    const game = this.game;
     const borderTiles = this.player.borderTiles();
     const otherUnits = this.player.units(type);
     const { borderSpacing, structureSpacing } = this.spacingConstants();
@@ -510,18 +510,18 @@ export class NationStructureBehavior {
       let w = 0;
 
       // Prefer higher elevations
-      w += mg.magnitude(tile);
+      w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
       w += Math.min(closestBorderDist, borderSpacing);
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
       if (closestOther !== null) {
-        const d = mg.manhattanDist(closestOther.x, tile);
+        const d = game.manhattanDist(closestOther.x, tile);
         w += Math.min(d, structureSpacing);
       }
 
@@ -534,7 +534,7 @@ export class NationStructureBehavior {
    * Prefers spacing from other ports.
    */
   private portValue(): (tile: TileRef) => number {
-    const mg = this.game;
+    const game = this.game;
     const otherUnits = this.player.units(UnitType.Port);
     const { structureSpacing } = this.spacingConstants();
 
@@ -544,7 +544,7 @@ export class NationStructureBehavior {
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
+      const [, closestOtherDist] = closestTile(game, otherTiles, tile);
       w += Math.min(closestOtherDist, structureSpacing);
 
       return w;
@@ -557,7 +557,7 @@ export class NationStructureBehavior {
    * Prefers elevation, proximity to border with hostile neighbors, and spacing.
    */
   private defensePostValue(): ((tile: TileRef) => number) | null {
-    const mg = this.game;
+    const game = this.game;
     const player = this.player;
     const borderTiles = player.borderTiles();
     const otherUnits = player.units(UnitType.DefensePost);
@@ -583,9 +583,9 @@ export class NationStructureBehavior {
       let w = 0;
 
       // Prefer higher elevations
-      w += mg.magnitude(tile);
+      w += game.magnitude(tile);
 
-      const [closest, closestBorderDist] = closestTile(mg, borderTiles, tile);
+      const [closest, closestBorderDist] = closestTile(game, borderTiles, tile);
       if (closest !== null) {
         // Prefer to be borderSpacing tiles from the border
         w += Math.max(
@@ -595,11 +595,11 @@ export class NationStructureBehavior {
 
         // Prefer adjacent players who are hostile
         const neighbors: Set<Player> = new Set();
-        for (const neighborTile of mg.neighbors(closest)) {
-          if (!mg.isLand(neighborTile)) continue;
-          const id = mg.ownerID(neighborTile);
+        for (const neighborTile of game.neighbors(closest)) {
+          if (!game.isLand(neighborTile)) continue;
+          const id = game.ownerID(neighborTile);
           if (id === player.smallID()) continue;
-          const neighbor = mg.playerBySmallID(id);
+          const neighbor = game.playerBySmallID(id);
           if (!neighbor.isPlayer()) continue;
           if (neighbor.type() === PlayerType.Bot) continue;
           neighbors.add(neighbor);
@@ -612,9 +612,9 @@ export class NationStructureBehavior {
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
       if (closestOther !== null) {
-        const d = mg.manhattanDist(closestOther.x, tile);
+        const d = game.manhattanDist(closestOther.x, tile);
         w += Math.min(d, structureSpacing);
       }
 
@@ -628,13 +628,13 @@ export class NationStructureBehavior {
    * On harder difficulties, weights by structure level and considers existing SAM coverage.
    */
   private samLauncherValue(): (tile: TileRef) => number {
-    const mg = this.game;
+    const game = this.game;
     const player = this.player;
     const borderTiles = player.borderTiles();
     const otherUnits = player.units(UnitType.SAMLauncher);
     const { borderSpacing, structureSpacing } = this.spacingConstants();
 
-    const { difficulty } = mg.config().gameConfig();
+    const { difficulty } = game.config().gameConfig();
     const weightByLevel =
       difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible;
 
@@ -651,7 +651,7 @@ export class NationStructureBehavior {
           });
       }
     }
-    const range = mg.config().defaultSamRange();
+    const range = game.config().defaultSamRange();
     const rangeSquared = range * range;
 
     const useCoverageWeighting =
@@ -665,8 +665,8 @@ export class NationStructureBehavior {
       for (const entry of protectEntries) {
         let coverageScore = 0;
         for (const sam of existingSams) {
-          const samRange = mg.config().samRange(sam.level());
-          const dist = mg.euclideanDistSquared(entry.tile, sam.tile());
+          const samRange = game.config().samRange(sam.level());
+          const dist = game.euclideanDistSquared(entry.tile, sam.tile());
           if (dist <= samRange * samRange) {
             coverageScore += sam.level();
           }
@@ -679,28 +679,28 @@ export class NationStructureBehavior {
       let w = 0;
 
       // Prefer higher elevations
-      w += mg.magnitude(tile);
+      w += game.magnitude(tile);
 
       // Prefer to be away from the border
-      const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+      const closestBorder = closestTwoTiles(game, borderTiles, [tile]);
       if (closestBorder !== null) {
-        const d = mg.manhattanDist(closestBorder.x, tile);
+        const d = game.manhattanDist(closestBorder.x, tile);
         w += Math.min(d, borderSpacing);
       }
 
       // Prefer to be away from other structures of the same type
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
-      const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
       if (closestOther !== null) {
-        const d = mg.manhattanDist(closestOther.x, tile);
+        const d = game.manhattanDist(closestOther.x, tile);
         w += Math.min(d, structureSpacing);
       }
 
       // Prefer to be in range of other structures (skip on easy difficulty)
       if (difficulty !== Difficulty.Easy) {
         for (const entry of protectEntries) {
-          const distanceSquared = mg.euclideanDistSquared(tile, entry.tile);
+          const distanceSquared = game.euclideanDistSquared(tile, entry.tile);
           if (distanceSquared > rangeSquared) continue;
           if (useCoverageWeighting && structureCoverage !== null) {
             const coverage = structureCoverage.get(entry.tile) ?? 0;
