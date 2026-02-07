@@ -362,13 +362,11 @@ export class RadialMenu implements Layer {
         const normalColor =
           d3.color(baseColor)?.copy({ opacity: opacity })?.toString() ??
           baseColor;
-        const parsed = d3.color(baseColor);
-        const fadedColor = parsed
-          ? d3
-              .interpolateRgb(parsed.toString(), "white")(0.4)
-              .replace("rgb", "rgba")
-              .replace(")", `, ${opacity})`)
-          : normalColor;
+        const interpolated = d3.color(
+          d3.interpolateRgb(baseColor, "white")(0.4),
+        );
+        const fadedColor =
+          interpolated?.copy({ opacity })?.toString() ?? normalColor;
 
         const gradientId = `timer-gradient-${d.data.id}`;
         const defs = this.menuElement.select("defs");
@@ -1175,13 +1173,11 @@ export class RadialMenu implements Layer {
               const normalColor =
                 d3.color(color)?.copy({ opacity: opacity })?.toString() ??
                 color;
-              const parsed = d3.color(color);
-              const fadedColor = parsed
-                ? d3
-                    .interpolateRgb(parsed.toString(), "white")(0.4)
-                    .replace("rgb", "rgba")
-                    .replace(")", `, ${opacity})`)
-                : normalColor;
+              const interpolated = d3.color(
+                d3.interpolateRgb(color, "white")(0.4),
+              );
+              const fadedColor =
+                interpolated?.copy({ opacity })?.toString() ?? normalColor;
 
               gradient
                 .select(".timer-stop-faded")
