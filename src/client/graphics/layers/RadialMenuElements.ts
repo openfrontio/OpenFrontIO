@@ -26,10 +26,13 @@ import targetIcon from "/images/TargetIconWhite.svg?url";
 import traitorIcon from "/images/TraitorIconWhite.svg?url";
 import xIcon from "/images/XIcon.svg?url";
 
-let allianceIconAspectRatio = 1;
-getSvgAspectRatio(allianceIcon).then((ratio) => {
-  if (ratio) allianceIconAspectRatio = ratio;
-});
+let allianceIconAspectRatio: number | null = null;
+function getAllianceIconAspectRatio(): void {
+  if (allianceIconAspectRatio !== null) return;
+  getSvgAspectRatio(allianceIcon).then((ratio) => {
+    if (ratio) allianceIconAspectRatio = ratio;
+  });
+}
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -281,7 +284,8 @@ const allyExtendElement: MenuElement = {
 
     const ns = "http://www.w3.org/2000/svg";
     const smallSize = iconSize * 0.8;
-    const width = smallSize * allianceIconAspectRatio;
+    getAllianceIconAspectRatio();
+    const width = smallSize * (allianceIconAspectRatio ?? 1);
     const gap = 2;
     const totalWidth = width * 2 + gap;
 
