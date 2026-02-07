@@ -310,10 +310,7 @@ const allyExtendElement: MenuElement = {
     rightImg.setAttribute("href", allianceIcon);
     rightImg.setAttribute("width", width.toString());
     rightImg.setAttribute("height", smallSize.toString());
-    rightImg.setAttribute(
-      "x",
-      (cx - totalWidth / 2 + width + gap).toString(),
-    );
+    rightImg.setAttribute("x", (cx - totalWidth / 2 + width + gap).toString());
     rightImg.setAttribute("y", (cy - smallSize / 2).toString());
     rightImg.setAttribute("opacity", disabled ? "0.5" : "1");
 
