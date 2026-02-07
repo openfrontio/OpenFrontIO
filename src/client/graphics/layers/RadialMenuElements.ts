@@ -321,7 +321,7 @@ const allyExtendElement: MenuElement = {
     if (!otherAgreed) {
       const animRight = document.createElementNS(ns, "animate");
       animRight.setAttribute("attributeName", "opacity");
-      animRight.setAttribute("values", "1;0.2;1");
+      animRight.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
       animRight.setAttribute("dur", "1.5s");
       animRight.setAttribute("repeatCount", "indefinite");
       rightImg.appendChild(animRight);
