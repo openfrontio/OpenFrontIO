@@ -197,7 +197,7 @@ export class FactoryRadiusLayer implements Layer {
   private drawCirclesUnion(context: CanvasRenderingContext2D) {
     const circles = this.ranges;
     if (circles.length === 0 || !this.visible) return;
-    // Only draw the stroke when UI toggle indicates SAM launchers are focused (e.g. hovering Atom/Hydrogen option).
+    // Draw factory radius arcs when the player is placing a City, Port, or Factory.
     context.save();
     for (let i = 0; i < circles.length; i++) {
       this.drawArcSegments(context, circles[i]);
