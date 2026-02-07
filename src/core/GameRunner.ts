@@ -223,8 +223,9 @@ export class GameRunner {
         actions.interaction.inAllianceExtensionWindow = inWindow;
         actions.interaction.myPlayerAgreedToExtend =
           alliance.agreedToExtend(player);
-        actions.interaction.otherPlayerAgreedToExtend =
-          alliance.agreedToExtend(other as Player);
+        actions.interaction.otherPlayerAgreedToExtend = alliance.agreedToExtend(
+          other as Player,
+        );
       }
     }
 

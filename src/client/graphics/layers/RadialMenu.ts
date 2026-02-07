@@ -1173,10 +1173,8 @@ export class RadialMenu implements Layer {
             if (!gradient.empty()) {
               const offset = 1 - fraction;
               const normalColor =
-                d3
-                  .color(color)
-                  ?.copy({ opacity: opacity })
-                  ?.toString() ?? color;
+                d3.color(color)?.copy({ opacity: opacity })?.toString() ??
+                color;
               const parsed = d3.color(color);
               const fadedColor = parsed
                 ? d3
