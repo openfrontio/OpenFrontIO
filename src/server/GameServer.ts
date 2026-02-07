@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameMapSize, GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -11,7 +11,6 @@ import {
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
-  GameMapSize,
   GameStartInfo,
   GameStartInfoSchema,
   Intent,
