@@ -215,7 +215,7 @@ const allyExtendElement: MenuElement = {
   disabled: (params: MenuElementParams) => false,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canExtendAlliance,
-  color: COLORS.boat,
+  color: COLORS.ally,
   icon: allianceIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleExtendAlliance(params.selected!);
