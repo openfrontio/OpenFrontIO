@@ -96,6 +96,7 @@ export class GameImpl implements Game {
   private _winner: Player | Team | null = null;
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
+  private _cachedHash: number = 0;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -127,6 +128,9 @@ export class GameImpl implements Game {
         { cachePaths: true },
       );
     }
+
+    // Initialize cached hash
+    this._cachedHash = this.computeFullHash();
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -424,6 +428,10 @@ export class GameImpl implements Game {
   }
 
   private hash(): number {
+    return this._cachedHash;
+  }
+
+  private computeFullHash(): number {
     let hash = 1;
     this._players.forEach((p) => {
       hash += p.hash();
@@ -431,28 +439,53 @@ export class GameImpl implements Game {
     return hash;
   }
 
+  // Incremental hash update methods - O(1) instead of O(N)
+  updatePlayerHash(oldHash: number, newHash: number): void {
+    this._cachedHash = this._cachedHash - oldHash + newHash;
+  }
+
+  updateUnitHash(oldHash: number, newHash: number): void {
+    this._cachedHash = this._cachedHash - oldHash + newHash;
+  }
+
   terraNullius(): TerraNullius {
     return this._terraNullius;
   }
 
   removeInactiveExecutions(): void {
-    const activeExecs: Execution[] = [];
-    for (const exec of this.execs) {
-      if (this.inSpawnPhase()) {
+    let writeIdx = 0;
+    const isSpawn = this.inSpawnPhase();
+
+    for (let i = 0; i < this.execs.length; i++) {
+      const exec = this.execs[i];
+      let keep = false;
+
+      if (isSpawn) {
         if (exec.activeDuringSpawnPhase()) {
           if (exec.isActive()) {
-            activeExecs.push(exec);
+            keep = true;
           }
         } else {
-          activeExecs.push(exec);
+          keep = true;
         }
       } else {
         if (exec.isActive()) {
-          activeExecs.push(exec);
+          keep = true;
         }
       }
+
+      if (keep) {
+        if (writeIdx !== i) {
+          this.execs[writeIdx] = exec;
+        }
+        writeIdx++;
+      }
     }
-    this.execs = activeExecs;
+
+    // Truncate array if needed (release references)
+    if (writeIdx < this.execs.length) {
+      this.execs.length = writeIdx;
+    }
   }
 
   players(): Player[] {
@@ -594,6 +627,13 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
+
+    // Notify hash changes
+    if (previousOwner.isPlayer()) {
+      (previousOwner as PlayerImpl).recalculateAndNotifyHash();
+    }
+    owner.recalculateAndNotifyHash();
+
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -615,6 +655,10 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
+
+    // Notify hash change
+    previousOwner.recalculateAndNotifyHash();
+
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -1160,11 +1204,26 @@ export class GameImpl implements Game {
 
 // Or a more dynamic approach that will catch new enum values:
 const createGameUpdatesMap = (): GameUpdates => {
-  const map = {} as GameUpdates;
-  Object.values(GameUpdateType)
-    .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
-    .forEach((key) => {
-      map[key as GameUpdateType] = [];
-    });
-  return map;
+  return {
+    [GameUpdateType.Tile]: [],
+    [GameUpdateType.Unit]: [],
+    [GameUpdateType.Player]: [],
+    [GameUpdateType.DisplayEvent]: [],
+    [GameUpdateType.DisplayChatEvent]: [],
+    [GameUpdateType.AllianceRequest]: [],
+    [GameUpdateType.AllianceRequestReply]: [],
+    [GameUpdateType.BrokeAlliance]: [],
+    [GameUpdateType.AllianceExpired]: [],
+    [GameUpdateType.AllianceExtension]: [],
+    [GameUpdateType.TargetPlayer]: [],
+    [GameUpdateType.Emoji]: [],
+    [GameUpdateType.Win]: [],
+    [GameUpdateType.Hash]: [],
+    [GameUpdateType.UnitIncoming]: [],
+    [GameUpdateType.BonusEvent]: [],
+    [GameUpdateType.RailroadEvent]: [],
+    [GameUpdateType.ConquestEvent]: [],
+    [GameUpdateType.EmbargoEvent]: [],
+    [GameUpdateType.GamePaused]: [],
+  };
 };

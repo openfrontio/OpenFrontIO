@@ -97,6 +97,7 @@ export class PlayerImpl implements Player {
 
   private lastDeleteUnitTick: Tick = -1;
   private lastEmbargoAllTick: Tick = -1;
+  private _cachedHash: number = 0;
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
@@ -117,6 +118,7 @@ export class PlayerImpl implements Player {
     this._gold = mg.config().startingGold(playerInfo);
     this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
+    this._cachedHash = this.computeHash();
   }
 
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
@@ -270,11 +272,14 @@ export class PlayerImpl implements Player {
 
   sharesBorderWith(other: Player | TerraNullius): boolean {
     for (const border of this._borderTiles) {
-      for (const neighbor of this.mg.map().neighbors(border)) {
-        if (this.mg.map().ownerID(neighbor) === other.smallID()) {
-          return true;
+      // Use zero-allocation neighbor iteration
+      let found = false;
+      this.mg.forEachNeighbor(border, (neighbor) => {
+        if (!found && this.mg.map().ownerID(neighbor) === other.smallID()) {
+          found = true;
         }
-      }
+      });
+      if (found) return true;
     }
     return false;
   }
@@ -312,6 +317,7 @@ export class PlayerImpl implements Player {
   }
   setTroops(troops: number) {
     this._troops = toInt(troops);
+    this.recalculateAndNotifyHash();
   }
   conquer(tile: TileRef) {
     this.mg.conquer(this, tile);
@@ -1187,10 +1193,23 @@ export class PlayerImpl implements Player {
   }
 
   hash(): number {
+    return this._cachedHash;
+  }
+
+  private computeHash(): number {
     return (
-      simpleHash(this.id()) * (this.troops() + this.numTilesOwned()) +
+      simpleHash(this.id()) * (Number(this.troops()) + this.numTilesOwned()) +
       this._units.reduce((acc, unit) => acc + unit.hash(), 0)
     );
+  }
+
+  // Notify game of hash changes - O(1) incremental update
+  recalculateAndNotifyHash(): void {
+    const oldHash = this._cachedHash;
+    this._cachedHash = this.computeHash();
+    if (oldHash !== this._cachedHash) {
+      this.mg.updatePlayerHash(oldHash, this._cachedHash);
+    }
   }
   toString(): string {
     return `Player:{name:${this.info().name},clientID:${

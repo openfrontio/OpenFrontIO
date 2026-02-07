@@ -29,6 +29,7 @@ export interface GameMap {
   setFallout(ref: TileRef, value: boolean): void;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
+  forEachNeighbor(ref: TileRef, fn: (neighbor: TileRef) => void): void;
   neighbors(ref: TileRef): TileRef[];
   isWater(ref: TileRef): boolean;
   isLake(ref: TileRef): boolean;
@@ -266,16 +267,19 @@ export class GameMapImpl implements GameMap {
     return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
   }
 
-  neighbors(ref: TileRef): TileRef[] {
-    const neighbors: TileRef[] = [];
+  forEachNeighbor(ref: TileRef, fn: (neighbor: TileRef) => void): void {
     const w = this.width_;
     const x = this.refToX[ref];
 
-    if (ref >= w) neighbors.push(ref - w);
-    if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
-    if (x !== 0) neighbors.push(ref - 1);
-    if (x !== w - 1) neighbors.push(ref + 1);
+    if (ref >= w) fn(ref - w);
+    if (ref < (this.height_ - 1) * w) fn(ref + w);
+    if (x !== 0) fn(ref - 1);
+    if (x !== w - 1) fn(ref + 1);
+  }
 
+  neighbors(ref: TileRef): TileRef[] {
+    const neighbors: TileRef[] = [];
+    this.forEachNeighbor(ref, (n) => neighbors.push(n));
     return neighbors;
   }
 
@@ -332,12 +336,12 @@ export class GameMapImpl implements GameMap {
     while (q.length > 0) {
       const curr = q.pop();
       if (curr === undefined) continue;
-      for (const n of this.neighbors(curr)) {
+      this.forEachNeighbor(curr, (n) => {
         if (!seen.has(n) && filter(this, n)) {
           seen.add(n);
           q.push(n);
         }
-      }
+      });
     }
     return seen;
   }

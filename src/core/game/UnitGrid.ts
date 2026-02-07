@@ -145,28 +145,61 @@ export class UnitGrid {
       searchRange,
     );
     const rangeSquared = searchRange * searchRange;
-    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+
+    // Optimization: Avoid allocating Set for single type
+    const isSingleType = !Array.isArray(types);
+    const typeSet = isSingleType ? null : new Set(types as readonly UnitType[]);
+
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        for (const type of typeSet) {
-          const unitSet = this.grid[cy][cx].get(type);
-          if (unitSet === undefined) continue;
-          for (const unit of unitSet) {
-            if (!unit.isActive()) continue;
-            // Exclude units under construction by default (e.g., defense posts being built)
-            // But include them for spacing checks
-            if (!includeUnderConstruction && unit.isUnderConstruction())
-              continue;
-            const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared > rangeSquared) continue;
-            const value = { unit, distSquared };
-            if (predicate !== undefined && !predicate(value)) continue;
-            nearby.push(value);
+        if (isSingleType) {
+          const unitSet = this.grid[cy][cx].get(types as UnitType);
+          if (unitSet !== undefined) {
+            this.processUnitSet(
+              unitSet,
+              tile,
+              rangeSquared,
+              predicate,
+              includeUnderConstruction,
+              nearby,
+            );
+          }
+        } else {
+          for (const type of typeSet!) {
+            const unitSet = this.grid[cy][cx].get(type);
+            if (unitSet === undefined) continue;
+            this.processUnitSet(
+              unitSet,
+              tile,
+              rangeSquared,
+              predicate,
+              includeUnderConstruction,
+              nearby,
+            );
           }
         }
       }
     }
     return nearby;
+  }
+
+  private processUnitSet(
+    unitSet: Set<Unit | UnitView>,
+    tile: TileRef,
+    rangeSquared: number,
+    predicate: UnitPredicate | undefined,
+    includeUnderConstruction: boolean,
+    nearby: Array<{ unit: Unit | UnitView; distSquared: number }>,
+  ) {
+    for (const unit of unitSet) {
+      if (!unit.isActive()) continue;
+      if (!includeUnderConstruction && unit.isUnderConstruction()) continue;
+      const distSquared = this.squaredDistanceFromTile(unit, tile);
+      if (distSquared > rangeSquared) continue;
+      const value = { unit, distSquared };
+      if (predicate !== undefined && !predicate(value)) continue;
+      nearby.push(value);
+    }
   }
 
   private unitIsInRange(

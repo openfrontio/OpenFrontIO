@@ -16,13 +16,17 @@ function getMapLoader(): GameMapLoader {
 // Gets the number of land tiles for a map
 // FetchGameMapLoader already caches maps, so no need for additional caching here.
 export async function getMapLandTiles(map: GameMapType): Promise<number> {
+  const manifest = await getMapManifest(map);
+  return manifest?.map.num_land_tiles ?? 1_000_000;
+}
+
+export async function getMapManifest(map: GameMapType) {
   try {
     const loader = getMapLoader();
     const mapData = loader.getMapData(map);
-    const manifest = await mapData.manifest();
-    return manifest.map.num_land_tiles;
+    return await mapData.manifest();
   } catch (error) {
     log.error(`Failed to load manifest for ${map}: ${error}`, { map });
-    return 1_000_000; // Default fallback
+    return null;
   }
 }

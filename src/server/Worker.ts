@@ -48,7 +48,7 @@ export async function startWorker() {
 
   const app = express();
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
 
   const gm = new GameManager(config, log);
 

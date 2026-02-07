@@ -22,4 +22,6 @@ export class Client {
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly isRejoin: boolean = false,
   ) {}
+
+  public viewCenter: { x: number; y: number } | null = null;
 }

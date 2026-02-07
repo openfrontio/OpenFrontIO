@@ -98,7 +98,8 @@ export type ClientMessage =
   | ClientJoinMessage
   | ClientRejoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientUpdateViewMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -127,6 +128,7 @@ export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientUpdateViewMessage = z.infer<typeof ClientUpdateViewSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -417,6 +419,12 @@ export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
   config: GameConfigSchema.partial(),
 });
 
+export const ClientUpdateViewSchema = z.object({
+  type: z.literal("update_view"),
+  x: z.number(),
+  y: z.number(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -630,6 +638,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientUpdateViewSchema,
 ]);
 
 //

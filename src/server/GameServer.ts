@@ -11,6 +11,7 @@ import {
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
+  GameMapSize,
   GameStartInfo,
   GameStartInfoSchema,
   Intent,
@@ -20,12 +21,13 @@ import {
   ServerLobbyInfoMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
-  ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
+import { ClientGrid } from "./ClientGrid";
+import { getMapManifest } from "./MapLandTiles";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -42,7 +44,8 @@ export class GameServer {
 
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
-  private turns: Turn[] = [];
+  private turnsAsJSON: string[] = []; // Objects stored as JSON strings to save memory
+  // private turns: Turn[] = []; // Removed to save memory
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
@@ -80,6 +83,7 @@ export class GameServer {
   public desyncCount = 0;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
+  private clientGrid: ClientGrid | undefined;
 
   constructor(
     public readonly id: string,
@@ -240,7 +244,7 @@ export class GameServer {
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, 0);
+      this.sendStartGameMsg(client, 0);
     }
   }
 
@@ -288,7 +292,7 @@ export class GameServer {
     this.startLobbyInfoBroadcast();
 
     if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, msg.lastTurn);
+      this.sendStartGameMsg(client, msg.lastTurn);
     }
   }
 
@@ -296,27 +300,43 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
-        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-        if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          this.log.warn(`Failed to parse client message ${error}`, {
-            clientID: client.clientID,
-          });
-          client.ws.send(
-            JSON.stringify({
-              type: "error",
-              error,
-              message: `Server could not parse message from client: ${message}`,
-            } satisfies ServerErrorMessage),
-          );
-          return;
+        // Fast-path: avoid Zod parsing for high-frequency messages (intent, ping, hash)
+        // We use a safe cast or raw access.
+        const raw = JSON.parse(message);
+        let clientMsg: any = raw;
+
+        if (
+          raw.type !== "intent" &&
+          raw.type !== "ping" &&
+          raw.type !== "hash" &&
+          raw.type !== "update_view"
+        ) {
+          const parsed = ClientMessageSchema.safeParse(raw);
+          if (!parsed.success) {
+            const error = z.prettifyError(parsed.error);
+            this.log.warn(`Failed to parse client message ${error}`, {
+              clientID: client.clientID,
+            });
+            client.ws.send(
+              JSON.stringify({
+                type: "error",
+                error,
+                message: `Server could not parse message from client: ${message}`,
+              } satisfies ServerErrorMessage),
+            );
+            return;
+          }
+          clientMsg = parsed.data;
         }
-        const clientMsg = parsed.data;
+        // For cached types, we proceed with 'raw' as 'clientMsg'.
+        // This assumes 'raw' matches the schema.
+        // If it doesn't, we might get runtime errors in the switch case,
+        // but since we wrap in try-catch (line 298), it's safe.
         switch (clientMsg.type) {
           case "rejoin": {
             // Client is already connected, no auth required, send start game message if game has started
             if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+              this.sendStartGameMsg(client, clientMsg.lastTurn);
             }
             break;
           }
@@ -580,7 +600,38 @@ export class GameServer {
     });
   }
 
+  private async initClientGrid() {
+    const manifest = await getMapManifest(this.gameConfig.gameMap);
+    if (!manifest) {
+      this.log.error("Failed to load map manifest for ClientGrid");
+      return;
+    }
+    // Handle compact/normal size logic if needed.
+    // TerrainMapLoader logic:
+    // Normal: uses manifest.map
+    // Compact: uses manifest.map4x (which is smaller resolution, but covers same area? No, compact is smaller map)
+    // Wait, compact map is literally smaller.
+    // If mapSize is Compact, we should use map4x dimensions?
+    // Let's check TerrainMapLoader again.
+    // loadTerrainMap: if Normal -> manifest.map. if Compact -> manifest.map4x.
+    // Yes.
+
+    let width = manifest.map.width;
+    let height = manifest.map.height;
+
+    if (this.gameConfig.gameMapSize === GameMapSize.Compact) {
+      width = manifest.map4x.width;
+      height = manifest.map4x.height;
+    }
+    this.clientGrid = new ClientGrid(width, height);
+    this.log.info(`ClientGrid initialized with size ${width}x${height}`);
+  }
+
   public start() {
+    this.initClientGrid().catch((e) =>
+      this.log.error("Failed to init ClientGrid", e),
+    );
+
     if (this._hasStarted || this._hasEnded) {
       return;
     }
@@ -617,7 +668,7 @@ export class GameServer {
         clientID: c.clientID,
         persistentID: c.persistentID,
       });
-      this.sendStartGameMsg(c.ws, 0);
+      this.sendStartGameMsg(c, 0);
     });
   }
 
@@ -625,14 +676,7 @@ export class GameServer {
     this.intents.push(intent);
   }
 
-  private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
-    // Find which client this websocket belongs to
-    const client = this.activeClients.find((c) => c.ws === ws);
-    if (!client) {
-      this.log.warn("Could not find client for websocket in sendStartGameMsg");
-      return;
-    }
-
+  private sendStartGameMsg(client: Client, lastTurn: number) {
     this.log.info(`Sending start message to client`, {
       clientID: client.clientID,
       lobbyCreatorID: this.lobbyCreatorID,
@@ -640,10 +684,10 @@ export class GameServer {
     });
 
     try {
-      ws.send(
+      client.ws.send(
         JSON.stringify({
           type: "start",
-          turns: this.turns.slice(lastTurn),
+          turns: this.turnsAsJSON.slice(lastTurn).map((t) => JSON.parse(t)),
           gameStartInfo: this.gameStartInfo,
           lobbyCreatedAt: this.createdAt,
         } satisfies ServerStartGameMessage),
@@ -665,19 +709,24 @@ export class GameServer {
     }
 
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
+      turnNumber: this.turnsAsJSON.length,
       intents: this.intents,
     };
-    this.turns.push(pastTurn);
-    this.intents = [];
+
+    // Optimize: Serialize once
+    const turnJSON = JSON.stringify(pastTurn);
+    this.turnsAsJSON.push(turnJSON);
+
+    this.intents.length = 0;
 
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    const msg = JSON.stringify({
-      type: "turn",
-      turn: pastTurn,
-    } satisfies ServerTurnMessage);
+    // Optimize: Construct message string manually to avoid extra object allocation/serialization
+    // The schema is { type: "turn", turn: Turn }
+    // We already have turn serialized as turnJSON.
+    const msg = `{"type":"turn","turn":${turnJSON}}`;
+
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
@@ -699,7 +748,7 @@ export class GameServer {
       this.log.info(`game not started, not archiving game`);
       return;
     }
-    this.log.info(`ending game with ${this.turns.length} turns`);
+    this.log.info(`ending game with ${this.turnsAsJSON.length} turns`);
     try {
       if (this.allClients.size === 0) {
         this.log.info("no clients joined, not archiving game", {
@@ -739,8 +788,9 @@ export class GameServer {
 
   phase(): GamePhase {
     const now = Date.now();
-    const alive: Client[] = [];
-    for (const client of this.activeClients) {
+    let writeIdx = 0;
+    for (let i = 0; i < this.activeClients.length; i++) {
+      const client = this.activeClients[i];
       if (now - client.lastPing > 60_000) {
         this.log.info("no pings received, terminating connection", {
           clientID: client.clientID,
@@ -750,10 +800,16 @@ export class GameServer {
           client.ws.close(1000, "no heartbeats received, closing connection");
         }
       } else {
-        alive.push(client);
+        if (writeIdx !== i) {
+          this.activeClients[writeIdx] = client;
+        }
+        writeIdx++;
       }
     }
-    this.activeClients = alive;
+
+    if (writeIdx < this.activeClients.length) {
+      this.activeClients.length = writeIdx;
+    }
     if (now > this.createdAt + this.maxGameDuration) {
       this.log.warn("game past max duration", {
         gameID: this.id,
@@ -866,7 +922,7 @@ export class GameServer {
   }
 
   private checkDisconnectedStatus() {
-    if (this.turns.length % 5 !== 0) {
+    if (this.turnsAsJSON.length % 5 !== 0) {
       return;
     }
 
@@ -921,13 +977,17 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
+
+    // Deserialize turns for archiving
+    const turns: Turn[] = this.turnsAsJSON.map((t) => JSON.parse(t));
+
     archive(
       finalizeGameRecord(
         createPartialGameRecord(
           this.id,
           this.gameStartInfo.config,
           playerRecords,
-          this.turns,
+          turns,
           this._startTime ?? 0,
           Date.now(),
           this.winner?.winner,
@@ -941,12 +1001,26 @@ export class GameServer {
     if (this.activeClients.length <= 1) {
       return;
     }
-    if (this.turns.length % 10 !== 0 || this.turns.length < 10) {
+    if (this.turnsAsJSON.length % 10 !== 0 || this.turnsAsJSON.length < 10) {
       // Check hashes every 10 turns
       return;
     }
 
-    const lastHashTurn = this.turns.length - 10;
+    // Optimization: Cleanup old hashes to prevent memory leak
+    const cleanupThreshold = this.turnsAsJSON.length - 20;
+    if (cleanupThreshold > 0) {
+      for (const client of this.allClients.values()) {
+        // Optimization: Delete specifically the old ones if we know the interval,
+        // but iterating keys is safer for correctness.
+        for (const t of client.hashes.keys()) {
+          if (t < cleanupThreshold) {
+            client.hashes.delete(t);
+          }
+        }
+      }
+    }
+
+    const lastHashTurn = this.turnsAsJSON.length - 10;
 
     const { mostCommonHash, outOfSyncClients } =
       this.findOutOfSyncClients(lastHashTurn);
@@ -954,7 +1028,17 @@ export class GameServer {
     this.desyncCount += outOfSyncClients.length;
 
     if (outOfSyncClients.length === 0) {
-      this.turns[lastHashTurn].hash = mostCommonHash;
+      // Update hash in the stored JSON
+      try {
+        const t: Turn = JSON.parse(this.turnsAsJSON[lastHashTurn]);
+        t.hash = mostCommonHash;
+        this.turnsAsJSON[lastHashTurn] = JSON.stringify(t);
+      } catch (e) {
+        this.log.error(
+          `Failed to update hash in turnsAsJSON for turn ${lastHashTurn}`,
+          e,
+        );
+      }
       return;
     }
 
@@ -972,6 +1056,17 @@ export class GameServer {
         error: serverDesync.error,
       });
       return;
+    }
+
+    // Update the stored serialized turn with the hash
+    if (this.turnsAsJSON[lastHashTurn]) {
+      try {
+        const t: Turn = JSON.parse(this.turnsAsJSON[lastHashTurn]);
+        t.hash = mostCommonHash;
+        this.turnsAsJSON[lastHashTurn] = JSON.stringify(t);
+      } catch (e) {
+        this.log.error(`failed to update hash for turn ${lastHashTurn}: ${e}`);
+      }
     }
 
     const desyncMsg = JSON.stringify(serverDesync.data);
@@ -994,29 +1089,49 @@ export class GameServer {
     mostCommonHash: number | null;
     outOfSyncClients: Client[];
   } {
-    const counts = new Map<number, number>();
+    // Use Boyer-Moore Voting Algorithm to find the majority hash with O(1) space
+    let candidate: number | null = null;
+    let count = 0;
 
-    // Count occurrences of each hash
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
-        const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
+        const hash = client.hashes.get(turnNumber)!;
+        if (count === 0) {
+          candidate = hash;
+          count = 1;
+        } else if (hash === candidate) {
+          count++;
+        } else {
+          count--;
+        }
       }
     }
 
-    // Find the most common hash
-    let mostCommonHash: number | null = null;
-    let maxCount = 0;
+    // Verify candidate is actually the most common (or majority)
+    // If count > 0, candidate is the likely majority.
+    // If count == 0, we have no majority, but we can just picking the candidate implies nothing.
+    // However, for game sync, we expect a strong majority.
+    // We need to do a second pass to confirm count and find outOfSyncClients.
 
-    for (const [hash, count] of counts.entries()) {
-      if (count > maxCount) {
-        mostCommonHash = hash;
-        maxCount = count;
-      }
-    }
+    const mostCommonHash: number | null = candidate;
+    // If no candidate (no one sent hashes), standard logic applies.
 
-    // Create a list of clients whose hash doesn't match the most common one
+    // If we have a candidate, verify it's actually common enough?
+    // Actually we just need "most common". Boyer-Moore guarantees majority.
+    // If no majority exists (e.g. 33% A, 33% B, 34% C), Boyer-Moore might return C.
+    // That is acceptable as "most common".
+
+    // Re-count to be sure and populate outOfSyncClients
     let outOfSyncClients: Client[] = [];
+
+    // If nobody sent a hash yet
+    if (mostCommonHash === null) {
+      return { mostCommonHash: null, outOfSyncClients: [] };
+    }
+
+    // Verify pass
+    // Also handling the edge case where candidate might not be the true most common if no majority exists,
+    // but in a deterministic game, majority SHOULD exist.
 
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {

@@ -161,6 +161,8 @@ export class UnitImpl implements Unit {
     this._tile = tile;
     this.mg.updateUnitTile(this);
     this.mg.addUpdate(this.toUpdate());
+    // Notify owner's hash changed due to unit movement
+    this._owner.recalculateAndNotifyHash();
   }
 
   setTroops(troops: number): void {
@@ -201,6 +203,7 @@ export class UnitImpl implements Unit {
         break;
     }
     this._lastOwner = this._owner;
+    const oldOwner = this._owner;
     this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
     this._owner = newOwner;
     this._owner._units.push(this);
@@ -219,6 +222,9 @@ export class UnitImpl implements Unit {
       undefined,
       { unit: this.type(), name: this._lastOwner.displayName() },
     );
+    // Notify both players' hashes changed due to owner change
+    oldOwner.recalculateAndNotifyHash();
+    newOwner.recalculateAndNotifyHash();
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
@@ -269,6 +275,9 @@ export class UnitImpl implements Unit {
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
+
+    // Notify owner's hash changed due to unit deletion
+    this._owner.recalculateAndNotifyHash();
 
     if (displayMessage !== false) {
       this.displayMessageOnDeleted();
@@ -351,7 +360,12 @@ export class UnitImpl implements Unit {
   }
 
   hash(): number {
-    return this.tile() + simpleHash(this.type()) * this._id;
+    // Include owner ID to detect unit captures in synchronization
+    return (
+      this.tile() +
+      simpleHash(this.type()) * this._id +
+      this._owner.smallID() * 1000000
+    );
   }
 
   toString(): string {
