@@ -46,11 +46,28 @@ export class ConfirmBreakAllianceModal extends LitElement {
   }
 
   updated(changed: Map<string, unknown>) {
-    if (
-      this.eventBus &&
-      !this._subscribed &&
-      (changed.has("eventBus") || changed.has("game"))
-    ) {
+    if (changed.has("eventBus")) {
+      if (this._subscribed) {
+        const previousEventBus = changed.get("eventBus") as
+          | EventBus
+          | null
+          | undefined;
+        if (previousEventBus) {
+          previousEventBus.off(
+            RequestConfirmBreakAllianceEvent,
+            this.requestConfirmHandler,
+          );
+        }
+        this._subscribed = false;
+      }
+      if (this.eventBus) {
+        this.eventBus.on(
+          RequestConfirmBreakAllianceEvent,
+          this.requestConfirmHandler,
+        );
+        this._subscribed = true;
+      }
+    } else if (this.eventBus && !this._subscribed && changed.has("game")) {
       this.eventBus.on(
         RequestConfirmBreakAllianceEvent,
         this.requestConfirmHandler,
