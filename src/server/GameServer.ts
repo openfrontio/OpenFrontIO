@@ -175,14 +175,12 @@ export class GameServer {
   // Get existing clientID or create a new one for this persistentID
   // Returns null if this persistentID has been kicked
   public getOrCreateClientId(persistentID: string): ClientID | null {
-    // Check if this persistentID has been kicked
-    if (this.kickedPersistentIds.has(persistentID)) {
-      return null;
-    }
-
     const existingClientID = this.getClientIdForPersistentId(persistentID);
     if (existingClientID) {
       return existingClientID;
+    }
+    if (this.kickedPersistentIds.has(persistentID)) {
+      return null;
     }
     // Generate new clientID for new player
     const newClientID = generateID();
