@@ -50,8 +50,14 @@ const STRUCTURE_RATIOS: Partial<Record<UnitType, StructureRatioConfig>> = {
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** If we have more than this many total structures per 1000 tiles, prefer upgrading over building */
-const UPGRADE_DENSITY_THRESHOLD = 1 / 1000;
+/** Factory ratio multiplier when the nation has coastal tiles */
+const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
+
+/** Maximum number of missile silos a nation will build */
+const MAX_MISSILE_SILOS = 3;
+
+/** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
+const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
 export class NationStructureBehavior {
   constructor(
@@ -120,10 +126,16 @@ export class NationStructureBehavior {
 
     // Heavily reduce factory spawning if we have coastal tiles
     if (type === UnitType.Factory && hasCoastalTiles) {
-      ratio *= 0.25;
+      ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
     }
 
     const owned = this.player.unitsOwned(type);
+
+    // Hard cap on missile silos
+    if (type === UnitType.MissileSilo && owned >= MAX_MISSILE_SILOS) {
+      return false;
+    }
+
     const targetCount = Math.floor(cityCount * ratio);
 
     return owned < targetCount;
@@ -152,6 +164,9 @@ export class NationStructureBehavior {
     if (canBuild === false) {
       return false;
     }
+    console.log(
+      `[BUILD] nation=${this.player.name()} type=${type} realCost=${this.cost(type)} perceivedCost=${perceivedCost} gold=${this.player.gold()} owned=${this.player.unitsOwned(type)}`,
+    );
     this.game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
@@ -159,16 +174,14 @@ export class NationStructureBehavior {
   /**
    * Calculates the perceived cost for a structure type.
    * The perceived cost increases by a percentage for each structure of that type already owned.
-   * This makes nations save up gold for MIRVs.
-   * Once the nation can afford both a MIRV and a Hydrogen Bomb, stop inflating costs.
+   * This makes nations save up gold for nukes.
+   * Once the nation can afford its target stockpile, stop inflating costs.
    */
   private getPerceivedCost(type: UnitType): Gold {
     const realCost = this.cost(type);
 
-    // If we can afford both MIRV and Hydrogen Bomb, no need to save up anymore
-    const mirvCost = this.cost(UnitType.MIRV);
-    const hydroCost = this.cost(UnitType.HydrogenBomb);
-    if (this.player.gold() >= mirvCost + hydroCost) {
+    const saveUpTarget = this.getSaveUpTarget();
+    if (saveUpTarget === 0n || this.player.gold() >= saveUpTarget) {
       return realCost;
     }
 
@@ -189,6 +202,32 @@ export class NationStructureBehavior {
   }
 
   /**
+   * Determines the gold target we want to save up for based on which nukes are enabled.
+   * Returns 0 if no saving is needed.
+   */
+  private getSaveUpTarget(): Gold {
+    const config = this.game.config();
+    const mirvEnabled = !config.isUnitDisabled(UnitType.MIRV);
+    const hydroEnabled = !config.isUnitDisabled(UnitType.HydrogenBomb);
+    const atomEnabled = !config.isUnitDisabled(UnitType.AtomBomb);
+
+    if (mirvEnabled) {
+      // Save up for MIRV + Hydrogen Bomb
+      return this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb);
+    }
+    if (hydroEnabled) {
+      // Save up for 5 hydrogen bombs
+      return this.cost(UnitType.HydrogenBomb) * 5n;
+    }
+    if (atomEnabled) {
+      // Save up for 20 atom bombs
+      return this.cost(UnitType.AtomBomb) * 20n;
+    }
+    // No nukes enabled, no need to save up
+    return 0n;
+  }
+
+  /**
    * Tries to upgrade an existing structure if density threshold is exceeded.
    * @param structures The pool of structures to consider for upgrading
    * @returns true if an upgrade was initiated, false otherwise
@@ -205,6 +244,9 @@ export class NationStructureBehavior {
       structureToUpgrade !== null &&
       this.player.canUpgradeUnit(structureToUpgrade)
     ) {
+      console.log(
+        `[UPGRADE] nation=${this.player.name()} type=${structureToUpgrade.type()} level=${structureToUpgrade.level()}→${structureToUpgrade.level() + 1} gold=${this.player.gold()} density=${this.getTotalStructureDensity().toFixed(6)}`,
+      );
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
@@ -227,6 +269,7 @@ export class NationStructureBehavior {
 
   /**
    * Finds the best structure to upgrade, preferring structures protected by a SAM.
+   * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
     if (structures.length === 0) {
@@ -234,12 +277,9 @@ export class NationStructureBehavior {
     }
 
     const samLaunchers = this.player.units(UnitType.SAMLauncher);
-    const samRange = this.game.config().defaultSamRange();
-    const samRangeSquared = samRange * samRange;
 
     // Score each structure based on SAM protection
-    let bestStructure: Unit | null = null;
-    let bestScore = -1;
+    const scored: { structure: Unit; score: number }[] = [];
 
     for (const structure of structures) {
       if (!this.player.canUpgradeUnit(structure)) {
@@ -248,8 +288,10 @@ export class NationStructureBehavior {
 
       let score = 0;
 
-      // Check if protected by any SAM
+      // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
+        const samRange = this.game.config().samRange(sam.level());
+        const samRangeSquared = samRange * samRange;
         const distSquared = this.game.euclideanDistSquared(
           structure.tile(),
           sam.tile(),
@@ -266,13 +308,26 @@ export class NationStructureBehavior {
       // Add small random factor to break ties
       score += this.random.nextInt(0, 5);
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestStructure = structure;
-      }
+      scored.push({ structure, score });
     }
 
-    return bestStructure;
+    if (scored.length === 0) {
+      return null;
+    }
+
+    // Sort descending by score
+    scored.sort((a, b) => b.score - a.score);
+
+    // 50% of the time, pick the second or third best for variety
+    if (scored.length >= 2 && this.random.chance(2)) {
+      const pickIndex =
+        scored.length >= 3
+          ? this.random.nextInt(1, 3) // pick index 1 or 2
+          : 1; // only index 1 available
+      return scored[pickIndex].structure;
+    }
+
+    return scored[0].structure;
   }
 
   private structureSpawnTile(type: UnitType): TileRef | null {
