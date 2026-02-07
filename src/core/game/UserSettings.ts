@@ -69,6 +69,10 @@ export class UserSettings {
     return this.get("settings.leftClickOpensMenu", false);
   }
 
+  skipAllyAttackConfirmation() {
+    return this.get("settings.skipAllyAttackConfirmation", false);
+  }
+
   territoryPatterns() {
     return this.get("settings.territoryPatterns", true);
   }
@@ -86,6 +90,13 @@ export class UserSettings {
 
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
+  }
+
+  toggleSkipAllyAttackConfirmation() {
+    this.set(
+      "settings.skipAllyAttackConfirmation",
+      !this.skipAllyAttackConfirmation(),
+    );
   }
 
   toggleFocusLocked() {

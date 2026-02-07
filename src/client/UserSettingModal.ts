@@ -351,6 +351,16 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private toggleSkipAllyAttackConfirmation(
+    e: CustomEvent<{ checked: boolean }>,
+  ) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.skipAllyAttackConfirmation", enabled);
+    console.log("⚔️ Skip Ally Attack Confirmation:", enabled ? "ON" : "OFF");
+  }
+
   private sliderAttackRatio(e: CustomEvent<{ value: number }>) {
     const value = e.detail?.value;
     if (typeof value === "number") {
@@ -846,6 +856,15 @@ export class UserSettingModal extends BaseModal {
         id="left-click-toggle"
         .checked=${this.userSettings.leftClickOpensMenu()}
         @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <!-- ⚔️ Skip Ally Attack Confirmation -->
+      <setting-toggle
+        label="${translateText("user_setting.skip_ally_attack_label")}"
+        description="${translateText("user_setting.skip_ally_attack_desc")}"
+        id="skip-ally-attack-toggle"
+        .checked=${this.userSettings.skipAllyAttackConfirmation()}
+        @change=${this.toggleSkipAllyAttackConfirmation}
       ></setting-toggle>
 
       <!-- 🙈 Anonymous Names -->

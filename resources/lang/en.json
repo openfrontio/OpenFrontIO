@@ -524,6 +524,8 @@
     "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_menu": "Left Click Menu",
+    "skip_ally_attack_label": "Skip Ally Attack Confirmation",
+    "skip_ally_attack_desc": "When enabled, attacking an ally will immediately break the alliance without asking for confirmation. Recommended for experienced players.",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
@@ -933,7 +935,8 @@
   },
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
-    "delete_unit_description": "Click to delete the nearest unit"
+    "delete_unit_description": "Click to delete the nearest unit",
+    "ally_attack_confirm": "Attack {name}? This will break your alliance."
   },
   "discord_user_header": {
     "avatar_alt": "Avatar"

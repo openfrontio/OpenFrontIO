@@ -2,6 +2,7 @@ import { Config } from "../../../core/configuration/Config";
 import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
@@ -223,6 +224,40 @@ const allyBreakElement: MenuElement = {
       params.myPlayer,
       params.selected!,
     );
+    params.closeMenu();
+  },
+};
+
+const userSettings = new UserSettings();
+
+const allyAttackElement: MenuElement = {
+  id: "ally_attack",
+  name: "attack",
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canBreakAlliance,
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.canBreakAlliance,
+  color: COLORS.attack,
+  icon: swordIcon,
+  action: (params: MenuElementParams) => {
+    const skip = userSettings.skipAllyAttackConfirmation();
+    const proceed =
+      skip ||
+      confirm(
+        translateText("radial_menu.ally_attack_confirm", {
+          name: params.selected!.displayName(),
+        }),
+      );
+    if (proceed) {
+      params.playerActionHandler.handleBreakAlliance(
+        params.myPlayer,
+        params.selected!,
+      );
+      params.playerActionHandler.handleAttack(
+        params.myPlayer,
+        params.selected!.id(),
+      );
+    }
     params.closeMenu();
   },
 };
@@ -629,7 +664,11 @@ export const rootMenuElement: MenuElement = {
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? allyBreakElement : boatMenuElement,
+            isAllied
+              ? userSettings.skipAllyAttackConfirmation()
+                ? allyAttackElement
+                : allyBreakElement
+              : boatMenuElement,
             allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
