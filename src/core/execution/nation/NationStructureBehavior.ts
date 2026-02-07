@@ -545,18 +545,48 @@ export class NationStructureBehavior {
         };
       }
       case UnitType.SAMLauncher: {
-        const protectTiles: Set<TileRef> = new Set();
+        const { difficulty } = mg.config().gameConfig();
+        const weightByLevel =
+          difficulty === Difficulty.Hard ||
+          difficulty === Difficulty.Impossible;
+
+        const protectEntries: { tile: TileRef; weight: number }[] = [];
         for (const unit of player.units()) {
           switch (unit.type()) {
             case UnitType.City:
             case UnitType.Factory:
             case UnitType.MissileSilo:
             case UnitType.Port:
-              protectTiles.add(unit.tile());
+              protectEntries.push({
+                tile: unit.tile(),
+                weight: weightByLevel ? unit.level() : 1,
+              });
           }
         }
         const range = mg.config().defaultSamRange();
         const rangeSquared = range * range;
+
+        const useCoverageWeighting =
+          difficulty !== Difficulty.Easy && this.random.nextInt(0, 100) < 25;
+
+        // Pre-compute existing SAM coverage for each protectable structure
+        let structureCoverage: Map<TileRef, number> | null = null;
+        if (useCoverageWeighting) {
+          structureCoverage = new Map<TileRef, number>();
+          const existingSams = player.units(UnitType.SAMLauncher);
+          for (const entry of protectEntries) {
+            let coverageScore = 0;
+            for (const sam of existingSams) {
+              const samRange = mg.config().samRange(sam.level());
+              const dist = mg.euclideanDistSquared(entry.tile, sam.tile());
+              if (dist <= samRange * samRange) {
+                coverageScore += sam.level();
+              }
+            }
+            structureCoverage.set(entry.tile, coverageScore);
+          }
+        }
+
         return (tile) => {
           let w = 0;
 
@@ -581,14 +611,19 @@ export class NationStructureBehavior {
             w += Math.min(d, structureSpacing);
           }
 
-          // Prefer to be in range of other structures
-          for (const maybeProtected of protectTiles) {
-            const distanceSquared = mg.euclideanDistSquared(
-              tile,
-              maybeProtected,
-            );
-            if (distanceSquared > rangeSquared) continue;
-            w += structureSpacing;
+          // Prefer to be in range of other structures (skip on easy difficulty)
+          if (difficulty !== Difficulty.Easy) {
+            for (const entry of protectEntries) {
+              const distanceSquared = mg.euclideanDistSquared(tile, entry.tile);
+              if (distanceSquared > rangeSquared) continue;
+              if (useCoverageWeighting && structureCoverage !== null) {
+                const coverage = structureCoverage.get(entry.tile) ?? 0;
+                const coverageWeight = 1 / (1 + coverage);
+                w += structureSpacing * entry.weight * coverageWeight;
+              } else {
+                w += structureSpacing * entry.weight;
+              }
+            }
           }
 
           return w;
