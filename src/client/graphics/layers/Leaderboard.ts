@@ -177,7 +177,7 @@ export class Leaderboard extends LitElement implements Layer {
     }
     return html`
       <div
-        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh]  ${this
+        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh] mt-2 ${this
           .visible
           ? ""
           : "hidden"}"

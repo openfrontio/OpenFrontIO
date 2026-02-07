@@ -16,8 +16,11 @@ export class GameLeftSidebar extends LitElement implements Layer {
   private isLeaderboardShow = false;
   @state()
   private isTeamLeaderboardShow = false;
+  @state()
   private isVisible = false;
+  @state()
   private isPlayerTeamLabelVisible = false;
+  @state()
   private playerTeam: string | null = null;
 
   private playerColor: Colord = new Colord("#FFFFFF");
@@ -59,7 +62,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
       this.requestUpdate();
     }
 
-    if (!this.game.inSpawnPhase()) {
+    if (!this.game.inSpawnPhase() && this.isPlayerTeamLabelVisible) {
       this.isPlayerTeamLabelVisible = false;
       this.requestUpdate();
     }
@@ -91,27 +94,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
-        ${this.isPlayerTeamLabelVisible
-          ? html`
-              <div
-                class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
-                @contextmenu=${(e: Event) => e.preventDefault()}
-              >
-                ${translateText("help_modal.ui_your_team")}
-                <span
-                  style="--color: ${this.playerColor.toRgbString()}"
-                  class="text-(--color)"
-                >
-                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
-                </span>
-              </div>
-            `
-          : null}
-        <div
-          class=${`flex items-center gap-4 lg:gap-6 xl:gap-8 text-white ${this.isTeamGame ? "ml-8" : ""} ${
-            this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
-          }`}
-        >
+        <div class="flex items-center gap-4 xl:gap-6 text-white">
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
             @click=${this.toggleLeaderboard}
@@ -119,6 +102,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
             tabindex="0"
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                e.preventDefault();
                 this.toggleLeaderboard();
               }
             }}
@@ -127,7 +111,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
                 : leaderboardRegularIcon}
-              alt="treeIcon"
+              alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
+              "Player Leaderboard Icon"}
               width="20"
               height="20"
             />
@@ -145,6 +130,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
                       e.key === " " ||
                       e.code === "Space"
                     ) {
+                      e.preventDefault();
                       this.toggleTeamLeaderboard();
                     }
                   }}
@@ -153,7 +139,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
                     src=${this.isTeamLeaderboardShow
                       ? teamSolidIcon
                       : teamRegularIcon}
-                    alt="treeIcon"
+                    alt=${translateText(
+                      "help_modal.icon_alt_team_leaderboard",
+                    ) || "Team Leaderboard Icon"}
                     width="20"
                     height="20"
                   />
@@ -161,7 +149,25 @@ export class GameLeftSidebar extends LitElement implements Layer {
               `
             : null}
         </div>
-        <div class="block lg:flex flex-wrap gap-2">
+        ${this.isPlayerTeamLabelVisible
+          ? html`
+              <div
+                class="flex items-center w-full text-white"
+                @contextmenu=${(e: Event) => e.preventDefault()}
+              >
+                ${translateText("help_modal.ui_your_team")}
+                <span
+                  style="--color: ${this.playerColor.toRgbString()}"
+                  class="text-(--color)"
+                >
+                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
+                </span>
+              </div>
+            `
+          : null}
+        <div
+          class=${`block lg:flex flex-wrap ${this.isLeaderboardShow && this.isTeamLeaderboardShow ? "gap-2" : ""}`}
+        >
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
             class="flex-1"
