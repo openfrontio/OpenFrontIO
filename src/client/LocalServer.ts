@@ -9,8 +9,8 @@ import {
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessage,
+  StampedIntent,
   Turn,
-  TurnIntent,
 } from "../core/Schemas";
 import {
   createPartialGameRecord,
@@ -35,7 +35,7 @@ export class LocalServer {
 
   private turns: Turn[] = [];
 
-  private intents: TurnIntent[] = [];
+  private intents: StampedIntent[] = [];
   private startedAt: number;
 
   private paused = false;

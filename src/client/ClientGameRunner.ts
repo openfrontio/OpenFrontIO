@@ -194,7 +194,7 @@ export function joinLobby(
 
 async function createClientGame(
   lobbyConfig: LobbyConfig,
-  clientID: ClientID | undefined,
+  clientID: ClientID,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
@@ -203,10 +203,6 @@ async function createClientGame(
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
-  }
-  // For local games only, derive clientID from the first player in GameStartInfo
-  if (!clientID && transport.isLocal) {
-    clientID = lobbyConfig.gameStartInfo.players[0]?.clientID;
   }
   const config = await getConfig(
     lobbyConfig.gameStartInfo.config,
@@ -224,13 +220,13 @@ async function createClientGame(
       mapLoader,
     );
   }
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID!);
+  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
   const gameView = new GameView(
     worker,
     config,
     gameMap,
-    clientID!,
+    clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
   );
@@ -270,7 +266,7 @@ export class ClientGameRunner {
 
   constructor(
     private lobby: LobbyConfig,
-    private clientID: ClientID | undefined,
+    private clientID: ClientID,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
@@ -304,8 +300,8 @@ export class ClientGameRunner {
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
-        clientID: this.clientID!,
-        stats: update.allPlayersStats[this.clientID!],
+        clientID: this.clientID,
+        stats: update.allPlayersStats[this.clientID],
       },
     ];
 
@@ -556,7 +552,7 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.clientID!);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -591,7 +587,7 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.clientID!);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -652,7 +648,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.clientID!);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -671,7 +667,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.clientID!);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }

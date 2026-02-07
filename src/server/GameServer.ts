@@ -19,8 +19,8 @@ import {
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
+  StampedIntent,
   Turn,
-  TurnIntent,
 } from "../core/Schemas";
 import { createPartialGameRecord, generateID, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -42,7 +42,7 @@ export class GameServer {
   private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
   private turns: Turn[] = [];
-  private intents: TurnIntent[] = [];
+  private intents: StampedIntent[] = [];
   public activeClients: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
   // Map persistentID to clientID for reconnection lookup
@@ -94,8 +94,11 @@ export class GameServer {
     this.log = log_.child({ gameID: id });
   }
 
-  // Lobby creator clientID - set when the creator joins
-  private lobbyCreatorID?: string;
+  private get lobbyCreatorID(): ClientID | undefined {
+    return this.creatorPersistentID
+      ? this.persistentIdToClientId.get(this.creatorPersistentID)
+      : undefined;
+  }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
@@ -207,20 +210,6 @@ export class GameServer {
       return;
     }
 
-    // Check if this client is the lobby creator (by persistentID)
-    // Server-assigned clientID becomes the lobbyCreatorID
-    if (
-      this.creatorPersistentID &&
-      client.persistentID === this.creatorPersistentID &&
-      !this.lobbyCreatorID
-    ) {
-      this.lobbyCreatorID = client.clientID;
-      this.log.info("Lobby creator joined", {
-        gameID: this.id,
-        creatorID: this.lobbyCreatorID,
-        persistentID: client.persistentID,
-      });
-    }
     this.log.info("client joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
@@ -335,6 +324,13 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         switch (clientMsg.type) {
+          case "rejoin": {
+            // Client is already connected, no auth required, send start game message if game has started
+            if (this._hasStarted) {
+              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+            }
+            break;
+          }
           case "intent": {
             // Server stamps clientID from the authenticated connection
             const stampedIntent = {
@@ -483,12 +479,6 @@ export class GameServer {
           }
           case "winner": {
             this.handleWinner(client, clientMsg);
-            break;
-          }
-          case "rejoin": {
-            if (this._hasStarted) {
-              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
-            }
             break;
           }
           default: {
@@ -654,7 +644,7 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: TurnIntent) {
+  private addIntent(intent: StampedIntent) {
     this.intents.push(intent);
   }
 

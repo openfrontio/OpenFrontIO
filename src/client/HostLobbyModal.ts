@@ -87,9 +87,6 @@ export class HostLobbyModal extends BaseModal {
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
-    if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
-      return;
-    }
     this.lobbyCreatorClientID = event.myClientID;
     if (lobby.clients) {
       this.clients = lobby.clients;

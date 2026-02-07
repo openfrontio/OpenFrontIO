@@ -444,9 +444,9 @@ const IntentSchema = z.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
 ]);
 
-// TurnIntent = Intent with server-stamped clientID (used in turns and execution)
-export const TurnIntentSchema = IntentSchema.and(z.object({ clientID: ID }));
-export type TurnIntent = Intent & { clientID: ClientID };
+// StampedIntent = Intent with server-stamped clientID (used in turns and execution)
+export const StampedIntentSchema = IntentSchema.and(z.object({ clientID: ID }));
+export type StampedIntent = Intent & { clientID: ClientID };
 
 //
 // Server utility types
@@ -454,7 +454,7 @@ export type TurnIntent = Intent & { clientID: ClientID };
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  intents: TurnIntentSchema.array(),
+  intents: StampedIntentSchema.array(),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
 });
