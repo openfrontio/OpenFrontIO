@@ -868,6 +868,9 @@ export interface PlayerInteraction {
   canDonateTroops: boolean;
   canEmbargo: boolean;
   allianceExpiresAt?: Tick;
+  inAllianceExtensionWindow?: boolean;
+  myPlayerAgreedToExtend?: boolean;
+  otherPlayerAgreedToExtend?: boolean;
 }
 
 export interface EmojiMessage {

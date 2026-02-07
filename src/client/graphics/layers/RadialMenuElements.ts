@@ -57,6 +57,17 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+
+  customRender?: (
+    content: SVGGElement,
+    centroidX: number,
+    centroidY: number,
+    iconSize: number,
+    disabled: boolean,
+    params: MenuElementParams,
+  ) => void;
+
+  timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
 
 export interface TooltipKey {
@@ -212,14 +223,89 @@ const allyRequestElement: MenuElement = {
 const allyExtendElement: MenuElement = {
   id: "ally_extend",
   name: "extend",
-  disabled: (params: MenuElementParams) => false,
   displayed: (params: MenuElementParams) =>
-    !!params.playerActions?.interaction?.canExtendAlliance,
+    !!params.playerActions?.interaction?.inAllianceExtensionWindow,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canExtendAlliance,
   color: COLORS.ally,
   icon: allianceIcon,
   action: (params: MenuElementParams) => {
+    if (!params.playerActions?.interaction?.canExtendAlliance) return;
     params.playerActionHandler.handleExtendAlliance(params.selected!);
     params.closeMenu();
+  },
+  timerFraction: (params: MenuElementParams) => {
+    const interaction = params.playerActions?.interaction;
+    if (!interaction?.allianceExpiresAt) return 1;
+    const remaining = Math.max(
+      0,
+      interaction.allianceExpiresAt - params.game.ticks(),
+    );
+    const window = Math.max(
+      1,
+      params.game.config().allianceExtensionPromptOffset(),
+    );
+    return Math.max(0, Math.min(1, remaining / window));
+  },
+  customRender: (
+    content: SVGGElement,
+    cx: number,
+    cy: number,
+    iconSize: number,
+    disabled: boolean,
+    params: MenuElementParams,
+  ) => {
+    const interaction = params.playerActions?.interaction;
+    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const smallSize = iconSize * 0.6;
+    const gap = 2;
+    const totalWidth = smallSize * 2 + gap;
+
+    // Left handshake = me
+    const leftImg = document.createElementNS(ns, "image");
+    leftImg.setAttribute("href", allianceIcon);
+    leftImg.setAttribute("width", smallSize.toString());
+    leftImg.setAttribute("height", smallSize.toString());
+    leftImg.setAttribute("x", (cx - totalWidth / 2).toString());
+    leftImg.setAttribute("y", (cy - smallSize / 2).toString());
+    leftImg.setAttribute("opacity", disabled ? "0.5" : "1");
+
+    if (!myAgreed) {
+      const animLeft = document.createElementNS(ns, "animate");
+      animLeft.setAttribute("attributeName", "opacity");
+      animLeft.setAttribute("values", "1;0.2;1");
+      animLeft.setAttribute("dur", "1.5s");
+      animLeft.setAttribute("repeatCount", "indefinite");
+      leftImg.appendChild(animLeft);
+    }
+
+    content.appendChild(leftImg);
+
+    // Right handshake = them
+    const rightImg = document.createElementNS(ns, "image");
+    rightImg.setAttribute("href", allianceIcon);
+    rightImg.setAttribute("width", smallSize.toString());
+    rightImg.setAttribute("height", smallSize.toString());
+    rightImg.setAttribute(
+      "x",
+      (cx - totalWidth / 2 + smallSize + gap).toString(),
+    );
+    rightImg.setAttribute("y", (cy - smallSize / 2).toString());
+    rightImg.setAttribute("opacity", disabled ? "0.5" : "1");
+
+    if (!otherAgreed) {
+      const animRight = document.createElementNS(ns, "animate");
+      animRight.setAttribute("attributeName", "opacity");
+      animRight.setAttribute("values", "1;0.2;1");
+      animRight.setAttribute("dur", "1.5s");
+      animRight.setAttribute("repeatCount", "indefinite");
+      rightImg.appendChild(animRight);
+    }
+
+    content.appendChild(rightImg);
   },
 };
 
@@ -638,8 +724,8 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    const canExtendAlliance =
-      params.playerActions.interaction?.canExtendAlliance;
+    const inExtensionWindow =
+      params.playerActions.interaction?.inAllianceExtensionWindow;
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
@@ -647,7 +733,7 @@ export const rootMenuElement: MenuElement = {
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
             isAllied ? allyBreakElement : boatMenuElement,
-            canExtendAlliance ? allyExtendElement : allyRequestElement,
+            inExtensionWindow ? allyExtendElement : allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
               : attackMenuElement,
