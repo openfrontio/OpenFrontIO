@@ -73,6 +73,14 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  confirmBreakAlliance() {
+    return this.get("settings.confirmBreakAlliance", false);
+  }
+
+  toggleConfirmBreakAlliance() {
+    this.set("settings.confirmBreakAlliance", !this.confirmBreakAlliance());
+  }
+
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);

@@ -10,6 +10,7 @@ import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
+import { ConfirmBreakAllianceModal } from "./layers/ConfirmBreakAllianceModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
@@ -229,6 +230,15 @@ export function createRenderer(
     console.error("alert frame not found");
   }
   alertFrame.game = game;
+
+  const confirmBreakAllianceModal = document.querySelector(
+    "confirm-break-alliance-modal",
+  ) as ConfirmBreakAllianceModal;
+  if (!(confirmBreakAllianceModal instanceof ConfirmBreakAllianceModal)) {
+    console.error("confirm break alliance modal not found");
+  }
+  confirmBreakAllianceModal.eventBus = eventBus;
+  confirmBreakAllianceModal.game = game;
 
   const spawnTimer = document.querySelector("spawn-timer") as SpawnTimer;
   if (!(spawnTimer instanceof SpawnTimer)) {

@@ -78,7 +78,7 @@ export function joinLobby(
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
-  const transport = new Transport(lobbyConfig, eventBus);
+  const transport = new Transport(lobbyConfig, eventBus, userSettings);
 
   let currentGameRunner: ClientGameRunner | null = null;
 
