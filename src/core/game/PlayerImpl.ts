@@ -869,6 +869,7 @@ export class PlayerImpl implements Player {
       return;
     }
     this._troops += toInt(troops);
+    this.recalculateAndNotifyHash();
   }
   removeTroops(troops: number): number {
     if (troops <= 0) {
@@ -876,6 +877,7 @@ export class PlayerImpl implements Player {
     }
     const toRemove = minInt(this._troops, toInt(troops));
     this._troops -= toRemove;
+    this.recalculateAndNotifyHash();
     return Number(toRemove);
   }
 
