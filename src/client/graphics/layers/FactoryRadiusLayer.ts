@@ -106,11 +106,11 @@ export class FactoryRadiusLayer implements Layer {
       .filter((unit) => unit.isActive());
 
     this.factories.clear();
-    activeFactories.forEach((factory) =>
+    for (const factory of activeFactories) {
       this.factories.set(factory.id(), {
         ownerId: factory.owner().smallID(),
-      }),
-    );
+      });
+    }
 
     const radius = this.game.config().trainStationMaxRange();
     this.ranges = activeFactories.map((factory) => {
