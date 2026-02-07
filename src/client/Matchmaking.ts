@@ -320,7 +320,7 @@ export class MatchmakingButton extends LitElement {
     window.showPage?.("page-account");
   }
 
-  private open() {
+  public open() {
     this.matchmakingModal?.open();
   }
 
