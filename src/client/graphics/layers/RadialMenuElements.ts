@@ -246,11 +246,11 @@ const allyExtendElement: MenuElement = {
       0,
       interaction.allianceExpiresAt - params.game.ticks(),
     );
-    const window = Math.max(
+    const extensionWindow = Math.max(
       1,
       params.game.config().allianceExtensionPromptOffset(),
     );
-    return Math.max(0, Math.min(1, remaining / window));
+    return Math.max(0, Math.min(1, remaining / extensionWindow));
   },
   customRenderStateKey: (disabled: boolean, params: MenuElementParams) => {
     const interaction = params.playerActions?.interaction;
