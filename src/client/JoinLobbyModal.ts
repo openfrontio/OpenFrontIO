@@ -542,9 +542,7 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    this.lobbyCreatorClientID = this.isPrivateLobby()
-      ? (lobby.clients?.[0]?.clientID ?? null)
-      : null;
+    this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? null;
   }
 
   private startLobbyUpdates() {

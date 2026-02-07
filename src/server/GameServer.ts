@@ -832,6 +832,7 @@ export class GameServer {
         username: c.username,
         clientID: c.clientID,
       })),
+      lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),

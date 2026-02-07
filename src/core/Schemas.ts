@@ -148,6 +148,7 @@ const ClientInfoSchema = z.object({
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
+  lobbyCreatorClientID: z.string().optional(),
   startsAt: z.number().optional(),
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
