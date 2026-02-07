@@ -6,8 +6,16 @@ import {
   mapCategories,
 } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
+import {
+  cardImageClasses,
+  cardStateClasses,
+  renderCardLabel,
+  renderCategoryLabel,
+} from "../../utilities/ConfigCards";
 import "./MapDisplay";
 import randomMap from "/images/RandomMap.webp?url";
+
+const MAP_GRID = "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
 
 const featuredMaps: GameMapType[] = [
   GameMapType.World,
@@ -52,18 +60,14 @@ export class MapPicker extends LitElement {
       ([_, value]) => value === mapValue,
     )?.[0];
     return html`
-      <div
+      <map-display
         @click=${() => this.handleMapSelection(mapValue)}
-        class="cursor-pointer transition-transform duration-200 active:scale-95"
-      >
-        <map-display
-          .mapKey=${mapKey}
-          .selected=${!this.useRandomMap && this.selectedMap === mapValue}
-          .showMedals=${this.showMedals}
-          .wins=${this.getWins(mapValue)}
-          .translation=${translateText(`map.${mapKey?.toLowerCase()}`)}
-        ></map-display>
-      </div>
+        .mapKey=${mapKey}
+        .selected=${!this.useRandomMap && this.selectedMap === mapValue}
+        .showMedals=${this.showMedals}
+        .wins=${this.getWins(mapValue)}
+        .translation=${translateText(`map.${mapKey?.toLowerCase()}`)}
+      ></map-display>
     `;
   }
 
@@ -72,13 +76,11 @@ export class MapPicker extends LitElement {
     return html`<div class="space-y-8">
       ${mapCategoryEntries.map(
         ([categoryKey, maps]) => html`
-          <div class="w-full">
-            <h4
-              class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-            >
-              ${translateText(`map_categories.${categoryKey}`)}
-            </h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div>
+            ${renderCategoryLabel(
+              translateText(`map_categories.${categoryKey}`),
+            )}
+            <div class="${MAP_GRID}">
               ${maps.map((mapValue) => this.renderMapCard(mapValue))}
             </div>
           </div>
@@ -92,87 +94,69 @@ export class MapPicker extends LitElement {
     if (!featuredMapList.includes(this.selectedMap)) {
       featuredMapList = [this.selectedMap, ...featuredMaps];
     }
-    return html`<div class="w-full">
-      <h4
-        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-      >
-        ${translateText("map_categories.featured")}
-      </h4>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    return html`<div>
+      ${renderCategoryLabel(translateText("map_categories.featured"))}
+      <div class="${MAP_GRID}">
         ${featuredMapList.map((mapValue) => this.renderMapCard(mapValue))}
       </div>
     </div>`;
   }
 
+  private renderTab(label: string, active: boolean, onClick: () => void) {
+    return html`<button
+      type="button"
+      role="tab"
+      aria-selected=${active}
+      class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${active
+        ? "bg-blue-500/20 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+        : "text-white/60 hover:text-white"}"
+      @click=${onClick}
+    >
+      ${label}
+    </button>`;
+  }
+
   render() {
     return html`
       <div class="space-y-8">
-        <div class="w-full">
-          <div
-            role="tablist"
-            aria-label="${translateText("map.map")}"
-            class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected=${!this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${this
-                .showAllMaps
-                ? "text-white/60 hover:text-white"
-                : "bg-blue-500/20 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.2)]"}"
-              @click=${() => (this.showAllMaps = false)}
-            >
-              ${translateText("map.featured")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected=${this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${this
-                .showAllMaps
-                ? "bg-blue-500/20 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.2)]"
-                : "text-white/60 hover:text-white"}"
-              @click=${() => (this.showAllMaps = true)}
-            >
-              ${translateText("map.all")}
-            </button>
-          </div>
+        <div
+          role="tablist"
+          aria-label="${translateText("map.map")}"
+          class="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+        >
+          ${this.renderTab(
+            translateText("map.featured"),
+            !this.showAllMaps,
+            () => (this.showAllMaps = false),
+          )}
+          ${this.renderTab(
+            translateText("map.all"),
+            this.showAllMaps,
+            () => (this.showAllMaps = true),
+          )}
         </div>
         ${this.showAllMaps ? this.renderAllMaps() : this.renderFeaturedMaps()}
         <div
-          class="w-full ${this.randomMapDivider
-            ? "pt-4 border-t border-white/5"
-            : ""}"
+          class="${this.randomMapDivider ? "pt-4 border-t border-white/5" : ""}"
         >
-          <h4
-            class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-          >
-            ${translateText("map_categories.special")}
-          </h4>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          ${renderCategoryLabel(translateText("map_categories.special"))}
+          <div class="${MAP_GRID}">
             <button
-              class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                .useRandomMap
-                ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+              class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch active:scale-95 ${cardStateClasses(
+                this.useRandomMap,
+              )}"
               @click=${this.handleSelectRandomMap}
             >
-              <div
-                class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-              >
+              <div class="aspect-[2/1] w-full bg-black/20">
                 <img
+                  draggable="false"
                   src=${randomMap}
                   alt=${translateText("map.random")}
-                  class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                  class="${cardImageClasses(this.useRandomMap)}"
                 />
               </div>
-              <div class="p-3 text-center border-t border-white/5">
-                <div
-                  class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                >
-                  ${translateText("map.random")}
-                </div>
+              <div class="p-3 border-t border-white/5">
+                ${renderCardLabel(translateText("map.random"), true)}
               </div>
             </button>
           </div>
