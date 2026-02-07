@@ -14,6 +14,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { DynamicUILayer } from "./layers/DynamicUILayer";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FactoryRadiusLayer } from "./layers/FactoryRadiusLayer";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
@@ -214,6 +215,7 @@ export function createRenderer(
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
+  const factoryRadiusLayer = new FactoryRadiusLayer(game, uiState);
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -268,6 +270,7 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
+    factoryRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game, transformHandler),
     new UILayer(game, eventBus, transformHandler),
