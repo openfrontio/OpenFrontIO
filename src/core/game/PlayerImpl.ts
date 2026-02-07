@@ -671,6 +671,8 @@ export class PlayerImpl implements Player {
     if (troops <= 0) return false;
     const removed = this.removeTroops(troops);
     if (removed === 0) return false;
+    const prevTroops = removed + this.troops();
+    const donationRatio = prevTroops > 0 ? removed / prevTroops : 0;
     recipient.addTroops(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
@@ -679,14 +681,30 @@ export class PlayerImpl implements Player {
       MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
       undefined,
-      { troops: renderTroops(troops), name: recipient.name() },
+      {
+        troops: renderTroops(removed),
+        name: recipient.name(),
+        donationSenderSmallID: this.smallID(),
+        donationRecipientSmallID: recipient.smallID(),
+        donationKind: "troops",
+        donationRatio,
+        donationTroopsAmount: removed,
+      },
     );
     this.mg.displayMessage(
       "events_display.received_troops_from_player",
       MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
       undefined,
-      { troops: renderTroops(troops), name: this.name() },
+      {
+        troops: renderTroops(removed),
+        name: this.name(),
+        donationSenderSmallID: this.smallID(),
+        donationRecipientSmallID: recipient.smallID(),
+        donationKind: "troops",
+        donationRatio,
+        donationTroopsAmount: removed,
+      },
     );
     return true;
   }
@@ -695,6 +713,9 @@ export class PlayerImpl implements Player {
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
+    const prevGold = removed + this.gold();
+    const donationRatio =
+      prevGold > 0n ? Number((removed * 10000n) / prevGold) / 10000 : 0;
     recipient.addGold(removed);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
@@ -703,14 +724,28 @@ export class PlayerImpl implements Player {
       MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
       undefined,
-      { gold: renderNumber(gold), name: recipient.name() },
+      {
+        gold: renderNumber(removed),
+        name: recipient.name(),
+        donationSenderSmallID: this.smallID(),
+        donationRecipientSmallID: recipient.smallID(),
+        donationKind: "gold",
+        donationRatio,
+      },
     );
     this.mg.displayMessage(
       "events_display.received_gold_from_player",
       MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
-      gold,
-      { gold: renderNumber(gold), name: this.name() },
+      removed,
+      {
+        gold: renderNumber(removed),
+        name: this.name(),
+        donationSenderSmallID: this.smallID(),
+        donationRecipientSmallID: recipient.smallID(),
+        donationKind: "gold",
+        donationRatio,
+      },
     );
     return true;
   }
