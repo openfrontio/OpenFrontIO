@@ -755,6 +755,32 @@ class Client {
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
     }
+
+    // Handle requeue parameter for ranked matchmaking
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("requeue")) {
+      // Remove only the requeue parameter, preserving other params and hash
+      searchParams.delete("requeue");
+      const newUrl =
+        window.location.pathname +
+        (searchParams.toString() ? "?" + searchParams.toString() : "") +
+        window.location.hash;
+      history.replaceState(null, "", newUrl);
+      // Wait for matchmaking button to be defined, then trigger its click handler
+      // This goes through username validation instead of bypassing it
+      customElements.whenDefined("matchmaking-button").then(() => {
+        const matchmakingButton = document.querySelector(
+          "matchmaking-button button",
+        ) as HTMLButtonElement | null;
+        if (matchmakingButton) {
+          matchmakingButton.click();
+        } else {
+          console.warn(
+            "Requeue requested, but matchmaking button not found in DOM.",
+          );
+        }
+      });
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
