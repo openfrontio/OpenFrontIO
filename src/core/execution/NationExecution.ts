@@ -95,6 +95,24 @@ export class NationExecution implements Execution {
     }
 
     if (ticks % this.attackRate !== this.attackTick) {
+      // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
+      // Otherwise it is possible that we earn more gold than we can spend
+      // The alternative is placing multiple structures in handleStructures, but that causes problems
+      if (
+        this.behaviorsInitialized &&
+        this.player !== null &&
+        this.player.isAlive()
+      ) {
+        const offset = ticks % this.attackRate;
+        const oneThird =
+          (this.attackTick + Math.floor(this.attackRate / 3)) % this.attackRate;
+        const twoThirds =
+          (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
+          this.attackRate;
+        if (offset === oneThird || offset === twoThirds) {
+          this.structureBehavior.handleStructures();
+        }
+      }
       return;
     }
 
@@ -141,7 +159,7 @@ export class NationExecution implements Execution {
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
     this.mirvBehavior.considerMIRV();
-    this.structureBehavior.handleUnits();
+    this.structureBehavior.handleStructures();
     this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
     this.attackBehavior.maybeAttack();

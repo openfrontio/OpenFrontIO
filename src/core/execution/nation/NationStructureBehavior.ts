@@ -83,7 +83,7 @@ export class NationStructureBehavior {
     private player: Player,
   ) {}
 
-  handleUnits(): boolean {
+  handleStructures(): boolean {
     const cityCount = this.player.unitsOwned(UnitType.City);
     const hasCoastalTiles = this.hasCoastalTiles();
 
