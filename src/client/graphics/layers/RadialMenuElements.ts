@@ -3,7 +3,7 @@ import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
-import { renderNumber, translateText } from "../../Utils";
+import { getSvgAspectRatio, renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -25,6 +25,11 @@ import swordIcon from "/images/SwordIconWhite.svg?url";
 import targetIcon from "/images/TargetIconWhite.svg?url";
 import traitorIcon from "/images/TraitorIconWhite.svg?url";
 import xIcon from "/images/XIcon.svg?url";
+
+let allianceIconAspectRatio = 1;
+getSvgAspectRatio(allianceIcon).then((ratio) => {
+  if (ratio) allianceIconAspectRatio = ratio;
+});
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -276,13 +281,14 @@ const allyExtendElement: MenuElement = {
 
     const ns = "http://www.w3.org/2000/svg";
     const smallSize = iconSize * 0.8;
+    const width = smallSize * allianceIconAspectRatio;
     const gap = 2;
-    const totalWidth = smallSize * 2 + gap;
+    const totalWidth = width * 2 + gap;
 
     // Left handshake = me
     const leftImg = document.createElementNS(ns, "image");
     leftImg.setAttribute("href", allianceIcon);
-    leftImg.setAttribute("width", smallSize.toString());
+    leftImg.setAttribute("width", width.toString());
     leftImg.setAttribute("height", smallSize.toString());
     leftImg.setAttribute("x", (cx - totalWidth / 2).toString());
     leftImg.setAttribute("y", (cy - smallSize / 2).toString());
@@ -302,11 +308,11 @@ const allyExtendElement: MenuElement = {
     // Right handshake = them
     const rightImg = document.createElementNS(ns, "image");
     rightImg.setAttribute("href", allianceIcon);
-    rightImg.setAttribute("width", smallSize.toString());
+    rightImg.setAttribute("width", width.toString());
     rightImg.setAttribute("height", smallSize.toString());
     rightImg.setAttribute(
       "x",
-      (cx - totalWidth / 2 + smallSize + gap).toString(),
+      (cx - totalWidth / 2 + width + gap).toString(),
     );
     rightImg.setAttribute("y", (cy - smallSize / 2).toString());
     rightImg.setAttribute("opacity", disabled ? "0.5" : "1");
