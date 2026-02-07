@@ -66,7 +66,7 @@ describe("GameLifecycle", () => {
     await game.end();
 
     // Now call start() - this should be a no-op due to our fix
-    game.start();
+    await game.start();
 
     // Check if the interval ID is set (it shouldn't be)
     expect((game as any).endTurnIntervalID).toBeUndefined();
@@ -93,7 +93,7 @@ describe("GameLifecycle", () => {
     game.prestart();
 
     // start() should create the interval
-    game.start();
+    await game.start();
     expect((game as any).endTurnIntervalID).toBeDefined();
 
     // end() should clear it
