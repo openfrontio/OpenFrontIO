@@ -199,7 +199,19 @@ export class EventsDisplay extends LitElement implements Layer {
     this.outgoingBoats = [];
   }
 
-  init() {}
+  init() {
+    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) => {
+      const myPlayer = this.game.myPlayer();
+      if (!myPlayer) return;
+      const alliance = myPlayer
+        .alliances()
+        .find((a) => a.other === e.recipient.id());
+      if (alliance) {
+        this.removeAllianceRenewalEvents(alliance.id);
+        this.requestUpdate();
+      }
+    });
+  }
 
   tick() {
     this.active = true;
