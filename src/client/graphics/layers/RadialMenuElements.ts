@@ -275,7 +275,7 @@ const allyExtendElement: MenuElement = {
     const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
 
     const ns = "http://www.w3.org/2000/svg";
-    const smallSize = iconSize * 0.6;
+    const smallSize = iconSize * 0.8;
     const gap = 2;
     const totalWidth = smallSize * 2 + gap;
 
