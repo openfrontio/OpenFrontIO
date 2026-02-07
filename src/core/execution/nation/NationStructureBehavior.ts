@@ -99,9 +99,30 @@ export class NationStructureBehavior {
       UnitType.MissileSilo,
     ];
 
+    const config = this.game.config();
+    const nukesEnabled =
+      !config.isUnitDisabled(UnitType.AtomBomb) ||
+      !config.isUnitDisabled(UnitType.HydrogenBomb) ||
+      !config.isUnitDisabled(UnitType.MIRV);
+    const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
+
     for (const structureType of buildOrder) {
       // Skip ports if no coastal tiles
       if (structureType === UnitType.Port && !hasCoastalTiles) {
+        continue;
+      }
+
+      // Skip missile silos and SAM launchers if all nukes are disabled
+      if (
+        !nukesEnabled &&
+        (structureType === UnitType.MissileSilo ||
+          structureType === UnitType.SAMLauncher)
+      ) {
+        continue;
+      }
+
+      // Skip SAM launchers if missile silos are disabled
+      if (!missileSilosEnabled && structureType === UnitType.SAMLauncher) {
         continue;
       }
 
@@ -254,6 +275,12 @@ export class NationStructureBehavior {
    */
   private getSaveUpTarget(): Gold {
     const config = this.game.config();
+
+    // No need to save up if missile silos are disabled
+    if (config.isUnitDisabled(UnitType.MissileSilo)) {
+      return 0n;
+    }
+
     const mirvEnabled = !config.isUnitDisabled(UnitType.MIRV);
     const hydroEnabled = !config.isUnitDisabled(UnitType.HydrogenBomb);
     const atomEnabled = !config.isUnitDisabled(UnitType.AtomBomb);
