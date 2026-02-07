@@ -76,6 +76,9 @@ const MAX_MISSILE_SILOS = 3;
 /** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/** Maximum density of defense posts (per tile owned) before no more can be built */
+const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
+
 export class NationStructureBehavior {
   constructor(
     private random: PseudoRandom,
@@ -153,6 +156,17 @@ export class NationStructureBehavior {
     // Hard cap on missile silos
     if (type === UnitType.MissileSilo && owned >= MAX_MISSILE_SILOS) {
       return false;
+    }
+
+    // Density cap on defense posts
+    if (type === UnitType.DefensePost) {
+      const tilesOwned = this.player.numTilesOwned();
+      if (
+        tilesOwned > 0 &&
+        owned / tilesOwned >= DEFENSE_POST_DENSITY_THRESHOLD
+      ) {
+        return false;
+      }
     }
 
     const targetCount = Math.floor(cityCount * ratio);
