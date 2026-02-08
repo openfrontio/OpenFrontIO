@@ -100,9 +100,17 @@ export default defineConfig(({ mode }) => {
       minify: isProduction ? "terser" : false,
       ...(isProduction && {
         terserOptions: {
-          toplevel: true, // Mangle top-level names and drop unused top-level vars/functions
-          compress: { passes: 3 },
-          mangle: { toplevel: true }, // Shorten top-level function/variable names
+          toplevel: true,
+          compress: {
+            passes: 3,
+            ecma: 2015,
+            drop_console: true,
+            keep_fargs: false, // Allow discarding unused function args (smaller; breaks Function.length)
+            keep_infinity: true, // Don't compress Infinity to 1/0 (avoids Chrome perf issues)
+            unsafe_Function: true, // Mangle Function(args, code) when string literals
+            unsafe_math: true, // e.g. 2*x*3 → 6*x (may affect float precision)
+          },
+          mangle: { toplevel: true },
           format: {
             comments: false,
           },
