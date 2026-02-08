@@ -250,11 +250,11 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, eventBus, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),

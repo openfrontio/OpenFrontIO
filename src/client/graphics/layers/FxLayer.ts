@@ -1,10 +1,8 @@
+import { EventBus } from "src/core/EventBus";
+import { TileRef } from "src/core/game/GameMap";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import {
-  ConquestUpdate,
-  GameUpdateType,
-  RailroadUpdate,
-} from "../../../core/game/GameUpdates";
+import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -14,6 +12,7 @@ import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
+import { RailTileChangedEvent } from "./RailroadLayer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
@@ -26,7 +25,10 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private eventBus: EventBus,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -44,12 +46,6 @@ export class FxLayer implements Layer {
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
-      });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onRailroadEvent(update);
       });
     this.game
       .updatesSinceLastTick()
@@ -124,22 +120,19 @@ export class FxLayer implements Layer {
     }
   }
 
-  onRailroadEvent(railroad: RailroadUpdate) {
-    const railTiles = railroad.railTiles;
-    for (const rail of railTiles) {
-      // No need for pseudorandom, this is fx
-      const chanceFx = Math.floor(Math.random() * 3);
-      if (chanceFx === 0) {
-        const x = this.game.x(rail.tile);
-        const y = this.game.y(rail.tile);
-        const animation = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.Dust,
-        );
-        this.allFx.push(animation);
-      }
+  onRailroadEvent(tile: TileRef) {
+    // No need for pseudorandom, this is fx
+    const chanceFx = Math.floor(Math.random() * 3);
+    if (chanceFx === 0) {
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      const animation = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.Dust,
+      );
+      this.allFx.push(animation);
     }
   }
 
@@ -235,6 +228,10 @@ export class FxLayer implements Layer {
 
   async init() {
     this.redraw();
+
+    this.eventBus.on(RailTileChangedEvent, (e) => {
+      this.onRailroadEvent(e.tile);
+    });
     try {
       this.animatedSpriteLoader.loadAllAnimatedSpriteImages();
       console.log("FX sprites loaded successfully");
