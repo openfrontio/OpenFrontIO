@@ -48,12 +48,21 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
   return keys;
 }
 
-function getAllFiles(dir: string, extensions: string[]): string[] {
+function getAllFiles(
+  dir: string,
+  extensions: string[],
+  /** Tracks visited real paths to guard against symlink cycles. */
+  seen: Set<string> = new Set(),
+): string[] {
+  const realDir = fs.realpathSync(dir);
+  if (seen.has(realDir)) return []; // cycle via directory symlink
+  seen.add(realDir);
+
   const results: string[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...getAllFiles(fullPath, extensions));
+      results.push(...getAllFiles(fullPath, extensions, seen));
     } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
       results.push(fullPath);
     }
@@ -239,6 +248,7 @@ function collectFromExpression(
       enKeySet,
       allowBareRoot,
     );
+    return;
   }
 }
 
@@ -272,6 +282,12 @@ function scanTsFile(
   }
 
   const visit = (node: ts.Node) => {
+    // Broad match: any string literal in any .ts/.tsx file that exactly
+    // matches an en.json key is counted as "used". This is intentionally
+    // permissive to avoid false-positive "unused" reports, but it means a
+    // key appearing in an unrelated context (e.g. a log message or object
+    // key that happens to share the same name) will mask a genuinely
+    // unused translation key.
     if (isStringLiteralLike(node) && enKeySet.has(node.text)) {
       result.usedKeys.add(node.text);
     }
@@ -366,6 +382,15 @@ describe("Unused Translation Keys", () => {
     const dynamicKeys: string[] = [];
     const missingKeys: string[] = [];
 
+    // NOTE: The isPotentialTranslationKey check below intentionally skips any
+    // referenced key whose root namespace (the part before the first ".") is
+    // not already present in en.json's rootKeys. This means keys under entirely
+    // new namespaces (e.g. "brand_new_namespace.some_key") will NOT be reported
+    // as missing. This trade-off was chosen to reduce false-positive noise from
+    // string literals that look like translation keys but aren't (config keys,
+    // CSS classes, etc.). It is a known limitation: if a real translation key
+    // is added under a brand-new namespace and no en.json entry exists yet,
+    // this test will not catch it.
     for (const key of Array.from(referencedStaticKeys).sort()) {
       if (enKeySet.has(key)) continue;
       if (!isPotentialTranslationKey(key, rootKeys, enKeySet)) continue;
