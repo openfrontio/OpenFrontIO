@@ -118,17 +118,10 @@ export function renderToggleCard(opts: {
   input?: TemplateResult;
 }): TemplateResult {
   return html`
-    <div
-      role="button"
-      tabindex="0"
+    <button
+      type="button"
       @click=${opts.onClick}
-      @keydown=${(e: KeyboardEvent) => {
-        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          opts.onClick(e);
-        }
-      }}
+      aria-pressed=${opts.checked}
       class="${BASE_CARD} justify-between h-full ${cardStateClasses(
         opts.checked,
         {
@@ -163,7 +156,7 @@ export function renderToggleCard(opts: {
         ? (opts.input ?? html``)
         : html`<div class="h-[2px] w-4 bg-white/10 rounded my-3"></div>`}
       ${renderCardLabel(translateText(opts.labelKey), opts.checked)}
-    </div>
+    </button>
   `;
 }
 

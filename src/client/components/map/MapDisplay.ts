@@ -49,24 +49,13 @@ export class MapDisplay extends LitElement {
     }
   }
 
-  private handleKeydown(event: KeyboardEvent) {
-    // Trigger the same activation logic as click when Enter or Space is pressed
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      // Dispatch a click event to maintain compatibility with parent click handlers
-      (event.target as HTMLElement).click();
-    }
-  }
-
   render() {
     return html`
-      <div
-        role="button"
-        tabindex="0"
-        aria-selected="${this.selected}"
+      <button
+        type="button"
+        aria-pressed="${this.selected}"
         aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
-        @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group active:scale-95 ${cardStateClasses(
+        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border transition-all duration-200 gap-3 group active:scale-95 ${cardStateClasses(
           this.selected,
         )}"
       >
@@ -98,7 +87,7 @@ export class MapDisplay extends LitElement {
             </div>`
           : null}
         ${renderCardLabel(this.translation ?? this.mapName ?? "", true)}
-      </div>
+      </button>
     `;
   }
 

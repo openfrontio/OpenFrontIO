@@ -34,6 +34,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private showAchievements: boolean = false;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   @state() private userMeResponse: UserMeResponse | false = false;
+  @state() private optionsChanged: boolean = false;
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -151,13 +152,16 @@ export class SinglePlayerModal extends BaseModal {
             variant="singleplayer"
             .showAchievements=${this.showAchievements}
             .mapWins=${this.mapWins}
+            @config-changed=${() => {
+              this.optionsChanged =
+                this.configForm?.hasOptionsChanged() ?? false;
+            }}
           ></game-config-form>
         </div>
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20">
-          ${hasLinkedAccount(this.userMeResponse) &&
-          this.configForm?.hasOptionsChanged()
+          ${hasLinkedAccount(this.userMeResponse) && this.optionsChanged
             ? html`<div
                 class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
               >
@@ -190,6 +194,7 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onClose(): void {
     this.configForm?.reset();
+    this.optionsChanged = false;
   }
 
   private async startGame() {

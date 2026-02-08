@@ -114,25 +114,18 @@ export class FluentSlider extends LitElement {
                 }}
                 @keydown=${this.handleNumberKeyDown}
               />`
-            : html`<span
-                class="cursor-pointer min-w-[60px] inline-block text-center text-sm font-bold select-none hover:text-white transition-colors mt-1 ${this
+            : html`<button
+                type="button"
+                class="min-w-[60px] inline-block text-center text-sm font-bold select-none hover:text-white transition-colors mt-1 bg-transparent border-none p-0 ${this
                   .value > 0
                   ? "text-white"
                   : "text-white/60"}"
-                role="button"
-                tabindex="0"
                 @click=${this.enableEditing}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    this.enableEditing();
-                    e.preventDefault();
-                  }
-                }}
               >
                 ${this.value === 0 && this.disabledKey
                   ? translateText(this.disabledKey)
                   : this.value}
-              </span>`}
+              </button>`}
         </div>
       </div>
     `;
