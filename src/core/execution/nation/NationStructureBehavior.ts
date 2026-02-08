@@ -39,6 +39,7 @@ const SAM_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
 /**
  * Returns structure ratios relative to city count, adjusted by difficulty.
  * Cities are always prioritized and built first.
+ * When cities are disabled, we use TILES_PER_CITY_EQUIVALENT. That's not ideal, nations won't properly upgrade structures, but it's better than nothing. Probably 99.9% of players won't disable cities anyway.
  */
 function getStructureRatios(
   difficulty: Difficulty,
@@ -73,11 +74,14 @@ const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
 /** Maximum number of missile silos a nation will build */
 const MAX_MISSILE_SILOS = 3;
 
-/** If we have more than this many structures per 1000 tiles, prefer upgrading over building */
+/** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
 /** Maximum density of defense posts (per tile owned) before no more can be built */
 const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
+
+/** Estimated number of tiles per city equivalent, used when cities are disabled */
+const TILES_PER_CITY_EQUIVALENT = 2000;
 
 export class NationStructureBehavior {
   constructor(
@@ -87,7 +91,14 @@ export class NationStructureBehavior {
   ) {}
 
   handleStructures(): boolean {
-    const cityCount = this.player.unitsOwned(UnitType.City);
+    const config = this.game.config();
+    const citiesDisabled = config.isUnitDisabled(UnitType.City);
+    const cityCount = citiesDisabled
+      ? Math.max(
+          1,
+          Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
+        )
+      : this.player.unitsOwned(UnitType.City);
     const hasCoastalTiles = this.hasCoastalTiles();
 
     // Build order for non-city structures (priority order)
@@ -99,7 +110,6 @@ export class NationStructureBehavior {
       UnitType.MissileSilo,
     ];
 
-    const config = this.game.config();
     const nukesEnabled =
       !config.isUnitDisabled(UnitType.AtomBomb) ||
       !config.isUnitDisabled(UnitType.HydrogenBomb) ||
@@ -107,6 +117,11 @@ export class NationStructureBehavior {
     const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
 
     for (const structureType of buildOrder) {
+      // Skip disabled structure types
+      if (config.isUnitDisabled(structureType)) {
+        continue;
+      }
+
       // Skip ports if no coastal tiles
       if (structureType === UnitType.Port && !hasCoastalTiles) {
         continue;
@@ -135,7 +150,7 @@ export class NationStructureBehavior {
       }
     }
 
-    if (this.maybeSpawnStructure(UnitType.City)) {
+    if (!citiesDisabled && this.maybeSpawnStructure(UnitType.City)) {
       return true;
     }
 
@@ -168,7 +183,11 @@ export class NationStructureBehavior {
     let ratio = config.ratioPerCity;
 
     // Heavily reduce factory spawning if we have coastal tiles
-    if (type === UnitType.Factory && hasCoastalTiles) {
+    if (
+      type === UnitType.Factory &&
+      hasCoastalTiles &&
+      !this.game.config().isUnitDisabled(UnitType.Port)
+    ) {
       ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
     }
 
@@ -230,9 +249,6 @@ export class NationStructureBehavior {
     if (canBuild === false) {
       return false;
     }
-    console.log(
-      `[BUILD] nation=${this.player.name()} type=${type} realCost=${this.cost(type)} perceivedCost=${perceivedCost} gold=${this.player.gold()} owned=${this.player.unitsOwned(type)}`,
-    );
     this.game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
@@ -318,9 +334,6 @@ export class NationStructureBehavior {
       structureToUpgrade !== null &&
       this.player.canUpgradeUnit(structureToUpgrade)
     ) {
-      console.log(
-        `[UPGRADE] nation=${this.player.name()} type=${structureToUpgrade.type()} level=${structureToUpgrade.level()}→${structureToUpgrade.level() + 1} gold=${this.player.gold()} density=${this.getTotalStructureDensity().toFixed(6)}`,
-      );
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
