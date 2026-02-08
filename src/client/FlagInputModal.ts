@@ -73,7 +73,7 @@ export class FlagInputModal extends BaseModal {
                     }}
                   />
                   <span
-                    class="text-xs font-bold text-gray-300 group-hover:text-white text-center leading-tight w-full truncate"
+                    class="text-xs font-bold text-gray-300 group-hover:text-white text-center leading-tight w-full whitespace-normal break-words"
                     >${country.name}</span
                   >
                 </button>

@@ -111,6 +111,7 @@ export enum GameMapType {
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
   Sierpinski = "Sierpinski",
+  TheBox = "The Box",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
@@ -118,6 +119,7 @@ export enum GameMapType {
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
   BosphorusStraits = "Bosphorus Straits",
+  Yenisei = "Yenisei",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -166,6 +168,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
     GameMapType.BosphorusStraits,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -179,6 +182,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
   ],
   arcade: [
+    GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,

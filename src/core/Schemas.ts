@@ -6,6 +6,7 @@ import {
   PatternDataSchema,
   PatternNameSchema,
 } from "./CosmeticSchemas";
+import type { GameEvent } from "./EventBus";
 import {
   AllPlayers,
   Difficulty,
@@ -105,7 +106,8 @@ export type ServerMessage =
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerLobbyInfoMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -115,6 +117,9 @@ export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
+export type ServerLobbyInfoMessage = z.infer<
+  typeof ServerLobbyInfoMessageSchema
+>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -131,6 +136,9 @@ export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
+export type GameInfo = z.infer<typeof GameInfoSchema>;
+export type PublicGames = z.infer<typeof PublicGamesSchema>;
+export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
 
 const ClientInfoSchema = z.object({
   clientID: z.string(),
@@ -140,18 +148,27 @@ const ClientInfoSchema = z.object({
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
-  numClients: z.number().optional(),
-  msUntilStart: z.number().optional(),
+  startsAt: z.number().optional(),
+  serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
 });
 
-export interface GameInfo {
-  gameID: GameID;
-  clients?: ClientInfo[];
-  numClients?: number;
-  msUntilStart?: number;
-  gameConfig?: GameConfig;
+export const PublicGameInfoSchema = z.object({
+  gameID: z.string(),
+  numClients: z.number(),
+  startsAt: z.number(),
+  gameConfig: z.lazy(() => GameConfigSchema).optional(),
+});
+
+export const PublicGamesSchema = z.object({
+  serverTime: z.number(),
+  games: PublicGameInfoSchema.array(),
+});
+
+export class LobbyInfoEvent implements GameEvent {
+  constructor(public lobby: GameInfo) {}
 }
+
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
@@ -212,7 +229,7 @@ export const GameConfigSchema = z.object({
 
 export const TeamSchema = z.string();
 
-const SafeString = z
+export const SafeString = z
   .string()
   .regex(
     /^([a-zA-Z0-9\s.,!?@#$%&*()\-_+=[\]{}|;:"'/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[üÜ])*$/u,
@@ -248,7 +265,7 @@ export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = z
   .string()
-  .regex(/^[a-zA-Z0-9_ [\]üÜ]+$/u)
+  .regex(/^[a-zA-Z0-9_ [\]üÜ.]+$/u)
   .min(3)
   .max(27);
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
@@ -539,6 +556,11 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const ServerLobbyInfoMessageSchema = z.object({
+  type: z.literal("lobby_info"),
+  lobby: GameInfoSchema,
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -546,6 +568,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyInfoMessageSchema,
 ]);
 
 //
