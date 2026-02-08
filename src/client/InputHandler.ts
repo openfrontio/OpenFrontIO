@@ -118,6 +118,10 @@ export class ReplaySpeedChangeEvent implements GameEvent {
   constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }
 
+export class ReplaySeekEvent implements GameEvent {
+  constructor(public readonly targetTurn: number) {}
+}
+
 export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }

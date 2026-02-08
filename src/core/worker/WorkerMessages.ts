@@ -23,7 +23,9 @@ export type WorkerMessageType =
   | "attack_average_position"
   | "attack_average_position_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result";
+  | "transport_ship_spawn_result"
+  | "seek_to_turn"
+  | "seek_complete";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -112,6 +114,16 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
   result: TileRef | false;
 }
 
+export interface SeekToTurnMessage extends BaseWorkerMessage {
+  type: "seek_to_turn";
+  targetTurn: number;
+  turns: Turn[];
+}
+
+export interface SeekCompleteMessage extends BaseWorkerMessage {
+  type: "seek_complete";
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
@@ -121,7 +133,8 @@ export type MainThreadMessage =
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
-  | TransportShipSpawnMessage;
+  | TransportShipSpawnMessage
+  | SeekToTurnMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -131,4 +144,5 @@ export type WorkerMessage =
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage
-  | TransportShipSpawnResultMessage;
+  | TransportShipSpawnResultMessage
+  | SeekCompleteMessage;

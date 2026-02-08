@@ -1,7 +1,8 @@
 import version from "resources/version.txt?raw";
-import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { createGameRunner, GameRunner } from "../GameRunner";
+import { ClientID, GameStartInfo } from "../Schemas";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -9,6 +10,7 @@ import {
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  SeekCompleteMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
@@ -18,9 +20,14 @@ let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 const MAX_TICKS_PER_HEARTBEAT = 4;
 
+// Saved from init so we can re-create the GameRunner during seek.
+let savedGameStartInfo: GameStartInfo | null = null;
+let savedClientID: ClientID | null = null;
+let isSeeking = false;
+
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
-  // skip if ErrorUpdate
-  if (!("updates" in gu)) {
+  // skip if ErrorUpdate or if we're seeking (don't send intermediate updates)
+  if (!("updates" in gu) || isSeeking) {
     return;
   }
   sendMessage({
@@ -38,6 +45,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat": {
+      if (isSeeking) break;
       const gr = await gameRunner;
       if (!gr) {
         break;
@@ -52,6 +60,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     }
     case "init":
       try {
+        savedGameStartInfo = message.gameStartInfo;
+        savedClientID = message.clientID;
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
@@ -179,6 +189,56 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         } as TransportShipSpawnResultMessage);
       } catch (error) {
         console.error("Failed to spawn transport ship:", error);
+      }
+      break;
+    case "seek_to_turn":
+      if (!savedGameStartInfo || !savedClientID) {
+        console.error("Cannot seek: game not initialized");
+        break;
+      }
+
+      try {
+        isSeeking = true;
+        const targetTurn = message.targetTurn;
+        const allTurns = message.turns;
+
+        // Re-create the GameRunner from scratch
+        const newGR = await createGameRunner(
+          savedGameStartInfo,
+          savedClientID,
+          mapLoader,
+          gameUpdate, // updates are suppressed while isSeeking is true
+        );
+
+        // Feed and execute all turns up to the target.
+        // Un-suppress on the very last tick so the callback emits the
+        // final state to the client without adding a spurious extra tick.
+        const turnsToReplay = Math.min(targetTurn, allTurns.length);
+        for (let i = 0; i < turnsToReplay; i++) {
+          if (i === turnsToReplay - 1) {
+            isSeeking = false;
+          }
+          newGR.addTurn(allTurns[i]);
+          newGR.executeNextTick();
+        }
+
+        // Replace the game runner
+        gameRunner = Promise.resolve(newGR);
+        isSeeking = false; // ensure flag is cleared even if turnsToReplay === 0
+
+        // If seeking to turn 0, emit the initial state with an empty tick
+        if (turnsToReplay === 0) {
+          newGR.addTurn({ turnNumber: 0, intents: [] });
+          newGR.executeNextTick();
+        }
+
+        sendMessage({
+          type: "seek_complete",
+          id: message.id,
+        } as SeekCompleteMessage);
+      } catch (error) {
+        isSeeking = false;
+        console.error("Failed to seek:", error);
       }
       break;
     default:

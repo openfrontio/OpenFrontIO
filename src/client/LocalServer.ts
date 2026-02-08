@@ -189,6 +189,31 @@ export class LocalServer {
     this.turnsExecuted++;
   }
 
+  /**
+   * Returns the full list of replay turns from the game record.
+   * Used by the seek system to send all turns to the worker for
+   * deterministic fast-forward.
+   */
+  public getReplayTurns(): Turn[] {
+    return this.replayTurns;
+  }
+
+  /**
+   * Resets internal turn-delivery state so that subsequent endTurn() calls
+   * resume from the given turn number. Called after the worker has completed
+   * a seek and rebuilt its game state up to `targetTurn`.
+   */
+  public seekToTurn(targetTurn: number): void {
+    // Trim `turns` so the next endTurn() will produce turn `targetTurn`.
+    // We keep turns 0..targetTurn-1 (already processed by the worker).
+    this.turns = this.replayTurns
+      .slice(0, targetTurn)
+      .map((t, i) => ({ turnNumber: i, intents: t.intents }));
+    this.turnsExecuted = targetTurn;
+    // Reset timing so the next turn fires immediately.
+    this.turnStartTime = 0;
+  }
+
   // endTurn in this context means the server has collected all the intents
   // and will send the turn to the client.
   private endTurn() {

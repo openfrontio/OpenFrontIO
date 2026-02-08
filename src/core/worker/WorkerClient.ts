@@ -108,6 +108,38 @@ export class WorkerClient {
     });
   }
 
+  seekToTurn(targetTurn: number, turns: Turn[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "seek_complete") {
+          resolve();
+        }
+      });
+
+      this.worker.postMessage({
+        type: "seek_to_turn",
+        id: messageId,
+        targetTurn,
+        turns,
+      });
+
+      // Generous timeout for seeking (large replays can take a while)
+      setTimeout(() => {
+        if (this.messageHandlers.has(messageId)) {
+          this.messageHandlers.delete(messageId);
+          reject(new Error("Seek timeout"));
+        }
+      }, 60000);
+    });
+  }
+
   playerProfile(playerID: number): Promise<PlayerProfile> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {

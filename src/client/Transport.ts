@@ -23,6 +23,7 @@ import {
   Intent,
   ServerMessage,
   ServerMessageSchema,
+  Turn,
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
@@ -396,6 +397,22 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.turnComplete();
     }
+  }
+
+  /**
+   * Returns the replay turns from the local server's game record.
+   * Only valid for local (replay/singleplayer) games.
+   */
+  public getReplayTurns(): Turn[] {
+    return this.localServer.getReplayTurns();
+  }
+
+  /**
+   * Resets the local server's turn-delivery position after a seek.
+   * Only valid for local (replay) games.
+   */
+  public seekToTurn(targetTurn: number): void {
+    this.localServer.seekToTurn(targetTurn);
   }
 
   async joinGame() {

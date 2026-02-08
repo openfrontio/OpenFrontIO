@@ -35,6 +35,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  ReplaySeekEvent,
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
@@ -50,6 +51,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
+import { ReplayPanel } from "./graphics/layers/ReplayPanel";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -256,6 +258,7 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private isSeeking = false;
 
   private turnsSeen = 0;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -349,8 +352,21 @@ export class ClientGameRunner {
       this.doGroundAttackUnderCursor.bind(this),
     );
 
+    this.eventBus.on(ReplaySeekEvent, (e) => this.onReplaySeek(e));
+
     this.renderer.initialize();
     this.input.initialize();
+
+    // Set total replay turns on the seek bar if this is a replay
+    if (this.lobby.gameRecord) {
+      const replayPanel = document.querySelector(
+        "replay-panel",
+      ) as ReplayPanel | null;
+      if (replayPanel) {
+        replayPanel.totalReplayTurns = this.transport.getReplayTurns().length;
+      }
+    }
+
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
@@ -477,6 +493,9 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
+        // Don't queue turns while seeking — the worker is being rebuilt.
+        if (this.isSeeking) return;
+
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
@@ -525,6 +544,34 @@ export class ClientGameRunner {
     if (this.goToPlayerTimeout) {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
+    }
+  }
+
+  private async onReplaySeek(event: ReplaySeekEvent) {
+    if (this.isSeeking) return;
+    if (!this.lobby.gameRecord) return; // Only works for replays
+
+    this.isSeeking = true;
+    try {
+      const replayTurns = this.transport.getReplayTurns();
+      const targetTurn = Math.min(event.targetTurn, replayTurns.length);
+
+      console.log(`Seeking to turn ${targetTurn}/${replayTurns.length}`);
+
+      // Tell the worker to rebuild game state up to the target turn
+      await this.worker.seekToTurn(targetTurn, replayTurns);
+
+      // Reset the local server so it delivers turns from the right position
+      this.transport.seekToTurn(targetTurn);
+
+      // Sync our turn counter
+      this.turnsSeen = targetTurn;
+
+      console.log(`Seek complete, now at turn ${targetTurn}`);
+    } catch (error) {
+      console.error("Seek failed:", error);
+    } finally {
+      this.isSeeking = false;
     }
   }
 
