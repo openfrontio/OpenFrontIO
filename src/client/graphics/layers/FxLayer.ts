@@ -1,7 +1,7 @@
-import { EventBus } from "src/core/EventBus";
-import { TileRef } from "src/core/game/GameMap";
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import { ConquestUpdate, GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";

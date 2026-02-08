@@ -199,7 +199,7 @@ export class RailNetworkImpl implements RailNetwork {
     return editedClusters.size !== 0;
   }
 
-  overlappingRailroads(tile: TileRef) {
+  overlappingRailroads(tile: TileRef): number[] {
     return [...this.railGrid.query(tile, this.stationRadius)].map(
       (railroad: Railroad) => railroad.id,
     );

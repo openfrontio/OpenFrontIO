@@ -8,5 +8,5 @@ export interface RailNetwork {
   removeStation(unit: Unit): void;
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
   stationManager(): StationManager;
-  overlappingRailroads(tile: TileRef);
+  overlappingRailroads(tile: TileRef): number[];
 }

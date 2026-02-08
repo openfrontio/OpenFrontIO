@@ -1,5 +1,5 @@
-import { TileRef } from "src/core/game/GameMap";
-import { GameView } from "src/core/game/GameView";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView } from "../../../core/game/GameView";
 
 export enum RailType {
   VERTICAL,
@@ -16,14 +16,15 @@ export type RailTile = {
 };
 
 export function computeRailTiles(game: GameView, tiles: TileRef[]): RailTile[] {
+  if (tiles.length === 0) return [];
+  if (tiles.length === 1) {
+    return [{ tile: tiles[0], type: RailType.VERTICAL }];
+  }
   const railTypes: RailTile[] = [];
   // Inverse direction computation for the first tile
   railTypes.push({
     tile: tiles[0],
-    type:
-      tiles.length > 0
-        ? computeExtremityDirection(game, tiles[0], tiles[1])
-        : RailType.VERTICAL,
+    type: computeExtremityDirection(game, tiles[0], tiles[1]),
   });
   for (let i = 1; i < tiles.length - 1; i++) {
     const direction = computeDirection(
@@ -36,14 +37,11 @@ export function computeRailTiles(game: GameView, tiles: TileRef[]): RailTile[] {
   }
   railTypes.push({
     tile: tiles[tiles.length - 1],
-    type:
-      tiles.length > 0
-        ? computeExtremityDirection(
-            game,
-            tiles[tiles.length - 1],
-            tiles[tiles.length - 2],
-          )
-        : RailType.VERTICAL,
+    type: computeExtremityDirection(
+      game,
+      tiles[tiles.length - 1],
+      tiles[tiles.length - 2],
+    ),
   });
   return railTypes;
 }
