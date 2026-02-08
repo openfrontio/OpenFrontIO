@@ -338,6 +338,9 @@ export class GameImpl implements Game {
     if (recipient.hasEmbargoAgainst(requestor))
       recipient.endTemporaryEmbargo(requestor);
 
+    // Cancel incoming nukes between players
+    this.cancelNukesBetweenAlliedPlayers(requestor, recipient);
+
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -357,6 +360,53 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: false,
     });
+  }
+
+  private cancelNukesBetweenAlliedPlayers(p1: Player, p2: Player): void {
+    const neutralized = new Map<Player, number>();
+
+    const players = [p1, p2];
+
+    for (const launcher of players) {
+      for (const unit of launcher.units(
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      )) {
+        if (!unit.isActive() || unit.reachedTarget()) continue;
+
+        const targetTile = unit.targetTile();
+        if (!targetTile) continue;
+
+        const targetOwner = this.owner(targetTile);
+        if (!targetOwner.isPlayer()) continue;
+
+        const other = launcher === p1 ? p2 : p1;
+        if (targetOwner !== other) continue;
+
+        unit.delete(false);
+        neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
+      }
+    }
+
+    for (const [launcher, count] of neutralized) {
+      const other = launcher === p1 ? p2 : p1;
+
+      this.displayMessage(
+        "events_display.alliance_nukes_destroyed_outgoing",
+        MessageType.ALLIANCE_ACCEPTED,
+        launcher.id(),
+        undefined,
+        { name: other.displayName(), count },
+      );
+
+      this.displayMessage(
+        "events_display.alliance_nukes_destroyed_incoming",
+        MessageType.ALLIANCE_ACCEPTED,
+        other.id(),
+        undefined,
+        { name: launcher.displayName(), count },
+      );
+    }
   }
 
   hasPlayer(id: PlayerID): boolean {
