@@ -386,32 +386,36 @@ describe("Unused Translation Keys", () => {
       }
     }
 
-    if (derivedDynamicPatterns.length > 0) {
-      console.log(
-        `\nDerived dynamic patterns (${derivedDynamicPatterns.length}):\n` +
-          derivedDynamicPatterns.map((p) => `  ${p.source}`).join("\n"),
-      );
-    }
+    const hasFailing = missingKeys.length > 0 || unusedKeys.length > 0;
 
-    if (dynamicKeys.length > 0) {
-      console.log(
-        `\nDynamically referenced keys (${dynamicKeys.length}) - verify manually:\n` +
-          dynamicKeys.map((k) => `  ${k}`).join("\n"),
-      );
-    }
+    if (hasFailing) {
+      if (derivedDynamicPatterns.length > 0) {
+        console.log(
+          `\nDerived dynamic patterns (${derivedDynamicPatterns.length}):\n` +
+            derivedDynamicPatterns.map((p) => `  ${p.source}`).join("\n"),
+        );
+      }
 
-    if (missingKeys.length > 0) {
-      console.error(
-        `\nMissing translation keys in en.json (${missingKeys.length}):\n` +
-          missingKeys.map((k) => `  ${k}`).join("\n"),
-      );
-    }
+      if (dynamicKeys.length > 0) {
+        console.log(
+          `\nDynamically referenced keys (${dynamicKeys.length}) - verify manually:\n` +
+            dynamicKeys.map((k) => `  ${k}`).join("\n"),
+        );
+      }
 
-    if (unusedKeys.length > 0) {
-      console.error(
-        `\nUnused translation keys (${unusedKeys.length}):\n` +
-          unusedKeys.map((k) => `  ${k}`).join("\n"),
-      );
+      if (missingKeys.length > 0) {
+        console.error(
+          `\nMissing translation keys in en.json (${missingKeys.length}):\n` +
+            missingKeys.map((k) => `  ${k}`).join("\n"),
+        );
+      }
+
+      if (unusedKeys.length > 0) {
+        console.error(
+          `\nUnused translation keys (${unusedKeys.length}):\n` +
+            unusedKeys.map((k) => `  ${k}`).join("\n"),
+        );
+      }
     }
 
     expect(missingKeys).toEqual([]);
