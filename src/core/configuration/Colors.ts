@@ -31,11 +31,9 @@ function generateTeamColors(baseColor: Colord): Colord[] {
   return Array.from({ length: colorCount }, (_, index) => {
     if (index === 0) return baseColor;
 
-    // Golden angle hue distribution clamped to ±12° to preserve team identity
-    const rawHueOffset = (index * goldenAngle) % 360;
-    const hueShift = ((rawHueOffset + 180) % 360) - 180;
-    const clampedShift = Math.max(-12, Math.min(12, hueShift));
-    const h = (lch.h + clampedShift + 360) % 360;
+    // Spread hues evenly across ±12° band using golden angle within that range
+    const hueShift = ((index * goldenAngle) % 24) - 12;
+    const h = (lch.h + hueShift + 360) % 360;
 
     // Chroma oscillates ±10% around the base to add variety without washing out
     const chromaFactor = 1.0 + 0.1 * Math.sin(index * 0.7);
