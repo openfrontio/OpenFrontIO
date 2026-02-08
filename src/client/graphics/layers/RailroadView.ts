@@ -141,7 +141,7 @@ export class RailroadView {
       // Animation complete, no tiles need to be painted
       return [];
     }
-    return this.railTiles.slice(this.headIndex + 1, this.tailIndex);
+    return this.railTiles.slice(this.headIndex, this.tailIndex);
   }
 
   drawnTiles(): RailTile[] {
@@ -149,28 +149,31 @@ export class RailroadView {
       // Animation complete, every tiles have been painted
       return this.tiles();
     }
-    const drawnTiles = [
-      ...this.railTiles.slice(0, this.headIndex),
-      ...this.railTiles.slice(this.tailIndex),
-    ];
+    let drawnTiles = this.railTiles.slice(0, this.headIndex);
+    drawnTiles = drawnTiles.concat(this.railTiles.slice(this.tailIndex));
     return drawnTiles;
   }
 
-  // Slowly add a few tiles each ticks
   tick(): RailTile[] {
     if (this.isComplete()) return [];
-
-    const remaining = this.tailIndex - this.headIndex;
-    const step = Math.min(this.increment, Math.ceil(remaining / 2));
-
-    const tiles = [
-      ...this.railTiles.slice(this.headIndex, this.headIndex + step),
-      ...this.railTiles.slice(this.tailIndex - step, this.tailIndex),
-    ];
-
-    this.headIndex = Math.min(this.headIndex + step, this.tailIndex);
-    this.tailIndex = Math.max(this.tailIndex - step, this.headIndex);
-
-    return tiles;
+    let updatedRailTiles: RailTile[];
+    // Check if remaining tiles can be done all at once
+    if (this.tailIndex - this.headIndex <= 2 * this.increment) {
+      updatedRailTiles = this.railTiles.slice(this.headIndex, this.tailIndex);
+    } else {
+      updatedRailTiles = [
+        ...this.railTiles.slice(
+          this.headIndex,
+          this.headIndex + this.increment,
+        ),
+        ...this.railTiles.slice(
+          this.tailIndex - this.increment,
+          this.tailIndex,
+        ),
+      ];
+    }
+    this.headIndex = Math.min(this.headIndex + this.increment, this.tailIndex);
+    this.tailIndex = Math.max(this.tailIndex - this.increment, this.headIndex);
+    return updatedRailTiles;
   }
 }

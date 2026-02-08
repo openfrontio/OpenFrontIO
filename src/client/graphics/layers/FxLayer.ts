@@ -11,6 +11,7 @@ import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { RailTileChangedEvent } from "./RailroadLayer";
 export class FxLayer implements Layer {
@@ -29,6 +30,7 @@ export class FxLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
+    private transformHandler: TransformHandler,
   ) {
     this.theme = this.game.config().theme();
   }
