@@ -100,8 +100,9 @@ export default defineConfig(({ mode }) => {
       minify: isProduction ? "terser" : false,
       ...(isProduction && {
         terserOptions: {
-          compress: { passes: 2 },
-          mangle: true,
+          toplevel: true, // Mangle top-level names and drop unused top-level vars/functions
+          compress: { passes: 3 },
+          mangle: { toplevel: true }, // Shorten top-level function/variable names
           format: {
             comments: false,
           },
