@@ -22,7 +22,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord, generateID, getClanTag } from "../core/Util";
+import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -172,24 +172,13 @@ export class GameServer {
     return clientID;
   }
 
-  // Get existing clientID or create a new one for this persistentID
-  // Returns null if this persistentID has been kicked
-  public getOrCreateClientId(persistentID: string): ClientID | null {
-    const existingClientID = this.getClientIdForPersistentId(persistentID);
-    if (existingClientID) {
-      return existingClientID;
+  public joinClient(client: Client): "joined" | "kicked" | "rejected" {
+    if (this.kickedPersistentIds.has(client.persistentID)) {
+      return "kicked";
     }
-    if (this.kickedPersistentIds.has(persistentID)) {
-      return null;
-    }
-    // Generate new clientID for new player
-    const newClientID = generateID();
-    this.persistentIdToClientId.set(persistentID, newClientID);
-    return newClientID;
-  }
 
-  public joinClient(client: Client) {
     this.websockets.add(client.ws);
+    this.persistentIdToClientId.set(client.persistentID, client.clientID);
 
     if (
       this.gameConfig.maxPlayers &&
@@ -205,7 +194,7 @@ export class GameServer {
           error: "full-lobby",
         } satisfies ServerErrorMessage),
       );
-      return;
+      return "rejected";
     }
 
     this.log.info("client joining game", {
@@ -224,7 +213,7 @@ export class GameServer {
         clientID: client.clientID,
         clientIP: ipAnonymize(client.ip),
       });
-      return;
+      return "rejected";
     }
 
     if (this.config.env() === GameEnv.Prod) {
@@ -260,6 +249,8 @@ export class GameServer {
     if (this._hasStarted) {
       this.sendStartGameMsg(client.ws, 0);
     }
+
+    return "joined";
   }
 
   // Attempt to reconnect a client by persistentID. Returns true if successful.

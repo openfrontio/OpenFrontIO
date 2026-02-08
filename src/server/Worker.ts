@@ -436,22 +436,9 @@ export async function startWorker() {
           }
         }
 
-        // Get or create clientID for this persistentID after authorization succeeds
-        // Server is authoritative over clientID assignment
-        const clientID = gm.getOrCreateClientId(clientMsg.gameID, persistentId);
-        if (clientID === null) {
-          // Could be game not found OR user was kicked - don't reveal which
-          log.warn(`client cannot join game ${clientMsg.gameID}`, {
-            gameID: clientMsg.gameID,
-            workerId,
-          });
-          ws.close(1002, "Cannot join game");
-          return;
-        }
-
         // Create client and add to game
         const client = new Client(
-          clientID,
+          generateID(),
           persistentId,
           claims,
           roles,
@@ -462,11 +449,17 @@ export async function startWorker() {
           cosmeticResult.cosmetics,
         );
 
-        const wasFound = gm.joinClient(client, clientMsg.gameID);
+        const joinResult = gm.joinClient(client, clientMsg.gameID);
 
-        if (!wasFound) {
+        if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
           ws.close(1002, "Game not found");
+        } else if (joinResult === "kicked") {
+          log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Cannot join game");
         }
 
         // Handle other message types

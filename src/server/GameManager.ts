@@ -32,20 +32,13 @@ export class GameManager {
     );
   }
 
-  // Get or create a clientID for this persistentID in the given game
-  getOrCreateClientId(gameID: GameID, persistentID: string): string | null {
+  joinClient(
+    client: Client,
+    gameID: GameID,
+  ): "joined" | "kicked" | "rejected" | "not_found" {
     const game = this.games.get(gameID);
-    if (!game) return null;
-    return game.getOrCreateClientId(persistentID);
-  }
-
-  joinClient(client: Client, gameID: GameID): boolean {
-    const game = this.games.get(gameID);
-    if (game) {
-      game.joinClient(client);
-      return true;
-    }
-    return false;
+    if (!game) return "not_found";
+    return game.joinClient(client);
   }
 
   rejoinClient(
