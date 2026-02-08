@@ -211,26 +211,20 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         );
 
         // Feed and execute all turns up to the target.
-        // Un-suppress on the very last tick so the callback emits the
-        // final state to the client without adding a spurious extra tick.
+        // isSeeking stays true so no intermediate updates are sent.
         const turnsToReplay = Math.min(targetTurn, allTurns.length);
         for (let i = 0; i < turnsToReplay; i++) {
-          if (i === turnsToReplay - 1) {
-            isSeeking = false;
-          }
           newGR.addTurn(allTurns[i]);
           newGR.executeNextTick();
         }
 
-        // Replace the game runner
+        // Replace the game runner and clear the seeking flag
         gameRunner = Promise.resolve(newGR);
-        isSeeking = false; // ensure flag is cleared even if turnsToReplay === 0
+        isSeeking = false;
 
-        // If seeking to turn 0, emit the initial state with an empty tick
-        if (turnsToReplay === 0) {
-          newGR.addTurn({ turnNumber: 0, intents: [] });
-          newGR.executeNextTick();
-        }
+        // Emit a full-state update (ALL tiles, not just the last tick's
+        // deltas) so the client view is fully synchronised.
+        newGR.emitFullState();
 
         sendMessage({
           type: "seek_complete",

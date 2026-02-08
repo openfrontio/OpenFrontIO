@@ -181,6 +181,48 @@ export class GameRunner {
     return true;
   }
 
+  /**
+   * Emits a full game-state update with ALL tiles packed, not just deltas.
+   * Used after a seek to synchronise the client view with the complete map.
+   */
+  public emitFullState(): void {
+    // Build name data for every player
+    this.game.players().forEach((p) => {
+      this.playerViewData[p.id()] = placeName(this.game, p);
+    });
+
+    // Run one normal tick to collect player/unit/alliance updates, etc.
+    this.addTurn({ turnNumber: this.currTurn, intents: [] });
+    const ran = this.executeNextTick();
+    if (!ran) {
+      return;
+    }
+    // The callback already fired with only the last tick's tile deltas.
+    // Now we need to send a SECOND update that contains every tile on the map
+    // so the client view is fully synchronised.
+    const allTileUpdates: bigint[] = [];
+    this.game.forEachTile((tile: TileRef) => {
+      allTileUpdates.push(this.game.toTileUpdate(tile));
+    });
+
+    // Build an empty updates map (no player/unit changes — those were
+    // already sent in the tick above).
+    const emptyUpdates = {} as GameUpdates;
+    Object.values(GameUpdateType)
+      .filter((key) => !isNaN(Number(key)))
+      .forEach((key) => {
+        emptyUpdates[key as GameUpdateType] = [];
+      });
+
+    this.callBack({
+      tick: this.game.ticks(),
+      packedTileUpdates: new BigUint64Array(allTileUpdates),
+      updates: emptyUpdates,
+      playerNameViewData: this.playerViewData,
+      tickExecutionDuration: 0,
+    });
+  }
+
   public pendingTurns(): number {
     return Math.max(0, this.turns.length - this.currTurn);
   }
