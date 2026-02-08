@@ -177,9 +177,6 @@ export class GameServer {
       return "kicked";
     }
 
-    this.websockets.add(client.ws);
-    this.persistentIdToClientId.set(client.persistentID, client.clientID);
-
     if (
       this.gameConfig.maxPlayers &&
       this.activeClients.length >= this.gameConfig.maxPlayers
@@ -238,6 +235,8 @@ export class GameServer {
     }
 
     // Client connection accepted
+    this.websockets.add(client.ws);
+    this.persistentIdToClientId.set(client.persistentID, client.clientID);
     this.activeClients.push(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);

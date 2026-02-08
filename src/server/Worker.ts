@@ -460,6 +460,12 @@ export async function startWorker() {
             workerId,
           });
           ws.close(1002, "Cannot join game");
+        } else if (joinResult === "rejected") {
+          log.info(`client rejected from game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Lobby full");
         }
 
         // Handle other message types
