@@ -32,20 +32,20 @@ export class BreakAllianceExecution implements Execution {
     }
     const alliance = this.requestor.allianceWith(this.recipient);
     if (alliance === null) {
-      console.warn("cant break alliance, not allied");
-    } else {
-      this.requestor.breakAlliance(alliance);
-      this.recipient.updateRelation(this.requestor, -100);
+      this.active = false;
+      return;
+    }
+    this.requestor.breakAlliance(alliance);
+    this.recipient.updateRelation(this.requestor, -100);
 
-      const neighbors = this.requestor
-        .neighbors()
-        .filter(
-          (n): n is Player => n.isPlayer() && !n.isOnSameTeam(this.recipient!),
-        );
+    const neighbors = this.requestor
+      .neighbors()
+      .filter(
+        (n): n is Player => n.isPlayer() && !n.isOnSameTeam(this.recipient!),
+      );
 
-      for (const neighbor of neighbors) {
-        neighbor.updateRelation(this.requestor, -40);
-      }
+    for (const neighbor of neighbors) {
+      neighbor.updateRelation(this.requestor, -40);
     }
     this.active = false;
   }

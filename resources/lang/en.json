@@ -481,6 +481,8 @@
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
+    "confirm_break_alliance_label": "Confirm Before Breaking Alliance",
+    "confirm_break_alliance_desc": "When enabled, a confirmation popup appears before you break an alliance.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",
@@ -797,6 +799,11 @@
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "lobby_creator": "Kicked by lobby creator"
+  },
+  "confirm_break_alliance": {
+    "title": "Break Alliance?",
+    "message": "Are you sure you want to break your alliance with {name}? This will mark you as a traitor and pause trade.",
+    "confirm": "Break Alliance"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",

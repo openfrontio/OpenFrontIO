@@ -10,6 +10,7 @@ import {
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { PlayerView } from "../core/game/GameView";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -42,6 +43,20 @@ export class SendAllianceRequestIntentEvent implements GameEvent {
 }
 
 export class SendBreakAllianceIntentEvent implements GameEvent {
+  constructor(
+    public readonly requestor: PlayerView,
+    public readonly recipient: PlayerView,
+  ) {}
+}
+
+export class RequestConfirmBreakAllianceEvent implements GameEvent {
+  constructor(
+    public readonly requestor: PlayerView,
+    public readonly recipient: PlayerView,
+  ) {}
+}
+
+export class ConfirmedBreakAllianceIntentEvent implements GameEvent {
   constructor(
     public readonly requestor: PlayerView,
     public readonly recipient: PlayerView,
@@ -194,6 +209,7 @@ export class Transport {
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
+    private userSettings?: UserSettings,
   ) {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.
@@ -210,8 +226,17 @@ export class Transport {
     this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
     );
-    this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
-      this.onBreakAllianceRequestUIEvent(e),
+    this.eventBus.on(SendBreakAllianceIntentEvent, (e) => {
+      if (this.userSettings?.confirmBreakAlliance()) {
+        this.eventBus.emit(
+          new RequestConfirmBreakAllianceEvent(e.requestor, e.recipient),
+        );
+      } else {
+        this.sendBreakAllianceIntent(e.recipient.id());
+      }
+    });
+    this.eventBus.on(ConfirmedBreakAllianceIntentEvent, (e) =>
+      this.sendBreakAllianceIntent(e.recipient.id()),
     );
     this.eventBus.on(SendSpawnIntentEvent, (e) =>
       this.onSendSpawnIntentEvent(e),
@@ -457,11 +482,11 @@ export class Transport {
     });
   }
 
-  private onBreakAllianceRequestUIEvent(event: SendBreakAllianceIntentEvent) {
+  private sendBreakAllianceIntent(recipientId: string) {
     this.sendIntent({
       type: "breakAlliance",
       clientID: this.lobbyConfig.clientID,
-      recipient: event.recipient.id(),
+      recipient: recipientId,
     });
   }
 

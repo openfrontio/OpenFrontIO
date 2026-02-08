@@ -297,6 +297,13 @@ export class UserSettingModal extends BaseModal {
     console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
   }
 
+  private toggleConfirmBreakAlliance(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.confirmBreakAlliance", enabled);
+  }
+
   private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -810,6 +817,16 @@ export class UserSettingModal extends BaseModal {
         id="alert-frame-toggle"
         .checked=${this.userSettings.alertFrame()}
         @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
+      <!-- ⚠️ Confirm break alliance -->
+      <setting-toggle
+        label="${translateText("user_setting.confirm_break_alliance_label")}"
+        description="${translateText(
+          "user_setting.confirm_break_alliance_desc",
+        )}"
+        .checked=${this.userSettings.confirmBreakAlliance()}
+        @change=${this.toggleConfirmBreakAlliance}
       ></setting-toggle>
 
       <!-- 💥 Special effects -->
