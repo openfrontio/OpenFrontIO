@@ -363,6 +363,7 @@
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
+    "players_per_team": "of {num}",
     "started": "Started",
     "status": "Status",
     "join_timeout": "You didn't enter the game in time."
