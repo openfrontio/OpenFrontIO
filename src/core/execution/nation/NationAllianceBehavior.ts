@@ -143,10 +143,16 @@ export class NationAllianceBehavior {
       return false;
     }
 
-    const totalPlayers = this.game.players().length;
+    const totalPlayers = this.game
+      .players()
+      .filter((p) => p.type() !== PlayerType.Bot).length;
     const otherPlayerAlliances = otherPlayer.alliances().length;
 
-    return otherPlayerAlliances >= totalPlayers * 0.5;
+    if (difficulty !== Difficulty.Hard) {
+      return otherPlayerAlliances >= totalPlayers * 0.5;
+    } else {
+      return otherPlayerAlliances >= totalPlayers * 0.25;
+    }
   }
 
   private isConfused(): boolean {

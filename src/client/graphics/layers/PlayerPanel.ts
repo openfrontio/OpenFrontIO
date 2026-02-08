@@ -37,12 +37,14 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import "./PlayerModerationModal";
 import "./SendResourceModal";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
+import shieldIcon from "/images/ShieldIconWhite.svg?url";
 import stopTradingIcon from "/images/StopIconWhite.png?url";
 import targetIcon from "/images/TargetIconWhite.svg?url";
 import startTradingIcon from "/images/TradingIconWhite.png?url";
@@ -59,6 +61,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
+  private kickedPlayerIDs = new Set<string>();
 
   @state() private sendTarget: PlayerView | null = null;
   @state() private sendMode: "troops" | "gold" | "none" = "none";
@@ -67,6 +70,7 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
   @state() private suppressNextHide: boolean = false;
+  @state() private moderationTarget: PlayerView | null = null;
 
   private ctModal: ChatModal;
 
@@ -142,6 +146,7 @@ export class PlayerPanel extends LitElement implements Layer {
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
     this.tile = tile;
+    this.moderationTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -156,6 +161,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.tile = tile;
     this.sendTarget = target;
     this.sendMode = "gold";
+    this.moderationTarget = null;
     this.isVisible = true;
     this.requestUpdate();
   }
@@ -164,6 +170,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.isVisible = false;
     this.sendMode = "none";
     this.sendTarget = null;
+    this.moderationTarget = null;
     this.requestUpdate();
   }
 
@@ -305,6 +312,23 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private openModeration(e: MouseEvent, other: PlayerView) {
+    e.stopPropagation();
+    this.suppressNextHide = true;
+    this.moderationTarget = other;
+  }
+
+  private closeModeration = () => {
+    this.moderationTarget = null;
+  };
+
+  private handleModerationKicked = (e: CustomEvent<{ playerId?: string }>) => {
+    const playerId = e.detail?.playerId;
+    if (playerId) this.kickedPlayerIDs.add(String(playerId));
+    this.closeModeration();
+    this.hide();
+  };
+
   private handleToggleRocketDirection(e: Event) {
     e.stopPropagation();
     const next = !this.uiState.rocketDirectionUp;
@@ -415,6 +439,25 @@ export class PlayerPanel extends LitElement implements Layer {
                 </span>`
             : ""}
         </span>
+      </div>
+    `;
+  }
+
+  private renderModeration(my: PlayerView, other: PlayerView) {
+    if (!my.isLobbyCreator()) return html``;
+    const moderationTitle = translateText("player_panel.moderation");
+
+    return html`
+      <ui-divider></ui-divider>
+      <div class="grid auto-cols-fr grid-flow-col gap-1">
+        ${actionButton({
+          onClick: (e: MouseEvent) => this.openModeration(e, other),
+          icon: shieldIcon,
+          iconAlt: "Moderation",
+          title: moderationTitle,
+          label: moderationTitle,
+          type: "red",
+        })}
       </div>
     `;
   }
@@ -804,6 +847,7 @@ export class PlayerPanel extends LitElement implements Layer {
               })}
             </div>`
           : ""}
+        ${this.renderModeration(my, other)}
       </div>
     `;
   }
@@ -912,6 +956,21 @@ export class PlayerPanel extends LitElement implements Layer {
                             @confirm=${this.confirmSend}
                             @close=${this.closeSend}
                           ></send-resource-modal>
+                        `
+                      : ""}
+                    ${this.moderationTarget
+                      ? html`
+                          <player-moderation-modal
+                            .open=${true}
+                            .myPlayer=${my}
+                            .target=${this.moderationTarget}
+                            .eventBus=${this.eventBus}
+                            .alreadyKicked=${this.kickedPlayerIDs.has(
+                              String(this.moderationTarget.id()),
+                            )}
+                            @close=${this.closeModeration}
+                            @kicked=${this.handleModerationKicked}
+                          ></player-moderation-modal>
                         `
                       : ""}
 

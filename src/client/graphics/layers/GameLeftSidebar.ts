@@ -16,8 +16,11 @@ export class GameLeftSidebar extends LitElement implements Layer {
   private isLeaderboardShow = false;
   @state()
   private isTeamLeaderboardShow = false;
+  @state()
   private isVisible = false;
+  @state()
   private isPlayerTeamLabelVisible = false;
+  @state()
   private playerTeam: string | null = null;
 
   private playerColor: Colord = new Colord("#FFFFFF");
@@ -59,7 +62,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
       this.requestUpdate();
     }
 
-    if (!this.game.inSpawnPhase()) {
+    if (!this.game.inSpawnPhase() && this.isPlayerTeamLabelVisible) {
       this.isPlayerTeamLabelVisible = false;
       this.requestUpdate();
     }
@@ -91,10 +94,65 @@ export class GameLeftSidebar extends LitElement implements Layer {
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
+        <div class="flex items-center gap-4 xl:gap-6 text-white">
+          <div
+            class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+            @click=${this.toggleLeaderboard}
+            role="button"
+            tabindex="0"
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                e.preventDefault();
+                this.toggleLeaderboard();
+              }
+            }}
+          >
+            <img
+              src=${this.isLeaderboardShow
+                ? leaderboardSolidIcon
+                : leaderboardRegularIcon}
+              alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
+              "Player Leaderboard Icon"}
+              width="20"
+              height="20"
+            />
+          </div>
+          ${this.isTeamGame
+            ? html`
+                <div
+                  class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+                  @click=${this.toggleTeamLeaderboard}
+                  role="button"
+                  tabindex="0"
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (
+                      e.key === "Enter" ||
+                      e.key === " " ||
+                      e.code === "Space"
+                    ) {
+                      e.preventDefault();
+                      this.toggleTeamLeaderboard();
+                    }
+                  }}
+                >
+                  <img
+                    src=${this.isTeamLeaderboardShow
+                      ? teamSolidIcon
+                      : teamRegularIcon}
+                    alt=${translateText(
+                      "help_modal.icon_alt_team_leaderboard",
+                    ) || "Team Leaderboard Icon"}
+                    width="20"
+                    height="20"
+                  />
+                </div>
+              `
+            : null}
+        </div>
         ${this.isPlayerTeamLabelVisible
           ? html`
               <div
-                class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
+                class="flex items-center w-full text-white"
                 @contextmenu=${(e: Event) => e.preventDefault()}
               >
                 ${translateText("help_modal.ui_your_team")}
@@ -108,39 +166,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
             `
           : null}
         <div
-          class=${`flex items-center gap-2 text-white ${
-            this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
-          }`}
+          class=${`block lg:flex flex-wrap ${this.isLeaderboardShow && this.isTeamLeaderboardShow ? "gap-2" : ""}`}
         >
-          <div class="cursor-pointer" @click=${this.toggleLeaderboard}>
-            <img
-              src=${this.isLeaderboardShow
-                ? leaderboardSolidIcon
-                : leaderboardRegularIcon}
-              alt="treeIcon"
-              width="20"
-              height="20"
-            />
-          </div>
-          ${this.isTeamGame
-            ? html`
-                <div
-                  class="cursor-pointer"
-                  @click=${this.toggleTeamLeaderboard}
-                >
-                  <img
-                    src=${this.isTeamLeaderboardShow
-                      ? teamSolidIcon
-                      : teamRegularIcon}
-                    alt="treeIcon"
-                    width="20"
-                    height="20"
-                  />
-                </div>
-              `
-            : null}
-        </div>
-        <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
             class="flex-1"

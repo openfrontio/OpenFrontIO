@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "copy": "Copy",
     "back": "Back",
     "available": "Available",
     "preset_max": "Max",
@@ -20,7 +21,8 @@
     "target_dead_note": "You can't send resources to an eliminated player.",
     "none": "None",
     "copied": "Copied!",
-    "click_to_copy": "Click to copy"
+    "click_to_copy": "Click to copy",
+    "enabled": "Enabled"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -45,19 +47,54 @@
     "play": "Play",
     "news": "News",
     "store": "Store",
+    "store_new_badge": "NEW",
     "settings": "Settings",
     "keys": "Keys",
     "stats": "Stats",
+    "leaderboard": "Leaderboard",
     "account": "Account",
     "help": "Help",
     "menu": "Menu",
+    "troubleshooting": "Troubleshooting",
+    "go_to_troubleshooting": "Go to our troubleshooting page",
     "pick_pattern": "Pick a pattern!"
   },
   "news": {
     "github_link": "on GitHub",
     "title": "Release Notes"
   },
+  "troubleshooting": {
+    "title": "Troubleshooting",
+    "loading": "Loading...",
+    "environment": "Environment",
+    "rendering": "Rendering",
+    "power": "Power",
+    "browser": "Browser",
+    "platform": "Platform",
+    "copied_to_clipboard": "Info copied to the clipboard! Feel free to share it on our Discord if you need help.",
+    "os": "OS",
+    "device_pixel_ratio": "Device Pixel Ratio",
+    "chromium_tip": "OpenFront runs best on Chromium-based browsers.",
+    "hardware_acceleration_tip": "Make sure hardware acceleration is enabled in your browser settings for optimal performance.",
+    "renderer": "Renderer",
+    "max_texture_size": "Max Texture Size",
+    "high_precision_shaders": "High Precision Shaders",
+    "gpu": "GPU",
+    "unavailable": "Unavailable",
+    "gpu_tip": "Verify that this is the dedicated GPU, if one is available.",
+    "battery": "Battery",
+    "charging": "Charging",
+    "battery_level": "Battery Level",
+    "power_saving_tip": "Make sure that your browser is not set to power saving mode.",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": "Unknown",
+    "software_rendering": "Software rendering",
+    "canvas_2d_no_gpu": "Canvas 2D (no GPU)"
+  },
   "help_modal": {
+    "video_tutorial": "Video Tutorial",
+    "video_tutorial_title": "OpenFront.io Tutorial",
     "hotkeys": "Hotkeys",
     "table_key": "Key",
     "table_action": "Action",
@@ -141,6 +178,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "The most powerful bomb in the game. Splits up into smaller bombs that will cover a huge range of territory. Only damages the player that you first clicked on to build it. Spawns from the nearest Missile Silo and lands in the area you first clicked to build it.",
     "player_icons": "Player icons",
+    "troubleshooting_desc": "If you experience performance issues, crashes, or other problems while playing OpenFront, please visit our Troubleshooting page for help diagnosing and fixing common issues:",
     "icon_desc": "Examples of some of the ingame icons you will encounter and what they mean:",
     "icon_crown": "Crown - Number 1. This is the top player in the leaderboard.",
     "icon_traitor": "Broken shield - Traitor. This player attacked an ally.",
@@ -149,7 +187,9 @@
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
     "info_enemy_panel": "Enemy info panel",
     "exit_confirmation": "Are you sure you want to exit the game?",
-    "bomb_direction": "Atom / Hydrogen bomb arc direction"
+    "bomb_direction": "Atom / Hydrogen bomb arc direction",
+    "icon_alt_player_leaderboard": "Player Leaderboard Icon",
+    "icon_alt_team_leaderboard": "Team Leaderboard Icon"
   },
   "single_modal": {
     "title": "Solo",
@@ -166,12 +206,14 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "max_timer": "Game length (minutes)",
     "max_timer_placeholder": "Mins",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game",
+    "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting gold",
@@ -201,15 +243,21 @@
     "enter_email_address": "Please enter an email address",
     "personal_player_id": "Personal Player ID:"
   },
-  "stats_modal": {
-    "title": "Stats",
+  "leaderboard_modal": {
+    "title": "Leaderboard",
+    "title_plural": "Leaderboards",
     "clan_stats": "Clan Stats",
+    "player_stats": "1v1 Ranked Stats",
+    "ranked_tab": "1v1 Ranked",
+    "clans_tab": "Clans",
     "loading": "Loading...",
-    "error": "Error loading clan stats",
-    "no_stats": "No clan stats available",
+    "error": "Error loading leaderboard",
+    "no_stats": "No stats available",
     "no_data_yet": "No Data Yet",
     "clan": "Clan",
+    "player": "Player",
     "games": "Games",
+    "elo": "ELO",
     "win_score": "Win Score",
     "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "loss_score": "Loss Score",
@@ -217,7 +265,8 @@
     "win_loss_ratio": "Win/Loss",
     "ratio": "Ratio",
     "rank": "Rank",
-    "try_again": "Try Again"
+    "try_again": "Try Again",
+    "your_ranking": "Your Ranking"
   },
   "game_info_modal": {
     "title": "Game info",
@@ -233,7 +282,8 @@
     "naval_trade": "Tradeship",
     "conquest_gold": "Conquered player gold",
     "stolen_gold": "Stolen with warships",
-    "num_of_conquests": "Number of conquered players",
+    "num_of_conquests_humans": "Player kills",
+    "num_of_conquests_bots": "Bot kills",
     "duration": "Duration",
     "survival_time": "Survival time",
     "war": "War",
@@ -246,6 +296,8 @@
   },
   "map": {
     "map": "Map",
+    "featured": "Featured",
+    "all": "All",
     "world": "World",
     "giantworldmap": "Giant World Map",
     "europe": "Europe",
@@ -288,6 +340,7 @@
     "manicouagan": "Manicouagan",
     "lemnos": "Lemnos",
     "sierpinski": "Sierpinski",
+    "thebox": "The Box",
     "twolakes": "Two Lakes",
     "straitofhormuz": "Strait of Hormuz",
     "surrounded": "Surrounded",
@@ -296,6 +349,7 @@
     "amazonriver": "Amazon River"
   },
   "map_categories": {
+    "featured": "Featured",
     "continental": "Continental",
     "regional": "Regional",
     "fantasy": "Other",
@@ -320,18 +374,23 @@
     "disabled_units": "Disabled Units"
   },
   "public_lobby": {
+    "title": "Waiting for Game Start...",
     "join": "Join next Game",
     "waiting": "players waiting",
     "teams_Duos": "{team_count} teams of 2 (Duos)",
     "teams_Trios": "{team_count} teams of 3 (Trios)",
     "teams_Quads": "{team_count} teams of 4 (Quads)",
     "waiting_for_players": "Waiting for players",
+    "connecting": "Connecting to lobby...",
+    "starting_in": "Starting in {time}",
     "starting_game": "Starting game…",
     "teams_hvn": "Humans vs Nations",
     "teams_hvn_detailed": "{num} Humans vs {num} Nations",
     "teams": "{num} teams",
     "players_per_team": "of {num}",
-    "started": "Started"
+    "started": "Started",
+    "status": "Status",
+    "join_timeout": "You didn't enter the game in time."
   },
   "matchmaking_modal": {
     "title": "1v1 Ranked Matchmaking (ALPHA)",
@@ -390,7 +449,8 @@
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
     "starting_gold": "Starting gold",
-    "starting_gold_placeholder": "5000000"
+    "starting_gold_placeholder": "5000000",
+    "crowded": "Crowded modifier"
   },
   "team_colors": {
     "red": "Red",
@@ -416,11 +476,13 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "humans_vs_nations": "Humans vs Nations"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
     "compact_map": "Compact Map",
+    "crowded": "Crowded",
     "starting_gold": "5M Starting Gold"
   },
   "select_lang": {
@@ -656,6 +718,7 @@
     "exit": "Exit Game",
     "keep": "Keep Playing",
     "spectate": "Spectate",
+    "requeue": "Play Again",
     "wishlist": "Wishlist on Steam!",
     "ofm_winter": "OpenFront Masters Winter Tournament!",
     "ofm_winter_description": "Join the competitive tournament and compete against the best players",
@@ -680,29 +743,6 @@
     "cities": "Cities",
     "show_control": "Show Control",
     "show_units": "Show Units"
-  },
-  "player_info_overlay": {
-    "type": "Type",
-    "bot": "Bot",
-    "nation": "Nation",
-    "player": "Player",
-    "team": "Team",
-    "alliance_timeout": "Alliance ends in",
-    "troops": "Troops",
-    "maxtroops": "Max troops",
-    "a_troops": "Attacking troops",
-    "gold": "Gold",
-    "ports": "Ports",
-    "cities": "Cities",
-    "factories": "Factories",
-    "missile_launchers": "Missile launchers",
-    "sams": "SAMs",
-    "warships": "Warships",
-    "health": "Health",
-    "attitude": "Attitude",
-    "levels": "Levels",
-    "wilderness_title": "Wilderness",
-    "irradiated_wilderness_title": "Irradiated Wilderness"
   },
   "events_display": {
     "retreating": "retreating",
@@ -734,6 +774,8 @@
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_trade": "Received {gold} gold from trade with {name}",
+    "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
+    "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
     "missile_intercepted": "Missile intercepted {unit}",
     "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV warhead intercepted} other {{count} MIRV warheads intercepted}}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
@@ -796,9 +838,17 @@
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis",
+    "moderation": "Moderation",
+    "kick": "Kick player",
+    "kicked": "Already kicked",
+    "kick_confirm": "Kick {name}?\n\nThey won't be able to rejoin this game.",
     "arc_up": "Upward arc",
     "arc_down": "Downward arc",
     "flip_rocket_trajectory": "Flip rocket trajectory"
+  },
+  "kick_reason": {
+    "duplicate_session": "Kicked from game (you may have been playing on another tab)",
+    "lobby_creator": "Kicked by lobby creator"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
