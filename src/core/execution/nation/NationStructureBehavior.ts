@@ -398,11 +398,7 @@ export class NationStructureBehavior {
     // Score each structure based on SAM protection
     const scored: { structure: Unit; score: number }[] = [];
 
-    for (const structure of structures) {
-      if (!this.player.canUpgradeUnit(structure)) {
-        continue;
-      }
-
+    for (const structure of upgradable) {
       let score = 0;
 
       // Check if protected by any SAM, using per-SAM level-based range
