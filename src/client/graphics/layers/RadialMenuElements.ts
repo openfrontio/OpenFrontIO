@@ -629,7 +629,7 @@ export const rootMenuElement: MenuElement = {
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? allyBreakElement : boatMenuElement,
+            isAllied && !isDisconnectedTarget(params) ? allyBreakElement : boatMenuElement,
             allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
