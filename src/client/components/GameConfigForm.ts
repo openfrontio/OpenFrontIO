@@ -79,6 +79,48 @@ export interface GameConfigSnapshot {
   spawnImmunityDurationMinutes: number | undefined;
 }
 
+type ModalTranslationKeys = {
+  optionsTitle: string;
+  bots: string;
+  botsDisabled: string;
+  disableNations: string;
+  instantBuild: string;
+  randomSpawn: string;
+  infiniteGold: string;
+  infiniteTroops: string;
+  compactMap: string;
+  maxTimer: string;
+  enablesTitle: string;
+};
+
+const HOST_MODAL_KEYS: ModalTranslationKeys = {
+  optionsTitle: "host_modal.options_title",
+  bots: "host_modal.bots",
+  botsDisabled: "host_modal.bots_disabled",
+  disableNations: "host_modal.disable_nations",
+  instantBuild: "host_modal.instant_build",
+  randomSpawn: "host_modal.random_spawn",
+  infiniteGold: "host_modal.infinite_gold",
+  infiniteTroops: "host_modal.infinite_troops",
+  compactMap: "host_modal.compact_map",
+  maxTimer: "host_modal.max_timer",
+  enablesTitle: "host_modal.enables_title",
+};
+
+const SINGLE_MODAL_KEYS: ModalTranslationKeys = {
+  optionsTitle: "single_modal.options_title",
+  bots: "single_modal.bots",
+  botsDisabled: "single_modal.bots_disabled",
+  disableNations: "single_modal.disable_nations",
+  instantBuild: "single_modal.instant_build",
+  randomSpawn: "single_modal.random_spawn",
+  infiniteGold: "single_modal.infinite_gold",
+  infiniteTroops: "single_modal.infinite_troops",
+  compactMap: "single_modal.compact_map",
+  maxTimer: "single_modal.max_timer",
+  enablesTitle: "single_modal.enables_title",
+};
+
 function renderSectionHeader(
   svgIcon: TemplateResult,
   colorClass: string,
@@ -305,14 +347,14 @@ export class GameConfigForm extends LitElement {
 
   render() {
     const isHost = this.variant === "host";
-    const prefix = isHost ? "host_modal" : "single_modal";
+    const keys = isHost ? HOST_MODAL_KEYS : SINGLE_MODAL_KEYS;
 
     return html`
       <div class="max-w-5xl mx-auto space-y-6">
         ${this.renderMapSection()} ${this.renderDifficultySection()}
         ${this.renderGameModeSection()} ${this.renderTeamCountSection()}
-        ${this.renderOptionsSection(prefix, isHost)}
-        ${this.renderUnitsSection(prefix)}
+        ${this.renderOptionsSection(keys, isHost)}
+        ${this.renderUnitsSection(keys.enablesTitle)}
       </div>
     `;
   }
@@ -431,7 +473,7 @@ export class GameConfigForm extends LitElement {
   }
 
   private renderOptionsSection(
-    prefix: string,
+    keys: ModalTranslationKeys,
     isHost: boolean,
   ): TemplateResult {
     return html`
@@ -439,7 +481,7 @@ export class GameConfigForm extends LitElement {
         ${renderSectionHeader(
           optionsIcon,
           "bg-orange-500/20 text-orange-400",
-          translateText(`${prefix}.options_title`),
+          translateText(keys.optionsTitle),
         )}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Bot Slider -->
@@ -454,8 +496,8 @@ export class GameConfigForm extends LitElement {
               max="400"
               step="1"
               .value=${this.bots}
-              labelKey="${prefix}.bots"
-              disabledKey="${prefix}.bots_disabled"
+              labelKey="${keys.bots}"
+              disabledKey="${keys.botsDisabled}"
               @value-changed=${this.handleBotsChange}
             ></fluent-slider>
           </div>
@@ -465,7 +507,7 @@ export class GameConfigForm extends LitElement {
             this.teamCount === HumansVsNations
           )
             ? this.renderOptionToggle(
-                `${prefix}.disable_nations`,
+                keys.disableNations,
                 this.disableNations,
                 (val) => {
                   this.disableNations = val;
@@ -474,7 +516,7 @@ export class GameConfigForm extends LitElement {
               )
             : ""}
           ${this.renderOptionToggle(
-            `${prefix}.instant_build`,
+            keys.instantBuild,
             this.instantBuild,
             (val) => {
               this.instantBuild = val;
@@ -482,7 +524,7 @@ export class GameConfigForm extends LitElement {
             },
           )}
           ${this.renderOptionToggle(
-            `${prefix}.random_spawn`,
+            keys.randomSpawn,
             this.randomSpawn,
             (val) => {
               this.randomSpawn = val;
@@ -510,7 +552,7 @@ export class GameConfigForm extends LitElement {
               `
             : ""}
           ${this.renderOptionToggle(
-            `${prefix}.infinite_gold`,
+            keys.infiniteGold,
             this.infiniteGold,
             (val) => {
               this.infiniteGold = val;
@@ -518,30 +560,26 @@ export class GameConfigForm extends LitElement {
             },
           )}
           ${this.renderOptionToggle(
-            `${prefix}.infinite_troops`,
+            keys.infiniteTroops,
             this.infiniteTroops,
             (val) => {
               this.infiniteTroops = val;
               this.fireConfigChanged();
             },
           )}
-          ${this.renderOptionToggle(
-            `${prefix}.compact_map`,
-            this.compactMap,
-            (val) => {
-              this.compactMap = val;
-              if (val && this.bots === 400) {
-                this.bots = 100;
-              } else if (!val && this.bots === 100) {
-                this.bots = 400;
-              }
-              this.fireConfigChanged();
-            },
-          )}
+          ${this.renderOptionToggle(keys.compactMap, this.compactMap, (val) => {
+            this.compactMap = val;
+            if (val && this.bots === 400) {
+              this.bots = 100;
+            } else if (!val && this.bots === 100) {
+              this.bots = 400;
+            }
+            this.fireConfigChanged();
+          })}
 
           <!-- Max Timer -->
           ${this.renderToggleInputCardWithHandlers({
-            labelKey: `${prefix}.max_timer`,
+            labelKey: keys.maxTimer,
             checked: this.maxTimer,
             toggleGetter: () => this.maxTimer,
             toggleSetter: (val) => (this.maxTimer = val),
@@ -552,7 +590,7 @@ export class GameConfigForm extends LitElement {
               id: "end-timer-value",
               min: 1,
               max: 120,
-              ariaLabel: translateText(`${prefix}.max_timer`),
+              ariaLabel: translateText(keys.maxTimer),
               placeholder: translateText(
                 isHost
                   ? "host_modal.mins_placeholder"
@@ -637,13 +675,13 @@ export class GameConfigForm extends LitElement {
     `;
   }
 
-  private renderUnitsSection(prefix: string): TemplateResult {
+  private renderUnitsSection(enablesTitleKey: string): TemplateResult {
     return html`
       <div class="space-y-6">
         ${renderSectionHeader(
           unitsIcon,
           "bg-teal-500/20 text-teal-400",
-          translateText(`${prefix}.enables_title`),
+          translateText(enablesTitleKey),
         )}
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           ${renderUnitTypeOptions(
