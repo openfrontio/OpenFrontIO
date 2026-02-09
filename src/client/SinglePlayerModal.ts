@@ -912,7 +912,6 @@ export class SinglePlayerModal extends BaseModal {
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          clientID: clientID,
           gameID: gameID,
           gameStartInfo: {
             gameID: gameID,
