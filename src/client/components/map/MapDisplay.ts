@@ -3,6 +3,11 @@ import { customElement, property, state } from "lit/decorators.js";
 import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
+import {
+  cardImageClasses,
+  cardStateClasses,
+  renderCardLabel,
+} from "../../utilities/ConfigCards";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -61,14 +66,13 @@ export class MapDisplay extends LitElement {
         aria-selected="${this.selected}"
         aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
         @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
-          .selected
-          ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 active:scale-95"}"
+        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group active:scale-95 ${cardStateClasses(
+          this.selected,
+        )}"
       >
         ${this.isLoading
           ? html`<div
-              class="w-full aspect-[2/1] text-white/40 transition-transform duration-200 rounded-lg bg-black/20 text-xs font-bold uppercase tracking-wider flex items-center justify-center animate-pulse"
+              class="w-full aspect-[2/1] text-white/40 rounded-lg bg-black/20 text-xs font-bold uppercase tracking-wider flex items-center justify-center animate-pulse"
             >
               ${translateText("map_component.loading")}
             </div>`
@@ -77,15 +81,14 @@ export class MapDisplay extends LitElement {
                 class="w-full aspect-[2/1] relative overflow-hidden rounded-lg bg-black/20"
               >
                 <img
+                  draggable="false"
                   src="${this.mapWebpPath}"
                   alt="${this.translation || this.mapName}"
-                  class="w-full h-full object-cover ${this.selected
-                    ? "opacity-100"
-                    : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
+                  class="${cardImageClasses(this.selected)}"
                 />
               </div>`
             : html`<div
-                class="w-full aspect-[2/1] text-red-400 transition-transform duration-200 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
+                class="w-full aspect-[2/1] text-red-400 rounded-lg bg-red-500/10 text-xs font-bold uppercase tracking-wider flex items-center justify-center"
               >
                 ${translateText("map_component.error")}
               </div>`}
@@ -94,11 +97,7 @@ export class MapDisplay extends LitElement {
               ${this.renderMedals()}
             </div>`
           : null}
-        <div
-          class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight break-words hyphens-auto"
-        >
-          ${this.translation || this.mapName}
-        </div>
+        ${renderCardLabel(this.translation ?? this.mapName ?? "", true)}
       </div>
     `;
   }
