@@ -339,6 +339,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.uiState.overlappingRailroads = [];
         } else {
           this.uiState.overlappingRailroads = unit.overlappingRailroads;
         }
