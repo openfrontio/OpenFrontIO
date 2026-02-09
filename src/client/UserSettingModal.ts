@@ -756,17 +756,10 @@ export class UserSettingModal extends BaseModal {
   private renderBasicSettings() {
     return html`
       <!-- 🚩 Flag Selector -->
-      <div
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer"
-        role="button"
-        tabindex="0"
+      <button
+        type="button"
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 text-left"
         @click=${this.openFlagSelector}
-        @keydown=${(e: KeyboardEvent) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            this.openFlagSelector();
-          }
-        }}
       >
         <div class="flex flex-col flex-1 min-w-0 mr-4">
           <div class="text-white font-bold text-base block mb-1">
@@ -782,7 +775,7 @@ export class UserSettingModal extends BaseModal {
         >
           <flag-input class="w-full h-full pointer-events-none"></flag-input>
         </div>
-      </div>
+      </button>
 
       <!-- 🌙 Dark Mode -->
       <setting-toggle
