@@ -3,6 +3,7 @@ import {
   Game,
   GameMode,
   HumansVsNations,
+  isStructureType,
   Player,
   PlayerID,
   PlayerType,
@@ -380,6 +381,7 @@ export class AiAttackBehavior {
 
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
   // sendAttack will do nothing if we don't have enough reserve troops left
+  // Bots that own structures are prioritized as targets (they might have stolen our structures and they will delete them!)
   private attackBots(): boolean {
     const bots = this.player
       .neighbors()
@@ -397,7 +399,16 @@ export class AiAttackBehavior {
     this.botAttackTroopsSent = 0;
 
     const density = (p: Player) => p.troops() / p.numTilesOwned();
-    const sortedBots = bots.slice().sort((a, b) => density(a) - density(b));
+    const ownsStructures = (p: Player) =>
+      p.units().some((u) => isStructureType(u.type()));
+    const sortedBots = bots.slice().sort((a, b) => {
+      const aHasStructures = ownsStructures(a);
+      const bHasStructures = ownsStructures(b);
+      if (aHasStructures !== bHasStructures) {
+        return aHasStructures ? -1 : 1;
+      }
+      return density(a) - density(b);
+    });
     const reducedBots = sortedBots.slice(0, this.getBotAttackMaxParallelism());
 
     for (const bot of reducedBots) {
