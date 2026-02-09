@@ -177,7 +177,7 @@ export class Leaderboard extends LitElement implements Layer {
     }
     return html`
       <div
-        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh]  ${this
+        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh] mt-2 ${this
           .visible
           ? ""
           : "hidden"}"
@@ -265,7 +265,9 @@ export class Leaderboard extends LitElement implements Layer {
       </div>
 
       <button
-        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10 text-white mx-auto block"
+        class="mt-1 px-1.5 pb-0.5 md:px-2 text-xs md:text-xs lg:text-sm 
+        border rounded-md border-slate-500 transition-colors
+        text-white mx-auto block hover:bg-white/10"
         @click=${() => {
           this.showTopFive = !this.showTopFive;
           this.updateLeaderboard();

@@ -133,3 +133,49 @@ export const ClanLeaderboardResponseSchema = z.object({
 export type ClanLeaderboardResponse = z.infer<
   typeof ClanLeaderboardResponseSchema
 >;
+
+export const PlayerLeaderboardEntrySchema = z.object({
+  rank: z.number(),
+  playerId: z.string(),
+  username: z.string(),
+  clanTag: z.string().optional(),
+  flag: z.string().optional(),
+  elo: z.number(),
+  games: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  winRate: z.number(),
+});
+export type PlayerLeaderboardEntry = z.infer<
+  typeof PlayerLeaderboardEntrySchema
+>;
+
+export const PlayerLeaderboardResponseSchema = z.object({
+  players: PlayerLeaderboardEntrySchema.array(),
+});
+export type PlayerLeaderboardResponse = z.infer<
+  typeof PlayerLeaderboardResponseSchema
+>;
+
+export const RankedLeaderboardEntrySchema = z.object({
+  rank: z.number(),
+  elo: z.number(),
+  peakElo: z.number().nullable(),
+  wins: z.number(),
+  losses: z.number(),
+  total: z.number(),
+  public_id: z.string(),
+  user: DiscordUserSchema.nullable().optional(),
+  username: z.string(),
+  clanTag: z.string().nullable().optional(),
+});
+export type RankedLeaderboardEntry = z.infer<
+  typeof RankedLeaderboardEntrySchema
+>;
+
+export const RankedLeaderboardResponseSchema = z.object({
+  "1v1": RankedLeaderboardEntrySchema.array(),
+});
+export type RankedLeaderboardResponse = z.infer<
+  typeof RankedLeaderboardResponseSchema
+>;

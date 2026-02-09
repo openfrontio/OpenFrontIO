@@ -2,7 +2,6 @@ import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { generateID } from "../core/Util";
 import { getUserMe, hasLinkedAccount } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
@@ -231,7 +230,7 @@ export class MatchmakingModal extends BaseModal {
       new CustomEvent("join-lobby", {
         detail: {
           gameID: this.gameID,
-          clientID: generateID(),
+          source: "matchmaking",
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -320,7 +319,7 @@ export class MatchmakingButton extends LitElement {
     window.showPage?.("page-account");
   }
 
-  private open() {
+  public open() {
     this.matchmakingModal?.open();
   }
 

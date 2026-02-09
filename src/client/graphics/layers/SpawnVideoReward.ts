@@ -4,7 +4,7 @@ import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
 import { getGamesPlayed } from "src/client/Utils";
 import { GameType } from "src/core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import "../../components/VideoAd";
+import "../../components/VideoReward";
 import { Layer } from "./Layer";
 
 @customElement("spawn-video-ad")
@@ -24,8 +24,7 @@ export class SpawnVideoAd extends LitElement implements Layer {
       window.innerWidth < 768 ||
       crazyGamesSDK.isOnCrazyGames() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
-      getGamesPlayed() < 3 || // Don't show to new players
-      getGamesPlayed() % 3 !== 0 // Only show 1 in 3 times
+      getGamesPlayed() < 3 // Don't show to new players
     ) {
       return;
     }

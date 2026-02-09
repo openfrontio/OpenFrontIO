@@ -20,6 +20,7 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -29,6 +30,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -421,6 +423,14 @@ export class PlayerImpl implements Player {
 
     if (hasPending) {
       return false;
+    }
+
+    const hasIncoming = this.incomingAllianceRequests().some(
+      (ar) => ar.requestor() === other,
+    );
+
+    if (hasIncoming) {
+      return true;
     }
 
     const recent = this.pastOutgoingAllianceRequests
@@ -950,20 +960,25 @@ export class PlayerImpl implements Player {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
+      let canBuild: TileRef | false = false;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
+        if (tile !== null) {
+          canBuild = this.canBuild(u, tile, validTiles);
+        }
       }
       return {
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canBuild,
+        canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+        overlappingRailroads:
+          canBuild !== false
+            ? this.mg.railNetwork().overlappingRailroads(canBuild)
+            : [],
       } as BuildableUnit;
     });
   }
@@ -978,7 +993,10 @@ export class PlayerImpl implements Player {
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (!this.isAlive() || this.gold() < cost) {
+    if (
+      unitType !== UnitType.MIRVWarhead &&
+      (!this.isAlive() || this.gold() < cost)
+    ) {
       return false;
     }
     switch (unitType) {
@@ -986,10 +1004,10 @@ export class PlayerImpl implements Player {
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        return this.nukeSpawn(targetTile);
+        return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -1016,7 +1034,7 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef): TileRef | false {
+  nukeSpawn(tile: TileRef, nukeType: UnitType): TileRef | false {
     if (this.mg.isSpawnImmunityActive()) {
       return false;
     }
@@ -1026,6 +1044,24 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
+
+    // Prevent launching nukes that would hit teammate structures (only in team games)
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.Team &&
+      nukeType !== UnitType.MIRV
+    ) {
+      const magnitude = this.mg.config().nukeMagnitudes(nukeType);
+      const wouldHitTeammate = this.mg.anyUnitNearby(
+        tile,
+        magnitude.outer,
+        StructureTypes,
+        (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
+      );
+      if (wouldHitTeammate) {
+        return false;
+      }
+    }
+
     // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {

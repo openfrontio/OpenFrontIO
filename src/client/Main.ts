@@ -22,19 +22,19 @@ import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
+import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
+import "./LeaderboardModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
 import "./PublicLobby";
-import { PublicLobby } from "./PublicLobby";
+import { PublicLobby, ShowPublicLobbyModalEvent } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
-import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -203,19 +203,20 @@ declare global {
   // Extend the global interfaces to include your custom events
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "show-public-lobby-modal": CustomEvent<ShowPublicLobbyModalEvent>;
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
   }
 }
 
 export interface JoinLobbyEvent {
-  clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
   // GameConfig only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
 }
 
 class Client {
@@ -228,7 +229,7 @@ class Client {
   private flagInput: FlagInput | null = null;
 
   private hostModal: HostPrivateLobbyModal;
-  private joinModal: JoinPrivateLobbyModal;
+  private joinModal: JoinLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
@@ -302,6 +303,10 @@ class Client {
     this.gutterAds = gutterAds;
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
+    document.addEventListener(
+      "show-public-lobby-modal",
+      this.handleShowPublicLobbyModal.bind(this),
+    );
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
     document.addEventListener(
@@ -498,13 +503,14 @@ class Client {
     ) as HostPrivateLobbyModal;
     if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
+    } else {
+      this.hostModal.eventBus = this.eventBus;
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         window.showPage?.("page-host-lobby");
-        this.publicLobby.leaveLobby();
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -519,10 +525,12 @@ class Client {
     });
 
     this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
-    ) as JoinPrivateLobbyModal;
-    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
-      console.warn("Join private lobby modal element not found");
+      "join-lobby-modal",
+    ) as JoinLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinLobbyModal)) {
+      console.warn("Join lobby modal element not found");
+    } else {
+      this.joinModal.eventBus = this.eventBus;
     }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
@@ -531,7 +539,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-join-private-lobby");
+        window.showPage?.("page-join-lobby");
       } else {
         window.dispatchEvent(
           new CustomEvent("show-message", {
@@ -631,7 +639,7 @@ class Client {
   private async handleUrl() {
     // Wait for modal custom elements to be defined
     await Promise.all([
-      customElements.whenDefined("join-private-lobby-modal"),
+      customElements.whenDefined("join-lobby-modal"),
       customElements.whenDefined("host-lobby-modal"),
     ]);
 
@@ -644,7 +652,7 @@ class Client {
         // Wait 2 seconds to ensure all elements are actually loaded,
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        window.showPage?.("page-join-private-lobby");
+        window.showPage?.("page-join-lobby");
         this.joinModal?.open(lobbyId);
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
@@ -733,7 +741,7 @@ class Client {
     const lobbyId =
       pathMatch && GAME_ID_REGEX.test(pathMatch[1]) ? pathMatch[1] : null;
     if (lobbyId) {
-      window.showPage?.("page-join-private-lobby");
+      window.showPage?.("page-join-lobby");
       this.joinModal.open(lobbyId);
       console.log(`joining lobby ${lobbyId}`);
       return;
@@ -748,6 +756,32 @@ class Client {
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
     }
+
+    // Handle requeue parameter for ranked matchmaking
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("requeue")) {
+      // Remove only the requeue parameter, preserving other params and hash
+      searchParams.delete("requeue");
+      const newUrl =
+        window.location.pathname +
+        (searchParams.toString() ? "?" + searchParams.toString() : "") +
+        window.location.hash;
+      history.replaceState(null, "", newUrl);
+      // Wait for matchmaking button to be defined, then trigger its click handler
+      // This goes through username validation instead of bypassing it
+      customElements.whenDefined("matchmaking-button").then(() => {
+        const matchmakingButton = document.querySelector(
+          "matchmaking-button button",
+        ) as HTMLButtonElement | null;
+        if (matchmakingButton) {
+          matchmakingButton.click();
+        } else {
+          console.warn(
+            "Requeue requested, but matchmaking button not found in DOM.",
+          );
+        }
+      });
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -759,7 +793,10 @@ class Client {
       document.body.classList.remove("in-game");
     }
     const config = await getServerConfigFromClient();
-    this.updateJoinUrlForShare(lobby.gameID, config);
+    // Only update URL immediately for private lobbies, not public ones
+    if (lobby.source !== "public") {
+      this.updateJoinUrlForShare(lobby.gameID, config);
+    }
 
     const pattern = this.userSettings.getSelectedPatternName(
       await fetchCosmetics(),
@@ -782,7 +819,6 @@ class Client {
         turnstileToken: await this.getTurnstileToken(lobby),
         playerName:
           this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
-        clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
@@ -796,10 +832,10 @@ class Client {
         document
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
+        this.joinModal?.closeWithoutLeaving();
         [
           "single-player-modal",
           "host-lobby-modal",
-          "join-private-lobby-modal",
           "game-starting-modal",
           "game-top-bar",
           "help-modal",
@@ -810,10 +846,11 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
-          "stats-button",
+          "leaderboard-button",
           "token-login",
           "matchmaking-modal",
           "lang-selector",
+          "gutter-ads",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -884,6 +921,17 @@ class Client {
     }
   }
 
+  private handleShowPublicLobbyModal(
+    event: CustomEvent<ShowPublicLobbyModalEvent>,
+  ) {
+    const { lobby } = event.detail;
+    console.log(`Opening JoinLobbyModal for public lobby ${lobby.gameID}`);
+
+    // Open the join lobby modal page and pass the lobby info
+    window.showPage?.("page-join-lobby");
+    this.joinModal?.open(lobby.gameID, true);
+  }
+
   private async handleLeaveLobby(/* event: CustomEvent */) {
     if (this.gameStop === null) {
       return;
@@ -902,7 +950,6 @@ class Client {
     document.body.classList.remove("in-game");
 
     crazyGamesSDK.gameplayStop();
-    this.publicLobby.leaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent) {

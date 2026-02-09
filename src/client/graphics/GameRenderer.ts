@@ -34,7 +34,7 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
-import { SpawnVideoAd } from "./layers/SpawnVideoAd";
+import { SpawnVideoAd } from "./layers/SpawnVideoReward";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -265,11 +265,11 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, eventBus, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
