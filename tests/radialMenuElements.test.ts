@@ -19,13 +19,18 @@ import {
 } from "../src/client/graphics/layers/RadialMenuElements";
 
 // Minimal stubs to satisfy types used in rootMenuElement.subMenu and allyBreak actions
-const makePlayer = (id: string) =>
+const makePlayer = (
+  id: string,
+  opts?: { isTraitor?: boolean; isDisconnected?: boolean },
+) =>
   ({
     id: () => id,
     isAlliedWith: (other: any) =>
       other && typeof other.id === "function" && other.id() !== id
         ? true
         : true,
+    isTraitor: () => opts?.isTraitor ?? false,
+    isDisconnected: () => opts?.isDisconnected ?? false,
   }) as unknown as import("../src/core/game/GameView").PlayerView;
 
 const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {

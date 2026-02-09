@@ -76,6 +76,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  breakAllyNoDebuff: "#d4882b",
   delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
@@ -624,12 +625,20 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    const breakElement: MenuElement = {
+      ...allyBreakElement,
+      color:
+        params.selected?.isTraitor() || params.selected?.isDisconnected()
+          ? COLORS.breakAllyNoDebuff
+          : COLORS.breakAlly,
+    };
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? allyBreakElement : boatMenuElement,
+            isAllied ? breakElement : boatMenuElement,
             allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
