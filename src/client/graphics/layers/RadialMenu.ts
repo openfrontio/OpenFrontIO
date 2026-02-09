@@ -858,10 +858,7 @@ export class RadialMenu implements Layer {
 
   public disableAllButtons() {
     this.updateCenterButtonState("default");
-
-    for (const item of this.currentMenuItems) {
-      item.color = this.config.disabledColor;
-    }
+    this.refresh();
   }
 
   public updateCenterButtonState(state: CenterButtonState) {
