@@ -40,9 +40,9 @@ function horizontalRailroadRects(): number[][] {
 function verticalRailroadRects(): number[][] {
   // x/y/w/h
   const rects = [
-    [-1, -2, 1, 2],
-    [1, -2, 1, 2],
-    [0, -1, 1, 1],
+    [-1, -1, 1, 2],
+    [1, -1, 1, 2],
+    [0, 0, 1, 1],
   ];
   return rects;
 }
@@ -50,9 +50,9 @@ function verticalRailroadRects(): number[][] {
 function topRightRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
-    [-1, -2, 1, 2],
+    [-1, -1, 1, 1],
     [0, -1, 1, 2],
-    [1, -2, 1, 4],
+    [1, -1, 1, 3],
   ];
   return rects;
 }
@@ -60,9 +60,9 @@ function topRightRailroadCornerRects(): number[][] {
 function topLeftRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
-    [-1, -2, 1, 4],
+    [-1, -1, 1, 3],
     [0, -1, 1, 2],
-    [1, -2, 1, 2],
+    [1, -1, 1, 1],
   ];
   return rects;
 }
@@ -70,9 +70,9 @@ function topLeftRailroadCornerRects(): number[][] {
 function bottomRightRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
-    [-1, 1, 1, 2],
+    [-1, 1, 1, 1],
     [0, 0, 1, 2],
-    [1, -1, 1, 4],
+    [1, -1, 1, 3],
   ];
   return rects;
 }
@@ -80,9 +80,9 @@ function bottomRightRailroadCornerRects(): number[][] {
 function bottomLeftRailroadCornerRects(): number[][] {
   // x/y/w/h
   const rects = [
-    [-1, -1, 1, 4],
+    [-1, -1, 1, 3],
     [0, 0, 1, 2],
-    [1, 1, 1, 2],
+    [1, 1, 1, 1],
   ];
   return rects;
 }
