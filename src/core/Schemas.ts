@@ -148,6 +148,7 @@ const ClientInfoSchema = z.object({
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
+  lobbyCreatorClientID: z.string().optional(),
   startsAt: z.number().optional(),
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
@@ -166,7 +167,10 @@ export const PublicGamesSchema = z.object({
 });
 
 export class LobbyInfoEvent implements GameEvent {
-  constructor(public lobby: GameInfo) {}
+  constructor(
+    public lobby: GameInfo,
+    public myClientID: ClientID,
+  ) {}
 }
 
 export interface ClientInfo {
@@ -280,139 +284,136 @@ export const QuickChatKeySchema = z.enum(
 // Intents
 //
 
-const BaseIntentSchema = z.object({
-  clientID: ID,
-});
-
-export const AllianceExtensionIntentSchema = BaseIntentSchema.extend({
+export const AllianceExtensionIntentSchema = z.object({
   type: z.literal("allianceExtension"),
   recipient: ID,
 });
 
-export const AttackIntentSchema = BaseIntentSchema.extend({
+export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: ID.nullable(),
   troops: z.number().nonnegative().nullable(),
 });
 
-export const SpawnIntentSchema = BaseIntentSchema.extend({
+export const SpawnIntentSchema = z.object({
   type: z.literal("spawn"),
   tile: z.number(),
 });
 
-export const BoatAttackIntentSchema = BaseIntentSchema.extend({
+export const BoatAttackIntentSchema = z.object({
   type: z.literal("boat"),
   troops: z.number().nonnegative(),
   dst: z.number(),
 });
 
-export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
+export const AllianceRequestIntentSchema = z.object({
   type: z.literal("allianceRequest"),
   recipient: ID,
 });
 
-export const AllianceRequestReplyIntentSchema = BaseIntentSchema.extend({
+export const AllianceRequestReplyIntentSchema = z.object({
   type: z.literal("allianceRequestReply"),
   requestor: ID, // The one who made the original alliance request
   accept: z.boolean(),
 });
 
-export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
+export const BreakAllianceIntentSchema = z.object({
   type: z.literal("breakAlliance"),
   recipient: ID,
 });
 
-export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
+export const TargetPlayerIntentSchema = z.object({
   type: z.literal("targetPlayer"),
   target: ID,
 });
 
-export const EmojiIntentSchema = BaseIntentSchema.extend({
+export const EmojiIntentSchema = z.object({
   type: z.literal("emoji"),
   recipient: z.union([ID, z.literal(AllPlayers)]),
   emoji: EmojiSchema,
 });
 
-export const EmbargoIntentSchema = BaseIntentSchema.extend({
+export const EmbargoIntentSchema = z.object({
   type: z.literal("embargo"),
   targetID: ID,
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
-export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
+export const EmbargoAllIntentSchema = z.object({
   type: z.literal("embargo_all"),
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
-export const DonateGoldIntentSchema = BaseIntentSchema.extend({
+export const DonateGoldIntentSchema = z.object({
   type: z.literal("donate_gold"),
   recipient: ID,
   gold: z.number().nonnegative().nullable(),
 });
 
-export const DonateTroopIntentSchema = BaseIntentSchema.extend({
+export const DonateTroopIntentSchema = z.object({
   type: z.literal("donate_troops"),
   recipient: ID,
   troops: z.number().nonnegative().nullable(),
 });
 
-export const BuildUnitIntentSchema = BaseIntentSchema.extend({
+export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
   tile: z.number(),
   rocketDirectionUp: z.boolean().optional(),
 });
 
-export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
+export const UpgradeStructureIntentSchema = z.object({
   type: z.literal("upgrade_structure"),
   unit: z.enum(UnitType),
   unitId: z.number(),
 });
 
-export const CancelAttackIntentSchema = BaseIntentSchema.extend({
+export const CancelAttackIntentSchema = z.object({
   type: z.literal("cancel_attack"),
   attackID: z.string(),
 });
 
-export const CancelBoatIntentSchema = BaseIntentSchema.extend({
+export const CancelBoatIntentSchema = z.object({
   type: z.literal("cancel_boat"),
   unitID: z.number(),
 });
 
-export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
+export const MoveWarshipIntentSchema = z.object({
   type: z.literal("move_warship"),
   unitId: z.number(),
   tile: z.number(),
 });
 
-export const DeleteUnitIntentSchema = BaseIntentSchema.extend({
+export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
   unitId: z.number(),
 });
 
-export const QuickChatIntentSchema = BaseIntentSchema.extend({
+export const QuickChatIntentSchema = z.object({
   type: z.literal("quick_chat"),
   recipient: ID,
   quickChatKey: QuickChatKeySchema,
   target: ID.optional(),
 });
 
-export const MarkDisconnectedIntentSchema = BaseIntentSchema.extend({
+export const MarkDisconnectedIntentSchema = z.object({
   type: z.literal("mark_disconnected"),
+  clientID: ID,
   isDisconnected: z.boolean(),
 });
 
-export const KickPlayerIntentSchema = BaseIntentSchema.extend({
+export const KickPlayerIntentSchema = z.object({
   type: z.literal("kick_player"),
   target: ID,
 });
 
-export const TogglePauseIntentSchema = BaseIntentSchema.extend({
+export const TogglePauseIntentSchema = z.object({
   type: z.literal("toggle_pause"),
   paused: z.boolean().default(false),
 });
 
-export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
+export const UpdateGameConfigIntentSchema = z.object({
   type: z.literal("update_game_config"),
   config: GameConfigSchema.partial(),
 });
@@ -444,13 +445,17 @@ const IntentSchema = z.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
 ]);
 
+// StampedIntent = Intent with server-stamped clientID (used in turns and execution)
+export const StampedIntentSchema = IntentSchema.and(z.object({ clientID: ID }));
+export type StampedIntent = Intent & { clientID: ClientID };
+
 //
 // Server utility types
 //
 
 export const TurnSchema = z.object({
   turnNumber: z.number(),
-  intents: IntentSchema.array(),
+  intents: StampedIntentSchema.array(),
   // The hash of the game state at the end of the turn.
   hash: z.number().nullable().optional(),
 });
@@ -539,6 +544,8 @@ export const ServerStartGameMessageSchema = z.object({
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
   lobbyCreatedAt: z.number(),
+  // The clientID assigned to this connection by the server
+  myClientID: ID,
 });
 
 export const ServerDesyncSchema = z.object({
@@ -559,6 +566,8 @@ export const ServerErrorSchema = z.object({
 export const ServerLobbyInfoMessageSchema = z.object({
   type: z.literal("lobby_info"),
   lobby: GameInfoSchema,
+  // The clientID assigned to this connection by the server
+  myClientID: ID,
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
@@ -603,10 +612,10 @@ export const ClientIntentMessageSchema = z.object({
 });
 
 // WARNING: never send this message to clients.
+// Note: clientID is NOT included - server assigns it based on persistentID from token
 export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
-  clientID: ID,
-  token: TokenSchema, // WARNING: PII
+  token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
@@ -617,7 +626,7 @@ export const ClientJoinMessageSchema = z.object({
 export const ClientRejoinMessageSchema = z.object({
   type: z.literal("rejoin"),
   gameID: ID,
-  clientID: ID,
+  // Note: clientID is NOT sent - server looks it up from persistentID in token
   lastTurn: z.number(),
   token: TokenSchema,
 });

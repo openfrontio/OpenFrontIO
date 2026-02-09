@@ -210,7 +210,6 @@ declare global {
 }
 
 export interface JoinLobbyEvent {
-  clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
   // GameConfig only exists when playing a singleplayer game.
@@ -504,6 +503,8 @@ class Client {
     ) as HostPrivateLobbyModal;
     if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
+    } else {
+      this.hostModal.eventBus = this.eventBus;
     }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
@@ -818,7 +819,6 @@ class Client {
         turnstileToken: await this.getTurnstileToken(lobby),
         playerName:
           this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
-        clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },

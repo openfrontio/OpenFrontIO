@@ -12,7 +12,6 @@ import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
-  ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
@@ -125,12 +124,27 @@ export async function startWorker() {
 
   app.post("/api/create_game/:id", async (req, res) => {
     const id = req.params.id;
-    const creatorClientID = (() => {
-      if (typeof req.query.creatorClientID !== "string") return undefined;
 
-      const trimmed = req.query.creatorClientID.trim();
-      return ID.safeParse(trimmed).success ? trimmed : undefined;
-    })();
+    // Extract persistentID from Authorization header token
+    // Never accept persistentID directly from client
+    let creatorPersistentID: string | undefined;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.substring("Bearer ".length);
+      const result = await verifyClientToken(token, config);
+      if (result.type === "success") {
+        creatorPersistentID = result.persistentId;
+      } else {
+        log.warn(`Invalid creator token: ${result.message}`);
+        return res.status(401).json({ error: "Invalid creator token" });
+      }
+    } else if (
+      !req.headers[config.adminHeader()] // Public games use admin token instead
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Authorization header required to create a game" });
+    }
 
     if (!id) {
       log.warn(`cannot create game, id not found`);
@@ -164,11 +178,11 @@ export async function startWorker() {
       return res.status(400).json({ error: "Worker, game id mismatch" });
     }
 
-    // Pass creatorClientID to createGame
-    const game = gm.createGame(id, gc, creatorClientID);
+    // Pass creatorPersistentID to createGame
+    const game = gm.createGame(id, gc, creatorPersistentID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -311,12 +325,9 @@ export async function startWorker() {
         const result = await verifyClientToken(clientMsg.token, config);
         if (result.type === "error") {
           log.warn(`Invalid token: ${result.message}`, {
-            clientID: clientMsg.clientID,
+            gameID: clientMsg.gameID,
           });
-          ws.close(
-            1002,
-            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
-          );
+          ws.close(1002, `Unauthorized: invalid token`);
           return;
         }
         const { persistentId, claims } = result;
@@ -324,17 +335,26 @@ export async function startWorker() {
         if (clientMsg.type === "rejoin") {
           log.info("rejoining game", {
             gameID: clientMsg.gameID,
-            clientID: clientMsg.clientID,
             persistentID: persistentId,
           });
-          const wasFound = gm.rejoinClient(ws, persistentId, clientMsg);
-
+          const wasFound = gm.rejoinClient(
+            ws,
+            persistentId,
+            clientMsg.gameID,
+            clientMsg.lastTurn,
+          );
           if (!wasFound) {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
             ws.close(1002, "Game not found");
           }
+          return;
+        }
+
+        // Try to reconnect an existing client (e.g., page refresh)
+        // If successful, skip all authorization
+        if (gm.rejoinClient(ws, persistentId, clientMsg.gameID)) {
           return;
         }
 
@@ -353,12 +373,10 @@ export async function startWorker() {
           const result = await getUserMe(clientMsg.token, config);
           if (result.type === "error") {
             log.warn(`Unauthorized: ${result.message}`, {
-              clientID: clientMsg.clientID,
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
             });
-            ws.close(
-              1002,
-              `Unauthorized: user me fetch failed for client ${clientMsg.clientID}`,
-            );
+            ws.close(1002, "Unauthorized: user me fetch failed");
             return;
           }
           roles = result.response.player.roles;
@@ -384,7 +402,8 @@ export async function startWorker() {
 
         if (cosmeticResult.type === "forbidden") {
           log.warn(`Forbidden: ${cosmeticResult.reason}`, {
-            clientID: clientMsg.clientID,
+            persistentID: persistentId,
+            gameID: clientMsg.gameID,
           });
           ws.close(1002, cosmeticResult.reason);
           return;
@@ -401,7 +420,8 @@ export async function startWorker() {
               break;
             case "rejected":
               log.warn("Unauthorized: Turnstile token rejected", {
-                clientID: clientMsg.clientID,
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
               ws.close(1002, "Unauthorized: Turnstile token rejected");
@@ -409,7 +429,8 @@ export async function startWorker() {
             case "error":
               // Fail open, allow the client to join.
               log.error("Turnstile token error", {
-                clientID: clientMsg.clientID,
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
                 reason: turnstileResult.reason,
               });
           }
@@ -417,7 +438,7 @@ export async function startWorker() {
 
         // Create client and add to game
         const client = new Client(
-          clientMsg.clientID,
+          generateID(),
           persistentId,
           claims,
           roles,
@@ -428,11 +449,23 @@ export async function startWorker() {
           cosmeticResult.cosmetics,
         );
 
-        const wasFound = gm.joinClient(client, clientMsg.gameID);
+        const joinResult = gm.joinClient(client, clientMsg.gameID);
 
-        if (!wasFound) {
+        if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          // Handle game not found case
+          ws.close(1002, "Game not found");
+        } else if (joinResult === "kicked") {
+          log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Cannot join game");
+        } else if (joinResult === "rejected") {
+          log.info(`client rejected from game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(1002, "Lobby full");
         }
 
         // Handle other message types
