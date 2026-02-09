@@ -1,7 +1,8 @@
 import { TemplateResult, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
 import {
   Difficulty,
   Duos,
@@ -12,23 +13,24 @@ import {
   Quads,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
 import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/LobbyPlayerView";
-import "./components/Maps";
+import "./components/map/MapPicker";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
@@ -38,7 +40,6 @@ import {
   renderToggleInputCardInput,
 } from "./utilities/RenderToggleInputCard";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import randomMap from "/images/RandomMap.webp?url";
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
@@ -75,12 +76,22 @@ export class HostLobbyModal extends BaseModal {
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
 
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
 
   private leaveLobbyOnClose = true;
+
+  private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
+    const lobby = event.lobby;
+    this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
+    if (lobby.clients) {
+      this.clients = lobby.clients;
+    }
+  };
 
   private renderOptionToggle(
     labelKey: string,
@@ -117,6 +128,12 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async buildLobbyUrl(): Promise<string> {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      const link = crazyGamesSDK.createInviteLink(this.lobbyId);
+      if (link !== null) {
+        return link;
+      }
+    }
     const config = await getServerConfigFromClient();
     return `${window.location.origin}/${config.workerPath(this.lobbyId)}/game/${this.lobbyId}?lobby&s=${encodeURIComponent(this.lobbyUrlSuffix)}`;
   }
@@ -127,7 +144,24 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    history.replaceState(null, "", url);
+    if (!crazyGamesSDK.isOnCrazyGames()) {
+      history.replaceState(null, "", url);
+    }
+  }
+
+  private startLobbyUpdates() {
+    this.stopLobbyUpdates();
+    if (!this.eventBus) {
+      console.warn(
+        "HostLobbyModal: eventBus not set, cannot subscribe to lobby updates",
+      );
+      return;
+    }
+    this.eventBus.on(LobbyInfoEvent, this.handleLobbyInfo);
+  }
+
+  private stopLobbyUpdates() {
+    this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
   }
 
   render() {
@@ -209,80 +243,14 @@ export class HostLobbyModal extends BaseModal {
                   ${translateText("map.map")}
                 </h3>
               </div>
-              <div class="space-y-8">
-                <!-- Use the imported mapCategories -->
-                ${Object.entries(mapCategories).map(
-                  ([categoryKey, maps]) => html`
-                    <div class="w-full">
-                      <h4
-                        class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                      >
-                        ${translateText(`map_categories.${categoryKey}`)}
-                      </h4>
-                      <div
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                      >
-                        ${maps.map((mapValue) => {
-                          const mapKey = Object.entries(GameMapType).find(
-                            ([, v]) => v === mapValue,
-                          )?.[0];
-                          return html`
-                            <div
-                              @click=${() => this.handleMapSelection(mapValue)}
-                              class="cursor-pointer transition-transform duration-200 active:scale-95"
-                            >
-                              <map-display
-                                .mapKey=${mapKey}
-                                .selected=${!this.useRandomMap &&
-                                this.selectedMap === mapValue}
-                                .translation=${translateText(
-                                  `map.${mapKey?.toLowerCase()}`,
-                                )}
-                              ></map-display>
-                            </div>
-                          `;
-                        })}
-                      </div>
-                    </div>
-                  `,
-                )}
-                <!-- Random Map Card -->
-                <div class="w-full pt-4 border-t border-white/5">
-                  <h4
-                    class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 pl-2"
-                  >
-                    ${translateText("map_categories.special")}
-                  </h4>
-                  <div
-                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                  >
-                    <button
-                      class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
-                        .useRandomMap
-                        ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
-                      @click=${this.handleSelectRandomMap}
-                    >
-                      <div
-                        class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
-                      >
-                        <img
-                          src=${randomMap}
-                          alt=${translateText("map.random")}
-                          class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                        />
-                      </div>
-                      <div class="p-3 text-center border-t border-white/5">
-                        <div
-                          class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                        >
-                          ${translateText("map.random")}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <map-picker
+                .selectedMap=${this.selectedMap}
+                .useRandomMap=${this.useRandomMap}
+                .randomMapDivider=${true}
+                .onSelectMap=${(mapValue: GameMapType) =>
+                  this.handleMapSelection(mapValue)}
+                .onSelectRandom=${() => this.handleSelectRandomMap()}
+              ></map-picker>
             </div>
 
             <!-- Difficulty Selection -->
@@ -653,6 +621,7 @@ export class HostLobbyModal extends BaseModal {
               .gameMode=${this.gameMode}
               .clients=${this.clients}
               .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+              .currentClientID=${this.lobbyCreatorClientID}
               .teamCount=${this.teamCount}
               .nationCount=${this.nationCount}
               .disableNations=${this.disableNations}
@@ -694,9 +663,13 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(): void {
-    this.lobbyCreatorClientID = generateID();
+    this.startLobbyUpdates();
+    this.lobbyId = generateID();
+    // Note: clientID will be assigned by server when we join the lobby
+    // lobbyCreatorClientID stays empty until then
 
-    createLobby(this.lobbyCreatorClientID)
+    // Pass auth token for creator identification (server extracts persistentID from it)
+    createLobby(this.lobbyId)
       .then(async (lobby) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
@@ -711,7 +684,7 @@ export class HostLobbyModal extends BaseModal {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: this.lobbyCreatorClientID,
+              source: "host",
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -776,6 +749,7 @@ export class HostLobbyModal extends BaseModal {
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
+    this.stopLobbyUpdates();
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
@@ -1139,18 +1113,20 @@ export class HostLobbyModal extends BaseModal {
   }
 }
 
-async function createLobby(creatorClientID: string): Promise<GameInfo> {
+async function createLobby(gameID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
+  // Send JWT token for creator identification - server extracts persistentID from it
+  // persistentID should never be exposed to other clients
+  const token = await getPlayToken();
   try {
-    const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
+      `/${config.workerPath(gameID)}/api/create_game/${gameID}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        // body: JSON.stringify(data), // Include this if you need to send data
       },
     );
 

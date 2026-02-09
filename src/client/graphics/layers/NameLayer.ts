@@ -133,11 +133,11 @@ export class NameLayer implements Layer {
     }
   }
 
-  public tick() {
-    if (this.game.ticks() % 10 !== 0) {
-      return;
-    }
+  getTickIntervalMs() {
+    return 1000;
+  }
 
+  public tick() {
     // Precompute the first-place player for performance
     this.firstPlace = getFirstPlacePlayer(this.game);
 

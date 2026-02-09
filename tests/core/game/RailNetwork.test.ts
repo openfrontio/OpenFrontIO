@@ -1,4 +1,4 @@
-import { Unit } from "../../../src/core/game/Game";
+import { Unit, UnitType } from "../../../src/core/game/Game";
 import {
   RailNetworkImpl,
   StationManagerImpl,
@@ -14,6 +14,7 @@ const createMockStation = (unitId: number): any => {
     unit: {
       id: unitId,
       setTrainStation: vi.fn(),
+      type: vi.fn(() => UnitType.City),
     },
     tile: vi.fn(),
     neighbors: vi.fn(() => []),
@@ -71,6 +72,8 @@ describe("RailNetworkImpl", () => {
         trainStationMinRange: () => 10,
         railroadMaxSize: () => 100,
       }),
+      x: vi.fn(() => 0),
+      y: vi.fn(() => 0),
     };
 
     network = new RailNetworkImpl(game, stationManager, pathService);

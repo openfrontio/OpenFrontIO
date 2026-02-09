@@ -8,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
+import { GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -26,32 +26,37 @@ export class GameManager {
     return this.games.get(id) ?? null;
   }
 
-  joinClient(client: Client, gameID: GameID): boolean {
+  public publicLobbies(): GameServer[] {
+    return Array.from(this.games.values()).filter(
+      (g) => g.phase() === GamePhase.Lobby && g.isPublic(),
+    );
+  }
+
+  joinClient(
+    client: Client,
+    gameID: GameID,
+  ): "joined" | "kicked" | "rejected" | "not_found" {
     const game = this.games.get(gameID);
-    if (game) {
-      game.joinClient(client);
-      return true;
-    }
-    return false;
+    if (!game) return "not_found";
+    return game.joinClient(client);
   }
 
   rejoinClient(
     ws: WebSocket,
     persistentID: string,
-    msg: ClientRejoinMessage,
+    gameID: GameID,
+    lastTurn: number = 0,
   ): boolean {
-    const game = this.games.get(msg.gameID);
-    if (game) {
-      game.rejoinClient(ws, persistentID, msg);
-      return true;
-    }
-    return false;
+    const game = this.games.get(gameID);
+    if (!game) return false;
+    return game.rejoinClient(ws, persistentID, lastTurn);
   }
 
   createGame(
     id: GameID,
     gameConfig: GameConfig | undefined,
-    creatorClientID?: string,
+    creatorPersistentID?: string,
+    startsAt?: number,
   ) {
     const game = new GameServer(
       id,
@@ -76,7 +81,8 @@ export class GameManager {
         disabledUnits: [],
         ...gameConfig,
       },
-      creatorClientID,
+      creatorPersistentID,
+      startsAt,
     );
     this.games.set(id, game);
     return game;

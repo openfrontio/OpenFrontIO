@@ -270,8 +270,8 @@ export class StructureIconsLayer implements Layer {
       myPlayer &&
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
-      // Only check if player has allies
-      const allies = myPlayer.allies();
+      // Only check connected allies - nuking disconnected allies doesn't cause a traitor debuff
+      const allies = myPlayer.allies().filter((a) => !a.isDisconnected());
       if (allies.length > 0) {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
@@ -333,10 +333,15 @@ export class StructureIconsLayer implements Layer {
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
           }
+          // No overlapping when a structure is upgradable
+          this.uiState.overlappingRailroads = [];
         } else if (unit.canBuild === false) {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.uiState.overlappingRailroads = [];
+        } else {
+          this.uiState.overlappingRailroads = unit.overlappingRailroads;
         }
 
         const scale = this.transformHandler.scale;
@@ -450,7 +455,13 @@ export class StructureIconsLayer implements Layer {
       priceGroup: ghost.priceGroup,
       priceBox: ghost.priceBox,
       range: null,
-      buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
+      buildableUnit: {
+        type,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 0n,
+        overlappingRailroads: [],
+      },
     };
     const showPrice = this.game.config().userSettings().cursorCostLabel();
     this.updateGhostPrice(0, showPrice);

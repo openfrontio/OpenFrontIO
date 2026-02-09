@@ -111,12 +111,14 @@ export enum GameMapType {
   Manicouagan = "Manicouagan",
   Lemnos = "Lemnos",
   Sierpinski = "Sierpinski",
+  TheBox = "The Box",
   TwoLakes = "Two Lakes",
   StraitOfHormuz = "Strait of Hormuz",
   Surrounded = "Surrounded",
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  Yenisei = "Yenisei",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -164,6 +166,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -177,6 +180,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Surrounded,
   ],
   arcade: [
+    GameMapType.TheBox,
     GameMapType.Didier,
     GameMapType.DidierFrance,
     GameMapType.Sierpinski,
@@ -211,6 +215,7 @@ export enum GameMapSize {
 export interface PublicGameModifiers {
   isCompact: boolean;
   isRandomSpawn: boolean;
+  isCrowded: boolean;
   startingGold?: number;
 }
 
@@ -755,6 +760,7 @@ export interface Game extends GameMap {
   inSpawnPhase(): boolean;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
+  getWinner(): Player | Team | null;
   config(): Config;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
@@ -839,6 +845,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
+  overlappingRailroads: number[];
 }
 
 export interface PlayerProfile {

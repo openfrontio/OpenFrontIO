@@ -1013,7 +1013,9 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div class="relative w-fit lg:bottom-4 lg:right-4 z-50">
+            <div
+              class="relative w-fit min-[1200px]:bottom-4 min-[1200px]:right-4 z-50"
+            >
               ${this.renderButton({
                 content: html`
                   Events
@@ -1033,10 +1035,12 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur-sm"
+              class="relative w-full min-[1200px]:bottom-4 min-[1200px]:right-4 z-50 min-[1200px]:w-96 backdrop-blur-sm"
             >
               <!-- Button Bar -->
-              <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
+              <div
+                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg lg:rounded-tl-lg"
+              >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
@@ -1079,7 +1083,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full sm:rounded-b-lg events-container"
+                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
               >
                 <div>
                   <table
