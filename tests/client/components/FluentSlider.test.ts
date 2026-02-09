@@ -240,11 +240,9 @@ describe("FluentSlider", () => {
       expect(rangeInput.step).toBe("1");
     });
 
-    it("should render a span for the value display with role button", () => {
-      const valueSpan = slider.querySelector('span[role="button"]');
-      expect(valueSpan).toBeTruthy();
-      expect(valueSpan?.getAttribute("role")).toBe("button");
-      expect(valueSpan?.getAttribute("tabindex")).toBe("0");
+    it("should render a button for the value display", () => {
+      const valueButton = slider.querySelector('button[type="button"]');
+      expect(valueButton).toBeTruthy();
     });
   });
 
