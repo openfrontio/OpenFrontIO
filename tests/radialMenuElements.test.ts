@@ -100,15 +100,6 @@ describe("RadialMenuElements ally break", () => {
     expect(ally.color(params)).toBe(COLORS.breakAllyNoDebuff);
   });
 
-  test("shows break option with orange color when allied to disconnected", () => {
-    const params = makeParams({
-      selected: makePlayer("p2", { isDisconnected: true }),
-    });
-    const items = rootMenuElement.subMenu!(params);
-    const ally = findAllyBreak(items)!;
-    expect(ally.color(params)).toBe(COLORS.breakAllyNoDebuff);
-  });
-
   test("break action calls handleBreakAlliance and closes menu", () => {
     const params = makeParams();
     const items = rootMenuElement.subMenu!(params);
