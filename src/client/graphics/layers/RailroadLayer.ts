@@ -1,6 +1,6 @@
 import { colord } from "colord";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { PlayerID } from "../../../core/game/Game";
+import { PlayerID, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
   GameUpdateType,
@@ -26,7 +26,11 @@ type RailRef = {
   numOccurence: number;
   lastOwnerId: PlayerID | null;
 };
-
+const SNAPPABLE_STRUCTURES: UnitType[] = [
+  UnitType.Port,
+  UnitType.City,
+  UnitType.Factory,
+];
 export class RailTileChangedEvent implements GameEvent {
   constructor(public tile: TileRef) {}
 }
@@ -165,7 +169,11 @@ export class RailroadLayer implements Layer {
   }
 
   private highlightOverlappingRailroads(context: CanvasRenderingContext2D) {
-    if (this.uiState.ghostStructure === null) return;
+    if (
+      this.uiState.ghostStructure === null ||
+      !SNAPPABLE_STRUCTURES.includes(this.uiState.ghostStructure)
+    )
+      return;
     if (
       this.uiState.overlappingRailroads === undefined ||
       this.uiState.overlappingRailroads.length === 0
