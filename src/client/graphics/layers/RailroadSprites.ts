@@ -1,4 +1,4 @@
-import { RailType } from "../../../core/game/GameUpdates";
+import { RailType } from "./RailroadView";
 
 const railTypeToFunctionMap: Record<RailType, () => number[][]> = {
   [RailType.TOP_RIGHT]: topRightRailroadCornerRects,
