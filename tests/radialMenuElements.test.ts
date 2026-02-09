@@ -81,13 +81,32 @@ const findAllyBreak = (items: any[]) =>
   items.find((i) => i && i.id === "ally_break");
 
 describe("RadialMenuElements ally break", () => {
-  test("shows break option with correct color when allied", () => {
+  test("shows break option with red color when allied to non-traitor", () => {
     const params = makeParams();
     const items = rootMenuElement.subMenu!(params);
     const ally = findAllyBreak(items)!;
     expect(ally).toBeTruthy();
     expect(ally.name).toBe("break");
-    expect(ally.color).toBe(COLORS.breakAlly);
+    expect(typeof ally.color).toBe("function");
+    expect(ally.color(params)).toBe(COLORS.breakAlly);
+  });
+
+  test("shows break option with orange color when allied to traitor", () => {
+    const params = makeParams({
+      selected: makePlayer("p2", { isTraitor: true }),
+    });
+    const items = rootMenuElement.subMenu!(params);
+    const ally = findAllyBreak(items)!;
+    expect(ally.color(params)).toBe(COLORS.breakAllyNoDebuff);
+  });
+
+  test("shows break option with orange color when allied to disconnected", () => {
+    const params = makeParams({
+      selected: makePlayer("p2", { isDisconnected: true }),
+    });
+    const items = rootMenuElement.subMenu!(params);
+    const ally = findAllyBreak(items)!;
+    expect(ally.color(params)).toBe(COLORS.breakAllyNoDebuff);
   });
 
   test("break action calls handleBreakAlliance and closes menu", () => {

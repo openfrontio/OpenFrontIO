@@ -46,7 +46,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -217,7 +217,10 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
@@ -625,20 +628,12 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    const breakElement: MenuElement = {
-      ...allyBreakElement,
-      color:
-        params.selected?.isTraitor() || params.selected?.isDisconnected()
-          ? COLORS.breakAllyNoDebuff
-          : COLORS.breakAlly,
-    };
-
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? breakElement : boatMenuElement,
+            isAllied ? allyBreakElement : boatMenuElement,
             allyRequestElement,
             isFriendlyTarget(params) && !isDisconnectedTarget(params)
               ? donateGoldRadialElement
