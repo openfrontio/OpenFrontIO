@@ -31,7 +31,9 @@ import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
+  DoBreakAllianceEvent,
   DoGroundAttackEvent,
+  DoRequestAllianceEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -40,8 +42,10 @@ import {
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -345,6 +349,14 @@ export class ClientGameRunner {
     this.eventBus.on(
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoRequestAllianceEvent,
+      this.doRequestAllianceUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoBreakAllianceEvent,
+      this.doBreakAllianceUnderCursor.bind(this),
     );
 
     this.renderer.initialize();
@@ -680,6 +692,50 @@ export class ClientGameRunner {
             this.gameView.owner(tile).id(),
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
+        );
+      }
+    });
+  }
+
+  private doRequestAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    const myPlayer =
+      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
+    if (myPlayer === null) return;
+    this.myPlayer = myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canSendAllianceRequest) {
+        this.eventBus.emit(
+          new SendAllianceRequestIntentEvent(myPlayer, recipient),
+        );
+      }
+    });
+  }
+
+  private doBreakAllianceUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) return;
+
+    const myPlayer =
+      this.myPlayer ?? this.gameView.playerByClientID(this.lobby.clientID);
+    if (myPlayer === null) return;
+    this.myPlayer = myPlayer;
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    const recipient = tileOwner as PlayerView;
+
+    myPlayer.actions(tile).then((actions) => {
+      if (actions.interaction?.canBreakAlliance) {
+        this.eventBus.emit(
+          new SendBreakAllianceIntentEvent(myPlayer, recipient),
         );
       }
     });
