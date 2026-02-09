@@ -109,8 +109,8 @@ function horizontalBridge(): number[][] {
 function verticalBridge(): number[][] {
   // x/y/w/h
   return [
-    [-2, -2, 1, 3],
-    [2, -2, 1, 3],
+    [-2, -1, 1, 3],
+    [2, -1, 1, 3],
   ];
 }
 // ⌞
