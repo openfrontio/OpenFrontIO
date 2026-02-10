@@ -69,6 +69,7 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
+  waitBeforeJoin: Promise<void> = Promise.resolve(),
 ): (force?: boolean) => boolean {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
@@ -95,7 +96,7 @@ export function joinLobby(
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
-  const onmessage = (message: ServerMessage) => {
+  const onmessage = async (message: ServerMessage) => {
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
@@ -105,14 +106,15 @@ export function joinLobby(
         message.gameMapSize,
         terrainMapFileLoader,
       );
-      onPrestart();
+      waitBeforeJoin.then(onPrestart);
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
-      onPrestart();
+      waitBeforeJoin.then(onPrestart);
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
+      await waitBeforeJoin;
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;

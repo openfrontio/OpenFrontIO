@@ -216,6 +216,8 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+
+  waitBeforeJoin?: Promise<void>;
 }
 
 class Client {
@@ -869,6 +871,7 @@ class Client {
         // Store current URL for popstate confirmation
         this.currentUrl = window.location.href;
       },
+      lobby.waitBeforeJoin,
     );
   }
 
