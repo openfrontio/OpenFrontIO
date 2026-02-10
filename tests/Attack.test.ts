@@ -224,8 +224,8 @@ describe("Attack race condition with alliance requests", () => {
       game.executeNextTick();
     }
 
-     expect(playerA.isAlive()).toBe(true);
-     expect(playerB.isAlive()).toBe(true);
+    expect(playerA.isAlive()).toBe(true);
+    expect(playerB.isAlive()).toBe(true);
 
     // Player A should not be marked as traitor because the alliance was formed after the attack started
     expect(playerA.isTraitor()).toBe(false);
