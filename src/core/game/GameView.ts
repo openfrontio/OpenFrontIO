@@ -605,6 +605,7 @@ export class GameView implements GameMap {
     private _config: Config,
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
+    private _myUsername: string,
     private _gameID: GameID,
     private humans: Player[],
     isSkinTest?: boolean,
@@ -613,6 +614,13 @@ export class GameView implements GameMap {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
+    // Replace the local player's username with their own stored username.
+    // This way the user does not know they are being censored.
+    for (const h of this.humans) {
+      if (h.clientID === this._myClientID) {
+        h.username = this._myUsername;
+      }
+    }
     this._cosmetics = new Map(
       this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
