@@ -54,7 +54,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -100,6 +100,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  breakAllyNoDebuff: "#d4882b",
   delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
@@ -338,7 +339,10 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
@@ -740,6 +744,7 @@ export const rootMenuElement: MenuElement = {
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
     const isAllied = params.selected?.isAlliedWith(params.myPlayer);
+    const isDisconnected = isDisconnectedTarget(params);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -754,9 +759,9 @@ export const rootMenuElement: MenuElement = {
       ...(isOwnTerritory
         ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            isAllied ? allyBreakElement : boatMenuElement,
+            isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,
-            isFriendlyTarget(params) && !isDisconnectedTarget(params)
+            isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

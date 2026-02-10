@@ -848,6 +848,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
+  overlappingRailroads: number[];
 }
 
 export interface PlayerProfile {

@@ -850,6 +850,7 @@ class Client {
           "token-login",
           "matchmaking-modal",
           "lang-selector",
+          "gutter-ads",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;

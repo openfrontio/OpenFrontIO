@@ -712,8 +712,6 @@
   },
   "events_display": {
     "retreating": "retreating",
-    "retaliate": "Retaliate",
-    "boat": "Boat",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
     "alliance_rejected": "rejected",
