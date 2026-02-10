@@ -3,7 +3,7 @@ import { customElement } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
-const AD_SHOW_TICKS = 2 * 60 * 10; // 2 minutes
+const AD_SHOW_TICKS = 10 * 60 * 10; // 2 minutes
 const HEADER_AD_TYPE = "standard_iab_head1";
 const HEADER_AD_CONTAINER_ID = "header-ad-container";
 const TWO_XL_BREAKPOINT = 1536;
@@ -72,6 +72,12 @@ export class InGameHeaderAd extends LitElement implements Layer {
   private hideHeaderAd(): void {
     this.shouldShow = false;
     this.adLoaded = false;
+    try {
+      window.ramp.destroyUnits(HEADER_AD_TYPE);
+      console.log("successfully destroyed in game header ad");
+    } catch (e) {
+      console.error("error destroying in game header ad", e);
+    }
     this.requestUpdate();
   }
 

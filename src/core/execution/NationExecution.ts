@@ -2,39 +2,36 @@ import {
   Difficulty,
   Execution,
   Game,
-  GameMode,
-  Gold,
   Nation,
   Player,
   PlayerID,
   Relation,
   TerrainType,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { assertNever, simpleHash } from "../Util";
-import { ConstructionExecution } from "./ConstructionExecution";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
-import { randTerritoryTileArray } from "./nation/NationUtils";
+import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
-import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class NationExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private emojiBehavior: NationEmojiBehavior | null = null;
-  private mirvBehavior: NationMIRVBehavior | null = null;
-  private attackBehavior: AiAttackBehavior | null = null;
-  private allianceBehavior: NationAllianceBehavior | null = null;
-  private warshipBehavior: NationWarshipBehavior | null = null;
-  private nukeBehavior: NationNukeBehavior | null = null;
+  private behaviorsInitialized = false;
+  private emojiBehavior!: NationEmojiBehavior;
+  private mirvBehavior!: NationMIRVBehavior;
+  private attackBehavior!: AiAttackBehavior;
+  private allianceBehavior!: NationAllianceBehavior;
+  private warshipBehavior!: NationWarshipBehavior;
+  private nukeBehavior!: NationNukeBehavior;
+  private structureBehavior!: NationStructureBehavior;
   private mg: Game;
   private player: Player | null = null;
 
@@ -89,7 +86,7 @@ export class NationExecution implements Execution {
   tick(ticks: number) {
     // Ship tracking
     if (
-      this.warshipBehavior !== null &&
+      this.behaviorsInitialized &&
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy
@@ -98,6 +95,24 @@ export class NationExecution implements Execution {
     }
 
     if (ticks % this.attackRate !== this.attackTick) {
+      // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
+      // Otherwise it is possible that we earn more gold than we can spend
+      // The alternative is placing multiple structures in handleStructures, but that causes problems
+      if (
+        this.behaviorsInitialized &&
+        this.player !== null &&
+        this.player.isAlive()
+      ) {
+        const offset = ticks % this.attackRate;
+        const oneThird =
+          (this.attackTick + Math.floor(this.attackRate / 3)) % this.attackRate;
+        const twoThirds =
+          (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
+          this.attackRate;
+        if (offset === oneThird || offset === twoThirds) {
+          this.structureBehavior.handleStructures();
+        }
+      }
       return;
     }
 
@@ -135,56 +150,8 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (
-      this.emojiBehavior === null ||
-      this.mirvBehavior === null ||
-      this.attackBehavior === null ||
-      this.allianceBehavior === null ||
-      this.warshipBehavior === null ||
-      this.nukeBehavior === null
-    ) {
-      this.emojiBehavior = new NationEmojiBehavior(
-        this.random,
-        this.mg,
-        this.player,
-      );
-      this.mirvBehavior = new NationMIRVBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.allianceBehavior = new NationAllianceBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.warshipBehavior = new NationWarshipBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.emojiBehavior,
-      );
-      this.attackBehavior = new AiAttackBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.triggerRatio,
-        this.reserveRatio,
-        this.expandRatio,
-        this.allianceBehavior,
-        this.emojiBehavior,
-      );
-      this.nukeBehavior = new NationNukeBehavior(
-        this.random,
-        this.mg,
-        this.player,
-        this.attackBehavior,
-        this.emojiBehavior,
-      );
-
-      // Send an attack on the first tick
+    if (!this.behaviorsInitialized) {
+      this.initializeBehaviors();
       this.attackBehavior.forceSendAttack(this.mg.terraNullius());
       return;
     }
@@ -194,11 +161,63 @@ export class NationExecution implements Execution {
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
     this.mirvBehavior.considerMIRV();
-    this.handleUnits();
+    this.structureBehavior.handleStructures();
+    this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();
+  }
+
+  private initializeBehaviors(): void {
+    if (this.player === null) throw new Error("Player not initialized");
+
+    this.emojiBehavior = new NationEmojiBehavior(
+      this.random,
+      this.mg,
+      this.player,
+    );
+    this.mirvBehavior = new NationMIRVBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.allianceBehavior = new NationAllianceBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.warshipBehavior = new NationWarshipBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.emojiBehavior,
+    );
+    this.attackBehavior = new AiAttackBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.triggerRatio,
+      this.reserveRatio,
+      this.expandRatio,
+      this.allianceBehavior,
+      this.emojiBehavior,
+    );
+    this.nukeBehavior = new NationNukeBehavior(
+      this.random,
+      this.mg,
+      this.player,
+      this.attackBehavior,
+      this.emojiBehavior,
+    );
+    this.structureBehavior = new NationStructureBehavior(
+      this.random,
+      this.mg,
+      this.player,
+    );
+    this.behaviorsInitialized = true;
   }
 
   private randomSpawnLand(): TileRef | null {
@@ -251,102 +270,6 @@ export class NationExecution implements Execution {
     });
   }
 
-  private handleUnits() {
-    if (this.warshipBehavior === null) throw new Error("not initialized");
-    const hasCoastalTiles = this.hasCoastalTiles();
-    const isTeamGame = this.mg.config().gameConfig().gameMode === GameMode.Team;
-    return (
-      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
-      this.warshipBehavior.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) =>
-        hasCoastalTiles ? num * 3 : num,
-      ) ||
-      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) =>
-        isTeamGame ? num : num ** 2,
-      ) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
-    );
-  }
-
-  private hasCoastalTiles(): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    for (const tile of this.player.borderTiles()) {
-      if (this.mg.isOceanShore(tile)) return true;
-    }
-    return false;
-  }
-
-  private maybeSpawnStructure(
-    type: UnitType,
-    multiplier: (num: number) => number,
-  ) {
-    if (this.player === null) throw new Error("not initialized");
-    const owned = this.player.unitsOwned(type);
-    const perceivedCostMultiplier = multiplier(owned + 1);
-    const realCost = this.cost(type);
-    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
-    if (this.player.gold() < perceivedCost) {
-      return false;
-    }
-    const tile = this.structureSpawnTile(type);
-    if (tile === null) {
-      return false;
-    }
-    const canBuild = this.player.canBuild(type, tile);
-    if (canBuild === false) {
-      return false;
-    }
-    this.mg.addExecution(new ConstructionExecution(this.player, type, tile));
-    return true;
-  }
-
-  private structureSpawnTile(type: UnitType): TileRef | null {
-    if (this.mg === undefined) throw new Error("Not initialized");
-    if (this.player === null) throw new Error("Not initialized");
-    const tiles =
-      type === UnitType.Port
-        ? this.randCoastalTileArray(25)
-        : randTerritoryTileArray(this.random, this.mg, this.player, 25);
-    if (tiles.length === 0) return null;
-    const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
-    if (valueFunction === null) return null;
-    let bestTile: TileRef | null = null;
-    let bestValue = 0;
-    for (const t of tiles) {
-      const v = valueFunction(t);
-      if (v <= bestValue && bestTile !== null) continue;
-      if (!this.player.canBuild(type, t)) continue;
-      // Found a better tile
-      bestTile = t;
-      bestValue = v;
-    }
-    return bestTile;
-  }
-
-  private randCoastalTileArray(numTiles: number): TileRef[] {
-    const tiles = Array.from(this.player!.borderTiles()).filter((t) =>
-      this.mg.isOceanShore(t),
-    );
-    return Array.from(this.arraySampler(tiles, numTiles));
-  }
-
-  private *arraySampler<T>(a: T[], sampleSize: number): Generator<T> {
-    if (a.length <= sampleSize) {
-      // Return all elements
-      yield* a;
-    } else {
-      // Sample `sampleSize` elements
-      const remaining = new Set<T>(a);
-      while (sampleSize--) {
-        const t = this.random.randFromSet(remaining);
-        remaining.delete(t);
-        yield t;
-      }
-    }
-  }
-
   private handleEmbargoesToHostileNations() {
     const player = this.player;
     if (player === null) return;
@@ -375,11 +298,6 @@ export class NationExecution implements Execution {
         player.stopEmbargo(other);
       }
     });
-  }
-
-  private cost(type: UnitType): Gold {
-    if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
   isActive(): boolean {
