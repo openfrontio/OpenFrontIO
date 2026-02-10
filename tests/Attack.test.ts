@@ -183,7 +183,7 @@ describe("Attack race condition with alliance requests", () => {
       null,
       "playerB_id",
     );
-    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -223,6 +223,9 @@ describe("Attack race condition with alliance requests", () => {
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
+
+     expect(playerA.isAlive()).toBe(true);
+     expect(playerB.isAlive()).toBe(true);
 
     // Player A should not be marked as traitor because the alliance was formed after the attack started
     expect(playerA.isTraitor()).toBe(false);
