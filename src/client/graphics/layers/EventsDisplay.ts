@@ -347,6 +347,7 @@ export class EventsDisplay extends LitElement implements Layer {
     for (const [allianceId] of this.alliancesCheckedAt) {
       if (!currentAllianceIds.has(allianceId)) {
         this.removeAllianceRenewalEvents(allianceId);
+        this.alliancesCheckedAt.delete(allianceId);
       }
     }
   }
@@ -380,7 +381,6 @@ export class EventsDisplay extends LitElement implements Layer {
           event.allianceID === allianceID
         ),
     );
-    this.alliancesCheckedAt.delete(allianceID);
   }
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
@@ -575,6 +575,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!myPlayer) return;
 
     this.removeAllianceRenewalEvents(update.allianceID);
+    this.alliancesCheckedAt.delete(update.allianceID);
     this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
