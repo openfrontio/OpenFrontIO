@@ -643,7 +643,7 @@ export class EventsDisplay extends LitElement implements Layer {
           : null;
     if (otherID === null) return;
     const other = this.game.playerBySmallID(otherID) as PlayerView;
-    if (!other || !myPlayer.isAlive()) return;
+    if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
       description: translateText("events_display.alliance_expired", {
