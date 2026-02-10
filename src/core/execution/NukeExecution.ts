@@ -259,49 +259,56 @@ export class NukeExecution implements Execution {
       ? this.mg.config().maxTroops(this.target() as Player)
       : 1;
 
+    // Retrieve all impacted players and the number of tiles
+    const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
         owner.relinquish(tile);
-        owner.removeTroops(
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              owner.troops(),
-              owner.numTilesOwned(),
-              maxTroops,
-            ),
-        );
-        owner.outgoingAttacks().forEach((attack) => {
-          const deaths =
-            this.mg
-              ?.config()
-              .nukeDeathFactor(
-                this.nukeType,
-                attack.troops(),
-                owner.numTilesOwned(),
-                maxTroops,
-              ) ?? 0;
-          attack.setTroops(attack.troops() - deaths);
-        });
-        owner.units(UnitType.TransportShip).forEach((attack) => {
-          const deaths =
-            this.mg
-              ?.config()
-              .nukeDeathFactor(
-                this.nukeType,
-                attack.troops(),
-                owner.numTilesOwned(),
-                maxTroops,
-              ) ?? 0;
-          attack.setTroops(attack.troops() - deaths);
-        });
+        const numTiles = tilesPerPlayers.get(owner);
+        tilesPerPlayers.set(owner, numTiles === undefined ? 0 : numTiles + 1);
       }
-
       if (this.mg.isLand(tile)) {
         this.mg.setFallout(tile, true);
       }
+    }
+
+    // Then compute the explosion effect on each player
+    for (const [player, numTiles] of tilesPerPlayers) {
+      player.removeTroops(
+        this.mg
+          .config()
+          .nukeDeathFactor(
+            this.nukeType,
+            player.troops(),
+            player.numTilesOwned(),
+            maxTroops,
+          ) * numTiles,
+      );
+      player.outgoingAttacks().forEach((attack) => {
+        const deaths =
+          this.mg
+            ?.config()
+            .nukeDeathFactor(
+              this.nukeType,
+              attack.troops(),
+              player.numTilesOwned(),
+              maxTroops,
+            ) ?? 0;
+        attack.setTroops(attack.troops() - deaths * numTiles);
+      });
+      player.units(UnitType.TransportShip).forEach((attack) => {
+        const deaths =
+          this.mg
+            ?.config()
+            .nukeDeathFactor(
+              this.nukeType,
+              attack.troops(),
+              player.numTilesOwned(),
+              maxTroops,
+            ) ?? 0;
+        attack.setTroops(attack.troops() - deaths * numTiles);
+      });
     }
 
     const outer2 = magnitude.outer * magnitude.outer;
