@@ -5,6 +5,7 @@ import {
   Player,
   PlayerID,
 } from "../../game/Game";
+import { GameUpdateType } from "../../game/GameUpdates";
 
 export class AllianceExtensionExecution implements Execution {
   constructor(
@@ -41,6 +42,12 @@ export class AllianceExtensionExecution implements Execution {
 
     // Mark this player's intent to extend
     alliance.addExtensionRequest(this.from);
+
+    mg.addUpdate({
+      type: GameUpdateType.AllianceExtension,
+      playerID: this.from.smallID(),
+      allianceID: alliance.id(),
+    });
 
     if (alliance.bothAgreedToExtend()) {
       alliance.extend();

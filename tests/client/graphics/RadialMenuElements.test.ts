@@ -364,10 +364,13 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        inAllianceExtensionWindow: true,
         canExtendAlliance: false,
-        myPlayerAgreedToExtend: true,
-        otherPlayerAgreedToExtend: false,
+        allianceInfo: {
+          expiresAt: 100,
+          inExtensionWindow: true,
+          myPlayerAgreedToExtend: true,
+          otherAgreedToExtend: false,
+        },
       };
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
@@ -387,8 +390,13 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        inAllianceExtensionWindow: false,
         canExtendAlliance: false,
+        allianceInfo: {
+          expiresAt: 100,
+          inExtensionWindow: false,
+          myPlayerAgreedToExtend: false,
+          otherAgreedToExtend: false,
+        },
       };
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
@@ -408,10 +416,13 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        inAllianceExtensionWindow: true,
         canExtendAlliance: false,
-        myPlayerAgreedToExtend: true,
-        otherPlayerAgreedToExtend: false,
+        allianceInfo: {
+          expiresAt: 100,
+          inExtensionWindow: true,
+          myPlayerAgreedToExtend: true,
+          otherAgreedToExtend: false,
+        },
       };
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
@@ -432,10 +443,13 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        inAllianceExtensionWindow: true,
         canExtendAlliance: true,
-        myPlayerAgreedToExtend: false,
-        otherPlayerAgreedToExtend: false,
+        allianceInfo: {
+          expiresAt: 100,
+          inExtensionWindow: true,
+          myPlayerAgreedToExtend: false,
+          otherAgreedToExtend: false,
+        },
       };
 
       const subMenu = rootMenuElement.subMenu!(mockParams);

@@ -661,6 +661,7 @@ export interface Player {
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
+  allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
   canExtendAlliance(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
@@ -860,6 +861,13 @@ export interface PlayerBorderTiles {
   borderTiles: ReadonlySet<TileRef>;
 }
 
+export interface AllianceInfo {
+  expiresAt: Tick;
+  inExtensionWindow: boolean;
+  myPlayerAgreedToExtend: boolean;
+  otherAgreedToExtend: boolean;
+}
+
 export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
@@ -870,10 +878,7 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
-  allianceExpiresAt?: Tick;
-  inAllianceExtensionWindow?: boolean;
-  myPlayerAgreedToExtend?: boolean;
-  otherPlayerAgreedToExtend?: boolean;
+  allianceInfo?: AllianceInfo;
 }
 
 export interface EmojiMessage {

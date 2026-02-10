@@ -212,20 +212,8 @@ export class GameRunner {
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
-      const alliance = player.allianceWith(other as Player);
-      if (alliance) {
-        actions.interaction.allianceExpiresAt = alliance.expiresAt();
-        const inWindow =
-          alliance.expiresAt() <=
-          this.game.ticks() +
-            this.game.config().allianceExtensionPromptOffset();
-        actions.interaction.inAllianceExtensionWindow = inWindow;
-        actions.interaction.myPlayerAgreedToExtend =
-          alliance.agreedToExtend(player);
-        actions.interaction.otherPlayerAgreedToExtend = alliance.agreedToExtend(
-          other as Player,
-        );
-      }
+      actions.interaction.allianceInfo =
+        player.allianceInfo(other as Player) ?? undefined;
     }
 
     return actions;

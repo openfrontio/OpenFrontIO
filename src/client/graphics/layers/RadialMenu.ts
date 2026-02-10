@@ -1287,8 +1287,8 @@ export class RadialMenu implements Layer {
     params: MenuElementParams,
   ): string {
     const interaction = params.playerActions?.interaction;
-    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
-    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
+    const myAgreed = interaction?.allianceInfo?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
     return `${disabled}:${myAgreed}:${otherAgreed}`;
   }
 
@@ -1307,8 +1307,8 @@ export class RadialMenu implements Layer {
     }
 
     const interaction = params.playerActions?.interaction;
-    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
-    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
+    const myAgreed = interaction?.allianceInfo?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
 
     const ns = "http://www.w3.org/2000/svg";
     const smallSize = iconSize * 0.8;

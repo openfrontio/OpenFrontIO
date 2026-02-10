@@ -218,7 +218,7 @@ const allyExtendElement: MenuElement = {
   id: "ally_extend",
   name: "extend",
   displayed: (params: MenuElementParams) =>
-    !!params.playerActions?.interaction?.inAllianceExtensionWindow,
+    !!params.playerActions?.interaction?.allianceInfo?.inExtensionWindow,
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canExtendAlliance,
   color: COLORS.ally,
@@ -230,10 +230,10 @@ const allyExtendElement: MenuElement = {
   },
   timerFraction: (params: MenuElementParams) => {
     const interaction = params.playerActions?.interaction;
-    if (!interaction?.allianceExpiresAt) return 1;
+    if (!interaction?.allianceInfo?.expiresAt) return 1;
     const remaining = Math.max(
       0,
-      interaction.allianceExpiresAt - params.game.ticks(),
+      interaction.allianceInfo.expiresAt - params.game.ticks(),
     );
     const extensionWindow = Math.max(
       1,
@@ -664,7 +664,7 @@ export const rootMenuElement: MenuElement = {
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
     const inExtensionWindow =
-      params.playerActions.interaction?.inAllianceExtensionWindow;
+      params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,

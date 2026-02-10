@@ -12,6 +12,7 @@ import {
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
+  AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
@@ -175,6 +176,10 @@ export class EventsDisplay extends LitElement implements Layer {
     [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
     [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
     [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+    [
+      GameUpdateType.AllianceExtension,
+      this.onAllianceExtensionEvent.bind(this),
+    ],
   ] as const;
 
   constructor() {
@@ -182,19 +187,7 @@ export class EventsDisplay extends LitElement implements Layer {
     this.events = [];
   }
 
-  init() {
-    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) => {
-      const myPlayer = this.game.myPlayer();
-      if (!myPlayer) return;
-      const alliance = myPlayer
-        .alliances()
-        .find((a) => a.other === e.recipient.id());
-      if (alliance) {
-        this.removeAllianceRenewalEvents(alliance.id);
-        this.requestUpdate();
-      }
-    });
-  }
+  init() {}
 
   tick() {
     this.active = true;
@@ -620,6 +613,11 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       focusID: otherID,
     });
+  }
+
+  private onAllianceExtensionEvent(update: AllianceExtensionUpdate) {
+    this.removeAllianceRenewalEvents(update.allianceID);
+    this.requestUpdate();
   }
 
   onTargetPlayerEvent(event: TargetPlayerUpdate) {
