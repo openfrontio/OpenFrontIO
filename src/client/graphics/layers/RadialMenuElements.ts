@@ -3,7 +3,7 @@ import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
-import { getSvgAspectRatio, renderNumber, translateText } from "../../Utils";
+import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -25,14 +25,6 @@ import swordIcon from "/images/SwordIconWhite.svg?url";
 import targetIcon from "/images/TargetIconWhite.svg?url";
 import traitorIcon from "/images/TraitorIconWhite.svg?url";
 import xIcon from "/images/XIcon.svg?url";
-
-let allianceIconAspectRatio: number | null = null;
-function getAllianceIconAspectRatio(): void {
-  if (allianceIconAspectRatio !== null) return;
-  getSvgAspectRatio(allianceIcon).then((ratio) => {
-    if (ratio) allianceIconAspectRatio = ratio;
-  });
-}
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -66,19 +58,7 @@ export interface MenuElement {
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
 
-  customRender?: (
-    content: SVGGElement,
-    centroidX: number,
-    centroidY: number,
-    iconSize: number,
-    disabled: boolean,
-    params: MenuElementParams,
-    update?: boolean, // true when refreshing existing render
-  ) => void;
-  customRenderStateKey?: (
-    disabled: boolean,
-    params: MenuElementParams,
-  ) => string;
+  renderType?: string;
 
   timerFraction?: (params: MenuElementParams) => number; // 0..1, for arc timer overlay
 }
@@ -261,75 +241,7 @@ const allyExtendElement: MenuElement = {
     );
     return Math.max(0, Math.min(1, remaining / extensionWindow));
   },
-  customRenderStateKey: (disabled: boolean, params: MenuElementParams) => {
-    const interaction = params.playerActions?.interaction;
-    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
-    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
-    return `${disabled}:${myAgreed}:${otherAgreed}`;
-  },
-  customRender: (
-    content: SVGGElement,
-    cx: number,
-    cy: number,
-    iconSize: number,
-    disabled: boolean,
-    params: MenuElementParams,
-    update?: boolean,
-  ) => {
-    if (update) {
-      while (content.firstChild) content.removeChild(content.firstChild);
-    }
-    const interaction = params.playerActions?.interaction;
-    const myAgreed = interaction?.myPlayerAgreedToExtend ?? false;
-    const otherAgreed = interaction?.otherPlayerAgreedToExtend ?? false;
-
-    const ns = "http://www.w3.org/2000/svg";
-    const smallSize = iconSize * 0.8;
-    getAllianceIconAspectRatio();
-    const width = smallSize * (allianceIconAspectRatio ?? 1);
-    const gap = 2;
-    const totalWidth = width * 2 + gap;
-
-    // Left handshake = me
-    const leftImg = document.createElementNS(ns, "image");
-    leftImg.setAttribute("href", allianceIcon);
-    leftImg.setAttribute("width", width.toString());
-    leftImg.setAttribute("height", smallSize.toString());
-    leftImg.setAttribute("x", (cx - totalWidth / 2).toString());
-    leftImg.setAttribute("y", (cy - smallSize / 2).toString());
-    leftImg.setAttribute("opacity", disabled ? "0.5" : "1");
-
-    if (!myAgreed) {
-      const animLeft = document.createElementNS(ns, "animate");
-      animLeft.setAttribute("attributeName", "opacity");
-      animLeft.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
-      animLeft.setAttribute("dur", "1.5s");
-      animLeft.setAttribute("repeatCount", "indefinite");
-      leftImg.appendChild(animLeft);
-    }
-
-    content.appendChild(leftImg);
-
-    // Right handshake = them
-    const rightImg = document.createElementNS(ns, "image");
-    rightImg.setAttribute("href", allianceIcon);
-    rightImg.setAttribute("width", width.toString());
-    rightImg.setAttribute("height", smallSize.toString());
-    rightImg.setAttribute("x", (cx - totalWidth / 2 + width + gap).toString());
-    rightImg.setAttribute("y", (cy - smallSize / 2).toString());
-    rightImg.setAttribute("opacity", disabled ? "0.5" : "1");
-
-    if (!otherAgreed) {
-      const animRight = document.createElementNS(ns, "animate");
-      animRight.setAttribute("attributeName", "opacity");
-      animRight.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
-      animRight.setAttribute("dur", "1.5s");
-      animRight.setAttribute("repeatCount", "indefinite");
-      rightImg.appendChild(animRight);
-    }
-
-    content.appendChild(rightImg);
-  },
+  renderType: "allyExtend",
 };
 
 const allyBreakElement: MenuElement = {
