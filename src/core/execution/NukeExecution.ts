@@ -266,7 +266,7 @@ export class NukeExecution implements Execution {
       if (owner.isPlayer()) {
         owner.relinquish(tile);
         const numTiles = tilesPerPlayers.get(owner);
-        tilesPerPlayers.set(owner, numTiles === undefined ? 0 : numTiles + 1);
+        tilesPerPlayers.set(owner, numTiles === undefined ? 1 : numTiles + 1);
       }
       if (this.mg.isLand(tile)) {
         this.mg.setFallout(tile, true);
@@ -288,26 +288,26 @@ export class NukeExecution implements Execution {
       player.outgoingAttacks().forEach((attack) => {
         const deaths =
           this.mg
-            ?.config()
+            .config()
             .nukeDeathFactor(
               this.nukeType,
               attack.troops(),
               player.numTilesOwned(),
               maxTroops,
-            ) ?? 0;
-        attack.setTroops(attack.troops() - deaths * numTiles);
+            ) * numTiles;
+        attack.setTroops(attack.troops() - deaths);
       });
       player.units(UnitType.TransportShip).forEach((attack) => {
         const deaths =
           this.mg
-            ?.config()
+            .config()
             .nukeDeathFactor(
               this.nukeType,
               attack.troops(),
               player.numTilesOwned(),
               maxTroops,
-            ) ?? 0;
-        attack.setTroops(attack.troops() - deaths * numTiles);
+            ) * numTiles;
+        attack.setTroops(attack.troops() - deaths);
       });
     }
 
