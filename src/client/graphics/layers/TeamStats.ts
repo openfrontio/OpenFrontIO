@@ -42,6 +42,10 @@ export class TeamStats extends LitElement implements Layer {
 
   init() {}
 
+  getTickIntervalMs() {
+    return 1000;
+  }
+
   tick() {
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
 
@@ -52,9 +56,7 @@ export class TeamStats extends LitElement implements Layer {
 
     if (!this.visible) return;
 
-    if (this.game.ticks() % 10 === 0) {
-      this.updateTeamStats();
-    }
+    this.updateTeamStats();
   }
 
   private updateTeamStats() {
@@ -130,7 +132,7 @@ export class TeamStats extends LitElement implements Layer {
 
     return html`
       <div
-        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/70 w-full text-white text-xs md:text-sm"
+        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/70 w-full text-white text-xs md:text-sm mt-2"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div

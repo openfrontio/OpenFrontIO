@@ -245,6 +245,15 @@ export class DefaultConfig implements Config {
   donateTroops(): boolean {
     return this._gameConfig.donateTroops;
   }
+  goldMultiplier(): number {
+    return this._gameConfig.goldMultiplier ?? 1;
+  }
+  startingGold(playerInfo: PlayerInfo): Gold {
+    if (playerInfo.playerType === PlayerType.Bot) {
+      return 0n;
+    }
+    return BigInt(this._gameConfig.startingGold ?? 0);
+  }
 
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
@@ -252,15 +261,21 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
+    const multiplier = this.goldMultiplier();
+    let baseGold: bigint;
     switch (rel) {
       case "ally":
-        return 35_000n;
+        baseGold = 35_000n;
+        break;
       case "team":
       case "other":
-        return 25_000n;
+        baseGold = 25_000n;
+        break;
       case "self":
-        return 10_000n;
+        baseGold = 10_000n;
+        break;
     }
+    return BigInt(Math.floor(Number(baseGold) * multiplier));
   }
 
   trainStationMinRange(): number {
@@ -281,7 +296,8 @@ export class DefaultConfig implements Config {
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
-    return BigInt(Math.floor(baseGold * bonus));
+    const multiplier = this.goldMultiplier();
+    return BigInt(Math.floor(baseGold * bonus * multiplier));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -709,7 +725,7 @@ export class DefaultConfig implements Config {
     if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 18_750;
+          return 12_500;
         case Difficulty.Medium:
           return 25_000; // Like humans
         case Difficulty.Hard:
@@ -744,7 +760,7 @@ export class DefaultConfig implements Config {
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxTroops * 0.75;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
         return maxTroops * 1; // Like humans
       case Difficulty.Hard:
@@ -771,7 +787,7 @@ export class DefaultConfig implements Config {
     if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          toAdd *= 0.95;
+          toAdd *= 0.9;
           break;
         case Difficulty.Medium:
           toAdd *= 1; // Like humans
@@ -791,10 +807,14 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
+    const multiplier = this.goldMultiplier();
+    let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
-      return 50n;
+      baseRate = 50n;
+    } else {
+      baseRate = 100n;
     }
-    return 100n;
+    return BigInt(Math.floor(Number(baseRate) * multiplier));
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

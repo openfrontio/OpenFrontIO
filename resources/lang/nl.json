@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Sluiten",
+    "back": "Terug",
     "available": "Beschikbaar",
     "preset_max": "Max",
     "summary_send": "Verstuur",
@@ -17,26 +18,42 @@
     "cap_tooltip": "Resterende capaciteit ontvanger",
     "target_dead": "Doelwit uitgeschakeld",
     "target_dead_note": "Je kunt geen middelen sturen naar een dode speler.",
-    "none": "Geen"
+    "none": "Geen",
+    "copied": "Gekopieerd!",
+    "click_to_copy": "Klik om te kopiëren"
   },
   "main": {
     "title": "OpenFront (ALFA)",
     "join_discord": "Discord",
     "login_discord": "Login met Discord",
+    "sign_in": "Aanmelden",
+    "discord_avatar_alt": "Avatar Discord profiel",
+    "user_avatar_alt": "Avatar van {username}",
     "checking_login": "Inlog controleren...",
     "logged_in": "Ingelogd!",
     "log_out": "Uitloggen",
-    "create_lobby": "Lobby aanmaken",
-    "join_lobby": "Lobby toetreden",
-    "single_player": "Eén Speler",
+    "create": "Lobby aanmaken",
+    "join": "Lobby toetreden",
+    "solo": "Solo",
     "instructions": "Instructies",
+    "game_info": "Spelinformatie",
     "wiki": "Wiki",
     "privacy_policy": "Privacybeleid",
     "terms_of_service": "Servicevoorwaarden",
-    "reddit": "Reddit"
+    "copyright": "© OpenFront™ en Bijdragers",
+    "reddit": "Reddit",
+    "play": "Spelen",
+    "news": "Nieuws",
+    "store": "Winkel",
+    "settings": "Instellingen",
+    "keys": "Sneltoetsen",
+    "stats": "Statistieken",
+    "account": "Account",
+    "help": "Help",
+    "menu": "Menu",
+    "pick_pattern": "Kies een skin!"
   },
   "news": {
-    "see_all_releases": "Bekijk alle releases",
     "github_link": "op GitHub",
     "title": "Release-opmerkingen"
   },
@@ -83,6 +100,8 @@
     "radial_attack": "Het aanvalsmenu openen.",
     "radial_info": "Infomenu openen.",
     "radial_boat": "Stuur een Boot (transportschip) voor een aanval op de geselecteerde locatie. Alleen beschikbaar als je toegang hebt tot water.",
+    "radial_donate_troops": "Doneer troepen, gelijk aan het percentage van de ingestelde aanvalsverhouding, aan de bondgenoot waarop je het radiale menu hebt geopend.",
+    "radial_donate_gold": "Opent het gouddonatiemenu zodat je bondgenoten snel goud kan sturen.",
     "radial_close": "Het menu sluiten.",
     "info_title": "Infomenu",
     "info_enemy_desc": "Bevat informatie zoals de naam van de geselecteerde speler, goud, troepen, of ze de handel hebben stopgezet, hoeveel kernwapens ze op je hebben afgevuurd, en of de speler een verrader is. Een verrader is een speler die een bondgenoot heeft aangevallen. Handel gestopt betekent dat jullie geen goud meer van elkaar ontvangen via handelsschepen. Handmatig (als de speler op \"Stop handel\" heeft geklikt, wat duurt totdat jullie beide op \"Start handel\" hebben geklikt) of automatisch (als jij jullie bondgenootschap hebt verraden, wat 5 minuten duurt of korter als jullie weer bondgenoten worden). Verrader toont 30 seconden lang Ja als de speler een bondgenoot heeft aangevallen. De iconen hieronder staan voor de volgende interacties:",
@@ -94,8 +113,8 @@
     "info_ally_panel": "Infopaneel bondgenoot",
     "info_ally_desc": "Wanneer je een bondgenootschap sluit met een speler, worden de volgende nieuwe iconen beschikbaar:",
     "ally_betray": "Verraad je bondgenoot, beëindig het bondgenootschap, stop de handel, verzwak je verdediging. De handel tussen jullie wordt 5 minuten gepauzeerd (of totdat jullie weer bondgenoten worden) en anderen stoppen de handel mogelijk ook. En tenzij de andere speler zelf een verrader was, wordt je 30 seconden als verrader gemarkeerd. Gedurende deze tijd staat er een icoon boven je naam en is je verdediging 50% zwakker. Bots zullen minder snel een bondgenoten willen worden en spelers zullen zich wel tweemaal bedenken voor ze dat doen.",
-    "ally_donate": "Geef een deel van je troepen aan je bondgenoot. Gebruikt wanneer ze weinig troepen hebben en worden aangevallen, of wanneer ze die extra kracht nodig hebben om een ​​vijand te verpletteren.",
-    "ally_donate_gold": "Geef een deel van je goud aan je bondgenoot. Wanneer zij weinig goud hebben en het voor gebouwen nodig hebben, of wanneer je teamgenoot aan het sparen is voor die MIRV.",
+    "ally_donate": "Doneer een deel van je troepen aan je bondgenoot. Gebruikt wanneer ze weinig troepen hebben en worden aangevallen, of wanneer ze die extra kracht nodig hebben om een ​​vijand te verpletteren.",
+    "ally_donate_gold": "Doneer een deel van je goud aan je bondgenoot. Wanneer zij weinig goud hebben en het voor gebouwen nodig hebben, of wanneer je teamgenoot aan het sparen is voor die MIRV.",
     "build_menu_title": "Bouwmenu",
     "build_menu_desc": "Maak hier een van of bekijk hoeveel van elke je al hebt gemaakt:",
     "build_name": "Naam",
@@ -114,7 +133,7 @@
     "build_silo": "Raketsilo",
     "build_silo_desc": "Maakt het lanceren van raketten mogelijk.",
     "build_sam": "Luchtdoelraket (SAM)-lanceerder",
-    "build_sam_desc": "Kan vijandelijke raketten onderscheppen binnen een straal van 80 pixels of, voor MIRV-kernkoppen, 50 pixels. Raakt 100% van de atoombommen, 80% van de waterstofbommen en 50% van de individuele MIRV-kernkoppen. De SAM heeft een afkoeltijd van 7,5 seconden.",
+    "build_sam_desc": "Kan vijandelijke raketten onderscheppen binnen een bereik van 100 pixels. De SAM-lanceerder heeft een herstelperiode van 7,5 seconden.",
     "build_atom": "Atoombom",
     "build_atom_desc": "Kleine explosieve bom die gebied, gebouwen, schepen en boten vernietigt. Komt vanuit de dichtstbijzijnde Raketsilo en landt op de plek waar je hebt geklikt om het te bouwen.",
     "build_hydrogen": "Waterstofbom",
@@ -129,12 +148,15 @@
     "icon_embargo": "Dollar stopbord - Embargo. Deze speler heeft de handel met jou gestopt, automatisch of handmatig.",
     "icon_request": "Envelop - Alliantieverzoek. Deze speler stuurde je een verzoek om bondgenoten te worden.",
     "info_enemy_panel": "Infopaneel vijand",
-    "exit_confirmation": "Weet je zeker dat je dit spel wilt verlaten?"
+    "exit_confirmation": "Weet je zeker dat je dit spel wilt verlaten?",
+    "bomb_direction": "Atoom- / waterstofbom boogrichting"
   },
   "single_modal": {
-    "title": "Eén speler",
+    "title": "Solo",
     "random_spawn": "Willekeurige startpositie",
     "allow_alliances": "Bondgenootschappen toestaan",
+    "toggle_achievements": "Prestaties in- of uitschakelen",
+    "sign_in_for_achievements": "Meld je aan voor prestaties",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
@@ -145,6 +167,8 @@
     "infinite_troops": "Oneindige troepen",
     "compact_map": "Compacte kaart",
     "max_timer": "Spellengte (minuten)",
+    "max_timer_placeholder": "Min.",
+    "max_timer_invalid": "Voer een geldige max. timertijd in (1-120 minuten)",
     "disable_nukes": "Kernwapens uitschakelen",
     "enables_title": "Onderdelen inschakelen",
     "start": "Start Spel"
@@ -156,10 +180,21 @@
   },
   "account_modal": {
     "title": "Account",
-    "logged_in_as": "Ingelogd als {email}",
+    "connected_as": "Gekoppeld als",
+    "stats_overview": "Overzicht van statistieken",
+    "link_discord": "Discord-account koppelen",
+    "log_out": "Uitloggen",
+    "sign_in_desc": "Meld je aan om statistieken en voortgang op te slaan",
+    "or": "OF",
+    "email_placeholder": "Voer je e-mailadres in",
+    "get_magic_link": "Krijg Magische Link",
+    "linked_account": "Ingelogd als {account_name}",
     "fetching_account": "Accountgegevens ophalen...",
-    "logged_in_with_discord": "Ingelogd met Discord",
-    "recovery_email_sent": "Herstelmail verzonden naar {email}"
+    "recovery_email_sent": "Herstelmail verzonden naar {email}",
+    "not_found": "Niet Gevonden",
+    "clear_session": "Sessie Wissen",
+    "failed_to_send_recovery_email": "Verzenden herstel e-mail mislukt",
+    "enter_email_address": "Voer een e-mailadres in alsjeblieft"
   },
   "stats_modal": {
     "title": "Statistieken",
@@ -167,11 +202,40 @@
     "loading": "Laden...",
     "error": "Fout bij het laden van clan statistieken",
     "no_stats": "Er zijn geen clan statistieken beschikbaar",
+    "no_data_yet": "Nog geen gegevens",
     "clan": "Clan",
     "games": "Spellen",
     "win_score": "Win Score",
+    "win_score_tooltip": "Gewogen aantal overwinningen op basis van clandeelname en matchmoeilijkheidsgraad",
     "loss_score": "Verlies Score",
-    "win_loss_ratio": "Gewonnen/Verloren"
+    "loss_score_tooltip": "Gewogen aantal verliezen op basis van clandeelname en matchmoeilijkheidsgraad",
+    "win_loss_ratio": "Gewonnen/Verloren",
+    "ratio": "Verhouding",
+    "rank": "Rang",
+    "try_again": "Opnieuw Proberen"
+  },
+  "game_info_modal": {
+    "title": "Spelinformatie",
+    "players": "Spelers",
+    "atoms": "Atoombom",
+    "hydros": "Waterstofbom",
+    "mirv": "MIRV",
+    "bombs": "Bommen",
+    "total_gold": "Totaal",
+    "all_gold": "Alle goud",
+    "trade": "Handel",
+    "conquest_gold": "Veroverd spelersgoud",
+    "stolen_gold": "Gestolen met oorlogsschepen",
+    "num_of_conquests": "Aantal veroverde spelers",
+    "duration": "Tijdsduur",
+    "survival_time": "Overlevingstijd",
+    "war": "Oorlog",
+    "economy": "Economie",
+    "conquests": "Veroveringen",
+    "pirate": "Kapen",
+    "conquered": "Veroverd",
+    "loading_game_info": "Spelstatistieken worden geladen",
+    "no_winner": "Dit spel eindigde zonder winnaar (of een Natie won)"
   },
   "map": {
     "map": "Kaart",
@@ -186,6 +250,7 @@
     "asia": "Azië",
     "mars": "Mars",
     "southamerica": "Zuid-Amerika",
+    "britanniaclassic": "Britannia (Klassiek)",
     "britannia": "Groot-Brittanië",
     "gatewaytotheatlantic": "Poort van de Atlantische Oceaan",
     "australia": "Australië",
@@ -196,7 +261,7 @@
     "betweentwoseas": "Tussen twee zeeën",
     "faroeislands": "Faeröer eilanden",
     "deglaciatedantarctica": "Ontdooid Antarctica",
-    "europeclassic": "Europa (klassiek)",
+    "europeclassic": "Europa (Klassiek)",
     "falklandislands": "Falklandeilanden",
     "baikal": "Baikalmeer",
     "halkidiki": "Chalkidiki",
@@ -206,19 +271,33 @@
     "yenisei": "Jenisej",
     "pluto": "Pluto",
     "montreal": "Montreal",
+    "newyorkcity": "New York City",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Kernoorlog)",
     "fourislands": "Vier Eilanden",
     "gulfofstlawrence": "Saint Lawrencebaai",
-    "lisbon": "Lissabon"
+    "lisbon": "Lissabon",
+    "svalmel": "Svalmel",
+    "manicouagan": "Manicouagan",
+    "lemnos": "Limnos",
+    "sierpinski": "Sierpinski",
+    "twolakes": "Twee Meren",
+    "straitofhormuz": "Straat van Hormuz",
+    "surrounded": "Omringd",
+    "didier": "Didier",
+    "didierfrance": "Didier (Frankrijk)",
+    "amazonriver": "Amazonerivier"
   },
   "map_categories": {
     "continental": "Continent",
     "regional": "Regio",
-    "fantasy": "Overig"
+    "fantasy": "Overig",
+    "special": "Speciaal",
+    "arcade": "Arcade"
   },
   "map_component": {
-    "loading": "Laden..."
+    "loading": "Laden...",
+    "error": "Fout"
   },
   "private_lobby": {
     "title": "Privélobby toetreden",
@@ -229,47 +308,60 @@
     "checking": "Lobby controleren...",
     "not_found": "Lobby niet gevonden. Controleer het ID en probeer het opnieuw.",
     "error": "Er is een fout opgetreden. Probeer het opnieuw of neem contact op met support.",
-    "joined_waiting": "Succesvol toegetreden! Wachten tot het spel begint...",
-    "version_mismatch": "Dit spel is aangemaakt met een andere versie. Kan niet afspelen of deelnemen."
+    "joined_waiting": "Toegetreden tot lobby! Wachten op host om te starten...",
+    "version_mismatch": "Dit spel is aangemaakt met een andere versie. Kan niet afspelen of deelnemen.",
+    "disabled_units": "Uitgeschakelde Eenheden"
   },
   "public_lobby": {
     "join": "Deelnemen aan volgende Spel",
     "waiting": "spelers wachten",
-    "teams_Duos": "van 2 (Duo's)",
-    "teams_Trios": "van 3 (Trio's)",
-    "teams_Quads": "van 4 (Viertallen)",
+    "teams_Duos": "{team_count} Teams van 2 (Duo's)",
+    "teams_Trios": "{team_count} Teams van 3 (Trio's)",
+    "teams_Quads": "{team_count} Teams van 4 (Viertallen)",
+    "waiting_for_players": "Wachten op spelers",
+    "starting_game": "Spel starten…",
     "teams_hvn": "Mensen vs Naties",
+    "teams_hvn_detailed": "{num} Mensen vs {num} Naties",
     "teams": "{num} Teams",
-    "players_per_team": "van {num}"
+    "players_per_team": "van {num}",
+    "started": "Begonnen"
   },
   "matchmaking_modal": {
-    "title": "Matchmaking",
+    "title": "1v1 Competitieve Matchmaking (ALFA)",
     "connecting": "Verbinden met matchmakingserver...",
     "searching": "Zoeken naar een spel...",
-    "waiting_for_game": "Wachten tot het spel begint..."
+    "waiting_for_game": "Wachten tot het spel begint...",
+    "elo": "Jouw ELO: {elo}"
   },
   "username": {
     "enter_username": "Voer je gebruikersnaam in",
     "not_string": "Gebruikersnaam moet een tekenreeks zijn.",
     "too_short": "Gebruikersnaam moet minstens {min} tekens lang zijn.",
     "too_long": "Gebruikersnaam mag niet langer zijn dan {max} tekens.",
-    "invalid_chars": "Gebruikersnaam mag alleen letters, cijfers, spaties, underscores en [vierkante haakjes] bevatten."
+    "invalid_chars": "Gebruikersnaam kan alleen letters, cijfers, spaties en underscores bevatten.",
+    "tag": "TAG",
+    "tag_too_short": "Clantag moet 2-5 alfanumerieke tekens zijn.",
+    "tag_invalid_chars": "Clantag kan alleen letters en cijfers bevatten."
   },
   "host_modal": {
-    "title": "Privélobby",
+    "title": "Privélobby Aanmaken",
+    "label": "Privé",
     "mode": "Modus",
     "team_count": "Aantal teams",
+    "team_type": "Teamtype",
     "options_title": "Opties",
     "bots": "Bots:",
     "bots_disabled": "Uitgeschakeld",
+    "player_immunity_duration": "PVP-immuniteitsduur (minuten)",
     "nations": "Naties: ",
     "disable_nations": "Naties uitschakelen",
     "max_timer": "Spellengte (minuten)",
+    "mins_placeholder": "Min.",
     "instant_build": "Bouwwachttijd uitschakelen",
     "infinite_gold": "Oneindig goud",
-    "donate_gold": "Goud geven",
+    "donate_gold": "Goud doneren",
     "infinite_troops": "Oneindige troepen",
-    "donate_troops": "Troepen geven",
+    "donate_troops": "Troepen doneren",
     "compact_map": "Compacte kaart",
     "enables_title": "Onderdelen inschakelen",
     "player": "Speler",
@@ -283,7 +375,11 @@
     "assigned_teams": "Toegewezen Teams",
     "empty_teams": "Lege Teams",
     "empty_team": "Leeg",
-    "remove_player": "Verwijder {username}"
+    "remove_player": "Verwijder {username}",
+    "teams_Duos": "Duo's (teams van 2)",
+    "teams_Trios": "Trio's (teams van 3)",
+    "teams_Quads": "Viertallen (teams van 4)",
+    "teams_Humans Vs Nations": "Mensen vs Naties"
   },
   "team_colors": {
     "red": "Rood",
@@ -301,15 +397,19 @@
     "code_license": "Code gelicenseerd onder AGPL-3.0 (geen garantie)"
   },
   "difficulty": {
-    "difficulty": "Moeilijkheidsgraad",
-    "Easy": "Ontspannen",
-    "Medium": "Gebalanceerd",
-    "Hard": "Intens",
-    "Impossible": "Onmogelijk"
+    "difficulty": "Natie moeilijkheidsgraad",
+    "easy": "Makkelijk",
+    "medium": "Gemiddeld",
+    "hard": "Moeilijk",
+    "impossible": "Onmogelijk"
   },
   "game_mode": {
     "ffa": "Iedereen tegen elkaar (FFA)",
     "teams": "Teams"
+  },
+  "public_game_modifier": {
+    "random_spawn": "Willekeurige Startpositie",
+    "compact_map": "Compacte Kaart"
   },
   "select_lang": {
     "title": "Kies taal"
@@ -327,7 +427,7 @@
     "factory": "Fabriek"
   },
   "user_setting": {
-    "title": "Gebruikersinstellingen",
+    "title": "Instellingen",
     "tab_basic": "Basisinstellingen",
     "tab_keybinds": "Sneltoetsen",
     "dark_mode_label": "Donkere Modus",
@@ -340,16 +440,18 @@
     "special_effects_desc": "Visuele effecten aanzetten. Zet uit om de prestaties van het spel te verbeteren",
     "structure_sprites_label": "Gebouw afbeeldingen",
     "structure_sprites_desc": "3D-afbeeldingen gebouwen in-/uitschakelen",
+    "cursor_cost_label_label": "Cursor Bouwkosten",
+    "cursor_cost_label_desc": "Toon kosten onder de bouwcursor",
     "anonymous_names_label": "Verborgen Namen",
     "anonymous_names_desc": "Vervang echte spelersnamen door willekeurige namen op je scherm.",
     "lobby_id_visibility_label": "Verborgen Lobby-ID's",
     "lobby_id_visibility_desc": "Verberg Lobby-ID tijdens het maken van een privélobby",
+    "toggle_visibility": "Zichtbaar/onzichtbaar",
     "left_click_label": "Linkermuisknop voor openen menu",
     "left_click_desc": "Als AAN: linkermuisknop opent het Radiale menu met zwaard-aanvalsknop. Als UIT: linkermuisknop opent direct de aanval.",
     "left_click_menu": "Linkermuisknop Radiale Menu",
     "attack_ratio_label": "⚔️ Aanvalsverhouding",
     "attack_ratio_desc": "Welk percentage van je troepen je bij een aanval stuurt (1-100%)",
-    "troop_ratio_desc": "De balans tussen troepen (voor gevechten) en werkers (voor goudproductie) aanpassen (1-100%)",
     "territory_patterns_label": "🏳️ Skins voor gebieden",
     "territory_patterns_desc": "Kies of je skins op gebieden wilt weergeven in het spel",
     "performance_overlay_label": "Prestatie-overlay",
@@ -358,6 +460,7 @@
     "easter_writing_speed_desc": "Pas aan hoe snel je pretendeert te programmeren (x1-x100)",
     "easter_bug_count_label": "Aantal bugs",
     "easter_bug_count_desc": "Hoeveel bugs je oké vindt (0-1000, gevoelsmatig)",
+    "press_a_key": "Druk op een toets",
     "view_options": "Weergave-opties",
     "toggle_view": "Weergave wisselen",
     "toggle_view_desc": "Weergave wisselen (terrein/landen)",
@@ -382,6 +485,11 @@
     "build_hydrogen_bomb_desc": "Bouw een Waterstofbom onder je cursor.",
     "build_mirv": "Bouw MIRV",
     "build_mirv_desc": "Bouw een MIRV onder je cursor.",
+    "menu_shortcuts": "Menu sneltoetsen",
+    "build_menu_modifier": "Bouwmenu",
+    "build_menu_modifier_desc": "Houdt deze toets ingedrukt terwijl je klikt, om het bouwmenu te openen.",
+    "emoji_menu_modifier": "Emoji-menu",
+    "emoji_menu_modifier_desc": "Houdt deze toets ingedrukt terwijl je klikt, om het emoji-menu te openen.",
     "attack_ratio_controls": "Aanvalsverhouding-bediening",
     "attack_ratio_up": "Verhoog Aanvalsverhouding",
     "attack_ratio_up_desc": "Verhoog aanvalsverhouding met 10%",
@@ -392,6 +500,8 @@
     "boat_attack_desc": "Stuur een bootaanval naar de plek onder je cursor.",
     "ground_attack": "Grondaanval",
     "ground_attack_desc": "Stuur een grondaanval naar de plek onder je cursor.",
+    "swap_direction": "Omdraaien boogrichting atoom- / waterstofbom",
+    "swap_direction_desc": "Draai boogrichting raket om (opwaarts/neerwaarts).",
     "zoom_controls": "Zoombediening",
     "zoom_out": "Uitzoomen",
     "zoom_out_desc": "Kaart uitzoomen",
@@ -416,7 +526,8 @@
     "exit_game_label": "Spel Verlaten",
     "exit_game_info": "Terug naar hoofdmenu",
     "background_music_volume": "Volume achtergrondmuziek",
-    "sound_effects_volume": "Volume geluidseffecten"
+    "sound_effects_volume": "Volume geluidseffecten",
+    "keybind_conflict_error": "De toets {key} is al verbonden aan een andere actie."
   },
   "chat": {
     "title": "Snelchat",
@@ -529,6 +640,7 @@
     "other_team": "{team} team heeft gewonnen!",
     "you_won": "Je hebt gewonnen!",
     "other_won": "{player} heeft gewonnen!",
+    "nation_won": "Natie {nation} heeft gewonnen!",
     "exit": "Verlaat spel",
     "keep": "Blijf spelen",
     "spectate": "Toekijken",
@@ -537,7 +649,7 @@
     "ofm_winter_description": "Doe mee met het competitieve toernooi en concurreer met de beste spelers",
     "join_tournament": "Toernooi toetreden",
     "join_discord": "Word lid van onze Discord-gemeenschap!",
-    "discord_description": "Leg contact met andere spelers, krijg updates en deel strategieën",
+    "discord_description": "Maak contact met spelers, ontdek nieuwe functies en win prijzen!",
     "join_server": "Word lid van server",
     "youtube_tutorial": "Wat hulp nodig?"
   },
@@ -549,7 +661,7 @@
     "team": "Team",
     "owned": "Bezit",
     "gold": "Goud",
-    "troops": "Troepen",
+    "maxtroops": "Max. troepen",
     "launchers": "Raketsilo's",
     "sams": "SAM-lanceerders",
     "warships": "Oorlogsschepen",
@@ -565,6 +677,7 @@
     "team": "Team",
     "alliance_timeout": "Alliantie eindigt over",
     "troops": "Troepen",
+    "maxtroops": "Max. troepen",
     "a_troops": "Aanvallende troepen",
     "gold": "Goud",
     "ports": "Havens",
@@ -575,7 +688,9 @@
     "warships": "Oorlogsschepen",
     "health": "Gezondheid",
     "attitude": "Houding",
-    "levels": "Levels"
+    "levels": "Levels",
+    "wilderness_title": "Wildernis",
+    "irradiated_wilderness_title": "Bestraalde Wildernis"
   },
   "events_display": {
     "retreating": "trekken zich terug",
@@ -601,7 +716,20 @@
     "wants_to_renew_alliance": "{name} wil jullie alliantie vernieuwen",
     "ignore": "Negeren",
     "unit_voluntarily_deleted": "Eenheid vrijwillig verwijderd",
-    "betrayal_debuff_ends": "Nog {time} seconden tot de verraad-verzwakking afloopt"
+    "betrayal_debuff_ends": "Nog {time} seconden tot de verraad-verzwakking afloopt",
+    "attack_cancelled_retreat": "Aanval geannuleerd, {troops} soldaten gedood tijdens terugtrekken",
+    "received_gold_from_captured_ship": "{gold} Goud ontvangen van veroverd schip van {name}",
+    "received_gold_from_trade": "{gold} Goud ontvangen van handel met {name}",
+    "missile_intercepted": "Raket onderschepte {unit}",
+    "mirv_warheads_intercepted": "{count, plural, one {{count} MIRV-kernkop onderschept} other {{count} MIRV-kernkoppen onderschept}}",
+    "sent_troops_to_player": "{troops} Troepen naar {name} gestuurd",
+    "received_troops_from_player": "{troops} Troepen ontvangen van {name}",
+    "sent_gold_to_player": "{gold} Goud verstuurd aan {name}",
+    "received_gold_from_player": "{gold} Goud ontvangen van {name}",
+    "unit_captured_by_enemy": "Jouw {unit} werd veroverd door {name}",
+    "captured_enemy_unit": "{unit} veroverd van {name}",
+    "unit_destroyed": "Jouw {unit} werd vernietigd",
+    "no_boats_available": "Geen boten beschikbaar, max. {max}"
   },
   "unit_info_modal": {
     "structure_info": "Gebouw Info",
@@ -653,7 +781,10 @@
     "send_alliance": "Stuur Alliantieverzoek",
     "send_troops": "Geef Troepen",
     "send_gold": "Geef Goud",
-    "emotes": "Emoji's"
+    "emotes": "Emoji's",
+    "arc_up": "Opwaartse boog",
+    "arc_down": "Neerwaartse boog",
+    "flip_rocket_trajectory": "Rakettraject spiegelen"
   },
   "send_troops_modal": {
     "title_with_name": "Stuur Troepen naar {name}",
@@ -702,20 +833,26 @@
   },
   "heads_up_message": {
     "choose_spawn": "Kies een startlocatie",
-    "random_spawn": "Willekeurige startpositie is ingeschakeld. Positie wordt voor je gekozen..."
+    "random_spawn": "Willekeurige startpositie is ingeschakeld. Positie wordt voor je gekozen...",
+    "singleplayer_game_paused": "Spel gepauzeerd",
+    "multiplayer_game_paused": "Spel gepauzeerd door Lobby-maker"
   },
   "territory_patterns": {
     "title": "Skins ",
     "colors": "Kleuren",
     "purchase": "Kopen",
     "show_only_owned": "Mijn Skins",
+    "all_owned": "Je bezit alle skins! Kom later terug voor nieuwe items.",
+    "not_logged_in": "Niet ingelogd",
     "blocked": {
       "login": "Je moet ingelogd zijn voor toegang tot deze skin.",
       "purchase": "Koop deze skin om te ontgrendelen."
     },
     "pattern": {
       "default": "Standaard"
-    }
+    },
+    "select_skin": "Kies Skin",
+    "selected": "geselecteerd"
   },
   "flag_input": {
     "title": "Selecteer Vlag",
@@ -747,7 +884,7 @@
     "ship_type": "Scheepstype",
     "weapon": "Wapen",
     "built": "Gebouwd",
-    "destroyed": "Verwoest",
+    "destroyed": "Vernietigd",
     "captured": "Veroverd",
     "lost": "Verloren",
     "hits": "Treffers",
@@ -786,8 +923,9 @@
     "mode": "Modus",
     "mode_ffa": "Iedereen tegen elkaar",
     "mode_team": "Team",
-    "view": "Weergeven",
+    "replay": "Herhaling",
     "details": "Details",
+    "ranking": "Rang",
     "started": "Begonnen",
     "map": "Kaart",
     "difficulty": "Moeilijkheidsgraad",
@@ -796,13 +934,20 @@
   "player_stats_tree": {
     "public": "Openbaar",
     "private": "Privé",
-    "singleplayer": "Eén Speler",
+    "singleplayer": "Solo",
     "mode": "Modus",
     "stats_wins": "Overwinningen",
     "stats_losses": "Nederlagen",
     "stats_wlr": "Winst:verliesverhouding",
     "stats_games_played": "Gespeelde spellen",
     "mode_ffa": "Iedereen tegen elkaar",
-    "mode_team": "Team"
+    "mode_team": "Team",
+    "no_stats": "Geen statistieken vastgelegd voor deze selectie."
+  },
+  "matchmaking_button": {
+    "play_ranked": "1v1 Competitieve Matchmaking",
+    "description": "(ALFA)",
+    "login_required": "Log in om competitief te spelen!",
+    "must_login": "Je moet ingelogd zijn om competitieve matchmaking te spelen."
   }
 }

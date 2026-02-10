@@ -5,6 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  LobbyInfoEvent,
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
@@ -55,7 +56,6 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   cosmetics: PlayerCosmeticRefs;
   playerName: string;
-  clientID: ClientID;
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
@@ -69,31 +69,33 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): () => void {
-  console.log(
-    `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
-  );
+): (force?: boolean) => boolean {
+  // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
+  let clientID: ClientID | undefined;
+
+  console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
 
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
 
-  let hasJoined = false;
+  let currentGameRunner: ClientGameRunner | null = null;
 
   const onconnect = () => {
-    if (hasJoined) {
-      console.log("rejoining game");
-      transport.rejoinGame(0);
-    } else {
-      hasJoined = true;
-      console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-      transport.joinGame();
-    }
+    // Always send join - server will detect reconnection via persistentID
+    console.log(`Joining game lobby ${lobbyConfig.gameID}`);
+    transport.joinGame();
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
   const onmessage = (message: ServerMessage) => {
+    if (message.type === "lobby_info") {
+      // Server tells us our assigned clientID
+      clientID = message.myClientID;
+      eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      return;
+    }
     if (message.type === "prestart") {
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
@@ -111,20 +113,29 @@ export function joinLobby(
       console.log(
         `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
       );
+      // Server tells us our assigned clientID (also sent on start for late joins)
+      clientID = message.myClientID;
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
       createClientGame(
         lobbyConfig,
+        clientID,
         eventBus,
         transport,
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
       )
-        .then((r) => r.start())
+        .then((r) => {
+          currentGameRunner = r;
+          r.start();
+        })
         .catch((e) => {
           console.error("error creating client game", e);
+
+          currentGameRunner = null;
+
           const startingModal = document.querySelector(
             "game-starting-modal",
           ) as HTMLElement;
@@ -135,7 +146,7 @@ export function joinLobby(
             e.message,
             e.stack,
             lobbyConfig.gameID,
-            lobbyConfig.clientID,
+            clientID,
             true,
             false,
             "error_modal.connection_error",
@@ -156,7 +167,7 @@ export function joinLobby(
           message.error,
           message.message,
           lobbyConfig.gameID,
-          lobbyConfig.clientID,
+          clientID,
           true,
           false,
           "error_modal.connection_error",
@@ -165,14 +176,25 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return () => {
+  return (force: boolean = false) => {
+    if (!force && currentGameRunner?.shouldPreventWindowClose()) {
+      console.log("Player is active, prevent leaving game");
+
+      return false;
+    }
+
     console.log("leaving game");
+
+    currentGameRunner = null;
     transport.leaveGame();
+
+    return true;
   };
 }
 
 async function createClientGame(
   lobbyConfig: LobbyConfig,
+  clientID: ClientID,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
@@ -198,16 +220,13 @@ async function createClientGame(
       mapLoader,
     );
   }
-  const worker = new WorkerClient(
-    lobbyConfig.gameStartInfo,
-    lobbyConfig.clientID,
-  );
+  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
   const gameView = new GameView(
     worker,
     config,
     gameMap,
-    lobbyConfig.clientID,
+    clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
   );
@@ -221,6 +240,7 @@ async function createClientGame(
 
   return new ClientGameRunner(
     lobbyConfig,
+    clientID,
     eventBus,
     gameRenderer,
     new InputHandler(gameRenderer.uiState, canvas, eventBus),
@@ -246,6 +266,7 @@ export class ClientGameRunner {
 
   constructor(
     private lobby: LobbyConfig,
+    private clientID: ClientID,
     private eventBus: EventBus,
     private renderer: GameRenderer,
     private input: InputHandler,
@@ -256,6 +277,21 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  /**
+   * Determines whether window closing should be prevented.
+   *
+   * Used to show a confirmation dialog when the user attempts to close
+   * the window or navigate away during an active game session.
+   *
+   * @returns {boolean} `true` if the window close should be prevented
+   * (when the player is alive in the game), `false` otherwise
+   * (when the player is not alive or doesn't exist)
+   */
+  public shouldPreventWindowClose(): boolean {
+    // Show confirmation dialog if player is alive in the game
+    return !!this.myPlayer?.isAlive();
+  }
+
   private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -264,8 +300,8 @@ export class ClientGameRunner {
       {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
-        clientID: this.lobby.clientID,
-        stats: update.allPlayersStats[this.lobby.clientID],
+        clientID: this.clientID,
+        stats: update.allPlayersStats[this.clientID],
       },
     ];
 
@@ -322,7 +358,7 @@ export class ClientGameRunner {
           gu.errMsg,
           gu.stack ?? "missing",
           this.lobby.gameStartInfo.gameID,
-          this.lobby.clientID,
+          this.clientID,
         );
         console.error(gu.stack);
         this.stop();
@@ -384,7 +420,7 @@ export class ClientGameRunner {
                 "spawn_failed",
                 translateText("error_modal.spawn_failed.description"),
                 this.lobby.gameID,
-                this.lobby.clientID,
+                this.clientID,
                 true,
                 false,
                 translateText("error_modal.spawn_failed.title"),
@@ -421,7 +457,7 @@ export class ClientGameRunner {
           `desync from server: ${JSON.stringify(message)}`,
           "",
           this.lobby.gameStartInfo.gameID,
-          this.lobby.clientID,
+          this.clientID,
           true,
           false,
           "error_modal.desync_notice",
@@ -432,7 +468,7 @@ export class ClientGameRunner {
           message.error,
           message.message,
           this.lobby.gameID,
-          this.lobby.clientID,
+          this.clientID,
           true,
           false,
           "error_modal.connection_error",
@@ -516,7 +552,7 @@ export class ClientGameRunner {
       return;
     }
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -551,7 +587,7 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -612,7 +648,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -631,7 +667,7 @@ export class ClientGameRunner {
     }
 
     if (this.myPlayer === null) {
-      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
@@ -680,17 +716,12 @@ export class ClientGameRunner {
   private sendBoatAttackIntent(tile: TileRef) {
     if (!this.myPlayer) return;
 
-    this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
-      this.eventBus.emit(
-        new SendBoatAttackIntentEvent(
-          this.gameView.owner(tile).id(),
-          tile,
-          this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          spawn === false ? null : spawn,
-        ),
-      );
-    });
+    this.eventBus.emit(
+      new SendBoatAttackIntentEvent(
+        tile,
+        this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+      ),
+    );
   }
 
   private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
@@ -733,7 +764,7 @@ function showErrorModal(
   error: string,
   message: string | undefined,
   gameID: GameID,
-  clientID: ClientID,
+  clientID: ClientID | undefined,
   closable = false,
   showDiscord = true,
   heading = "error_modal.crashed",
@@ -741,6 +772,9 @@ function showErrorModal(
   if (document.querySelector("#error-modal")) {
     return;
   }
+
+  const translatedError = translateText(error);
+  const displayError = translatedError === error ? error : translatedError;
 
   const modal = document.createElement("div");
   modal.id = "error-modal";
@@ -750,7 +784,7 @@ function showErrorModal(
     translateText(heading),
     `game id: ${gameID}`,
     `client id: ${clientID}`,
-    `Error: ${error}`,
+    `Error: ${displayError}`,
     message ? `Message: ${message}` : null,
   ]
     .filter(Boolean)

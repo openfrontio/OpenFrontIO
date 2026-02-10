@@ -46,7 +46,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -76,6 +76,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  breakAllyNoDebuff: "#d4882b",
   delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
@@ -115,6 +116,14 @@ function isFriendlyTarget(params: MenuElementParams): boolean {
   const isFriendly = (selectedPlayer as PlayerView).isFriendly;
   if (typeof isFriendly !== "function") return false;
   return isFriendly.call(selectedPlayer, params.myPlayer);
+}
+
+function isDisconnectedTarget(params: MenuElementParams): boolean {
+  const selectedPlayer = params.selected;
+  if (selectedPlayer === null) return false;
+  const isDisconnected = (selectedPlayer as PlayerView).isDisconnected;
+  if (typeof isDisconnected !== "function") return false;
+  return isDisconnected.call(selectedPlayer);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -208,7 +217,10 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
@@ -548,17 +560,7 @@ export const boatMenuElement: MenuElement = {
   color: COLORS.boat,
 
   action: async (params: MenuElementParams) => {
-    const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
-      params.myPlayer,
-      params.tile,
-    );
-
-    params.playerActionHandler.handleBoatAttack(
-      params.myPlayer,
-      params.selected?.id() ?? null,
-      params.tile,
-      spawn !== false ? spawn : null,
-    );
+    params.playerActionHandler.handleBoatAttack(params.myPlayer, params.tile);
 
     params.closeMenu();
   },
@@ -572,13 +574,16 @@ export const centerButtonElement: CenterButtonElement = {
       return true;
     }
     if (params.game.inSpawnPhase()) {
+      if (params.game.config().isRandomSpawn()) {
+        return true;
+      }
       if (tileOwner.isPlayer()) {
         return true;
       }
       return false;
     }
 
-    if (isFriendlyTarget(params)) {
+    if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
       return !params.playerActions.interaction?.canDonateTroops;
     }
 
@@ -588,7 +593,7 @@ export const centerButtonElement: CenterButtonElement = {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
-      if (isFriendlyTarget(params)) {
+      if (isFriendlyTarget(params) && !isDisconnectedTarget(params)) {
         const selectedPlayer = params.selected as PlayerView;
         const ratio = params.uiState?.attackRatio ?? 1;
         const troopsToDonate = Math.floor(ratio * params.myPlayer.troops());
@@ -616,10 +621,8 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    let ally = allyRequestElement;
-    if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
-    }
+    const isAllied = params.selected?.isAlliedWith(params.myPlayer);
+    const isDisconnected = isDisconnectedTarget(params);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -629,11 +632,11 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            boatMenuElement,
-            ally,
-            isFriendlyTarget(params)
+            isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
+            allyRequestElement,
+            isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

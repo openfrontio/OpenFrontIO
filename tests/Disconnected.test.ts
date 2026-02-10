@@ -350,13 +350,7 @@ describe("Disconnected", () => {
       const enemyShoreTile = game.map().ref(coastX, 15);
 
       game.addExecution(
-        new TransportShipExecution(
-          player2,
-          null,
-          enemyShoreTile,
-          100,
-          game.map().ref(coastX, 1),
-        ),
+        new TransportShipExecution(player2, enemyShoreTile, 100),
       );
 
       executeTicks(game, 1);
@@ -387,13 +381,7 @@ describe("Disconnected", () => {
       const enemyShoreTile = game.map().ref(coastX, 15);
 
       game.addExecution(
-        new TransportShipExecution(
-          player2,
-          null,
-          enemyShoreTile,
-          100,
-          game.map().ref(coastX, 1),
-        ),
+        new TransportShipExecution(player2, enemyShoreTile, 100),
       );
       executeTicks(game, 1);
 
@@ -425,13 +413,7 @@ describe("Disconnected", () => {
 
       const boatTroops = 100;
       game.addExecution(
-        new TransportShipExecution(
-          player2,
-          null,
-          enemyShoreTile,
-          boatTroops,
-          game.map().ref(coastX, 1),
-        ),
+        new TransportShipExecution(player2, enemyShoreTile, boatTroops),
       );
       executeTicks(game, 1);
 

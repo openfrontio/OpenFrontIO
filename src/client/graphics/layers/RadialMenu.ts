@@ -11,6 +11,16 @@ import {
 } from "./RadialMenuElements";
 import backIcon from "/images/BackIconWhite.svg?url";
 
+function resolveColor(
+  item: MenuElement,
+  params: MenuElementParams | null,
+): string | undefined {
+  if (typeof item.color === "function") {
+    return params ? item.color(params) : undefined;
+  }
+  return item.color;
+}
+
 export class CloseRadialMenuEvent implements GameEvent {
   constructor() {}
 }
@@ -322,7 +332,7 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const color = disabled
           ? this.config.disabledColor
-          : (d.data.color ?? "#333333");
+          : (resolveColor(d.data, this.params) ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
@@ -365,7 +375,7 @@ export class RadialMenu implements Layer {
         const color =
           this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
-            : (d.data.color ?? "#333333");
+            : (resolveColor(d.data, this.params) ?? "#333333");
         path.attr("fill", color);
       }
     });
@@ -431,7 +441,7 @@ export class RadialMenu implements Layer {
       path.attr("stroke-width", "2");
       const color = disabled
         ? this.config.disabledColor
-        : (d.data.color ?? "#333333");
+        : (resolveColor(d.data, this.params) ?? "#333333");
       const opacity = disabled ? 0.5 : 0.7;
       path.attr(
         "fill",
@@ -848,10 +858,7 @@ export class RadialMenu implements Layer {
 
   public disableAllButtons() {
     this.updateCenterButtonState("default");
-
-    for (const item of this.currentMenuItems) {
-      item.color = this.config.disabledColor;
-    }
+    this.refresh();
   }
 
   public updateCenterButtonState(state: CenterButtonState) {
@@ -907,9 +914,12 @@ export class RadialMenu implements Layer {
       .select(".center-button-hitbox")
       .style("cursor", enabled ? "pointer" : "not-allowed");
 
+    // Use default color for back button, otherwise use the current center button color
+    const buttonColor =
+      state === "back" ? this.defaultCenterButtonColor : this.centerButtonColor;
     centerButton
       .select(".center-button-visible")
-      .attr("fill", enabled ? this.centerButtonColor : "#999999");
+      .attr("fill", enabled ? buttonColor : "#999999");
 
     centerButton
       .select(".center-button-icon")
@@ -1040,7 +1050,7 @@ export class RadialMenu implements Layer {
         const disabled = this.isItemDisabled(item);
         const color = disabled
           ? this.config.disabledColor
-          : (item.color ?? "#333333");
+          : (resolveColor(item, this.params) ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         // Update path appearance

@@ -126,7 +126,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
         ${this.isVisible
           ? html`
               <div
-                class="fixed top-[10%] left-1/2 -translate-x-1/2 z-[11000]
+                class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[11000]
                             inline-flex items-center justify-center h-8 lg:h-10
                             w-fit max-w-[90vw]
                             bg-gray-900/60 rounded-md lg:rounded-lg
