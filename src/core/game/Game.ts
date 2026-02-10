@@ -118,6 +118,7 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  BosphorusStraits = "Bosphorus Straits",
   Yenisei = "Yenisei",
 }
 
@@ -166,6 +167,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.BosphorusStraits,
     GameMapType.Yenisei,
   ],
   fantasy: [
