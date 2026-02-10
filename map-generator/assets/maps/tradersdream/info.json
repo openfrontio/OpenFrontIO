@@ -1,0 +1,70 @@
+{
+  "name": "Traders Dream",
+  "nations": [
+    {
+      "coordinates": [1010, 120],
+      "flag": "",
+      "name": "Fort Profit"
+    },
+    {
+      "coordinates": [900, 400],
+      "flag": "",
+      "name": "Taxhaven"
+    },
+    {
+      "coordinates": [1350, 370],
+      "flag": "",
+      "name": "Markup Mesa"
+    },
+    {
+      "coordinates": [1100, 1290],
+      "flag": "",
+      "name": "Ledgerland"
+    },
+    {
+      "coordinates": [850, 1550],
+      "flag": "",
+      "name": "Isle of Margins"
+    },
+    {
+      "coordinates": [1350, 1550],
+      "flag": "",
+      "name": "Port Folio"
+    },
+    {
+      "coordinates": [430, 810],
+      "flag": "",
+      "name": "Barter Bluffs"
+    },
+    {
+      "coordinates": [1770, 810],
+      "flag": "",
+      "name": "Dividend Shores"
+    },
+    {
+      "coordinates": [1210, 660],
+      "flag": "",
+      "name": "Market Peaks"
+    },
+    {
+      "coordinates": [1150, 1830],
+      "flag": "",
+      "name": "Cape Commerce"
+    },
+    {
+      "coordinates": [1890, 1390],
+      "flag": "",
+      "name": "Anchorspire"
+    },
+    {
+      "coordinates": [310, 1420],
+      "flag": "",
+      "name": "Inflation Island"
+    },
+    {
+      "coordinates": [1870, 400],
+      "flag": "",
+      "name": "Harborwick"
+    }
+  ]
+}
