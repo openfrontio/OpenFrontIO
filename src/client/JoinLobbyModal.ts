@@ -25,7 +25,6 @@ import {
   HumansVsNations,
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
-import { getClientIDForGame } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -61,9 +60,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
-    if (!this.currentLobbyId || lobby.gameID !== this.currentLobbyId) {
-      return;
-    }
+    this.currentClientID = event.myClientID;
     // Only stop showing spinner when we have player info
     if (this.isConnecting && lobby.clients) {
       this.isConnecting = false;
@@ -335,7 +332,6 @@ export class JoinLobbyModal extends BaseModal {
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobbyId,
-          clientID: this.currentClientID,
           source: "public",
         } as JoinLobbyEvent,
         bubbles: true,
@@ -346,7 +342,8 @@ export class JoinLobbyModal extends BaseModal {
 
   private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
     this.currentLobbyId = lobbyId;
-    this.currentClientID = getClientIDForGame(lobbyId);
+    // clientID will be assigned by server via lobby_info message
+    this.currentClientID = "";
     this.gameConfig = null;
     this.players = [];
     this.nationCount = 0;
@@ -545,9 +542,7 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    this.lobbyCreatorClientID = this.isPrivateLobby()
-      ? (lobby.clients?.[0]?.clientID ?? null)
-      : null;
+    this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? null;
   }
 
   private startLobbyUpdates() {
@@ -776,7 +771,6 @@ export class JoinLobbyModal extends BaseModal {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: this.currentClientID,
             source: "private",
           } as JoinLobbyEvent,
           bubbles: true,
@@ -835,7 +829,6 @@ export class JoinLobbyModal extends BaseModal {
         detail: {
           gameID: lobbyId,
           gameRecord: parsed.data,
-          clientID: this.currentClientID,
           source: "private",
         } as JoinLobbyEvent,
         bubbles: true,

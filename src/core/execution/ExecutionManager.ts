@@ -1,6 +1,6 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, Intent, Turn } from "../Schemas";
+import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
@@ -46,7 +46,7 @@ export class Executor {
     return turn.intents.map((i) => this.createExec(i));
   }
 
-  createExec(intent: Intent): Execution {
+  createExec(intent: StampedIntent): Execution {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);

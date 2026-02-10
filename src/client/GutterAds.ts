@@ -13,7 +13,6 @@ export class GutterAds extends LitElement {
   private rightAdType: string = "standard_iab_rght1";
   private leftContainerId: string = "gutter-ad-container-left";
   private rightContainerId: string = "gutter-ad-container-right";
-  private margin: string = "10px";
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -48,6 +47,16 @@ export class GutterAds extends LitElement {
     this.updateComplete.then(() => {
       this.loadAds();
     });
+  }
+
+  public close(): void {
+    try {
+      window.ramp.destroyUnits(this.leftAdType);
+      window.ramp.destroyUnits(this.rightAdType);
+      console.log("successfully destroyed gutter ads");
+    } catch (e) {
+      console.error("error destroying gutter ads", e);
+    }
   }
 
   private loadAds(): void {
@@ -111,8 +120,8 @@ export class GutterAds extends LitElement {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="margin-left: ${this.margin};"
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+        style="left: calc(50% - 10cm - 230px); top: calc(50% + 10px);"
       >
         <div
           id="${this.leftContainerId}"
@@ -122,8 +131,8 @@ export class GutterAds extends LitElement {
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="margin-right: ${this.margin};"
+        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+        style="left: calc(50% + 10cm + 70px); top: calc(50% + 10px);"
       >
         <div
           id="${this.rightContainerId}"

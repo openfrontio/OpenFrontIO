@@ -1,3 +1,4 @@
+import { GameUpdateType } from "src/core/game/GameUpdates";
 import { vi, type Mocked } from "vitest";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
 import { Game, Player, Unit, UnitType } from "../../../src/core/game/Game";
@@ -112,7 +113,7 @@ describe("TrainStation", () => {
 
     expect(game.addUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        isActive: false,
+        type: GameUpdateType.RailroadDestructionEvent,
       }),
     );
     expect(stationA.getRailroads().size).toBe(0);
