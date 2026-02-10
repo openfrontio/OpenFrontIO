@@ -67,6 +67,8 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     config.jwtIssuer() + "/cosmetics.json",
+    config.jwtIssuer() + "/profane_words_game_server",
+    config.apiKey(),
     log,
   );
   privilegeRefresher.start();
@@ -436,6 +438,11 @@ export async function startWorker() {
           }
         }
 
+        // Censor profane usernames server-side (don't reject, just rename)
+        const censoredUsername = privilegeRefresher
+          .get()
+          .censorUsername(clientMsg.username);
+
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -444,6 +451,7 @@ export async function startWorker() {
           roles,
           flares,
           ip,
+          censoredUsername,
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
