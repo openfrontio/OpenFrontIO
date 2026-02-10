@@ -13,7 +13,10 @@ export type WorkerMessageType =
   | "init"
   | "initialized"
   | "turn"
+  | "turn_batch"
   | "game_update"
+  | "tile_context"
+  | "tile_context_result"
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
@@ -23,12 +26,36 @@ export type WorkerMessageType =
   | "attack_average_position"
   | "attack_average_position_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result";
+  | "transport_ship_spawn_result"
+  | "init_renderer"
+  | "renderer_ready"
+  | "set_patterns_enabled"
+  | "set_palette"
+  | "set_view_size"
+  | "set_view_transform"
+  | "set_alternative_view"
+  | "set_highlighted_owner"
+  | "set_shader_settings"
+  | "mark_tile"
+  | "mark_all_dirty"
+  | "refresh_palette"
+  | "refresh_terrain"
+  | "tick_renderer"
+  | "render_frame"
+  | "render_done"
+  | "set_worker_debug"
+  | "worker_metrics"
+  | "renderer_metrics";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
   type: WorkerMessageType;
   id?: string;
+  /**
+   * Cross-thread timestamp (Date.now()) set by the sender when enqueuing the
+   * message. Used for queue latency debugging.
+   */
+  sentAtWallMs?: number;
 }
 
 export interface HeartbeatMessage extends BaseWorkerMessage {
@@ -47,6 +74,11 @@ export interface TurnMessage extends BaseWorkerMessage {
   turn: Turn;
 }
 
+export interface TurnBatchMessage extends BaseWorkerMessage {
+  type: "turn_batch";
+  turns: Turn[];
+}
+
 // Messages from worker to main thread
 export interface InitializedMessage extends BaseWorkerMessage {
   type: "initialized";
@@ -55,6 +87,24 @@ export interface InitializedMessage extends BaseWorkerMessage {
 export interface GameUpdateMessage extends BaseWorkerMessage {
   type: "game_update";
   gameUpdate: GameUpdateViewData;
+}
+
+export interface TileContext {
+  hasOwner: boolean;
+  ownerSmallId: number | null;
+  ownerId: PlayerID | null;
+  hasFallout: boolean;
+  isDefended: boolean;
+}
+
+export interface TileContextMessage extends BaseWorkerMessage {
+  type: "tile_context";
+  tile: TileRef;
+}
+
+export interface TileContextResultMessage extends BaseWorkerMessage {
+  type: "tile_context_result";
+  result: TileContext;
 }
 
 export interface PlayerActionsMessage extends BaseWorkerMessage {
@@ -112,23 +162,251 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
   result: TileRef | false;
 }
 
+// Renderer messages from main thread to worker
+export interface InitRendererMessage extends BaseWorkerMessage {
+  type: "init_renderer";
+  offscreenCanvas: OffscreenCanvas;
+  darkMode: boolean; // Whether to use dark theme
+  backend?: "webgpu" | "canvas2d";
+}
+
+export interface SetPatternsEnabledMessage extends BaseWorkerMessage {
+  type: "set_patterns_enabled";
+  enabled: boolean;
+}
+
+export interface SetPaletteMessage extends BaseWorkerMessage {
+  type: "set_palette";
+  paletteWidth: number;
+  maxSmallId: number;
+  row0: Uint8Array;
+  row1: Uint8Array;
+}
+
+export interface SetViewSizeMessage extends BaseWorkerMessage {
+  type: "set_view_size";
+  width: number;
+  height: number;
+}
+
+export interface SetViewTransformMessage extends BaseWorkerMessage {
+  type: "set_view_transform";
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface SetAlternativeViewMessage extends BaseWorkerMessage {
+  type: "set_alternative_view";
+  enabled: boolean;
+}
+
+export interface SetHighlightedOwnerMessage extends BaseWorkerMessage {
+  type: "set_highlighted_owner";
+  ownerSmallId: number | null;
+}
+
+export interface SetShaderSettingsMessage extends BaseWorkerMessage {
+  type: "set_shader_settings";
+  territoryShader?: string;
+  territoryShaderParams0?: number[];
+  territoryShaderParams1?: number[];
+  terrainShader?: string;
+  terrainShaderParams0?: number[];
+  terrainShaderParams1?: number[];
+  preSmoothing?: {
+    enabled: boolean;
+    shaderPath: string;
+    params0: number[];
+  };
+  postSmoothing?: {
+    enabled: boolean;
+    shaderPath: string;
+    params0: number[];
+  };
+}
+
+export interface MarkTileMessage extends BaseWorkerMessage {
+  type: "mark_tile";
+  tile: TileRef;
+}
+
+export interface MarkAllDirtyMessage extends BaseWorkerMessage {
+  type: "mark_all_dirty";
+}
+
+export interface RefreshPaletteMessage extends BaseWorkerMessage {
+  type: "refresh_palette";
+}
+
+export interface RefreshTerrainMessage extends BaseWorkerMessage {
+  type: "refresh_terrain";
+}
+
+export interface TickRendererMessage extends BaseWorkerMessage {
+  type: "tick_renderer";
+}
+
+export interface ViewSize {
+  width: number;
+  height: number;
+}
+
+export interface ViewTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface RenderFrameMessage extends BaseWorkerMessage {
+  type: "render_frame";
+  /**
+   * Optional per-frame view state. This allows the main thread to coalesce
+   * high-frequency camera updates into the existing render message.
+   */
+  viewSize?: ViewSize;
+  viewTransform?: ViewTransform;
+}
+
+// Renderer messages from worker to main thread
+export interface RenderDoneMessage extends BaseWorkerMessage {
+  type: "render_done";
+  /**
+   * Timestamp (performance.now()) in the worker right before starting work.
+   */
+  startedAt?: number;
+  /**
+   * Timestamp (performance.now()) in the worker right after finishing work.
+   */
+  endedAt?: number;
+  /**
+   * Echo of RenderFrameMessage.sentAtWallMs (if provided) so callers can
+   * compute queue/processing latency without storing state.
+   */
+  sentAtWallMs?: number;
+  /**
+   * Timestamps (Date.now()) in the worker. Use these for cross-thread latency
+   * (Firefox may use a different time origin for performance.now()).
+   */
+  startedAtWallMs?: number;
+  endedAtWallMs?: number;
+
+  /**
+   * Optional breakdown from the worker's renderAsync implementation.
+   * All values are milliseconds.
+   */
+  renderWaitPrevGpuMs?: number;
+  renderCpuMs?: number;
+  renderGetTextureMs?: number;
+  renderGpuWaitMs?: number;
+  renderWaitPrevGpuTimedOut?: boolean;
+  renderGpuWaitTimedOut?: boolean;
+
+  /**
+   * Additional optional breakdown for CPU-side render encoding.
+   */
+  renderSubmitted?: boolean;
+  renderFrameComputeMs?: number;
+  renderTerritoryPassMs?: number;
+  renderTemporalResolveMs?: number;
+  renderSubmitMs?: number;
+  renderCpuTotalMs?: number;
+}
+
+export interface RendererReadyMessage extends BaseWorkerMessage {
+  type: "renderer_ready";
+  ok: boolean;
+  error?: string;
+}
+
+export interface RendererMetricsMessage extends BaseWorkerMessage {
+  type: "renderer_metrics";
+  computeMs: number;
+}
+
+export interface SetWorkerDebugMessage extends BaseWorkerMessage {
+  type: "set_worker_debug";
+  enabled: boolean;
+  intervalMs?: number;
+  includeTrace?: boolean;
+}
+
+export interface WorkerMetricsMessage extends BaseWorkerMessage {
+  type: "worker_metrics";
+  intervalMs: number;
+  eventLoopLagMsAvg: number;
+  eventLoopLagMsMax: number;
+  simPumpDelayMsAvg: number;
+  simPumpDelayMsMax: number;
+  simPumpExecMsAvg: number;
+  simPumpExecMsMax: number;
+
+  /**
+   * Optional render_frame breakdown collected inside the worker renderer.
+   * Values are based on the last metrics interval.
+   */
+  renderSubmittedCount?: number;
+  renderNoopCount?: number;
+  renderGetTextureMsAvg?: number;
+  renderGetTextureMsMax?: number;
+  renderFrameComputeMsAvg?: number;
+  renderFrameComputeMsMax?: number;
+  renderTerritoryPassMsAvg?: number;
+  renderTerritoryPassMsMax?: number;
+  renderTemporalResolveMsAvg?: number;
+  renderTemporalResolveMsMax?: number;
+  renderSubmitMsAvg?: number;
+  renderSubmitMsMax?: number;
+  renderCpuTotalMsAvg?: number;
+  renderCpuTotalMsMax?: number;
+
+  msgCounts: Record<string, number>;
+  msgHandlerMsAvg: Record<string, number>;
+  msgHandlerMsMax: Record<string, number>;
+  msgQueueMsAvg: Record<string, number>;
+  msgQueueMsMax: Record<string, number>;
+  trace?: string[];
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
+  | TurnBatchMessage
+  | TileContextMessage
   | PlayerActionsMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
-  | TransportShipSpawnMessage;
+  | TransportShipSpawnMessage
+  | InitRendererMessage
+  | SetPatternsEnabledMessage
+  | SetPaletteMessage
+  | SetViewSizeMessage
+  | SetViewTransformMessage
+  | SetAlternativeViewMessage
+  | SetHighlightedOwnerMessage
+  | SetShaderSettingsMessage
+  | MarkTileMessage
+  | MarkAllDirtyMessage
+  | RefreshPaletteMessage
+  | RefreshTerrainMessage
+  | TickRendererMessage
+  | SetWorkerDebugMessage
+  | RenderFrameMessage;
 
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
+  | TileContextResultMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage
-  | TransportShipSpawnResultMessage;
+  | TransportShipSpawnResultMessage
+  | RenderDoneMessage
+  | RendererReadyMessage
+  | RendererMetricsMessage
+  | WorkerMetricsMessage;

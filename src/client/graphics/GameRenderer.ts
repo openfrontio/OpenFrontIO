@@ -39,11 +39,11 @@ import { SpawnVideoAd } from "./layers/SpawnVideoReward";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
-import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { WebGPUDebugOverlay } from "./layers/WebGPUDebugOverlay";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -235,6 +235,16 @@ export function createRenderer(
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
+  const webgpuDebugOverlay = document.querySelector(
+    "webgpu-debug-overlay",
+  ) as WebGPUDebugOverlay;
+  if (!(webgpuDebugOverlay instanceof WebGPUDebugOverlay)) {
+    console.error("webgpu debug overlay not found");
+  }
+  webgpuDebugOverlay.eventBus = eventBus;
+  webgpuDebugOverlay.userSettings = userSettings;
+  webgpuDebugOverlay.requestUpdate();
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -274,7 +284,6 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
-    new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
@@ -318,6 +327,7 @@ export function createRenderer(
     spawnVideoAd,
     alertFrame,
     performanceOverlay,
+    webgpuDebugOverlay,
   ];
 
   return new GameRenderer(
@@ -328,6 +338,7 @@ export function createRenderer(
     uiState,
     layers,
     performanceOverlay,
+    webgpuDebugOverlay,
   );
 }
 
@@ -343,8 +354,10 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private performanceOverlay: PerformanceOverlay,
+    private webgpuDebugOverlay: WebGPUDebugOverlay,
   ) {
-    const context = canvas.getContext("2d", { alpha: false });
+    // Keep the main canvas transparent; the WebGPU territory canvas renders the background.
+    const context = canvas.getContext("2d", { alpha: true });
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }
@@ -392,13 +405,8 @@ export class GameRenderer {
   renderGame() {
     FrameProfiler.clear();
     const start = performance.now();
-    // Set background
-    this.context.fillStyle = this.game
-      .config()
-      .theme()
-      .backgroundColor()
-      .toHex();
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Clear overlay canvas to transparent; the territory WebGPU canvas draws the base.
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const handleTransformState = (
       needsTransform: boolean,
@@ -436,6 +444,7 @@ export class GameRenderer {
 
     const layerDurations = FrameProfiler.consume();
     this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
+    this.webgpuDebugOverlay.updateFrameMetrics(duration);
 
     if (duration > 50) {
       console.warn(

@@ -9,7 +9,12 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
-import { WorkerMessage } from "./WorkerMessages";
+import {
+  SetWorkerDebugMessage,
+  TileContext,
+  WorkerMessage,
+  WorkerMetricsMessage,
+} from "./WorkerMessages";
 
 export class WorkerClient {
   private worker: Worker;
@@ -18,6 +23,11 @@ export class WorkerClient {
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
+  private workerMetricsCallback?: (metrics: WorkerMetricsMessage) => void;
+
+  private pendingTurns: Turn[] = [];
+  private turnFlushScheduled = false;
+  private readonly maxTurnsPerBatch = 256;
 
   constructor(
     private gameStartInfo: GameStartInfo,
@@ -45,7 +55,12 @@ export class WorkerClient {
         }
         break;
 
+      case "worker_metrics":
+        this.workerMetricsCallback?.(message);
+        break;
+
       case "initialized":
+      case "renderer_ready":
       default:
         if (message.id && this.messageHandlers.has(message.id)) {
           const handler = this.messageHandlers.get(message.id)!;
@@ -54,6 +69,58 @@ export class WorkerClient {
         }
         break;
     }
+  }
+
+  /**
+   * Add a message handler for a specific message ID.
+   */
+  addMessageHandler(
+    id: string,
+    handler: (message: WorkerMessage) => void,
+  ): void {
+    this.messageHandlers.set(id, handler);
+  }
+
+  /**
+   * Remove a message handler.
+   */
+  removeMessageHandler(id: string): void {
+    this.messageHandlers.delete(id);
+  }
+
+  /**
+   * Post a message to the worker with optional transferables.
+   */
+  postMessage(message: any, transfer?: Transferable[]): void {
+    if (
+      message &&
+      typeof message === "object" &&
+      typeof message.sentAtWallMs !== "number"
+    ) {
+      message.sentAtWallMs = Date.now();
+    }
+    if (transfer && transfer.length > 0) {
+      this.worker.postMessage(message, transfer);
+      return;
+    }
+    this.worker.postMessage(message);
+  }
+
+  onWorkerMetrics(callback?: (metrics: WorkerMetricsMessage) => void): void {
+    this.workerMetricsCallback = callback;
+  }
+
+  setWorkerDebug(config: {
+    enabled: boolean;
+    intervalMs?: number;
+    includeTrace?: boolean;
+  }): void {
+    this.postMessage({
+      type: "set_worker_debug",
+      enabled: config.enabled,
+      intervalMs: config.intervalMs,
+      includeTrace: config.includeTrace,
+    } satisfies SetWorkerDebugMessage);
   }
 
   initialize(): Promise<void> {
@@ -67,7 +134,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "init",
         id: messageId,
         gameStartInfo: this.gameStartInfo,
@@ -91,19 +158,47 @@ export class WorkerClient {
     this.gameUpdateCallback = gameUpdate;
   }
 
+  private scheduleTurnFlush(): void {
+    if (this.turnFlushScheduled) return;
+    this.turnFlushScheduled = true;
+    setTimeout(() => {
+      this.turnFlushScheduled = false;
+      this.flushTurns();
+    }, 0);
+  }
+
+  private flushTurns(): void {
+    while (this.pendingTurns.length > 0) {
+      const batch = this.pendingTurns.splice(0, this.maxTurnsPerBatch);
+      this.postMessage({
+        type: "turn_batch",
+        turns: batch,
+      });
+    }
+  }
+
   sendTurn(turn: Turn) {
     if (!this.isInitialized) {
       throw new Error("Worker not initialized");
     }
 
-    this.worker.postMessage({
-      type: "turn",
-      turn,
-    });
+    this.pendingTurns.push(turn);
+    this.scheduleTurnFlush();
+  }
+
+  sendTurnBatch(turns: Turn[]) {
+    if (!this.isInitialized) {
+      throw new Error("Worker not initialized");
+    }
+    if (turns.length === 0) return;
+
+    // Preserve order with any already queued turns.
+    this.pendingTurns.push(...turns);
+    this.scheduleTurnFlush();
   }
 
   sendHeartbeat() {
-    this.worker.postMessage({
+    this.postMessage({
       type: "heartbeat",
     });
   }
@@ -126,7 +221,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_profile",
         id: messageId,
         playerID: playerID,
@@ -152,7 +247,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_border_tiles",
         id: messageId,
         playerID: playerID,
@@ -182,7 +277,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "player_actions",
         id: messageId,
         playerID: playerID,
@@ -218,7 +313,7 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "attack_average_position",
         id: messageId,
         playerID: playerID,
@@ -248,11 +343,34 @@ export class WorkerClient {
         }
       });
 
-      this.worker.postMessage({
+      this.postMessage({
         type: "transport_ship_spawn",
         id: messageId,
         playerID: playerID,
         targetTile: targetTile,
+      });
+    });
+  }
+
+  tileContext(tile: TileRef): Promise<TileContext> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "tile_context_result" && message.result) {
+          resolve(message.result);
+        }
+      });
+
+      this.postMessage({
+        type: "tile_context",
+        id: messageId,
+        tile,
       });
     });
   }

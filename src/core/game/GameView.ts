@@ -888,6 +888,18 @@ export class GameView implements GameMap {
   setFallout(ref: TileRef, value: boolean): void {
     return this._map.setFallout(ref, value);
   }
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+  setDefended(ref: TileRef, value: boolean): void {
+    return this._map.setDefended(ref, value);
+  }
+  tileStateView(): Uint16Array {
+    return this._map.tileStateView();
+  }
+  terrainDataView(): Uint8Array {
+    return this._map.terrainDataView();
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }

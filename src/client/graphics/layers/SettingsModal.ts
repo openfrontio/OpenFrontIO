@@ -168,6 +168,11 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleWebgpuDebugOverlayButtonClick() {
+    this.userSettings.toggleWebgpuDebug();
+    this.requestUpdate();
+  }
+
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = "/";
@@ -493,6 +498,29 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.performanceOverlay()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click="${this.onToggleWebgpuDebugOverlayButtonClick}"
+            >
+              <img
+                src=${settingsIcon}
+                alt="webgpuDebugIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">WebGPU Debug</div>
+                <div class="text-sm text-slate-400">
+                  Territory shader selection + options
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.webgpuDebug()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

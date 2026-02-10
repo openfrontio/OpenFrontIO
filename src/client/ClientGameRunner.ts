@@ -9,6 +9,7 @@ import {
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
+  Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
@@ -35,7 +36,9 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  SetWorkerDebugEvent,
   TickMetricsEvent,
+  WorkerMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -222,6 +225,12 @@ async function createClientGame(
   }
   const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
   await worker.initialize();
+  worker.onWorkerMetrics((metrics) => {
+    eventBus.emit(new WorkerMetricsEvent(metrics));
+  });
+  eventBus.on(SetWorkerDebugEvent, (event: SetWorkerDebugEvent) => {
+    worker.setWorkerDebug(event.config);
+  });
   const gameView = new GameView(
     worker,
     config,
@@ -385,15 +394,6 @@ export class ClientGameRunner {
       }
     });
 
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
-
     const onconnect = () => {
       console.log("Connected to game server!");
       this.transport.rejoinGame(this.turnsSeen);
@@ -435,20 +435,43 @@ export class ClientGameRunner {
           goToPlayer();
         }
 
-        for (const turn of message.turns) {
+        const normalizeTurn = (turn: Turn): Turn =>
+          this.gameView.config().isReplay()
+            ? {
+                ...turn,
+                intents: turn.intents.filter((i) => i.type !== "toggle_pause"),
+              }
+            : turn;
+
+        // Firefox in particular suffers from a storm of thousands of tiny
+        // postMessage() calls on reconnect. Batch turns to keep the worker
+        // event loop responsive for render_frame and sim scheduling.
+        const batchSize = 256;
+        let batch: Turn[] = [];
+        const flush = () => {
+          if (batch.length === 0) return;
+          this.worker.sendTurnBatch(batch);
+          batch = [];
+        };
+
+        for (const rawTurn of message.turns as Turn[]) {
+          const turn = normalizeTurn(rawTurn);
           if (turn.turnNumber < this.turnsSeen) {
             continue;
           }
           while (turn.turnNumber - 1 > this.turnsSeen) {
-            this.worker.sendTurn({
+            batch.push({
               turnNumber: this.turnsSeen,
               intents: [],
             });
             this.turnsSeen++;
+            if (batch.length >= batchSize) flush();
           }
-          this.worker.sendTurn(turn);
+          batch.push(turn);
           this.turnsSeen++;
+          if (batch.length >= batchSize) flush();
         }
+        flush();
       }
       if (message.type === "desync") {
         if (this.lobby.gameStartInfo === undefined) {
@@ -542,11 +565,19 @@ export class ClientGameRunner {
     const tile = this.gameView.ref(cell.x, cell.y);
     if (
       this.gameView.isLand(tile) &&
-      !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase() &&
       !this.gameView.config().isRandomSpawn()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(tile));
+      // Main thread no longer maintains authoritative tile ownership. Query the
+      // worker for spawn validation.
+      this.worker
+        .tileContext(tile)
+        .then((ctx) => {
+          if (!ctx.hasOwner) {
+            this.eventBus.emit(new SendSpawnIntentEvent(tile));
+          }
+        })
+        .catch((err) => console.warn("tileContext spawn lookup failed:", err));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -560,12 +591,22 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        this.worker
+          .tileContext(tile)
+          .then((ctx) => {
+            if (!this.myPlayer) {
+              return;
+            }
+            this.eventBus.emit(
+              new SendAttackIntentEvent(
+                ctx.ownerId ?? null,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+              ),
+            );
+          })
+          .catch((err) =>
+            console.warn("tileContext attack lookup failed:", err),
+          );
       } else if (this.canAutoBoat(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
@@ -676,12 +717,22 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
+        this.worker
+          .tileContext(tile)
+          .then((ctx) => {
+            if (!this.myPlayer) {
+              return;
+            }
+            this.eventBus.emit(
+              new SendAttackIntentEvent(
+                ctx.ownerId ?? null,
+                this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+              ),
+            );
+          })
+          .catch((err) =>
+            console.warn("tileContext attack lookup failed:", err),
+          );
       }
     });
   }

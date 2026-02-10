@@ -2,9 +2,12 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
+import type { WorkerMetricsMessage } from "../../../core/worker/WorkerMessages";
 import {
+  SetWorkerDebugEvent,
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
+  WorkerMetricsEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
@@ -43,6 +46,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private isVisible: boolean = false;
 
   @state()
+  private workerMetrics: WorkerMetricsMessage | null = null;
+
+  @state()
+  private workerMetricsAgeMs: number = 0;
+
+  @state()
+  private workerIncludeTrace: boolean = false;
+
+  @state()
+  private workerIntervalMs: number = 1000;
+
+  @state()
   private isDragging: boolean = false;
 
   @state()
@@ -60,6 +75,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
+  private lastWorkerMetricsWallMs: number = 0;
 
   private copyStatusTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -232,11 +248,24 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
       this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
     });
+    this.eventBus.on(WorkerMetricsEvent, (event: WorkerMetricsEvent) => {
+      this.workerMetrics = event.metrics;
+      this.lastWorkerMetricsWallMs = Date.now();
+      this.workerMetricsAgeMs = 0;
+      this.requestUpdate();
+    });
   }
 
   setVisible(visible: boolean) {
     this.isVisible = visible;
     FrameProfiler.setEnabled(visible);
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: visible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
   }
 
   private handleClose() {
@@ -326,9 +355,20 @@ export class PerformanceOverlay extends LitElement implements Layer {
     // Update FrameProfiler enabled state when visibility changes
     if (wasVisible !== this.isVisible) {
       FrameProfiler.setEnabled(this.isVisible);
+      this.eventBus.emit(
+        new SetWorkerDebugEvent({
+          enabled: this.isVisible,
+          intervalMs: this.workerIntervalMs,
+          includeTrace: this.workerIncludeTrace,
+        }),
+      );
     }
 
     if (!this.isVisible) return;
+
+    if (this.lastWorkerMetricsWallMs > 0) {
+      this.workerMetricsAgeMs = Date.now() - this.lastWorkerMetricsWallMs;
+    }
 
     const now = performance.now();
 
@@ -486,8 +526,218 @@ export class PerformanceOverlay extends LitElement implements Layer {
         executionSamples: [...this.tickExecutionTimes],
         delaySamples: [...this.tickDelayTimes],
       },
+      worker: {
+        enabled: this.isVisible,
+        includeTrace: this.workerIncludeTrace,
+        intervalMs: this.workerIntervalMs,
+        lastMetricsAgeMs: this.workerMetricsAgeMs,
+        metrics: this.workerMetrics,
+      },
       layers: this.layerBreakdown.map((layer) => ({ ...layer })),
     };
+  }
+
+  private getWorkerKeyStats(metrics: WorkerMetricsMessage | null): {
+    intervalMs: number;
+    loopLagAvg: number;
+    loopLagMax: number;
+    simDelayAvg: number;
+    simDelayMax: number;
+    simExecAvg: number;
+    simExecMax: number;
+    rfQueueAvg: number | null;
+    rfQueueMax: number | null;
+    rfHandlerAvg: number | null;
+    rfHandlerMax: number | null;
+    renderSubmittedCount: number | null;
+    renderNoopCount: number | null;
+    renderCpuTotalAvg: number | null;
+    renderCpuTotalMax: number | null;
+    renderGetTextureAvg: number | null;
+    renderGetTextureMax: number | null;
+    renderFrameComputeAvg: number | null;
+    renderFrameComputeMax: number | null;
+    renderTerritoryPassAvg: number | null;
+    renderTerritoryPassMax: number | null;
+    renderTemporalResolveAvg: number | null;
+    renderTemporalResolveMax: number | null;
+    renderSubmitAvg: number | null;
+    renderSubmitMax: number | null;
+    traceLines: string[];
+    topMsgs: Array<{
+      type: string;
+      count: number;
+      queueAvg: number | null;
+      queueMax: number | null;
+      handlerAvg: number | null;
+      handlerMax: number | null;
+    }>;
+  } {
+    if (!metrics) {
+      return {
+        intervalMs: 0,
+        loopLagAvg: 0,
+        loopLagMax: 0,
+        simDelayAvg: 0,
+        simDelayMax: 0,
+        simExecAvg: 0,
+        simExecMax: 0,
+        rfQueueAvg: null,
+        rfQueueMax: null,
+        rfHandlerAvg: null,
+        rfHandlerMax: null,
+        renderSubmittedCount: null,
+        renderNoopCount: null,
+        renderCpuTotalAvg: null,
+        renderCpuTotalMax: null,
+        renderGetTextureAvg: null,
+        renderGetTextureMax: null,
+        renderFrameComputeAvg: null,
+        renderFrameComputeMax: null,
+        renderTerritoryPassAvg: null,
+        renderTerritoryPassMax: null,
+        renderTemporalResolveAvg: null,
+        renderTemporalResolveMax: null,
+        renderSubmitAvg: null,
+        renderSubmitMax: null,
+        traceLines: [],
+        topMsgs: [],
+      };
+    }
+
+    const rfQueueAvg = metrics.msgQueueMsAvg?.["render_frame"];
+    const rfQueueMax = metrics.msgQueueMsMax?.["render_frame"];
+    const rfHandlerAvg = metrics.msgHandlerMsAvg?.["render_frame"];
+    const rfHandlerMax = metrics.msgHandlerMsMax?.["render_frame"];
+    const traceLines =
+      metrics.trace && metrics.trace.length > 0 ? metrics.trace.slice(-5) : [];
+
+    const topMsgs = Object.entries(metrics.msgCounts ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([type, count]) => ({
+        type,
+        count,
+        queueAvg:
+          typeof metrics.msgQueueMsAvg?.[type] === "number"
+            ? metrics.msgQueueMsAvg[type]
+            : null,
+        queueMax:
+          typeof metrics.msgQueueMsMax?.[type] === "number"
+            ? metrics.msgQueueMsMax[type]
+            : null,
+        handlerAvg:
+          typeof metrics.msgHandlerMsAvg?.[type] === "number"
+            ? metrics.msgHandlerMsAvg[type]
+            : null,
+        handlerMax:
+          typeof metrics.msgHandlerMsMax?.[type] === "number"
+            ? metrics.msgHandlerMsMax[type]
+            : null,
+      }));
+
+    return {
+      intervalMs: metrics.intervalMs,
+      loopLagAvg: metrics.eventLoopLagMsAvg,
+      loopLagMax: metrics.eventLoopLagMsMax,
+      simDelayAvg: metrics.simPumpDelayMsAvg,
+      simDelayMax: metrics.simPumpDelayMsMax,
+      simExecAvg: metrics.simPumpExecMsAvg,
+      simExecMax: metrics.simPumpExecMsMax,
+      rfQueueAvg: typeof rfQueueAvg === "number" ? rfQueueAvg : null,
+      rfQueueMax: typeof rfQueueMax === "number" ? rfQueueMax : null,
+      rfHandlerAvg: typeof rfHandlerAvg === "number" ? rfHandlerAvg : null,
+      rfHandlerMax: typeof rfHandlerMax === "number" ? rfHandlerMax : null,
+      renderSubmittedCount:
+        typeof metrics.renderSubmittedCount === "number"
+          ? metrics.renderSubmittedCount
+          : null,
+      renderNoopCount:
+        typeof metrics.renderNoopCount === "number"
+          ? metrics.renderNoopCount
+          : null,
+      renderCpuTotalAvg:
+        typeof metrics.renderCpuTotalMsAvg === "number"
+          ? metrics.renderCpuTotalMsAvg
+          : null,
+      renderCpuTotalMax:
+        typeof metrics.renderCpuTotalMsMax === "number"
+          ? metrics.renderCpuTotalMsMax
+          : null,
+      renderGetTextureAvg:
+        typeof metrics.renderGetTextureMsAvg === "number"
+          ? metrics.renderGetTextureMsAvg
+          : null,
+      renderGetTextureMax:
+        typeof metrics.renderGetTextureMsMax === "number"
+          ? metrics.renderGetTextureMsMax
+          : null,
+      renderFrameComputeAvg:
+        typeof metrics.renderFrameComputeMsAvg === "number"
+          ? metrics.renderFrameComputeMsAvg
+          : null,
+      renderFrameComputeMax:
+        typeof metrics.renderFrameComputeMsMax === "number"
+          ? metrics.renderFrameComputeMsMax
+          : null,
+      renderTerritoryPassAvg:
+        typeof metrics.renderTerritoryPassMsAvg === "number"
+          ? metrics.renderTerritoryPassMsAvg
+          : null,
+      renderTerritoryPassMax:
+        typeof metrics.renderTerritoryPassMsMax === "number"
+          ? metrics.renderTerritoryPassMsMax
+          : null,
+      renderTemporalResolveAvg:
+        typeof metrics.renderTemporalResolveMsAvg === "number"
+          ? metrics.renderTemporalResolveMsAvg
+          : null,
+      renderTemporalResolveMax:
+        typeof metrics.renderTemporalResolveMsMax === "number"
+          ? metrics.renderTemporalResolveMsMax
+          : null,
+      renderSubmitAvg:
+        typeof metrics.renderSubmitMsAvg === "number"
+          ? metrics.renderSubmitMsAvg
+          : null,
+      renderSubmitMax:
+        typeof metrics.renderSubmitMsMax === "number"
+          ? metrics.renderSubmitMsMax
+          : null,
+      traceLines,
+      topMsgs,
+    };
+  }
+
+  private formatMs(v: number | null | undefined, digits: number = 1): string {
+    if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+    return `${v.toFixed(digits)}ms`;
+  }
+
+  private onWorkerTraceToggle(e: Event) {
+    const target = e.target as HTMLInputElement;
+    this.workerIncludeTrace = !!target.checked;
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: this.isVisible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
+  }
+
+  private onWorkerIntervalChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const ms = Number.parseInt(target.value, 10);
+    if (!Number.isFinite(ms) || ms <= 0) return;
+    this.workerIntervalMs = ms;
+    this.eventBus.emit(
+      new SetWorkerDebugEvent({
+        enabled: this.isVisible,
+        intervalMs: this.workerIntervalMs,
+        includeTrace: this.workerIncludeTrace,
+      }),
+    );
   }
 
   private clearCopyStatusTimeout() {
@@ -550,6 +800,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         ? Math.max(...this.layerBreakdown.map((l) => l.avg))
         : 1;
 
+    const worker = this.getWorkerKeyStats(this.workerMetrics);
+
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
@@ -595,6 +847,172 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="layers-section">
+          <div class="performance-line">Worker</div>
+          <div class="layer-row" style="margin-top: 4px;">
+            <span class="layer-name">metrics age</span>
+            <span class="layer-metrics"
+              >${this.formatMs(this.workerMetricsAgeMs, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">metrics interval (worker)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.intervalMs, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">event loop lag (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.loopLagAvg)} /
+              ${this.formatMs(worker.loopLagMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">sim pump delay (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.simDelayAvg)} /
+              ${this.formatMs(worker.simDelayMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">sim pump exec (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.simExecAvg)} /
+              ${this.formatMs(worker.simExecMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">render_frame queue (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.rfQueueAvg, 0)} /
+              ${this.formatMs(worker.rfQueueMax, 0)}</span
+            >
+          </div>
+          <div class="layer-row">
+            <span class="layer-name">render_frame handler (avg / max)</span>
+            <span class="layer-metrics"
+              >${this.formatMs(worker.rfHandlerAvg, 0)} /
+              ${this.formatMs(worker.rfHandlerMax, 0)}</span
+            >
+          </div>
+          ${worker.renderSubmittedCount !== null ||
+          worker.renderNoopCount !== null
+            ? html`<div class="layer-row">
+                <span class="layer-name">render submits / noops</span>
+                <span class="layer-metrics"
+                  >${worker.renderSubmittedCount ?? 0} /
+                  ${worker.renderNoopCount ?? 0}</span
+                >
+              </div>`
+            : html``}
+          ${worker.renderCpuTotalAvg !== null
+            ? html`<div class="performance-line" style="margin-top: 6px;">
+                  render CPU breakdown (avg/max, submitted frames)
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">cpu total</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderCpuTotalAvg)} /
+                    ${this.formatMs(worker.renderCpuTotalMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">getCurrentTexture</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderGetTextureAvg)} /
+                    ${this.formatMs(worker.renderGetTextureMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">frame compute</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderFrameComputeAvg)} /
+                    ${this.formatMs(worker.renderFrameComputeMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">territory pass</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderTerritoryPassAvg)} /
+                    ${this.formatMs(worker.renderTerritoryPassMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">temporal resolve</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderTemporalResolveAvg)} /
+                    ${this.formatMs(worker.renderTemporalResolveMax, 0)}</span
+                  >
+                </div>
+                <div class="layer-row">
+                  <span class="layer-name">submit</span>
+                  <span class="layer-metrics"
+                    >${this.formatMs(worker.renderSubmitAvg)} /
+                    ${this.formatMs(worker.renderSubmitMax, 0)}</span
+                  >
+                </div>`
+            : html``}
+          ${worker.topMsgs.length
+            ? html`<div class="performance-line" style="margin-top: 6px;">
+                  top msgs (count | queue avg/max | handler avg/max)
+                </div>
+                ${worker.topMsgs.map(
+                  (m) =>
+                    html`<div class="layer-row">
+                      <span class="layer-name" title=${m.type}
+                        >${m.type} (${m.count})
+                      </span>
+                      <span class="layer-metrics"
+                        >${this.formatMs(m.queueAvg, 0)}/${this.formatMs(
+                          m.queueMax,
+                          0,
+                        )}
+                        |
+                        ${this.formatMs(m.handlerAvg, 0)}/${this.formatMs(
+                          m.handlerMax,
+                          0,
+                        )}
+                      </span>
+                    </div>`,
+                )}`
+            : html``}
+          <div class="layer-row" style="margin-top: 4px;">
+            <span class="layer-name">trace</span>
+            <span class="layer-metrics">
+              <label style="cursor: pointer;">
+                <input
+                  type="checkbox"
+                  .checked=${this.workerIncludeTrace}
+                  @change=${this.onWorkerTraceToggle}
+                />
+                include
+              </label>
+              <select
+                style="margin-left: 8px;"
+                .value=${String(this.workerIntervalMs)}
+                @change=${this.onWorkerIntervalChange}
+              >
+                <option value="250">250ms</option>
+                <option value="500">500ms</option>
+                <option value="1000">1000ms</option>
+                <option value="2000">2000ms</option>
+              </select>
+            </span>
+          </div>
+          ${worker.traceLines.length
+            ? html`<div
+                class="performance-line"
+                style="margin-top: 4px; opacity: 0.85;"
+              >
+                <div
+                  style="white-space: pre-wrap; font-size: 10px; line-height: 1.2;"
+                >
+                  ${worker.traceLines.join("\n")}
+                </div>
+              </div>`
+            : html``}
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">

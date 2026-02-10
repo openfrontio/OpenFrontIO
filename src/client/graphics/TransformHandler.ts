@@ -45,6 +45,14 @@ export class TransformHandler {
     return this._boundingRect;
   }
 
+  getOffsetX(): number {
+    return this.offsetX;
+  }
+
+  getOffsetY(): number {
+    return this.offsetY;
+  }
+
   width(): number {
     return this.boundingRect().width;
   }

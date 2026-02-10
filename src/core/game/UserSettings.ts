@@ -4,6 +4,16 @@ import { PlayerPattern } from "../Schemas";
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
+  getString(key: string, defaultValue: string): string {
+    const value = localStorage.getItem(key);
+    if (value === null) return defaultValue;
+    return value;
+  }
+
+  setString(key: string, value: string): void {
+    localStorage.setItem(key, value);
+  }
+
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -33,12 +43,39 @@ export class UserSettings {
     localStorage.setItem(key, value.toString());
   }
 
+  getInt(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const intValue = parseInt(value, 10);
+    if (!Number.isFinite(intValue)) return defaultValue;
+
+    return intValue;
+  }
+
+  setInt(key: string, value: number): void {
+    localStorage.setItem(key, Math.trunc(value).toString());
+  }
+
   emojis() {
     return this.get("settings.emojis", true);
   }
 
   performanceOverlay() {
     return this.get("settings.performanceOverlay", false);
+  }
+
+  webgpuDebug(): boolean {
+    return this.get("settings.webgpuDebug", true);
+  }
+
+  backgroundRenderer(): "webgpu" | "canvas2d" {
+    const raw = this.getString("settings.backgroundRenderer", "webgpu");
+    return raw === "canvas2d" ? "canvas2d" : "webgpu";
+  }
+
+  setBackgroundRenderer(renderer: "webgpu" | "canvas2d"): void {
+    this.setString("settings.backgroundRenderer", renderer);
   }
 
   alertFrame() {
@@ -98,6 +135,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.set("settings.performanceOverlay", !this.performanceOverlay());
+  }
+
+  toggleWebgpuDebug() {
+    this.set("settings.webgpuDebug", !this.webgpuDebug());
   }
 
   toggleAlertFrame() {
