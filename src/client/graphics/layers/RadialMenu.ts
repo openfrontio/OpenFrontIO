@@ -366,7 +366,7 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const baseColor = disabled
           ? this.config.disabledColor
-          : (d.data.color ?? "#333333");
+          : (resolveColor(d.data, this.params) ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         const normalColor =
