@@ -200,6 +200,7 @@ describe("Skin test game flow", () => {
 
     const runner = new ClientGameRunner(
       lobby,
+      "client123",
       eventBus,
       renderer,
       input,

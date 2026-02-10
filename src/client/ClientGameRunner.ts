@@ -364,7 +364,7 @@ export class ClientGameRunner {
       // Start a fresh TestSkinExecution which manages its own modal timeout
       this.testSkinExecution = new TestSkinExecution(
         this.gameView,
-        this.lobby.clientID,
+        this.clientID,
         () => this.isActive,
         () => {
           // Called when execution requests the modal be shown — stop the game and
