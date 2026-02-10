@@ -758,7 +758,26 @@ export class EventsDisplay extends LitElement implements Layer {
       return !this.eventsFilters.get(category);
     });
 
-    filteredEvents.sort((a, b) => {
+    // Separate actionable alliance events (requests & renewals) so they
+    // can be rendered in a pinned, non-scrolling section above the feed.
+    const pinnedEvents = filteredEvents.filter(
+      (event) =>
+        (event.type === MessageType.ALLIANCE_REQUEST ||
+          event.type === MessageType.RENEW_ALLIANCE) &&
+        event.buttons &&
+        event.buttons.length > 0,
+    );
+    const regularEvents = filteredEvents.filter(
+      (event) =>
+        !(
+          (event.type === MessageType.ALLIANCE_REQUEST ||
+            event.type === MessageType.RENEW_ALLIANCE) &&
+          event.buttons &&
+          event.buttons.length > 0
+        ),
+    );
+
+    regularEvents.sort((a, b) => {
       const aPrior = a.priority ?? 100000;
       const bPrior = b.priority ?? 100000;
       if (aPrior === bPrior) {
@@ -840,6 +859,69 @@ export class EventsDisplay extends LitElement implements Layer {
                 </div>
               </div>
 
+              <!-- Pinned Alliance Requests / Renewals -->
+              ${pinnedEvents.length > 0
+                ? html`
+                    <div
+                      class="bg-gray-900/80 border-b border-yellow-500/30 max-h-[20vh] overflow-y-auto pointer-events-auto"
+                    >
+                      ${pinnedEvents.map(
+                        (event) => html`
+                          <div
+                            class="px-2 py-1.5 border-b border-gray-700/50 last:border-b-0"
+                          >
+                            <div class="text-yellow-300 text-md md:text-sm">
+                              ${event.focusID
+                                ? this.renderButton({
+                                    content: this.getEventDescription(event),
+                                    onClick: () => {
+                                      if (event.focusID)
+                                        this.emitGoToPlayerEvent(event.focusID);
+                                    },
+                                    className: "text-left text-yellow-300",
+                                  })
+                                : this.getEventDescription(event)}
+                            </div>
+                            ${event.buttons
+                              ? html`
+                                  <div class="flex flex-wrap gap-1.5 mt-1">
+                                    ${event.buttons.map(
+                                      (btn) => html`
+                                        <button
+                                          class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
+                            ${btn.className.includes("btn-info")
+                                            ? "bg-blue-500 hover:bg-blue-600"
+                                            : btn.className.includes("btn-gray")
+                                              ? "bg-gray-500 hover:bg-gray-600"
+                                              : "bg-green-600 hover:bg-green-700"}"
+                                          @click=${() => {
+                                            btn.action();
+                                            if (!btn.preventClose) {
+                                              const originalIndex =
+                                                this.events.findIndex(
+                                                  (e) => e === event,
+                                                );
+                                              if (originalIndex !== -1) {
+                                                this.removeEvent(originalIndex);
+                                              }
+                                            }
+                                            this.requestUpdate();
+                                          }}
+                                        >
+                                          ${btn.text}
+                                        </button>
+                                      `,
+                                    )}
+                                  </div>
+                                `
+                              : ""}
+                          </div>
+                        `,
+                      )}
+                    </div>
+                  `
+                : ""}
+
               <!-- Content Area -->
               <div
                 class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
@@ -849,7 +931,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
                   >
                     <tbody>
-                      ${filteredEvents.map(
+                      ${regularEvents.map(
                         (event, index) => html`
                           <tr>
                             <td
@@ -938,8 +1020,45 @@ export class EventsDisplay extends LitElement implements Layer {
                           `
                         : ""}
 
-                      <!--- Empty row when no events -->
-                      ${filteredEvents.length === 0 &&
+                      <!--- Outgoing attacks row -->
+                      ${this.outgoingAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Outgoing land attacks row -->
+                      ${this.outgoingLandAttacks.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderOutgoingLandAttacks()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Boats row -->
+                      ${this.outgoingBoats.length > 0
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderBoats()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
+                      <!--- Empty row when no events or attacks -->
+                      ${regularEvents.length === 0 &&
+                      this.incomingAttacks.length === 0 &&
+                      this.outgoingAttacks.length === 0 &&
+                      this.outgoingLandAttacks.length === 0 &&
+                      this.outgoingBoats.length === 0 &&
                       !(() => {
                         const myPlayer = this.game.myPlayer();
                         return (
