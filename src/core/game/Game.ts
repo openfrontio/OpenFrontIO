@@ -825,6 +825,7 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+  removeOnDeath(deadPlayer: Player): void;
   miniWaterHPA(): PathFinder<number> | null;
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;

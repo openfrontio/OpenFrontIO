@@ -1156,6 +1156,28 @@ export class GameImpl implements Game {
       gold,
     });
   }
+
+  removeOnDeath(deadPlayer: Player): void {
+    // Player (bot, human, nation) has no tiles
+    // Delete any remaining gold, non-nuke units and alliances
+    const gold = deadPlayer.gold();
+    deadPlayer.removeGold(gold);
+
+    deadPlayer.units().forEach((u) => {
+      if (
+        u.type() !== UnitType.AtomBomb &&
+        u.type() !== UnitType.HydrogenBomb &&
+        u.type() !== UnitType.MIRVWarhead &&
+        u.type() !== UnitType.MIRV
+      ) {
+        u.delete();
+      }
+    });
+
+    this.alliances_ = this.alliances_.filter(
+      (a) => a.requestor() !== deadPlayer && a.recipient() !== deadPlayer,
+    );
+  }
 }
 
 // Or a more dynamic approach that will catch new enum values:

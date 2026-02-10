@@ -129,6 +129,8 @@ export class NationExecution implements Execution {
     }
 
     if (!this.player.isAlive()) {
+      this.mg.removeOnDeath(this.player);
+
       this.active = false;
       return;
     }

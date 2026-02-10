@@ -60,19 +60,8 @@ export class PlayerExecution implements Execution {
     }
 
     if (!this.player.isAlive()) {
-      // Player has no tiles, delete any remaining units and gold
-      const gold = this.player.gold();
-      this.player.removeGold(gold);
-      this.player.units().forEach((u) => {
-        if (
-          u.type() !== UnitType.AtomBomb &&
-          u.type() !== UnitType.HydrogenBomb &&
-          u.type() !== UnitType.MIRVWarhead &&
-          u.type() !== UnitType.MIRV
-        ) {
-          u.delete();
-        }
-      });
+      this.mg.removeOnDeath(this.player);
+
       this.active = false;
       this.mg.stats().playerKilled(this.player, ticks);
       return;
