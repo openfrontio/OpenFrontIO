@@ -160,7 +160,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: 5 * 10,
+      spawnImmunityDuration: startingGold ? 30 * 10 : 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }

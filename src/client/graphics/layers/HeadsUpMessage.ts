@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameType } from "../../../core/game/Game";
+import { GameType, Tick } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
@@ -15,6 +15,12 @@ export class HeadsUpMessage extends LitElement implements Layer {
 
   @state()
   private isPaused = false;
+
+  @state()
+  private isImmunityActive = false;
+
+  @state()
+  private immunitySecondsLeft = 0;
 
   @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
@@ -79,7 +85,20 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.isPaused = pauseUpdate.paused;
     }
 
-    this.isVisible = this.game.inSpawnPhase() || this.isPaused;
+    const config = this.game.config();
+    const immunityDuration = config.spawnImmunityDuration();
+    const immunityEnd: Tick = config.numSpawnPhaseTurns() + immunityDuration;
+    const ticks = this.game.ticks();
+    this.isImmunityActive =
+      immunityDuration > 5 * 10 &&
+      !this.game.inSpawnPhase() &&
+      ticks <= immunityEnd;
+    if (this.isImmunityActive) {
+      this.immunitySecondsLeft = Math.ceil((immunityEnd - ticks) / 10);
+    }
+
+    this.isVisible =
+      this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
     this.requestUpdate();
   }
 
@@ -90,6 +109,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
       } else {
         return translateText("heads_up_message.multiplayer_game_paused");
       }
+    }
+    if (this.isImmunityActive) {
+      return translateText("heads_up_message.pvp_immunity_active");
     }
     return this.game.config().isRandomSpawn()
       ? translateText("heads_up_message.random_spawn")
