@@ -631,17 +631,17 @@
     "available_tooltip": "Τα τρέχοντα διαθέσιμα στρατεύματά σου",
     "min_keep": "Ελάχιστη διατήρηση",
     "min_keep_pct": "(30%)",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "toggle_attack_bar_mode": "Χρησιμοποίησε την μπάρα επίθεσης για να στείλεις στρατεύματα",
     "warning_attackbar": "Μόλις ενεργοποιηθεί, δεν θα μπορείς να ανοίξεις απευθείας αυτό το modal. Θα στέλνεις στρατεύματα μόνο μέσω της μπάρας επίθεσης.",
     "aria_slider": "Ρυθμιστής στρατευμάτων",
-    "capacity_note": "Ο παραλήπτης μπορεί να δεχτεί μόνο {{amount}} τώρα."
+    "capacity_note": "Ο παραλήπτης μπορεί να δεχτεί μόνο {amount} τώρα."
   },
   "send_gold_modal": {
     "title_with_name": "Αποστολή Χρυσού στον {name}",
     "available_tooltip": "Διαθέσιμος χρυσός",
     "aria_slider": "Ρυθμιστικό ποσού",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Ταχύτητα επανάληψης",
