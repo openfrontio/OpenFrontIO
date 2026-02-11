@@ -117,6 +117,15 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
+  ticksPerSecond(): number {
+    return 1000 / this.turnIntervalMs();
+  }
+  spawnPhaseTicks(gameType: GameType): number {
+    return gameType === GameType.Singleplayer ? 100 : 300;
+  }
+  spawnPhaseSeconds(gameType: GameType): number {
+    return this.spawnPhaseTicks(gameType) / this.ticksPerSecond();
+  }
   gameCreationRate(): number {
     return 60 * 1000;
   }
@@ -542,7 +551,7 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    return this._serverConfig.spawnPhaseTicks(this._gameConfig.gameType);
   }
   numBots(): number {
     return this.bots();
