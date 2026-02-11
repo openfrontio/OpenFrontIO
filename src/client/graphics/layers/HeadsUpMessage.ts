@@ -82,10 +82,15 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.isPaused = pauseUpdate.paused;
     }
 
+    const showImmunityHudDuration = 10 * 10;
+    const spawnEnd = this.game.config().numSpawnPhaseTurns();
+    const ticksSinceSpawnEnd = this.game.ticks() - spawnEnd;
+
     this.isImmunityActive =
       this.game.config().hasExtendedSpawnImmunity() &&
       !this.game.inSpawnPhase() &&
-      this.game.isSpawnImmunityActive();
+      this.game.isSpawnImmunityActive() &&
+      ticksSinceSpawnEnd < showImmunityHudDuration;
 
     this.isVisible =
       this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
@@ -101,7 +106,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
       }
     }
     if (this.isImmunityActive) {
-      return translateText("heads_up_message.pvp_immunity_active");
+      return translateText("heads_up_message.pvp_immunity_active", {
+        seconds: Math.round(this.game.config().spawnImmunityDuration() / 10),
+      });
     }
     return this.game.config().isRandomSpawn()
       ? translateText("heads_up_message.random_spawn")
