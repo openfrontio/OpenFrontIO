@@ -39,6 +39,7 @@ describe("InputHandler AutoUpgrade", () => {
         ghostStructure: null,
         rocketDirectionUp: true,
         localAttackHeld: false,
+        overlappingRailroads: [],
       },
       mockCanvas,
       eventBus,
