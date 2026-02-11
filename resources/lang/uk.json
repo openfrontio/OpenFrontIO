@@ -790,15 +790,15 @@
     "title_with_name": "Надіслати війська до {name}",
     "available_tooltip": "Ваші поточні доступні війська",
     "min_keep": "Мінімальний залишок",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Повзунок військ",
-    "capacity_note": "Зараз отримувач може прийняти лише {{amount}}."
+    "capacity_note": "Зараз отримувач може прийняти лише {amount}."
   },
   "send_gold_modal": {
     "title_with_name": "Надіслати золото до {name}",
     "available_tooltip": "Ваше поточне доступне золото",
     "aria_slider": "Повзунок кількості",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Швидкість відтворення",
