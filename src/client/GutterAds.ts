@@ -9,6 +9,8 @@ export class GutterAds extends LitElement {
   @state()
   private adLoaded: boolean = false;
 
+  private adLoadRequested: boolean = false;
+
   @state()
   private isXlViewport: boolean = false;
 
@@ -28,6 +30,15 @@ export class GutterAds extends LitElement {
   private xlMediaQuery: MediaQueryList | null = null;
   private noContentCheckTimer: number | null = null;
   private noContentCheckCount = 0;
+  private adWorkToken = 0;
+  private handleUserMeResponse = () => {
+    if (window.adsEnabled) {
+      console.log("showing gutter ads");
+      this.show();
+    } else {
+      console.log("not showing gutter ads");
+    }
+  };
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -41,15 +52,7 @@ export class GutterAds extends LitElement {
     this.xlMediaQuery = window.matchMedia("(min-width: 1280px)");
     this.isXlViewport = this.xlMediaQuery.matches;
     this.xlMediaQuery.addEventListener("change", this.handleViewportChange);
-
-    document.addEventListener("userMeResponse", () => {
-      if (window.adsEnabled) {
-        console.log("showing gutter ads");
-        this.show();
-      } else {
-        console.log("not showing gutter ads");
-      }
-    });
+    document.addEventListener("userMeResponse", this.handleUserMeResponse);
   }
 
   // Called after the component's DOM is first rendered
@@ -59,7 +62,10 @@ export class GutterAds extends LitElement {
   }
 
   public show(): void {
+    this.adWorkToken += 1;
     this.isVisible = true;
+    this.adLoaded = false;
+    this.adLoadRequested = false;
     this.leftAdVisible = false;
     this.rightAdVisible = false;
     this.isProbingAds = true;
@@ -74,8 +80,10 @@ export class GutterAds extends LitElement {
   }
 
   public close(): void {
+    this.adWorkToken += 1;
     this.isVisible = false;
     this.adLoaded = false;
+    this.adLoadRequested = false;
     this.leftAdVisible = false;
     this.rightAdVisible = false;
     this.isProbingAds = false;
@@ -93,7 +101,7 @@ export class GutterAds extends LitElement {
   private handleViewportChange = (event: MediaQueryListEvent) => {
     this.isXlViewport = event.matches;
 
-    if (!this.isXlViewport && this.adLoaded) {
+    if (!this.isXlViewport && (this.adLoaded || this.isProbingAds)) {
       this.close();
       return;
     }
@@ -107,6 +115,7 @@ export class GutterAds extends LitElement {
   };
 
   private loadAds(): void {
+    const adWorkToken = this.adWorkToken;
     console.log("loading ramp ads");
     // Ensure the container elements exist before loading ads
     const leftContainer = this.querySelector(`#${this.leftContainerId}`);
@@ -122,13 +131,19 @@ export class GutterAds extends LitElement {
       return;
     }
 
-    if (this.adLoaded) {
+    if (this.adLoadRequested || this.adLoaded) {
       console.log("Ads already loaded, skipping");
       return;
     }
 
+    this.adLoadRequested = true;
+
     try {
       window.ramp.que.push(() => {
+        if (adWorkToken !== this.adWorkToken || !this.isVisible) {
+          return;
+        }
+
         try {
           window.ramp.spaAddAds([
             {
@@ -140,18 +155,19 @@ export class GutterAds extends LitElement {
               selectorId: this.rightContainerId,
             },
           ]);
-          this.adLoaded = true;
-          this.startNoContentCheck();
+          this.startNoContentCheck(adWorkToken);
           console.log(
             "Playwire ads loaded:",
             this.leftAdType,
             this.rightAdType,
           );
         } catch (e) {
+          this.adLoadRequested = false;
           console.log(e);
         }
       });
     } catch (error) {
+      this.adLoadRequested = false;
       console.error("Failed to load Playwire ads:", error);
     }
   }
@@ -174,12 +190,17 @@ export class GutterAds extends LitElement {
     return Boolean(root.textContent?.trim());
   }
 
-  private startNoContentCheck(): void {
+  private startNoContentCheck(adWorkToken: number): void {
     this.stopNoContentCheck();
     this.noContentCheckCount = 0;
     this.isProbingAds = true;
 
     this.noContentCheckTimer = window.setInterval(() => {
+      if (adWorkToken !== this.adWorkToken) {
+        this.stopNoContentCheck();
+        return;
+      }
+
       this.noContentCheckCount += 1;
       this.leftAdVisible = this.hasInjectedAdContent(this.leftContainerId);
       this.rightAdVisible = this.hasInjectedAdContent(this.rightContainerId);
@@ -188,7 +209,9 @@ export class GutterAds extends LitElement {
         this.stopNoContentCheck();
         this.isProbingAds = false;
         this.adLoaded = this.leftAdVisible || this.rightAdVisible;
+        this.adLoadRequested = this.adLoaded;
         if (!this.adLoaded) {
+          this.adLoadRequested = false;
           this.isVisible = false;
         }
       }
@@ -203,7 +226,9 @@ export class GutterAds extends LitElement {
   }
 
   disconnectedCallback() {
+    this.adWorkToken += 1;
     this.xlMediaQuery?.removeEventListener("change", this.handleViewportChange);
+    document.removeEventListener("userMeResponse", this.handleUserMeResponse);
     this.xlMediaQuery = null;
     this.stopNoContentCheck();
     super.disconnectedCallback();
@@ -218,12 +243,10 @@ export class GutterAds extends LitElement {
     const rightMounted = this.rightAdVisible || this.isProbingAds;
     const probeClass =
       "absolute w-px h-px overflow-hidden pointer-events-none opacity-0";
-    const leftClass = this.leftAdVisible
-      ? "fixed flex transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-      : probeClass;
-    const rightClass = this.rightAdVisible
-      ? "fixed flex transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-      : probeClass;
+    const visibleClass =
+      "fixed flex transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center";
+    const leftClass = this.leftAdVisible ? visibleClass : probeClass;
+    const rightClass = this.rightAdVisible ? visibleClass : probeClass;
 
     return html`
       ${leftMounted
