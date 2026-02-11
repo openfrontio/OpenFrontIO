@@ -9,10 +9,25 @@ export class GutterAds extends LitElement {
   @state()
   private adLoaded: boolean = false;
 
+  @state()
+  private isXlViewport: boolean = false;
+
+  @state()
+  private leftAdVisible: boolean = false;
+
+  @state()
+  private rightAdVisible: boolean = false;
+
+  @state()
+  private isProbingAds: boolean = false;
+
   private leftAdType: string = "standard_iab_left2";
   private rightAdType: string = "standard_iab_rght1";
   private leftContainerId: string = "gutter-ad-container-left";
   private rightContainerId: string = "gutter-ad-container-right";
+  private xlMediaQuery: MediaQueryList | null = null;
+  private noContentCheckTimer: number | null = null;
+  private noContentCheckCount = 0;
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -23,6 +38,10 @@ export class GutterAds extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.xlMediaQuery = window.matchMedia("(min-width: 1280px)");
+    this.isXlViewport = this.xlMediaQuery.matches;
+    this.xlMediaQuery.addEventListener("change", this.handleViewportChange);
+
     document.addEventListener("userMeResponse", () => {
       if (window.adsEnabled) {
         console.log("showing gutter ads");
@@ -41,23 +60,49 @@ export class GutterAds extends LitElement {
 
   public show(): void {
     this.isVisible = true;
+    this.leftAdVisible = false;
+    this.rightAdVisible = false;
+    this.isProbingAds = true;
     this.requestUpdate();
 
-    // Wait for the update to complete, then load ads
-    this.updateComplete.then(() => {
-      this.loadAds();
-    });
+    if (this.isXlViewport) {
+      // Wait for the update to complete, then load ads
+      this.updateComplete.then(() => {
+        this.loadAds();
+      });
+    }
   }
 
   public close(): void {
     try {
       window.ramp.destroyUnits(this.leftAdType);
       window.ramp.destroyUnits(this.rightAdType);
+      this.adLoaded = false;
+      this.leftAdVisible = false;
+      this.rightAdVisible = false;
+      this.isProbingAds = false;
+      this.stopNoContentCheck();
       console.log("successfully destroyed gutter ads");
     } catch (e) {
       console.error("error destroying gutter ads", e);
     }
   }
+
+  private handleViewportChange = (event: MediaQueryListEvent) => {
+    this.isXlViewport = event.matches;
+
+    if (!this.isXlViewport && this.adLoaded) {
+      this.close();
+      return;
+    }
+
+    if (this.isVisible && this.isXlViewport) {
+      this.requestUpdate();
+      this.updateComplete.then(() => {
+        this.loadAds();
+      });
+    }
+  };
 
   private loadAds(): void {
     console.log("loading ramp ads");
@@ -94,6 +139,7 @@ export class GutterAds extends LitElement {
             },
           ]);
           this.adLoaded = true;
+          this.startNoContentCheck();
           console.log(
             "Playwire ads loaded:",
             this.leftAdType,
@@ -108,37 +154,104 @@ export class GutterAds extends LitElement {
     }
   }
 
+  private hasInjectedAdContent(containerId: string): boolean {
+    const container = this.querySelector(`#${containerId}`);
+    if (!container) return false;
+
+    // Treat common ad payload elements as real content.
+    if (
+      container.querySelector("iframe, img, video, ins, canvas, object, embed")
+    ) {
+      return true;
+    }
+
+    const root = container.firstElementChild as HTMLElement | null;
+    if (!root) return false;
+    if (root.childElementCount > 0) return true;
+
+    return Boolean(root.textContent?.trim());
+  }
+
+  private startNoContentCheck(): void {
+    this.stopNoContentCheck();
+    this.noContentCheckCount = 0;
+    this.isProbingAds = true;
+
+    this.noContentCheckTimer = window.setInterval(() => {
+      this.noContentCheckCount += 1;
+      this.leftAdVisible = this.hasInjectedAdContent(this.leftContainerId);
+      this.rightAdVisible = this.hasInjectedAdContent(this.rightContainerId);
+
+      if (this.noContentCheckCount >= 10) {
+        this.isProbingAds = false;
+        this.adLoaded = this.leftAdVisible || this.rightAdVisible;
+        if (!this.adLoaded) {
+          this.isVisible = false;
+          this.stopNoContentCheck();
+        }
+      }
+    }, 1000);
+  }
+
+  private stopNoContentCheck(): void {
+    if (this.noContentCheckTimer) {
+      window.clearInterval(this.noContentCheckTimer);
+      this.noContentCheckTimer = null;
+    }
+  }
+
   disconnectedCallback() {
+    this.xlMediaQuery?.removeEventListener("change", this.handleViewportChange);
+    this.xlMediaQuery = null;
+    this.stopNoContentCheck();
     super.disconnectedCallback();
   }
 
   render() {
-    if (!this.isVisible) {
+    if (!this.isVisible || !this.isXlViewport) {
       return html``;
     }
 
-    return html`
-      <!-- Left Gutter Ad -->
-      <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="left: calc(50% - 10cm - 230px); top: calc(50% + 10px);"
-      >
-        <div
-          id="${this.leftContainerId}"
-          class="w-full h-full flex items-center justify-center p-2"
-        ></div>
-      </div>
+    const leftMounted = this.leftAdVisible || this.isProbingAds;
+    const rightMounted = this.rightAdVisible || this.isProbingAds;
+    const probeClass =
+      "absolute w-px h-px overflow-hidden pointer-events-none opacity-0";
+    const leftClass = this.leftAdVisible
+      ? "fixed flex transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+      : probeClass;
+    const rightClass = this.rightAdVisible
+      ? "fixed flex transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
+      : probeClass;
 
-      <!-- Right Gutter Ad -->
-      <div
-        class="hidden xl:flex fixed transform -translate-y-1/2 w-[160px] min-h-[600px] z-[100] pointer-events-auto items-center justify-center"
-        style="left: calc(50% + 10cm + 70px); top: calc(50% + 10px);"
-      >
-        <div
-          id="${this.rightContainerId}"
-          class="w-full h-full flex items-center justify-center p-2"
-        ></div>
-      </div>
+    return html`
+      ${leftMounted
+        ? html`
+            <!-- Left Gutter Ad -->
+            <div
+              class="${leftClass}"
+              style="left: calc(50% - 10cm - 230px); top: calc(50% + 10px);"
+            >
+              <div
+                id="${this.leftContainerId}"
+                class="w-full h-full flex items-center justify-center p-2"
+              ></div>
+            </div>
+          `
+        : html``}
+      ${rightMounted
+        ? html`
+            <!-- Right Gutter Ad -->
+            <div
+              class="${rightClass}"
+              style="left: calc(50% + 10cm + 70px); top: calc(50% + 10px);"
+            >
+              <div
+                id="${this.rightContainerId}"
+                class="w-full h-full flex items-center justify-center p-2"
+              ></div>
+            </div>
+          `
+        : html``}
     `;
   }
 }
