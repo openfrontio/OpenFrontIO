@@ -420,7 +420,12 @@ export class GameImpl implements Game {
       });
     }
     this._ticks++;
+    this.endOfTickActions();
     return this.updates;
+  }
+
+  private endOfTickActions() {
+    this._railNetwork.recomputeClusters();
   }
 
   private hash(): number {
