@@ -722,7 +722,7 @@ export class GameImpl implements Game {
   public isSpawnImmunityActive(): boolean {
     return (
       this.config().numSpawnPhaseTurns() +
-        this.config().spawnImmunityDuration() >=
+        this.config().spawnImmunityDuration() >
       this.ticks()
     );
   }

@@ -815,8 +815,7 @@ export class GameView implements GameMap {
   }
   isSpawnImmunityActive(): boolean {
     return (
-      this._config.numSpawnPhaseTurns() +
-        this._config.spawnImmunityDuration() >=
+      this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
       this.ticks()
     );
   }
