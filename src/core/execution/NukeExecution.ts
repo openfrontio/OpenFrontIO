@@ -275,40 +275,40 @@ export class NukeExecution implements Execution {
 
     // Then compute the explosion effect on each player
     for (const [player, numTiles] of tilesPerPlayers) {
-      player.removeTroops(
-        this.mg
-          .config()
-          .nukeDeathFactor(
+      const config = this.mg.config();
+      const tilesBeforeNuke = player.numTilesOwned() + numTiles;
+      const transportShips = player.units(UnitType.TransportShip);
+      // nukeDeathFactor could compute the complete fallout in a single call instead
+      for (let i = 0; i < numTiles; i++) {
+        // Diminishing effect as each affected tile has been nuked
+        const numTiles = tilesBeforeNuke - i;
+        player.removeTroops(
+          config.nukeDeathFactor(
             this.nukeType,
             player.troops(),
-            player.numTilesOwned(),
+            numTiles,
             maxTroops,
-          ) * numTiles,
-      );
-      player.outgoingAttacks().forEach((attack) => {
-        const deaths =
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              attack.troops(),
-              player.numTilesOwned(),
-              maxTroops,
-            ) * numTiles;
-        attack.setTroops(attack.troops() - deaths);
-      });
-      player.units(UnitType.TransportShip).forEach((attack) => {
-        const deaths =
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              attack.troops(),
-              player.numTilesOwned(),
-              maxTroops,
-            ) * numTiles;
-        attack.setTroops(attack.troops() - deaths);
-      });
+          ),
+        );
+        player.outgoingAttacks().forEach((attack) => {
+          const deaths = config.nukeDeathFactor(
+            this.nukeType,
+            attack.troops(),
+            numTiles,
+            maxTroops,
+          );
+          attack.setTroops(attack.troops() - deaths);
+        });
+        transportShips.forEach((unit) => {
+          const deaths = config.nukeDeathFactor(
+            this.nukeType,
+            unit.troops(),
+            numTiles,
+            maxTroops,
+          );
+          unit.setTroops(unit.troops() - deaths);
+        });
+      }
     }
 
     const outer2 = magnitude.outer * magnitude.outer;
