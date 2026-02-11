@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameType, Tick } from "../../../core/game/Game";
+import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
@@ -18,9 +18,6 @@ export class HeadsUpMessage extends LitElement implements Layer {
 
   @state()
   private isImmunityActive = false;
-
-  @state()
-  private immunitySecondsLeft = 0;
 
   @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
@@ -85,17 +82,10 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.isPaused = pauseUpdate.paused;
     }
 
-    const config = this.game.config();
-    const immunityDuration = config.spawnImmunityDuration();
-    const immunityEnd: Tick = config.numSpawnPhaseTurns() + immunityDuration;
-    const ticks = this.game.ticks();
     this.isImmunityActive =
-      immunityDuration > 5 * 10 &&
+      this.game.config().hasExtendedSpawnImmunity() &&
       !this.game.inSpawnPhase() &&
-      ticks <= immunityEnd;
-    if (this.isImmunityActive) {
-      this.immunitySecondsLeft = Math.ceil((immunityEnd - ticks) / 10);
-    }
+      this.game.isSpawnImmunityActive();
 
     this.isVisible =
       this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
