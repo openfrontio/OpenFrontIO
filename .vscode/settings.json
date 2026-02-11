@@ -1,3 +1,4 @@
 {
-  "html.validate.scripts": false
+  "html.validate.scripts": false,
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
 }
