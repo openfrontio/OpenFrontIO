@@ -204,6 +204,7 @@ export class WinModal extends LitElement implements Layer {
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
+              .allowTrial=${false}
               .onSelect=${(p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}

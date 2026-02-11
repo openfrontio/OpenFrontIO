@@ -125,6 +125,31 @@ export async function createCheckoutSession(
   }
 }
 
+export async function grantTemporaryFlare(flare: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/flares_granted/temporary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ flare }),
+    });
+    if (!response.ok) {
+      console.error(
+        "grantTemporaryFlare: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("grantTemporaryFlare: request failed", e);
+    return false;
+  }
+}
+
 export function getApiBase() {
   const domainname = getAudience();
 

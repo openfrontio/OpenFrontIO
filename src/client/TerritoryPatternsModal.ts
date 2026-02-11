@@ -12,8 +12,10 @@ import "./components/PatternButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  getPlayerCosmetics,
   handlePurchase,
   patternRelationship,
+  TEMP_FLARE_OFFSET,
 } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -37,8 +39,8 @@ export class TerritoryPatternsModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | false = false;
 
-  private _onPatternSelected = () => {
-    this.updateFromSettings();
+  private _onPatternSelected = async () => {
+    await this.updateFromSettings();
     this.refresh();
   };
 
@@ -62,24 +64,16 @@ export class TerritoryPatternsModal extends BaseModal {
     window.removeEventListener("pattern-selected", this._onPatternSelected);
   }
 
-  private updateFromSettings() {
-    this.selectedPattern =
-      this.cosmetics !== null
-        ? this.userSettings.getSelectedPatternName(this.cosmetics)
-        : null;
-    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
+  private async updateFromSettings() {
+    const cosmetics = await getPlayerCosmetics();
+    this.selectedPattern = cosmetics.pattern ?? null;
+    this.selectedColor = cosmetics.color?.color ?? null;
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
-    if (!hasLinkedAccount(userMeResponse)) {
-      this.userSettings.setSelectedPatternName(undefined);
-      this.userSettings.setSelectedColor(undefined);
-      this.selectedPattern = null;
-      this.selectedColor = null;
-    }
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
-    this.updateFromSettings();
+    await this.updateFromSettings();
     this.refresh();
   }
 
@@ -130,7 +124,7 @@ export class TerritoryPatternsModal extends BaseModal {
         ? [...(pattern.colorPalettes ?? []), null]
         : [null];
       for (const colorPalette of colorPalettes) {
-        let rel = "owned";
+        let rel: string | number = "owned";
         if (pattern) {
           rel = patternRelationship(
             pattern,
@@ -142,8 +136,9 @@ export class TerritoryPatternsModal extends BaseModal {
         if (rel === "blocked") {
           continue;
         }
+        const isTrial = typeof rel === "number";
         if (this.showOnlyOwned) {
-          if (rel !== "owned") continue;
+          if (rel !== "owned" && !isTrial) continue;
         } else {
           // Store mode: hide owned items
           if (rel === "owned") continue;
@@ -163,7 +158,19 @@ export class TerritoryPatternsModal extends BaseModal {
             .colorPalette=${this.cosmetics?.colorPalettes?.[
               colorPalette?.name ?? ""
             ] ?? null}
-            .requiresPurchase=${rel === "purchasable"}
+            .requiresPurchase=${rel === "purchasable" ||
+            rel === "purchasable_no_trial"}
+            .allowTrial=${rel === "purchasable"}
+            .trialCooldown=${this.userMeResponse !== false &&
+            this.userMeResponse.player.tempFlaresCooldown}
+            .trialTimeRemaining=${isTrial
+              ? Math.max(
+                  0,
+                  Math.floor(
+                    ((rel as number) - TEMP_FLARE_OFFSET - Date.now()) / 1000,
+                  ),
+                )
+              : 0}
             .selected=${isSelected}
             .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
             .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>

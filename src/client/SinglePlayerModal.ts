@@ -15,7 +15,6 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { hasLinkedAccount } from "./Api";
@@ -26,9 +25,8 @@ import "./components/Difficulties";
 import "./components/FluentSlider";
 import "./components/Maps";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { fetchCosmetics } from "./Cosmetics";
+import { getPlayerCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -59,8 +57,6 @@ export class SinglePlayerModal extends BaseModal {
   @state() private startingGoldValue: number | undefined = undefined;
 
   @state() private disabledUnits: UnitType[] = [];
-
-  private userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
     super.connectedCallback();
@@ -1049,18 +1045,6 @@ export class SinglePlayerModal extends BaseModal {
       console.warn("Username input element not found");
     }
 
-    const flagInput = document.querySelector("flag-input") as FlagInput;
-    if (!flagInput) {
-      console.warn("Flag input element not found");
-    }
-    const cosmetics = await fetchCosmetics();
-    let selectedPattern = this.userSettings.getSelectedPatternName(cosmetics);
-    selectedPattern ??= cosmetics
-      ? (this.userSettings.getDevOnlyPattern() ?? null)
-      : null;
-
-    const selectedColor = this.userSettings.getSelectedColor();
-
     await crazyGamesSDK.requestMidgameAd();
 
     this.dispatchEvent(
@@ -1074,14 +1058,7 @@ export class SinglePlayerModal extends BaseModal {
               {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
-                cosmetics: {
-                  flag:
-                    flagInput.getCurrentFlag() === "xx"
-                      ? ""
-                      : flagInput.getCurrentFlag(),
-                  pattern: selectedPattern ?? undefined,
-                  color: selectedColor ? { color: selectedColor } : undefined,
-                },
+                cosmetics: await getPlayerCosmetics(),
               },
             ],
             config: {
