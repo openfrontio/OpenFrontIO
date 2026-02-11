@@ -168,9 +168,9 @@ export class HostLobbyModal extends BaseModal {
         checked: this.maxTimer,
         onClick: maxTimerHandlers.click,
         input: renderToggleInputCardInput({
-          min: 0,
+          min: 1,
           max: 120,
-          value: this.maxTimerValue ?? 0,
+          value: this.maxTimerValue ?? "",
           ariaLabel: translateText("host_modal.max_timer"),
           placeholder: translateText("host_modal.mins_placeholder"),
           onInput: this.handleMaxTimerValueChanges,
@@ -444,13 +444,6 @@ export class HostLobbyModal extends BaseModal {
         if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
         toggleLogic();
       },
-      keydown: (e: KeyboardEvent) => {
-        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggleLogic();
-        }
-      },
     };
   }
 
@@ -667,7 +660,7 @@ export class HostLobbyModal extends BaseModal {
     ).value.replace(/[e+-]/gi, "");
     const value = parseInt((e.target as HTMLInputElement).value);
 
-    if (isNaN(value) || value < 0 || value > 120) {
+    if (isNaN(value) || value < 1 || value > 120) {
       return;
     }
     this.maxTimerValue = value;

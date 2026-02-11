@@ -446,7 +446,7 @@ export function renderGameConfigSettings(
       `,
     )}
     ${settings.gameMode.selected === GameMode.FFA
-      ? ""
+      ? nothing
       : html`
           <section class="space-y-6">
             <div
