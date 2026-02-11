@@ -1,3 +1,14 @@
+import {
+  DataSet,
+  RegExpMatcher,
+  collapseDuplicatesTransformer,
+  englishDataset,
+  pattern,
+  resolveConfusablesTransformer,
+  resolveLeetSpeakTransformer,
+  skipNonAlphabeticTransformer,
+  toAsciiLowerCaseTransformer,
+} from "obscenity";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
@@ -7,6 +18,95 @@ import {
   PlayerCosmetics,
   PlayerPattern,
 } from "../core/Schemas";
+import { getClanTagOriginalCase, simpleHash } from "../core/Util";
+
+export const shadowNames = [
+  "UnhuggedToday",
+  "DaddysLilChamp",
+  "BunnyKisses67",
+  "SnugglePuppy",
+  "CuddleMonster67",
+  "DaddysLilStar",
+  "SnuggleMuffin",
+  "PeesALittle",
+  "PleaseFullSendMe",
+  "NanasLilMan",
+  "NoAlliances",
+  "TryingTooHard67",
+  "MommysLilStinker",
+  "NeedHugs",
+  "MommysLilPeanut",
+  "IWillBetrayU",
+  "DaddysLilTater",
+  "PreciousBubbles",
+  "67 Cringelord",
+  "Peace And Love",
+  "AlmostPottyTrained",
+];
+
+export function createMatcher(bannedWords: string[]): RegExpMatcher {
+  const customDataset = new DataSet<{ originalWord: string }>().addAll(
+    englishDataset,
+  );
+
+  for (const word of bannedWords) {
+    customDataset.addPhrase((phrase) =>
+      phrase.setMetadata({ originalWord: word }).addPattern(pattern`${word}`),
+    );
+  }
+
+  return new RegExpMatcher({
+    ...customDataset.build(),
+    blacklistMatcherTransformers: [
+      toAsciiLowerCaseTransformer(),
+      resolveConfusablesTransformer(),
+      resolveLeetSpeakTransformer(),
+      collapseDuplicatesTransformer(),
+      skipNonAlphabeticTransformer(),
+    ],
+  });
+}
+
+/**
+ * Sanitizes and censors profane usernames and clan tags.
+ * Profane username is overwritten, profane clan tag is removed.
+ *
+ * Removing bad clan tags won't hurt existing clans nor cause desyncs:
+ * - full name including clan tag was overwritten in the past, if any part of name was bad
+ * - only each separate local player name with a profane clan tag will remain, no clan team assignment
+ *
+ * Examples:
+ * - "GoodName" -> "GoodName"
+ * - "BadName" -> "Censored"
+ * - "[CLAN]GoodName" -> "[CLAN]GoodName"
+ * - "[CLaN]BadName" -> "[CLAN] Censored"
+ * - "[BAD]GoodName" -> "GoodName"
+ * - "[BAD]BadName" -> "Censored"
+ */
+function censorUsernameWithMatcher(
+  username: string,
+  matcher: RegExpMatcher,
+): string {
+  const clanTag = getClanTagOriginalCase(username);
+
+  const nameWithoutClan = clanTag
+    ? username.replace(`[${clanTag}]`, "").trim()
+    : username;
+
+  const clanTagIsProfane = clanTag ? matcher.hasMatch(clanTag) : false;
+  const usernameIsProfane = matcher.hasMatch(nameWithoutClan);
+
+  const censoredName = usernameIsProfane
+    ? shadowNames[simpleHash(nameWithoutClan) % shadowNames.length]
+    : nameWithoutClan;
+
+  // Restore clan tag only if it's clean, otherwise remove it entirely
+  if (clanTag && !clanTagIsProfane) {
+    return `[${clanTag.toUpperCase()}] ${censoredName}`;
+  }
+
+  return censoredName;
+}
 
 type CosmeticResult =
   | { type: "allowed"; cosmetics: PlayerCosmetics }
@@ -14,13 +114,19 @@ type CosmeticResult =
 
 export interface PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult;
+  censorUsername(username: string): string;
 }
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
+  private matcher: RegExpMatcher;
+
   constructor(
     private cosmetics: Cosmetics,
     private b64urlDecode: (base64: string) => Uint8Array,
-  ) {}
+    bannedWords: string[],
+  ) {
+    this.matcher = createMatcher(bannedWords);
+  }
 
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
     const cosmetics: PlayerCosmetics = {};
@@ -106,10 +212,22 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     }
     return { color };
   }
+
+  censorUsername(username: string): string {
+    return censorUsernameWithMatcher(username, this.matcher);
+  }
 }
+
+// Default matcher with no custom banned words (just englishDataset)
+const defaultMatcher = createMatcher([]);
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
     return { type: "allowed", cosmetics: {} };
+  }
+
+  censorUsername(username: string): string {
+    // Fail open: use matcher with just the built-in English profanity dataset
+    return censorUsernameWithMatcher(username, defaultMatcher);
   }
 }

@@ -24,8 +24,7 @@ export class SpawnVideoAd extends LitElement implements Layer {
       window.innerWidth < 768 ||
       crazyGamesSDK.isOnCrazyGames() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
-      getGamesPlayed() < 3 || // Don't show to new players
-      getGamesPlayed() % 3 !== 0 // Only show 1 in 3 times
+      getGamesPlayed() < 3 // Don't show to new players
     ) {
       return;
     }

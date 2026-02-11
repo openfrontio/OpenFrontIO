@@ -119,6 +119,7 @@ export enum GameMapType {
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
   Yenisei = "Yenisei",
+  TradersDream = "Traders Dream",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -178,6 +179,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+    GameMapType.TradersDream,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -845,6 +847,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
+  overlappingRailroads: number[];
 }
 
 export interface PlayerProfile {
