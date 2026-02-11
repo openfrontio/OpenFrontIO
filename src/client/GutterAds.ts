@@ -74,14 +74,16 @@ export class GutterAds extends LitElement {
   }
 
   public close(): void {
+    this.isVisible = false;
+    this.adLoaded = false;
+    this.leftAdVisible = false;
+    this.rightAdVisible = false;
+    this.isProbingAds = false;
+    this.stopNoContentCheck();
+
     try {
       window.ramp.destroyUnits(this.leftAdType);
       window.ramp.destroyUnits(this.rightAdType);
-      this.adLoaded = false;
-      this.leftAdVisible = false;
-      this.rightAdVisible = false;
-      this.isProbingAds = false;
-      this.stopNoContentCheck();
       console.log("successfully destroyed gutter ads");
     } catch (e) {
       console.error("error destroying gutter ads", e);
@@ -183,11 +185,11 @@ export class GutterAds extends LitElement {
       this.rightAdVisible = this.hasInjectedAdContent(this.rightContainerId);
 
       if (this.noContentCheckCount >= 10) {
+        this.stopNoContentCheck();
         this.isProbingAds = false;
         this.adLoaded = this.leftAdVisible || this.rightAdVisible;
         if (!this.adLoaded) {
           this.isVisible = false;
-          this.stopNoContentCheck();
         }
       }
     }, 1000);
