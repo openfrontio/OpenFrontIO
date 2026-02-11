@@ -1,6 +1,12 @@
 import fs from "fs";
+import IntlMessageFormat from "intl-messageformat";
 import path from "path";
 import ts from "typescript";
+
+const PROJECT_ROOT = path.join(__dirname, "..");
+const LANGUAGE_DIR = path.join(PROJECT_ROOT, "resources", "lang");
+const FLAG_DIR = path.join(PROJECT_ROOT, "resources", "flags");
+const METADATA_FILE = path.join(LANGUAGE_DIR, "metadata.json");
 
 /**
  * Regex patterns for keys that are intentionally generated dynamically.
@@ -29,6 +35,13 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   /^lang\./, // language metadata, not a UI translation key
 ];
 
+type NestedTranslations = Record<string, unknown>;
+
+type ParsedTranslationFile = {
+  file: string;
+  flatMessages: Record<string, string>;
+};
+
 type ScanResult = {
   usedKeys: Set<string>;
   referencedStaticKeys: Set<string>;
@@ -46,6 +59,90 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
     }
   }
   return keys;
+}
+
+function flattenTranslations(
+  obj: NestedTranslations,
+  file: string,
+  parentKey = "",
+  result: Record<string, string> = {},
+  errors: string[] = [],
+): Record<string, string> {
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = parentKey ? `${parentKey}.${key}` : key;
+    if (typeof value === "string") {
+      result[fullKey] = value;
+      continue;
+    }
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      flattenTranslations(
+        value as NestedTranslations,
+        file,
+        fullKey,
+        result,
+        errors,
+      );
+      continue;
+    }
+    errors.push(
+      `${file}:${fullKey} has invalid type ${Array.isArray(value) ? "array" : typeof value}`,
+    );
+  }
+  return result;
+}
+
+function listLanguageJsonFiles(): string[] {
+  return fs
+    .readdirSync(LANGUAGE_DIR)
+    .filter((file) => file.endsWith(".json") && file !== "metadata.json")
+    .sort();
+}
+
+function loadTranslationFiles(): {
+  files: ParsedTranslationFile[];
+  errors: string[];
+} {
+  const errors: string[] = [];
+  const files: ParsedTranslationFile[] = [];
+
+  for (const file of listLanguageJsonFiles()) {
+    const fullPath = path.join(LANGUAGE_DIR, file);
+    let raw: string;
+    try {
+      raw = fs.readFileSync(fullPath, "utf-8");
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      errors.push(`${file}: failed to read file (${details})`);
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      errors.push(`${file}: invalid JSON (${details})`);
+      continue;
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      errors.push(`${file}: root must be an object`);
+      continue;
+    }
+
+    files.push({
+      file,
+      flatMessages: flattenTranslations(
+        parsed as NestedTranslations,
+        file,
+        "",
+        {},
+        errors,
+      ),
+    });
+  }
+
+  return { files, errors };
 }
 
 function getAllFiles(
@@ -335,15 +432,92 @@ function scanTsFile(
   return result;
 }
 
-describe("Unused Translation Keys", () => {
+describe("Translation System", () => {
+  test("metadata languages point to existing lang json and flag files", () => {
+    if (!fs.existsSync(METADATA_FILE)) {
+      console.log(
+        "No resources/lang/metadata.json file found. Skipping check.",
+      );
+      return;
+    }
+
+    const metadata = JSON.parse(fs.readFileSync(METADATA_FILE, "utf-8"));
+    if (!Array.isArray(metadata) || metadata.length === 0) {
+      console.log(
+        "No language entries found in metadata.json. Skipping check.",
+      );
+      return;
+    }
+
+    const knownLanguageFiles = new Set(listLanguageJsonFiles());
+    const errors: string[] = [];
+
+    for (const entry of metadata) {
+      const code = entry?.code;
+      const svg = entry?.svg;
+
+      if (typeof code !== "string" || code.length === 0) {
+        errors.push(
+          `metadata entry missing valid code: ${JSON.stringify(entry)}`,
+        );
+        continue;
+      }
+
+      if (typeof svg !== "string" || svg.length === 0) {
+        errors.push(
+          `[${code}]: metadata svg is missing or not a non-empty string`,
+        );
+        continue;
+      }
+
+      if (!knownLanguageFiles.has(`${code}.json`)) {
+        errors.push(`[${code}]: lang json file does not exist: ${code}.json`);
+      }
+
+      const svgFile = svg.endsWith(".svg") ? svg : `${svg}.svg`;
+      const flagPath = path.join(FLAG_DIR, svgFile);
+      if (!fs.existsSync(flagPath)) {
+        errors.push(`[${code}]: SVG file does not exist: ${svgFile}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error(
+        "Metadata lang or SVG file check failed:\n" + errors.join("\n"),
+      );
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test("all translation strings are valid ICU messages", () => {
+    const { files, errors } = loadTranslationFiles();
+
+    for (const { file, flatMessages } of files) {
+      for (const [key, message] of Object.entries(flatMessages)) {
+        try {
+          new IntlMessageFormat(message, "en");
+        } catch (error) {
+          const details =
+            error instanceof Error ? error.message : String(error);
+          errors.push(`${file}:${key} has invalid ICU syntax (${details})`);
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error("ICU translation validation failed:\n" + errors.join("\n"));
+    }
+    expect(errors).toEqual([]);
+  });
+
   test("en.json keys stay in sync with source usage", () => {
-    const enJsonPath = path.join(__dirname, "../resources/lang/en.json");
+    const enJsonPath = path.join(LANGUAGE_DIR, "en.json");
     const enJson = JSON.parse(fs.readFileSync(enJsonPath, "utf-8"));
     const allKeys = flattenKeys(enJson);
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(__dirname, "../src");
+    const srcDir = path.join(PROJECT_ROOT, "src");
     const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
 
     const usedKeys = new Set<string>();
@@ -353,12 +527,13 @@ describe("Unused Translation Keys", () => {
     for (const file of sourceFiles) {
       const scan = scanTsFile(file, rootKeys, enKeySet);
       for (const key of scan.usedKeys) usedKeys.add(key);
-      for (const key of scan.referencedStaticKeys)
+      for (const key of scan.referencedStaticKeys) {
         referencedStaticKeys.add(key);
+      }
       for (const prefix of scan.dynamicPrefixes) dynamicPrefixes.add(prefix);
     }
 
-    const indexHtmlPath = path.join(__dirname, "../index.html");
+    const indexHtmlPath = path.join(PROJECT_ROOT, "index.html");
     if (fs.existsSync(indexHtmlPath)) {
       const htmlContent = fs.readFileSync(indexHtmlPath, "utf-8");
       const htmlDataI18nKeys = extractDataI18nKeys(htmlContent);
@@ -412,7 +587,6 @@ describe("Unused Translation Keys", () => {
     }
 
     const hasFailing = missingKeys.length > 0 || unusedKeys.length > 0;
-
     if (hasFailing) {
       if (derivedDynamicPatterns.length > 0) {
         console.log(
