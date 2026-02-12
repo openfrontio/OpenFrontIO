@@ -326,7 +326,8 @@
     "surrounded": "Surrounded",
     "didier": "Didier",
     "didierfrance": "Didier (France)",
-    "amazonriver": "Amazon River"
+    "amazonriver": "Amazon River",
+    "tradersdream": "Traders Dream"
   },
   "map_categories": {
     "featured": "Featured",
@@ -799,15 +800,15 @@
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
     "available_tooltip": "Your current available troops",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Troops slider",
-    "capacity_note": "Receiver can accept only {{amount}} right now."
+    "capacity_note": "Receiver can accept only {amount} right now."
   },
   "send_gold_modal": {
     "title_with_name": "Send Gold to {name}",
     "available_tooltip": "Your current available gold",
     "aria_slider": "Amount slider",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
