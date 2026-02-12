@@ -119,9 +119,10 @@ export class RailNetworkImpl implements RailNetwork {
         for (const connectedStation of allConnectedStations) {
           allOriginalStations.delete(connectedStation);
         }
+        // Those stations were disconnected: new cluster
         if (allOriginalStations.size > 0) {
-          // Those stations were disconnected: new cluster
           const newCluster = new Cluster();
+          // Switching their cluster will automatically remove them from their current cluster
           newCluster.addStations(allConnectedStations);
         }
       }
@@ -280,10 +281,6 @@ export class RailNetworkImpl implements RailNetwork {
       this.railGrid.unregister(rail);
     }
     station.clearRailroads();
-    const cluster = station.getCluster();
-    if (cluster !== null && cluster.size() === 1) {
-      this.deleteCluster(cluster);
-    }
   }
 
   private deleteCluster(cluster: Cluster) {
