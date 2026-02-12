@@ -659,15 +659,15 @@
     "title_with_name": "{name}에게 병력 보내기",
     "available_tooltip": "현재 지원 가능한 병력",
     "min_keep": "최소 보유량",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "병력 슬라이더",
-    "capacity_note": "상대방은 지금 {{amount}}까지만 받을 수 있습니다."
+    "capacity_note": "상대방은 지금 {amount}까지만 받을 수 있습니다."
   },
   "send_gold_modal": {
     "title_with_name": "{name}에게 금 보내기",
     "available_tooltip": "현재 보유 중인 금",
     "aria_slider": "수량 슬라이더",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "리플레이 속도",

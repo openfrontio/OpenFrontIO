@@ -790,15 +790,15 @@
     "title_with_name": "Изпрати войници на {name}",
     "available_tooltip": "Текущите ти войници на разположение",
     "min_keep": "Минимално запазени",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Плъзгач за войници",
-    "capacity_note": "Получателят може да приеме само {{amount}} в момента."
+    "capacity_note": "Получателят може да приеме само {amount} в момента."
   },
   "send_gold_modal": {
     "title_with_name": "Изпрати злато на {name}",
     "available_tooltip": "Текущото ти злато на разположение",
     "aria_slider": "Количествен плъзгач",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Скорост на повторението",
