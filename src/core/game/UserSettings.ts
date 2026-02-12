@@ -73,6 +73,25 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
+  accessibilityPatterns() {
+    return this.get("settings.accessibilityPatterns", false);
+  }
+
+  accessibilityPatternOpacity(): number {
+    return this.getFloat("settings.accessibilityPatternOpacity", 0.2);
+  }
+
+  setAccessibilityPatternOpacity(value: number): void {
+    this.setFloat(
+      "settings.accessibilityPatternOpacity",
+      Math.max(0, Math.min(0.5, value)),
+    );
+  }
+
+  toggleAccessibilityPatterns() {
+    this.set("settings.accessibilityPatterns", !this.accessibilityPatterns());
+  }
+
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);
