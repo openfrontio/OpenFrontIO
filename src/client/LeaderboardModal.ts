@@ -77,9 +77,9 @@ export class LeaderboardModal extends BaseModal {
       >`;
     }
     const refreshTime = html`<span
-        class="text-sm font-normal text-white/40 ml-2 wrap-break-words italic"
-        >(${translateText("leaderboard_modal.refresh_time")})</span
-      >`;
+      class="text-sm font-normal text-white/40 ml-2 wrap-break-words italic"
+      >(${translateText("leaderboard_modal.refresh_time")})</span
+    >`;
 
     const content = html`
       <div
