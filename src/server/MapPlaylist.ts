@@ -150,8 +150,7 @@ export class MapPlaylist {
         startingGold,
       },
       startingGold,
-      difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
+      difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
