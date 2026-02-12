@@ -1,14 +1,7 @@
 import { Worker } from "cluster";
 import winston from "winston";
 import { ServerConfig } from "../core/configuration/Config";
-import {
-  Duos,
-  GameMode,
-  HumansVsNations,
-  PublicGameModifiers,
-  Quads,
-  Trios,
-} from "../core/game/Game";
+import { GameMode, PublicGameModifiers } from "../core/game/Game";
 import { PublicGameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
@@ -244,22 +237,6 @@ export class MasterLobbyService {
   }
 
   private async gameConfigForCategory(category: LobbyCategory) {
-    const teamOptions = [
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      Duos,
-      Trios,
-      Quads,
-      HumansVsNations,
-    ] as const;
-
-    const randomTeamConfig =
-      teamOptions[Math.floor(Math.random() * teamOptions.length)];
-
     if (category === "ffa") {
       return this.playlist.gameConfig({ mode: GameMode.FFA });
     }
@@ -267,7 +244,6 @@ export class MasterLobbyService {
     if (category === "teams") {
       return this.playlist.gameConfig({
         mode: GameMode.Team,
-        playerTeams: randomTeamConfig,
       });
     }
 
@@ -275,7 +251,6 @@ export class MasterLobbyService {
     if (specialAsTeam) {
       return this.playlist.gameConfig({
         mode: GameMode.Team,
-        playerTeams: randomTeamConfig,
         ensureSpecialModifier: true,
       });
     }
