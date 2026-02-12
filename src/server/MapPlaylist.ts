@@ -17,6 +17,7 @@ import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
+import { isSpecialModifiers } from "./SpecialModifiers";
 
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
@@ -410,13 +411,7 @@ export class MapPlaylist {
   }
 
   private isSpecial(modifiers: PublicGameModifiers | undefined): boolean {
-    if (!modifiers) return false;
-    return Boolean(
-      modifiers.isCompact ||
-        modifiers.isRandomSpawn ||
-        modifiers.isCrowded ||
-        (modifiers.startingGold && modifiers.startingGold > 0),
-    );
+    return isSpecialModifiers(modifiers);
   }
 
   private isArcadeMap(map: GameMapType): boolean {

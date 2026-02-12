@@ -18,6 +18,7 @@ import {
 } from "./IPCBridgeSchema";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
+import { isSpecialModifiers } from "./SpecialModifiers";
 
 type LobbyCategory = "ffa" | "teams" | "special";
 
@@ -184,15 +185,7 @@ export class MasterLobbyService {
   }
 
   private isSpecialConfig(modifiers: PublicGameModifiers | undefined): boolean {
-    if (!modifiers) {
-      return false;
-    }
-    return Boolean(
-      modifiers.isCompact ||
-        modifiers.isRandomSpawn ||
-        modifiers.isCrowded ||
-        modifiers.startingGold !== undefined,
-    );
+    return isSpecialModifiers(modifiers);
   }
 
   private categoryCounts(
