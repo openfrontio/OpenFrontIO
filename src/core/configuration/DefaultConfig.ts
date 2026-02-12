@@ -28,6 +28,7 @@ import { PastelThemeDark } from "./PastelThemeDark";
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
+const DEFAULT_SPAWN_IMMUNITY_TICKS = 5 * 10;
 
 const JwksSchema = z.object({
   keys: z
@@ -163,7 +164,12 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
+    return (
+      this._gameConfig.spawnImmunityDuration ?? DEFAULT_SPAWN_IMMUNITY_TICKS
+    );
+  }
+  hasExtendedSpawnImmunity(): boolean {
+    return this.spawnImmunityDuration() > DEFAULT_SPAWN_IMMUNITY_TICKS;
   }
 
   gameConfig(): GameConfig {
