@@ -1,0 +1,45 @@
+{
+  "name": "Hawaii",
+  "nations": [
+    {
+      "coordinates": [225, 592],
+      "name": "Niihau",
+      "flag": "us"
+    },
+    {
+      "coordinates": [480, 398],
+      "name": "Kauai",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1215, 766],
+      "name": "Oahu",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1623, 980],
+      "name": "Molokai",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1654, 1143],
+      "name": "Lanai",
+      "flag": "us"
+    },
+    {
+      "coordinates": [1889, 1103],
+      "name": "Maui",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2899, 1878],
+      "name": "Kona",
+      "flag": "us"
+    },
+    {
+      "coordinates": [3246, 1919],
+      "name": "Hilo",
+      "flag": "us"
+    }
+  ]
+}
