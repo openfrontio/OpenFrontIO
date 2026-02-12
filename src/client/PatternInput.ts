@@ -17,6 +17,9 @@ export class PatternInput extends LitElement {
   @property({ type: Boolean, attribute: "show-select-label" })
   public showSelectLabel: boolean = false;
 
+  @property({ type: Boolean, attribute: "adaptive-size" })
+  public adaptiveSize: boolean = false;
+
   private userSettings = new UserSettings();
   private cosmetics: Cosmetics | null = null;
   private _abortController: AbortController | null = null;
@@ -73,13 +76,39 @@ export class PatternInput extends LitElement {
     return this;
   }
 
+  private getIsDefaultPattern(): boolean {
+    return this.pattern === null && this.selectedColor === null;
+  }
+
+  private shouldShowSelectLabel(): boolean {
+    return this.showSelectLabel && this.getIsDefaultPattern();
+  }
+
+  private applyAdaptiveSize(): void {
+    if (!this.adaptiveSize) {
+      this.style.removeProperty("width");
+      this.style.removeProperty("height");
+      return;
+    }
+
+    const showSelect = this.showSelectLabel && this.getIsDefaultPattern();
+    this.style.setProperty("height", "3rem");
+    this.style.setProperty(
+      "width",
+      showSelect ? "clamp(6.5rem, 28vw, 9.5rem)" : "3rem",
+    );
+  }
+
+  protected updated(): void {
+    this.applyAdaptiveSize();
+  }
+
   render() {
     if (crazyGamesSDK.isOnCrazyGames()) {
       return html``;
     }
 
-    const isDefault = this.pattern === null && this.selectedColor === null;
-    const showSelect = this.showSelectLabel && isDefault;
+    const showSelect = this.shouldShowSelectLabel();
     const buttonTitle = translateText("territory_patterns.title");
 
     // Show loading state

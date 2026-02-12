@@ -114,7 +114,8 @@ export class PlayPage extends LitElement {
               <pattern-input
                 id="pattern-input-mobile"
                 show-select-label
-                class="w-12 h-12 shrink-0"
+                adaptive-size
+                class="shrink-0"
               ></pattern-input>
             </div>
           </div>
