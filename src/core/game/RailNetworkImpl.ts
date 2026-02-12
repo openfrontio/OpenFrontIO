@@ -134,12 +134,12 @@ export class RailNetworkImpl implements RailNetwork {
     const station = this._stationManager.findStation(unit);
     if (!station) return;
 
-    const cluster = station.getCluster();
-    if (!cluster) return;
-
     this.disconnectFromNetwork(station);
     this._stationManager.removeStation(station);
     station.unit.setTrainStation(false);
+
+    const cluster = station.getCluster();
+    if (!cluster) return;
 
     cluster.removeStation(station);
     if (cluster.size() === 0) {
