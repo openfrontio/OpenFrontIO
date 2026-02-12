@@ -719,6 +719,12 @@ export class GameImpl implements Game {
     });
   }
 
+  public removeAlliancesByPlayerSilently(player: Player): void {
+    this.alliances_ = this.alliances_.filter(
+      (a) => a.requestor() !== player && a.recipient() !== player,
+    );
+  }
+
   public isSpawnImmunityActive(): boolean {
     return (
       this.config().numSpawnPhaseTurns() +
@@ -1155,28 +1161,6 @@ export class GameImpl implements Game {
       conqueredId: conquered.id(),
       gold,
     });
-  }
-
-  removeOnDeath(deadPlayer: Player): void {
-    // Player (bot, human, nation) has no tiles
-    // Delete any remaining gold, non-nuke units and alliances
-    const gold = deadPlayer.gold();
-    deadPlayer.removeGold(gold);
-
-    deadPlayer.units().forEach((u) => {
-      if (
-        u.type() !== UnitType.AtomBomb &&
-        u.type() !== UnitType.HydrogenBomb &&
-        u.type() !== UnitType.MIRVWarhead &&
-        u.type() !== UnitType.MIRV
-      ) {
-        u.delete();
-      }
-    });
-
-    this.alliances_ = this.alliances_.filter(
-      (a) => a.requestor() !== deadPlayer && a.recipient() !== deadPlayer,
-    );
   }
 }
 

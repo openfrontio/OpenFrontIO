@@ -661,6 +661,7 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
+  removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
 
@@ -825,7 +826,6 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
-  removeOnDeath(deadPlayer: Player): void;
   miniWaterHPA(): PathFinder<number> | null;
   miniWaterGraph(): AbstractGraph | null;
   getWaterComponent(tile: TileRef): number | null;
