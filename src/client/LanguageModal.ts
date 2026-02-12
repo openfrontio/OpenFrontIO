@@ -70,7 +70,7 @@ export class LanguageModal extends BaseModal {
                 >
                   <img
                     src="/flags/${lang.svg}.svg"
-                    class="w-8 h-6 object-contain shadow-sm rounded-sm shrink-0"
+                    class="w-8 h-6 object-contain rounded-sm shrink-0"
                     alt="${lang.code}"
                   />
                   <div class="flex flex-col items-start min-w-0">
