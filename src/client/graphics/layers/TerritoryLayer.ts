@@ -1,6 +1,13 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import {
+  applyPatternDarken,
+  getPatternByIndex,
+  getTeamPattern,
+  PatternLUT,
+  PatternType,
+} from "../../../core/configuration/Patterns";
 import { EventBus } from "../../../core/EventBus";
 import {
   Cell,
@@ -32,6 +39,7 @@ export class TerritoryLayer implements Layer {
   private borderAnimTime = 0;
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
+  private patternLUT = new PatternLUT();
 
   private tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
@@ -428,8 +436,13 @@ export class TerritoryLayer implements Layer {
     this.highlightCanvas.width = this.game.width();
     this.highlightCanvas.height = this.game.height();
 
+    const accessibilityEnabled = this.userSettings.accessibilityPatterns();
+    const accessibilityOpacity = accessibilityEnabled
+      ? this.userSettings.accessibilityPatternOpacity()
+      : 0;
+
     this.game.forEachTile((t) => {
-      this.paintTerritory(t);
+      this.paintTerritory(t, false, accessibilityEnabled, accessibilityOpacity);
     });
   }
 
@@ -515,6 +528,11 @@ export class TerritoryLayer implements Layer {
   }
 
   renderTerritory() {
+    const accessibilityEnabled = this.userSettings.accessibilityPatterns();
+    const accessibilityOpacity = accessibilityEnabled
+      ? this.userSettings.accessibilityPatternOpacity()
+      : 0;
+
     let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
     if (numToRender === 0 || this.game.inSpawnPhase()) {
       numToRender = this.tileToRenderQueue.size();
@@ -529,14 +547,29 @@ export class TerritoryLayer implements Layer {
       }
 
       const tile = entry.tile;
-      this.paintTerritory(tile);
+      this.paintTerritory(
+        tile,
+        false,
+        accessibilityEnabled,
+        accessibilityOpacity,
+      );
       for (const neighbor of this.game.neighbors(tile)) {
-        this.paintTerritory(neighbor, true);
+        this.paintTerritory(
+          neighbor,
+          true,
+          accessibilityEnabled,
+          accessibilityOpacity,
+        );
       }
     }
   }
 
-  paintTerritory(tile: TileRef, isBorder: boolean = false) {
+  paintTerritory(
+    tile: TileRef,
+    isBorder: boolean = false,
+    accessibilityEnabled?: boolean,
+    accessibilityOpacity?: number,
+  ) {
     if (isBorder && !this.game.hasOwner(tile)) {
       return;
     }
@@ -586,7 +619,34 @@ export class TerritoryLayer implements Layer {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      const baseColor = owner.territoryColor(tile);
+      if (accessibilityEnabled) {
+        const team = owner.team();
+        let patternType =
+          team !== null ? getTeamPattern(team) : PatternType.None;
+        if (patternType === PatternType.None) {
+          patternType = getPatternByIndex(owner.smallID());
+        }
+        if (
+          this.patternLUT.isPattern(
+            this.game.x(tile),
+            this.game.y(tile),
+            patternType,
+          )
+        ) {
+          const [pr, pg, pb] = applyPatternDarken(
+            baseColor.rgba.r,
+            baseColor.rgba.g,
+            baseColor.rgba.b,
+            accessibilityOpacity!,
+          );
+          this.paintTileRaw(this.imageData, tile, pr, pg, pb, 150);
+        } else {
+          this.paintTile(this.imageData, tile, baseColor, 150);
+        }
+      } else {
+        this.paintTile(this.imageData, tile, baseColor, 150);
+      }
     }
   }
 
@@ -617,6 +677,21 @@ export class TerritoryLayer implements Layer {
     imageData.data[offset] = color.rgba.r;
     imageData.data[offset + 1] = color.rgba.g;
     imageData.data[offset + 2] = color.rgba.b;
+    imageData.data[offset + 3] = alpha;
+  }
+
+  paintTileRaw(
+    imageData: ImageData,
+    tile: TileRef,
+    r: number,
+    g: number,
+    b: number,
+    alpha: number,
+  ) {
+    const offset = tile * 4;
+    imageData.data[offset] = r;
+    imageData.data[offset + 1] = g;
+    imageData.data[offset + 2] = b;
     imageData.data[offset + 3] = alpha;
   }
 
