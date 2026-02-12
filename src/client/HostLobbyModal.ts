@@ -24,16 +24,23 @@ import { getPlayToken } from "./Auth";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/GameConfigSettings";
 import "./components/LobbyPlayerView";
+import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
-  renderGameConfigSettings,
-  renderToggleInputCard,
-  renderToggleInputCardInput,
-} from "./utilities/RenderGameConfigSettings";
+  getBotsForCompactMap,
+  getRandomMapType,
+  getUpdatedDisabledUnits,
+  parseBoundedFloatFromInput,
+  parseBoundedIntegerFromInput,
+  preventDisallowedKeys,
+  toOptionalNumber,
+} from "./utilities/GameConfigHelpers";
+
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
@@ -133,99 +140,72 @@ export class HostLobbyModal extends BaseModal {
   }
 
   render() {
-    const maxTimerHandlers = this.createToggleHandlers(
-      () => this.maxTimer,
-      (val) => (this.maxTimer = val),
-      () => this.maxTimerValue,
-      (val) => (this.maxTimerValue = val),
-      30,
-    );
-    const spawnImmunityHandlers = this.createToggleHandlers(
-      () => this.spawnImmunity,
-      (val) => (this.spawnImmunity = val),
-      () => this.spawnImmunityDurationMinutes,
-      (val) => (this.spawnImmunityDurationMinutes = val),
-      5,
-    );
-    const goldMultiplierHandlers = this.createToggleHandlers(
-      () => this.goldMultiplier,
-      (val) => (this.goldMultiplier = val),
-      () => this.goldMultiplierValue,
-      (val) => (this.goldMultiplierValue = val),
-      2,
-    );
-    const startingGoldHandlers = this.createToggleHandlers(
-      () => this.startingGold,
-      (val) => (this.startingGold = val),
-      () => this.startingGoldValue,
-      (val) => (this.startingGoldValue = val),
-      5000000,
-    );
-
     const inputCards = [
-      renderToggleInputCard({
-        labelKey: "host_modal.max_timer",
-        checked: this.maxTimer,
-        onClick: maxTimerHandlers.click,
-        input: renderToggleInputCardInput({
-          min: 1,
-          max: 120,
-          value: this.maxTimerValue ?? "",
-          ariaLabel: translateText("host_modal.max_timer"),
-          placeholder: translateText("host_modal.mins_placeholder"),
-          onInput: this.handleMaxTimerValueChanges,
-          onKeyDown: this.handleMaxTimerValueKeyDown,
-        }),
-      }),
-      renderToggleInputCard({
-        labelKey: "host_modal.player_immunity_duration",
-        checked: this.spawnImmunity,
-        onClick: spawnImmunityHandlers.click,
-        input: renderToggleInputCardInput({
-          min: 0,
-          max: 120,
-          step: 1,
-          value: this.spawnImmunityDurationMinutes ?? 0,
-          ariaLabel: translateText("host_modal.player_immunity_duration"),
-          placeholder: translateText("host_modal.mins_placeholder"),
-          onInput: this.handleSpawnImmunityDurationInput,
-          onKeyDown: this.handleSpawnImmunityDurationKeyDown,
-        }),
-      }),
-      renderToggleInputCard({
-        labelKey: "single_modal.gold_multiplier",
-        checked: this.goldMultiplier,
-        onClick: goldMultiplierHandlers.click,
-        input: renderToggleInputCardInput({
-          id: "gold-multiplier-value",
-          min: 0.1,
-          max: 1000,
-          step: "any",
-          value: this.goldMultiplierValue ?? "",
-          ariaLabel: translateText("single_modal.gold_multiplier"),
-          placeholder: translateText(
-            "single_modal.gold_multiplier_placeholder",
-          ),
-          onChange: this.handleGoldMultiplierValueChanges,
-          onKeyDown: this.handleGoldMultiplierValueKeyDown,
-        }),
-      }),
-      renderToggleInputCard({
-        labelKey: "single_modal.starting_gold",
-        checked: this.startingGold,
-        onClick: startingGoldHandlers.click,
-        input: renderToggleInputCardInput({
-          id: "starting-gold-value",
-          min: 0,
-          max: 1000000000,
-          step: 100000,
-          value: this.startingGoldValue ?? "",
-          ariaLabel: translateText("single_modal.starting_gold"),
-          placeholder: translateText("single_modal.starting_gold_placeholder"),
-          onInput: this.handleStartingGoldValueChanges,
-          onKeyDown: this.handleStartingGoldValueKeyDown,
-        }),
-      }),
+      html`<toggle-input-card
+        .labelKey=${"host_modal.max_timer"}
+        .checked=${this.maxTimer}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputValue=${this.maxTimerValue}
+        .inputAriaLabel=${translateText("host_modal.max_timer")}
+        .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleMaxTimerToggle}
+        .onInput=${this.handleMaxTimerValueChanges}
+        .onKeyDown=${this.handleMaxTimerValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_immunity_duration"}
+        .checked=${this.spawnImmunity}
+        .inputMin=${0}
+        .inputMax=${120}
+        .inputStep=${1}
+        .inputValue=${this.spawnImmunityDurationMinutes}
+        .inputAriaLabel=${translateText("host_modal.player_immunity_duration")}
+        .inputPlaceholder=${translateText("host_modal.mins_placeholder")}
+        .defaultInputValue=${5}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleSpawnImmunityToggle}
+        .onInput=${this.handleSpawnImmunityDurationInput}
+        .onKeyDown=${this.handleSpawnImmunityDurationKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.gold_multiplier"}
+        .checked=${this.goldMultiplier}
+        .inputId=${"gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.goldMultiplierValue}
+        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "single_modal.gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleGoldMultiplierToggle}
+        .onChange=${this.handleGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.starting_gold"}
+        .checked=${this.startingGold}
+        .inputId=${"starting-gold-value"}
+        .inputMin=${0}
+        .inputMax=${1000000000}
+        .inputStep=${100000}
+        .inputValue=${this.startingGoldValue}
+        .inputAriaLabel=${translateText("single_modal.starting_gold")}
+        .inputPlaceholder=${translateText(
+          "single_modal.starting_gold_placeholder",
+        )}
+        .defaultInputValue=${5000000}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleStartingGoldToggle}
+        .onInput=${this.handleStartingGoldValueChanges}
+        .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
     ];
 
     const content = html`
@@ -250,95 +230,90 @@ export class HostLobbyModal extends BaseModal {
         })}
 
         <div
-          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl space-y-10"
+          class="flex-1 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
         >
-          ${renderGameConfigSettings({
-            map: {
-              selected: this.selectedMap,
-              useRandom: this.useRandomMap,
-              randomMapDivider: true,
-              onSelectMap: (mapValue: GameMapType) =>
-                this.handleMapSelection(mapValue),
-              onSelectRandom: () => this.handleSelectRandomMap(),
-            },
-            difficulty: {
-              selected: this.selectedDifficulty,
-              disabled: this.disableNations,
-              onSelect: (value: Difficulty) =>
-                this.handleDifficultySelection(value),
-            },
-            gameMode: {
-              selected: this.gameMode,
-              onSelect: (mode: GameMode) => this.handleGameModeSelection(mode),
-            },
-            teamCount: {
-              selected: this.teamCount,
-              onSelect: (count: TeamCountConfig) =>
-                this.handleTeamCountSelection(count),
-            },
-            options: {
-              titleKey: "host_modal.options_title",
-              bots: {
-                value: this.bots,
-                labelKey: "host_modal.bots",
-                disabledKey: "host_modal.bots_disabled",
-                onChange: this.handleBotsChange,
+          <game-config-settings
+            class="block"
+            .sectionGapClass=${"space-y-10"}
+            .settings=${{
+              map: {
+                selected: this.selectedMap,
+                useRandom: this.useRandomMap,
+                randomMapDivider: true,
               },
-              toggles: [
-                {
-                  labelKey: "host_modal.disable_nations",
-                  checked: this.disableNations,
-                  onChange: this.handleDisableNationsChange,
-                  hidden:
-                    this.gameMode === GameMode.Team &&
-                    this.teamCount === HumansVsNations,
+              difficulty: {
+                selected: this.selectedDifficulty,
+                disabled: this.disableNations,
+              },
+              gameMode: {
+                selected: this.gameMode,
+              },
+              teamCount: {
+                selected: this.teamCount,
+              },
+              options: {
+                titleKey: "host_modal.options_title",
+                bots: {
+                  value: this.bots,
+                  labelKey: "host_modal.bots",
+                  disabledKey: "host_modal.bots_disabled",
                 },
-                {
-                  labelKey: "host_modal.instant_build",
-                  checked: this.instantBuild,
-                  onChange: this.handleInstantBuildChange,
-                },
-                {
-                  labelKey: "host_modal.random_spawn",
-                  checked: this.randomSpawn,
-                  onChange: this.handleRandomSpawnChange,
-                },
-                {
-                  labelKey: "host_modal.donate_gold",
-                  checked: this.donateGold,
-                  onChange: this.handleDonateGoldChange,
-                },
-                {
-                  labelKey: "host_modal.donate_troops",
-                  checked: this.donateTroops,
-                  onChange: this.handleDonateTroopsChange,
-                },
-                {
-                  labelKey: "host_modal.infinite_gold",
-                  checked: this.infiniteGold,
-                  onChange: this.handleInfiniteGoldChange,
-                },
-                {
-                  labelKey: "host_modal.infinite_troops",
-                  checked: this.infiniteTroops,
-                  onChange: this.handleInfiniteTroopsChange,
-                },
-                {
-                  labelKey: "host_modal.compact_map",
-                  checked: this.compactMap,
-                  onChange: this.handleCompactMapChange,
-                },
-              ],
-              inputCards,
-            },
-            unitTypes: {
-              titleKey: "host_modal.enables_title",
-              disabledUnits: this.disabledUnits,
-              toggleUnit: this.toggleUnit.bind(this),
-            },
-          })}
+                toggles: [
+                  {
+                    labelKey: "host_modal.disable_nations",
+                    checked: this.disableNations,
+                    hidden:
+                      this.gameMode === GameMode.Team &&
+                      this.teamCount === HumansVsNations,
+                  },
+                  {
+                    labelKey: "host_modal.instant_build",
+                    checked: this.instantBuild,
+                  },
+                  {
+                    labelKey: "host_modal.random_spawn",
+                    checked: this.randomSpawn,
+                  },
+                  {
+                    labelKey: "host_modal.donate_gold",
+                    checked: this.donateGold,
+                  },
+                  {
+                    labelKey: "host_modal.donate_troops",
+                    checked: this.donateTroops,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_gold",
+                    checked: this.infiniteGold,
+                  },
+                  {
+                    labelKey: "host_modal.infinite_troops",
+                    checked: this.infiniteTroops,
+                  },
+                  {
+                    labelKey: "host_modal.compact_map",
+                    checked: this.compactMap,
+                  },
+                ],
+                inputCards,
+              },
+              unitTypes: {
+                titleKey: "host_modal.enables_title",
+                disabledUnits: this.disabledUnits,
+              },
+            }}
+            @map-selected=${this.handleConfigMapSelected}
+            @random-map-selected=${this.handleConfigRandomMapSelected}
+            @difficulty-selected=${this.handleConfigDifficultySelected}
+            @game-mode-selected=${this.handleConfigGameModeSelected}
+            @team-count-selected=${this.handleConfigTeamCountSelected}
+            @bots-changed=${this.handleBotsChange}
+            @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+            @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
+          ></game-config-settings>
 
           <lobby-player-view
+            class="mt-10"
             .gameMode=${this.gameMode}
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
@@ -420,33 +395,6 @@ export class HostLobbyModal extends BaseModal {
     this.loadNationCount();
   }
 
-  private createToggleHandlers(
-    toggleStateGetter: () => boolean,
-    toggleStateSetter: (val: boolean) => void,
-    valueGetter: () => number | undefined,
-    valueSetter: (val: number | undefined) => void,
-    defaultValue: number = 0,
-  ) {
-    const toggleLogic = () => {
-      const newState = !toggleStateGetter();
-      toggleStateSetter(newState);
-      if (newState) {
-        valueSetter(valueGetter() ?? defaultValue);
-      } else {
-        valueSetter(undefined);
-      }
-      this.putGameConfig();
-      this.requestUpdate();
-    };
-
-    return {
-      click: (e: Event) => {
-        if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
-        toggleLogic();
-      },
-    };
-  }
-
   private leaveLobby() {
     if (!this.lobbyId) {
       return;
@@ -513,10 +461,14 @@ export class HostLobbyModal extends BaseModal {
 
   private async handleSelectRandomMap() {
     this.useRandomMap = true;
-    this.selectedMap = this.getRandomMap();
+    this.selectedMap = getRandomMapType();
     await this.loadNationCount();
     this.putGameConfig();
   }
+
+  private handleConfigRandomMapSelected = () => {
+    void this.handleSelectRandomMap();
+  };
 
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
@@ -525,13 +477,81 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   }
 
+  private handleConfigMapSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ map: GameMapType }>;
+    void this.handleMapSelection(customEvent.detail.map);
+  };
+
   private async handleDifficultySelection(value: Difficulty) {
     this.selectedDifficulty = value;
     this.putGameConfig();
   }
 
+  private handleConfigDifficultySelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
+    void this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigGameModeSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ mode: GameMode }>;
+    void this.handleGameModeSelection(customEvent.detail.mode);
+  };
+
+  private handleConfigTeamCountSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ count: TeamCountConfig }>;
+    void this.handleTeamCountSelection(customEvent.detail.count);
+  };
+
+  private handleConfigOptionToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      labelKey: string;
+      checked: boolean;
+    }>;
+    const { labelKey, checked } = customEvent.detail;
+
+    switch (labelKey) {
+      case "host_modal.disable_nations":
+        void this.handleDisableNationsChange(checked);
+        break;
+      case "host_modal.instant_build":
+        this.handleInstantBuildChange(checked);
+        break;
+      case "host_modal.random_spawn":
+        this.handleRandomSpawnChange(checked);
+        break;
+      case "host_modal.donate_gold":
+        this.handleDonateGoldChange(checked);
+        break;
+      case "host_modal.donate_troops":
+        this.handleDonateTroopsChange(checked);
+        break;
+      case "host_modal.infinite_gold":
+        this.handleInfiniteGoldChange(checked);
+        break;
+      case "host_modal.infinite_troops":
+        this.handleInfiniteTroopsChange(checked);
+        break;
+      case "host_modal.compact_map":
+        this.handleCompactMapChange(checked);
+        break;
+      default:
+        break;
+    }
+  };
+
+  private handleConfigUnitToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{ unit: UnitType; checked: boolean }>;
+    const { unit, checked } = customEvent.detail;
+    this.disabledUnits = getUpdatedDisabledUnits(
+      this.disabledUnits,
+      unit,
+      checked,
+    );
+    this.putGameConfig();
+  };
+
   // Modified to include debouncing
-  private handleBotsChange(e: Event) {
+  private handleBotsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
     if (isNaN(value) || value < 0 || value > 400) {
@@ -551,67 +571,94 @@ export class HostLobbyModal extends BaseModal {
       this.putGameConfig();
       this.botsUpdateTimer = null;
     }, 300);
-  }
+  };
 
   private handleInstantBuildChange = (val: boolean) => {
     this.instantBuild = val;
     this.putGameConfig();
   };
 
-  private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleMaxTimerToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.maxTimer = checked;
+    this.maxTimerValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
 
-  private handleSpawnImmunityDurationInput(e: Event) {
+  private handleSpawnImmunityToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.spawnImmunity = checked;
+    this.spawnImmunityDurationMinutes = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.goldMultiplier = checked;
+    this.goldMultiplierValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleStartingGoldToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.startingGold = checked;
+    this.startingGoldValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleSpawnImmunityDurationKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleSpawnImmunityDurationInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value, 10);
-    if (Number.isNaN(value) || value < 0 || value > 120) {
+    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 120 });
+    if (value === undefined) {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
     this.putGameConfig();
-  }
+  };
 
-  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
-    if (["+", "-", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
 
-  private handleGoldMultiplierValueChanges(e: Event) {
+  private handleGoldMultiplierValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseFloat(input.value);
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
 
-    if (isNaN(value) || value < 0.1 || value > 1000) {
+    if (value === undefined) {
       this.goldMultiplierValue = undefined;
       input.value = "";
     } else {
       this.goldMultiplierValue = value;
     }
     this.putGameConfig();
-  }
+  };
 
-  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleStartingGoldValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
 
-  private handleStartingGoldValueChanges(e: Event) {
+  private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value);
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 1000000000,
+    });
 
-    if (isNaN(value) || value < 0 || value > 1000000000) {
-      this.startingGoldValue = undefined;
-    } else {
-      this.startingGoldValue = value;
-    }
+    this.startingGoldValue = value;
     this.putGameConfig();
-  }
+  };
 
   private handleRandomSpawnChange = (val: boolean) => {
     this.randomSpawn = val;
@@ -635,11 +682,7 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCompactMapChange = (val: boolean) => {
     this.compactMap = val;
-    if (val && this.bots === 400) {
-      this.bots = 100;
-    } else if (!val && this.bots === 100) {
-      this.bots = 400;
-    }
+    this.bots = getBotsForCompactMap(this.bots, val);
     this.putGameConfig();
   };
 
@@ -648,24 +691,24 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
 
-  private handleMaxTimerValueChanges(e: Event) {
-    (e.target as HTMLInputElement).value = (
-      e.target as HTMLInputElement
-    ).value.replace(/[e+-]/gi, "");
-    const value = parseInt((e.target as HTMLInputElement).value);
+  private handleMaxTimerValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
 
-    if (isNaN(value) || value < 1 || value > 120) {
+    if (value === undefined) {
       return;
     }
     this.maxTimerValue = value;
     this.putGameConfig();
-  }
+  };
 
   private handleDisableNationsChange = async (val: boolean) => {
     this.disableNations = val;
@@ -740,20 +783,6 @@ export class HostLobbyModal extends BaseModal {
         composed: true,
       }),
     );
-  }
-
-  private toggleUnit(unit: UnitType, checked: boolean): void {
-    this.disabledUnits = checked
-      ? [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
-
-    this.putGameConfig();
-  }
-
-  private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
   }
 
   private async startGame() {

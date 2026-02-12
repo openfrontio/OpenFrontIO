@@ -18,6 +18,8 @@ import { hasLinkedAccount } from "./Api";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
+import "./components/GameConfigSettings";
+import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -25,10 +27,14 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import {
-  renderGameConfigSettings,
-  renderToggleInputCard,
-  renderToggleInputCardInput,
-} from "./utilities/RenderGameConfigSettings";
+  getBotsForCompactMap,
+  getRandomMapType,
+  getUpdatedDisabledUnits,
+  parseBoundedFloatFromInput,
+  parseBoundedIntegerFromInput,
+  preventDisallowedKeys,
+  toOptionalNumber,
+} from "./utilities/GameConfigHelpers";
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -161,109 +167,57 @@ export class SinglePlayerModal extends BaseModal {
 
   render() {
     const inputCards = [
-      renderToggleInputCard({
-        labelKey: "single_modal.max_timer",
-        checked: this.maxTimer,
-        onClick: () => {
-          this.maxTimer = !this.maxTimer;
-          if (!this.maxTimer) {
-            this.maxTimerValue = undefined;
-          } else {
-            // Set default value when enabling if not already set or invalid
-            if (!this.maxTimerValue || this.maxTimerValue <= 0) {
-              this.maxTimerValue = 30;
-            }
-            // Focus the input after render
-            setTimeout(() => {
-              const input = this.getEndTimerInput();
-              if (input) {
-                input.focus();
-                input.select();
-              }
-            }, 0);
-          }
-        },
-        input: renderToggleInputCardInput({
-          id: "end-timer-value",
-          min: 1,
-          max: 120,
-          value: this.maxTimerValue ?? "",
-          ariaLabel: translateText("single_modal.max_timer"),
-          placeholder: translateText("single_modal.max_timer_placeholder"),
-          onInput: this.handleMaxTimerValueChanges,
-          onKeyDown: this.handleMaxTimerValueKeyDown,
-        }),
-      }),
-      renderToggleInputCard({
-        labelKey: "single_modal.gold_multiplier",
-        checked: this.goldMultiplier,
-        onClick: () => {
-          this.goldMultiplier = !this.goldMultiplier;
-          if (!this.goldMultiplier) {
-            this.goldMultiplierValue = undefined;
-          } else {
-            if (!this.goldMultiplierValue || this.goldMultiplierValue <= 0) {
-              this.goldMultiplierValue = 2;
-            }
-            setTimeout(() => {
-              const input = this.renderRoot.querySelector(
-                "#gold-multiplier-value",
-              ) as HTMLInputElement;
-              if (input) {
-                input.focus();
-                input.select();
-              }
-            }, 0);
-          }
-        },
-        input: renderToggleInputCardInput({
-          id: "gold-multiplier-value",
-          min: 0.1,
-          max: 1000,
-          step: "any",
-          value: this.goldMultiplierValue ?? "",
-          ariaLabel: translateText("single_modal.gold_multiplier"),
-          placeholder: translateText(
-            "single_modal.gold_multiplier_placeholder",
-          ),
-          onChange: this.handleGoldMultiplierValueChanges,
-          onKeyDown: this.handleGoldMultiplierValueKeyDown,
-        }),
-      }),
-      renderToggleInputCard({
-        labelKey: "single_modal.starting_gold",
-        checked: this.startingGold,
-        onClick: () => {
-          this.startingGold = !this.startingGold;
-          if (!this.startingGold) {
-            this.startingGoldValue = undefined;
-          } else {
-            if (!this.startingGoldValue || this.startingGoldValue < 0) {
-              this.startingGoldValue = 5000000;
-            }
-            setTimeout(() => {
-              const input = this.renderRoot.querySelector(
-                "#starting-gold-value",
-              ) as HTMLInputElement;
-              if (input) {
-                input.focus();
-                input.select();
-              }
-            }, 0);
-          }
-        },
-        input: renderToggleInputCardInput({
-          id: "starting-gold-value",
-          min: 0,
-          max: 1000000000,
-          step: 100000,
-          value: this.startingGoldValue ?? "",
-          ariaLabel: translateText("single_modal.starting_gold"),
-          placeholder: translateText("single_modal.starting_gold_placeholder"),
-          onInput: this.handleStartingGoldValueChanges,
-          onKeyDown: this.handleStartingGoldValueKeyDown,
-        }),
-      }),
+      html`<toggle-input-card
+        .labelKey=${"single_modal.max_timer"}
+        .checked=${this.maxTimer}
+        .inputId=${"end-timer-value"}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputValue=${this.maxTimerValue}
+        .inputAriaLabel=${translateText("single_modal.max_timer")}
+        .inputPlaceholder=${translateText("single_modal.max_timer_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleMaxTimerToggle}
+        .onInput=${this.handleMaxTimerValueChanges}
+        .onKeyDown=${this.handleMaxTimerValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.gold_multiplier"}
+        .checked=${this.goldMultiplier}
+        .inputId=${"gold-multiplier-value"}
+        .inputMin=${0.1}
+        .inputMax=${1000}
+        .inputStep=${"any"}
+        .inputValue=${this.goldMultiplierValue}
+        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
+        .inputPlaceholder=${translateText(
+          "single_modal.gold_multiplier_placeholder",
+        )}
+        .defaultInputValue=${2}
+        .minValidOnEnable=${0.1}
+        .onToggle=${this.handleGoldMultiplierToggle}
+        .onChange=${this.handleGoldMultiplierValueChanges}
+        .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"single_modal.starting_gold"}
+        .checked=${this.startingGold}
+        .inputId=${"starting-gold-value"}
+        .inputMin=${0}
+        .inputMax=${1000000000}
+        .inputStep=${100000}
+        .inputValue=${this.startingGoldValue}
+        .inputAriaLabel=${translateText("single_modal.starting_gold")}
+        .inputPlaceholder=${translateText(
+          "single_modal.starting_gold_placeholder",
+        )}
+        .defaultInputValue=${5000000}
+        .minValidOnEnable=${0}
+        .onToggle=${this.handleStartingGoldToggle}
+        .onInput=${this.handleStartingGoldValueChanges}
+        .onKeyDown=${this.handleStartingGoldValueKeyDown}
+      ></toggle-input-card>`,
     ];
 
     const content = html`
@@ -299,91 +253,80 @@ export class SinglePlayerModal extends BaseModal {
         })}
 
         <div
-          class="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl space-y-6"
+          class="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
-          ${renderGameConfigSettings({
-            map: {
-              selected: this.selectedMap,
-              useRandom: this.useRandomMap,
-              showMedals: this.showAchievements,
-              mapWins: this.mapWins,
-              onSelectMap: (mapValue: GameMapType) =>
-                this.handleMapSelection(mapValue),
-              onSelectRandom: () => this.handleSelectRandomMap(),
-            },
-            difficulty: {
-              selected: this.selectedDifficulty,
-              disabled: this.disableNations,
-              onSelect: (value: Difficulty) =>
-                this.handleDifficultySelection(value),
-            },
-            gameMode: {
-              selected: this.gameMode,
-              onSelect: (mode: GameMode) => this.handleGameModeSelection(mode),
-            },
-            teamCount: {
-              selected: this.teamCount,
-              onSelect: (count: TeamCountConfig) =>
-                this.handleTeamCountSelection(count),
-            },
-            options: {
-              titleKey: "single_modal.options_title",
-              bots: {
-                value: this.bots,
-                labelKey: "single_modal.bots",
-                disabledKey: "single_modal.bots_disabled",
-                onChange: this.handleBotsChange,
+          <game-config-settings
+            class="block"
+            .sectionGapClass=${"space-y-6"}
+            .settings=${{
+              map: {
+                selected: this.selectedMap,
+                useRandom: this.useRandomMap,
+                showMedals: this.showAchievements,
+                mapWins: this.mapWins,
               },
-              toggles: [
-                {
-                  labelKey: "single_modal.disable_nations",
-                  checked: this.disableNations,
-                  onChange: (val) => (this.disableNations = val),
-                  hidden:
-                    this.gameMode === GameMode.Team &&
-                    this.teamCount === HumansVsNations,
+              difficulty: {
+                selected: this.selectedDifficulty,
+                disabled: this.disableNations,
+              },
+              gameMode: {
+                selected: this.gameMode,
+              },
+              teamCount: {
+                selected: this.teamCount,
+              },
+              options: {
+                titleKey: "single_modal.options_title",
+                bots: {
+                  value: this.bots,
+                  labelKey: "single_modal.bots",
+                  disabledKey: "single_modal.bots_disabled",
                 },
-                {
-                  labelKey: "single_modal.instant_build",
-                  checked: this.instantBuild,
-                  onChange: (val) => (this.instantBuild = val),
-                },
-                {
-                  labelKey: "single_modal.random_spawn",
-                  checked: this.randomSpawn,
-                  onChange: (val) => (this.randomSpawn = val),
-                },
-                {
-                  labelKey: "single_modal.infinite_gold",
-                  checked: this.infiniteGold,
-                  onChange: (val) => (this.infiniteGold = val),
-                },
-                {
-                  labelKey: "single_modal.infinite_troops",
-                  checked: this.infiniteTroops,
-                  onChange: (val) => (this.infiniteTroops = val),
-                },
-                {
-                  labelKey: "single_modal.compact_map",
-                  checked: this.compactMap,
-                  onChange: (val) => {
-                    this.compactMap = val;
-                    if (val && this.bots === 400) {
-                      this.bots = 100;
-                    } else if (!val && this.bots === 100) {
-                      this.bots = 400;
-                    }
+                toggles: [
+                  {
+                    labelKey: "single_modal.disable_nations",
+                    checked: this.disableNations,
+                    hidden:
+                      this.gameMode === GameMode.Team &&
+                      this.teamCount === HumansVsNations,
                   },
-                },
-              ],
-              inputCards,
-            },
-            unitTypes: {
-              titleKey: "single_modal.enables_title",
-              disabledUnits: this.disabledUnits,
-              toggleUnit: this.toggleUnit.bind(this),
-            },
-          })}
+                  {
+                    labelKey: "single_modal.instant_build",
+                    checked: this.instantBuild,
+                  },
+                  {
+                    labelKey: "single_modal.random_spawn",
+                    checked: this.randomSpawn,
+                  },
+                  {
+                    labelKey: "single_modal.infinite_gold",
+                    checked: this.infiniteGold,
+                  },
+                  {
+                    labelKey: "single_modal.infinite_troops",
+                    checked: this.infiniteTroops,
+                  },
+                  {
+                    labelKey: "single_modal.compact_map",
+                    checked: this.compactMap,
+                  },
+                ],
+                inputCards,
+              },
+              unitTypes: {
+                titleKey: "single_modal.enables_title",
+                disabledUnits: this.disabledUnits,
+              },
+            }}
+            @map-selected=${this.handleConfigMapSelected}
+            @random-map-selected=${this.handleConfigRandomMapSelected}
+            @difficulty-selected=${this.handleConfigDifficultySelected}
+            @game-mode-selected=${this.handleConfigGameModeSelected}
+            @team-count-selected=${this.handleConfigTeamCountSelected}
+            @bots-changed=${this.handleBotsChange}
+            @option-toggle-changed=${this.handleConfigOptionToggleChanged}
+            @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
+          ></game-config-settings>
         </div>
 
         <!-- Footer Action -->
@@ -467,29 +410,121 @@ export class SinglePlayerModal extends BaseModal {
     this.useRandomMap = true;
   }
 
+  private handleConfigRandomMapSelected = () => {
+    this.handleSelectRandomMap();
+  };
+
   private handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
     this.useRandomMap = false;
   }
 
+  private handleConfigMapSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ map: GameMapType }>;
+    this.handleMapSelection(customEvent.detail.map);
+  };
+
   private handleDifficultySelection(value: Difficulty) {
     this.selectedDifficulty = value;
   }
 
-  private handleBotsChange(e: Event) {
+  private handleConfigDifficultySelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
+    this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigGameModeSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ mode: GameMode }>;
+    this.handleGameModeSelection(customEvent.detail.mode);
+  };
+
+  private handleConfigTeamCountSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ count: TeamCountConfig }>;
+    this.handleTeamCountSelection(customEvent.detail.count);
+  };
+
+  private handleCompactMapChange(val: boolean) {
+    this.compactMap = val;
+    this.bots = getBotsForCompactMap(this.bots, val);
+  }
+
+  private handleConfigOptionToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      labelKey: string;
+      checked: boolean;
+    }>;
+    const { labelKey, checked } = customEvent.detail;
+
+    switch (labelKey) {
+      case "single_modal.disable_nations":
+        this.disableNations = checked;
+        break;
+      case "single_modal.instant_build":
+        this.instantBuild = checked;
+        break;
+      case "single_modal.random_spawn":
+        this.randomSpawn = checked;
+        break;
+      case "single_modal.infinite_gold":
+        this.infiniteGold = checked;
+        break;
+      case "single_modal.infinite_troops":
+        this.infiniteTroops = checked;
+        break;
+      case "single_modal.compact_map":
+        this.handleCompactMapChange(checked);
+        break;
+      default:
+        break;
+    }
+  };
+
+  private handleConfigUnitToggleChanged = (e: Event) => {
+    const customEvent = e as CustomEvent<{ unit: UnitType; checked: boolean }>;
+    const { unit, checked } = customEvent.detail;
+    this.disabledUnits = getUpdatedDisabledUnits(
+      this.disabledUnits,
+      unit,
+      checked,
+    );
+  };
+
+  private handleBotsChange = (e: Event) => {
     const customEvent = e as CustomEvent<{ value: number }>;
     const value = customEvent.detail.value;
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
     this.bots = value;
-  }
+  };
 
-  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleMaxTimerToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.maxTimer = checked;
+    this.maxTimerValue = toOptionalNumber(value);
+  };
+
+  private handleGoldMultiplierToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.goldMultiplier = checked;
+    this.goldMultiplierValue = toOptionalNumber(value);
+  };
+
+  private handleStartingGoldToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.startingGold = checked;
+    this.startingGoldValue = toOptionalNumber(value);
+  };
+
+  private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
 
   private getEndTimerInput(): HTMLInputElement | null {
     return (
@@ -500,55 +535,46 @@ export class SinglePlayerModal extends BaseModal {
     );
   }
 
-  private handleMaxTimerValueChanges(e: Event) {
+  private handleMaxTimerValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[e+-]/gi, "");
-    const value = parseInt(input.value);
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
 
-    // Always update state to keep UI and internal state in sync
-    if (isNaN(value) || value < 1 || value > 120) {
-      // Set to undefined for invalid/empty/out-of-range values
-      this.maxTimerValue = undefined;
-    } else {
-      this.maxTimerValue = value;
-    }
-  }
+    this.maxTimerValue = value;
+  };
 
-  private handleGoldMultiplierValueKeyDown(e: KeyboardEvent) {
-    if (["+", "-", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["+", "-", "e", "E"]);
+  };
 
-  private handleGoldMultiplierValueChanges(e: Event) {
+  private handleGoldMultiplierValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseFloat(input.value);
+    const value = parseBoundedFloatFromInput(input, { min: 0.1, max: 1000 });
 
-    if (isNaN(value) || value < 0.1 || value > 1000) {
+    if (value === undefined) {
       this.goldMultiplierValue = undefined;
       input.value = "";
     } else {
       this.goldMultiplierValue = value;
     }
-  }
+  };
 
-  private handleStartingGoldValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
+  private handleStartingGoldValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
 
-  private handleStartingGoldValueChanges(e: Event) {
+  private handleStartingGoldValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value);
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 0,
+      max: 1000000000,
+    });
 
-    if (isNaN(value) || value < 0 || value > 1000000000) {
-      this.startingGoldValue = undefined;
-    } else {
-      this.startingGoldValue = value;
-    }
-  }
+    this.startingGoldValue = value;
+  };
 
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
@@ -556,18 +582,6 @@ export class SinglePlayerModal extends BaseModal {
 
   private handleTeamCountSelection(value: TeamCountConfig) {
     this.teamCount = value;
-  }
-
-  private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
-  }
-
-  private toggleUnit(unit: UnitType, checked: boolean): void {
-    this.disabledUnits = checked
-      ? [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
   }
 
   private async startGame() {
@@ -594,7 +608,7 @@ export class SinglePlayerModal extends BaseModal {
 
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
+      this.selectedMap = getRandomMapType();
     }
 
     console.log(
