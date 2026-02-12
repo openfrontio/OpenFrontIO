@@ -2,6 +2,11 @@
   "name": "GatewayToTheAtlantic",
   "nations": [
     {
+      "coordinates": [1700, 630],
+      "name": "Occitania",
+      "flag": "1_Occitania"
+    },
+    {
       "coordinates": [2144, 344],
       "name": "Swiss Confederation",
       "flag": "ch"

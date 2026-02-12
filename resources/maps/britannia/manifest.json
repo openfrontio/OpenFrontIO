@@ -17,102 +17,162 @@
   "name": "Britannia",
   "nations": [
     {
-      "coordinates": [1539, 1915],
+      "coordinates": [
+        1539,
+        1915
+      ],
       "flag": "fr",
       "name": "Pas-de-Calais"
     },
     {
-      "coordinates": [214, 1242],
+      "coordinates": [
+        214,
+        1242
+      ],
       "flag": "ie",
       "name": "Mayo"
     },
     {
-      "coordinates": [189, 1605],
+      "coordinates": [
+        189,
+        1605
+      ],
       "flag": "ie",
       "name": "Kerry"
     },
     {
-      "coordinates": [257, 1458],
+      "coordinates": [
+        257,
+        1458
+      ],
       "flag": "ie",
       "name": "Clare"
     },
     {
-      "coordinates": [527, 1295],
+      "coordinates": [
+        527,
+        1295
+      ],
       "flag": "ie",
       "name": "Meath"
     },
     {
-      "coordinates": [703, 431],
+      "coordinates": [
+        703,
+        431
+      ],
       "flag": "gb-sct",
       "name": "Highland"
     },
     {
-      "coordinates": [611, 690],
+      "coordinates": [
+        611,
+        690
+      ],
       "flag": "gb-sct",
       "name": "Argyll and Bute"
     },
     {
-      "coordinates": [1118, 1202],
+      "coordinates": [
+        1118,
+        1202
+      ],
       "flag": "gb-eng",
       "name": "North Yorkshire"
     },
     {
-      "coordinates": [971, 517],
+      "coordinates": [
+        971,
+        517
+      ],
       "flag": "gb-sct",
       "name": "Aberdeenshire"
     },
     {
-      "coordinates": [951, 1088],
+      "coordinates": [
+        951,
+        1088
+      ],
       "flag": "gb-eng",
       "name": "Cumbria"
     },
     {
-      "coordinates": [846, 1000],
+      "coordinates": [
+        846,
+        1000
+      ],
       "flag": "gb-sct",
       "name": "Dumfries and Galloway"
     },
     {
-      "coordinates": [856, 672],
+      "coordinates": [
+        856,
+        672
+      ],
       "flag": "gb-sct",
       "name": "Perthshire and Kinross"
     },
     {
-      "coordinates": [1271, 1403],
+      "coordinates": [
+        1271,
+        1403
+      ],
       "flag": "gb-eng",
       "name": "Lincolnshire"
     },
     {
-      "coordinates": [867, 1883],
+      "coordinates": [
+        867,
+        1883
+      ],
       "flag": "gb-eng",
       "name": "Devon"
     },
     {
-      "coordinates": [1051, 946],
+      "coordinates": [
+        1051,
+        946
+      ],
       "flag": "gb-eng",
       "name": "Northumberland"
     },
     {
-      "coordinates": [1400, 1495],
+      "coordinates": [
+        1400,
+        1495
+      ],
       "flag": "gb-eng",
       "name": "Norfolk"
     },
     {
-      "coordinates": [902, 1569],
+      "coordinates": [
+        902,
+        1569
+      ],
       "flag": "gb-wls",
       "name": "Powys"
     },
     {
-      "coordinates": [1407, 1584],
+      "coordinates": [
+        1407,
+        1584
+      ],
       "flag": "gb-eng",
       "name": "Suffolk"
     },
     {
-      "coordinates": [1148, 1820],
+      "coordinates": [
+        1148,
+        1820
+      ],
       "flag": "gb-eng",
       "name": "Hampshire"
     },
     {
-      "coordinates": [404, 1146],
+      "coordinates": [
+        404,
+        1146
+      ],
       "name": "Fermanagh"
     }
   ]

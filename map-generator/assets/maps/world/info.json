@@ -2,6 +2,11 @@
   "name": "World",
   "nations": [
     {
+      "coordinates": [955, 240],
+      "name": "Occitania",
+      "flag": "1_Occitania"
+    },
+    {
       "coordinates": [375, 272],
       "flag": "us",
       "name": "United States"

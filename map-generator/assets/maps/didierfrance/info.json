@@ -2,6 +2,11 @@
   "name": "Didier (France)",
   "nations": [
     {
+      "coordinates": [1200, 1736],
+      "name": "Occitania",
+      "flag": "1_Occitania"
+    },
+    {
       "coordinates": [120, 680],
       "name": "Brest",
       "flag": "fr"

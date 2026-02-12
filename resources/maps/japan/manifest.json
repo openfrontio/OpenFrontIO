@@ -17,62 +17,98 @@
   "name": "japan",
   "nations": [
     {
-      "coordinates": [1895, 288],
+      "coordinates": [
+        1895,
+        288
+      ],
       "flag": "jp",
       "name": "Hokkaido"
     },
     {
-      "coordinates": [1647, 897],
+      "coordinates": [
+        1647,
+        897
+      ],
       "flag": "jp",
       "name": "Tohoku"
     },
     {
-      "coordinates": [1613, 1133],
+      "coordinates": [
+        1613,
+        1133
+      ],
       "flag": "jp",
       "name": "Kanto"
     },
     {
-      "coordinates": [1391, 1194],
+      "coordinates": [
+        1391,
+        1194
+      ],
       "flag": "jp",
       "name": "Chubu"
     },
     {
-      "coordinates": [1191, 1370],
+      "coordinates": [
+        1191,
+        1370
+      ],
       "flag": "jp",
       "name": "Kansai"
     },
     {
-      "coordinates": [932, 1308],
+      "coordinates": [
+        932,
+        1308
+      ],
       "flag": "jp",
       "name": "Chugoku"
     },
     {
-      "coordinates": [949, 1454],
+      "coordinates": [
+        949,
+        1454
+      ],
       "flag": "jp",
       "name": "Shikoku"
     },
     {
-      "coordinates": [709, 1570],
+      "coordinates": [
+        709,
+        1570
+      ],
       "flag": "jp",
       "name": "Kyushu"
     },
     {
-      "coordinates": [397, 2283],
+      "coordinates": [
+        397,
+        2283
+      ],
       "flag": "jp",
       "name": "Okinawa"
     },
     {
-      "coordinates": [1493, 1246],
+      "coordinates": [
+        1493,
+        1246
+      ],
       "flag": "jp",
       "name": "Mount Fuji"
     },
     {
-      "coordinates": [1565, 1178],
+      "coordinates": [
+        1565,
+        1178
+      ],
       "flag": "jp",
       "name": "Tokyo"
     },
     {
-      "coordinates": [1158, 1290],
+      "coordinates": [
+        1158,
+        1290
+      ],
       "flag": "jp",
       "name": "Kyoto"
     }

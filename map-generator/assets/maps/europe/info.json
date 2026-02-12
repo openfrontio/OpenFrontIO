@@ -2,6 +2,11 @@
   "name": "Europe",
   "nations": [
     {
+      "coordinates": [537, 1100],
+      "name": "Occitania",
+      "flag": "1_Occitania"
+    },
+    {
       "coordinates": [148, 744],
       "name": "Republic of Ireland",
       "flag": "ie"

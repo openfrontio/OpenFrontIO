@@ -17,147 +17,234 @@
   "name": "Pangaea",
   "nations": [
     {
-      "coordinates": [389, 800],
+      "coordinates": [
+        389,
+        800
+      ],
       "flag": "za",
       "name": "South Africa"
     },
     {
-      "coordinates": [500, 780],
+      "coordinates": [
+        500,
+        780
+      ],
       "flag": "mg",
       "name": "Madagascar"
     },
     {
-      "coordinates": [515, 600],
+      "coordinates": [
+        515,
+        600
+      ],
       "flag": "eg",
       "name": "Egypt"
     },
     {
-      "coordinates": [180, 420],
+      "coordinates": [
+        180,
+        420
+      ],
       "flag": "us",
       "name": "United States"
     },
     {
-      "coordinates": [200, 310],
+      "coordinates": [
+        200,
+        310
+      ],
       "flag": "ca",
       "name": "Canada"
     },
     {
-      "coordinates": [150, 460],
+      "coordinates": [
+        150,
+        460
+      ],
       "flag": "mx",
       "name": "Mexico"
     },
     {
-      "coordinates": [160, 600],
+      "coordinates": [
+        160,
+        600
+      ],
       "flag": "co",
       "name": "Colombia"
     },
     {
-      "coordinates": [280, 800],
+      "coordinates": [
+        280,
+        800
+      ],
       "flag": "ar",
       "name": "Argentina"
     },
     {
-      "coordinates": [250, 600],
+      "coordinates": [
+        250,
+        600
+      ],
       "flag": "br",
       "name": "Brazil"
     },
     {
-      "coordinates": [470, 890],
+      "coordinates": [
+        470,
+        890
+      ],
       "flag": "aq",
       "name": "Antarctica"
     },
     {
-      "coordinates": [400, 340],
+      "coordinates": [
+        400,
+        340
+      ],
       "flag": "gl",
       "name": "Greenland"
     },
     {
-      "coordinates": [550, 440],
+      "coordinates": [
+        550,
+        440
+      ],
       "flag": "es",
       "name": "Spain"
     },
     {
-      "coordinates": [550, 450],
+      "coordinates": [
+        550,
+        450
+      ],
       "flag": "fr",
       "name": "France"
     },
     {
-      "coordinates": [510, 380],
+      "coordinates": [
+        510,
+        380
+      ],
       "flag": "de",
       "name": "Germany"
     },
     {
-      "coordinates": [480, 365],
+      "coordinates": [
+        480,
+        365
+      ],
       "flag": "se",
       "name": "Sweden"
     },
     {
-      "coordinates": [605, 370],
+      "coordinates": [
+        605,
+        370
+      ],
       "flag": "tr",
       "name": "Turkey"
     },
     {
-      "coordinates": [480, 335],
+      "coordinates": [
+        480,
+        335
+      ],
       "flag": "fi",
       "name": "Finland"
     },
     {
-      "coordinates": [570, 340],
+      "coordinates": [
+        570,
+        340
+      ],
       "flag": "ua",
       "name": "Ukraine"
     },
     {
-      "coordinates": [570, 290],
+      "coordinates": [
+        570,
+        290
+      ],
       "flag": "ru",
       "name": "Russia"
     },
     {
-      "coordinates": [490, 150],
+      "coordinates": [
+        490,
+        150
+      ],
       "flag": "mn",
       "name": "Mongolia"
     },
     {
-      "coordinates": [550, 70],
+      "coordinates": [
+        550,
+        70
+      ],
       "flag": "cn",
       "name": "China"
     },
     {
-      "coordinates": [620, 650],
+      "coordinates": [
+        620,
+        650
+      ],
       "flag": "in",
       "name": "India"
     },
     {
-      "coordinates": [545, 200],
+      "coordinates": [
+        545,
+        200
+      ],
       "flag": "kz",
       "name": "Kazakhstan"
     },
     {
-      "coordinates": [600, 600],
+      "coordinates": [
+        600,
+        600
+      ],
       "flag": "sa",
       "name": "Saudi Arabia"
     },
     {
-      "coordinates": [680, 830],
+      "coordinates": [
+        680,
+        830
+      ],
       "flag": "au",
       "name": "Australia"
     },
     {
-      "coordinates": [540, 650],
+      "coordinates": [
+        540,
+        650
+      ],
       "flag": "et",
       "name": "Ethiopia"
     },
     {
-      "coordinates": [400, 500],
+      "coordinates": [
+        400,
+        500
+      ],
       "flag": "td",
       "name": "Chad"
     },
     {
-      "coordinates": [420, 25],
+      "coordinates": [
+        420,
+        25
+      ],
       "flag": "jp",
       "name": "Japan"
     },
     {
-      "coordinates": [480, 410],
+      "coordinates": [
+        480,
+        410
+      ],
       "flag": "gb",
       "name": "United Kingdom"
     }

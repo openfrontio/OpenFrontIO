@@ -17,51 +17,87 @@
   "name": "Didier",
   "nations": [
     {
-      "coordinates": [478, 163],
+      "coordinates": [
+        478,
+        163
+      ],
       "name": "Aywen Enclave"
     },
     {
-      "coordinates": [749, 164],
+      "coordinates": [
+        749,
+        164
+      ],
       "name": "Kumiz Confederation"
     },
     {
-      "coordinates": [1009, 160],
+      "coordinates": [
+        1009,
+        160
+      ],
       "name": "MyBios Station"
     },
     {
-      "coordinates": [329, 356],
+      "coordinates": [
+        329,
+        356
+      ],
       "name": "Blazzy Tribe"
     },
     {
-      "coordinates": [693, 427],
+      "coordinates": [
+        693,
+        427
+      ],
       "name": "Xederma Enclave"
     },
     {
-      "coordinates": [1116, 383],
+      "coordinates": [
+        1116,
+        383
+      ],
       "name": "PinPin Confederation"
     },
     {
-      "coordinates": [97, 604],
+      "coordinates": [
+        97,
+        604
+      ],
       "name": "Scorpionem Confederation"
     },
     {
-      "coordinates": [1309, 731],
+      "coordinates": [
+        1309,
+        731
+      ],
       "name": "Limace qui passe Tribe"
     },
     {
-      "coordinates": [791, 844],
+      "coordinates": [
+        791,
+        844
+      ],
       "name": "708CN Confederation"
     },
     {
-      "coordinates": [409, 823],
+      "coordinates": [
+        409,
+        823
+      ],
       "name": "Furti Two Tribe"
     },
     {
-      "coordinates": [1025, 852],
+      "coordinates": [
+        1025,
+        852
+      ],
       "name": "DarkEarth Station"
     },
     {
-      "coordinates": [622, 1220],
+      "coordinates": [
+        622,
+        1220
+      ],
       "name": "Mell Confederation"
     }
   ]
