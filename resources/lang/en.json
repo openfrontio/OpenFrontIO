@@ -868,13 +868,15 @@
     "show_only_owned": "My Skins",
     "all_owned": "All skins owned! Check back later for new items.",
     "not_logged_in": "Not logged in",
-    "blocked": {
-      "login": "You must be logged in to access this skin.",
-      "purchase": "Purchase this skin to unlock it."
-    },
     "pattern": {
       "default": "Default"
     },
+    "try_me": "Try me!",
+    "trial_remaining": "remaining",
+    "trial_granted": "Skin trial granted!",
+    "trial_cooldown": "Only one trial per 24 hours. Please try again later.",
+    "reward_countdown": "Reward in {seconds} seconds...",
+    "steam_wishlist_prompt": "Support OpenFront by adding it to your Steam wishlist",
     "select_skin": "Select Skin",
     "selected": "selected"
   },
