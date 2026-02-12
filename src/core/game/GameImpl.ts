@@ -719,6 +719,12 @@ export class GameImpl implements Game {
     });
   }
 
+  public removeAlliancesByPlayerSilently(player: Player): void {
+    this.alliances_ = this.alliances_.filter(
+      (a) => a.requestor() !== player && a.recipient() !== player,
+    );
+  }
+
   public isSpawnImmunityActive(): boolean {
     return (
       this.config().numSpawnPhaseTurns() +

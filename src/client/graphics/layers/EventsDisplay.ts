@@ -251,7 +251,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer?.isAlive()) return;
 
+    const currentAllianceIds = new Set<number>();
+
     for (const alliance of myPlayer.alliances()) {
+      currentAllianceIds.add(alliance.id);
+
       if (
         alliance.expiresAt >
         this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
@@ -270,7 +274,6 @@ export class EventsDisplay extends LitElement implements Layer {
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
       const other = this.game.player(alliance.other) as PlayerView;
-      if (!other.isAlive()) continue;
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
@@ -304,6 +307,13 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: other.smallID(),
         allianceID: alliance.id,
       });
+    }
+
+    for (const [allianceId] of this.alliancesCheckedAt) {
+      if (!currentAllianceIds.has(allianceId)) {
+        this.removeAllianceRenewalEvents(allianceId);
+        this.alliancesCheckedAt.delete(allianceId);
+      }
     }
   }
 
@@ -530,6 +540,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!myPlayer) return;
 
     this.removeAllianceRenewalEvents(update.allianceID);
+    this.alliancesCheckedAt.delete(update.allianceID);
     this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
