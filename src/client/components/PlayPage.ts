@@ -15,16 +15,16 @@ export class PlayPage extends LitElement {
       >
         <token-login class="absolute"></token-login>
 
+        <!-- Mobile: Fixed top bar -->
         <div
-          class="grid grid-cols-1 lg:grid-cols-12 gap-2 w-full sticky top-0 z-30 lg:static pb-4 lg:pb-0"
+          class="lg:hidden fixed left-0 right-0 top-0 z-40 pt-[env(safe-area-inset-top)] bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-b border-white/10"
         >
-          <!-- Mobile: Two-row header with skin spanning both rows -->
           <div
-            class="lg:hidden grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-2 items-center p-2 gap-x-2 gap-y-1 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] w-full overflow-visible"
+            class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-14 px-2 gap-2"
           >
             <button
               id="hamburger-btn"
-              class="row-start-1 col-start-1 justify-self-start h-10 shrink-0 aspect-[4/3] flex text-white/90 rounded-md items-center justify-center transition-colors"
+              class="col-start-1 justify-self-start h-10 shrink-0 aspect-[4/3] flex text-white/90 rounded-md items-center justify-center transition-colors"
               data-i18n-aria-label="main.menu"
               aria-expanded="false"
               aria-controls="sidebar-menu"
@@ -46,8 +46,9 @@ export class PlayPage extends LitElement {
                 />
               </svg>
             </button>
+
             <div
-              class="row-start-1 col-start-2 flex items-center justify-center text-[#2563eb] min-w-0"
+              class="col-start-2 flex items-center justify-center text-[#2563eb] min-w-0"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -90,16 +91,32 @@ export class PlayPage extends LitElement {
                 />
               </svg>
             </div>
+
             <div
-              class="row-start-2 col-start-1 col-span-2 flex items-center h-10 min-w-0"
-            >
+              aria-hidden="true"
+              class="col-start-3 justify-self-end h-10 shrink-0 aspect-[4/3]"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          class="w-full pb-4 lg:pb-0 flex flex-col gap-0 lg:grid lg:grid-cols-12 lg:gap-2"
+        >
+          <!-- Mobile: spacer for fixed top bar -->
+          <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
+
+          <!-- Mobile: profile/setup controls -->
+          <div
+            class="lg:hidden px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 flex flex-col gap-2 overflow-visible"
+          >
+            <div class="flex items-center gap-2 min-w-0">
               <username-input class="flex-1 min-w-0 h-10"></username-input>
+              <pattern-input
+                id="pattern-input-mobile"
+                show-select-label
+                class="w-12 h-12 shrink-0"
+              ></pattern-input>
             </div>
-            <pattern-input
-              id="pattern-input-mobile"
-              show-select-label
-              class="row-start-1 row-span-2 col-start-3 justify-self-end w-20 shrink-0 h-auto"
-            ></pattern-input>
           </div>
 
           <!-- Desktop: Original layout -->
