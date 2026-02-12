@@ -76,6 +76,10 @@ export class LeaderboardModal extends BaseModal {
         >(${start} - ${end})</span
       >`;
     }
+    const refreshTime = html`<span
+      class="text-sm font-normal text-white/40 ml-2 wrap-break-words italic"
+      >(${translateText("leaderboard_modal.refresh_time")})</span
+    >`;
 
     const content = html`
       <div class="${this.modalContainerClass}">
@@ -88,6 +92,7 @@ export class LeaderboardModal extends BaseModal {
                 ${translateText("leaderboard_modal.title")}
               </span>
               ${this.activeTab === "clans" ? dateRange : ""}
+              ${this.activeTab === "players" ? refreshTime : ""}
             </div>
           `,
           onBack: () => this.close(),

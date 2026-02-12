@@ -230,6 +230,7 @@
     "title": "Leaderboard",
     "ranked_tab": "1v1 Ranked",
     "clans_tab": "Clans",
+    "refresh_time": "Refreshed every 1 hour",
     "loading": "Loading...",
     "error": "Error loading leaderboard",
     "no_stats": "No stats available",
