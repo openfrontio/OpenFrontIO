@@ -221,9 +221,7 @@ export class SinglePlayerModal extends BaseModal {
     ];
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",
@@ -664,6 +662,7 @@ export class SinglePlayerModal extends BaseModal {
                 ? GameMapSize.Compact
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
+              lobbyStartDelayMs: 0,
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,

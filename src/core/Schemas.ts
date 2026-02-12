@@ -148,17 +148,22 @@ const ClientInfoSchema = z.object({
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
+  numClients: z.number().optional(),
+  msUntilStart: z.number().optional(),
   lobbyCreatorClientID: z.string().optional(),
   startsAt: z.number().optional(),
-  serverTime: z.number(),
+  serverTime: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
+  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
 });
 
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
   numClients: z.number(),
-  startsAt: z.number(),
+  startsAt: z.number().optional(),
+  msUntilStart: z.number().optional(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
+  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -172,7 +177,6 @@ export class LobbyInfoEvent implements GameEvent {
     public myClientID: ClientID,
   ) {}
 }
-
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
@@ -229,6 +233,7 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
+  lobbyStartDelayMs: z.number().int().min(0),
 });
 
 export const TeamSchema = z.string();

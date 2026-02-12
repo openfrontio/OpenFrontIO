@@ -1,6 +1,14 @@
 import { Worker } from "cluster";
 import winston from "winston";
 import { ServerConfig } from "../core/configuration/Config";
+import {
+  Duos,
+  GameMode,
+  HumansVsNations,
+  PublicGameModifiers,
+  Quads,
+  Trios,
+} from "../core/game/Game";
 import { PublicGameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
@@ -8,21 +16,28 @@ import {
   MasterLobbiesBroadcast,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
-import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
 
-export interface MasterLobbyServiceOptions {
-  config: ServerConfig;
-  playlist: MapPlaylist;
-  log: typeof logger;
-}
+type LobbyCategory = "ffa" | "teams" | "special";
+
+const TARGET_PUBLIC_LOBBIES = 3;
+const CATEGORY_TARGET: Record<LobbyCategory, number> = {
+  ffa: 1,
+  teams: 1,
+  special: 1,
+};
 
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();
   // Worker id => the lobbies it owns.
   private readonly workerLobbies = new Map<number, PublicGameInfo[]>();
   private readonly readyWorkers = new Set<number>();
+  private readonly scheduledLobbyCategory = new Map<string, LobbyCategory>();
+  private readonly pendingLobbyCreatedAt = new Map<string, number>();
+  private readonly pendingLobbyInfo = new Map<string, PublicGameInfo>();
+  private scheduleInProgress = false;
+  private scheduleRequested = false;
   private started = false;
 
   constructor(
@@ -48,6 +63,8 @@ export class MasterLobbyService {
           break;
         case "lobbyList":
           this.workerLobbies.set(workerId, msg.lobbies);
+          this.markPendingAsLive(msg.lobbies);
+          void this.maybeScheduleLobby();
           break;
       }
     });
@@ -57,6 +74,7 @@ export class MasterLobbyService {
     this.workers.delete(workerId);
     this.workerLobbies.delete(workerId);
     this.readyWorkers.delete(workerId);
+    void this.maybeScheduleLobby();
   }
 
   private handleWorkerReady(workerId: number) {
@@ -64,19 +82,202 @@ export class MasterLobbyService {
     this.log.info(
       `Worker ${workerId} is ready. (${this.readyWorkers.size}/${this.config.numWorkers()} ready)`,
     );
-    if (this.readyWorkers.size === this.config.numWorkers() && !this.started) {
+    if (this.readyWorkers.size >= 1 && !this.started) {
       this.started = true;
-      this.log.info("All workers ready, starting game scheduling");
+      this.log.info("At least one worker ready, starting game scheduling");
       startPolling(async () => this.broadcastLobbies(), 250);
-      startPolling(async () => await this.maybeScheduleLobby(), 1000);
+      startPolling(async () => await this.maybeScheduleLobby(), 100);
+    }
+  }
+
+  private markPendingAsLive(lobbies: PublicGameInfo[]) {
+    for (const lobby of lobbies) {
+      this.pendingLobbyCreatedAt.delete(lobby.gameID);
+      this.pendingLobbyInfo.delete(lobby.gameID);
     }
   }
 
   private getAllLobbies(): PublicGameInfo[] {
-    const lobbies = Array.from(this.workerLobbies.values())
-      .flat()
-      .sort((a, b) => a.startsAt! - b.startsAt);
-    return lobbies;
+    const liveLobbies = Array.from(this.workerLobbies.values()).flat();
+    this.pruneStaleTrackedLobbies(liveLobbies);
+    const liveIds = new Set(liveLobbies.map((lobby) => lobby.gameID));
+    const pending = Array.from(this.pendingLobbyInfo.values()).filter(
+      (lobby) => !liveIds.has(lobby.gameID),
+    );
+
+    const normalized = [...liveLobbies, ...pending]
+      .map((lobby) => {
+        const category = this.inferLobbyCategory(lobby);
+        return category ? { ...lobby, publicLobbyCategory: category } : lobby;
+      })
+      .sort(
+        (a, b) =>
+          (a.startsAt ?? Number.MAX_SAFE_INTEGER) -
+          (b.startsAt ?? Number.MAX_SAFE_INTEGER),
+      );
+
+    for (const lobby of normalized) {
+      const category = this.normalizeCategory(lobby.publicLobbyCategory);
+      if (category && !this.scheduledLobbyCategory.has(lobby.gameID)) {
+        this.scheduledLobbyCategory.set(lobby.gameID, category);
+      }
+    }
+
+    return normalized;
+  }
+
+  private pruneStaleTrackedLobbies(lobbies: PublicGameInfo[]) {
+    const now = Date.now();
+    const live = new Set(lobbies.map((l) => l.gameID));
+    for (const gameID of this.scheduledLobbyCategory.keys()) {
+      if (live.has(gameID)) {
+        continue;
+      }
+      const pendingAt = this.pendingLobbyCreatedAt.get(gameID);
+      if (pendingAt !== undefined && now - pendingAt < 15_000) {
+        continue;
+      }
+      this.pendingLobbyCreatedAt.delete(gameID);
+      this.pendingLobbyInfo.delete(gameID);
+      this.scheduledLobbyCategory.delete(gameID);
+    }
+  }
+
+  private normalizeCategory(
+    category: PublicGameInfo["publicLobbyCategory"] | undefined,
+  ): LobbyCategory | undefined {
+    if (category === "ffa" || category === "teams" || category === "special") {
+      return category;
+    }
+    return undefined;
+  }
+
+  private inferLobbyCategory(lobby: PublicGameInfo): LobbyCategory | undefined {
+    const tagged = this.normalizeCategory(lobby.publicLobbyCategory);
+    if (tagged) {
+      return tagged;
+    }
+
+    const tracked = this.scheduledLobbyCategory.get(lobby.gameID);
+    if (tracked) {
+      return tracked;
+    }
+
+    const config = lobby.gameConfig;
+    if (!config) {
+      return undefined;
+    }
+
+    if (config.gameMode === GameMode.FFA) {
+      return this.isSpecialConfig(config.publicGameModifiers)
+        ? "special"
+        : "ffa";
+    }
+
+    if (config.gameMode === GameMode.Team) {
+      return config.playerTeams === HumansVsNations ? "special" : "teams";
+    }
+
+    return undefined;
+  }
+
+  private isSpecialConfig(modifiers: PublicGameModifiers | undefined): boolean {
+    if (!modifiers) {
+      return false;
+    }
+    return Boolean(
+      modifiers.isCompact ||
+        modifiers.isRandomSpawn ||
+        modifiers.isCrowded ||
+        modifiers.startingGold !== undefined,
+    );
+  }
+
+  private categoryCounts(
+    lobbies: PublicGameInfo[],
+  ): Record<LobbyCategory, number> {
+    const counts: Record<LobbyCategory, number> = {
+      ffa: 0,
+      teams: 0,
+      special: 0,
+    };
+
+    for (const lobby of lobbies) {
+      const category = this.inferLobbyCategory(lobby);
+      if (category) {
+        counts[category] += 1;
+      }
+    }
+
+    return counts;
+  }
+
+  private nextCategoryToSchedule(
+    lobbies: PublicGameInfo[],
+  ): LobbyCategory | null {
+    const counts = this.categoryCounts(lobbies);
+    const totalCount = counts.ffa + counts.teams + counts.special;
+
+    for (const category of ["ffa", "teams", "special"] as const) {
+      if (counts[category] < CATEGORY_TARGET[category]) {
+        return category;
+      }
+    }
+
+    if (totalCount < TARGET_PUBLIC_LOBBIES) {
+      const ordered = (Object.entries(counts) as Array<[LobbyCategory, number]>)
+        .sort((a, b) => a[1] - b[1])
+        .map(([category]) => category);
+      return ordered[0] ?? "ffa";
+    }
+
+    return null;
+  }
+
+  private allocateGameToReadyWorker(): {
+    gameID: string;
+    workerId: number;
+  } | null {
+    for (let i = 0; i < 500; i += 1) {
+      const gameID = generateID();
+      const workerId = this.config.workerIndex(gameID);
+      if (this.readyWorkers.has(workerId) && this.workers.has(workerId)) {
+        return { gameID, workerId };
+      }
+    }
+    return null;
+  }
+
+  private async gameConfigForCategory(category: LobbyCategory) {
+    if (category === "ffa") {
+      return this.playlist.gameConfig({ mode: GameMode.FFA });
+    }
+
+    if (category === "teams") {
+      const teamOptions = [2, 3, 4, 5, 6, 7, Duos, Trios, Quads] as const;
+      const playerTeams =
+        teamOptions[Math.floor(Math.random() * teamOptions.length)];
+      return this.playlist.gameConfig({
+        mode: GameMode.Team,
+        playerTeams,
+      });
+    }
+
+    const specialAsTeam = Math.random() < 0.5;
+    if (specialAsTeam) {
+      return this.playlist.gameConfig({
+        mode: GameMode.Team,
+        playerTeams: HumansVsNations,
+        ensureSpecialModifier: true,
+        maxPlayersScale: 0.5,
+      });
+    }
+
+    return this.playlist.gameConfig({
+      mode: GameMode.FFA,
+      ensureSpecialModifier: true,
+      maxPlayersScale: 0.5,
+    });
   }
 
   private broadcastLobbies() {
@@ -97,39 +298,83 @@ export class MasterLobbyService {
   }
 
   private async maybeScheduleLobby() {
-    const lobbies = this.getAllLobbies();
-    if (lobbies.length >= 2) {
+    if (this.scheduleInProgress) {
+      this.scheduleRequested = true;
+      return;
+    }
+    this.scheduleInProgress = true;
+
+    try {
+      do {
+        this.scheduleRequested = false;
+        await this.fillLobbyDeficit();
+      } while (this.scheduleRequested);
+    } finally {
+      this.scheduleInProgress = false;
+    }
+  }
+
+  private async fillLobbyDeficit() {
+    if (this.readyWorkers.size === 0) {
       return;
     }
 
-    const lastStart = lobbies.reduce(
-      (max, pb) => Math.max(max, pb.startsAt),
-      Date.now(),
-    );
+    for (let i = 0; i < TARGET_PUBLIC_LOBBIES; i += 1) {
+      const lobbies = this.getAllLobbies();
+      const category = this.nextCategoryToSchedule(lobbies);
+      if (category === null) {
+        return;
+      }
 
-    const gameID = generateID();
-    const workerId = this.config.workerIndex(gameID);
+      const lastStart = lobbies.reduce(
+        (max, pb) => Math.max(max, pb.startsAt ?? max),
+        Date.now(),
+      );
 
-    const gameConfig = await this.playlist.gameConfig();
-    const worker = this.workers.get(workerId);
-    if (!worker) {
-      this.log.error(`Worker ${workerId} not found`);
-      return;
-    }
+      const placement = this.allocateGameToReadyWorker();
+      if (!placement) {
+        this.log.warn("Unable to allocate game to a ready worker");
+        return;
+      }
 
-    worker.send(
-      {
-        type: "createGame",
+      const { gameID, workerId } = placement;
+      const gameConfig = await this.gameConfigForCategory(category);
+      const worker = this.workers.get(workerId);
+      if (!worker) {
+        this.log.error(`Worker ${workerId} not found`);
+        return;
+      }
+
+      this.scheduledLobbyCategory.set(gameID, category);
+      this.pendingLobbyCreatedAt.set(gameID, Date.now());
+      this.pendingLobbyInfo.set(gameID, {
         gameID,
-        gameConfig,
+        numClients: 0,
         startsAt: lastStart + this.config.gameCreationRate(),
-      } satisfies MasterCreateGame,
-      (e) => {
-        if (e) {
-          this.log.error("Failed to schedule lobby on worker:", e);
-        }
-      },
-    );
-    this.log.info(`Scheduled public game ${gameID} on worker ${workerId}`);
+        gameConfig,
+        publicLobbyCategory: category,
+      });
+
+      worker.send(
+        {
+          type: "createGame",
+          gameID,
+          gameConfig,
+          startsAt: lastStart + this.config.gameCreationRate(),
+        } satisfies MasterCreateGame,
+        (e) => {
+          if (e) {
+            this.pendingLobbyCreatedAt.delete(gameID);
+            this.pendingLobbyInfo.delete(gameID);
+            this.scheduledLobbyCategory.delete(gameID);
+            this.log.error("Failed to schedule lobby on worker:", e);
+          }
+        },
+      );
+
+      this.log.info(
+        `Scheduled ${category} public game ${gameID} on worker ${workerId}`,
+      );
+    }
   }
 }

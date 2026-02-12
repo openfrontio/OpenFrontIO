@@ -79,9 +79,7 @@ export class LeaderboardModal extends BaseModal {
 
     const content = html`
       <div
-        class="h-full flex flex-col overflow-hidden ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
+        class="${this.modalContainerClass} ${this.inline ? "rounded-2xl" : ""}"
       >
         ${modalHeader({
           titleContent: html`
