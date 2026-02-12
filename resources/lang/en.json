@@ -453,6 +453,8 @@
   "mode_selector": {
     "special_title": "Special Mix",
     "teams_title": "Teams",
+    "teams_count": "{teamCount} teams",
+    "teams_of": "{teamCount} teams of {playersPerTeam}",
     "ranked_title": "Ranked",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",

@@ -36,7 +36,7 @@ export class LanguageModal extends BaseModal {
         <!-- Header -->
         ${modalHeader({
           title: translateText("select_lang.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 

@@ -400,7 +400,7 @@ export class UserSettingModal extends BaseModal {
         >
           ${modalHeader({
             title: translateText("user_setting.title"),
-            onBack: this.close,
+            onBack: () => this.close(),
             ariaLabel: translateText("common.back"),
             showDivider: true,
           })}

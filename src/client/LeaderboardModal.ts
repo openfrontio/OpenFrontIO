@@ -92,7 +92,7 @@ export class LeaderboardModal extends BaseModal {
               ${this.activeTab === "clans" ? dateRange : ""}
             </div>
           `,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.close"),
         })}
 

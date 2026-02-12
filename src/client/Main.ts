@@ -210,6 +210,7 @@ declare global {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
     "join-changed": CustomEvent;
+    "open-matchmaking": CustomEvent<undefined>;
   }
 }
 
@@ -889,7 +890,7 @@ class Client {
     crazyGamesSDK.gameplayStop();
   }
 
-  private handleOpenMatchmaking() {
+  private handleOpenMatchmaking(_event: CustomEvent<undefined>) {
     this.matchmakingModal?.open();
   }
 

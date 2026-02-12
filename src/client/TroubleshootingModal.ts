@@ -52,7 +52,7 @@ export class TroubleshootingModal extends BaseModal {
               ${translateText("common.copy")}
             </button>
           </div>`,
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         ${this.loading

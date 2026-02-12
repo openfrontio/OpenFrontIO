@@ -225,7 +225,7 @@ export class SinglePlayerModal extends BaseModal {
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent: hasLinkedAccount(this.userMeResponse)
             ? html`<button

@@ -40,7 +40,7 @@ export class MatchmakingModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("matchmaking_modal.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         <div class="flex-1 flex flex-col items-center justify-center gap-6 p-6">

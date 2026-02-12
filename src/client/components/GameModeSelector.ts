@@ -26,7 +26,7 @@ export class GameModeSelector extends LitElement {
     this.handleLobbiesUpdate(lobbies),
   );
   private lobbyIDToStart = new Map<GameID, number>();
-  private updateIntervalId?: number;
+  private updateIntervalId: number | null = null;
 
   createRenderRoot() {
     return this;
@@ -64,15 +64,16 @@ export class GameModeSelector extends LitElement {
   }
 
   disconnectedCallback() {
+    this.stop();
     super.disconnectedCallback();
-    this.lobbySocket.stop();
-    if (this.updateIntervalId !== undefined) {
-      clearInterval(this.updateIntervalId);
-    }
   }
 
   public stop() {
     this.lobbySocket.stop();
+    if (this.updateIntervalId !== null) {
+      clearInterval(this.updateIntervalId);
+      this.updateIntervalId = null;
+    }
   }
 
   private handleLobbiesUpdate(payload: PublicGames) {
@@ -384,10 +385,15 @@ export class GameModeSelector extends LitElement {
       ) => {
         if (!teamCount)
           return label ?? translateText("mode_selector.teams_title");
-        if (playersPerTeam) {
-          return `${teamCount} teams of ${playersPerTeam}${label ? ` (${label})` : ""}`;
-        }
-        return `${teamCount} teams${label ? ` (${label})` : ""}`;
+        const baseTitle = playersPerTeam
+          ? translateText("mode_selector.teams_of", {
+              teamCount: String(teamCount),
+              playersPerTeam: String(playersPerTeam),
+            })
+          : translateText("mode_selector.teams_count", {
+              teamCount: String(teamCount),
+            });
+        return `${baseTitle}${label ? ` (${label})` : ""}`;
       };
 
       switch (config.playerTeams) {

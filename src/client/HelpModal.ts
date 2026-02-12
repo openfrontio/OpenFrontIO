@@ -102,7 +102,7 @@ export class HelpModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("main.help"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 

@@ -66,7 +66,7 @@ export class RankedModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("mode_selector.ranked_title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">

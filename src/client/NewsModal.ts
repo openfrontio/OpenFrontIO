@@ -20,7 +20,7 @@ export class NewsModal extends BaseModal {
       <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("news.title"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
         <div

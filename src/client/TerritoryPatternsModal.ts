@@ -87,7 +87,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       ${modalHeader({
         title: translateText("territory_patterns.title"),
-        onBack: this.close,
+        onBack: () => this.close(),
         ariaLabel: translateText("common.back"),
         rightContent: !hasLinkedAccount(this.userMeResponse)
           ? html`<div class="flex items-center">
