@@ -20,6 +20,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
   private isImmunityActive = false;
 
   @state()
+  private isCatchingUp = false;
+
+  @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
   @state()
   private toastColor: "green" | "red" = "green";
@@ -92,12 +95,20 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
+    this.isCatchingUp = this.game.isCatchingUp();
+
     this.isVisible =
-      this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
+      this.game.inSpawnPhase() ||
+      this.isPaused ||
+      this.isImmunityActive ||
+      this.isCatchingUp;
     this.requestUpdate();
   }
 
   private getMessage(): string {
+    if (this.isCatchingUp) {
+      return translateText("heads_up_message.catching_up");
+    }
     if (this.isPaused) {
       if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
         return translateText("heads_up_message.singleplayer_game_paused");
