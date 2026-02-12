@@ -665,7 +665,6 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
-  canExtendAlliance(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
@@ -868,13 +867,13 @@ export interface AllianceInfo {
   inExtensionWindow: boolean;
   myPlayerAgreedToExtend: boolean;
   otherAgreedToExtend: boolean;
+  canExtend: boolean;
 }
 
 export interface PlayerInteraction {
   sharedBorder: boolean;
   canSendEmoji: boolean;
   canSendAllianceRequest: boolean;
-  canExtendAlliance: boolean;
   canBreakAlliance: boolean;
   canTarget: boolean;
   canDonateGold: boolean;

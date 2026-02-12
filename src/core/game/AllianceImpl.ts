@@ -1,4 +1,5 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
+import { GameUpdateType } from "./GameUpdates";
 
 export class AllianceImpl implements MutableAlliance {
   private extensionRequestedRequestor_: boolean = false;
@@ -45,6 +46,11 @@ export class AllianceImpl implements MutableAlliance {
     } else if (this.recipient_ === player) {
       this.extensionRequestedRecipient_ = true;
     }
+    this.mg.addUpdate({
+      type: GameUpdateType.AllianceExtension,
+      playerID: player.smallID(),
+      allianceID: this.id_,
+    });
   }
 
   bothAgreedToExtend(): boolean {

@@ -206,14 +206,12 @@ export class GameRunner {
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
         canSendAllianceRequest: player.canSendAllianceRequest(other),
-        canExtendAlliance: player.canExtendAlliance(other),
         canBreakAlliance: player.isAlliedWith(other),
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        allianceInfo: player.allianceInfo(other as Player) ?? undefined,
       };
-      actions.interaction.allianceInfo =
-        player.allianceInfo(other as Player) ?? undefined;
     }
 
     return actions;

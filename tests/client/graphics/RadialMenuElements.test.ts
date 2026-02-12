@@ -364,12 +364,12 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        canExtendAlliance: false,
         allianceInfo: {
           expiresAt: 100,
           inExtensionWindow: true,
           myPlayerAgreedToExtend: true,
           otherAgreedToExtend: false,
+          canExtend: false,
         },
       };
 
@@ -390,12 +390,12 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        canExtendAlliance: false,
         allianceInfo: {
           expiresAt: 100,
           inExtensionWindow: false,
           myPlayerAgreedToExtend: false,
           otherAgreedToExtend: false,
+          canExtend: false,
         },
       };
 
@@ -405,7 +405,7 @@ describe("RadialMenuElements", () => {
       expect(extendMenu).toBeUndefined();
     });
 
-    it("should show extend element as disabled when canExtendAlliance is false", () => {
+    it("should show extend element as disabled when canExtend is false", () => {
       const allyPlayer = {
         id: () => 2,
         isAlliedWith: vi.fn(() => true),
@@ -416,12 +416,12 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        canExtendAlliance: false,
         allianceInfo: {
           expiresAt: 100,
           inExtensionWindow: true,
           myPlayerAgreedToExtend: true,
           otherAgreedToExtend: false,
+          canExtend: false,
         },
       };
 
@@ -432,7 +432,7 @@ describe("RadialMenuElements", () => {
       expect(extendMenu!.disabled(mockParams)).toBe(true);
     });
 
-    it("should show extend element as enabled when canExtendAlliance is true", () => {
+    it("should show extend element as enabled when canExtend is true", () => {
       const allyPlayer = {
         id: () => 2,
         isAlliedWith: vi.fn(() => true),
@@ -443,12 +443,12 @@ describe("RadialMenuElements", () => {
       mockPlayerActions.interaction = {
         ...mockPlayerActions.interaction,
         canBreakAlliance: true,
-        canExtendAlliance: true,
         allianceInfo: {
           expiresAt: 100,
           inExtensionWindow: true,
           myPlayerAgreedToExtend: false,
           otherAgreedToExtend: false,
+          canExtend: true,
         },
       };
 

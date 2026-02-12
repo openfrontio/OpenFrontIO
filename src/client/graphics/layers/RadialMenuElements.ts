@@ -220,11 +220,11 @@ const allyExtendElement: MenuElement = {
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.allianceInfo?.inExtensionWindow,
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canExtendAlliance,
+    !params.playerActions?.interaction?.allianceInfo?.canExtend,
   color: COLORS.ally,
   icon: allianceIcon,
   action: (params: MenuElementParams) => {
-    if (!params.playerActions?.interaction?.canExtendAlliance) return;
+    if (!params.playerActions?.interaction?.allianceInfo?.canExtend) return;
     params.playerActionHandler.handleExtendAlliance(params.selected!);
     params.closeMenu();
   },
