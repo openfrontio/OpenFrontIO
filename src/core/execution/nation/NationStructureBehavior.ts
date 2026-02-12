@@ -5,7 +5,6 @@ import {
   Player,
   PlayerType,
   Relation,
-  StructureTypes,
   Unit,
   UnitType,
 } from "../../game/Game";
@@ -347,7 +346,7 @@ export class NationStructureBehavior {
    */
   private getTotalStructureDensity(): number {
     let totalStructures = 0;
-    for (const type of StructureTypes) {
+    for (const type of this.game.getStructureTypes()) {
       totalStructures += this.player.units(type).length; // ignoring levels
     }
     const tilesOwned = this.player.numTilesOwned();

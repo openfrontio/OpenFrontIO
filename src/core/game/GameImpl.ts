@@ -97,6 +97,9 @@ export class GameImpl implements Game {
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
 
+  private _structureTypes: UnitType[];
+  private _structureTypesSet: Set<UnitType>;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -127,6 +130,11 @@ export class GameImpl implements Game {
         { cachePaths: true },
       );
     }
+
+    this._structureTypes = Object.values(UnitType).filter(
+      (t) => this._config.unitInfo(t).territoryBound,
+    );
+    this._structureTypesSet = new Set(this._structureTypes);
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -901,6 +909,14 @@ export class GameImpl implements Game {
       unit: Unit;
       distSquared: number;
     }>;
+  }
+
+  getStructureTypes(): UnitType[] {
+    return this._structureTypes;
+  }
+
+  isStructureType(type: UnitType): boolean {
+    return this._structureTypesSet.has(type);
   }
 
   ref(x: number, y: number): TileRef {

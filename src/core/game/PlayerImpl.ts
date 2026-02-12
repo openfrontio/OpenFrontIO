@@ -30,7 +30,6 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -51,6 +50,8 @@ import {
   canBuildTransportShip,
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
+
+const UNIT_TYPES = Object.freeze(Object.values(UnitType));
 
 interface Target {
   tick: Tick;
@@ -911,6 +912,10 @@ export class PlayerImpl implements Player {
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    if (!this.mg.config().unitInfo(type).upgradable) {
+      return false;
+    }
+
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type, undefined, true)
@@ -958,23 +963,22 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
+    return UNIT_TYPES.map((u) => {
+      const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+      if (tile !== null && !this.mg.inSpawnPhase()) {
+        const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
-        if (tile !== null) {
-          canBuild = this.canBuild(u, tile, validTiles);
-        }
+        canBuild = this.canBuild(u, tile, validTiles, cost);
       }
       return {
         type: u,
         canBuild,
         canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+        cost,
         overlappingRailroads:
           canBuild !== false
             ? this.mg.railNetwork().overlappingRailroads(canBuild)
@@ -987,12 +991,13 @@ export class PlayerImpl implements Player {
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
+    knownCost: Gold | null = null,
   ): TileRef | false {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
+    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
     if (
       unitType !== UnitType.MIRVWarhead &&
       (!this.isAlive() || this.gold() < cost)
@@ -1054,7 +1059,7 @@ export class PlayerImpl implements Player {
       const wouldHitTeammate = this.mg.anyUnitNearby(
         tile,
         magnitude.outer,
-        StructureTypes,
+        this.mg.getStructureTypes(),
         (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
       );
       if (wouldHitTeammate) {
@@ -1133,14 +1138,11 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
-    });
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      types,
+      this.mg.getStructureTypes(),
       undefined,
       true,
     );

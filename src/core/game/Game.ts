@@ -258,21 +258,6 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
-  UnitType.City,
-  UnitType.DefensePost,
-  UnitType.SAMLauncher,
-  UnitType.MissileSilo,
-  UnitType.Port,
-  UnitType.Factory,
-]);
-
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
-
-export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
-}
-
 export interface OwnerComp {
   owner: Player;
 }
@@ -793,6 +778,8 @@ export interface Game extends GameMap {
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
+  getStructureTypes(): UnitType[];
+  isStructureType(type: UnitType): boolean;
 
   addExecution(...exec: Execution[]): void;
   displayMessage(
