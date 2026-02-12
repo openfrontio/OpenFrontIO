@@ -77,17 +77,10 @@ interface MapWithMode {
   mode: GameMode;
 }
 
-export type SpecialPreset =
-  | "compact"
-  | "startingGold"
-  | "randomSpawn"
-  | "crowded";
-
 export interface GameConfigOverrides {
   mode?: GameMode;
   playerTeams?: TeamCountConfig;
   ensureSpecialModifier?: boolean;
-  specialPreset?: SpecialPreset;
   lobbyStartDelayMs?: number;
   maxPlayersScale?: number;
 }
@@ -179,7 +172,6 @@ export class MapPlaylist {
 
     const rollModifiers = () =>
       this.getRandomPublicGameModifiers({
-        specialPreset: overrides?.specialPreset,
         ensureSpecial: requireSpecial,
       });
 
@@ -235,8 +227,7 @@ export class MapPlaylist {
       startingGold,
       lobbyStartDelayMs:
         overrides?.lobbyStartDelayMs ?? this.defaultLobbyStartDelayMs,
-      difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
+      difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -319,7 +310,6 @@ export class MapPlaylist {
   }
 
   private getRandomPublicGameModifiers(options?: {
-    specialPreset?: SpecialPreset;
     ensureSpecial: boolean;
   }): PublicGameModifiers {
     const useSpecialRates = options?.ensureSpecial ?? false;
@@ -344,33 +334,11 @@ export class MapPlaylist {
       startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
     });
 
-    const applyPreset = (modifiers: PublicGameModifiers) => {
-      switch (options?.specialPreset) {
-        case "compact":
-          modifiers.isCompact = true;
-          modifiers.isRandomSpawn = false;
-          break;
-        case "startingGold":
-          modifiers.startingGold = 5_000_000;
-          break;
-        case "randomSpawn":
-          modifiers.isRandomSpawn = true;
-          break;
-        case "crowded":
-          modifiers.isCrowded = true;
-          break;
-        default:
-          break;
-      }
-    };
-
     let modifiers = rollModifiers();
-    applyPreset(modifiers);
 
     // For special rotations, reroll until we actually land a modifier.
     while (options?.ensureSpecial && !this.isSpecial(modifiers)) {
       modifiers = rollModifiers();
-      applyPreset(modifiers);
     }
 
     return modifiers;

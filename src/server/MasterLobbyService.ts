@@ -175,7 +175,9 @@ export class MasterLobbyService {
     }
 
     if (config.gameMode === GameMode.Team) {
-      return config.playerTeams === HumansVsNations ? "special" : "teams";
+      return this.isSpecialConfig(config.publicGameModifiers)
+        ? "special"
+        : "teams";
     }
 
     return undefined;
@@ -249,17 +251,30 @@ export class MasterLobbyService {
   }
 
   private async gameConfigForCategory(category: LobbyCategory) {
+    const teamOptions = [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      Duos,
+      Trios,
+      Quads,
+      HumansVsNations,
+    ] as const;
+
+    const randomTeamConfig =
+      teamOptions[Math.floor(Math.random() * teamOptions.length)];
+
     if (category === "ffa") {
       return this.playlist.gameConfig({ mode: GameMode.FFA });
     }
 
     if (category === "teams") {
-      const teamOptions = [2, 3, 4, 5, 6, 7, Duos, Trios, Quads] as const;
-      const playerTeams =
-        teamOptions[Math.floor(Math.random() * teamOptions.length)];
       return this.playlist.gameConfig({
         mode: GameMode.Team,
-        playerTeams,
+        playerTeams: randomTeamConfig,
       });
     }
 
@@ -267,16 +282,14 @@ export class MasterLobbyService {
     if (specialAsTeam) {
       return this.playlist.gameConfig({
         mode: GameMode.Team,
-        playerTeams: HumansVsNations,
+        playerTeams: randomTeamConfig,
         ensureSpecialModifier: true,
-        maxPlayersScale: 0.5,
       });
     }
 
     return this.playlist.gameConfig({
       mode: GameMode.FFA,
       ensureSpecialModifier: true,
-      maxPlayersScale: 0.5,
     });
   }
 
