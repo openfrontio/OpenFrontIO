@@ -11,6 +11,7 @@ import { modalHeader } from "./ui/ModalHeader";
 export class RankedModal extends BaseModal {
   @state() private elo: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
+  @state() private errorMessage: string | null = null;
 
   constructor() {
     super();
@@ -36,11 +37,17 @@ export class RankedModal extends BaseModal {
   private handleUserMeResponse = (
     event: CustomEvent<UserMeResponse | false>,
   ) => {
+    this.errorMessage = null;
     this.userMeResponse = event.detail;
     this.updateElo();
   };
 
   private updateElo() {
+    if (this.errorMessage) {
+      this.elo = translateText("map_component.error");
+      return;
+    }
+
     if (hasLinkedAccount(this.userMeResponse)) {
       this.elo =
         this.userMeResponse &&
@@ -52,9 +59,19 @@ export class RankedModal extends BaseModal {
 
   protected override async onOpen(): Promise<void> {
     this.elo = "...";
-    const userMe = await getUserMe();
-    this.userMeResponse = userMe;
-    this.updateElo();
+    this.errorMessage = null;
+
+    try {
+      const userMe = await getUserMe();
+      this.userMeResponse = userMe;
+    } catch (error) {
+      console.error("Failed to fetch user profile for ranked modal", error);
+      this.userMeResponse = false;
+      this.errorMessage = translateText("map_component.error");
+      this.elo = translateText("map_component.error");
+    } finally {
+      this.updateElo();
+    }
   }
 
   createRenderRoot() {
@@ -73,9 +90,10 @@ export class RankedModal extends BaseModal {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             ${this.renderCard(
               translateText("mode_selector.ranked_1v1_title"),
-              hasLinkedAccount(this.userMeResponse)
-                ? translateText("matchmaking_modal.elo", { elo: this.elo })
-                : translateText("mode_selector.ranked_title"),
+              this.errorMessage ??
+                (hasLinkedAccount(this.userMeResponse)
+                  ? translateText("matchmaking_modal.elo", { elo: this.elo })
+                  : translateText("mode_selector.ranked_title")),
               () => this.handleRanked(),
             )}
             ${this.renderDisabledCard(

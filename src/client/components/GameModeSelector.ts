@@ -397,24 +397,36 @@ export class GameModeSelector extends LitElement {
       };
 
       switch (config.playerTeams) {
-        case Duos:
-          return formatTeamsOf(
-            totalPlayers ? Math.floor(totalPlayers / 2) : undefined,
-            2,
-            "Duos",
-          );
-        case Trios:
-          return formatTeamsOf(
-            totalPlayers ? Math.floor(totalPlayers / 3) : undefined,
-            3,
-            "Trios",
-          );
-        case Quads:
-          return formatTeamsOf(
-            totalPlayers ? Math.floor(totalPlayers / 4) : undefined,
-            4,
-            "Quads",
-          );
+        case Duos: {
+          const teamCount = totalPlayers
+            ? Math.floor(totalPlayers / 2)
+            : undefined;
+          return teamCount
+            ? translateText("public_lobby.teams_Duos", {
+                team_count: String(teamCount),
+              })
+            : formatTeamsOf(undefined, 2);
+        }
+        case Trios: {
+          const teamCount = totalPlayers
+            ? Math.floor(totalPlayers / 3)
+            : undefined;
+          return teamCount
+            ? translateText("public_lobby.teams_Trios", {
+                team_count: String(teamCount),
+              })
+            : formatTeamsOf(undefined, 3);
+        }
+        case Quads: {
+          const teamCount = totalPlayers
+            ? Math.floor(totalPlayers / 4)
+            : undefined;
+          return teamCount
+            ? translateText("public_lobby.teams_Quads", {
+                team_count: String(teamCount),
+              })
+            : formatTeamsOf(undefined, 4);
+        }
         case HumansVsNations: {
           const humanSlots = config.maxPlayers ?? lobby.numClients;
           return humanSlots
