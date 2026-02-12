@@ -78,9 +78,7 @@ export class LeaderboardModal extends BaseModal {
     }
 
     const content = html`
-      <div
-        class="${this.modalContainerClass} ${this.inline ? "rounded-2xl" : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           titleContent: html`
             <div class="flex flex-wrap items-center gap-2">
