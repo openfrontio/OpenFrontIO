@@ -39,6 +39,7 @@ export class BotExecution implements Execution {
     if (ticks % this.attackRate !== this.attackTick) return;
 
     if (!this.bot.isAlive()) {
+      //removeOnDeath is called from bot's PlayerExecution
       this.active = false;
       return;
     }

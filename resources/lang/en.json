@@ -230,6 +230,7 @@
     "title": "Leaderboard",
     "ranked_tab": "1v1 Ranked",
     "clans_tab": "Clans",
+    "refresh_time": "Refreshed every 1 hour",
     "loading": "Loading...",
     "error": "Error loading leaderboard",
     "no_stats": "No stats available",
@@ -845,7 +846,8 @@
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
     "singleplayer_game_paused": "Game paused",
-    "multiplayer_game_paused": "Game paused by Lobby Creator"
+    "multiplayer_game_paused": "Game paused by Lobby Creator",
+    "pvp_immunity_active": "PVP immunity active for {seconds}s"
   },
   "territory_patterns": {
     "title": "Skins",
