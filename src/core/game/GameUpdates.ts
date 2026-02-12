@@ -176,6 +176,7 @@ export interface PlayerUpdate {
   outgoingAllianceRequests: PlayerID[];
   alliances: AllianceView[];
   hasSpawned: boolean;
+  spawnTile?: TileRef;
   betrayals: number;
   lastDeleteUnitTick: Tick;
   isLobbyCreator: boolean;
