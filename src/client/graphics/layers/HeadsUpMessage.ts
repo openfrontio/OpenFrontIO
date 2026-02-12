@@ -95,7 +95,8 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
-    this.isCatchingUp = this.game.isCatchingUp();
+    this.isCatchingUp =
+      !this.game.config().isReplay() && this.game.isCatchingUp();
 
     this.isVisible =
       this.game.inSpawnPhase() ||
