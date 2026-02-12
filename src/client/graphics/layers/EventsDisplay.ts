@@ -66,45 +66,6 @@ export interface GameEvent {
   allianceID?: number;
 }
 
-/**
- * Splits events into pinned (actionable alliance requests/renewals) and
- * regular events. Regular events are sorted by priority then createdAt.
- */
-export function splitAndSortEvents(events: GameEvent[]): {
-  pinnedEvents: GameEvent[];
-  regularEvents: GameEvent[];
-} {
-  const pinnedEvents = events
-    .filter(
-      (event) =>
-        (event.type === MessageType.ALLIANCE_REQUEST ||
-          event.type === MessageType.RENEW_ALLIANCE) &&
-        event.buttons &&
-        event.buttons.length > 0,
-    )
-    .sort((a, b) => a.createdAt - b.createdAt);
-  const regularEvents = events.filter(
-    (event) =>
-      !(
-        (event.type === MessageType.ALLIANCE_REQUEST ||
-          event.type === MessageType.RENEW_ALLIANCE) &&
-        event.buttons &&
-        event.buttons.length > 0
-      ),
-  );
-
-  regularEvents.sort((a, b) => {
-    const aPrior = a.priority ?? 100000;
-    const bPrior = b.priority ?? 100000;
-    if (aPrior === bPrior) {
-      return a.createdAt - b.createdAt;
-    }
-    return bPrior - aPrior;
-  });
-
-  return { pinnedEvents, regularEvents };
-}
-
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
@@ -136,12 +97,41 @@ export class EventsDisplay extends LitElement implements Layer {
   private _eventsContainer?: HTMLDivElement;
   private _shouldScrollToBottom = true;
 
+  @query(".alliance-slot")
+  private _allianceSlot?: HTMLDivElement;
+  private _allianceOriginalParent?: Element | null = null;
+
   updated(changed: Map<string, unknown>) {
     super.updated(changed);
     if (this._eventsContainer && this._shouldScrollToBottom) {
       this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
     }
+    // Reparent <alliance-display> into the slot between button bar and
+    // content area. This is a DOM move (not a clone), so the element keeps
+    // its internal state, event listeners, and Lit lifecycle intact.
+    // Side-effect: the element's parentElement changes, which means any
+    // external code using document.querySelector("alliance-display") will
+    // still find it, but its position in the DOM tree shifts. If this
+    // causes issues with layout or third-party observers, consider using a
+    // placeholder/sentinel element or CSS-based repositioning instead.
+    const ad = document.querySelector("alliance-display");
+    if (this._allianceSlot && ad) {
+      this._allianceOriginalParent ??= ad.parentElement;
+      if (ad.parentElement !== this._allianceSlot) {
+        this._allianceSlot.appendChild(ad);
+      }
+    } else if (
+      ad &&
+      this._allianceOriginalParent &&
+      document.contains(this._allianceOriginalParent) &&
+      ad.parentElement !== this._allianceOriginalParent
+    ) {
+      // Panel is hidden/collapsed — move alliance-display back to its
+      // original parent, but only if that parent is still in the document.
+      this._allianceOriginalParent.appendChild(ad);
+    }
   }
+
 
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
@@ -278,10 +268,23 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   disconnectedCallback() {
+    super.disconnectedCallback();
     if (this.goldAmountTimeoutId !== null) {
       clearTimeout(this.goldAmountTimeoutId);
       this.goldAmountTimeoutId = null;
     }
+    // Restore <alliance-display> to its original parent so it isn't lost
+    // when EventsDisplay is removed from the DOM.
+    const ad = document.querySelector("alliance-display");
+    if (
+      ad &&
+      this._allianceOriginalParent &&
+      document.contains(this._allianceOriginalParent) &&
+      ad.parentElement !== this._allianceOriginalParent
+    ) {
+      this._allianceOriginalParent.appendChild(ad);
+    }
+    this._allianceOriginalParent = null;
   }
 
   private updateAttacksAndBoats(myPlayer: PlayerView) {
@@ -769,7 +772,14 @@ export class EventsDisplay extends LitElement implements Layer {
       return !this.eventsFilters.get(category);
     });
 
-    const { regularEvents } = splitAndSortEvents(filteredEvents);
+    filteredEvents.sort((a, b) => {
+      const aPrior = a.priority ?? 100000;
+      const bPrior = b.priority ?? 100000;
+      if (aPrior === bPrior) {
+        return a.createdAt - b.createdAt;
+      }
+      return bPrior - aPrior;
+    });
 
     return html`
       ${styles}
@@ -840,6 +850,9 @@ export class EventsDisplay extends LitElement implements Layer {
                 </div>
               </div>
 
+              <!-- Alliance Display Slot -->
+              <div class="alliance-slot"></div>
+
               <!-- Content Area -->
               <div
                 class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full min-[1200px]:rounded-b-xl events-container"
@@ -849,7 +862,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
                   >
                     <tbody>
-                      ${regularEvents.map(
+                      ${filteredEvents.map(
                         (event, index) => html`
                           <tr>
                             <td
@@ -896,7 +909,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         : ""}
 
                       <!--- Empty row when no events or attacks -->
-                      ${regularEvents.length === 0 &&
+                      ${filteredEvents.length === 0 &&
                       this.outgoingAttacks.length === 0 &&
                       this.outgoingLandAttacks.length === 0 &&
                       this.outgoingBoats.length === 0

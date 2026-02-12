@@ -23,6 +23,36 @@ import { GameEvent } from "./EventsDisplay";
 import { Layer } from "./Layer";
 import { GoToPlayerEvent } from "./Leaderboard";
 
+/**
+ * Splits alliance events into pinned (actionable requests/renewals with
+ * buttons) and informational events. Pinned events are sorted oldest-first.
+ */
+export function splitAllianceEvents(events: GameEvent[]): {
+  pinnedEvents: GameEvent[];
+  infoEvents: GameEvent[];
+} {
+  const pinnedEvents: GameEvent[] = [];
+  const infoEvents: GameEvent[] = [];
+
+  for (const e of events) {
+    const isPinned =
+      (e.type === MessageType.ALLIANCE_REQUEST ||
+        e.type === MessageType.RENEW_ALLIANCE) &&
+      e.buttons &&
+      e.buttons.length > 0;
+
+    if (isPinned) {
+      pinnedEvents.push(e);
+    } else {
+      infoEvents.push(e);
+    }
+  }
+
+  pinnedEvents.sort((a, b) => a.createdAt - b.createdAt);
+
+  return { pinnedEvents, infoEvents };
+}
+
 @customElement("alliance-display")
 export class AllianceDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
@@ -61,7 +91,7 @@ export class AllianceDisplay extends LitElement implements Layer {
     this.processAllianceUpdates();
 
     // Expire old events
-    let remainingEvents = this.events.filter((event) => {
+    const remainingEvents = this.events.filter((event) => {
       const shouldKeep =
         this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
         !event.shouldDelete?.(this.game);
@@ -495,25 +525,7 @@ export class AllianceDisplay extends LitElement implements Layer {
     }
 
     // Separate pinned (actionable) from informational alliance events
-    const pinnedEvents = this.events
-      .filter(
-        (e) =>
-          (e.type === MessageType.ALLIANCE_REQUEST ||
-            e.type === MessageType.RENEW_ALLIANCE) &&
-          e.buttons &&
-          e.buttons.length > 0,
-      )
-      .sort((a, b) => a.createdAt - b.createdAt);
-
-    const infoEvents = this.events.filter(
-      (e) =>
-        !(
-          (e.type === MessageType.ALLIANCE_REQUEST ||
-            e.type === MessageType.RENEW_ALLIANCE) &&
-          e.buttons &&
-          e.buttons.length > 0
-        ),
-    );
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(this.events);
 
     const hasBetrayal = (() => {
       const myPlayer = this.game.myPlayer();

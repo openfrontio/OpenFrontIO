@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MessageType } from "../../../../src/core/game/Game";
-import {
-  GameEvent,
-  splitAndSortEvents,
-} from "../../../../src/client/graphics/layers/EventsDisplay";
+import { GameEvent } from "../../../../src/client/graphics/layers/EventsDisplay";
+import { splitAllianceEvents } from "../../../../src/client/graphics/layers/AllianceDisplay";
 
 const dummyButtons = [
   { text: "Accept", className: "btn", action: () => {} },
@@ -19,7 +17,7 @@ function makeEvent(overrides: Partial<GameEvent> = {}): GameEvent {
   } as GameEvent;
 }
 
-describe("splitAndSortEvents", () => {
+describe("splitAllianceEvents", () => {
   it("should pin ALLIANCE_REQUEST events that have buttons", () => {
     const events = [
       makeEvent({
@@ -29,12 +27,12 @@ describe("splitAndSortEvents", () => {
       makeEvent({ type: MessageType.ATTACK_FAILED }),
     ];
 
-    const { pinnedEvents, regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(events);
 
     expect(pinnedEvents).toHaveLength(1);
     expect(pinnedEvents[0].type).toBe(MessageType.ALLIANCE_REQUEST);
-    expect(regularEvents).toHaveLength(1);
-    expect(regularEvents[0].type).toBe(MessageType.ATTACK_FAILED);
+    expect(infoEvents).toHaveLength(1);
+    expect(infoEvents[0].type).toBe(MessageType.ATTACK_FAILED);
   });
 
   it("should pin RENEW_ALLIANCE events that have buttons", () => {
@@ -46,12 +44,12 @@ describe("splitAndSortEvents", () => {
       makeEvent({ type: MessageType.CHAT }),
     ];
 
-    const { pinnedEvents, regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(events);
 
     expect(pinnedEvents).toHaveLength(1);
     expect(pinnedEvents[0].type).toBe(MessageType.RENEW_ALLIANCE);
-    expect(regularEvents).toHaveLength(1);
-    expect(regularEvents[0].type).toBe(MessageType.CHAT);
+    expect(infoEvents).toHaveLength(1);
+    expect(infoEvents[0].type).toBe(MessageType.CHAT);
   });
 
   it("should NOT pin alliance events without buttons", () => {
@@ -61,10 +59,10 @@ describe("splitAndSortEvents", () => {
       makeEvent({ type: MessageType.ALLIANCE_ACCEPTED }),
     ];
 
-    const { pinnedEvents, regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(events);
 
     expect(pinnedEvents).toHaveLength(0);
-    expect(regularEvents).toHaveLength(3);
+    expect(infoEvents).toHaveLength(3);
   });
 
   it("should NOT pin non-alliance events even if they have buttons", () => {
@@ -75,36 +73,41 @@ describe("splitAndSortEvents", () => {
       }),
     ];
 
-    const { pinnedEvents, regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(events);
 
     expect(pinnedEvents).toHaveLength(0);
-    expect(regularEvents).toHaveLength(1);
+    expect(infoEvents).toHaveLength(1);
   });
 
-  it("should sort regular events by priority (descending) then createdAt", () => {
+  it("should sort pinned events oldest-first by createdAt", () => {
     const events = [
-      makeEvent({ description: "low-prio-early", priority: 0, createdAt: 1 }),
-      makeEvent({ description: "high-prio", priority: 100, createdAt: 5 }),
-      makeEvent({ description: "low-prio-late", priority: 0, createdAt: 10 }),
-      makeEvent({ description: "default-prio", createdAt: 3 }),
+      makeEvent({
+        type: MessageType.ALLIANCE_REQUEST,
+        buttons: dummyButtons,
+        description: "newer",
+        createdAt: 200,
+      }),
+      makeEvent({
+        type: MessageType.RENEW_ALLIANCE,
+        buttons: dummyButtons,
+        description: "older",
+        createdAt: 50,
+      }),
     ];
 
-    const { regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents } = splitAllianceEvents(events);
 
-    // default priority (100000) > 100 > 0 – descending
-    expect(regularEvents.map((e) => e.description)).toEqual([
-      "default-prio",
-      "high-prio",
-      "low-prio-early",
-      "low-prio-late",
+    expect(pinnedEvents.map((e) => e.description)).toEqual([
+      "older",
+      "newer",
     ]);
   });
 
   it("should handle an empty events list", () => {
-    const { pinnedEvents, regularEvents } = splitAndSortEvents([]);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents([]);
 
     expect(pinnedEvents).toHaveLength(0);
-    expect(regularEvents).toHaveLength(0);
+    expect(infoEvents).toHaveLength(0);
   });
 
   it("should pin multiple alliance events simultaneously", () => {
@@ -124,13 +127,13 @@ describe("splitAndSortEvents", () => {
         buttons: dummyButtons,
         description: "request 2",
       }),
-      makeEvent({ type: MessageType.CHAT, description: "chat msg" }),
+      makeEvent({ type: MessageType.ALLIANCE_EXPIRED, description: "expired" }),
     ];
 
-    const { pinnedEvents, regularEvents } = splitAndSortEvents(events);
+    const { pinnedEvents, infoEvents } = splitAllianceEvents(events);
 
     expect(pinnedEvents).toHaveLength(3);
-    expect(regularEvents).toHaveLength(1);
-    expect(regularEvents[0].description).toBe("chat msg");
+    expect(infoEvents).toHaveLength(1);
+    expect(infoEvents[0].description).toBe("expired");
   });
 });
