@@ -659,15 +659,15 @@
     "title_with_name": "Truppen an {name} senden",
     "available_tooltip": "Verfügbare Truppen",
     "min_keep": "Mindestbestand",
-    "slider_tooltip": "{{percent}} % • {{amount}}",
+    "slider_tooltip": "{percent} % • {amount}",
     "aria_slider": "Truppenregler",
-    "capacity_note": "Der Empfänger kann derzeit nur {{amount}} annehmen."
+    "capacity_note": "Der Empfänger kann derzeit nur {amount} annehmen."
   },
   "send_gold_modal": {
     "title_with_name": "Gold an {name} senden",
     "available_tooltip": "Verfügbares Gold",
     "aria_slider": "Mengenregler",
-    "slider_tooltip": "{{percent}} % • {{amount}}"
+    "slider_tooltip": "{percent} % • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Wiedergabegeschwindigkeit",
