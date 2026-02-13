@@ -96,6 +96,18 @@ export default defineConfig(({ mode }) => {
       outDir: "static", // Webpack outputs to 'static', assuming we want to keep this.
       emptyOutDir: true,
       assetsDir: "assets", // Sub-directory for assets
+      sourcemap: !isProduction, // Source maps for dev builds only
+      minify: isProduction ? "terser" : false,
+      ...(isProduction && {
+        terserOptions: {
+          toplevel: true, // Mangle top-level names and drop unused top-level vars/functions
+          compress: { passes: 3 },
+          mangle: { toplevel: true }, // Shorten top-level function/variable names
+          format: {
+            comments: false,
+          },
+        },
+      }),
       rollupOptions: {
         output: {
           manualChunks: {
