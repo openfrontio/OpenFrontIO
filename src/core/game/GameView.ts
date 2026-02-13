@@ -603,12 +603,20 @@ export class GameView implements GameMap {
     private _config: Config,
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
+    private _myUsername: string,
     private _gameID: GameID,
     private humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
+    // Replace the local player's username with their own stored username.
+    // This way the user does not know they are being censored.
+    for (const h of this.humans) {
+      if (h.clientID === this._myClientID) {
+        h.username = this._myUsername;
+      }
+    }
     this._cosmetics = new Map(
       this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
@@ -804,6 +812,12 @@ export class GameView implements GameMap {
   }
   inSpawnPhase(): boolean {
     return this.ticks() <= this._config.numSpawnPhaseTurns();
+  }
+  isSpawnImmunityActive(): boolean {
+    return (
+      this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
+      this.ticks()
+    );
   }
   config(): Config {
     return this._config;

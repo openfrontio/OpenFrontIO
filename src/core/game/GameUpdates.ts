@@ -44,7 +44,9 @@ export enum GameUpdateType {
   Hash,
   UnitIncoming,
   BonusEvent,
-  RailroadEvent,
+  RailroadDestructionEvent,
+  RailroadConstructionEvent,
+  RailroadSnapEvent,
   ConquestEvent,
   EmbargoEvent,
   GamePaused,
@@ -67,7 +69,9 @@ export type GameUpdate =
   | UnitIncomingUpdate
   | AllianceExtensionUpdate
   | BonusEventUpdate
-  | RailroadUpdate
+  | RailroadConstructionUpdate
+  | RailroadDestructionUpdate
+  | RailroadSnapUpdate
   | ConquestUpdate
   | EmbargoUpdate
   | GamePausedUpdate;
@@ -80,24 +84,24 @@ export interface BonusEventUpdate {
   troops: number;
 }
 
-export enum RailType {
-  VERTICAL,
-  HORIZONTAL,
-  TOP_LEFT,
-  TOP_RIGHT,
-  BOTTOM_LEFT,
-  BOTTOM_RIGHT,
+export interface RailroadConstructionUpdate {
+  type: GameUpdateType.RailroadConstructionEvent;
+  id: number;
+  tiles: TileRef[];
 }
 
-export interface RailTile {
-  tile: TileRef;
-  railType: RailType;
+export interface RailroadDestructionUpdate {
+  type: GameUpdateType.RailroadDestructionEvent;
+  id: number;
 }
 
-export interface RailroadUpdate {
-  type: GameUpdateType.RailroadEvent;
-  isActive: boolean;
-  railTiles: RailTile[];
+export interface RailroadSnapUpdate {
+  type: GameUpdateType.RailroadSnapEvent;
+  originalId: number;
+  newId1: number;
+  newId2: number;
+  tiles1: TileRef[];
+  tiles2: TileRef[];
 }
 
 export interface ConquestUpdate {

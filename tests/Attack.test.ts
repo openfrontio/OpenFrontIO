@@ -183,7 +183,7 @@ describe("Attack race condition with alliance requests", () => {
       null,
       "playerB_id",
     );
-    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 11));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
@@ -223,6 +223,9 @@ describe("Attack race condition with alliance requests", () => {
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
+
+    expect(playerA.isAlive()).toBe(true);
+    expect(playerB.isAlive()).toBe(true);
 
     // Player A should not be marked as traitor because the alliance was formed after the attack started
     expect(playerA.isTraitor()).toBe(false);
@@ -391,17 +394,17 @@ describe("Attack immunity", () => {
 
   test("Ensure a player can't attack during all the immunity phase", async () => {
     // Execute a few ticks but stop right before the immunity phase is over
-    for (let i = 0; i < immunityPhaseTicks - 1; i++) {
+    for (let i = 0; i < immunityPhaseTicks - 2; i++) {
       game.executeNextTick();
     }
     // Player A attacks Player B
     game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
-    game.executeNextTick(); // ticks === immunityPhaseTicks here
+    game.executeNextTick(); // ticks === immunityPhaseTicks - 1 here
     // Attack is not possible during immunity
     expect(playerA.outgoingAttacks()).toHaveLength(0);
 
     // Retry after the immunity is over
-    game.executeNextTick(); // ticks === immunityPhaseTicks + 1
+    game.executeNextTick(); // ticks === immunityPhaseTicks
     game.addExecution(new AttackExecution(null, playerA, playerB.id(), null));
     game.executeNextTick();
     // Attack is now possible right after
