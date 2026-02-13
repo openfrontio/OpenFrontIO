@@ -158,9 +158,7 @@ export class ChatModal extends LitElement {
         </div>
 
         <div class="chat-preview">
-          ${this.previewText
-            ? translateText(this.previewText)
-            : translateText("chat.build")}
+          ${this.previewText ?? translateText("chat.build")}
         </div>
         <div class="chat-send">
           <button
@@ -208,7 +206,9 @@ export class ChatModal extends LitElement {
     this.selectedPhraseText = translateText(
       `chat.${this.selectedCategory}.${phrase.key}`,
     );
-    this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
+    this.previewText = translateText(
+      `chat.${this.selectedCategory}.${phrase.key}`,
+    );
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.requiresPlayer2Selection = phrase.requiresPlayer2 ?? false;
     this.requestUpdate();
