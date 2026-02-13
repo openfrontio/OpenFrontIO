@@ -671,7 +671,8 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "snowballing": "[P1] is snowballing too fast!",
       "cheating": "[P1] is cheating!",
-      "stop_trading": "Stop trading with [P1]!"
+      "stop_trading": "Stop trading with [P1]!",
+      "teaming_with": "[P1] is teaming with [P2]!"
     }
   },
   "build_menu": {

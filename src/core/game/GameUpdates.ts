@@ -248,6 +248,7 @@ export type DisplayChatMessageUpdate = {
   key: string;
   category: string;
   target: string | undefined;
+  target2: string | undefined;
   playerID: number | null;
   isFrom: boolean;
   recipient: string;

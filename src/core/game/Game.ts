@@ -819,6 +819,7 @@ export interface Game extends GameMap {
     message: string,
     category: string,
     target: PlayerID | undefined,
+    target2: PlayerID | undefined,
     playerID: PlayerID | null,
     isFrom: boolean,
     recipient: string,

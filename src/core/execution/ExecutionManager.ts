@@ -116,6 +116,7 @@ export class Executor {
           intent.recipient,
           intent.quickChatKey,
           intent.target,
+          intent.target2,
         );
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
