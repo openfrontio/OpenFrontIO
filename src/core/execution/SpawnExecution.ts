@@ -113,6 +113,11 @@ export class SpawnExecution implements Execution {
         continue;
       }
 
+      if (!getSpawnTiles(this.mg, tile, true)) {
+        // if some of the spawn tile is outside of the land, we want to find another spawn tile
+        continue;
+      }
+
       return tile;
     }
 
