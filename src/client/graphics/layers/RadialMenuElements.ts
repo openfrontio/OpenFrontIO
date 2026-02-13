@@ -3,6 +3,7 @@ import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { resolveAttackSourceTile } from "../../attackSource";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
@@ -589,7 +590,7 @@ export const centerButtonElement: CenterButtonElement = {
 
     return !params.playerActions.canAttack;
   },
-  action: (params: MenuElementParams) => {
+  action: async (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
     } else {
@@ -604,9 +605,20 @@ export const centerButtonElement: CenterButtonElement = {
           );
         }
       } else {
+        const targetId = params.selected?.id() ?? null;
+        const useLocalAttack = params.uiState?.localAttackHeld ?? false;
+        const sourceTile = useLocalAttack
+          ? await resolveAttackSourceTile(
+              params.game,
+              params.myPlayer,
+              targetId,
+              params.tile,
+            )
+          : null;
         params.playerActionHandler.handleAttack(
           params.myPlayer,
-          params.selected?.id() ?? null,
+          targetId,
+          sourceTile,
         );
       }
     }

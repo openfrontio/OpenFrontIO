@@ -5,4 +5,5 @@ export interface UIState {
   ghostStructure: UnitType | null;
   overlappingRailroads: number[];
   rocketDirectionUp: boolean;
+  localAttackHeld: boolean;
 }

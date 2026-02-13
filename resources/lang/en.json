@@ -547,6 +547,8 @@
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "local_attack": "Localized Attack (Hold + Click)",
+    "local_attack_desc": "Hold and attack-click to start attacks from the nearest border tile to the target.",
     "swap_direction": "Swap Rocket Direction",
     "swap_direction_desc": "Toggle rocket launch direction (up/down).",
     "zoom_controls": "Zoom Controls",

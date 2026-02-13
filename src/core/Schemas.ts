@@ -293,6 +293,7 @@ export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: ID.nullable(),
   troops: z.number().nonnegative().nullable(),
+  sourceTile: z.number().nullable().optional(),
 });
 
 export const SpawnIntentSchema = z.object({
