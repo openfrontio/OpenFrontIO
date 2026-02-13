@@ -1,6 +1,5 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { cancelNukesBetweenAlliedPlayers } from "../execution/alliance/AllianceRequestExecution";
 import {
   AbstractGraph,
   AbstractGraphBuilder,
@@ -333,18 +332,7 @@ export class GameImpl implements Game {
       request,
     );
 
-    // Update relations
-    requestor.updateRelation(recipient, 100);
-    recipient.updateRelation(requestor, 100);
-
-    // Automatically remove embargoes only if they were automatically created
-    if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient);
-    if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor);
-
-    // Cancel incoming nukes between players
-    cancelNukesBetweenAlliedPlayers(this, requestor, recipient);
+    alliance.onCreate();
 
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,

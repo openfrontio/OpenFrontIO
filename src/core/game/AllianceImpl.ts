@@ -1,4 +1,11 @@
-import { Game, MutableAlliance, Player, Tick } from "./Game";
+import {
+  Game,
+  MessageType,
+  MutableAlliance,
+  Player,
+  Tick,
+  UnitType,
+} from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
   private extensionRequestedRequestor_: boolean = false;
@@ -74,5 +81,69 @@ export class AllianceImpl implements MutableAlliance {
 
   expiresAt(): Tick {
     return this.expiresAt_;
+  }
+
+  onCreate(): void {
+    // Update relations
+    this.requestor_.updateRelation(this.recipient_, 100);
+    this.recipient_.updateRelation(this.requestor_, 100);
+
+    // Automatically remove embargoes only if they were automatically created
+    if (this.requestor_.hasEmbargoAgainst(this.recipient_))
+      this.requestor_.endTemporaryEmbargo(this.recipient_);
+    if (this.recipient_.hasEmbargoAgainst(this.requestor_))
+      this.recipient_.endTemporaryEmbargo(this.requestor_);
+
+    // Cancel incoming nukes between players
+    this.cancelNukesBetweenAlliedPlayers();
+  }
+
+  cancelNukesBetweenAlliedPlayers(): void {
+    const neutralized = new Map<Player, number>();
+
+    const players = [this.requestor_, this.recipient_];
+
+    for (const launcher of players) {
+      for (const unit of launcher.units(
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      )) {
+        if (!unit.isActive() || unit.reachedTarget()) continue;
+
+        const targetTile = unit.targetTile();
+        if (!targetTile) continue;
+
+        const targetOwner = this.mg.owner(targetTile);
+        if (!targetOwner.isPlayer()) continue;
+
+        const other =
+          launcher === this.requestor_ ? this.recipient_ : this.requestor_;
+        if (targetOwner !== other) continue;
+
+        unit.delete(false);
+        neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);
+      }
+    }
+
+    for (const [launcher, count] of neutralized) {
+      const other =
+        launcher === this.requestor_ ? this.recipient_ : this.requestor_;
+
+      this.mg.displayMessage(
+        "events_display.alliance_nukes_destroyed_outgoing",
+        MessageType.ALLIANCE_ACCEPTED,
+        launcher.id(),
+        undefined,
+        { name: other.displayName(), count },
+      );
+
+      this.mg.displayMessage(
+        "events_display.alliance_nukes_destroyed_incoming",
+        MessageType.ALLIANCE_ACCEPTED,
+        other.id(),
+        undefined,
+        { name: launcher.displayName(), count },
+      );
+    }
   }
 }
