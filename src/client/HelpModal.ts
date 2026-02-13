@@ -154,7 +154,7 @@ export class HelpModal extends BaseModal {
               <iframe
                 id="tutorial-video-iframe"
                 class="absolute top-0 left-0 w-full h-full"
-                src="${TUTORIAL_VIDEO_URL}"
+                src="${this.isModalOpen ? TUTORIAL_VIDEO_URL : ""}"
                 title="${translateText("help_modal.video_tutorial_title")}"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

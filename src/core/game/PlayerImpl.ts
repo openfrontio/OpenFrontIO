@@ -450,6 +450,10 @@ export class PlayerImpl implements Player {
     this.mg.breakAlliance(this, alliance);
   }
 
+  removeAllAlliances(): void {
+    this.mg.removeAlliancesByPlayerSilently(this);
+  }
+
   isTraitor(): boolean {
     return this.getTraitorRemainingTicks() > 0;
   }
@@ -960,20 +964,25 @@ export class PlayerImpl implements Player {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
+      let canBuild: TileRef | false = false;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
+        if (tile !== null) {
+          canBuild = this.canBuild(u, tile, validTiles);
+        }
       }
       return {
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canBuild,
+        canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+        overlappingRailroads:
+          canBuild !== false
+            ? this.mg.railNetwork().overlappingRailroads(canBuild)
+            : [],
       } as BuildableUnit;
     });
   }
@@ -988,7 +997,10 @@ export class PlayerImpl implements Player {
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (!this.isAlive() || this.gold() < cost) {
+    if (
+      unitType !== UnitType.MIRVWarhead &&
+      (!this.isAlive() || this.gold() < cost)
+    ) {
       return false;
     }
     switch (unitType) {

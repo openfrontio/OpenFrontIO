@@ -1,6 +1,7 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
+import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -16,6 +17,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  UnitType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -30,7 +32,6 @@ import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { simpleHash } from "./Util";
-import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -48,7 +49,7 @@ export async function createGameRunner(
 
   const humans = gameStart.players.map((p) => {
     return new PlayerInfo(
-      p.clientID === clientID ? p.username : censorNameWithClanTag(p.username),
+      p.username,
       PlayerType.Human,
       p.clientID,
       random.nextID(),
@@ -106,6 +107,11 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
+    if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
+      this.game.addExecution(
+        new RecomputeRailClusterExecution(this.game.railNetwork()),
+      );
+    }
   }
 
   public addTurn(turn: Turn): void {

@@ -118,6 +118,8 @@ export enum GameMapType {
   Didier = "Didier",
   DidierFrance = "Didier France",
   AmazonRiver = "Amazon River",
+  Yenisei = "Yenisei",
+  TradersDream = "Traders Dream",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -165,6 +167,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.TwoLakes,
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
+    GameMapType.Yenisei,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -176,6 +179,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+    GameMapType.TradersDream,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -659,6 +663,7 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
+  removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
 
@@ -843,6 +848,7 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
+  overlappingRailroads: number[];
 }
 
 export interface PlayerProfile {

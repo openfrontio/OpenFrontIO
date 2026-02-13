@@ -7,6 +7,7 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -123,6 +124,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const attacksDisplay = document.querySelector(
+    "attacks-display",
+  ) as AttacksDisplay;
+  if (!(attacksDisplay instanceof AttacksDisplay)) {
+    console.error("attacks display not found");
+  }
+  attacksDisplay.eventBus = eventBus;
+  attacksDisplay.game = game;
+  attacksDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -271,13 +282,14 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game, transformHandler),
+    new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
+    attacksDisplay,
     chatDisplay,
     buildMenu,
     new MainRadialMenu(

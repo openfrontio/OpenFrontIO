@@ -66,6 +66,8 @@ const frequency: Partial<Record<GameMapName, number>> = {
   AmazonRiver: 3,
   Sierpinski: 10,
   TheBox: 3,
+  Yenisei: 6,
+  TradersDream: 4,
 };
 
 interface MapWithMode {
@@ -148,8 +150,7 @@ export class MapPlaylist {
         startingGold,
       },
       startingGold,
-      difficulty:
-        playerTeams === HumansVsNations ? Difficulty.Medium : Difficulty.Easy,
+      difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
@@ -159,7 +160,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: isCompact ? 100 : 400,
-      spawnImmunityDuration: 5 * 10,
+      spawnImmunityDuration: startingGold ? 30 * 10 : 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
