@@ -233,6 +233,7 @@ export class ChatModal extends LitElement {
     this.previewText =
       this.selectedPhraseTemplate?.replace("[P1]", player.name()) ?? null;
     this.selectedPlayer = player;
+    this.selectedPlayer2 = null;
     this.selectingPlayer2 = this.requiresPlayer2Selection;
     this.requiresPlayerSelection = this.requiresPlayer2Selection;
     this.requestUpdate();
