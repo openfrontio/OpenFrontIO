@@ -127,11 +127,11 @@ export class ChatModal extends LitElement {
             ? html`
                 <div class="chat-column">
                   <div class="column-title">
-                    ${translateText("chat.player")}${this.selectingPlayer2
-                      ? " [P2]"
+                    ${this.selectingPlayer2
+                      ? translateText("chat.player_2")
                       : this.requiresPlayer2Selection
-                        ? " [P1]"
-                        : ""}
+                        ? translateText("chat.player_1")
+                        : translateText("chat.player")}
                   </div>
 
                   <input
@@ -154,7 +154,8 @@ export class ChatModal extends LitElement {
                           style="border: 2px solid ${player
                             .territoryColor()
                             .toHex()};"
-                          ?disabled=${this.selectingPlayer2 && this.selectedPlayer === player}
+                          ?disabled=${this.selectingPlayer2 &&
+                          this.selectedPlayer === player}
                           @click=${() => this.selectPlayer(player)}
                         >
                           ${player.name()}
