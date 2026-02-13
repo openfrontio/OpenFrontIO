@@ -51,8 +51,6 @@ import {
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
 
-const UNIT_TYPES = Object.freeze(Object.values(UnitType));
-
 interface Target {
   tick: Tick;
   target: Player;
