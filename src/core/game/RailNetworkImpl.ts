@@ -249,10 +249,10 @@ export class RailNetworkImpl implements RailNetwork {
     }
 
     const neighbors = this.game.nearbyUnits(tile, maxRange, [
-        UnitType.City,
-        UnitType.Factory,
-        UnitType.Port,
-      ]);
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+    ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
     const paths: TileRef[][] = [];

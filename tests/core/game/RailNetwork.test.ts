@@ -174,7 +174,7 @@ describe("RailNetworkImpl", () => {
       const railGridMock = { query: vi.fn(() => new Set([{}])) };
       (network as any).railGrid = railGridMock;
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
       expect(railGridMock.query).toHaveBeenCalledWith(tile, 3);
     });
@@ -185,7 +185,7 @@ describe("RailNetworkImpl", () => {
       (network as any).railGrid = railGridMock;
       game.nearbyUnits.mockReturnValue([]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
     });
 
@@ -205,7 +205,7 @@ describe("RailNetworkImpl", () => {
         { unit: neighborStation.unit, distSquared: 400 },
       ]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([mockPath]);
       expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
     });
@@ -224,7 +224,7 @@ describe("RailNetworkImpl", () => {
         { unit: neighborStation.unit, distSquared: 50 },
       ]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
     });
 
@@ -237,7 +237,7 @@ describe("RailNetworkImpl", () => {
 
       game.nearbyUnits.mockReturnValue([{ unit: { id: 1 }, distSquared: 400 }]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
     });
 
@@ -257,7 +257,7 @@ describe("RailNetworkImpl", () => {
         { unit: neighborStation.unit, distSquared: 400 },
       ]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result).toEqual([]);
     });
 
@@ -286,7 +286,7 @@ describe("RailNetworkImpl", () => {
 
       game.nearbyUnits.mockReturnValue(neighbors);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       expect(result.length).toBe(5);
     });
 
@@ -322,7 +322,7 @@ describe("RailNetworkImpl", () => {
         { unit: stationB.unit, distSquared: 900 },
       ]);
 
-      const result = network.computeGhostRailPaths(tile);
+      const result = network.computeGhostRailPaths(UnitType.City, tile);
       // Only station A should get a path; B is reachable from A within maxConnectionDistance - 1
       expect(result.length).toBe(1);
       expect(pathService.findTilePath).toHaveBeenCalledTimes(1);
