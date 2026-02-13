@@ -211,6 +211,9 @@ export class ChatModal extends LitElement {
     );
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.requiresPlayer2Selection = phrase.requiresPlayer2 ?? false;
+    this.selectedPlayer = null;
+    this.selectedPlayer2 = null;
+    this.selectingPlayer2 = false;
     this.requestUpdate();
   }
 
