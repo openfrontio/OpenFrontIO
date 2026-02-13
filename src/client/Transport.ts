@@ -124,6 +124,7 @@ export class SendQuickChatEvent implements GameEvent {
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
     public readonly target?: PlayerID,
+    public readonly target2?: PlayerID,
   ) {}
 }
 
@@ -540,6 +541,7 @@ export class Transport {
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
       target: event.target,
+      target2: event.target2,
     });
   }
 
