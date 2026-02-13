@@ -254,6 +254,12 @@ export class DefaultConfig implements Config {
   goldMultiplier(): number {
     return this._gameConfig.goldMultiplier ?? 1;
   }
+  portGoldMultiplier(): number {
+    return this._gameConfig.portGoldMultiplier ?? 1;
+  }
+  factoryGoldMultiplier(): number {
+    return this._gameConfig.factoryGoldMultiplier ?? 1;
+  }
   startingGold(playerInfo: PlayerInfo): Gold {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 0n;
@@ -267,7 +273,7 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplier() * this.factoryGoldMultiplier();
     let baseGold: bigint;
     switch (rel) {
       case "ally":
@@ -302,7 +308,7 @@ export class DefaultConfig implements Config {
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
-    const multiplier = this.goldMultiplier();
+    const multiplier = this.goldMultiplier() * this.portGoldMultiplier();
     return BigInt(Math.floor(baseGold * bonus * multiplier));
   }
 
