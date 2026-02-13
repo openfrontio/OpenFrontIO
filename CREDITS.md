@@ -49,6 +49,11 @@ Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://ope
 [USA Hawaii relief location map](https://commons.wikimedia.org/wiki/File:USA_Hawaii_relief_location_map.svg) by NordNordWest
 Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/de/deed.en)
 
+### Nile Delta Map
+
+[Niledelta 33](https://commons.wikimedia.org/wiki/File:Niledelta_33.svg) by John187
+Licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
