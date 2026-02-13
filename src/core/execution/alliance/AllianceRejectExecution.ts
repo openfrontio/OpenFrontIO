@@ -11,7 +11,7 @@ export class AllianceRejectExecution implements Execution {
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.requestorID)) {
       console.warn(
-        `AllianceRejectExecution requester ${this.requestorID} not found`,
+        `[AllianceRejectExecution] Requestor ${this.requestorID} not found`,
       );
       this.active = false;
       return;
@@ -19,13 +19,17 @@ export class AllianceRejectExecution implements Execution {
     const requestor = mg.player(this.requestorID);
 
     if (requestor.isFriendly(this.recipient)) {
-      console.warn("already allied");
+      console.warn(
+        `[AllianceRejectExecution] Player ${this.requestorID} cannot reject alliance with ${this.recipient.id}, already allied`,
+      );
     } else {
       const request = requestor
         .outgoingAllianceRequests()
         .find((ar) => ar.recipient() === this.recipient);
       if (request === undefined) {
-        console.warn("no alliance request found");
+        console.warn(
+          `[AllianceRejectExecution] Player ${this.requestorID} cannot reject alliance with ${this.recipient.id}, no alliance request found`,
+        );
       } else {
         request.reject();
       }
