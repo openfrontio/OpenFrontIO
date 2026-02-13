@@ -790,15 +790,15 @@
     "title_with_name": "向 {name} 发送军队",
     "available_tooltip": "你的剩余军队",
     "min_keep": "最小保留值",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "军队滑块",
-    "capacity_note": "接收者现在仅能接收 {{amount}}。"
+    "capacity_note": "接收者现在仅能接收 {amount}。"
   },
   "send_gold_modal": {
     "title_with_name": "向 {name} 发送黄金",
     "available_tooltip": "你的剩余黄金",
     "aria_slider": "数量滑块",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "回放速度",

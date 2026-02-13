@@ -790,15 +790,15 @@
     "title_with_name": "Stuur Troepen naar {name}",
     "available_tooltip": "Jouw nu beschikbare troepen",
     "min_keep": "Min. houden",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Troepen schuifbalk",
-    "capacity_note": "Ontvanger kan slechts {{amount}} accepteren momenteel."
+    "capacity_note": "Ontvanger kan slechts {amount} accepteren momenteel."
   },
   "send_gold_modal": {
     "title_with_name": "Stuur Goud naar {name}",
     "available_tooltip": "Jouw nu beschikbare goud",
     "aria_slider": "Bedrag schuifbalk",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Afspeelsnelheid",
