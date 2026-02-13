@@ -967,7 +967,8 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return UNIT_TYPES.map((u) => {
+
+    return this.mg.getPlayerBuildableUnitTypes().map((u) => {
       const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;

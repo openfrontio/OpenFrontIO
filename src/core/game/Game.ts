@@ -225,12 +225,11 @@ export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
+  playerBuildable: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
-  canBuildTrainStation?: boolean;
-  experimental?: boolean;
 }
 
 export enum UnitType {
@@ -779,7 +778,7 @@ export interface Game extends GameMap {
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
-  getStructureTypes(): UnitType[];
+  getStructureTypes(): readonly UnitType[];
   isStructureType(type: UnitType): boolean;
 
   addExecution(...exec: Execution[]): void;

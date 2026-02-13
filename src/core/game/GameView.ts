@@ -630,9 +630,10 @@ export class GameView implements GameMap {
       } satisfies PlayerCosmetics);
     }
 
-    this._structureTypes = Object.values(UnitType).filter(
-      (t) => this._config.unitInfo(t).territoryBound,
-    );
+    this._structureTypes =
+      Object.values(UnitType).filter(
+        (t) => this._config.unitInfo(t).territoryBound,
+      ) ?? [];
     this._structureTypesSet = new Set(this._structureTypes);
   }
 
