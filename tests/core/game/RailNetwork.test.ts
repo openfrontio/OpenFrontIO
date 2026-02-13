@@ -65,6 +65,7 @@ describe("RailNetworkImpl", () => {
       findStationsPath: vi.fn(() => [0]),
     };
     game = {
+      hasUnitNearby: vi.fn(() => true),
       nearbyUnits: vi.fn(() => []),
       addExecution: vi.fn(),
       config: () => ({
