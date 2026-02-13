@@ -974,6 +974,19 @@ export class PlayerImpl implements Player {
           canBuild = this.canBuild(u, tile, validTiles);
         }
       }
+      let ghostRailPaths: TileRef[][] = [];
+      if (
+        canBuild !== false &&
+        (u === UnitType.City || u === UnitType.Port) &&
+        this.mg.hasUnitNearby(
+          canBuild,
+          this.mg.config().trainStationMaxRange(),
+          UnitType.Factory,
+        )
+      ) {
+        ghostRailPaths = this.mg.railNetwork().computeGhostRailPaths(canBuild);
+      }
+
       return {
         type: u,
         canBuild,
@@ -983,6 +996,7 @@ export class PlayerImpl implements Player {
           canBuild !== false
             ? this.mg.railNetwork().overlappingRailroads(canBuild)
             : [],
+        ghostRailPaths,
       } as BuildableUnit;
     });
   }

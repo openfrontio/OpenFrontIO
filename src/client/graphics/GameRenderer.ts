@@ -54,11 +54,13 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = {
+  const uiState: UIState = {
     attackRatio: 20,
     ghostStructure: null,
+    overlappingRailroads: [],
+    ghostRailPaths: [],
     rocketDirectionUp: true,
-  } as UIState;
+  };
 
   //hide when the game renders
   const startingModal = document.querySelector(

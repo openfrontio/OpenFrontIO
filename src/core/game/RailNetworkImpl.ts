@@ -228,6 +228,52 @@ export class RailNetworkImpl implements RailNetwork {
     );
   }
 
+  computeGhostRailPaths(tile: TileRef): TileRef[][] {
+    const snappableRails = this.railGrid.query(tile, this.stationRadius);
+    if (snappableRails.size > 0) {
+      return [];
+    }
+
+    const maxRange = this.game.config().trainStationMaxRange();
+    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    const maxPathSize = this.game.config().railroadMaxSize();
+
+    const neighbors = this.game.nearbyUnits(tile, maxRange, [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+    ]);
+    neighbors.sort((a, b) => a.distSquared - b.distSquared);
+
+    const paths: TileRef[][] = [];
+    const connectedStations: TrainStation[] = [];
+    for (const neighbor of neighbors) {
+      if (paths.length >= 5) break;
+      if (neighbor.distSquared <= minRangeSquared) continue;
+
+      const neighborStation = this._stationManager.findStation(neighbor.unit);
+      if (!neighborStation) continue;
+
+      const alreadyReachable = connectedStations.some(
+        (s) =>
+          this.distanceFrom(
+            neighborStation,
+            s,
+            this.maxConnectionDistance - 1,
+          ) !== -1,
+      );
+      if (alreadyReachable) continue;
+
+      const path = this.pathService.findTilePath(tile, neighborStation.tile());
+      if (path.length > 0 && path.length < maxPathSize) {
+        paths.push(path);
+        connectedStations.push(neighborStation);
+      }
+    }
+
+    return paths;
+  }
+
   private connectToNearbyStations(station: TrainStation) {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
