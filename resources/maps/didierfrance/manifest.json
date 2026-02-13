@@ -17,343 +17,209 @@
   "name": "Didier (France)",
   "nations": [
     {
-      "coordinates": [
-        1200,
-        1736
-      ],
-      "flag": "1_Occitania",
-      "name": "Occitania"
-    },
-    {
-      "coordinates": [
-        120,
-        680
-      ],
+      "coordinates": [120, 680],
       "flag": "fr",
       "name": "Brest"
     },
     {
-      "coordinates": [
-        551,
-        748
-      ],
+      "coordinates": [551, 748],
       "flag": "fr",
       "name": "Rennes"
     },
     {
-      "coordinates": [
-        752,
-        500
-      ],
+      "coordinates": [752, 500],
       "flag": "fr",
       "name": "Caen"
     },
     {
-      "coordinates": [
-        841,
-        773
-      ],
+      "coordinates": [841, 773],
       "flag": "fr",
       "name": "Le Mans"
     },
     {
-      "coordinates": [
-        829,
-        424
-      ],
+      "coordinates": [829, 424],
       "flag": "fr",
       "name": "Le Havre"
     },
     {
-      "coordinates": [
-        980,
-        437
-      ],
+      "coordinates": [980, 437],
       "flag": "fr",
       "name": "Rouen"
     },
     {
-      "coordinates": [
-        1168,
-        577
-      ],
+      "coordinates": [1168, 577],
       "flag": "fr",
       "name": "Paris"
     },
     {
-      "coordinates": [
-        1165,
-        331
-      ],
+      "coordinates": [1165, 331],
       "flag": "fr",
       "name": "Amiens"
     },
     {
-      "coordinates": [
-        1279,
-        155
-      ],
+      "coordinates": [1279, 155],
       "flag": "fr",
       "name": "Lille"
     },
     {
-      "coordinates": [
-        1096,
-        81
-      ],
+      "coordinates": [1096, 81],
       "flag": "fr",
       "name": "Calais"
     },
     {
-      "coordinates": [
-        1426,
-        480
-      ],
+      "coordinates": [1426, 480],
       "flag": "fr",
       "name": "Reims"
     },
     {
-      "coordinates": [
-        1758,
-        517
-      ],
+      "coordinates": [1758, 517],
       "flag": "fr",
       "name": "Metz"
     },
     {
-      "coordinates": [
-        1762,
-        613
-      ],
+      "coordinates": [1762, 613],
       "flag": "fr",
       "name": "Nancy"
     },
     {
-      "coordinates": [
-        1999,
-        642
-      ],
+      "coordinates": [1999, 642],
       "flag": "fr",
       "name": "Strasbourg"
     },
     {
-      "coordinates": [
-        1939,
-        831
-      ],
+      "coordinates": [1939, 831],
       "flag": "fr",
       "name": "Mulhouse"
     },
     {
-      "coordinates": [
-        1735,
-        948
-      ],
+      "coordinates": [1735, 948],
       "flag": "fr",
       "name": "Besançon"
     },
     {
-      "coordinates": [
-        1583,
-        928
-      ],
+      "coordinates": [1583, 928],
       "flag": "fr",
       "name": "Dijon"
     },
     {
-      "coordinates": [
-        1003,
-        799
-      ],
+      "coordinates": [1003, 799],
       "flag": "fr",
       "name": "Orléans"
     },
     {
-      "coordinates": [
-        916,
-        911
-      ],
+      "coordinates": [916, 911],
       "flag": "fr",
       "name": "Tours"
     },
     {
-      "coordinates": [
-        1001,
-        1259
-      ],
+      "coordinates": [1001, 1259],
       "flag": "fr",
       "name": "Limoges"
     },
     {
-      "coordinates": [
-        861,
-        1095
-      ],
+      "coordinates": [861, 1095],
       "flag": "fr",
       "name": "Poitiers"
     },
     {
-      "coordinates": [
-        939,
-        1186
-      ],
+      "coordinates": [939, 1186],
       "flag": "fr",
       "name": "La Rochelle"
     },
     {
-      "coordinates": [
-        569,
-        949
-      ],
+      "coordinates": [569, 949],
       "flag": "fr",
       "name": "Nantes"
     },
     {
-      "coordinates": [
-        721,
-        1479
-      ],
+      "coordinates": [721, 1479],
       "flag": "fr",
       "name": "Bordeaux"
     },
     {
-      "coordinates": [
-        1033,
-        1743
-      ],
+      "coordinates": [1033, 1743],
       "flag": "fr",
       "name": "Toulouse"
     },
     {
-      "coordinates": [
-        1258,
-        1929
-      ],
+      "coordinates": [1258, 1929],
       "flag": "fr",
       "name": "Perpignan"
     },
     {
-      "coordinates": [
-        1407,
-        1739
-      ],
+      "coordinates": [1407, 1739],
       "flag": "fr",
       "name": "Montpellier"
     },
     {
-      "coordinates": [
-        1480,
-        1690
-      ],
+      "coordinates": [1480, 1690],
       "flag": "fr",
       "name": "Nîmes"
     },
     {
-      "coordinates": [
-        1555,
-        1669
-      ],
+      "coordinates": [1555, 1669],
       "flag": "fr",
       "name": "Avignon"
     },
     {
-      "coordinates": [
-        1634,
-        1808
-      ],
+      "coordinates": [1634, 1808],
       "flag": "fr",
       "name": "Marseille"
     },
     {
-      "coordinates": [
-        1722,
-        1843
-      ],
+      "coordinates": [1722, 1843],
       "flag": "fr",
       "name": "Toulon"
     },
     {
-      "coordinates": [
-        1829,
-        1817
-      ],
+      "coordinates": [1829, 1817],
       "flag": "fr",
       "name": "Saint-Tropez"
     },
     {
-      "coordinates": [
-        1887,
-        1749
-      ],
+      "coordinates": [1887, 1749],
       "flag": "fr",
       "name": "Cannes"
     },
     {
-      "coordinates": [
-        1925,
-        1718
-      ],
+      "coordinates": [1925, 1718],
       "flag": "fr",
       "name": "Nice"
     },
     {
-      "coordinates": [
-        565,
-        1784
-      ],
+      "coordinates": [565, 1784],
       "flag": "fr",
       "name": "Biarritz"
     },
     {
-      "coordinates": [
-        1483,
-        1349
-      ],
+      "coordinates": [1483, 1349],
       "flag": "fr",
       "name": "Saint-Étienne"
     },
     {
-      "coordinates": [
-        1558,
-        1278
-      ],
+      "coordinates": [1558, 1278],
       "flag": "fr",
       "name": "Lyon"
     },
     {
-      "coordinates": [
-        1692,
-        1402
-      ],
+      "coordinates": [1692, 1402],
       "flag": "fr",
       "name": "Grenoble"
     },
     {
-      "coordinates": [
-        1459,
-        1888
-      ],
+      "coordinates": [1459, 1888],
       "name": "Didier's Right Foot"
     },
     {
-      "coordinates": [
-        482,
-        1196
-      ],
+      "coordinates": [482, 1196],
       "name": "Didier's Left Hand"
     },
     {
-      "coordinates": [
-        1237,
-        1147
-      ],
+      "coordinates": [1237, 1147],
       "name": "Napolidier"
     },
     {
-      "coordinates": [
-        2012,
-        2198
-      ],
+      "coordinates": [2012, 2198],
       "name": "Arryn"
     }
   ]

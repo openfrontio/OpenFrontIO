@@ -17,42 +17,27 @@
   "name": "Svalmel",
   "nations": [
     {
-      "coordinates": [
-        900,
-        850
-      ],
+      "coordinates": [900, 850],
       "flag": "santa_claus",
       "name": "Santa Claus"
     },
     {
-      "coordinates": [
-        275,
-        525
-      ],
+      "coordinates": [275, 525],
       "flag": "no",
       "name": "Svalbard"
     },
     {
-      "coordinates": [
-        860,
-        1360
-      ],
+      "coordinates": [860, 1360],
       "flag": "ca",
       "name": "Melville"
     },
     {
-      "coordinates": [
-        1370,
-        465
-      ],
+      "coordinates": [1370, 465],
       "flag": "ca",
       "name": "Bathurst"
     },
     {
-      "coordinates": [
-        910,
-        250
-      ],
+      "coordinates": [910, 250],
       "flag": "no",
       "name": "Nordaustlandet"
     }

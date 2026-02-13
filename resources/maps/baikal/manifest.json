@@ -17,90 +17,57 @@
   "name": "Baikal",
   "nations": [
     {
-      "coordinates": [
-        695,
-        665
-      ],
+      "coordinates": [695, 665],
       "flag": "bai_irk",
       "name": "Irkutsk Oblast"
     },
     {
-      "coordinates": [
-        2188,
-        1001
-      ],
+      "coordinates": [2188, 1001],
       "flag": "bai_bur",
       "name": "Republic of Buryatia"
     },
     {
-      "coordinates": [
-        754,
-        1170
-      ],
+      "coordinates": [754, 1170],
       "flag": "ru",
       "name": "Olkhon Island"
     },
     {
-      "coordinates": [
-        1025,
-        831
-      ],
+      "coordinates": [1025, 831],
       "flag": "ru",
       "name": "Cape Khoboy"
     },
     {
-      "coordinates": [
-        361,
-        1195
-      ],
+      "coordinates": [361, 1195],
       "flag": "ru",
       "name": "Ogoi Island"
     },
     {
-      "coordinates": [
-        1805,
-        115
-      ],
+      "coordinates": [1805, 115],
       "flag": "ru",
       "name": "Bolshoy Ushkan Island"
     },
     {
-      "coordinates": [
-        2030,
-        335
-      ],
+      "coordinates": [2030, 335],
       "flag": "ru",
       "name": "Svyatoy Nos Peninsula"
     },
     {
-      "coordinates": [
-        2194,
-        659
-      ],
+      "coordinates": [2194, 659],
       "flag": "ru",
       "name": "Chivyrkuisky Bay"
     },
     {
-      "coordinates": [
-        309,
-        230
-      ],
+      "coordinates": [309, 230],
       "flag": "ru",
       "name": "Chanchur"
     },
     {
-      "coordinates": [
-        2165,
-        1439
-      ],
+      "coordinates": [2165, 1439],
       "flag": "ru",
       "name": "Zabaykalsky National Park"
     },
     {
-      "coordinates": [
-        132,
-        751
-      ],
+      "coordinates": [132, 751],
       "flag": "ru",
       "name": "Listvyanka"
     }

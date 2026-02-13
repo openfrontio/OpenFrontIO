@@ -17,93 +17,57 @@
   "name": "Italia",
   "nations": [
     {
-      "coordinates": [
-        1038,
-        993
-      ],
+      "coordinates": [1038, 993],
       "name": "Kingdom of the Two Sicilies"
     },
     {
-      "coordinates": [
-        370,
-        1137
-      ],
+      "coordinates": [370, 1137],
       "flag": "tn",
       "name": "Beylik of Tunis"
     },
     {
-      "coordinates": [
-        785,
-        578
-      ],
+      "coordinates": [785, 578],
       "flag": "va",
       "name": "Papal States"
     },
     {
-      "coordinates": [
-        625,
-        534
-      ],
+      "coordinates": [625, 534],
       "name": "Tuscany"
     },
     {
-      "coordinates": [
-        595,
-        190
-      ],
+      "coordinates": [595, 190],
       "flag": "venice",
       "name": "Venice"
     },
     {
-      "coordinates": [
-        469,
-        386
-      ],
+      "coordinates": [469, 386],
       "name": "Modena"
     },
     {
-      "coordinates": [
-        391,
-        254
-      ],
+      "coordinates": [391, 254],
       "name": "Parma"
     },
     {
-      "coordinates": [
-        361,
-        68
-      ],
+      "coordinates": [361, 68],
       "flag": "ch",
       "name": "Switzerland"
     },
     {
-      "coordinates": [
-        278,
-        774
-      ],
+      "coordinates": [278, 774],
       "name": "Kingdom of Sardinia"
     },
     {
-      "coordinates": [
-        29,
-        266
-      ],
+      "coordinates": [29, 266],
       "flag": "fr",
       "name": "France"
     },
     {
-      "coordinates": [
-        747,
-        39
-      ],
+      "coordinates": [747, 39],
       "flag": "Habsburg Austria",
       "name": "Austrian Empire"
     },
     {
-      "coordinates": [
-        1238,
-        349
-      ],
+      "coordinates": [1238, 349],
       "name": "Ottoman Empire"
     }
   ]

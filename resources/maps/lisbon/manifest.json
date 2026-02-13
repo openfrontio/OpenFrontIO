@@ -17,122 +17,77 @@
   "name": "Lisbon",
   "nations": [
     {
-      "coordinates": [
-        750,
-        630
-      ],
+      "coordinates": [750, 630],
       "flag": "pt",
       "name": "Lisbon"
     },
     {
-      "coordinates": [
-        602,
-        450
-      ],
+      "coordinates": [602, 450],
       "flag": "pt",
       "name": "Amadora"
     },
     {
-      "coordinates": [
-        120,
-        644
-      ],
+      "coordinates": [120, 644],
       "flag": "pt",
       "name": "Cascais"
     },
     {
-      "coordinates": [
-        372,
-        334
-      ],
+      "coordinates": [372, 334],
       "flag": "pt",
       "name": "Pero Pinheiro"
     },
     {
-      "coordinates": [
-        214,
-        36
-      ],
+      "coordinates": [214, 36],
       "flag": "pt",
       "name": "Ericeira"
     },
     {
-      "coordinates": [
-        924,
-        210
-      ],
+      "coordinates": [924, 210],
       "flag": "pt",
       "name": "Alverca do Ribatejo"
     },
     {
-      "coordinates": [
-        680,
-        760
-      ],
+      "coordinates": [680, 760],
       "flag": "pt",
       "name": "Almada"
     },
     {
-      "coordinates": [
-        944,
-        808
-      ],
+      "coordinates": [944, 808],
       "flag": "pt",
       "name": "Barreiro"
     },
     {
-      "coordinates": [
-        1078,
-        630
-      ],
+      "coordinates": [1078, 630],
       "flag": "pt",
       "name": "Montijo"
     },
     {
-      "coordinates": [
-        762,
-        1266
-      ],
+      "coordinates": [762, 1266],
       "flag": "pt",
       "name": "Sesimbra"
     },
     {
-      "coordinates": [
-        1330,
-        60
-      ],
+      "coordinates": [1330, 60],
       "flag": "pt",
       "name": "Samora Correia"
     },
     {
-      "coordinates": [
-        1506,
-        412
-      ],
+      "coordinates": [1506, 412],
       "flag": "pt",
       "name": "Pegoes"
     },
     {
-      "coordinates": [
-        1210,
-        1100
-      ],
+      "coordinates": [1210, 1100],
       "flag": "pt",
       "name": "Setubal"
     },
     {
-      "coordinates": [
-        1560,
-        1186
-      ],
+      "coordinates": [1560, 1186],
       "flag": "pt",
       "name": "Sado"
     },
     {
-      "coordinates": [
-        1470,
-        1470
-      ],
+      "coordinates": [1470, 1470],
       "flag": "pt",
       "name": "Carvalhal"
     }

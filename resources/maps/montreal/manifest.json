@@ -17,98 +17,62 @@
   "name": "Montreal",
   "nations": [
     {
-      "coordinates": [
-        800,
-        430
-      ],
+      "coordinates": [800, 430],
       "flag": "Quebec",
       "name": "Laval"
     },
     {
-      "coordinates": [
-        1110,
-        930
-      ],
+      "coordinates": [1110, 930],
       "flag": "Quebec",
       "name": "Royal Mount park"
     },
     {
-      "coordinates": [
-        1220,
-        1360
-      ],
+      "coordinates": [1220, 1360],
       "flag": "Quebec",
       "name": "Hochelaga Archipelago"
     },
     {
-      "coordinates": [
-        1080,
-        980
-      ],
+      "coordinates": [1080, 980],
       "flag": "ca",
       "name": "Westmount"
     },
     {
-      "coordinates": [
-        1400,
-        1000
-      ],
+      "coordinates": [1400, 1000],
       "flag": "Quebec",
       "name": "Saint-Lambert"
     },
     {
-      "coordinates": [
-        500,
-        130
-      ],
+      "coordinates": [500, 130],
       "flag": "Quebec",
       "name": "Blainville"
     },
     {
-      "coordinates": [
-        350,
-        650
-      ],
+      "coordinates": [350, 650],
       "flag": "Quebec",
       "name": "Saint-Eustache"
     },
     {
-      "coordinates": [
-        200,
-        1350
-      ],
+      "coordinates": [200, 1350],
       "flag": "Quebec",
       "name": "Perrot Island"
     },
     {
-      "coordinates": [
-        25,
-        950
-      ],
+      "coordinates": [25, 950],
       "flag": "Quebec",
       "name": "Kanesatake Lands"
     },
     {
-      "coordinates": [
-        50,
-        450
-      ],
+      "coordinates": [50, 450],
       "flag": "Quebec",
       "name": "Mirabel"
     },
     {
-      "coordinates": [
-        650,
-        1450
-      ],
+      "coordinates": [650, 1450],
       "flag": "Quebec",
       "name": "Chateauguay"
     },
     {
-      "coordinates": [
-        1330,
-        300
-      ],
+      "coordinates": [1330, 300],
       "flag": "Quebec",
       "name": "Pointe-aux-Trembles"
     }

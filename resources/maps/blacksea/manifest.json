@@ -17,74 +17,47 @@
   "name": "BlackSea",
   "nations": [
     {
-      "coordinates": [
-        122,
-        647
-      ],
+      "coordinates": [122, 647],
       "flag": "bg",
       "name": "Bulgaria"
     },
     {
-      "coordinates": [
-        513,
-        929
-      ],
+      "coordinates": [513, 929],
       "flag": "tr",
       "name": "Turkiye"
     },
     {
-      "coordinates": [
-        123,
-        237
-      ],
+      "coordinates": [123, 237],
       "flag": "ro",
       "name": "Romania"
     },
     {
-      "coordinates": [
-        300,
-        188
-      ],
+      "coordinates": [300, 188],
       "flag": "md",
       "name": "Moldova"
     },
     {
-      "coordinates": [
-        737,
-        120
-      ],
+      "coordinates": [737, 120],
       "flag": "ua",
       "name": "Ukraine"
     },
     {
-      "coordinates": [
-        1180,
-        354
-      ],
+      "coordinates": [1180, 354],
       "flag": "ru",
       "name": "Russia"
     },
     {
-      "coordinates": [
-        1362,
-        722
-      ],
+      "coordinates": [1362, 722],
       "flag": "ge",
       "name": "Georgia"
     },
     {
-      "coordinates": [
-        1382,
-        943
-      ],
+      "coordinates": [1382, 943],
       "flag": "am",
       "name": "Armenia"
     },
     {
-      "coordinates": [
-        1115,
-        555
-      ],
+      "coordinates": [1115, 555],
       "flag": "Circassia",
       "name": "Circassia"
     }

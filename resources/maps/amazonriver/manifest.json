@@ -17,170 +17,107 @@
   "name": "Amazon River",
   "nations": [
     {
-      "coordinates": [
-        524,
-        60
-      ],
+      "coordinates": [524, 60],
       "flag": "br",
       "name": "Boa Esperança"
     },
     {
-      "coordinates": [
-        298,
-        242
-      ],
+      "coordinates": [298, 242],
       "flag": "br",
       "name": "Santa Rosa"
     },
     {
-      "coordinates": [
-        1056,
-        8
-      ],
+      "coordinates": [1056, 8],
       "flag": "br",
       "name": "Paraíso"
     },
     {
-      "coordinates": [
-        1161,
-        8
-      ],
+      "coordinates": [1161, 8],
       "flag": "br",
       "name": "Bom Futuro"
     },
     {
-      "coordinates": [
-        1662,
-        254
-      ],
+      "coordinates": [1662, 254],
       "flag": "br",
       "name": "São Paulo de Olivença"
     },
     {
-      "coordinates": [
-        1807,
-        8
-      ],
+      "coordinates": [1807, 8],
       "flag": "br",
       "name": "São João"
     },
     {
-      "coordinates": [
-        1977,
-        7
-      ],
+      "coordinates": [1977, 7],
       "flag": "br",
       "name": "Castro Alves"
     },
     {
-      "coordinates": [
-        2487,
-        70
-      ],
+      "coordinates": [2487, 70],
       "flag": "br",
       "name": "Flora"
     },
     {
-      "coordinates": [
-        2458,
-        217
-      ],
+      "coordinates": [2458, 217],
       "flag": "br",
       "name": "Esperito Santo"
     },
     {
-      "coordinates": [
-        2590,
-        149
-      ],
+      "coordinates": [2590, 149],
       "flag": "br",
       "name": "Recreio"
     },
     {
-      "coordinates": [
-        2937,
-        199
-      ],
+      "coordinates": [2937, 199],
       "flag": "br",
       "name": "Caturiá"
     },
     {
-      "coordinates": [
-        3101,
-        222
-      ],
+      "coordinates": [3101, 222],
       "flag": "br",
       "name": "Correnteza"
     },
     {
-      "coordinates": [
-        3354,
-        75
-      ],
+      "coordinates": [3354, 75],
       "flag": "br",
       "name": "Botafogo"
     },
     {
-      "coordinates": [
-        3405,
-        237
-      ],
+      "coordinates": [3405, 237],
       "flag": "br",
       "name": "São João"
     },
     {
-      "coordinates": [
-        3744,
-        228
-      ],
+      "coordinates": [3744, 228],
       "flag": "br",
       "name": "Cajual"
     },
     {
-      "coordinates": [
-        3861,
-        244
-      ],
+      "coordinates": [3861, 244],
       "flag": "br",
       "name": "União"
     },
     {
-      "coordinates": [
-        4409,
-        211
-      ],
+      "coordinates": [4409, 211],
       "flag": "br",
       "name": "Amaturá"
     },
     {
-      "coordinates": [
-        4361,
-        55
-      ],
+      "coordinates": [4361, 55],
       "flag": "br",
       "name": "Monte Cristo"
     },
     {
-      "coordinates": [
-        4649,
-        54
-      ],
+      "coordinates": [4649, 54],
       "flag": "br",
       "name": "Floresta"
     },
     {
-      "coordinates": [
-        5399,
-        128
-      ],
+      "coordinates": [5399, 128],
       "flag": "br",
       "name": "Vargem Grande"
     },
     {
-      "coordinates": [
-        5373,
-        7
-      ],
+      "coordinates": [5373, 7],
       "flag": "br",
       "name": "Baia"
     }
