@@ -18,6 +18,14 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import shieldIcon from "/images/ShieldIconBlack.svg?url";
 
+const isSafari = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const vendor = navigator.vendor;
+  if (!/Apple/i.test(vendor)) return false;
+  return !/CriOS|FxiOS|OPiOS|EdgiOS|Chrome|Chromium/i.test(ua);
+};
+
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
 
@@ -45,6 +53,8 @@ export class NameLayer implements Layer {
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
   private firstPlace: PlayerView | null = null;
+  private crispTextMode: boolean = isSafari();
+  private lastScale: number;
 
   constructor(
     private game: GameView,
@@ -55,6 +65,7 @@ export class NameLayer implements Layer {
     this.shieldIconImage.src = shieldIcon;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
+    this.lastScale = this.transformHandler.scale;
   }
 
   resizeCanvas() {
@@ -77,10 +88,13 @@ export class NameLayer implements Layer {
 
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
-    this.container.style.left = "50%";
-    this.container.style.top = "50%";
+    this.container.style.left = this.crispTextMode ? "0" : "50%";
+    this.container.style.top = this.crispTextMode ? "0" : "50%";
     this.container.style.pointerEvents = "none";
     this.container.style.zIndex = "2";
+    if (this.crispTextMode) {
+      this.container.style.transformOrigin = "0 0";
+    }
     document.body.appendChild(this.container);
 
     // Add CSS keyframes for traitor icon flashing animation
@@ -94,6 +108,17 @@ export class NameLayer implements Layer {
         50% {
           opacity: 0.3;
         }
+      }
+      ${
+        this.crispTextMode
+          ? `
+      .player-name,
+      .player-troops {
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
+      }
+      `
+          : ""
       }
     `;
     this.container.appendChild(style);
@@ -161,20 +186,39 @@ export class NameLayer implements Layer {
   }
 
   public renderLayer(mainContex: CanvasRenderingContext2D) {
-    const screenPosOld = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
-    );
-    const screenPos = new Cell(
-      screenPosOld.x - window.innerWidth / 2,
-      screenPosOld.y - window.innerHeight / 2,
-    );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    const scaleChanged = this.transformHandler.scale !== this.lastScale;
+    if (scaleChanged) {
+      this.lastScale = this.transformHandler.scale;
+    }
+
+    if (this.crispTextMode) {
+      this.container.style.transform = "translate(0px, 0px)";
+      if (this.transformHandler.hasChanged() || scaleChanged) {
+        for (const render of this.renders) {
+          if (!render.player.nameLocation()) continue;
+          const baseSize = Math.max(
+            1,
+            Math.floor(render.player.nameLocation()!.size),
+          );
+          this.applyElementTransform(render, baseSize);
+        }
+      }
+    } else {
+      const screenPosOld = this.transformHandler.worldToScreenCoordinates(
+        new Cell(0, 0),
+      );
+      const screenPos = new Cell(
+        screenPosOld.x - window.innerWidth / 2,
+        screenPosOld.y - window.innerHeight / 2,
+      );
+      this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    }
 
     const now = Date.now();
-    if (now > this.lastChecked + this.renderCheckRate) {
+    if (scaleChanged || now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
       for (const render of this.renders) {
-        this.renderPlayerInfo(render);
+        this.renderPlayerInfo(render, scaleChanged);
       }
     }
 
@@ -287,7 +331,7 @@ export class NameLayer implements Layer {
     return element;
   }
 
-  renderPlayerInfo(render: RenderInfo) {
+  renderPlayerInfo(render: RenderInfo, forceUpdate = false) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
       this.renders = this.renders.filter((r) => r !== render);
       render.element.remove();
@@ -302,7 +346,15 @@ export class NameLayer implements Layer {
 
     // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    const elementScale = Math.min(baseSize * 0.25, 3);
+    if (this.crispTextMode) {
+      render.fontSize = Math.max(
+        4,
+        Math.floor(baseSize * 0.4 * this.transformHandler.scale * elementScale),
+      );
+    } else {
+      render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    }
     render.fontColor = this.theme.textColor(render.player);
 
     // Update element visibility (handles Ctrl key, size, and screen position)
@@ -315,7 +367,7 @@ export class NameLayer implements Layer {
 
     // Throttle updates
     const now = Date.now();
-    if (now - render.lastRenderCalc <= this.renderRefreshRate) {
+    if (!forceUpdate && now - render.lastRenderCalc <= this.renderRefreshRate) {
       return;
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
@@ -516,10 +568,28 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location !== oldLocation) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+    if (render.location && (render.location !== oldLocation || forceUpdate)) {
+      this.applyElementTransform(render, baseSize);
     }
+  }
+
+  private applyElementTransform(render: RenderInfo, baseSize: number) {
+    if (render.element.style.display === "none" || !render.location) {
+      return;
+    }
+    if (this.crispTextMode) {
+      const screenPos = this.transformHandler.worldToScreenCoordinates(
+        render.location,
+      );
+      const dpr = window.devicePixelRatio || 1;
+      const x = Math.round(screenPos.x * dpr) / dpr;
+      const y = Math.round(screenPos.y * dpr) / dpr;
+      render.element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+      return;
+    }
+
+    const scale = Math.min(baseSize * 0.25, 3);
+    render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
   }
 
   private createIconElement(
