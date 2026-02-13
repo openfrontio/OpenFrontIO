@@ -243,11 +243,16 @@ export class RailNetworkImpl implements RailNetwork {
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
     const maxPathSize = this.game.config().railroadMaxSize();
 
+    // Cannot connect if outside the max range of a factory
+    if (!this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)) {
+      return [];
+    }
+
     const neighbors = this.game.nearbyUnits(tile, maxRange, [
-      UnitType.City,
-      UnitType.Factory,
-      UnitType.Port,
-    ]);
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.Port,
+      ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
     const paths: TileRef[][] = [];

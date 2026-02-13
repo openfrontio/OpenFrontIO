@@ -253,7 +253,7 @@ export class RailroadLayer implements Layer {
 
     const offsetX = -this.game.width() / 2;
     const offsetY = -this.game.height() / 2;
-    context.fillStyle = "rgba(255, 255, 255, 0.6)";
+    context.fillStyle = "rgba(0, 0, 0, 0.4)";
 
     for (const path of this.uiState.ghostRailPaths) {
       const railTiles = computeRailTiles(this.game, path);
@@ -263,7 +263,7 @@ export class RailroadLayer implements Layer {
 
         if (this.game.isWater(railTile.tile)) {
           context.save();
-          context.fillStyle = "rgba(197, 69, 72, 0.6)";
+          context.fillStyle = "rgba(197, 69, 72, 0.4)";
           const bridgeRects = getBridgeRects(railTile.type);
           for (const [dx, dy, w, h] of bridgeRects) {
             context.fillRect(
