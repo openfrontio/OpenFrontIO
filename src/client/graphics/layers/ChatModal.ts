@@ -51,17 +51,6 @@ export class ChatModal extends LitElement {
 
   public g: GameView;
 
-  quickChatPhrases: Record<
-    string,
-    Array<{ text: string; requiresPlayer: boolean }>
-  > = {
-    help: [{ text: "Please give me troops!", requiresPlayer: false }],
-    attack: [{ text: "Attack [P1]!", requiresPlayer: true }],
-    defend: [{ text: "Defend [P1]!", requiresPlayer: true }],
-    greet: [{ text: "Hello!", requiresPlayer: false }],
-    misc: [{ text: "Let's go!", requiresPlayer: false }],
-  };
-
   public categories = [
     { id: "help" },
     { id: "attack" },
