@@ -179,7 +179,7 @@ export class ChatModal extends LitElement {
             @click=${this.sendChatMessage}
             ?disabled=${!this.previewText ||
             (this.requiresPlayerSelection && !this.selectedPlayer) ||
-            (this.selectingPlayer2 && !this.selectedPlayer2)}
+            (this.requiresPlayer2Selection && !this.selectedPlayer2)}
           >
             ${translateText("chat.send")}
           </button>
@@ -233,8 +233,7 @@ export class ChatModal extends LitElement {
     if (!this.previewText) return;
 
     if (this.selectingPlayer2) {
-      this.previewText =
-        this.previewText.replace("[P2]", player.name()) ?? null;
+      this.previewText = this.previewText.replace("[P2]", player.name());
       this.selectedPlayer2 = player;
       this.selectingPlayer2 = false;
       this.requiresPlayerSelection = false;
