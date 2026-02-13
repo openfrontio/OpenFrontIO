@@ -79,6 +79,8 @@ export interface Config {
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
   goldMultiplier(): number;
+  portGoldMultiplier(): number;
+  factoryGoldMultiplier(): number;
   startingGold(playerInfo: PlayerInfo): Gold;
 
   startManpower(playerInfo: PlayerInfo): number;

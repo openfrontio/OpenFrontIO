@@ -198,6 +198,10 @@
     "options_changed_no_achievements": "Custom settings – achievements disabled",
     "gold_multiplier": "Gold multiplier",
     "gold_multiplier_placeholder": "2.0x",
+    "port_gold_multiplier": "Port trade gold multiplier",
+    "port_gold_multiplier_placeholder": "1.0x",
+    "factory_gold_multiplier": "Factory gold multiplier",
+    "factory_gold_multiplier_placeholder": "1.0x",
     "starting_gold": "Starting gold",
     "starting_gold_placeholder": "5000000"
   },
@@ -424,6 +428,10 @@
     "teams_Quads": "Quads (teams of 4)",
     "teams_Humans Vs Nations": "Humans vs Nations",
     "starting_gold": "Starting gold",
+    "port_gold_multiplier": "Port trade gold multiplier",
+    "port_gold_multiplier_placeholder": "1.0x",
+    "factory_gold_multiplier": "Factory gold multiplier",
+    "factory_gold_multiplier_placeholder": "1.0x",
     "crowded": "Crowded modifier"
   },
   "team_colors": {
