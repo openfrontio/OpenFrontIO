@@ -9,6 +9,7 @@ import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
+  GameType,
   GameUpdates,
   Gold,
   NameViewData,
@@ -811,6 +812,10 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
+    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
+      // Singleplayer has no fixed spawn countdown; game starts once the human spawns.
+      return !this.myPlayer()?.hasSpawned();
+    }
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
   isSpawnImmunityActive(): boolean {

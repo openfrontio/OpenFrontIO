@@ -1,4 +1,11 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  GameType,
+  Player,
+  PlayerInfo,
+  PlayerType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
@@ -30,7 +37,11 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
-    if (!this.mg.inSpawnPhase()) {
+    const isSingleplayerNationSpawn =
+      this.playerInfo.playerType === PlayerType.Nation &&
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
+
+    if (!this.mg.inSpawnPhase() && !isSingleplayerNationSpawn) {
       this.active = false;
       return;
     }

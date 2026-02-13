@@ -21,6 +21,7 @@ import {
   Execution,
   Game,
   GameMode,
+  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -376,6 +377,10 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      // Singleplayer has no fixed spawn countdown; game starts once the human spawns.
+      return !this._humans.every((human) => this.player(human.id).hasSpawned());
+    }
     return this._ticks <= this.config().numSpawnPhaseTurns();
   }
 

@@ -2,9 +2,11 @@ import {
   Difficulty,
   Execution,
   Game,
+  GameType,
   Nation,
   Player,
   PlayerID,
+  PlayerType,
   Relation,
   TerrainType,
 } from "../game/Game";
@@ -42,6 +44,7 @@ export class NationExecution implements Execution {
   private expandRatio: number;
 
   private readonly embargoMalusApplied = new Set<PlayerID>();
+  private spawnQueuedAtTick: number | null = null;
 
   constructor(
     private gameID: GameID,
@@ -84,6 +87,30 @@ export class NationExecution implements Execution {
   }
 
   tick(ticks: number) {
+    if (this.player !== null && this.player.hasSpawned()) {
+      this.spawnQueuedAtTick = null;
+    } else if (
+      this.spawnQueuedAtTick !== null &&
+      ticks > this.spawnQueuedAtTick + 1
+    ) {
+      // Give queued SpawnExecution one full tick to run, then allow retries.
+      this.spawnQueuedAtTick = null;
+    }
+
+    if (this.player === null) {
+      return;
+    }
+
+    if (this.shouldSpawnNationNow()) {
+      if (this.spawnQueuedAtTick !== null) {
+        return;
+      }
+      if (this.queueSpawnExecution()) {
+        this.spawnQueuedAtTick = ticks;
+      }
+      return;
+    }
+
     // Ship tracking
     if (
       this.behaviorsInitialized &&
@@ -116,30 +143,18 @@ export class NationExecution implements Execution {
       return;
     }
 
-    if (this.player === null) {
-      return;
-    }
-
     if (this.mg.inSpawnPhase()) {
-      // Place nations without a spawn cell (Dynamically created for HumansVsNations) randomly by SpawnExecution
-      if (this.nation.spawnCell === undefined) {
-        this.mg.addExecution(
-          new SpawnExecution(this.gameID, this.nation.playerInfo),
-        );
+      // In singleplayer nations should spawn only after the human spawns.
+      if (this.mg.config().gameConfig().gameType === GameType.Singleplayer) {
         return;
       }
 
-      // Select a tile near the position defined in the map manifest
-      const rl = this.randomSpawnLand();
-
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+      if (this.spawnQueuedAtTick !== null) {
         return;
       }
-
-      this.mg.addExecution(
-        new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
-      );
+      if (this.queueSpawnExecution()) {
+        this.spawnQueuedAtTick = ticks;
+      }
       return;
     }
 
@@ -217,6 +232,49 @@ export class NationExecution implements Execution {
       this.player,
     );
     this.behaviorsInitialized = true;
+  }
+
+  private shouldSpawnNationNow(): boolean {
+    if (this.player === null || this.player.hasSpawned()) {
+      return false;
+    }
+
+    const isSingleplayer =
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
+    if (!isSingleplayer) {
+      return false;
+    }
+
+    return this.allHumansSpawned();
+  }
+
+  private allHumansSpawned(): boolean {
+    return this.mg
+      .allPlayers()
+      .filter((p) => p.type() === PlayerType.Human)
+      .every((p) => p.hasSpawned());
+  }
+
+  private queueSpawnExecution(): boolean {
+    // Place nations without a spawn cell (dynamically created for HumansVsNations) randomly by SpawnExecution.
+    if (this.nation.spawnCell === undefined) {
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
+      );
+      return true;
+    }
+
+    // Select a tile near the position defined in the map manifest.
+    const rl = this.randomSpawnLand();
+    if (rl === null) {
+      console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
+      return false;
+    }
+
+    this.mg.addExecution(
+      new SpawnExecution(this.gameID, this.nation.playerInfo, rl),
+    );
+    return true;
   }
 
   private randomSpawnLand(): TileRef | null {

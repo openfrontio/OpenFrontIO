@@ -4,6 +4,7 @@ import {
   Execution,
   Game,
   GameMode,
+  GameType,
   Player,
   PlayerType,
   RankedType,
@@ -18,6 +19,7 @@ export class WinCheckExecution implements Execution {
   private active = true;
 
   private mg: Game | null = null;
+  private singleplayerStartTick: number | null = null;
 
   constructor() {}
 
@@ -60,8 +62,7 @@ export class WinCheckExecution implements Execution {
     }
 
     const max = sorted[0];
-    const timeElapsed =
-      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    const timeElapsed = this.timeElapsedSeconds();
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
@@ -95,8 +96,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
-    const timeElapsed =
-      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    const timeElapsed = this.timeElapsedSeconds();
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
@@ -114,6 +114,24 @@ export class WinCheckExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private timeElapsedSeconds(): number {
+    if (this.mg === null) throw new Error("Not initialized");
+
+    const isSingleplayer =
+      this.mg.config().gameConfig().gameType === GameType.Singleplayer;
+    if (!isSingleplayer) {
+      return (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    }
+
+    if (this.mg.inSpawnPhase()) {
+      this.singleplayerStartTick = null;
+      return 0;
+    }
+
+    this.singleplayerStartTick ??= this.mg.ticks();
+    return (this.mg.ticks() - this.singleplayerStartTick) / 10;
   }
 
   activeDuringSpawnPhase(): boolean {
