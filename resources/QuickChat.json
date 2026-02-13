@@ -241,6 +241,11 @@
     {
       "key": "stop_trading_all",
       "requiresPlayer": false
+    },
+    {
+      "key": "teaming_with",
+      "requiresPlayer": true,
+      "requiresPlayer2": true
     }
   ]
 }
