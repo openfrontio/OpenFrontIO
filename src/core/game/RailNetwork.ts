@@ -1,4 +1,4 @@
-import { Unit } from "./Game";
+import { Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { StationManager } from "./RailNetworkImpl";
 import { TrainStation } from "./TrainStation";
@@ -9,6 +9,6 @@ export interface RailNetwork {
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
   stationManager(): StationManager;
   overlappingRailroads(tile: TileRef): number[];
-  computeGhostRailPaths(tile: TileRef): TileRef[][];
+  computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][];
   recomputeClusters(): void;
 }

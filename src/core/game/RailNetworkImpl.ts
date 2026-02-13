@@ -228,7 +228,12 @@ export class RailNetworkImpl implements RailNetwork {
     );
   }
 
-  computeGhostRailPaths(tile: TileRef): TileRef[][] {
+  computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
+    if (![UnitType.City, UnitType.Port].includes(unitType)) {
+      return [];
+    }
+
+    // Skip if can snap to existing railway
     const snappableRails = this.railGrid.query(tile, this.stationRadius);
     if (snappableRails.size > 0) {
       return [];

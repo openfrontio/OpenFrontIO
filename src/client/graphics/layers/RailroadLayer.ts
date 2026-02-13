@@ -274,7 +274,6 @@ export class RailroadLayer implements Layer {
             );
           }
           context.restore();
-          context.fillStyle = "rgba(255, 255, 255, 0.6)";
         }
 
         const railRects = getRailroadRects(railTile.type);
