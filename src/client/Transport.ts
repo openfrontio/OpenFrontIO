@@ -26,7 +26,7 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
-import { getPlayToken } from "./Auth";
+import { getPlayToken, userAuth } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -189,6 +189,7 @@ export class Transport {
   private onmessage: (msg: ServerMessage) => void;
 
   private pingInterval: number | null = null;
+  private authKeepAliveInterval: number | null = null;
   public readonly isLocal: boolean;
 
   constructor(
@@ -328,6 +329,7 @@ export class Transport {
     onmessage: (message: ServerMessage) => void,
   ) {
     this.startPing();
+    this.startAuthKeepAlive();
     this.killExistingSocket();
     const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -711,5 +713,28 @@ export class Transport {
     }
 
     this.socket = null;
+  }
+
+  private startAuthKeepAlive(): void {
+    if (this.isLocal || this.authKeepAliveInterval !== null) {
+      return;
+    }
+    this.authKeepAliveInterval = window.setInterval(
+      async () => {
+        try {
+          await userAuth();
+        } catch (e) {
+          console.warn("auth keep-alive failed", e);
+        }
+      },
+      5 * 60 * 1000,
+    );
+  }
+
+  private stopAuthKeepAlive(): void {
+    if (this.authKeepAliveInterval !== null) {
+      window.clearInterval(this.authKeepAliveInterval);
+      this.authKeepAliveInterval = null;
+    }
   }
 }
