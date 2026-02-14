@@ -974,6 +974,7 @@ export class PlayerImpl implements Player {
           canBuild = this.canBuild(u, tile, validTiles);
         }
       }
+
       return {
         type: u,
         canBuild,
@@ -982,6 +983,10 @@ export class PlayerImpl implements Player {
         overlappingRailroads:
           canBuild !== false
             ? this.mg.railNetwork().overlappingRailroads(canBuild)
+            : [],
+        ghostRailPaths:
+          canBuild !== false
+            ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
             : [],
       } as BuildableUnit;
     });

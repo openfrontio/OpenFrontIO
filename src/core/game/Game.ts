@@ -851,6 +851,7 @@ export interface BuildableUnit {
   type: UnitType;
   cost: Gold;
   overlappingRailroads: number[];
+  ghostRailPaths: TileRef[][];
 }
 
 export interface PlayerProfile {
