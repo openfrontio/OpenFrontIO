@@ -44,7 +44,7 @@ import {
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
+  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -429,7 +429,7 @@ export class HostLobbyModal extends BaseModal {
 
     // Reset all transient form state to ensure clean slate
     this.selectedMap = GameMapType.World;
-    this.selectedDifficulty = Difficulty.Easy;
+    this.selectedDifficulty = Difficulty.Medium;
     this.disableNations = false;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
