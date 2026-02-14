@@ -475,6 +475,10 @@ export class PlayerImpl implements Player {
     this.mg.breakAlliance(this, alliance);
   }
 
+  removeAllAlliances(): void {
+    this.mg.removeAlliancesByPlayerSilently(this);
+  }
+
   isTraitor(): boolean {
     return this.getTraitorRemainingTicks() > 0;
   }

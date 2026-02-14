@@ -666,6 +666,7 @@ export interface Player {
   allianceInfo(other: Player): AllianceInfo | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
+  removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
 
