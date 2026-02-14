@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { GameMode, Team } from "../../../core/game/Game";
+import { GameMode, GameType, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -31,6 +31,17 @@ export class SpawnTimer extends LitElement implements Layer {
   }
 
   tick() {
+    if (
+      this.game.config().gameConfig().gameType === GameType.Singleplayer &&
+      this.game.inSpawnPhase()
+    ) {
+      // Singleplayer has no spawn countdown.
+      this.ratios = [];
+      this.colors = [];
+      this.requestUpdate();
+      return;
+    }
+
     if (this.game.inSpawnPhase()) {
       // During spawn phase, only one segment filling full width
       this.ratios = [

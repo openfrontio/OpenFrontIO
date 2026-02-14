@@ -37,6 +37,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private hasWinner = false;
   private isLobbyCreator = false;
+  private singleplayerStartTick: number | null = null;
 
   createRenderRoot() {
     return this;
@@ -72,13 +73,23 @@ export class GameRightSidebar extends LitElement implements Layer {
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
     const ticks = this.game.ticks();
-    const gameTicks = Math.max(0, ticks - spawnPhaseTurns);
-    const elapsedSeconds = Math.floor(gameTicks / 10); // 10 ticks per second
+    const isSingleplayer =
+      this.game.config().gameConfig().gameType === GameType.Singleplayer;
 
     if (this.game.inSpawnPhase()) {
+      this.singleplayerStartTick = null;
       this.timer = maxTimerValue !== undefined ? maxTimerValue * 60 : 0;
       return;
     }
+
+    if (isSingleplayer && this.singleplayerStartTick === null) {
+      this.singleplayerStartTick = ticks;
+    }
+
+    const gameStartTick = isSingleplayer
+      ? (this.singleplayerStartTick ?? ticks)
+      : spawnPhaseTurns;
+    const elapsedSeconds = Math.floor(Math.max(0, ticks - gameStartTick) / 10); // 10 ticks per second
 
     if (this.hasWinner) {
       return;
