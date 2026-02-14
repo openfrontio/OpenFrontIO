@@ -480,7 +480,7 @@ export class UserSettingModal extends BaseModal {
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
-        defaultKey="KeyM"
+        defaultKey=${DefaultKeybinds.coordinateGrid}
         .value=${this.getKeyValue("coordinateGrid")}
         .display=${this.getKeyChar("coordinateGrid")}
         @change=${this.handleKeybindChange}
