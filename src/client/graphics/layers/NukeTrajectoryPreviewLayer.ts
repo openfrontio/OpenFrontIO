@@ -138,7 +138,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     // Get buildable units to find spawn tile (expensive call - only on tick when tile changes)
     player
-      .actions(targetTile)
+      .actions(targetTile, [ghostStructure])
       .then((actions) => {
         // Ignore stale results if target changed
         if (this.lastTargetTile !== targetTile) {

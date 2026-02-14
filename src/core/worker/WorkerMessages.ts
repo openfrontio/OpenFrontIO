@@ -3,6 +3,7 @@ import {
   PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
@@ -62,6 +63,7 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
+  units?: UnitType[];
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {
