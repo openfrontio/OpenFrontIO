@@ -53,6 +53,10 @@ export class MapDisplay extends LitElement {
     }
   }
 
+  private preventImageDrag(event: DragEvent) {
+    event.preventDefault();
+  }
+
   render() {
     return html`
       <div
@@ -61,10 +65,10 @@ export class MapDisplay extends LitElement {
         aria-selected="${this.selected}"
         aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
         @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
+        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${this
           .selected
           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 active:scale-95"}"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"}"
       >
         ${this.isLoading
           ? html`<div
@@ -79,6 +83,8 @@ export class MapDisplay extends LitElement {
                 <img
                   src="${this.mapWebpPath}"
                   alt="${this.translation || this.mapName}"
+                  draggable="false"
+                  @dragstart=${this.preventImageDrag}
                   class="w-full h-full object-cover ${this.selected
                     ? "opacity-100"
                     : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
