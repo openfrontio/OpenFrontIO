@@ -200,6 +200,13 @@ export class AiAttackBehavior {
     borderingFriends: Player[],
     borderingEnemies: Player[],
   ) {
+    // In games with high starting gold, nations will quickly build a lot of cities
+    // This causes them to expand slowly (cities increase max troops), and bots will steal their structures
+    // In this case: Attack bots before ratio checks
+    if (this.hasNeighboringBotWithStructures()) {
+      if (this.attackBots()) return;
+    }
+
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
 
@@ -344,6 +351,18 @@ export class AiAttackBehavior {
       default:
         assertNever(difficulty);
     }
+  }
+
+  private hasNeighboringBotWithStructures(): boolean {
+    return this.player
+      .neighbors()
+      .some(
+        (n) =>
+          n.isPlayer() &&
+          n.type() === PlayerType.Bot &&
+          !this.player.isFriendly(n) &&
+          n.units().some((u) => isStructureType(u.type())),
+      );
   }
 
   private hasReserveRatioTroops(): boolean {
@@ -711,9 +730,14 @@ export class AiAttackBehavior {
 
   private sendLandAttack(target: Player | TerraNullius) {
     const maxTroops = this.game.config().maxTroops(this.player);
-    const reserveRatio = target.isPlayer()
-      ? this.reserveRatio
-      : this.expandRatio;
+    const botWithStructures =
+      target.isPlayer() &&
+      target.type() === PlayerType.Bot &&
+      target.units().some((u) => isStructureType(u.type()));
+    // Use the expand ratio when attacking a bot that owns structures — we need to
+    // recapture those structures ASAP, even before reaching the normal reserve.
+    const useReserve = target.isPlayer() && !botWithStructures;
+    const reserveRatio = useReserve ? this.reserveRatio : this.expandRatio;
     const targetTroops = maxTroops * reserveRatio;
 
     let troops;
