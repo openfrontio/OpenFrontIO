@@ -1,5 +1,5 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player, UnitType } from "../game/Game";
+import { Game, Player } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 import { GameView } from "../game/GameView";
 
