@@ -278,7 +278,7 @@ export function createRenderer(
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, eventBus, transformHandler, uiState),
-    new CoordinateGridLayer(game, eventBus, transformHandler, userSettings),
+    new CoordinateGridLayer(game, eventBus, transformHandler),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),

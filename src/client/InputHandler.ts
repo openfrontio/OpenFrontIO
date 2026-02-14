@@ -158,6 +158,7 @@ export class InputHandler {
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
+  private coordinateGridEnabled = false;
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
@@ -323,9 +324,10 @@ export class InputHandler {
 
       if (e.code === this.keybinds.coordinateGrid && !e.repeat) {
         e.preventDefault();
-        const next = !this.userSettings.coordinateGridEnabled();
-        this.userSettings.set("settings.coordinateGridEnabled", next);
-        this.eventBus.emit(new ToggleCoordinateGridEvent(next));
+        this.coordinateGridEnabled = !this.coordinateGridEnabled;
+        this.eventBus.emit(
+          new ToggleCoordinateGridEvent(this.coordinateGridEnabled),
+        );
       }
 
       if (e.code === "Escape") {

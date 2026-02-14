@@ -73,10 +73,6 @@ export class UserSettings {
     return this.get("settings.territoryPatterns", true);
   }
 
-  coordinateGridEnabled() {
-    return this.get("settings.coordinateGridEnabled", false);
-  }
-
   cursorCostLabel() {
     const legacy = this.get("settings.ghostPricePill", true);
     return this.get("settings.cursorCostLabel", legacy);
@@ -130,10 +126,6 @@ export class UserSettings {
 
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
-  }
-
-  toggleCoordinateGrid() {
-    this.set("settings.coordinateGridEnabled", !this.coordinateGridEnabled());
   }
 
   toggleDarkMode() {

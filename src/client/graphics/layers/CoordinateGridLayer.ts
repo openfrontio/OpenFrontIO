@@ -1,7 +1,6 @@
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { ToggleCoordinateGridEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -66,13 +65,12 @@ const computeGrid = (width: number, height: number) => {
 };
 
 export class CoordinateGridLayer implements Layer {
-  private isVisible = this.userSettings.coordinateGridEnabled();
+  private isVisible = false;
 
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private userSettings: UserSettings,
   ) {}
 
   init() {
