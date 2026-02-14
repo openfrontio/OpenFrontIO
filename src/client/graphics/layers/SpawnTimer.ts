@@ -52,7 +52,7 @@ export class SpawnTimer extends LitElement implements Layer {
         const teamTiles: Map<Team, number> = new Map();
         for (const player of this.game.players()) {
           const team = player.team();
-          if (team === null) throw new Error("Team is null");
+          if (team === null) continue;
           const tiles = teamTiles.get(team) ?? 0;
           teamTiles.set(team, tiles + player.numTilesOwned());
         }

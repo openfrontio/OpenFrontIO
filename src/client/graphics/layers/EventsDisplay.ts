@@ -789,7 +789,7 @@ export class EventsDisplay extends LitElement implements Layer {
               ${this.renderButton({
                 content: html`
                   <span class="flex items-center gap-2">
-                    Events
+                    ${translateText("events_display.events")}
                     ${this.newEvents > 0
                       ? html`<span
                           class="inline-block px-2 bg-red-500 rounded-lg text-sm"

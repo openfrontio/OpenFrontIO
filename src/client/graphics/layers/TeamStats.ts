@@ -132,7 +132,7 @@ export class TeamStats extends LitElement implements Layer {
 
     return html`
       <div
-        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/85 w-full text-white text-xs md:text-sm mt-2 rounded-lg overflow-hidden"
+        class="max-h-[30vh] overflow-x-hidden overflow-y-auto grid bg-slate-800/85 w-full text-white text-xs md:text-sm mt-2 rounded-lg"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div

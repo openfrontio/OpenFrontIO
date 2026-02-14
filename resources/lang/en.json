@@ -714,6 +714,7 @@
     "show_units": "Show Units"
   },
   "events_display": {
+    "events": "Events",
     "retreating": "retreating",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
