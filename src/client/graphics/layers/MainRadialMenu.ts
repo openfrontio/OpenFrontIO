@@ -95,7 +95,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
       this.game
         .myPlayer()!
-        .actions(this.clickedTile)
+        .actions(this.clickedTile, BuildableUnitsTransportShip.Include)
         .then((actions) => {
           this.updatePlayerActions(
             this.game.myPlayer()!,
