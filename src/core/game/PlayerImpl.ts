@@ -25,11 +25,13 @@ import {
   MessageType,
   MutableAlliance,
   Player,
+  PlayerBuildableTypes,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
   PlayerType,
   Relation,
+  StructureTypes,
   Team,
   TerraNullius,
   Tick,
@@ -966,7 +968,7 @@ export class PlayerImpl implements Player {
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
 
-    return this.mg.getPlayerBuildableUnitTypes().map((u) => {
+    return PlayerBuildableTypes.map((u) => {
       const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
@@ -1062,7 +1064,7 @@ export class PlayerImpl implements Player {
       const wouldHitTeammate = this.mg.anyUnitNearby(
         tile,
         magnitude.outer,
-        this.mg.getStructureTypes(),
+        StructureTypes,
         (unit) => unit.owner().isPlayer() && this.isOnSameTeam(unit.owner()),
       );
       if (wouldHitTeammate) {
@@ -1145,7 +1147,7 @@ export class PlayerImpl implements Player {
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      this.mg.getStructureTypes(),
+      StructureTypes,
       undefined,
       true,
     );

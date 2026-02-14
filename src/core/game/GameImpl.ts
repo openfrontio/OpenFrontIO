@@ -97,10 +97,6 @@ export class GameImpl implements Game {
   private _miniWaterGraph: AbstractGraph | null = null;
   private _miniWaterHPA: AStarWaterHierarchical | null = null;
 
-  private _structureTypes: UnitType[] = [];
-  private _structureTypesSet: Set<UnitType>;
-  private _buildableUnitTypes: UnitType[] = [];
-
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -131,17 +127,6 @@ export class GameImpl implements Game {
         { cachePaths: true },
       );
     }
-
-    this._structureTypes =
-      Object.values(UnitType).filter(
-        (t) => this._config.unitInfo(t).territoryBound,
-      ) ?? [];
-    this._structureTypesSet = new Set(this._structureTypes);
-
-    this._buildableUnitTypes =
-      Object.values(UnitType).filter(
-        (t) => this._config.unitInfo(t).playerBuildable,
-      ) ?? [];
 
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
@@ -908,7 +893,7 @@ export class GameImpl implements Game {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
@@ -922,18 +907,6 @@ export class GameImpl implements Game {
       unit: Unit;
       distSquared: number;
     }>;
-  }
-
-  getStructureTypes(): UnitType[] {
-    return this._structureTypes;
-  }
-
-  isStructureType(type: UnitType): boolean {
-    return this._structureTypesSet.has(type);
-  }
-
-  getPlayerBuildableUnitTypes(): UnitType[] {
-    return this._buildableUnitTypes;
   }
 
   ref(x: number, y: number): TileRef {

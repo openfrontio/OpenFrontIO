@@ -348,7 +348,6 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: false,
         };
       case UnitType.Warship:
         return {
@@ -357,21 +356,18 @@ export class DefaultConfig implements Config {
             UnitType.Warship,
           ),
           territoryBound: false,
-          playerBuildable: true,
           maxHealth: 1000,
         };
       case UnitType.Shell:
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: false,
           damage: 250,
         };
       case UnitType.SAMMissile:
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: false,
         };
       case UnitType.Port:
         return {
@@ -382,7 +378,6 @@ export class DefaultConfig implements Config {
             UnitType.Factory,
           ),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
@@ -390,13 +385,11 @@ export class DefaultConfig implements Config {
         return {
           cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
           territoryBound: false,
-          playerBuildable: true,
         };
       case UnitType.HydrogenBomb:
         return {
           cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
           territoryBound: false,
-          playerBuildable: true,
         };
       case UnitType.MIRV:
         return {
@@ -407,25 +400,21 @@ export class DefaultConfig implements Config {
             return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
           },
           territoryBound: false,
-          playerBuildable: true,
         };
       case UnitType.MIRVWarhead:
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: false,
         };
       case UnitType.TradeShip:
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: true,
         };
       case UnitType.MissileSilo:
         return {
           cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
@@ -436,7 +425,6 @@ export class DefaultConfig implements Config {
             UnitType.DefensePost,
           ),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
@@ -447,7 +435,6 @@ export class DefaultConfig implements Config {
             UnitType.SAMLauncher,
           ),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
@@ -459,7 +446,6 @@ export class DefaultConfig implements Config {
             UnitType.City,
           ),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
@@ -472,7 +458,6 @@ export class DefaultConfig implements Config {
             UnitType.Port,
           ),
           territoryBound: true,
-          playerBuildable: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
@@ -480,7 +465,6 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: false,
-          playerBuildable: false,
         };
       default:
         assertNever(type);

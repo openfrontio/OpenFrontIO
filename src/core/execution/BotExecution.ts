@@ -1,4 +1,4 @@
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game, isStructureType, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
@@ -85,7 +85,7 @@ export class BotExecution implements Execution {
 
   private deleteAllStructures() {
     for (const unit of this.bot.units()) {
-      if (this.mg.isStructureType(unit.type()) && this.bot.canDeleteUnit()) {
+      if (isStructureType(unit.type()) && this.bot.canDeleteUnit()) {
         this.mg.addExecution(new DeleteUnitExecution(this.bot, unit.id()));
       }
     }

@@ -225,7 +225,6 @@ export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
-  playerBuildable: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
@@ -256,6 +255,39 @@ export enum TrainType {
   TailEngine = "TailEngine",
   Carriage = "Carriage",
 }
+
+const _structureTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+  UnitType.Factory,
+]);
+
+export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+
+export function isStructureType(type: UnitType): boolean {
+  return _structureTypes.has(type);
+}
+
+const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.TransportShip,
+  UnitType.Warship,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+]);
+
+export const PlayerBuildableTypes: readonly UnitType[] = [
+  ..._playerBuildableTypes,
+];
 
 export interface OwnerComp {
   owner: Player;
@@ -774,13 +806,10 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
-  getStructureTypes(): readonly UnitType[];
-  isStructureType(type: UnitType): boolean;
-  getPlayerBuildableUnitTypes(): readonly UnitType[];
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

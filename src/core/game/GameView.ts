@@ -598,9 +598,6 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
-  private _structureTypes: UnitType[];
-  private _structureTypesSet: Set<UnitType>;
-
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -629,12 +626,6 @@ export class GameView implements GameMap {
         flag: nation.flag,
       } satisfies PlayerCosmetics);
     }
-
-    this._structureTypes =
-      Object.values(UnitType).filter(
-        (t) => this._config.unitInfo(t).territoryBound,
-      ) ?? [];
-    this._structureTypesSet = new Set(this._structureTypes);
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
@@ -715,7 +706,7 @@ export class GameView implements GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
@@ -761,14 +752,6 @@ export class GameView implements GameMap {
       playerId,
       includeUnderConstruction,
     );
-  }
-
-  getStructureTypes(): UnitType[] {
-    return this._structureTypes;
-  }
-
-  isStructureType(type: UnitType): boolean {
-    return this._structureTypesSet.has(type);
   }
 
   myClientID(): ClientID {
