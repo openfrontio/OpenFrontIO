@@ -780,6 +780,7 @@ export interface Game extends GameMap {
   ): Array<{ unit: Unit; distSquared: number }>;
   getStructureTypes(): readonly UnitType[];
   isStructureType(type: UnitType): boolean;
+  getPlayerBuildableUnitTypes(): readonly UnitType[];
 
   addExecution(...exec: Execution[]): void;
   displayMessage(

@@ -1,5 +1,5 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player } from "../game/Game";
+import { Game, Player, UnitType } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 import { GameView } from "../game/GameView";
 
@@ -119,7 +119,7 @@ export function listNukeBreakAlliance(
 
   // Also check if any allied structures would be destroyed
   game
-    .nearbyUnits(targetTile, magnitude.outer, this.game.getStructureTypes())
+    .nearbyUnits(targetTile, magnitude.outer, [...game.getStructureTypes()])
     .forEach(({ unit }) =>
       playersToBreakAllianceWith.add(unit.owner().smallID()),
     );
