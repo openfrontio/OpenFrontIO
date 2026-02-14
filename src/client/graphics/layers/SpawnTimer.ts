@@ -1,16 +1,23 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+export class SpawnBarVisibleEvent implements GameEvent {
+  constructor(public readonly visible: boolean) {}
+}
+
 @customElement("spawn-timer")
 export class SpawnTimer extends LitElement implements Layer {
   public game: GameView;
+  public eventBus: EventBus;
   public transformHandler: TransformHandler;
 
   private ratios = [0];
+  private _barVisible = false;
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
 
   private isVisible = false;
@@ -37,39 +44,41 @@ export class SpawnTimer extends LitElement implements Layer {
         this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
       ];
       this.colors = ["rgba(0, 128, 255, 0.7)"];
-      this.requestUpdate();
-      return;
+    } else {
+      this.ratios = [];
+      this.colors = [];
+
+      if (this.game.config().gameConfig().gameMode === GameMode.Team) {
+        const teamTiles: Map<Team, number> = new Map();
+        for (const player of this.game.players()) {
+          const team = player.team();
+          if (team === null) throw new Error("Team is null");
+          const tiles = teamTiles.get(team) ?? 0;
+          teamTiles.set(team, tiles + player.numTilesOwned());
+        }
+
+        const theme = this.game.config().theme();
+        const total = sumIterator(teamTiles.values());
+        if (total > 0) {
+          for (const [team, count] of teamTiles) {
+            const ratio = count / total;
+            this.ratios.push(ratio);
+            this.colors.push(theme.teamColor(team).toRgbString());
+          }
+        }
+      }
     }
 
-    this.ratios = [];
-    this.colors = [];
-
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
-      this.requestUpdate();
-      return;
-    }
-
-    const teamTiles: Map<Team, number> = new Map();
-    for (const player of this.game.players()) {
-      const team = player.team();
-      if (team === null) throw new Error("Team is null");
-      const tiles = teamTiles.get(team) ?? 0;
-      teamTiles.set(team, tiles + player.numTilesOwned());
-    }
-
-    const theme = this.game.config().theme();
-    const total = sumIterator(teamTiles.values());
-    if (total === 0) {
-      this.requestUpdate();
-      return;
-    }
-
-    for (const [team, count] of teamTiles) {
-      const ratio = count / total;
-      this.ratios.push(ratio);
-      this.colors.push(theme.teamColor(team).toRgbString());
-    }
     this.requestUpdate();
+    this.emitBarVisibility();
+  }
+
+  private emitBarVisibility() {
+    const nowVisible = this.isVisible && this.ratios.length > 0;
+    if (nowVisible !== this._barVisible) {
+      this._barVisible = nowVisible;
+      this.eventBus?.emit(new SpawnBarVisibleEvent(this._barVisible));
+    }
   }
 
   shouldTransform(): boolean {
