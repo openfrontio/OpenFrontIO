@@ -42,9 +42,10 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       if (!gr) {
         break;
       }
-      const ticksToRun = Math.min(gr.pendingTurns(), MAX_TICKS_PER_HEARTBEAT);
+      const pendingTurns = gr.pendingTurns();
+      const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
       for (let i = 0; i < ticksToRun; i++) {
-        if (!gr.executeNextTick()) {
+        if (!gr.executeNextTick(gr.pendingTurns())) {
           break;
         }
       }
