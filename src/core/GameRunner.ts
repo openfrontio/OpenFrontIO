@@ -196,7 +196,7 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    transportShip: BuildableUnitsTransportShip = BuildableUnitsTransportShip.Exclude,
+    transportShip?: BuildableUnitsTransportShip,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
