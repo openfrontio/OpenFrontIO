@@ -403,12 +403,12 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef, unit?: UnitType): Promise<PlayerActions> {
+  async actions(tile?: TileRef, units?: UnitType[]): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
-      unit,
+      units,
     );
   }
 

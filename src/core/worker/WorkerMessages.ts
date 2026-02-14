@@ -63,7 +63,7 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
-  unit?: UnitType;
+  units?: UnitType[];
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {

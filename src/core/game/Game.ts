@@ -627,7 +627,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, unit?: UnitType): BuildableUnit[];
+  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

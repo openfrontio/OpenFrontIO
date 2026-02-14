@@ -22,6 +22,7 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
+  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
@@ -962,11 +963,16 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    unit?: UnitType,
+    units?: UnitType[],
   ): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
+    const validTiles =
+      tile !== null &&
+      units !== undefined &&
+      units.some((u) => isStructureType(u))
+        ? this.validStructureSpawnTiles(tile)
+        : [];
     return Object.values(UnitType)
-      .filter((u) => unit === undefined || u === unit)
+      .filter((u) => units === undefined || units.includes(u))
       .map((u) => {
         let canUpgrade: number | false = false;
         let canBuild: TileRef | false = false;

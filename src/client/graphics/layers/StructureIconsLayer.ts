@@ -285,7 +285,7 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef, this.ghostUnit?.buildableUnit.type)
+      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((actions) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];

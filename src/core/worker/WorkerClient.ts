@@ -165,7 +165,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    unit?: UnitType,
+    units?: UnitType[],
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -190,7 +190,7 @@ export class WorkerClient {
         playerID,
         x,
         y,
-        unit,
+        units,
       });
     });
   }
