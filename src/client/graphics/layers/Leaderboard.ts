@@ -55,6 +55,12 @@ export class Leaderboard extends LitElement implements Layer {
 
   init() {}
 
+  willUpdate(changed: Map<string, unknown>) {
+    if (changed.has("visible") && this.visible) {
+      this.updateLeaderboard();
+    }
+  }
+
   getTickIntervalMs() {
     return 1000;
   }
@@ -184,10 +190,10 @@ export class Leaderboard extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
+          class="grid bg-gray-800/85 w-full text-xs md:text-xs lg:text-sm rounded-lg overflow-hidden"
           style="grid-template-columns: 30px 100px 70px 55px 105px;"
         >
-          <div class="contents font-bold bg-gray-700/50">
+          <div class="contents font-bold bg-gray-700/60">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
@@ -234,28 +240,51 @@ export class Leaderboard extends LitElement implements Layer {
           ${repeat(
             this.players,
             (p) => p.player.id(),
-            (player) => html`
+            (player, index) => html`
               <div
                 class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
                   ? "font-bold"
                   : ""} cursor-pointer"
                 @click=${() => this.handleRowClickPlayer(player.player)}
               >
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
                   ${player.position}
                 </div>
                 <div
-                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""} truncate"
                 >
                   ${player.name}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
                   ${player.score}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
                   ${player.gold}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div
+                  class="py-1 md:py-2 text-center ${index <
+                  this.players.length - 1
+                    ? "border-b border-slate-500"
+                    : ""}"
+                >
                   ${player.maxTroops}
                 </div>
               </div>
@@ -265,9 +294,9 @@ export class Leaderboard extends LitElement implements Layer {
       </div>
 
       <button
-        class="mt-1 px-1.5 pb-0.5 md:px-2 text-xs md:text-xs lg:text-sm 
+        class="mt-2 p-0.5 px-1.5 md:px-2 text-xs md:text-xs lg:text-sm 
         border rounded-md border-slate-500 transition-colors
-        text-white mx-auto block hover:bg-white/10"
+        text-white mx-auto block hover:bg-white/10 bg-gray-700/50"
         @click=${() => {
           this.showTopFive = !this.showTopFive;
           this.updateLeaderboard();

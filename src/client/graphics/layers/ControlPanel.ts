@@ -261,7 +261,7 @@ export class ControlPanel extends LitElement implements Layer {
     return html`
       <div
         class="pointer-events-auto ${this._isVisible
-          ? "relative z-[60] w-full lg:max-w-[400px] text-sm lg:text-base bg-gray-800/70 p-1.5 pr-2 lg:p-5 shadow-lg lg:rounded-tr-xl min-[1200px]:rounded-xl backdrop-blur-sm"
+          ? "relative z-[60] w-full lg:max-w-[400px] text-sm lg:text-base bg-gray-800/70 p-1.5 pr-2 lg:p-5 shadow-lg sm:rounded-tr-lg min-[1200px]:rounded-lg backdrop-blur-xs"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
