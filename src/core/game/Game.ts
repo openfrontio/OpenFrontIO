@@ -120,6 +120,7 @@ export enum GameMapType {
   AmazonRiver = "Amazon River",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
+  Hawaii = "Hawaii",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -168,6 +169,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
     GameMapType.Yenisei,
+    GameMapType.Hawaii,
   ],
   fantasy: [
     GameMapType.Pangaea,

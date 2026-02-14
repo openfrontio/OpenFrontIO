@@ -3,6 +3,7 @@ import {
   GameConfigSchema,
   PublicGameInfoSchema,
   PublicGamesSchema,
+  PublicGameTypeSchema,
 } from "../core/Schemas";
 
 export type WorkerLobbyList = z.infer<typeof WorkerLobbyListSchema>;
@@ -48,6 +49,7 @@ const MasterCreateGameSchema = z.object({
   gameID: z.string(),
   gameConfig: GameConfigSchema,
   startsAt: z.number(),
+  publicGameType: PublicGameTypeSchema,
 });
 
 export const MasterMessageSchema = z.discriminatedUnion("type", [
