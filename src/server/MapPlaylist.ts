@@ -167,14 +167,11 @@ export class MapPlaylist {
 
   public get1v1Config(): GameConfig {
     const maps = [
-      GameMapType.Iceland,
+      GameMapType.Australia, // 40%
       GameMapType.Australia,
-      GameMapType.Australia,
-      GameMapType.Australia,
-      GameMapType.Pangaea,
-      GameMapType.Italia,
-      GameMapType.FalklandIslands,
-      GameMapType.Sierpinski,
+      GameMapType.Iceland, // 20%
+      GameMapType.Asia, // 20%
+      GameMapType.EuropeClassic, // 20%
     ];
     return {
       donateGold: false,
@@ -182,17 +179,17 @@ export class MapPlaylist {
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 2,
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Compact,
-      difficulty: Difficulty.Easy,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.OneVOne,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10, // 10 minutes
+      maxTimerValue: 15, // 15 minutes
       instantBuild: false,
       randomSpawn: false,
       disableNations: true,
       gameMode: GameMode.FFA,
-      bots: 100,
+      bots: 400,
       spawnImmunityDuration: 30 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
