@@ -1,8 +1,19 @@
+import {
+  ensureUiSessionRuntimeStarted,
+  getUiSessionStorageCachedValue,
+  removeUiSessionStorage,
+  UI_SESSION_RUNTIME_EVENTS,
+  type UiSessionNavigationDetail,
+  writeUiSessionStorage,
+} from "./runtime/UiSessionRuntime";
+
 export class MultiTabDetector {
   private readonly tabId = `${Date.now()}-${Math.random()}`;
   private readonly lockKey = "multi-tab-lock";
   private readonly heartbeatIntervalMs = 1_000;
   private readonly staleThresholdMs = 3_000;
+  private readonly onStorageEventBound = this.onStorageEvent.bind(this);
+  private readonly onBeforeUnloadBound = this.onBeforeUnload.bind(this);
 
   private heartbeatTimer: number | null = null;
   private isPunished = false;
@@ -10,8 +21,12 @@ export class MultiTabDetector {
   private startPenaltyCallback: (duration: number) => void = () => {};
 
   constructor() {
-    window.addEventListener("storage", this.onStorageEvent.bind(this));
-    window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
+    window.addEventListener("storage", this.onStorageEventBound);
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.beforeUnload,
+      this.onBeforeUnloadBound as EventListener,
+    );
+    void ensureUiSessionRuntimeStarted();
   }
 
   public startMonitoring(startPenalty: (duration: number) => void): void {
@@ -31,10 +46,13 @@ export class MultiTabDetector {
 
     const lock = this.readLock();
     if (lock?.owner === this.tabId) {
-      localStorage.removeItem(this.lockKey);
+      void removeUiSessionStorage(this.lockKey);
     }
-    window.removeEventListener("storage", this.onStorageEvent.bind(this));
-    window.removeEventListener("beforeunload", this.onBeforeUnload.bind(this));
+    window.removeEventListener("storage", this.onStorageEventBound);
+    window.removeEventListener(
+      UI_SESSION_RUNTIME_EVENTS.beforeUnload,
+      this.onBeforeUnloadBound as EventListener,
+    );
   }
 
   private heartbeat(): void {
@@ -71,10 +89,10 @@ export class MultiTabDetector {
     }
   }
 
-  private onBeforeUnload(): void {
+  private onBeforeUnload(_event: CustomEvent<UiSessionNavigationDetail>): void {
     const lock = this.readLock();
     if (lock?.owner === this.tabId) {
-      localStorage.removeItem(this.lockKey);
+      void removeUiSessionStorage(this.lockKey);
     }
   }
 
@@ -89,15 +107,15 @@ export class MultiTabDetector {
   }
 
   private writeLock(): void {
-    localStorage.setItem(
+    void writeUiSessionStorage(
       this.lockKey,
       JSON.stringify({ owner: this.tabId, timestamp: Date.now() }),
     );
   }
 
   private readLock(): { owner: string; timestamp: number } | null {
-    const raw = localStorage.getItem(this.lockKey);
-    if (!raw) return null;
+    const raw = getUiSessionStorageCachedValue(this.lockKey);
+    if (typeof raw !== "string" || raw.length === 0) return null;
     try {
       return JSON.parse(raw);
     } catch (e) {

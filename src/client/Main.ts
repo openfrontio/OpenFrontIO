@@ -6,57 +6,49 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import "./FlagInput";
-import { FlagInput } from "./FlagInput";
-import "./FlagInputModal";
-import { FlagInputModal } from "./FlagInputModal";
-import { GameInfoModal } from "./GameInfoModal";
-import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
-import { HelpModal } from "./HelpModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./LangSelector";
-import { LangSelector } from "./LangSelector";
+import {
+  DioxusHostLobbyModal as DioxusHostPrivateLobbyModal,
+  DioxusJoinPrivateLobbyModal,
+  DioxusPublicLobby,
+} from "./LobbyBridges";
 import { initLayout } from "./Layout";
-import "./Matchmaking";
-import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
-import "./NewsModal";
-import "./PatternInput";
-import "./PublicLobby";
-import { PublicLobby } from "./PublicLobby";
-import { SinglePlayerModal } from "./SinglePlayerModal";
-import "./StatsModal";
-import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
-import { TokenLoginModal } from "./TokenLoginModal";
+import {
+  DioxusFlagInput,
+  DioxusFlagInputModal,
+  DioxusGameInfoModal,
+  DioxusGameStartingModal,
+  DioxusHelpModal,
+  DioxusLangSelector,
+  DioxusSinglePlayerModal,
+  DioxusTerritoryPatternsModal,
+  DioxusTokenLoginModal,
+  DioxusUserSettingModal,
+  DioxusUsernameInput,
+} from "./ProfileAndSettingsBridges";
+import { DioxusMatchmaking } from "./profile/DioxusMatchmakingModal";
+import {
+  ensureUiSessionRuntimeStarted,
+  UI_SESSION_RUNTIME_EVENTS,
+  type UiSessionNavigationDetail,
+} from "./runtime/UiSessionRuntime";
 import {
   SendKickPlayerIntentEvent,
   SendUpdateGameConfigIntentEvent,
 } from "./Transport";
-import { UserSettingModal } from "./UserSettingModal";
-import "./UsernameInput";
-import { UsernameInput } from "./UsernameInput";
 import {
   getDiscordAvatarUrl,
   incrementGamesPlayed,
   isInIframe,
   translateText,
 } from "./Utils";
-import "./components/DesktopNavBar";
-import "./components/Footer";
-import "./components/MainLayout";
-import "./components/MobileNavBar";
-import "./components/PlayPage";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
 import "./styles.css";
 import "./styles/core/typography.css";
 import "./styles/core/variables.css";
@@ -213,15 +205,16 @@ class Client {
 
   private currentUrl: string | null = null;
 
-  private usernameInput: UsernameInput | null = null;
-  private flagInput: FlagInput | null = null;
+  private usernameInput: DioxusUsernameInput | null = null;
+  private flagInput: DioxusFlagInput | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
-  private publicLobby: PublicLobby;
+  private joinModal: DioxusJoinPrivateLobbyModal;
+  private publicLobby: DioxusPublicLobby;
   private userSettings: UserSettings = new UserSettings();
-  private patternsModal: TerritoryPatternsModal;
-  private tokenLoginModal: TokenLoginModal;
-  private matchmakingModal: MatchmakingModal;
+  private patternsModal: DioxusTerritoryPatternsModal;
+  private tokenLoginModal: DioxusTokenLoginModal;
+  private matchmakingModal: DioxusMatchmaking;
+  private pendingPatternNameForTokenReload: string | null = null;
 
   private gutterAds: GutterAds;
 
@@ -237,10 +230,15 @@ class Client {
     // Prefetch turnstile token so it is available when
     // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
+    try {
+      await ensureUiSessionRuntimeStarted();
+    } catch (error) {
+      console.warn("[Main] Failed to start UI session runtime", error);
+    }
 
     // Wait for components to render before setting version
-    await customElements.whenDefined("mobile-nav-bar");
-    await customElements.whenDefined("desktop-nav-bar");
+    await customElements.whenDefined("dioxus-mobile-nav-bar");
+    await customElements.whenDefined("dioxus-desktop-nav-bar");
 
     const versionElements = document.querySelectorAll(
       "#game-version, .game-version-display",
@@ -257,37 +255,50 @@ class Client {
 
     const langSelector = document.querySelector(
       "lang-selector",
-    ) as LangSelector;
+    ) as DioxusLangSelector;
     if (!langSelector) {
       console.warn("Lang selector element not found");
     }
 
-    this.flagInput = document.querySelector("flag-input") as FlagInput;
+    this.flagInput = document.querySelector("flag-input") as DioxusFlagInput;
     if (!this.flagInput) {
       console.warn("Flag input element not found");
     }
 
     this.usernameInput = document.querySelector(
       "username-input",
-    ) as UsernameInput;
+    ) as DioxusUsernameInput;
     if (!this.usernameInput) {
       console.warn("Username input element not found");
     }
 
-    this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    this.publicLobby = document.querySelector(
+      "dioxus-public-lobby",
+    ) as DioxusPublicLobby;
 
-    window.addEventListener("beforeunload", async () => {
-      console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop(true);
-        await crazyGamesSDK.gameplayStop();
-      }
-    });
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.beforeUnload,
+      async (_event: CustomEvent<UiSessionNavigationDetail>) => {
+        console.log("Browser is closing");
+        if (this.pendingPatternNameForTokenReload) {
+          this.userSettings.setSelectedPatternName(
+            this.pendingPatternNameForTokenReload,
+          );
+        }
+        if (this.gameStop !== null) {
+          this.gameStop(true);
+          await crazyGamesSDK.gameplayStop();
+        }
+      },
+    );
 
     const gutterAds = document.querySelector("gutter-ads");
-    if (!(gutterAds instanceof GutterAds))
-      throw new Error("Missing gutter-ads");
-    this.gutterAds = gutterAds;
+    if (gutterAds instanceof GutterAds) {
+      this.gutterAds = gutterAds;
+    } else {
+      console.warn("Missing gutter-ads");
+      this.gutterAds = { hide: () => {} } as GutterAds;
+    }
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -298,69 +309,115 @@ class Client {
     );
 
     const spModal = document.querySelector(
-      "single-player-modal",
-    ) as SinglePlayerModal;
-    if (!spModal || !(spModal instanceof SinglePlayerModal)) {
+      "dioxus-single-player-modal",
+    ) as DioxusSinglePlayerModal;
+    if (!spModal || !(spModal instanceof DioxusSinglePlayerModal)) {
       console.warn("Singleplayer modal element not found");
     }
 
-    const singlePlayer = document.getElementById("single-player");
-    if (singlePlayer === null) throw new Error("Missing single-player");
-    singlePlayer.addEventListener("click", () => {
+    const showUsernameValidationError = () => {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: this.usernameInput?.validationError,
+            color: "red",
+            duration: 3000,
+          },
+        }),
+      );
+    };
+
+    const withValidUsername = (onValid: () => void) => {
       if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-single-player");
+        onValid();
       } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
+        showUsernameValidationError();
       }
+    };
+
+    const showPageAndEnsureShown = (pageId: string) => {
+      window.showPage?.(pageId);
+      const pageEl = document.getElementById(pageId) as
+        | (HTMLElement & { open?: () => void; show?: () => void })
+        | null;
+      // Navigation already calls .open() when available. Some migrated modals
+      // expose .show() only, so trigger that path explicitly.
+      if (pageEl && typeof pageEl.open !== "function" && pageEl.show) {
+        pageEl.show();
+      }
+    };
+
+    // Bind to stable Dioxus bridge events instead of direct DOM node IDs,
+    // because those nodes are recreated during Dioxus rerenders.
+    document.addEventListener("solo-click", () => {
+      withValidUsername(() => {
+        showPageAndEnsureShown("page-single-player");
+      });
+    });
+    document.addEventListener("create-click", () => {
+      withValidUsername(() => {
+        showPageAndEnsureShown("page-host-lobby");
+        this.publicLobby.leaveLobby();
+      });
+    });
+    document.addEventListener("join-click", () => {
+      withValidUsername(() => {
+        showPageAndEnsureShown("page-join-private-lobby");
+      });
+    });
+    document.addEventListener("matchmaking-click", () => {
+      withValidUsername(() => {
+        showPageAndEnsureShown("page-matchmaking");
+        this.publicLobby.leaveLobby();
+      });
+    });
+    document.addEventListener("matchmaking-logged-out-click", () => {
+      window.showPage?.("page-account");
     });
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+    const hlpModal = document.querySelector(
+      "dioxus-help-modal",
+    ) as DioxusHelpModal;
+    if (!hlpModal || !(hlpModal instanceof DioxusHelpModal)) {
       console.warn("Help modal element not found");
     }
-    const giModal = document.querySelector("game-info-modal") as GameInfoModal;
-    if (!giModal || !(giModal instanceof GameInfoModal)) {
+    const giModal = document.querySelector(
+      "dioxus-game-info-modal",
+    ) as DioxusGameInfoModal;
+    if (!giModal || !(giModal instanceof DioxusGameInfoModal)) {
       console.warn("Game info modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
-        if (hlpModal && hlpModal instanceof HelpModal) {
+        if (hlpModal && hlpModal instanceof DioxusHelpModal) {
           hlpModal.open();
         }
       });
     }
 
     const flagInputModal = document.querySelector(
-      "flag-input-modal",
-    ) as FlagInputModal;
-    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
+      "dioxus-flag-input-modal",
+    ) as DioxusFlagInputModal;
+    if (!flagInputModal || !(flagInputModal instanceof DioxusFlagInputModal)) {
       console.warn("Flag input modal element not found");
     }
 
     // Attach listener to any flag-input component (desktop or potentially others)
     document.querySelectorAll("flag-input").forEach((flagInput) => {
       flagInput.addEventListener("flag-input-click", () => {
-        if (flagInputModal && flagInputModal instanceof FlagInputModal) {
+        if (flagInputModal && flagInputModal instanceof DioxusFlagInputModal) {
           flagInputModal.open();
         }
       });
     });
 
     this.patternsModal = document.getElementById(
-      "territory-patterns-modal",
-    ) as TerritoryPatternsModal;
+      "page-item-store",
+    ) as DioxusTerritoryPatternsModal;
     if (
       !this.patternsModal ||
-      !(this.patternsModal instanceof TerritoryPatternsModal)
+      !(this.patternsModal instanceof DioxusTerritoryPatternsModal)
     ) {
       console.warn("Territory patterns modal element not found");
     }
@@ -389,7 +446,7 @@ class Client {
 
     if (
       !this.patternsModal ||
-      !(this.patternsModal instanceof TerritoryPatternsModal)
+      !(this.patternsModal instanceof DioxusTerritoryPatternsModal)
     ) {
       console.warn("Territory patterns modal element not found");
     }
@@ -415,30 +472,35 @@ class Client {
     });
 
     this.tokenLoginModal = document.querySelector(
-      "token-login",
-    ) as TokenLoginModal;
+      "dioxus-token-login-modal",
+    ) as DioxusTokenLoginModal;
     if (
       !this.tokenLoginModal ||
-      !(this.tokenLoginModal instanceof TokenLoginModal)
+      !(this.tokenLoginModal instanceof DioxusTokenLoginModal)
     ) {
       console.warn("Token login modal element not found");
     }
 
     this.matchmakingModal = document.querySelector(
-      "matchmaking-modal",
-    ) as MatchmakingModal;
+      "dioxus-matchmaking-modal",
+    ) as DioxusMatchmaking;
     if (
       !this.matchmakingModal ||
-      !(this.matchmakingModal instanceof MatchmakingModal)
+      !(this.matchmakingModal instanceof DioxusMatchmaking)
     ) {
       console.warn("Matchmaking modal element not found");
     }
-    const matchmakingButton = document.getElementById("matchmaking-button");
-    const matchmakingButtonLoggedOut = document.getElementById(
-      "matchmaking-button-logged-out",
-    );
-
     const updateMatchmakingButton = (loggedIn: boolean) => {
+      const playPage = document.querySelector("dioxus-play-page") as
+        | (HTMLElement & { updateState?: (patch: Record<string, unknown>) => void })
+        | null;
+      playPage?.updateState?.({ isLoggedIn: loggedIn });
+
+      // Keep legacy class toggles for backward compatibility.
+      const matchmakingButton = document.getElementById("matchmaking-button");
+      const matchmakingButtonLoggedOut = document.getElementById(
+        "matchmaking-button-logged-out",
+      );
       if (!loggedIn) {
         matchmakingButton?.classList.add("hidden");
         matchmakingButtonLoggedOut?.classList.remove("hidden");
@@ -447,31 +509,6 @@ class Client {
         matchmakingButtonLoggedOut?.classList.add("hidden");
       }
     };
-
-    if (matchmakingButton) {
-      matchmakingButton.addEventListener("click", () => {
-        if (this.usernameInput?.isValid()) {
-          window.showPage?.("page-matchmaking");
-          this.publicLobby.leaveLobby();
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("show-message", {
-              detail: {
-                message: this.usernameInput?.validationError,
-                color: "red",
-                duration: 3000,
-              },
-            }),
-          );
-        }
-      });
-    }
-
-    if (matchmakingButtonLoggedOut) {
-      matchmakingButtonLoggedOut.addEventListener("click", () => {
-        window.showPage?.("page-account");
-      });
-    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       // Check if user has actual authentication (discord or email), not just a publicId
@@ -511,70 +548,35 @@ class Client {
     }
 
     const settingsModal = document.querySelector(
-      "user-setting",
-    ) as UserSettingModal;
-    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
+      "dioxus-user-setting-modal",
+    ) as DioxusUserSettingModal;
+    if (!settingsModal || !(settingsModal instanceof DioxusUserSettingModal)) {
       console.warn("User settings modal element not found");
     }
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
-        if (settingsModal && settingsModal instanceof UserSettingModal) {
+        if (settingsModal && settingsModal instanceof DioxusUserSettingModal) {
           settingsModal.open();
         }
       });
 
     const hostModal = document.querySelector(
-      "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+      "dioxus-host-lobby-modal",
+    ) as DioxusHostPrivateLobbyModal;
+    if (!hostModal || !(hostModal instanceof DioxusHostPrivateLobbyModal)) {
       console.warn("Host private lobby modal element not found");
     }
-    const hostLobbyButton = document.getElementById("host-lobby-button");
-    if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
-    hostLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-host-lobby");
-        this.publicLobby.leaveLobby();
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
 
     this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
-    ) as JoinPrivateLobbyModal;
-    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
+      "dioxus-join-private-lobby-modal",
+    ) as DioxusJoinPrivateLobbyModal;
+    if (
+      !this.joinModal ||
+      !(this.joinModal instanceof DioxusJoinPrivateLobbyModal)
+    ) {
       console.warn("Join private lobby modal element not found");
     }
-    const joinPrivateLobbyButton = document.getElementById(
-      "join-private-lobby-button",
-    );
-    if (joinPrivateLobbyButton === null)
-      throw new Error("Missing join-private-lobby-button");
-    joinPrivateLobbyButton.addEventListener("click", () => {
-      if (this.usernameInput?.isValid()) {
-        window.showPage?.("page-join-private-lobby");
-      } else {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: this.usernameInput?.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-      }
-    });
 
     if (this.userSettings.darkMode()) {
       document.documentElement.classList.add("dark");
@@ -633,8 +635,18 @@ class Client {
     };
 
     // Handle browser navigation & manual hash edits
-    window.addEventListener("popstate", onPopState);
-    window.addEventListener("hashchange", onHashUpdate);
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.navigationPopstate,
+      (_event: CustomEvent<UiSessionNavigationDetail>) => {
+        onPopState();
+      },
+    );
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.navigationHashchange,
+      (_event: CustomEvent<UiSessionNavigationDetail>) => {
+        onHashUpdate();
+      },
+    );
     window.addEventListener("join-changed", onJoinChanged);
 
     function updateSliderProgress(slider: HTMLInputElement) {
@@ -658,6 +670,8 @@ class Client {
   }
 
   private handleUrl() {
+    this.pendingPatternNameForTokenReload = null;
+
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = crazyGamesSDK.getInviteGameId();
@@ -709,11 +723,7 @@ class Client {
 
       if (token) {
         strip();
-        window.addEventListener("beforeunload", () => {
-          // The page reloads after token login, so we need to save the pattern name
-          // in case it is unset during reload.
-          this.userSettings.setSelectedPatternName(patternName);
-        });
+        this.pendingPatternNameForTokenReload = patternName;
         this.tokenLoginModal.openWithToken(token);
       } else {
         alertAndStrip(`purchase succeeded: ${patternName}`);
@@ -752,6 +762,7 @@ class Client {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
+        window.showPage?.("page-item-store");
         this.patternsModal?.open(affiliateCode);
       }
     }
@@ -806,21 +817,21 @@ class Client {
           .getElementById("username-validation-error")
           ?.classList.add("hidden");
         [
-          "single-player-modal",
-          "host-lobby-modal",
-          "join-private-lobby-modal",
-          "game-starting-modal",
+          "dioxus-single-player-modal",
+          "dioxus-host-lobby-modal",
+          "dioxus-join-private-lobby-modal",
+          "dioxus-game-starting-modal",
           "game-top-bar",
-          "help-modal",
-          "user-setting",
-          "territory-patterns-modal",
-          "language-modal",
-          "news-modal",
-          "flag-input-modal",
+          "dioxus-help-modal",
+          "dioxus-user-setting-modal",
+          "dioxus-territory-patterns-modal",
+          "dioxus-language-modal",
+          "dioxus-news-modal",
+          "dioxus-flag-input-modal",
           "account-button",
           "stats-button",
-          "token-login",
-          "matchmaking-modal",
+          "dioxus-token-login-modal",
+          "dioxus-matchmaking-modal",
           "lang-selector",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
@@ -842,9 +853,12 @@ class Client {
 
         // show when the game loads
         const startingModal = document.querySelector(
-          "game-starting-modal",
-        ) as GameStartingModal;
-        if (startingModal && startingModal instanceof GameStartingModal) {
+          "dioxus-game-starting-modal",
+        ) as DioxusGameStartingModal;
+        if (
+          startingModal &&
+          startingModal instanceof DioxusGameStartingModal
+        ) {
           startingModal.show();
         }
         this.gutterAds.hide();

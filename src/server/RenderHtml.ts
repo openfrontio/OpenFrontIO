@@ -1,12 +1,14 @@
 import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
+import { templateRenderContext } from "./RuntimeConfig";
 
 export async function renderHtmlContent(htmlPath: string): Promise<string> {
   const htmlContent = await fs.readFile(htmlPath, "utf-8");
+  const context = templateRenderContext();
   return ejs.render(htmlContent, {
-    gitCommit: JSON.stringify(process.env.GIT_COMMIT ?? "undefined"),
-    instanceId: JSON.stringify(process.env.INSTANCE_ID ?? "undefined"),
+    gitCommit: JSON.stringify(context.gitCommit),
+    instanceId: JSON.stringify(context.instanceId),
   });
 }
 

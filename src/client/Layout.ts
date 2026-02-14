@@ -1,6 +1,12 @@
+import {
+  ensureUiSessionRuntimeStarted,
+  UI_SESSION_RUNTIME_EVENTS,
+  type UiSessionKeyboardChangedDetail,
+} from "./runtime/UiSessionRuntime";
+
 export function initLayout() {
   // Wait for play-page component to render before setting up hamburger menu
-  customElements.whenDefined("play-page").then(() => {
+  customElements.whenDefined("dioxus-play-page").then(() => {
     const hb = document.getElementById("hamburger-btn");
     const sidebar = document.getElementById("sidebar-menu");
     const backdrop = document.getElementById("mobile-menu-backdrop");
@@ -36,6 +42,7 @@ export function initLayout() {
 
     const closeMenu = () => setMenuState(false);
     const openMenu = () => setMenuState(true);
+    void ensureUiSessionRuntimeStarted();
 
     const toggle = (e: Event) => {
       e.stopPropagation();
@@ -74,11 +81,16 @@ export function initLayout() {
     });
 
     // Close on Escape (Mobile only)
-    document.addEventListener("keydown", (e) => {
-      if (window.innerWidth >= 768) return;
-      if (e.key === "Escape" && sidebar.classList.contains("open")) {
-        closeMenu();
-      }
-    });
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.keyboardChanged,
+      (event: CustomEvent<UiSessionKeyboardChangedDetail>) => {
+        const detail = event.detail;
+        if (!detail?.isDown) return;
+        if (window.innerWidth >= 768) return;
+        if (detail.key === "Escape" && sidebar.classList.contains("open")) {
+          closeMenu();
+        }
+      },
+    );
   });
 }

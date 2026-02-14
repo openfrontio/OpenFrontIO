@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Include Rust/Dioxus files for Tailwind class scanning */
+@source "../../rust/dioxus-ui/src/**/*.rs";
+
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
 

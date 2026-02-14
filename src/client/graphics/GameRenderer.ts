@@ -1,48 +1,56 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
-import { GameStartingModal } from "../GameStartingModal";
+import { DioxusGameStartingModal } from "../ProfileAndSettingsBridges";
+import {
+  DioxusBuildMenu,
+  DioxusRadialMenu,
+  DioxusWinModal,
+} from "../GameActionBridges";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
-import { AlertFrame } from "./layers/AlertFrame";
-import { BuildMenu } from "./layers/BuildMenu";
-import { ChatDisplay } from "./layers/ChatDisplay";
-import { ChatModal } from "./layers/ChatModal";
-import { ControlPanel } from "./layers/ControlPanel";
+import {
+  DioxusAlertFrame,
+  DioxusChatDisplay,
+  DioxusControlPanel,
+  DioxusEmojiTable,
+  DioxusEventsDisplay,
+  DioxusGameLeftSidebar,
+  DioxusGameRightSidebar,
+  DioxusHeadsUpMessage,
+  DioxusImmunityTimer,
+  DioxusLeaderboard,
+  DioxusPerformanceOverlay,
+  DioxusPlayerInfoOverlay,
+  DioxusPlayerPanel,
+  DioxusReplayPanel,
+  DioxusSettingsModal,
+  DioxusSpawnTimer,
+  DioxusTeamStats,
+  DioxusUnitDisplay,
+} from "./layers/AdvancedLayerBridges";
+import {
+  DioxusChatModal,
+  DioxusMultiTabModal,
+  DioxusPlayerModerationModal,
+  DioxusSendResourceModal,
+} from "../InGameModalBridges";
 import { DynamicUILayer } from "./layers/DynamicUILayer";
-import { EmojiTable } from "./layers/EmojiTable";
-import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
-import { GameLeftSidebar } from "./layers/GameLeftSidebar";
-import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { HeadsUpMessage } from "./layers/HeadsUpMessage";
-import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { Layer } from "./layers/Layer";
-import { Leaderboard } from "./layers/Leaderboard";
-import { MainRadialMenu } from "./layers/MainRadialMenu";
-import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
-import { PerformanceOverlay } from "./layers/PerformanceOverlay";
-import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
-import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
-import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
-import { SettingsModal } from "./layers/SettingsModal";
-import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
-import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
 import { UILayer } from "./layers/UILayer";
-import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
-import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -60,127 +68,204 @@ export function createRenderer(
 
   //hide when the game renders
   const startingModal = document.querySelector(
-    "game-starting-modal",
-  ) as GameStartingModal;
+    "dioxus-game-starting-modal",
+  ) as DioxusGameStartingModal;
   startingModal.hide();
 
   // TODO maybe append this to document instead of querying for them?
-  const emojiTable = document.querySelector("emoji-table") as EmojiTable;
-  if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
-    console.error("EmojiTable element not found in the DOM");
+  const emojiTable = document.querySelector(
+    "dioxus-emoji-table",
+  ) as DioxusEmojiTable;
+  if (!emojiTable || !(emojiTable instanceof DioxusEmojiTable)) {
+    console.error("DioxusEmojiTable element not found in the DOM");
   }
   emojiTable.transformHandler = transformHandler;
   emojiTable.game = game;
   emojiTable.initEventBus(eventBus);
 
-  const buildMenu = document.querySelector("build-menu") as BuildMenu;
-  if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
-    console.error("BuildMenu element not found in the DOM");
+  // BuildMenu - Dioxus implementation
+  const dioxusBuildMenu = document.querySelector(
+    "dioxus-build-menu",
+  ) as DioxusBuildMenu | null;
+  if (dioxusBuildMenu) {
+    if (!(dioxusBuildMenu instanceof DioxusBuildMenu)) {
+      customElements.upgrade(dioxusBuildMenu);
+    }
+    dioxusBuildMenu.game = game;
+    dioxusBuildMenu.eventBus = eventBus;
+    dioxusBuildMenu.uiState = uiState;
+    dioxusBuildMenu.transformHandler = transformHandler;
+  } else {
+    console.error("DioxusBuildMenu element not found in the DOM");
   }
-  buildMenu.game = game;
-  buildMenu.eventBus = eventBus;
-  buildMenu.uiState = uiState;
-  buildMenu.transformHandler = transformHandler;
 
-  const leaderboard = document.querySelector("leader-board") as Leaderboard;
-  if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
-    console.error("LeaderBoard element not found in the DOM");
+  // RadialMenu - Dioxus implementation
+  const dioxusRadialMenu = document.querySelector(
+    "dioxus-radial-menu",
+  ) as DioxusRadialMenu | null;
+  if (dioxusRadialMenu) {
+    if (!(dioxusRadialMenu instanceof DioxusRadialMenu)) {
+      customElements.upgrade(dioxusRadialMenu);
+    }
+    dioxusRadialMenu.game = game;
+    dioxusRadialMenu.eventBus = eventBus;
+    dioxusRadialMenu.uiState = uiState;
+    dioxusRadialMenu.transformHandler = transformHandler;
+  } else {
+    console.error("DioxusRadialMenu element not found in the DOM");
   }
-  leaderboard.eventBus = eventBus;
-  leaderboard.game = game;
+
+  // Leaderboard - Dioxus implementation
+  const dioxusLeaderboard = document.querySelector(
+    "dioxus-leader-board",
+  ) as DioxusLeaderboard | null;
+  if (dioxusLeaderboard) {
+    if (!(dioxusLeaderboard instanceof DioxusLeaderboard)) {
+      customElements.upgrade(dioxusLeaderboard);
+    }
+    dioxusLeaderboard.eventBus = eventBus;
+    dioxusLeaderboard.game = game;
+  } else {
+    console.error("DioxusLeaderboard element not found in the DOM");
+  }
 
   const gameLeftSidebar = document.querySelector(
-    "game-left-sidebar",
-  ) as GameLeftSidebar;
-  if (!gameLeftSidebar || !(gameLeftSidebar instanceof GameLeftSidebar)) {
-    console.error("GameLeftSidebar element not found in the DOM");
+    "dioxus-game-left-sidebar",
+  ) as DioxusGameLeftSidebar;
+  if (
+    !gameLeftSidebar ||
+    !(gameLeftSidebar instanceof DioxusGameLeftSidebar)
+  ) {
+    console.error("DioxusGameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
 
-  const teamStats = document.querySelector("team-stats") as TeamStats;
-  if (!teamStats || !(teamStats instanceof TeamStats)) {
-    console.error("TeamStats element not found in the DOM");
+  // TeamStats - Dioxus implementation
+  const dioxusTeamStats = document.querySelector(
+    "dioxus-team-stats",
+  ) as DioxusTeamStats | null;
+  if (dioxusTeamStats) {
+    if (!(dioxusTeamStats instanceof DioxusTeamStats)) {
+      customElements.upgrade(dioxusTeamStats);
+    }
+    dioxusTeamStats.eventBus = eventBus;
+    dioxusTeamStats.game = game;
+  } else {
+    console.error("DioxusTeamStats element not found in the DOM");
   }
-  teamStats.eventBus = eventBus;
-  teamStats.game = game;
 
-  const controlPanel = document.querySelector("control-panel") as ControlPanel;
-  if (!(controlPanel instanceof ControlPanel)) {
-    console.error("ControlPanel element not found in the DOM");
+  const controlPanel = document.querySelector(
+    "dioxus-control-panel",
+  ) as DioxusControlPanel;
+  if (!(controlPanel instanceof DioxusControlPanel)) {
+    console.error("DioxusControlPanel element not found in the DOM");
   }
   controlPanel.eventBus = eventBus;
   controlPanel.uiState = uiState;
   controlPanel.game = game;
 
   const eventsDisplay = document.querySelector(
-    "events-display",
-  ) as EventsDisplay;
-  if (!(eventsDisplay instanceof EventsDisplay)) {
+    "dioxus-events-display",
+  ) as DioxusEventsDisplay;
+  if (!(eventsDisplay instanceof DioxusEventsDisplay)) {
     console.error("events display not found");
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
 
-  const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
-  if (!(chatDisplay instanceof ChatDisplay)) {
+  const chatDisplay = document.querySelector(
+    "dioxus-chat-display",
+  ) as DioxusChatDisplay;
+  if (!(chatDisplay instanceof DioxusChatDisplay)) {
     console.error("chat display not found");
   }
   chatDisplay.eventBus = eventBus;
   chatDisplay.game = game;
 
   const playerInfo = document.querySelector(
-    "player-info-overlay",
-  ) as PlayerInfoOverlay;
-  if (!(playerInfo instanceof PlayerInfoOverlay)) {
+    "dioxus-player-info-overlay",
+  ) as DioxusPlayerInfoOverlay;
+  if (!(playerInfo instanceof DioxusPlayerInfoOverlay)) {
     console.error("player info overlay not found");
   }
   playerInfo.eventBus = eventBus;
   playerInfo.transform = transformHandler;
   playerInfo.game = game;
 
-  const winModal = document.querySelector("win-modal") as WinModal;
-  if (!(winModal instanceof WinModal)) {
-    console.error("win modal not found");
+  // WinModal - Dioxus implementation
+  const dioxusWinModal = document.querySelector(
+    "dioxus-win-modal",
+  ) as DioxusWinModal | null;
+  if (dioxusWinModal) {
+    if (!(dioxusWinModal instanceof DioxusWinModal)) {
+      customElements.upgrade(dioxusWinModal);
+    }
+    dioxusWinModal.eventBus = eventBus;
+    dioxusWinModal.game = game;
+  } else {
+    console.error("DioxusWinModal element not found in the DOM");
   }
-  winModal.eventBus = eventBus;
-  winModal.game = game;
 
-  const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
-  if (!(replayPanel instanceof ReplayPanel)) {
+  // Dioxus SendResourceModal
+  const dioxusSendResourceModal = document.querySelector(
+    "dioxus-send-resource-modal",
+  ) as DioxusSendResourceModal | null;
+  if (dioxusSendResourceModal) {
+    if (!(dioxusSendResourceModal instanceof DioxusSendResourceModal)) {
+      customElements.upgrade(dioxusSendResourceModal);
+    }
+    dioxusSendResourceModal.game = game;
+    dioxusSendResourceModal.eventBus = eventBus;
+    dioxusSendResourceModal.uiState = uiState;
+  }
+
+  const replayPanel = document.querySelector(
+    "dioxus-replay-panel",
+  ) as DioxusReplayPanel;
+  if (!(replayPanel instanceof DioxusReplayPanel)) {
     console.error("replay panel not found");
   }
   replayPanel.eventBus = eventBus;
   replayPanel.game = game;
 
   const gameRightSidebar = document.querySelector(
-    "game-right-sidebar",
-  ) as GameRightSidebar;
-  if (!(gameRightSidebar instanceof GameRightSidebar)) {
+    "dioxus-game-right-sidebar",
+  ) as DioxusGameRightSidebar;
+  if (!(gameRightSidebar instanceof DioxusGameRightSidebar)) {
     console.error("Game Right bar not found");
   }
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
 
-  const settingsModal = document.querySelector(
-    "settings-modal",
-  ) as SettingsModal;
-  if (!(settingsModal instanceof SettingsModal)) {
-    console.error("settings modal not found");
+  // SettingsModal - Dioxus implementation
+  const dioxusSettingsModal = document.querySelector(
+    "dioxus-settings-modal",
+  ) as DioxusSettingsModal | null;
+  if (dioxusSettingsModal) {
+    if (!(dioxusSettingsModal instanceof DioxusSettingsModal)) {
+      customElements.upgrade(dioxusSettingsModal);
+    }
+    dioxusSettingsModal.userSettings = userSettings;
+    dioxusSettingsModal.eventBus = eventBus;
+  } else {
+    console.error("DioxusSettingsModal element not found in the DOM");
   }
-  settingsModal.userSettings = userSettings;
-  settingsModal.eventBus = eventBus;
 
-  const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
-  if (!(unitDisplay instanceof UnitDisplay)) {
+  const unitDisplay = document.querySelector(
+    "dioxus-unit-display",
+  ) as DioxusUnitDisplay;
+  if (!(unitDisplay instanceof DioxusUnitDisplay)) {
     console.error("unit display not found");
   }
   unitDisplay.game = game;
   unitDisplay.eventBus = eventBus;
   unitDisplay.uiState = uiState;
 
-  const playerPanel = document.querySelector("player-panel") as PlayerPanel;
-  if (!(playerPanel instanceof PlayerPanel)) {
+  const playerPanel = document.querySelector(
+    "dioxus-player-panel",
+  ) as DioxusPlayerPanel;
+  if (!(playerPanel instanceof DioxusPlayerPanel)) {
     console.error("player panel not found");
   }
   playerPanel.g = game;
@@ -188,25 +273,59 @@ export function createRenderer(
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
 
-  const chatModal = document.querySelector("chat-modal") as ChatModal;
-  if (!(chatModal instanceof ChatModal)) {
-    console.error("chat modal not found");
+  // Wire up DioxusRadialMenu dependencies that are defined late
+  if (dioxusRadialMenu) {
+    dioxusRadialMenu.emojiTable = emojiTable as DioxusEmojiTable;
+    dioxusRadialMenu.buildMenu = dioxusBuildMenu!;
+    dioxusRadialMenu.playerPanel = playerPanel;
   }
-  chatModal.g = game;
-  chatModal.initEventBus(eventBus);
 
-  const multiTabModal = document.querySelector(
-    "multi-tab-modal",
-  ) as MultiTabModal;
-  if (!(multiTabModal instanceof MultiTabModal)) {
-    console.error("multi-tab modal not found");
+  // ChatModal - Dioxus implementation
+  const dioxusChatModal = document.querySelector(
+    "dioxus-chat-modal",
+  ) as DioxusChatModal | null;
+  if (dioxusChatModal) {
+    if (!(dioxusChatModal instanceof DioxusChatModal)) {
+      customElements.upgrade(dioxusChatModal);
+    }
+    dioxusChatModal.eventBus = eventBus;
+    dioxusChatModal.game = game;
+  } else {
+    console.error("DioxusChatModal element not found in the DOM");
   }
-  multiTabModal.game = game;
+
+  // PlayerModerationModal - Dioxus implementation
+  const dioxusPlayerModerationModal = document.querySelector(
+    "dioxus-player-moderation-modal",
+  ) as DioxusPlayerModerationModal | null;
+  if (dioxusPlayerModerationModal) {
+    if (
+      !(dioxusPlayerModerationModal instanceof DioxusPlayerModerationModal)
+    ) {
+      customElements.upgrade(dioxusPlayerModerationModal);
+    }
+    dioxusPlayerModerationModal.eventBus = eventBus;
+  } else {
+    console.error("DioxusPlayerModerationModal element not found in the DOM");
+  }
+
+  // MultiTabModal - Dioxus implementation
+  const dioxusMultiTabModal = document.querySelector(
+    "dioxus-multi-tab-modal",
+  ) as DioxusMultiTabModal | null;
+  if (dioxusMultiTabModal) {
+    if (!(dioxusMultiTabModal instanceof DioxusMultiTabModal)) {
+      customElements.upgrade(dioxusMultiTabModal);
+    }
+    dioxusMultiTabModal.game = game;
+  } else {
+    console.error("DioxusMultiTabModal element not found in the DOM");
+  }
 
   const headsUpMessage = document.querySelector(
-    "heads-up-message",
-  ) as HeadsUpMessage;
-  if (!(headsUpMessage instanceof HeadsUpMessage)) {
+    "dioxus-heads-up-message",
+  ) as DioxusHeadsUpMessage;
+  if (!(headsUpMessage instanceof DioxusHeadsUpMessage)) {
     console.error("heads-up message not found");
   }
   headsUpMessage.game = game;
@@ -215,31 +334,35 @@ export function createRenderer(
   const samRadiusLayer = new SAMRadiusLayer(game, eventBus, uiState);
 
   const performanceOverlay = document.querySelector(
-    "performance-overlay",
-  ) as PerformanceOverlay;
-  if (!(performanceOverlay instanceof PerformanceOverlay)) {
+    "dioxus-performance-overlay",
+  ) as DioxusPerformanceOverlay;
+  if (!(performanceOverlay instanceof DioxusPerformanceOverlay)) {
     console.error("performance overlay not found");
   }
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
-  const alertFrame = document.querySelector("alert-frame") as AlertFrame;
-  if (!(alertFrame instanceof AlertFrame)) {
+  const alertFrame = document.querySelector(
+    "dioxus-alert-frame",
+  ) as DioxusAlertFrame;
+  if (!(alertFrame instanceof DioxusAlertFrame)) {
     console.error("alert frame not found");
   }
   alertFrame.game = game;
 
-  const spawnTimer = document.querySelector("spawn-timer") as SpawnTimer;
-  if (!(spawnTimer instanceof SpawnTimer)) {
+  const spawnTimer = document.querySelector(
+    "dioxus-spawn-timer",
+  ) as DioxusSpawnTimer;
+  if (!(spawnTimer instanceof DioxusSpawnTimer)) {
     console.error("spawn timer not found");
   }
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
   const immunityTimer = document.querySelector(
-    "immunity-timer",
-  ) as ImmunityTimer;
-  if (!(immunityTimer instanceof ImmunityTimer)) {
+    "dioxus-immunity-timer",
+  ) as DioxusImmunityTimer;
+  if (!(immunityTimer instanceof DioxusImmunityTimer)) {
     console.error("immunity timer not found");
   }
   immunityTimer.game = game;
@@ -262,31 +385,31 @@ export function createRenderer(
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,
-    buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
-    ),
+    // BuildMenu - Dioxus implementation
+    ...(dioxusBuildMenu ? [dioxusBuildMenu] : []),
+    // RadialMenu - Dioxus implementation
+    ...(dioxusRadialMenu ? [dioxusRadialMenu] : []),
     spawnTimer,
     immunityTimer,
-    leaderboard,
+    ...(dioxusLeaderboard ? [dioxusLeaderboard] : []),
     gameLeftSidebar,
     unitDisplay,
     gameRightSidebar,
     controlPanel,
     playerInfo,
-    winModal,
+    ...(dioxusWinModal ? [dioxusWinModal] : []),
     replayPanel,
-    settingsModal,
-    teamStats,
+    ...(dioxusSettingsModal ? [dioxusSettingsModal] : []),
+    ...(dioxusTeamStats ? [dioxusTeamStats] : []),
     playerPanel,
     headsUpMessage,
-    multiTabModal,
+    ...(dioxusMultiTabModal ? [dioxusMultiTabModal] : []),
+    // Dioxus SendResourceModal
+    ...(dioxusSendResourceModal ? [dioxusSendResourceModal] : []),
+    // Dioxus ChatModal
+    ...(dioxusChatModal ? [dioxusChatModal] : []),
+    // Dioxus PlayerModerationModal
+    ...(dioxusPlayerModerationModal ? [dioxusPlayerModerationModal] : []),
     new AdTimer(game),
     alertFrame,
     performanceOverlay,
@@ -313,7 +436,7 @@ export class GameRenderer {
     public transformHandler: TransformHandler,
     public uiState: UIState,
     private layers: Layer[],
-    private performanceOverlay: PerformanceOverlay,
+    private performanceOverlay: DioxusPerformanceOverlay,
   ) {
     const context = canvas.getContext("2d", { alpha: false });
     if (context === null) throw new Error("2d context not supported");

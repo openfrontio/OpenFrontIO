@@ -5,6 +5,11 @@ import {
   SearchBounds,
 } from "../algorithms/AStar.WaterBounded";
 import { PathFinder } from "../types";
+import {
+  AStarWaterBoundedWasm,
+  isWasmReady,
+  SearchBounds as WasmSearchBounds,
+} from "../WasmPathfinding";
 
 const ENDPOINT_REFINEMENT_TILES = 50;
 const LOCAL_ASTAR_MAX_AREA = 100 * 100;
@@ -20,7 +25,7 @@ const MAGNITUDE_MASK = 0x1f;
  */
 export class SmoothingWaterTransformer implements PathFinder<TileRef> {
   private readonly mapWidth: number;
-  private readonly localAStar: AStarWaterBounded;
+  private readonly localAStar: AStarWaterBounded | AStarWaterBoundedWasm;
   private readonly terrain: Uint8Array;
   private readonly isTraversable: (tile: TileRef) => boolean;
 
@@ -30,7 +35,9 @@ export class SmoothingWaterTransformer implements PathFinder<TileRef> {
     isTraversable: (tile: TileRef) => boolean = (t) => map.isWater(t),
   ) {
     this.mapWidth = map.width();
-    this.localAStar = new AStarWaterBounded(map, LOCAL_ASTAR_MAX_AREA);
+    this.localAStar = isWasmReady()
+      ? new AStarWaterBoundedWasm(map, LOCAL_ASTAR_MAX_AREA)
+      : new AStarWaterBounded(map, LOCAL_ASTAR_MAX_AREA);
     this.terrain = (map as any).terrain as Uint8Array;
     this.isTraversable = isTraversable;
   }

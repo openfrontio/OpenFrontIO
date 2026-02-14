@@ -19,7 +19,7 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
   UnsafeHTMLDirective: class {},
 }));
 
-import { EventsDisplay } from "../../../../src/client/graphics/layers/EventsDisplay";
+import { DioxusEventsDisplay } from "../../../../src/client/graphics/layers/AdvancedLayerBridges";
 import { MessageType } from "../../../../src/core/game/Game";
 
 describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
@@ -38,7 +38,7 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
   }
 
   test("removes ONLY renewal events for the broken alliance", () => {
-    const display = new EventsDisplay();
+    const display = new DioxusEventsDisplay();
 
     const allianceAB = 1;
     const allianceAC = 2;
@@ -65,7 +65,7 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
   });
 
   test("does NOT remove renewals just because the same player is involved", () => {
-    const display = new EventsDisplay();
+    const display = new DioxusEventsDisplay();
 
     const allianceAB = 10;
     const allianceAC = 11;
@@ -84,7 +84,7 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
   });
 
   test("breaking one alliance does not affect renewals between other players", () => {
-    const display = new EventsDisplay();
+    const display = new DioxusEventsDisplay();
 
     const allianceAB = 100;
     const allianceCD = 200;
@@ -103,7 +103,7 @@ describe("EventsDisplay - alliance renewal cleanup (allianceID based)", () => {
   });
 
   test("does not affect non-RENEW_ALLIANCE events", () => {
-    const display = new EventsDisplay();
+    const display = new DioxusEventsDisplay();
 
     (display as any).events = [
       {

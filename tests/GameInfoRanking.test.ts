@@ -1,7 +1,7 @@
 import {
   Ranking,
   RankType,
-} from "../src/client/components/baseComponents/ranking/GameInfoRanking";
+} from "../src/client/ranking/GameInfoRanking";
 import {
   Difficulty,
   GameMapSize,

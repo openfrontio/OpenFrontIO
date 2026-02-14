@@ -1,5 +1,9 @@
 import { GameConfig, GameID, PartialGameRecord } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import {
+  getUiSessionStorageCachedValue,
+  writeUiSessionStorage,
+} from "./runtime/UiSessionRuntime";
 
 export interface LocalStatsData {
   [key: GameID]: {
@@ -10,16 +14,24 @@ export interface LocalStatsData {
 }
 
 let _startTime: number;
+const GAME_RECORDS_STORAGE_KEY = "game-records";
 
 function getStats(): LocalStatsData {
-  const statsStr = localStorage.getItem("game-records");
+  const statsStr = getUiSessionStorageCachedValue(GAME_RECORDS_STORAGE_KEY);
+  if (typeof statsStr !== "string") {
+    return {};
+  }
   return statsStr ? JSON.parse(statsStr) : {};
 }
 
 function save(stats: LocalStatsData) {
   // To execute asynchronously
   setTimeout(
-    () => localStorage.setItem("game-records", JSON.stringify(stats, replacer)),
+    () =>
+      void writeUiSessionStorage(
+        GAME_RECORDS_STORAGE_KEY,
+        JSON.stringify(stats, replacer),
+      ),
     0,
   );
 }
@@ -27,10 +39,6 @@ function save(stats: LocalStatsData) {
 // The user can quit the game anytime so better save the lobby as soon as the
 // game starts.
 export function startGame(id: GameID, lobby: Partial<GameConfig>) {
-  if (localStorage === undefined) {
-    return;
-  }
-
   _startTime = Date.now();
   const stats = getStats();
   stats[id] = { lobby };
@@ -42,10 +50,6 @@ export function startTime() {
 }
 
 export function endGame(gameRecord: PartialGameRecord) {
-  if (localStorage === undefined) {
-    return;
-  }
-
   const stats = getStats();
   const gameStat = stats[gameRecord.info.gameID];
 

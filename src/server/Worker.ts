@@ -31,10 +31,15 @@ import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import {
+  resolvedInstanceId,
+  resolvedWorkerId,
+  runtimeConfigSnapshot,
+} from "./RuntimeConfig";
 
 const config = getServerConfigFromServer();
 
-const workerId = parseInt(process.env.WORKER_ID ?? "0");
+const workerId = resolvedWorkerId();
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist(true);
 
@@ -55,8 +60,10 @@ export async function startWorker() {
   const app = express();
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server });
+  let workerReady = false;
 
   const gm = new GameManager(config, log);
+  log.info("Worker runtime config", runtimeConfigSnapshot(config, "worker", workerId));
 
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
@@ -96,6 +103,28 @@ export async function startWorker() {
   app.set("trust proxy", 3);
   app.use(compression());
   app.use(express.json());
+
+  app.get("/healthz", (_req, res) => {
+    res.json({
+      status: "ok",
+      role: "worker",
+      workerId,
+      pid: process.pid,
+    });
+  });
+
+  app.get("/readyz", (_req, res) => {
+    res.status(workerReady ? 200 : 503).json({
+      status: workerReady ? "ready" : "not_ready",
+      role: "worker",
+      workerId,
+      pid: process.pid,
+    });
+  });
+
+  app.get("/configz", (_req, res) => {
+    res.json(runtimeConfigSnapshot(config, "worker", workerId));
+  });
 
   // Configure MIME types for webp files
   express.static.mime.define({ "image/webp": ["webp"] });
@@ -202,6 +231,12 @@ export async function startWorker() {
       return res.status(404).json({ error: "Game not found" });
     }
     res.json(game.gameInfo());
+  });
+
+  app.get("/api/public_lobbies", async (_req, res) => {
+    res.json({
+      lobbies: gm.publicLobbies(),
+    });
   });
 
   registerGamePreviewRoute({
@@ -456,6 +491,7 @@ export async function startWorker() {
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
+    workerReady = true;
     log.info(`running on http://localhost:${PORT}`);
     log.info(`Handling requests with path prefix /w${workerId}/`);
     // Signal to the master process that this worker is ready
@@ -507,7 +543,7 @@ async function startMatchmakingPolling(gm: GameManager) {
             id: workerId,
             gameId: gameId,
             ccu: gm.activeClients(),
-            instanceId: process.env.INSTANCE_ID,
+            instanceId: resolvedInstanceId(),
           }),
           signal: controller.signal,
         });

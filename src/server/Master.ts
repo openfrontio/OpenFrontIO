@@ -1,12 +1,10 @@
 import cluster from "cluster";
-import crypto from "crypto";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -14,6 +12,14 @@ import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
 import { renderHtml } from "./RenderHtml";
+import {
+  applyMasterSessionConfig,
+  createMasterSessionConfig,
+  resolvedControlPlaneUrl,
+  resolvedGameEnvName,
+  resolvedMasterPort,
+  runtimeConfigSnapshot,
+} from "./RuntimeConfig";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -28,6 +34,95 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(express.json());
+
+const CONTROL_PLANE_ENV_CACHE_TTL_MS = 5000;
+const CONTROL_PLANE_ENV_TIMEOUT_MS = 1000;
+
+type EnvApiPayload = {
+  game_env: string;
+};
+
+let cachedControlPlaneEnv: {
+  value: EnvApiPayload;
+  expiresAtMs: number;
+} | null = null;
+
+const isEnvApiPayload = (value: unknown): value is EnvApiPayload => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.game_env === "string";
+};
+
+const fetchControlPlaneEnv = async (): Promise<EnvApiPayload | null> => {
+  const controlPlaneUrl = resolvedControlPlaneUrl();
+  if (!controlPlaneUrl) {
+    return null;
+  }
+
+  const nowMs = Date.now();
+  if (cachedControlPlaneEnv && cachedControlPlaneEnv.expiresAtMs > nowMs) {
+    return cachedControlPlaneEnv.value;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    CONTROL_PLANE_ENV_TIMEOUT_MS,
+  );
+  try {
+    const url = new URL("/api/env", controlPlaneUrl).toString();
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      log.warn(
+        `Control-plane /api/env returned ${response.status}; falling back to master env response`,
+      );
+      return null;
+    }
+
+    const payload = await response.json();
+    if (!isEnvApiPayload(payload)) {
+      log.warn(
+        "Control-plane /api/env returned unexpected payload; falling back to master env response",
+      );
+      return null;
+    }
+
+    cachedControlPlaneEnv = {
+      value: payload,
+      expiresAtMs: nowMs + CONTROL_PLANE_ENV_CACHE_TTL_MS,
+    };
+    return payload;
+  } catch (error) {
+    log.warn("Control-plane /api/env fetch failed; falling back", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+app.get("/healthz", (_req, res) => {
+  res.json({
+    status: "ok",
+    role: "master",
+    pid: process.pid,
+  });
+});
+
+app.get("/readyz", (_req, res) => {
+  const isReady = readyWorkers.size === config.numWorkers();
+  res.status(isReady ? 200 : 503).json({
+    status: isReady ? "ready" : "not_ready",
+    role: "master",
+    readyWorkers: readyWorkers.size,
+    totalWorkers: config.numWorkers(),
+  });
+});
+
+app.get("/configz", (_req, res) => {
+  res.json(runtimeConfigSnapshot(config, "master"));
+});
 
 // Middleware to handle HTML files with EJS templating
 app.use(async (req, res, next) => {
@@ -137,24 +232,18 @@ export async function startMaster() {
     });
   });
 
-  // Generate admin token for worker authentication
-  const ADMIN_TOKEN = crypto.randomBytes(16).toString("hex");
-  process.env.ADMIN_TOKEN = ADMIN_TOKEN;
+  const masterSession = createMasterSessionConfig(config);
+  applyMasterSessionConfig(masterSession);
 
-  const INSTANCE_ID =
-    config.env() === GameEnv.Dev
-      ? "DEV_ID"
-      : crypto.randomBytes(4).toString("hex");
-  process.env.INSTANCE_ID = INSTANCE_ID;
-
-  log.info(`Instance ID: ${INSTANCE_ID}`);
+  log.info(`Instance ID: ${masterSession.instanceId}`);
+  log.info("Master runtime config", runtimeConfigSnapshot(config, "master"));
 
   // Fork workers
   for (let i = 0; i < config.numWorkers(); i++) {
     const worker = cluster.fork({
       WORKER_ID: i,
-      ADMIN_TOKEN,
-      INSTANCE_ID,
+      ADMIN_TOKEN: masterSession.adminToken,
+      INSTANCE_ID: masterSession.instanceId,
     });
 
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
@@ -203,8 +292,8 @@ export async function startMaster() {
     // Restart the worker with the same ID
     const newWorker = cluster.fork({
       WORKER_ID: workerId,
-      ADMIN_TOKEN,
-      INSTANCE_ID,
+      ADMIN_TOKEN: masterSession.adminToken,
+      INSTANCE_ID: masterSession.instanceId,
     });
 
     log.info(
@@ -212,18 +301,21 @@ export async function startMaster() {
     );
   });
 
-  const PORT = 3000;
+  const PORT = resolvedMasterPort();
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
 }
 
-app.get("/api/env", async (req, res) => {
-  const envConfig = {
-    game_env: process.env.GAME_ENV,
-  };
-  if (!envConfig.game_env) return res.sendStatus(500);
-  res.json(envConfig);
+app.get("/api/env", async (_req, res) => {
+  const controlPlanePayload = await fetchControlPlaneEnv();
+  if (controlPlanePayload) {
+    return res.json(controlPlanePayload);
+  }
+
+  res.json({
+    game_env: resolvedGameEnvName(),
+  });
 });
 
 // Add lobbies endpoint to list public games for this worker

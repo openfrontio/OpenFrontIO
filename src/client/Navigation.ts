@@ -64,7 +64,7 @@ export function initNavigation() {
   });
 
   // Wait for main-layout component to render before setting up click handler
-  customElements.whenDefined("main-layout").then(() => {
+  customElements.whenDefined("dioxus-main-layout").then(() => {
     // Handle clicks on main container to close open modals (navigate back)
     const mainEl = document.querySelector("main");
 

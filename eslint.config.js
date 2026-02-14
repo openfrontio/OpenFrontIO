@@ -26,7 +26,9 @@ export default [
           allowDefaultProject: [
             "__mocks__/fileMock.js",
             "eslint.config.js",
+            "scripts/ensureCanvasNative.mjs",
             "scripts/sync-assets.mjs",
+            "scripts/checkBridgeLegacySurface.mjs",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

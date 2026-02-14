@@ -4,6 +4,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { otelPromLabels } from "./RuntimeConfig";
 
 const config = getServerConfigFromServer();
 
@@ -16,14 +17,5 @@ export function getOtelResource() {
 }
 
 export function getPromLabels() {
-  return {
-    "service.instance.id": process.env.HOSTNAME,
-    "openfront.environment": config.env(),
-    "openfront.host": process.env.HOST,
-    "openfront.domain": process.env.DOMAIN,
-    "openfront.subdomain": process.env.SUBDOMAIN,
-    "openfront.component": process.env.WORKER_ID
-      ? "Worker " + process.env.WORKER_ID
-      : "Master",
-  };
+  return otelPromLabels(config);
 }

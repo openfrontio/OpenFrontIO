@@ -59,6 +59,19 @@ jobs:
       - run: npm ci
       - run: npx eslint --format gha
 
+  bridge-surface:
+    name: 🧬 Bridge Surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run check:bridge-surface
+
   prettier:
     name: 🎨 Prettier
     runs-on: ubuntu-latest
@@ -71,3 +84,12 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npx prettier --check .
+
+  rust-control-plane:
+    name: 🦀 Rust Control Plane
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p openfront-control-plane --manifest-path rust/Cargo.toml

@@ -31,6 +31,7 @@ import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
+  GoToPlayerEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -48,7 +49,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {

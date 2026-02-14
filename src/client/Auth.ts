@@ -3,6 +3,16 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import {
+  isLikelyApiUnavailableError,
+  isLocalExternalApiBase,
+  localApiUnavailableMessage,
+} from "./ExternalApi";
+import {
+  getUiSessionStorageCachedValue,
+  removeUiSessionStorage,
+  writeUiSessionStorage,
+} from "./runtime/UiSessionRuntime";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
@@ -10,6 +20,15 @@ export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
 let __jwt: string | null = null;
+let hasWarnedLocalAuthUnavailable = false;
+
+function warnLocalAuthUnavailableOnce(context: string): void {
+  if (hasWarnedLocalAuthUnavailable) return;
+  hasWarnedLocalAuthUnavailable = true;
+  console.warn(
+    `[Auth] ${context}: ${localApiUnavailableMessage("Authentication")}`,
+  );
+}
 
 export function discordLogin() {
   const redirectUri = encodeURIComponent(window.location.href);
@@ -60,7 +79,7 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     return false;
   } finally {
     __jwt = null;
-    localStorage.removeItem(PERSISTENT_ID_KEY);
+    void removeUiSessionStorage(PERSISTENT_ID_KEY);
   }
 }
 
@@ -138,14 +157,19 @@ export async function userAuth(
 }
 
 async function refreshJwt(): Promise<void> {
+  const apiBase = getApiBase();
   try {
     console.log("Refreshing jwt");
-    const response = await fetch(getApiBase() + "/auth/refresh", {
+    const response = await fetch(apiBase + "/auth/refresh", {
       method: "POST",
       credentials: "include",
     });
     if (response.status !== 200) {
-      console.error("Refresh failed", response);
+      if (isLocalExternalApiBase(apiBase)) {
+        warnLocalAuthUnavailableOnce("refresh");
+      } else {
+        console.error("Refresh failed", response);
+      }
       logOut();
       return;
     }
@@ -154,16 +178,20 @@ async function refreshJwt(): Promise<void> {
     console.log("Refresh succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("Refresh failed", e);
-    // if server unreachable, just clear jwt
+    if (isLocalExternalApiBase(apiBase) && isLikelyApiUnavailableError(e)) {
+      warnLocalAuthUnavailableOnce("refresh");
+    } else {
+      console.error("Refresh failed", e);
+    }
+    // If server is unreachable, keep client session logged out.
     __jwt = null;
     return;
   }
 }
 
 export async function sendMagicLink(email: string): Promise<boolean> {
+  const apiBase = getApiBase();
   try {
-    const apiBase = getApiBase();
     const response = await fetch(`${apiBase}/auth/magic-link`, {
       method: "POST",
       headers: {
@@ -179,15 +207,23 @@ export async function sendMagicLink(email: string): Promise<boolean> {
     if (response.ok) {
       return true;
     } else {
-      console.error(
-        "Failed to send recovery email:",
-        response.status,
-        response.statusText,
-      );
+      if (isLocalExternalApiBase(apiBase)) {
+        warnLocalAuthUnavailableOnce("magic-link");
+      } else {
+        console.error(
+          "Failed to send recovery email:",
+          response.status,
+          response.statusText,
+        );
+      }
       return false;
     }
   } catch (error) {
-    console.error("Error sending recovery email:", error);
+    if (isLocalExternalApiBase(apiBase) && isLikelyApiUnavailableError(error)) {
+      warnLocalAuthUnavailableOnce("magic-link");
+    } else {
+      console.error("Error sending recovery email:", error);
+    }
     return false;
   }
 }
@@ -196,28 +232,26 @@ export async function sendMagicLink(email: string): Promise<boolean> {
 export async function getPlayToken(): Promise<string> {
   const result = await userAuth();
   if (result !== false) return result.jwt;
-  return getPersistentIDFromLocalStorage();
+  return getPersistentIDFromSessionStorage();
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentID(): string {
   const jwt = __jwt;
-  if (!jwt) return getPersistentIDFromLocalStorage();
+  if (!jwt) return getPersistentIDFromSessionStorage();
   const payload = decodeJwt(jwt);
   const sub = payload.sub;
-  if (!sub) return getPersistentIDFromLocalStorage();
+  if (!sub) return getPersistentIDFromSessionStorage();
   return base64urlToUuid(sub);
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromLocalStorage(): string {
-  // Try to get existing localStorage
-  const value = localStorage.getItem(PERSISTENT_ID_KEY);
+function getPersistentIDFromSessionStorage(): string {
+  const value = getUiSessionStorageCachedValue(PERSISTENT_ID_KEY);
   if (value) return value;
 
-  // If no localStorage exists, create new ID and set localStorage
   const newID = generateCryptoRandomUUID();
-  localStorage.setItem(PERSISTENT_ID_KEY, newID);
+  void writeUiSessionStorage(PERSISTENT_ID_KEY, newID);
 
   return newID;
 }

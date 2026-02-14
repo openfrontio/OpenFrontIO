@@ -2,6 +2,7 @@ import version from "resources/version.txt?raw";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { initWasm } from "../pathfinding/WasmPathfinding";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -16,6 +17,16 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+
+// Initialize WASM module at worker startup
+// This is done eagerly so pathfinding can use WASM when available
+const wasmReady = initWasm()
+  .then(() => {
+    console.log("[Worker] WASM module initialized successfully");
+  })
+  .catch((err) => {
+    console.warn("[Worker] WASM initialization failed, falling back to TypeScript:", err);
+  });
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -41,18 +52,21 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       break;
     case "init":
       try {
-        gameRunner = createGameRunner(
-          message.gameStartInfo,
-          message.clientID,
-          mapLoader,
-          gameUpdate,
-        ).then((gr) => {
-          sendMessage({
-            type: "initialized",
-            id: message.id,
-          } as InitializedMessage);
-          return gr;
-        });
+        // Wait for WASM to be ready (or fail gracefully) before creating game runner
+        gameRunner = wasmReady.then(() =>
+          createGameRunner(
+            message.gameStartInfo,
+            message.clientID,
+            mapLoader,
+            gameUpdate,
+          ).then((gr) => {
+            sendMessage({
+              type: "initialized",
+              id: message.id,
+            } as InitializedMessage);
+            return gr;
+          }),
+        );
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;

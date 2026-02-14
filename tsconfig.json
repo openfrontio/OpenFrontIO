@@ -9,7 +9,11 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "resources/*": ["resources/*"]
+      "resources/*": ["resources/*"],
+      "wasm-core": ["rust/wasm-core/pkg"],
+      "wasm-core/*": ["rust/wasm-core/pkg/*"],
+      "dioxus-ui": ["rust/dioxus-ui/pkg"],
+      "dioxus-ui/*": ["rust/dioxus-ui/pkg/*"]
     },
     // Emit
     "sourceMap": true,

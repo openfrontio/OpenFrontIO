@@ -2,22 +2,29 @@ import { Game, Player, TerraNullius } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinding } from "../PathFinder";
-import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
+import { AStarWaterBounded, SearchBounds } from "../algorithms/AStar.WaterBounded";
+import {
+  AStarWaterBoundedWasm,
+  isWasmReady,
+  SearchBounds as WasmSearchBounds,
+} from "../WasmPathfinding";
 
 type Owner = Player | TerraNullius;
 
 const REFINE_MAX_SEARCH_AREA = 100 * 100;
 
 export class SpatialQuery {
-  private boundedAStar: AStarWaterBounded | null = null;
+  private boundedAStar: AStarWaterBounded | AStarWaterBoundedWasm | null = null;
 
   constructor(private game: Game) {}
 
-  private getBoundedAStar(): AStarWaterBounded {
-    this.boundedAStar ??= new AStarWaterBounded(
-      this.game.map(),
-      REFINE_MAX_SEARCH_AREA,
-    );
+  private getBoundedAStar(): AStarWaterBounded | AStarWaterBoundedWasm {
+    if (!this.boundedAStar) {
+      const map = this.game.map();
+      this.boundedAStar = isWasmReady()
+        ? new AStarWaterBoundedWasm(map, REFINE_MAX_SEARCH_AREA)
+        : new AStarWaterBounded(map, REFINE_MAX_SEARCH_AREA);
+    }
 
     return this.boundedAStar;
   }

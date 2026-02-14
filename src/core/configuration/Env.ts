@@ -89,4 +89,25 @@ export const Env = {
   get ADMIN_TOKEN() {
     return getEnv("ADMIN_TOKEN");
   },
+  get INSTANCE_ID() {
+    return getEnv("INSTANCE_ID");
+  },
+  get WORKER_ID() {
+    return getEnv("WORKER_ID");
+  },
+  get MASTER_PORT() {
+    return getEnv("MASTER_PORT");
+  },
+  get WORKER_BASE_PORT() {
+    return getEnv("WORKER_BASE_PORT");
+  },
+  get HOST() {
+    return getEnv("HOST");
+  },
+  get HOSTNAME() {
+    return getEnv("HOSTNAME");
+  },
+  get CONTROL_PLANE_URL() {
+    return getEnv("CONTROL_PLANE_URL");
+  },
 };

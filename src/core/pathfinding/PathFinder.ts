@@ -15,7 +15,8 @@ import { ComponentCheckTransformer } from "./transformers/ComponentCheckTransfor
 import { MiniMapTransformer } from "./transformers/MiniMapTransformer";
 import { ShoreCoercingTransformer } from "./transformers/ShoreCoercingTransformer";
 import { SmoothingWaterTransformer } from "./transformers/SmoothingWaterTransformer";
-import { PathStatus, SteppingPathFinder } from "./types";
+import { PathStatus, SteppingPathFinder, PathFinder } from "./types";
+import { AStarWaterWasm, AStarRailWasm, isWasmReady } from "./WasmPathfinding";
 
 /**
  * Pathfinders that work with GameMap - usable in both simulation and UI layers
@@ -54,7 +55,11 @@ export class PathFinding {
 
   static WaterSimple(game: Game): SteppingPathFinder<TileRef> {
     const miniMap = game.miniMap();
-    const pf = new AStarWater(miniMap);
+
+    // Use WASM implementation when available for better performance
+    const pf: PathFinder<number> = isWasmReady()
+      ? new AStarWaterWasm(miniMap)
+      : new AStarWater(miniMap);
 
     return PathFinderBuilder.create(pf)
       .wrap((pf) => new ShoreCoercingTransformer(pf, miniMap))
@@ -64,7 +69,11 @@ export class PathFinding {
 
   static Rail(game: Game): SteppingPathFinder<TileRef> {
     const miniMap = game.miniMap();
-    const pf = new AStarRail(miniMap);
+
+    // Use WASM implementation when available for better performance
+    const pf: PathFinder<number> = isWasmReady()
+      ? new AStarRailWasm(miniMap)
+      : new AStarRail(miniMap);
 
     return PathFinderBuilder.create(pf)
       .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))

@@ -8,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
+import { ClientRejoinMessage, GameConfig, GameID, GameInfo } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -92,6 +92,34 @@ export class GameManager {
       totalClients += game.activeClients.length;
     });
     return totalClients;
+  }
+
+  publicLobbies(): GameInfo[] {
+    const now = Date.now();
+    const lobbies: GameInfo[] = [];
+    this.games.forEach((game) => {
+      if (!game.isPublic()) {
+        return;
+      }
+      const info = game.gameInfo();
+      const numClients = info.clients?.length ?? 0;
+      const maxPlayers = info.gameConfig?.maxPlayers ?? null;
+      const msUntilStart = (info.msUntilStart ?? now) - now;
+      if (msUntilStart <= 250) {
+        return;
+      }
+      if (maxPlayers !== null && maxPlayers <= numClients) {
+        return;
+      }
+      lobbies.push({
+        gameID: info.gameID,
+        numClients,
+        gameConfig: info.gameConfig,
+        msUntilStart,
+      } as GameInfo);
+    });
+
+    return lobbies;
   }
 
   desyncCount(): number {

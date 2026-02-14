@@ -1,18 +1,29 @@
 import { GameMap, TileRef } from "../../game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
+import { AStarWaterBoundedWasm, isWasmReady } from "../WasmPathfinding";
 import { AbstractGraphAStar } from "./AStar.AbstractGraph";
-import { AStarWaterBounded } from "./AStar.WaterBounded";
+import { AStarWaterBounded, SearchBounds } from "./AStar.WaterBounded";
 import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
 import { LAND_MARKER } from "./ConnectedComponents";
 
+// Type alias for the bounded A* pathfinder (either WASM or TypeScript)
+type BoundedPathfinder = AStarWaterBounded | AStarWaterBoundedWasm;
+
+// Factory function to create bounded pathfinder with WASM acceleration when available
+function createBoundedPathfinder(map: GameMap, maxArea: number): BoundedPathfinder {
+  return isWasmReady()
+    ? new AStarWaterBoundedWasm(map, maxArea)
+    : new AStarWaterBounded(map, maxArea);
+}
+
 export class AStarWaterHierarchical implements PathFinder<number> {
   private tileBFS: BFSGrid;
   private abstractAStar: AbstractGraphAStar;
-  private localAStar: AStarWaterBounded;
-  private localAStarMultiCluster: AStarWaterBounded;
-  private localAStarShortPath: AStarWaterBounded;
+  private localAStar: BoundedPathfinder;
+  private localAStarMultiCluster: BoundedPathfinder;
+  private localAStarShortPath: BoundedPathfinder;
   private sourceResolver: SourceResolver;
 
   constructor(
@@ -30,14 +41,14 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     // AbstractGraphAStar for abstract graph routing
     this.abstractAStar = new AbstractGraphAStar(this.graph);
 
-    // BoundedAStar for cluster-bounded local pathfinding
+    // BoundedAStar for cluster-bounded local pathfinding (uses WASM when available)
     const maxLocalNodes = clusterSize * clusterSize;
-    this.localAStar = new AStarWaterBounded(map, maxLocalNodes);
+    this.localAStar = createBoundedPathfinder(map, maxLocalNodes);
 
     // BoundedAStar for multi-cluster (3x3) local pathfinding
     const multiClusterSize = clusterSize * 3;
     const maxMultiClusterNodes = multiClusterSize * multiClusterSize;
-    this.localAStarMultiCluster = new AStarWaterBounded(
+    this.localAStarMultiCluster = createBoundedPathfinder(
       map,
       maxMultiClusterNodes,
     );
@@ -45,7 +56,7 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     // BoundedAStar for short path multi-source
     const shortPathSize = 260; // 2 * (120 + padding 10)
     const maxShortPathNodes = shortPathSize * shortPathSize;
-    this.localAStarShortPath = new AStarWaterBounded(map, maxShortPathNodes);
+    this.localAStarShortPath = createBoundedPathfinder(map, maxShortPathNodes);
 
     // SourceResolver for multi-source search
     this.sourceResolver = new SourceResolver(this.map, this.graph);

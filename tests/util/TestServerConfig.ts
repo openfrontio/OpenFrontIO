@@ -3,86 +3,120 @@ import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
 import { PublicGameModifiers } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
+const TEST_JWK: JWK = {
+  alg: "EdDSA",
+  crv: "Ed25519",
+  kty: "OKP",
+  x: "test-public-key",
+};
+
 export class TestServerConfig implements ServerConfig {
   turnstileSiteKey(): string {
-    throw new Error("Method not implemented.");
+    return "test-turnstile-site-key";
   }
+
   turnstileSecretKey(): string {
-    throw new Error("Method not implemented.");
+    return "test-turnstile-secret-key";
   }
+
   apiKey(): string {
-    throw new Error("Method not implemented.");
+    return "test-api-key";
   }
+
   allowedFlares(): string[] | undefined {
-    throw new Error("Method not implemented.");
+    return undefined;
   }
+
   stripePublishableKey(): string {
-    throw new Error("Method not implemented.");
+    return "pk_test";
   }
+
   domain(): string {
-    throw new Error("Method not implemented.");
+    return "localhost";
   }
+
   subdomain(): string {
-    throw new Error("Method not implemented.");
+    return "";
   }
+
   jwtAudience(): string {
-    throw new Error("Method not implemented.");
+    return "localhost";
   }
+
   jwtIssuer(): string {
-    throw new Error("Method not implemented.");
+    return "http://localhost:8787";
   }
+
   jwkPublicKey(): Promise<JWK> {
-    throw new Error("Method not implemented.");
+    return Promise.resolve(TEST_JWK);
   }
+
   otelEnabled(): boolean {
-    throw new Error("Method not implemented.");
+    return false;
   }
+
   otelEndpoint(): string {
-    throw new Error("Method not implemented.");
+    return "";
   }
+
   otelAuthHeader(): string {
-    throw new Error("Method not implemented.");
+    return "";
   }
+
   turnIntervalMs(): number {
-    throw new Error("Method not implemented.");
+    return 100;
   }
+
   gameCreationRate(): number {
-    throw new Error("Method not implemented.");
+    return 60_000;
   }
+
   async lobbyMaxPlayers(): Promise<number> {
-    throw new Error("Method not implemented.");
+    return 64;
   }
+
   numWorkers(): number {
-    throw new Error("Method not implemented.");
+    return 1;
   }
+
   workerIndex(gameID: GameID): number {
-    throw new Error("Method not implemented.");
+    void gameID;
+    return 0;
   }
+
   workerPath(gameID: GameID): string {
-    throw new Error("Method not implemented.");
+    return `w${this.workerIndex(gameID)}`;
   }
+
   workerPort(gameID: GameID): number {
-    throw new Error("Method not implemented.");
+    return this.workerPortByIndex(this.workerIndex(gameID));
   }
+
   workerPortByIndex(workerID: number): number {
-    throw new Error("Method not implemented.");
+    return 3001 + workerID;
   }
+
   env(): GameEnv {
-    throw new Error("Method not implemented.");
+    return GameEnv.Dev;
   }
+
   adminToken(): string {
-    throw new Error("Method not implemented.");
+    return "test-admin-token";
   }
+
   adminHeader(): string {
-    throw new Error("Method not implemented.");
+    return "x-admin-key";
   }
+
   gitCommit(): string {
-    throw new Error("Method not implemented.");
+    return "test-git-commit";
   }
+
   getRandomPublicGameModifiers(): PublicGameModifiers {
     return { isCompact: false, isRandomSpawn: false };
   }
+
   async supportsCompactMapForTeams(): Promise<boolean> {
-    throw new Error("Method not implemented.");
+    return true;
   }
 }

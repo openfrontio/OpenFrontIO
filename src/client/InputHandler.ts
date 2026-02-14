@@ -1,8 +1,15 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
-import { UnitView } from "../core/game/GameView";
+import { PlayerView, UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
+import {
+  ensureUiSessionRuntimeStarted,
+  getUiSessionStorageCachedValue,
+  readUiSessionStorage,
+  UI_SESSION_RUNTIME_EVENTS,
+  type UiSessionKeyboardChangedDetail,
+} from "./runtime/UiSessionRuntime";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -136,6 +143,29 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+export class GoToPlayerEvent implements GameEvent {
+  constructor(public player: PlayerView) {}
+}
+
+export class GoToPositionEvent implements GameEvent {
+  constructor(
+    public x: number,
+    public y: number,
+  ) {}
+}
+
+export class GoToUnitEvent implements GameEvent {
+  constructor(public unit: UnitView) {}
+}
+
+export class ShowSettingsModalEvent {
+  constructor(
+    public readonly isVisible: boolean = true,
+    public readonly shouldPause: boolean = false,
+    public readonly isPaused: boolean = false,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -157,6 +187,7 @@ export class InputHandler {
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
+  private readonly KEYBINDS_STORAGE_KEY = "settings.keybinds";
 
   private readonly userSettings: UserSettings = new UserSettings();
 
@@ -167,35 +198,6 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    let saved: Record<string, string> = {};
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("settings.keybinds") ?? "{}",
-      );
-      // flatten { key: {key, value} } → { key: value } and accept legacy string values
-      saved = Object.fromEntries(
-        Object.entries(parsed)
-          .map(([k, v]) => {
-            // Extract value from nested object or plain string
-            let val: unknown;
-            if (v && typeof v === "object" && "value" in v) {
-              val = (v as { value: unknown }).value;
-            } else {
-              val = v;
-            }
-
-            // Map invalid values to undefined (filtered later)
-            if (typeof val !== "string") {
-              return [k, undefined];
-            }
-            return [k, val];
-          })
-          .filter(([, v]) => typeof v === "string"),
-      ) as Record<string, string>;
-    } catch (e) {
-      console.warn("Invalid keybinds JSON:", e);
-    }
-
     // Mac users might have different keybinds
     const isMac = /Mac/.test(navigator.userAgent);
 
@@ -225,8 +227,14 @@ export class InputHandler {
       buildAtomBomb: "Digit8",
       buildHydrogenBomb: "Digit9",
       buildMIRV: "Digit0",
-      ...saved,
     };
+    const cachedKeybinds = getUiSessionStorageCachedValue(
+      this.KEYBINDS_STORAGE_KEY,
+    );
+    if (typeof cachedKeybinds === "string" && cachedKeybinds.length > 0) {
+      this.applySerializedKeybinds(cachedKeybinds);
+    }
+    void this.hydrateKeybindsFromSessionStorage();
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
@@ -302,161 +310,242 @@ export class InputHandler {
       }
     }, 1);
 
-    window.addEventListener("keydown", (e) => {
-      const isTextInput = this.isTextInputTarget(e.target);
-      if (isTextInput && e.code !== "Escape") {
-        return;
-      }
+    void ensureUiSessionRuntimeStarted();
+    window.addEventListener(
+      UI_SESSION_RUNTIME_EVENTS.keyboardChanged,
+      this.handleSessionKeyboardChanged as EventListener,
+    );
+  }
 
-      if (e.code === this.keybinds.toggleView) {
-        e.preventDefault();
-        if (!this.alternateView) {
-          this.alternateView = true;
-          this.eventBus.emit(new AlternateViewEvent(true));
-        }
-      }
+  private async hydrateKeybindsFromSessionStorage() {
+    const stored = await readUiSessionStorage(this.KEYBINDS_STORAGE_KEY);
+    if (typeof stored !== "string" || stored.length === 0) {
+      return;
+    }
 
-      if (e.code === "Escape") {
-        e.preventDefault();
-        this.eventBus.emit(new CloseViewEvent());
-        this.setGhostStructure(null);
-      }
+    this.applySerializedKeybinds(stored);
+  }
 
-      if (
-        [
-          this.keybinds.moveUp,
-          this.keybinds.moveDown,
-          this.keybinds.moveLeft,
-          this.keybinds.moveRight,
-          this.keybinds.zoomOut,
-          this.keybinds.zoomIn,
-          "ArrowUp",
-          "ArrowLeft",
-          "ArrowDown",
-          "ArrowRight",
-          "Minus",
-          "Equal",
-          this.keybinds.attackRatioDown,
-          this.keybinds.attackRatioUp,
-          this.keybinds.centerCamera,
-          "ControlLeft",
-          "ControlRight",
-          "ShiftLeft",
-          "ShiftRight",
-        ].includes(e.code)
-      ) {
-        this.activeKeys.add(e.code);
-      }
-    });
-    window.addEventListener("keyup", (e) => {
-      const isTextInput = this.isTextInputTarget(e.target);
-      if (isTextInput && !this.activeKeys.has(e.code)) {
-        return;
-      }
+  private applySerializedKeybinds(serialized: string) {
+    try {
+      const parsed = JSON.parse(serialized);
+      // flatten { key: {key, value} } -> { key: value } and accept legacy string values
+      const saved = Object.fromEntries(
+        Object.entries(parsed)
+          .map(([k, v]) => {
+            let val: unknown;
+            if (v && typeof v === "object" && "value" in v) {
+              val = (v as { value: unknown }).value;
+            } else {
+              val = v;
+            }
 
-      if (e.code === this.keybinds.toggleView) {
-        e.preventDefault();
-        this.alternateView = false;
-        this.eventBus.emit(new AlternateViewEvent(false));
-      }
+            if (typeof val !== "string") {
+              return [k, undefined];
+            }
+            return [k, val];
+          })
+          .filter(([, v]) => typeof v === "string"),
+      ) as Record<string, string>;
+      this.keybinds = {
+        ...this.keybinds,
+        ...saved,
+      };
+    } catch (error) {
+      console.warn("Invalid keybinds JSON:", error);
+    }
+  }
 
-      const resetKey = this.keybinds.resetGfx ?? "KeyR";
-      if (e.code === resetKey && this.isAltKeyHeld(e)) {
-        e.preventDefault();
-        this.eventBus.emit(new RefreshGraphicsEvent());
-      }
+  private handleSessionKeyboardChanged = (
+    event: CustomEvent<UiSessionKeyboardChangedDetail>,
+  ) => {
+    const detail = event.detail;
+    if (!detail?.code) {
+      return;
+    }
 
-      if (e.code === this.keybinds.boatAttack) {
-        e.preventDefault();
-        this.eventBus.emit(new DoBoatAttackEvent());
-      }
+    if (detail.isDown) {
+      this.handleSessionKeyDown(detail.code);
+      return;
+    }
 
-      if (e.code === this.keybinds.groundAttack) {
-        e.preventDefault();
-        this.eventBus.emit(new DoGroundAttackEvent());
-      }
+    this.handleSessionKeyUp(detail.code);
+  };
 
-      if (e.code === this.keybinds.attackRatioDown) {
-        e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(-10));
-      }
+  private handleSessionKeyDown(code: string) {
+    const isTextInput = this.isTextInputTarget(document.activeElement);
+    if (isTextInput && code !== "Escape") {
+      return;
+    }
 
-      if (e.code === this.keybinds.attackRatioUp) {
-        e.preventDefault();
-        this.eventBus.emit(new AttackRatioEvent(10));
+    if (code === this.keybinds.toggleView) {
+      if (!this.alternateView) {
+        this.alternateView = true;
+        this.eventBus.emit(new AlternateViewEvent(true));
       }
+    }
 
-      if (e.code === this.keybinds.centerCamera) {
-        e.preventDefault();
-        this.eventBus.emit(new CenterCameraEvent());
-      }
+    if (code === "Escape") {
+      this.eventBus.emit(new CloseViewEvent());
+      this.setGhostStructure(null);
+    }
 
-      if (e.code === this.keybinds.buildCity) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.City);
-      }
+    if (this.isTrackedActiveKey(code)) {
+      this.activeKeys.add(code);
+    }
+  }
 
-      if (e.code === this.keybinds.buildFactory) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
-      }
+  private handleSessionKeyUp(code: string) {
+    const isTextInput = this.isTextInputTarget(document.activeElement);
+    if (isTextInput && !this.activeKeys.has(code)) {
+      return;
+    }
 
-      if (e.code === this.keybinds.buildPort) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
-      }
+    if (code === this.keybinds.toggleView) {
+      this.alternateView = false;
+      this.eventBus.emit(new AlternateViewEvent(false));
+    }
 
-      if (e.code === this.keybinds.buildDefensePost) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
-      }
+    const resetKey = this.keybinds.resetGfx ?? "KeyR";
+    if (code === resetKey && this.isAltKeyActive()) {
+      this.eventBus.emit(new RefreshGraphicsEvent());
+    }
 
-      if (e.code === this.keybinds.buildMissileSilo) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
-      }
+    if (code === this.keybinds.boatAttack) {
+      this.eventBus.emit(new DoBoatAttackEvent());
+    }
 
-      if (e.code === this.keybinds.buildSamLauncher) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
-      }
+    if (code === this.keybinds.groundAttack) {
+      this.eventBus.emit(new DoGroundAttackEvent());
+    }
 
-      if (e.code === this.keybinds.buildAtomBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
-      }
+    if (code === this.keybinds.attackRatioDown) {
+      this.eventBus.emit(new AttackRatioEvent(-10));
+    }
 
-      if (e.code === this.keybinds.buildHydrogenBomb) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
-      }
+    if (code === this.keybinds.attackRatioUp) {
+      this.eventBus.emit(new AttackRatioEvent(10));
+    }
 
-      if (e.code === this.keybinds.buildWarship) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
-      }
+    if (code === this.keybinds.centerCamera) {
+      this.eventBus.emit(new CenterCameraEvent());
+    }
 
-      if (e.code === this.keybinds.buildMIRV) {
-        e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
-      }
+    if (code === this.keybinds.buildCity) {
+      this.setGhostStructure(UnitType.City);
+    }
 
-      if (e.code === this.keybinds.swapDirection) {
-        e.preventDefault();
-        const nextDirection = !this.uiState.rocketDirectionUp;
-        this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
-      }
+    if (code === this.keybinds.buildFactory) {
+      this.setGhostStructure(UnitType.Factory);
+    }
 
-      // Shift-D to toggle performance overlay
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
-      if (e.code === "KeyD" && e.shiftKey) {
-        e.preventDefault();
-        console.log("TogglePerformanceOverlayEvent");
-        this.eventBus.emit(new TogglePerformanceOverlayEvent());
-      }
+    if (code === this.keybinds.buildPort) {
+      this.setGhostStructure(UnitType.Port);
+    }
 
-      this.activeKeys.delete(e.code);
-    });
+    if (code === this.keybinds.buildDefensePost) {
+      this.setGhostStructure(UnitType.DefensePost);
+    }
+
+    if (code === this.keybinds.buildMissileSilo) {
+      this.setGhostStructure(UnitType.MissileSilo);
+    }
+
+    if (code === this.keybinds.buildSamLauncher) {
+      this.setGhostStructure(UnitType.SAMLauncher);
+    }
+
+    if (code === this.keybinds.buildAtomBomb) {
+      this.setGhostStructure(UnitType.AtomBomb);
+    }
+
+    if (code === this.keybinds.buildHydrogenBomb) {
+      this.setGhostStructure(UnitType.HydrogenBomb);
+    }
+
+    if (code === this.keybinds.buildWarship) {
+      this.setGhostStructure(UnitType.Warship);
+    }
+
+    if (code === this.keybinds.buildMIRV) {
+      this.setGhostStructure(UnitType.MIRV);
+    }
+
+    if (code === this.keybinds.swapDirection) {
+      const nextDirection = !this.uiState.rocketDirectionUp;
+      this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
+    }
+
+    if (
+      code === "KeyD" &&
+      (this.activeKeys.has("ShiftLeft") || this.activeKeys.has("ShiftRight"))
+    ) {
+      this.eventBus.emit(new TogglePerformanceOverlayEvent());
+    }
+
+    this.activeKeys.delete(code);
+  }
+
+  private isTrackedActiveKey(code: string): boolean {
+    return [
+      this.keybinds.moveUp,
+      this.keybinds.moveDown,
+      this.keybinds.moveLeft,
+      this.keybinds.moveRight,
+      this.keybinds.zoomOut,
+      this.keybinds.zoomIn,
+      "ArrowUp",
+      "ArrowLeft",
+      "ArrowDown",
+      "ArrowRight",
+      "Minus",
+      "Equal",
+      this.keybinds.attackRatioDown,
+      this.keybinds.attackRatioUp,
+      this.keybinds.centerCamera,
+      "ControlLeft",
+      "ControlRight",
+      "ShiftLeft",
+      "ShiftRight",
+      "AltLeft",
+      "AltRight",
+      "MetaLeft",
+      "MetaRight",
+    ].includes(code);
+  }
+
+  private isAltKeyActive(): boolean {
+    if (
+      this.keybinds.altKey === "AltLeft" ||
+      this.keybinds.altKey === "AltRight"
+    ) {
+      return (
+        (this.activeKeys.has("AltLeft") || this.activeKeys.has("AltRight")) &&
+        !this.activeKeys.has("ControlLeft") &&
+        !this.activeKeys.has("ControlRight")
+      );
+    }
+    if (
+      this.keybinds.altKey === "ControlLeft" ||
+      this.keybinds.altKey === "ControlRight"
+    ) {
+      return (
+        this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight")
+      );
+    }
+    if (
+      this.keybinds.altKey === "ShiftLeft" ||
+      this.keybinds.altKey === "ShiftRight"
+    ) {
+      return this.activeKeys.has("ShiftLeft") || this.activeKeys.has("ShiftRight");
+    }
+    if (
+      this.keybinds.altKey === "MetaLeft" ||
+      this.keybinds.altKey === "MetaRight"
+    ) {
+      return this.activeKeys.has("MetaLeft") || this.activeKeys.has("MetaRight");
+    }
+    return false;
   }
 
   private onPointerDown(event: PointerEvent) {
@@ -631,6 +720,10 @@ export class InputHandler {
     if (this.moveInterval !== null) {
       clearInterval(this.moveInterval);
     }
+    window.removeEventListener(
+      UI_SESSION_RUNTIME_EVENTS.keyboardChanged,
+      this.handleSessionKeyboardChanged as EventListener,
+    );
     this.activeKeys.clear();
   }
 
@@ -649,34 +742,6 @@ export class InputHandler {
         this.keybinds.modifierKey === "MetaRight") &&
         event.metaKey)
     );
-  }
-
-  private isAltKeyHeld(event: KeyboardEvent): boolean {
-    if (
-      this.keybinds.altKey === "AltLeft" ||
-      this.keybinds.altKey === "AltRight"
-    ) {
-      return event.altKey && !event.ctrlKey;
-    }
-    if (
-      this.keybinds.altKey === "ControlLeft" ||
-      this.keybinds.altKey === "ControlRight"
-    ) {
-      return event.ctrlKey;
-    }
-    if (
-      this.keybinds.altKey === "ShiftLeft" ||
-      this.keybinds.altKey === "ShiftRight"
-    ) {
-      return event.shiftKey;
-    }
-    if (
-      this.keybinds.altKey === "MetaLeft" ||
-      this.keybinds.altKey === "MetaRight"
-    ) {
-      return event.metaKey;
-    }
-    return false;
   }
 
   isAltKeyPressed(event: PointerEvent): boolean {

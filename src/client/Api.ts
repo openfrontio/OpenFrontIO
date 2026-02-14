@@ -7,6 +7,7 @@ import {
 } from "../core/ApiSchemas";
 import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 import { getAuthHeader, logOut, userAuth } from "./Auth";
+import { getUiSessionStorageCachedValue } from "./runtime/UiSessionRuntime";
 
 export async function fetchPlayerById(
   playerId: string,
@@ -121,7 +122,11 @@ export function getApiBase() {
     if (apiDomain) {
       return `https://${apiDomain}`;
     }
-    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
+    const apiHost = getUiSessionStorageCachedValue("apiHost");
+    if (typeof apiHost === "string" && apiHost.length > 0) {
+      return apiHost;
+    }
+    return "http://localhost:8787";
   }
 
   return `https://api.${domainname}`;

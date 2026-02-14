@@ -22,87 +22,18 @@ vi.mock("../../../../src/client/Utils", () => ({
   renderTroops: vi.fn(),
 }));
 
-vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
-  actionButton: vi.fn((props: unknown) => props),
+vi.mock("../../../../src/client/UiRuntimeBridge", () => ({
+  dispatchUiAction: vi.fn(() => true),
+  dispatchUiSnapshot: vi.fn(() => true),
+  initDioxusRuntime: vi.fn(async () => ({})),
 }));
 
-import { actionButton } from "../../../../src/client/components/ui/ActionButton";
-import { PlayerModerationModal } from "../../../../src/client/graphics/layers/PlayerModerationModal";
-import { PlayerPanel } from "../../../../src/client/graphics/layers/PlayerPanel";
+import { DioxusPlayerModerationModal } from "../../../../src/client/InGameModalBridges";
 import { SendKickPlayerIntentEvent } from "../../../../src/client/Transport";
 import { PlayerType } from "../../../../src/core/game/Game";
 import { PlayerView } from "../../../../src/core/game/GameView";
 
-describe("PlayerPanel - kick player moderation", () => {
-  let panel: PlayerPanel;
-  const originalConfirm = globalThis.confirm;
-
-  beforeEach(() => {
-    panel = new PlayerPanel();
-    (panel as any).requestUpdate = vi.fn();
-    (panel as any).isVisible = true;
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-    globalThis.confirm = originalConfirm;
-  });
-
-  test("renders moderation action only when allowed or already kicked", () => {
-    const my = { isLobbyCreator: () => true } as unknown as PlayerView;
-    const other = {
-      id: () => 2,
-      name: () => "Other",
-      type: () => PlayerType.Human,
-      clientID: () => "client-2",
-    } as unknown as PlayerView;
-
-    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
-    (panel as any).renderModeration(my, other);
-    expect(actionButton).toHaveBeenCalledTimes(1);
-    expect(
-      (actionButton as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0],
-    ).toMatchObject({
-      label: "player_panel.moderation",
-      title: "player_panel.moderation",
-      type: "red",
-    });
-
-    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
-    (panel as any).kickedPlayerIDs.add("2");
-    (panel as any).renderModeration(my, other);
-    expect(actionButton).toHaveBeenCalledTimes(1);
-
-    const notCreator = { isLobbyCreator: () => false } as unknown as PlayerView;
-    (actionButton as unknown as ReturnType<typeof vi.fn>).mockClear();
-    (panel as any).kickedPlayerIDs.clear();
-    (panel as any).renderModeration(notCreator, other);
-    expect(actionButton).not.toHaveBeenCalled();
-  });
-
-  test("opens moderation modal and hides after a kick", () => {
-    const other = {
-      id: () => 2,
-      name: () => "Other",
-      type: () => PlayerType.Human,
-      clientID: () => "client-2",
-    } as unknown as PlayerView;
-
-    (panel as any).openModeration({ stopPropagation: vi.fn() }, other);
-    expect((panel as any).moderationTarget).toBe(other);
-    expect((panel as any).suppressNextHide).toBe(true);
-
-    (panel as any).handleModerationKicked(
-      new CustomEvent("kicked", { detail: { playerId: "2" } }),
-    );
-
-    expect((panel as any).kickedPlayerIDs.has("2")).toBe(true);
-    expect((panel as any).moderationTarget).toBe(null);
-    expect((panel as any).isVisible).toBe(false);
-  });
-});
-
-describe("PlayerModerationModal - kick confirmation", () => {
+describe("DioxusPlayerModerationModal - kick confirmation", () => {
   const originalConfirm = globalThis.confirm;
 
   afterEach(() => {
@@ -113,8 +44,10 @@ describe("PlayerModerationModal - kick confirmation", () => {
   test("emits SendKickPlayerIntentEvent and dispatches kicked when confirmed", () => {
     (globalThis as any).confirm = vi.fn(() => true);
 
-    const modal = new PlayerModerationModal();
-    const eventBus = { emit: vi.fn() };
+    const modal = new DioxusPlayerModerationModal();
+    const eventBus = { emit: vi.fn(), on: vi.fn() };
+    (modal as any).eventBus = eventBus;
+
     const my = { isLobbyCreator: () => true } as unknown as PlayerView;
     const other = {
       id: () => 2,
@@ -123,14 +56,17 @@ describe("PlayerModerationModal - kick confirmation", () => {
       clientID: () => "client-2",
     } as unknown as PlayerView;
 
-    modal.eventBus = eventBus as any;
-    modal.myPlayer = my;
-    modal.target = other;
+    (modal as any).myPlayer = my;
+    (modal as any).targetPlayer = other;
 
     const kickedListener = vi.fn();
     modal.addEventListener("kicked", kickedListener as any);
 
-    (modal as any).handleKickClick({ stopPropagation: vi.fn() });
+    (modal as any).handleKick({
+      playerId: "2",
+      playerName: "Other",
+      confirmMessage: "Kick Other?",
+    });
 
     expect(eventBus.emit).toHaveBeenCalledTimes(1);
     const event = eventBus.emit.mock.calls[0][0] as SendKickPlayerIntentEvent;
@@ -145,8 +81,10 @@ describe("PlayerModerationModal - kick confirmation", () => {
   test("does not emit when confirmation is cancelled", () => {
     (globalThis as any).confirm = vi.fn(() => false);
 
-    const modal = new PlayerModerationModal();
-    const eventBus = { emit: vi.fn() };
+    const modal = new DioxusPlayerModerationModal();
+    const eventBus = { emit: vi.fn(), on: vi.fn() };
+    (modal as any).eventBus = eventBus;
+
     const my = { isLobbyCreator: () => true } as unknown as PlayerView;
     const other = {
       id: () => 2,
@@ -155,16 +93,78 @@ describe("PlayerModerationModal - kick confirmation", () => {
       clientID: () => "client-2",
     } as unknown as PlayerView;
 
-    modal.eventBus = eventBus as any;
-    modal.myPlayer = my;
-    modal.target = other;
+    (modal as any).myPlayer = my;
+    (modal as any).targetPlayer = other;
 
     const kickedListener = vi.fn();
     modal.addEventListener("kicked", kickedListener as any);
 
-    (modal as any).handleKickClick({ stopPropagation: vi.fn() });
+    (modal as any).handleKick({
+      playerId: "2",
+      playerName: "Other",
+      confirmMessage: "Kick Other?",
+    });
 
     expect(eventBus.emit).not.toHaveBeenCalled();
     expect(kickedListener).not.toHaveBeenCalled();
+  });
+
+  test("does not emit when current player cannot kick target", () => {
+    (globalThis as any).confirm = vi.fn(() => true);
+
+    const modal = new DioxusPlayerModerationModal();
+    const eventBus = { emit: vi.fn(), on: vi.fn() };
+    (modal as any).eventBus = eventBus;
+
+    const my = { isLobbyCreator: () => false } as unknown as PlayerView;
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+      isLobbyCreator: () => false,
+    } as unknown as PlayerView;
+
+    (modal as any).myPlayer = my;
+    (modal as any).targetPlayer = other;
+
+    (modal as any).handleKick({
+      playerId: "2",
+      playerName: "Other",
+      confirmMessage: "Kick Other?",
+    });
+
+    expect(eventBus.emit).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
+  });
+
+  test("does not emit when target was already kicked", () => {
+    (globalThis as any).confirm = vi.fn(() => true);
+
+    const modal = new DioxusPlayerModerationModal();
+    const eventBus = { emit: vi.fn(), on: vi.fn() };
+    (modal as any).eventBus = eventBus;
+
+    const my = { isLobbyCreator: () => true } as unknown as PlayerView;
+    const other = {
+      id: () => 2,
+      name: () => "Other",
+      type: () => PlayerType.Human,
+      clientID: () => "client-2",
+      isLobbyCreator: () => false,
+    } as unknown as PlayerView;
+
+    (modal as any).myPlayer = my;
+    (modal as any).targetPlayer = other;
+    (modal as any).alreadyKicked = true;
+
+    (modal as any).handleKick({
+      playerId: "2",
+      playerName: "Other",
+      confirmMessage: "Kick Other?",
+    });
+
+    expect(eventBus.emit).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
   });
 });

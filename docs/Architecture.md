@@ -14,6 +14,12 @@ The game is split into four components:
 
 The game simulation logic does not run on the server. Instead, each client runs their own instance of core, which is why it must be deterministic. At the end of each tick, data is sent from core to client via GameUpdates. Core and client run in different threads - the core runs in a worker thread.
 
+## Server Runtime Contract
+
+For environment variables, port layout, and health/readiness endpoints used by orchestrators, see `docs/ServerDeploymentContract.md`.
+Rust gateway/proxy details are documented in `docs/AxumControlPlaneSpike.md`.
+Rust crate boundaries and expansion paths are consolidated in `docs/RustArchitecture.md`.
+
 ## Intents
 
 When a user performs an action, it creates an "Intent" which is sent to the server. The server stores all intents for that tick/turn, and at the end, relays all intents to all clients in a bundle called a "turn". Each client receives the turn and sends it to its core simulation. The core then creates an "Execution" for each intent. Executions are the only thing that can modify the game state.

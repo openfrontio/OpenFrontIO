@@ -138,20 +138,24 @@
       aria-hidden="true"
     ></div>
 
-    <mobile-nav-bar
+    <dioxus-mobile-nav-bar
       id="sidebar-menu"
       class="peer [.in-game_&]:hidden z-[40001] fixed left-0 top-0 h-full flex flex-col justify-start overflow-visible bg-black/60 backdrop-blur-md transition-transform duration-500 ease-out transform -translate-x-full w-[80%] [&.open]:translate-x-0 lg:hidden"
       role="dialog"
       data-i18n-aria-label="main.menu"
       aria-hidden="true"
-    ></mobile-nav-bar>
+    >
+      <lang-selector></lang-selector>
+    </dioxus-mobile-nav-bar>
 
     <!-- MAIN CONTENT AREA -->
     <div
       class="[.in-game_&]:hidden flex-1 relative overflow-hidden h-full transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar -->
-      <desktop-nav-bar></desktop-nav-bar>
+      <dioxus-desktop-nav-bar>
+        <lang-selector></lang-selector>
+      </dioxus-desktop-nav-bar>
 
       <div
         id="turnstile-container"
@@ -161,78 +165,88 @@
       <gutter-ads></gutter-ads>
 
       <!-- Main container with responsive padding -->
-      <main-layout class="contents">
-        <play-page class="contents"></play-page>
+      <dioxus-main-layout class="contents">
+        <dioxus-play-page id="page-play" class="contents">
+          <dioxus-token-login-modal class="absolute"></dioxus-token-login-modal>
+          <username-input
+            id="username-input"
+            class="w-full h-full block text-ellipsis overflow-hidden whitespace-nowrap"
+          ></username-input>
+          <pattern-input
+            id="pattern-input-mobile"
+            class="block md:hidden w-full h-full"
+          ></pattern-input>
+          <pattern-input
+            id="pattern-input-desktop"
+            class="hidden md:block flex-1 h-full"
+          ></pattern-input>
+          <flag-input
+            id="flag-input-desktop"
+            class="hidden md:block flex-1 h-full"
+          ></flag-input>
+          <dioxus-public-lobby
+            id="public-lobby"
+            class="block w-full transition-all duration-[50ms]"
+          ></dioxus-public-lobby>
+        </dioxus-play-page>
 
-        <news-modal
+        <dioxus-news-modal
           id="page-news"
           inline
           class="hidden w-full h-full page-content"
-        ></news-modal>
-        <single-player-modal
+        ></dioxus-news-modal>
+        <dioxus-single-player-modal
           id="page-single-player"
           inline
           class="hidden w-full h-full page-content"
-        ></single-player-modal>
-        <host-lobby-modal
+        ></dioxus-single-player-modal>
+        <dioxus-host-lobby-modal
           id="page-host-lobby"
           inline
           class="hidden w-full h-full page-content"
-        ></host-lobby-modal>
-        <join-private-lobby-modal
+        ></dioxus-host-lobby-modal>
+        <dioxus-join-private-lobby-modal
           id="page-join-private-lobby"
           inline
           class="hidden w-full h-full page-content"
-        ></join-private-lobby-modal>
-        <territory-patterns-modal
+        ></dioxus-join-private-lobby-modal>
+        <dioxus-territory-patterns-modal
           id="page-item-store"
           inline
           class="hidden w-full h-full page-content"
-        ></territory-patterns-modal>
-        <matchmaking-modal
+        ></dioxus-territory-patterns-modal>
+        <dioxus-matchmaking-modal
           id="page-matchmaking"
           inline
           class="hidden w-full h-full page-content"
-        ></matchmaking-modal>
-        <user-setting
+        ></dioxus-matchmaking-modal>
+        <dioxus-user-setting-modal
           id="page-settings"
           inline
           class="hidden w-full h-full page-content"
-        ></user-setting>
-        <stats-modal
+        ></dioxus-user-setting-modal>
+        <dioxus-stats-modal
           id="page-stats"
           inline
           class="hidden w-full h-full page-content"
-        ></stats-modal>
-        <account-modal
+        ></dioxus-stats-modal>
+        <dioxus-account-modal
           id="page-account"
           inline
           class="hidden w-full h-full page-content"
-        ></account-modal>
-        <help-modal
+        ></dioxus-account-modal>
+        <dioxus-help-modal
           id="page-help"
           inline
           class="hidden w-full h-full page-content"
-        ></help-modal>
-        <language-modal
-          id="page-language"
-          inline
-          class="hidden w-full h-full page-content"
-        ></language-modal>
-        <flag-input-modal
-          id="flag-input-modal"
-          inline
-          class="hidden w-full h-full page-content"
-        ></flag-input-modal>
-      </main-layout>
+        ></dioxus-help-modal>
+        <dioxus-language-modal id="page-language"></dioxus-language-modal>
+        <dioxus-flag-input-modal id="flag-input-modal"></dioxus-flag-input-modal>
+      </dioxus-main-layout>
 
       <!-- Desktop Footer -->
-      <page-footer></page-footer>
+      <dioxus-footer></dioxus-footer>
 
-      <!-- Global Modals -->
-      <territory-patterns-modal
-        id="territory-patterns-modal"
-      ></territory-patterns-modal>
     </div>
 
     <!-- Game components -->
@@ -244,38 +258,46 @@
       <div
         class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end pointer-events-none"
       >
-        <chat-display></chat-display>
-        <events-display></events-display>
+        <dioxus-chat-display></dioxus-chat-display>
+        <dioxus-events-display></dioxus-events-display>
       </div>
       <div>
-        <control-panel></control-panel>
+        <dioxus-control-panel></dioxus-control-panel>
       </div>
     </div>
 
     <!-- Game modals and overlays -->
-    <emoji-table></emoji-table>
-    <build-menu></build-menu>
-    <win-modal></win-modal>
-    <game-starting-modal></game-starting-modal>
-    <unit-display></unit-display>
+    <dioxus-emoji-table></dioxus-emoji-table>
+    <!-- BuildMenu: Dioxus implementation -->
+    <dioxus-build-menu></dioxus-build-menu>
+    <!-- RadialMenu: Dioxus implementation -->
+    <dioxus-radial-menu></dioxus-radial-menu>
+    <dioxus-win-modal></dioxus-win-modal>
+    <!-- Dioxus SendResourceModal -->
+    <dioxus-send-resource-modal></dioxus-send-resource-modal>
+    <dioxus-game-starting-modal></dioxus-game-starting-modal>
+    <dioxus-unit-display></dioxus-unit-display>
     <div class="flex flex-col items-end fixed top-4 right-4 z-1000 gap-2">
-      <game-right-sidebar></game-right-sidebar>
-      <replay-panel></replay-panel>
+      <dioxus-game-right-sidebar></dioxus-game-right-sidebar>
+      <dioxus-replay-panel></dioxus-replay-panel>
     </div>
-    <settings-modal></settings-modal>
-    <player-panel></player-panel>
-    <spawn-timer></spawn-timer>
-    <immunity-timer></immunity-timer>
-    <game-info-modal></game-info-modal>
-    <alert-frame></alert-frame>
-    <chat-modal></chat-modal>
-    <multi-tab-modal></multi-tab-modal>
-    <game-left-sidebar></game-left-sidebar>
-    <performance-overlay></performance-overlay>
-    <player-info-overlay></player-info-overlay>
-    <leader-board></leader-board>
-    <team-stats></team-stats>
-    <heads-up-message></heads-up-message>
+    <dioxus-settings-modal></dioxus-settings-modal>
+    <dioxus-player-panel></dioxus-player-panel>
+    <dioxus-spawn-timer></dioxus-spawn-timer>
+    <dioxus-immunity-timer></dioxus-immunity-timer>
+    <dioxus-game-info-modal></dioxus-game-info-modal>
+    <dioxus-alert-frame></dioxus-alert-frame>
+    <dioxus-chat-modal></dioxus-chat-modal>
+    <dioxus-player-moderation-modal></dioxus-player-moderation-modal>
+    <dioxus-multi-tab-modal></dioxus-multi-tab-modal>
+    <dioxus-game-left-sidebar>
+      <!-- Dioxus Leaderboard - Alternative implementation using Rust/WASM -->
+      <dioxus-leader-board></dioxus-leader-board>
+    </dioxus-game-left-sidebar>
+    <dioxus-performance-overlay></dioxus-performance-overlay>
+    <dioxus-player-info-overlay></dioxus-player-info-overlay>
+    <dioxus-team-stats></dioxus-team-stats>
+    <dioxus-heads-up-message></dioxus-heads-up-message>
 
     <!-- Scripts -->
     <script>

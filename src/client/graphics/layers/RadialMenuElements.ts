@@ -5,12 +5,18 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
-import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
+import { BuildItemDisplay, IBuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
-import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerPanel } from "./PlayerPanel";
-import { TooltipItem } from "./RadialMenu";
+import {
+  DioxusEmojiTable,
+  DioxusPlayerPanel,
+} from "./AdvancedLayerBridges";
+
+export interface TooltipItem {
+  text: string;
+  className: string;
+}
 
 import { EventBus } from "../../../core/EventBus";
 import allianceIcon from "/images/AllianceIconWhite.svg?url";
@@ -32,10 +38,10 @@ export interface MenuElementParams {
   tile: TileRef;
   playerActions: PlayerActions;
   game: GameView;
-  buildMenu: BuildMenu;
-  emojiTable: EmojiTable;
+  buildMenu: IBuildMenu;
+  emojiTable: DioxusEmojiTable;
   playerActionHandler: PlayerActionHandler;
-  playerPanel: PlayerPanel;
+  playerPanel: DioxusPlayerPanel;
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
   uiState?: UIState;

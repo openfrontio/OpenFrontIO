@@ -1,42 +1,42 @@
+import quickChatData from "resources/QuickChat.json" with { type: "json" };
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ShowChatModalEvent } from "../../InGameModalBridges";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
 import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 
-export class ChatIntegration {
-  private ctModal: ChatModal;
+export type QuickChatPhrase = {
+  key: string;
+  requiresPlayer: boolean;
+};
 
+export type QuickChatPhrases = Record<string, QuickChatPhrase[]>;
+
+export const quickChatPhrases: QuickChatPhrases = quickChatData;
+
+const CHAT_CATEGORIES = [
+  { id: "help" },
+  { id: "attack" },
+  { id: "defend" },
+  { id: "greet" },
+  { id: "misc" },
+  { id: "warnings" },
+];
+
+export class ChatIntegration {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-  ) {
-    this.ctModal = document.querySelector("chat-modal") as ChatModal;
-
-    if (!this.ctModal) {
-      throw new Error(
-        "Chat modal element not found. Ensure chat-modal element exists in DOM before initializing ChatIntegration",
-      );
-    }
-  }
-
-  setupChatModal(sender: PlayerView, recipient: PlayerView) {
-    this.ctModal.setSender(sender);
-    this.ctModal.setRecipient(recipient);
-  }
+  ) {}
 
   createQuickChatMenu(recipient: PlayerView): MenuElement[] {
-    if (!this.ctModal) {
-      throw new Error("Chat modal not set");
-    }
-
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) {
       throw new Error("Current player not found");
     }
 
-    return this.ctModal.categories.map((category) => {
+    return CHAT_CATEGORIES.map((category) => {
       const categoryTranslation = translateText(`chat.cat.${category.id}`);
 
       const categoryColor =
@@ -63,11 +63,14 @@ export class ChatIntegration {
             ],
             action: (params: MenuElementParams) => {
               if (phrase.requiresPlayer) {
-                this.ctModal.openWithSelection(
-                  category.id,
-                  phrase.key,
-                  myPlayer,
-                  recipient,
+                this.eventBus.emit(
+                  new ShowChatModalEvent(
+                    true,
+                    myPlayer,
+                    recipient,
+                    category.id,
+                    phrase.key,
+                  ),
                 );
               } else {
                 this.eventBus.emit(

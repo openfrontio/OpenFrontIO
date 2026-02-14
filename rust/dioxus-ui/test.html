@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dioxus UI Components Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        h1 {
+            color: #4ade80;
+        }
+        .section {
+            margin: 24px 0;
+            padding: 16px;
+            background: #16213e;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #4ade80;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            margin: 8px;
+        }
+        button:hover {
+            background: #22c55e;
+        }
+        #mount-point {
+            min-height: 200px;
+            border: 2px dashed #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .event-log {
+            background: #0a0a1a;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dioxus UI Components Test</h1>
+
+    <div class="section">
+        <h2>Hello World Component</h2>
+        <p>Click to launch the Hello World component:</p>
+        <button id="launch-hello">Launch Hello World</button>
+    </div>
+
+    <div class="section">
+        <h2>Settings Modal Component</h2>
+        <p>Click to launch the Settings Modal:</p>
+        <button id="launch-settings">Launch Settings Modal</button>
+    </div>
+
+    <div class="section">
+        <h2>Component Mount Point</h2>
+        <div id="mount-point">
+            <p style="color: #666;">Components will render here...</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Event Log</h2>
+        <p>Custom events from Dioxus components:</p>
+        <div class="event-log" id="event-log">
+            <div>Waiting for events...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the Dioxus UI WASM module
+        import init, {
+            init as initDioxus,
+            launch_hello_world,
+            launch_settings_modal
+        } from './pkg/dioxus_ui.js';
+
+        const eventLog = document.getElementById('event-log');
+
+        function logEvent(name, detail) {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.textContent = `[${timestamp}] ${name}: ${JSON.stringify(detail)}`;
+            eventLog.prepend(div);
+        }
+
+        // Listen for custom events from Dioxus components
+        document.addEventListener('count-changed', (e) => {
+            logEvent('count-changed', e.detail);
+        });
+
+        document.addEventListener('settings-changed', (e) => {
+            logEvent('settings-changed', e.detail);
+        });
+
+        document.addEventListener('modal-closed', (e) => {
+            logEvent('modal-closed', 'Modal was closed');
+        });
+
+        // Initialize WASM
+        async function initWasm() {
+            try {
+                await init();
+                initDioxus();
+                console.log('Dioxus UI initialized!');
+                logEvent('init', 'Dioxus UI WASM module loaded');
+            } catch (err) {
+                console.error('Failed to initialize Dioxus UI:', err);
+                logEvent('error', err.message);
+            }
+        }
+
+        // Set up button handlers
+        document.getElementById('launch-hello').addEventListener('click', () => {
+            document.getElementById('mount-point').innerHTML = '<div id="dioxus-root"></div>';
+            launch_hello_world();
+            logEvent('launch', 'Hello World component');
+        });
+
+        document.getElementById('launch-settings').addEventListener('click', () => {
+            document.getElementById('mount-point').innerHTML = '<div id="dioxus-root"></div>';
+            launch_settings_modal();
+            logEvent('launch', 'Settings Modal component');
+        });
+
+        // Initialize
+        initWasm();
+    </script>
+</body>
+</html>

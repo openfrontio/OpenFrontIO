@@ -9,6 +9,7 @@ import * as dotenv from "dotenv";
 import winston from "winston";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { getOtelResource } from "./OtelResource";
+import { gameEnvName } from "./RuntimeConfig";
 dotenv.config();
 
 const config = getServerConfigFromServer();
@@ -62,7 +63,7 @@ const logger = winston.createLogger({
   ),
   defaultMeta: {
     service: "openfront",
-    environment: process.env.GAME_ENV ?? "prod",
+    environment: gameEnvName(config.env()),
   },
   transports: [
     new winston.transports.Console(),

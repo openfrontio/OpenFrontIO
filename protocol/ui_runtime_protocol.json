@@ -1,0 +1,1683 @@
+{
+  "version": 1,
+  "actions": {
+    "sessionLanguageRead": {
+      "name": "session.language.read",
+      "payload": {
+        "storageKey": { "type": "string", "required": false }
+      }
+    },
+    "sessionLanguageWrite": {
+      "name": "session.language.write",
+      "payload": {
+        "storageKey": { "type": "string", "required": false },
+        "lang": { "type": "string", "required": true }
+      }
+    },
+    "sessionStorageRead": {
+      "name": "session.storage.read",
+      "payload": {
+        "storageKey": { "type": "string", "required": true }
+      }
+    },
+    "sessionStorageWrite": {
+      "name": "session.storage.write",
+      "payload": {
+        "storageKey": { "type": "string", "required": true },
+        "value": { "type": "string", "required": true }
+      }
+    },
+    "sessionStorageRemove": {
+      "name": "session.storage.remove",
+      "payload": {
+        "storageKey": { "type": "string", "required": true }
+      }
+    },
+    "sessionKeyboardEscape": {
+      "name": "session.keyboard.escape",
+      "payload": {
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "sessionKeyboardState": {
+      "name": "session.keyboard.state",
+      "payload": {
+        "key": { "type": "string", "required": true },
+        "code": { "type": "string", "required": true },
+        "isDown": { "type": "boolean", "required": true }
+      }
+    },
+    "sessionLifecycleBeforeUnload": {
+      "name": "session.lifecycle.before-unload",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "sessionNavigationPopstate": {
+      "name": "session.navigation.popstate",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "sessionNavigationHashchange": {
+      "name": "session.navigation.hashchange",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "sessionModalState": {
+      "name": "session.modal.state",
+      "payload": {
+        "modal": { "type": "string", "required": true },
+        "isOpen": { "type": "boolean", "required": true }
+      }
+    },
+    "sessionModalCloseRequest": {
+      "name": "session.modal.close.request",
+      "payload": {
+        "modal": { "type": "string", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiReadStatsRequest": {
+      "name": "ui.read.stats.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true }
+      }
+    },
+    "uiReadStatsRetry": {
+      "name": "ui.read.stats.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true }
+      }
+    },
+    "uiReadStatsError": {
+      "name": "ui.read.stats.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiReadGameInfoRequest": {
+      "name": "ui.read.game-info.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "gameId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadGameInfoRetry": {
+      "name": "ui.read.game-info.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "gameId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadGameInfoError": {
+      "name": "ui.read.game-info.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "gameId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyExistsRequest": {
+      "name": "ui.read.lobby-exists.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyExistsRetry": {
+      "name": "ui.read.lobby-exists.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyExistsError": {
+      "name": "ui.read.lobby-exists.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyArchiveRequest": {
+      "name": "ui.read.lobby-archive.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyArchiveRetry": {
+      "name": "ui.read.lobby-archive.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyArchiveError": {
+      "name": "ui.read.lobby-archive.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyStateRequest": {
+      "name": "ui.read.lobby-state.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyStateRetry": {
+      "name": "ui.read.lobby-state.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiReadLobbyStateError": {
+      "name": "ui.read.lobby-state.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiMatchmakingSearchRequest": {
+      "name": "ui.matchmaking.search.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true }
+      }
+    },
+    "uiMatchmakingSearchRetry": {
+      "name": "ui.matchmaking.search.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true }
+      }
+    },
+    "uiMatchmakingSearchCancel": {
+      "name": "ui.matchmaking.search.cancel",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiMatchmakingSearchError": {
+      "name": "ui.matchmaking.search.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostCreateRequest": {
+      "name": "ui.mutate.host-lobby.create.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "creatorClientID": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostCreateRetry": {
+      "name": "ui.mutate.host-lobby.create.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "creatorClientID": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostCreateError": {
+      "name": "ui.mutate.host-lobby.create.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "creatorClientID": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostStartRequest": {
+      "name": "ui.mutate.host-lobby.start.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostStartRetry": {
+      "name": "ui.mutate.host-lobby.start.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateHostStartError": {
+      "name": "ui.mutate.host-lobby.start.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateAccountMagicLinkRequest": {
+      "name": "ui.mutate.account.magic-link.request",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "email": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateAccountMagicLinkRetry": {
+      "name": "ui.mutate.account.magic-link.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": true },
+        "email": { "type": "string", "required": true }
+      }
+    },
+    "uiMutateAccountMagicLinkError": {
+      "name": "ui.mutate.account.magic-link.error",
+      "payload": {
+        "requestId": { "type": "number", "required": true },
+        "reason": { "type": "string", "required": false },
+        "email": { "type": "string", "required": false },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiHostLobbyModalLaunch": {
+      "name": "ui.lobby.host-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true },
+        "maps": { "type": "array", "required": true },
+        "difficulties": { "type": "array", "required": true },
+        "unitOptions": { "type": "array", "required": true },
+        "teamCountOptions": { "type": "array", "required": true }
+      }
+    },
+    "uiHostLobbyModalShow": {
+      "name": "ui.lobby.host-modal.show",
+      "payload": {}
+    },
+    "uiHostLobbyModalHide": {
+      "name": "ui.lobby.host-modal.hide",
+      "payload": {}
+    },
+    "uiJoinPrivateLobbyModalLaunch": {
+      "name": "ui.lobby.join-private-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiJoinPrivateLobbyModalOpen": {
+      "name": "ui.lobby.join-private-modal.open",
+      "payload": {}
+    },
+    "uiJoinPrivateLobbyModalClose": {
+      "name": "ui.lobby.join-private-modal.close",
+      "payload": {}
+    },
+    "uiJoinPrivateLobbyUpdateLobbyId": {
+      "name": "ui.lobby.join-private-modal.update-lobby-id",
+      "payload": {
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiJoinPrivateLobbyUpdateJoined": {
+      "name": "ui.lobby.join-private-modal.update-joined",
+      "payload": {
+        "hasJoined": { "type": "boolean", "required": true }
+      }
+    },
+    "uiPublicLobbyLaunch": {
+      "name": "ui.lobby.public.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiLayoutFooterLaunch": {
+      "name": "ui.layout.footer.launch",
+      "payload": {}
+    },
+    "uiLayoutMainLayoutLaunch": {
+      "name": "ui.layout.main-layout.launch",
+      "payload": {}
+    },
+    "uiLayoutMobileNavBarLaunch": {
+      "name": "ui.layout.mobile-nav-bar.launch",
+      "payload": {}
+    },
+    "uiLayoutDesktopNavBarLaunch": {
+      "name": "ui.layout.desktop-nav-bar.launch",
+      "payload": {}
+    },
+    "uiLayoutPlayPageLaunch": {
+      "name": "ui.layout.play-page.launch",
+      "payload": {}
+    },
+    "uiProfileAccountModalLaunch": {
+      "name": "ui.profile.account-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileAccountModalOpen": {
+      "name": "ui.profile.account-modal.open",
+      "payload": {}
+    },
+    "uiProfileAccountModalClose": {
+      "name": "ui.profile.account-modal.close",
+      "payload": {}
+    },
+    "uiProfileSinglePlayerModalLaunch": {
+      "name": "ui.profile.single-player-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true },
+        "maps": { "type": "array", "required": true },
+        "difficulties": { "type": "array", "required": true },
+        "unitOptions": { "type": "array", "required": true },
+        "teamCountOptions": { "type": "array", "required": true }
+      }
+    },
+    "uiProfileSinglePlayerModalShow": {
+      "name": "ui.profile.single-player-modal.show",
+      "payload": {}
+    },
+    "uiProfileSinglePlayerModalHide": {
+      "name": "ui.profile.single-player-modal.hide",
+      "payload": {}
+    },
+    "uiProfileLangSelectorLaunch": {
+      "name": "ui.profile.lang-selector.launch",
+      "payload": {
+        "initialFlagSvg": { "type": "string", "required": true }
+      }
+    },
+    "uiProfileLangSelectorShow": {
+      "name": "ui.profile.lang-selector.show",
+      "payload": {}
+    },
+    "uiProfileLangSelectorHide": {
+      "name": "ui.profile.lang-selector.hide",
+      "payload": {}
+    },
+    "uiProfileGameStartingModalLaunch": {
+      "name": "ui.profile.game-starting-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileGameStartingModalShow": {
+      "name": "ui.profile.game-starting-modal.show",
+      "payload": {}
+    },
+    "uiProfileGameStartingModalHide": {
+      "name": "ui.profile.game-starting-modal.hide",
+      "payload": {}
+    },
+    "uiProfileLanguageModalLaunch": {
+      "name": "ui.profile.language-modal.launch",
+      "payload": {
+        "languageList": { "type": "array", "required": true },
+        "currentLang": { "type": "string", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileLanguageModalOpen": {
+      "name": "ui.profile.language-modal.open",
+      "payload": {}
+    },
+    "uiProfileLanguageModalClose": {
+      "name": "ui.profile.language-modal.close",
+      "payload": {}
+    },
+    "uiProfileFlagInputModalLaunch": {
+      "name": "ui.profile.flag-input-modal.launch",
+      "payload": {
+        "countries": { "type": "array", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileFlagInputModalOpen": {
+      "name": "ui.profile.flag-input-modal.open",
+      "payload": {}
+    },
+    "uiProfileFlagInputModalClose": {
+      "name": "ui.profile.flag-input-modal.close",
+      "payload": {}
+    },
+    "uiProfileTokenLoginModalLaunch": {
+      "name": "ui.profile.token-login-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileTokenLoginModalOpen": {
+      "name": "ui.profile.token-login-modal.open",
+      "payload": {}
+    },
+    "uiProfileTokenLoginModalClose": {
+      "name": "ui.profile.token-login-modal.close",
+      "payload": {}
+    },
+    "uiProfileNewsModalLaunch": {
+      "name": "ui.profile.news-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileNewsModalOpen": {
+      "name": "ui.profile.news-modal.open",
+      "payload": {}
+    },
+    "uiProfileNewsModalClose": {
+      "name": "ui.profile.news-modal.close",
+      "payload": {}
+    },
+    "uiProfileHelpModalLaunch": {
+      "name": "ui.profile.help-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileHelpModalOpen": {
+      "name": "ui.profile.help-modal.open",
+      "payload": {}
+    },
+    "uiProfileHelpModalClose": {
+      "name": "ui.profile.help-modal.close",
+      "payload": {}
+    },
+    "uiProfileFlagInputLaunch": {
+      "name": "ui.profile.flag-input.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfilePatternInputLaunch": {
+      "name": "ui.profile.pattern-input.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileUsernameInputLaunch": {
+      "name": "ui.profile.username-input.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileTerritoryPatternsModalLaunch": {
+      "name": "ui.profile.territory-patterns-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileUserSettingModalLaunch": {
+      "name": "ui.profile.user-setting-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileMatchmakingModalLaunch": {
+      "name": "ui.profile.matchmaking-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileStatsModalLaunch": {
+      "name": "ui.profile.stats-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileGameInfoModalLaunch": {
+      "name": "ui.profile.game-info-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiProfileGameInfoModalHide": {
+      "name": "ui.profile.game-info-modal.hide",
+      "payload": {}
+    },
+    "uiInGameBuildMenuLaunch": {
+      "name": "ui.ingame.build-menu.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameBuildMenuShow": {
+      "name": "ui.ingame.build-menu.show",
+      "payload": {
+        "items": { "type": "array", "required": true }
+      }
+    },
+    "uiInGameBuildMenuHide": {
+      "name": "ui.ingame.build-menu.hide",
+      "payload": {}
+    },
+    "uiInGameRadialMenuLaunch": {
+      "name": "ui.ingame.radial-menu.launch",
+      "payload": {
+        "config": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameRadialMenuShow": {
+      "name": "ui.ingame.radial-menu.show",
+      "payload": {
+        "items": { "type": "array", "required": true },
+        "centerButton": { "type": "object", "required": true },
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameRadialMenuUpdateItems": {
+      "name": "ui.ingame.radial-menu.update-items",
+      "payload": {
+        "items": { "type": "array", "required": true },
+        "centerButton": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameRadialMenuPushSubmenu": {
+      "name": "ui.ingame.radial-menu.push-submenu",
+      "payload": {
+        "items": { "type": "array", "required": true }
+      }
+    },
+    "uiInGameRadialMenuPopSubmenu": {
+      "name": "ui.ingame.radial-menu.pop-submenu",
+      "payload": {}
+    },
+    "uiInGameRadialMenuHide": {
+      "name": "ui.ingame.radial-menu.hide",
+      "payload": {}
+    },
+    "uiInGameWinModalLaunch": {
+      "name": "ui.ingame.win-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true },
+        "isInIframe": { "type": "boolean", "required": true },
+        "gamesPlayed": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameWinModalShow": {
+      "name": "ui.ingame.win-modal.show",
+      "payload": {
+        "title": { "type": "string", "required": true },
+        "isWin": { "type": "boolean", "required": true },
+        "contentType": { "type": "string", "required": true },
+        "cosmetics": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameWinModalHide": {
+      "name": "ui.ingame.win-modal.hide",
+      "payload": {}
+    },
+    "uiInGameWinModalUpdateCosmetics": {
+      "name": "ui.ingame.win-modal.update-cosmetics",
+      "payload": {
+        "cosmetics": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayLaunch": {
+      "name": "ui.ingame.events-display.launch",
+      "payload": {}
+    },
+    "uiInGameChatDisplayLaunch": {
+      "name": "ui.ingame.chat-display.launch",
+      "payload": {}
+    },
+    "uiInGameControlPanelLaunch": {
+      "name": "ui.ingame.control-panel.launch",
+      "payload": {}
+    },
+    "uiInGameEmojiTableLaunch": {
+      "name": "ui.ingame.emoji-table.launch",
+      "payload": {
+        "emojis": { "type": "array", "required": true }
+      }
+    },
+    "uiInGameEmojiTableShow": {
+      "name": "ui.ingame.emoji-table.show",
+      "payload": {}
+    },
+    "uiInGameEmojiTableHide": {
+      "name": "ui.ingame.emoji-table.hide",
+      "payload": {}
+    },
+    "uiInGameUnitDisplayLaunch": {
+      "name": "ui.ingame.unit-display.launch",
+      "payload": {}
+    },
+    "uiHudSpawnTimerLaunch": {
+      "name": "ui.hud.spawn-timer.launch",
+      "payload": {}
+    },
+    "uiHudSpawnTimerShow": {
+      "name": "ui.hud.spawn-timer.show",
+      "payload": {}
+    },
+    "uiHudImmunityTimerLaunch": {
+      "name": "ui.hud.immunity-timer.launch",
+      "payload": {}
+    },
+    "uiHudHeadsUpMessageLaunch": {
+      "name": "ui.hud.heads-up-message.launch",
+      "payload": {}
+    },
+    "uiHudHeadsUpToastShow": {
+      "name": "ui.hud.heads-up-message.toast-show",
+      "payload": {
+        "message": { "type": "string", "required": true },
+        "color": { "type": "string", "required": true }
+      }
+    },
+    "uiHudHeadsUpToastHide": {
+      "name": "ui.hud.heads-up-message.toast-hide",
+      "payload": {}
+    },
+    "uiHudAlertFrameLaunch": {
+      "name": "ui.hud.alert-frame.launch",
+      "payload": {}
+    },
+    "uiInGameGameLeftSidebarLaunch": {
+      "name": "ui.ingame.game-left-sidebar.launch",
+      "payload": {}
+    },
+    "uiInGameReplayPanelLaunch": {
+      "name": "ui.ingame.replay-panel.launch",
+      "payload": {}
+    },
+    "uiInGameGameRightSidebarLaunch": {
+      "name": "ui.ingame.game-right-sidebar.launch",
+      "payload": {}
+    },
+    "uiInGamePlayerPanelLaunch": {
+      "name": "ui.ingame.player-panel.launch",
+      "payload": {}
+    },
+    "uiInGamePlayerInfoOverlayLaunch": {
+      "name": "ui.ingame.player-info-overlay.launch",
+      "payload": {}
+    },
+    "uiInGamePerformanceOverlayLaunch": {
+      "name": "ui.ingame.performance-overlay.launch",
+      "payload": {}
+    },
+    "uiInGameFullSettingsModalLaunch": {
+      "name": "ui.ingame.full-settings-modal.launch",
+      "payload": {
+        "settings": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true },
+        "icons": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameLeaderboardLaunch": {
+      "name": "ui.ingame.leaderboard.launch",
+      "payload": {
+        "entries": { "type": "array", "required": true },
+        "translations": { "type": "object", "required": true },
+        "showTopFive": { "type": "boolean", "required": true }
+      }
+    },
+    "uiInGameTeamStatsLaunch": {
+      "name": "ui.ingame.team-stats.launch",
+      "payload": {
+        "entries": { "type": "array", "required": true },
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameSendResourceModalLaunch": {
+      "name": "ui.ingame.send-resource-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameSendResourceModalShow": {
+      "name": "ui.ingame.send-resource-modal.show",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameSendResourceModalHide": {
+      "name": "ui.ingame.send-resource-modal.hide",
+      "payload": {}
+    },
+    "uiInGameMultiTabModalLaunch": {
+      "name": "ui.ingame.multi-tab-modal.launch",
+      "payload": {
+        "translations": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameMultiTabModalShow": {
+      "name": "ui.ingame.multi-tab-modal.show",
+      "payload": {
+        "durationMs": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameMultiTabModalHide": {
+      "name": "ui.ingame.multi-tab-modal.hide",
+      "payload": {}
+    },
+    "uiInGameChatModalLaunch": {
+      "name": "ui.ingame.chat-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "players": { "type": "array", "required": true },
+        "quickChatPhrases": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true },
+        "phraseTranslations": { "type": "object", "required": true }
+      }
+    },
+    "uiInGameChatModalClose": {
+      "name": "ui.ingame.chat-modal.close",
+      "payload": {}
+    },
+    "uiInGameChatModalOpenWithSelection": {
+      "name": "ui.ingame.chat-modal.open-with-selection",
+      "payload": {
+        "categoryId": { "type": "string", "required": true },
+        "phraseKey": { "type": "string", "required": true }
+      }
+    },
+    "uiInGamePlayerModerationModalLaunch": {
+      "name": "ui.ingame.player-moderation-modal.launch",
+      "payload": {
+        "state": { "type": "object", "required": true },
+        "myPlayer": { "type": "object", "required": true },
+        "targetPlayer": { "type": "object", "required": true },
+        "translations": { "type": "object", "required": true },
+        "kickIcon": { "type": "string", "required": true },
+        "shieldIcon": { "type": "string", "required": true }
+      }
+    },
+    "uiInGamePlayerModerationModalClose": {
+      "name": "ui.ingame.player-moderation-modal.close",
+      "payload": {}
+    }
+  },
+  "events": {
+    "sessionLanguageReadResult": {
+      "name": "session.language.read.result",
+      "payload": {
+        "storageKey": { "type": "string", "required": true },
+        "lang": { "type": "stringOrNull", "required": true }
+      }
+    },
+    "sessionLanguageChanged": {
+      "name": "session.language.changed",
+      "payload": {
+        "storageKey": { "type": "string", "required": true },
+        "lang": { "type": "string", "required": true }
+      }
+    },
+    "sessionStorageReadResult": {
+      "name": "session.storage.read.result",
+      "payload": {
+        "storageKey": { "type": "string", "required": true },
+        "value": { "type": "stringOrNull", "required": true }
+      }
+    },
+    "sessionStorageChanged": {
+      "name": "session.storage.changed",
+      "payload": {
+        "storageKey": { "type": "string", "required": true },
+        "value": { "type": "stringOrNull", "required": true }
+      }
+    },
+    "sessionModalClose": {
+      "name": "session.modal.close",
+      "payload": {
+        "modal": { "type": "string", "required": true },
+        "reason": { "type": "string", "required": true }
+      }
+    },
+    "sessionKeyboardChanged": {
+      "name": "session.keyboard.changed",
+      "payload": {
+        "key": { "type": "string", "required": true },
+        "code": { "type": "string", "required": true },
+        "isDown": { "type": "boolean", "required": true }
+      }
+    },
+    "sessionLifecycleBeforeUnload": {
+      "name": "session.lifecycle.before-unload",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "sessionNavigationPopstate": {
+      "name": "session.navigation.popstate",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "sessionNavigationHashchange": {
+      "name": "session.navigation.hashchange",
+      "payload": {
+        "href": { "type": "string", "required": true }
+      }
+    },
+    "uiReadStatsLoading": {
+      "name": "ui.read.stats.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiReadStatsRetry": {
+      "name": "ui.read.stats.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiReadStatsError": {
+      "name": "ui.read.stats.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiReadGameInfoLoading": {
+      "name": "ui.read.game-info.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "gameId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadGameInfoRetry": {
+      "name": "ui.read.game-info.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "gameId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadGameInfoError": {
+      "name": "ui.read.game-info.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "gameId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyExistsLoading": {
+      "name": "ui.read.lobby-exists.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyExistsRetry": {
+      "name": "ui.read.lobby-exists.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyExistsError": {
+      "name": "ui.read.lobby-exists.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyArchiveLoading": {
+      "name": "ui.read.lobby-archive.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyArchiveRetry": {
+      "name": "ui.read.lobby-archive.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyArchiveError": {
+      "name": "ui.read.lobby-archive.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyStateLoading": {
+      "name": "ui.read.lobby-state.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyStateRetry": {
+      "name": "ui.read.lobby-state.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiReadLobbyStateError": {
+      "name": "ui.read.lobby-state.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiMatchmakingSearchLoading": {
+      "name": "ui.matchmaking.search.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiMatchmakingSearchRetry": {
+      "name": "ui.matchmaking.search.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiMatchmakingSearchCancel": {
+      "name": "ui.matchmaking.search.cancel",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false }
+      }
+    },
+    "uiMatchmakingSearchError": {
+      "name": "ui.matchmaking.search.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostCreateLoading": {
+      "name": "ui.mutate.host-lobby.create.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "creatorClientID": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostCreateRetry": {
+      "name": "ui.mutate.host-lobby.create.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "creatorClientID": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostCreateError": {
+      "name": "ui.mutate.host-lobby.create.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "creatorClientID": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostStartLoading": {
+      "name": "ui.mutate.host-lobby.start.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostStartRetry": {
+      "name": "ui.mutate.host-lobby.start.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateHostStartError": {
+      "name": "ui.mutate.host-lobby.start.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "lobbyId": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateAccountMagicLinkLoading": {
+      "name": "ui.mutate.account.magic-link.loading",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "email": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateAccountMagicLinkRetry": {
+      "name": "ui.mutate.account.magic-link.retry",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "email": { "type": "string", "required": false }
+      }
+    },
+    "uiMutateAccountMagicLinkError": {
+      "name": "ui.mutate.account.magic-link.error",
+      "payload": {
+        "requestId": { "type": "number", "required": false },
+        "reason": { "type": "string", "required": false },
+        "email": { "type": "string", "required": false },
+        "message": { "type": "string", "required": false }
+      }
+    },
+    "uiInGameBuildMenuSelected": {
+      "name": "ui.ingame.build-menu.selected",
+      "payload": {
+        "unitType": { "type": "string", "required": true },
+        "canUpgrade": { "type": "boolean", "required": true },
+        "upgradeUnitId": { "type": "numberOrNull", "required": false }
+      }
+    },
+    "uiInGameBuildMenuClosed": {
+      "name": "ui.ingame.build-menu.closed",
+      "payload": {}
+    },
+    "uiInGameRadialMenuItemClick": {
+      "name": "ui.ingame.radial-menu.item-click",
+      "payload": {
+        "itemId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameRadialMenuCenterClick": {
+      "name": "ui.ingame.radial-menu.center-click",
+      "payload": {}
+    },
+    "uiInGameRadialMenuClose": {
+      "name": "ui.ingame.radial-menu.close",
+      "payload": {}
+    },
+    "uiInGameWinModalExit": {
+      "name": "ui.ingame.win-modal.exit",
+      "payload": {}
+    },
+    "uiInGameWinModalHideRequest": {
+      "name": "ui.ingame.win-modal.hide-request",
+      "payload": {}
+    },
+    "uiInGameWinModalPurchase": {
+      "name": "ui.ingame.win-modal.purchase",
+      "payload": {
+        "priceId": { "type": "string", "required": true },
+        "colorPaletteName": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameChatModalCloseRequest": {
+      "name": "ui.ingame.chat-modal.close.request",
+      "payload": {}
+    },
+    "uiInGameChatModalSend": {
+      "name": "ui.ingame.chat-modal.send",
+      "payload": {
+        "quickChatKey": { "type": "string", "required": true },
+        "selectedPlayerId": { "type": "stringOrNull", "required": true },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiInGamePlayerModerationCloseRequest": {
+      "name": "ui.ingame.player-moderation-modal.close.request",
+      "payload": {}
+    },
+    "uiInGamePlayerModerationKick": {
+      "name": "ui.ingame.player-moderation-modal.kick",
+      "payload": {
+        "playerId": { "type": "string", "required": true },
+        "playerName": { "type": "string", "required": true },
+        "confirmMessage": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameSendResourceCloseRequest": {
+      "name": "ui.ingame.send-resource-modal.close.request",
+      "payload": {}
+    },
+    "uiInGameSendResourceConfirm": {
+      "name": "ui.ingame.send-resource-modal.confirm",
+      "payload": {
+        "amount": { "type": "number", "required": true },
+        "mode": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameMultiTabPenaltyComplete": {
+      "name": "ui.ingame.multi-tab-modal.penalty-complete",
+      "payload": {}
+    },
+    "uiInGamePerformanceOverlayReset": {
+      "name": "ui.ingame.performance-overlay.reset",
+      "payload": {}
+    },
+    "uiInGamePerformanceOverlayCopy": {
+      "name": "ui.ingame.performance-overlay.copy",
+      "payload": {}
+    },
+    "uiInGamePerformanceOverlayCloseRequest": {
+      "name": "ui.ingame.performance-overlay.close.request",
+      "payload": {}
+    },
+    "uiInGameEventsDisplayToggleHidden": {
+      "name": "ui.ingame.events-display.toggle-hidden",
+      "payload": {}
+    },
+    "uiInGameEventsDisplayToggleFilter": {
+      "name": "ui.ingame.events-display.toggle-filter",
+      "payload": {
+        "category": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayFocusPlayer": {
+      "name": "ui.ingame.events-display.focus-player",
+      "payload": {
+        "playerId": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayFocusUnit": {
+      "name": "ui.ingame.events-display.focus-unit",
+      "payload": {
+        "unitId": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayButtonClick": {
+      "name": "ui.ingame.events-display.button-click",
+      "payload": {
+        "actionId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayAttackClick": {
+      "name": "ui.ingame.events-display.attack-click",
+      "payload": {
+        "attackId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayRetaliate": {
+      "name": "ui.ingame.events-display.retaliate",
+      "payload": {
+        "attackId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayCancelAttack": {
+      "name": "ui.ingame.events-display.cancel-attack",
+      "payload": {
+        "attackId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayFocusBoat": {
+      "name": "ui.ingame.events-display.focus-boat",
+      "payload": {
+        "boatId": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameEventsDisplayCancelBoat": {
+      "name": "ui.ingame.events-display.cancel-boat",
+      "payload": {
+        "boatId": { "type": "number", "required": true }
+      }
+    },
+    "uiInGamePlayerPanelClose": {
+      "name": "ui.ingame.player-panel.close",
+      "payload": {}
+    },
+    "uiInGamePlayerPanelAction": {
+      "name": "ui.ingame.player-panel.action",
+      "payload": {
+        "actionId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGamePlayerPanelToggleRocket": {
+      "name": "ui.ingame.player-panel.toggle-rocket",
+      "payload": {}
+    },
+    "uiInGamePlayerInfoToggleDetails": {
+      "name": "ui.ingame.player-info-overlay.toggle-details",
+      "payload": {}
+    },
+    "uiInGameSettingsModalSettingChange": {
+      "name": "ui.ingame.settings-modal.setting-change",
+      "payload": {
+        "setting": { "type": "string", "required": true },
+        "value": { "type": "any", "required": true }
+      }
+    },
+    "uiInGameSettingsModalCloseRequest": {
+      "name": "ui.ingame.settings-modal.close.request",
+      "payload": {}
+    },
+    "uiInGameChatDisplayToggle": {
+      "name": "ui.ingame.chat-display.toggle",
+      "payload": {}
+    },
+    "uiInGameControlPanelRatioChange": {
+      "name": "ui.ingame.control-panel.ratio-change",
+      "payload": {
+        "ratio": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameEmojiTableSelect": {
+      "name": "ui.ingame.emoji-table.select",
+      "payload": {
+        "index": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameEmojiTableClose": {
+      "name": "ui.ingame.emoji-table.close",
+      "payload": {}
+    },
+    "uiInGameUnitDisplayClick": {
+      "name": "ui.ingame.unit-display.click",
+      "payload": {
+        "unitType": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameUnitDisplayHover": {
+      "name": "ui.ingame.unit-display.hover",
+      "payload": {
+        "unitType": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameUnitDisplayUnhover": {
+      "name": "ui.ingame.unit-display.unhover",
+      "payload": {}
+    },
+    "uiInGameLeaderboardRowClick": {
+      "name": "ui.ingame.leaderboard.row-click",
+      "payload": {
+        "playerId": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameLeaderboardSort": {
+      "name": "ui.ingame.leaderboard.sort",
+      "payload": {
+        "sortKey": { "type": "string", "required": true },
+        "sortOrder": { "type": "string", "required": true }
+      }
+    },
+    "uiInGameLeaderboardToggle": {
+      "name": "ui.ingame.leaderboard.toggle",
+      "payload": {}
+    },
+    "uiInGameGameLeftSidebarToggleLeaderboard": {
+      "name": "ui.ingame.game-left-sidebar.toggle-leaderboard",
+      "payload": {}
+    },
+    "uiInGameGameLeftSidebarToggleTeam": {
+      "name": "ui.ingame.game-left-sidebar.toggle-team",
+      "payload": {}
+    },
+    "uiInGameReplayPanelSpeed": {
+      "name": "ui.ingame.replay-panel.speed",
+      "payload": {
+        "index": { "type": "number", "required": true }
+      }
+    },
+    "uiInGameGameRightSidebarReplay": {
+      "name": "ui.ingame.game-right-sidebar.replay",
+      "payload": {}
+    },
+    "uiInGameGameRightSidebarPause": {
+      "name": "ui.ingame.game-right-sidebar.pause",
+      "payload": {}
+    },
+    "uiInGameGameRightSidebarSettings": {
+      "name": "ui.ingame.game-right-sidebar.settings",
+      "payload": {}
+    },
+    "uiInGameGameRightSidebarExit": {
+      "name": "ui.ingame.game-right-sidebar.exit",
+      "payload": {}
+    },
+    "uiLobbyHostModalCloseRequest": {
+      "name": "ui.lobby.host-modal.close.request",
+      "payload": {}
+    },
+    "uiLobbyHostModalStartRequest": {
+      "name": "ui.lobby.host-modal.start.request",
+      "payload": {}
+    },
+    "uiLobbyHostModalFormChange": {
+      "name": "ui.lobby.host-modal.form-change",
+      "payload": {
+        "formJson": { "type": "string", "required": true }
+      }
+    },
+    "uiLobbyHostModalCopyLinkRequest": {
+      "name": "ui.lobby.host-modal.copy-link.request",
+      "payload": {}
+    },
+    "uiLobbyHostModalKickRequest": {
+      "name": "ui.lobby.host-modal.kick.request",
+      "payload": {
+        "clientId": { "type": "string", "required": true }
+      }
+    },
+    "uiLobbyPublicClick": {
+      "name": "ui.lobby.public.click",
+      "payload": {
+        "gameId": { "type": "string", "required": true }
+      }
+    },
+    "uiLobbyJoinPrivateJoinLobby": {
+      "name": "ui.lobby.join-private-modal.join-lobby",
+      "payload": {
+        "lobbyId": { "type": "string", "required": true }
+      }
+    },
+    "uiLobbyJoinPrivatePasteRequest": {
+      "name": "ui.lobby.join-private-modal.paste-request",
+      "payload": {}
+    },
+    "uiLobbyJoinPrivateCloseRequest": {
+      "name": "ui.lobby.join-private-modal.close.request",
+      "payload": {}
+    }
+  },
+  "snapshots": {
+    "uiSnapshotHudSpawnTimer": {
+      "name": "ui.snapshot.hud.spawn-timer",
+      "payload": {
+        "visible": { "type": "boolean", "required": true },
+        "segments": { "type": "array", "required": false }
+      }
+    },
+    "uiSnapshotHudImmunityTimer": {
+      "name": "ui.snapshot.hud.immunity-timer",
+      "payload": {
+        "active": { "type": "boolean", "required": true },
+        "progressRatio": { "type": "number", "required": true },
+        "topOffset": { "type": "string", "required": true }
+      }
+    },
+    "uiSnapshotHudHeadsUpMessage": {
+      "name": "ui.snapshot.hud.heads-up-message",
+      "payload": {
+        "isVisible": { "type": "boolean", "required": true },
+        "message": { "type": "string", "required": true }
+      }
+    },
+    "uiSnapshotHudAlertFrame": {
+      "name": "ui.snapshot.hud.alert-frame",
+      "payload": {
+        "action": { "type": "string", "required": true },
+        "alertType": { "type": "string", "required": false }
+      }
+    },
+    "uiSnapshotInGameControlPanel": {
+      "name": "ui.snapshot.ingame.control-panel",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameUnitDisplay": {
+      "name": "ui.snapshot.ingame.unit-display",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameReplayPanel": {
+      "name": "ui.snapshot.ingame.replay-panel",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameGameLeftSidebar": {
+      "name": "ui.snapshot.ingame.game-left-sidebar",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameGameRightSidebar": {
+      "name": "ui.snapshot.ingame.game-right-sidebar",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameChatDisplay": {
+      "name": "ui.snapshot.ingame.chat-display",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameChatModalPlayers": {
+      "name": "ui.snapshot.ingame.chat-modal.players",
+      "payload": {
+        "players": { "type": "array", "required": true }
+      }
+    },
+    "uiSnapshotInGameEventsDisplay": {
+      "name": "ui.snapshot.ingame.events-display",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGamePlayerPanel": {
+      "name": "ui.snapshot.ingame.player-panel",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGamePlayerInfoOverlay": {
+      "name": "ui.snapshot.ingame.player-info-overlay",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGamePerformanceOverlay": {
+      "name": "ui.snapshot.ingame.performance-overlay",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotInGameLeaderboardEntries": {
+      "name": "ui.snapshot.ingame.leaderboard-entries",
+      "payload": {
+        "entries": { "type": "array", "required": true }
+      }
+    },
+    "uiSnapshotInGameTeamStatsEntries": {
+      "name": "ui.snapshot.ingame.team-stats-entries",
+      "payload": {
+        "entries": { "type": "array", "required": true }
+      }
+    },
+    "uiSnapshotInGameSendResourceTotal": {
+      "name": "ui.snapshot.ingame.send-resource-total",
+      "payload": {
+        "total": { "type": "number", "required": true },
+        "mode": { "type": "string", "required": true },
+        "capacityLeft": { "type": "number", "required": true },
+        "hasCapacity": { "type": "boolean", "required": true },
+        "targetAlive": { "type": "boolean", "required": true },
+        "senderAlive": { "type": "boolean", "required": true }
+      }
+    },
+    "uiSnapshotLobbyHostPlayers": {
+      "name": "ui.snapshot.lobby.host-players",
+      "payload": {
+        "players": { "type": "array", "required": true }
+      }
+    },
+    "uiSnapshotLobbyJoinPrivateConfigHtml": {
+      "name": "ui.snapshot.lobby.join-private.config-html",
+      "payload": {
+        "html": { "type": "string", "required": true }
+      }
+    },
+    "uiSnapshotLobbyJoinPrivatePlayersHtml": {
+      "name": "ui.snapshot.lobby.join-private.players-html",
+      "payload": {
+        "html": { "type": "string", "required": true }
+      }
+    },
+    "uiSnapshotLobbyPublicData": {
+      "name": "ui.snapshot.lobby.public.data",
+      "payload": {
+        "data": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLobbyPublicJoining": {
+      "name": "ui.snapshot.lobby.public.joining",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLayoutFooterState": {
+      "name": "ui.snapshot.layout.footer-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLayoutMainLayoutState": {
+      "name": "ui.snapshot.layout.main-layout-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLayoutMobileNavBarState": {
+      "name": "ui.snapshot.layout.mobile-nav-bar-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLayoutDesktopNavBarState": {
+      "name": "ui.snapshot.layout.desktop-nav-bar-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotLayoutPlayPageState": {
+      "name": "ui.snapshot.layout.play-page-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileAccountModalState": {
+      "name": "ui.snapshot.profile.account-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileSinglePlayerModalState": {
+      "name": "ui.snapshot.profile.single-player-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileLangSelectorState": {
+      "name": "ui.snapshot.profile.lang-selector-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileTokenLoginModalState": {
+      "name": "ui.snapshot.profile.token-login-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileNewsModalState": {
+      "name": "ui.snapshot.profile.news-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileHelpModalState": {
+      "name": "ui.snapshot.profile.help-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileFlagInputState": {
+      "name": "ui.snapshot.profile.flag-input-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfilePatternInputState": {
+      "name": "ui.snapshot.profile.pattern-input-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileUsernameInputState": {
+      "name": "ui.snapshot.profile.username-input-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileTerritoryPatternsModalState": {
+      "name": "ui.snapshot.profile.territory-patterns-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileUserSettingModalState": {
+      "name": "ui.snapshot.profile.user-setting-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileMatchmakingModalState": {
+      "name": "ui.snapshot.profile.matchmaking-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileStatsModalState": {
+      "name": "ui.snapshot.profile.stats-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    },
+    "uiSnapshotProfileGameInfoModalState": {
+      "name": "ui.snapshot.profile.game-info-modal-state",
+      "payload": {
+        "state": { "type": "object", "required": true }
+      }
+    }
+  }
+}

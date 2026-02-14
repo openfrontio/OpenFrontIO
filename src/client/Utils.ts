@@ -1,6 +1,13 @@
 import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
-import type { LangSelector } from "./LangSelector";
+import type { DioxusLangSelector } from "./ProfileAndSettingsBridges";
+import {
+  getUiSessionStorageCachedValue,
+  primeUiSessionStorage,
+  writeUiSessionStorage,
+} from "./runtime/UiSessionRuntime";
+
+const GAMES_PLAYED_STORAGE_KEY = "gamesPlayed";
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
@@ -170,7 +177,9 @@ export const translateText = (
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
-  const langSelector = document.querySelector("lang-selector") as LangSelector;
+  const langSelector = document.querySelector(
+    "lang-selector",
+  ) as DioxusLangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
@@ -297,20 +306,23 @@ export function getAltKey(): string {
 }
 
 export function getGamesPlayed(): number {
-  try {
-    return parseInt(localStorage.getItem("gamesPlayed") ?? "0", 10) || 0;
-  } catch (error) {
-    console.warn("Failed to read games played from localStorage:", error);
+  const cachedValue = getUiSessionStorageCachedValue(GAMES_PLAYED_STORAGE_KEY);
+  if (cachedValue === undefined) {
+    primeUiSessionStorage(GAMES_PLAYED_STORAGE_KEY);
     return 0;
   }
+
+  if (typeof cachedValue !== "string") {
+    return 0;
+  }
+
+  const parsed = Number.parseInt(cachedValue, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 export function incrementGamesPlayed(): void {
-  try {
-    localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
-  } catch (error) {
-    console.warn("Failed to increment games played in localStorage:", error);
-  }
+  const nextGamesPlayed = (getGamesPlayed() + 1).toString();
+  void writeUiSessionStorage(GAMES_PLAYED_STORAGE_KEY, nextGamesPlayed);
 }
 
 export function isInIframe(): boolean {
