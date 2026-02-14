@@ -93,7 +93,7 @@ export class WinModal extends LitElement implements Layer {
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${this.game.myPlayer()?.isAlive()
+            ${this.game?.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
           </button>

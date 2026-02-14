@@ -18,9 +18,7 @@ export class FlagInputModal extends BaseModal {
 
   render() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <div
           class="relative flex flex-col border-b border-white/10 pb-4 shrink-0"
         >

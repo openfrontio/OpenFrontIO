@@ -61,18 +61,9 @@ export class AccountModal extends BaseModal {
 
   render() {
     const content = this.isLoadingUser
-      ? html`
-          <div
-            class="flex flex-col items-center justify-center p-12 text-white bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 h-full min-h-[400px]"
-          >
-            <div
-              class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"
-            ></div>
-            <p class="text-white/60 font-medium tracking-wide animate-pulse">
-              ${translateText("account_modal.fetching_account")}
-            </p>
-          </div>
-        `
+      ? this.renderLoadingSpinner(
+          translateText("account_modal.fetching_account"),
+        )
       : this.renderInner();
 
     if (this.inline) {
@@ -99,9 +90,7 @@ export class AccountModal extends BaseModal {
     const displayId = publicId || translateText("account_modal.not_found");
 
     return html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title,
           onBack: () => this.close(),
