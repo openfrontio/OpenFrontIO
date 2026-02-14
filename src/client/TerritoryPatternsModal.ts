@@ -87,7 +87,7 @@ export class TerritoryPatternsModal extends BaseModal {
     return html`
       ${modalHeader({
         title: translateText("territory_patterns.title"),
-        onBack: this.close,
+        onBack: () => this.close(),
         ariaLabel: translateText("common.back"),
         rightContent: !hasLinkedAccount(this.userMeResponse)
           ? html`<div class="flex items-center">
@@ -251,11 +251,7 @@ export class TerritoryPatternsModal extends BaseModal {
     if (!this.isActive && !this.inline) return html``;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${this.renderTabNavigation()}
         <div class="overflow-y-auto pr-2 custom-scrollbar mr-1">
           ${this.activeTab === "patterns"

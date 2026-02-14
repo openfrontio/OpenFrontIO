@@ -271,6 +271,7 @@ export async function setupFromPath(
       infiniteTroops: false,
       instantBuild: false,
       randomSpawn: false,
+      lobbyStartDelayMs: 60000,
       ...gameConfig,
     },
     new UserSettings(),

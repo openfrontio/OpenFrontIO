@@ -793,7 +793,8 @@ export class GameServer {
 
     // Public Games
 
-    const lessThanLifetime = Date.now() < this.startsAt!;
+    const scheduledStartAt = this.scheduledStartAt();
+    const lessThanLifetime = now < scheduledStartAt;
     const notEnoughPlayers =
       this.gameConfig.gameType === GameType.Public &&
       this.gameConfig.maxPlayers &&
@@ -801,7 +802,7 @@ export class GameServer {
     if (lessThanLifetime && notEnoughPlayers) {
       return GamePhase.Lobby;
     }
-    const warmupOver = now > this.startsAt! + 30 * 1000;
+    const warmupOver = now > scheduledStartAt + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
@@ -813,16 +814,29 @@ export class GameServer {
     return this._hasStarted || this._hasPrestarted;
   }
 
+  private scheduledStartAt(): number {
+    const override = this.gameConfig.lobbyStartDelayMs;
+    return (
+      this.startsAt ??
+      this.createdAt + (override ?? this.config.gameCreationRate())
+    );
+  }
+
   public gameInfo(): GameInfo {
+    const startAt = this.scheduledStartAt();
     return {
       gameID: this.id,
       clients: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
       })),
+      numClients: this.activeClients.length,
       lobbyCreatorClientID: this.lobbyCreatorID,
       gameConfig: this.gameConfig,
-      startsAt: this.startsAt,
+      startsAt: startAt,
+      msUntilStart: this.isPublic()
+        ? Math.max(0, startAt - Date.now())
+        : undefined,
       serverTime: Date.now(),
     };
   }

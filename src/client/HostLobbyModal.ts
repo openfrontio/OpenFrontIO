@@ -78,8 +78,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private nationCount: number = 0;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
-
-  private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private mapLoader = terrainMapFileLoader;
@@ -88,6 +86,9 @@ export class HostLobbyModal extends BaseModal {
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
+    if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
+      return;
+    }
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
@@ -209,9 +210,7 @@ export class HostLobbyModal extends BaseModal {
     ];
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("host_modal.title"),
@@ -391,7 +390,6 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       };
     }
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
     this.loadNationCount();
   }
 
@@ -418,10 +416,6 @@ export class HostLobbyModal extends BaseModal {
     crazyGamesSDK.hideInviteButton();
 
     // Clean up timers and resources
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
     if (this.botsUpdateTimer !== null) {
       clearTimeout(this.botsUpdateTimer);
       this.botsUpdateTimer = null;
@@ -809,20 +803,6 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobbyOnClose = true;
     }
     return response;
-  }
-
-  private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        this.clients = data.clients ?? [];
-      });
   }
 
   private kickPlayer(clientID: string) {

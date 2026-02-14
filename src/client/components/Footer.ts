@@ -10,7 +10,7 @@ export class Footer extends LitElement {
   render() {
     return html`
       <footer
-        class="[.in-game_&]:hidden bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
+        class="[.in-game_&]:hidden bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center gap-2 pt-[2px] pb-2 text-white/50 w-full border-t border-white/10 shrink-0 mt-auto"
       >
         <div class="flex items-center justify-center gap-6 pt-2">
           <a
@@ -43,7 +43,7 @@ export class Footer extends LitElement {
             </svg>
           </a>
           <a
-            href="https://discord.gg/jRpxXvG42t"
+            href="https://discord.gg/openfront"
             target="_blank"
             rel="noopener noreferrer"
             class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"

@@ -69,6 +69,7 @@ export async function setup(
     infiniteTroops: false,
     instantBuild: false,
     randomSpawn: false,
+    lobbyStartDelayMs: 60000,
     ..._gameConfig,
   };
   const config = new ConfigClass(
