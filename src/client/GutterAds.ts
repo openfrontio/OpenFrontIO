@@ -67,11 +67,13 @@ export class GutterAds extends LitElement {
 
     if (!leftContainer || !rightContainer) {
       console.warn("Ad containers not found in DOM");
+      this.isVisible = false;
       return;
     }
 
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
+      this.isVisible = false;
       return;
     }
 
@@ -100,10 +102,12 @@ export class GutterAds extends LitElement {
             this.rightAdType,
           );
         } catch (e) {
+          this.isVisible = false;
           console.log(e);
         }
       });
     } catch (error) {
+      this.isVisible = false;
       console.error("Failed to load Playwire ads:", error);
     }
   }
