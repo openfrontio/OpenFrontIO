@@ -16,6 +16,7 @@ import {
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
+  PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -96,9 +97,7 @@ export class JoinLobbyModal extends BaseModal {
       ? (this.lobbyCreatorClientID ?? "")
       : "";
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("public_lobby.title"),
           onBack: () => this.closeAndLeave(),
@@ -149,7 +148,7 @@ export class JoinLobbyModal extends BaseModal {
         ${this.isPrivateLobby()
           ? html`
               <div
-                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <button
                   class="w-full py-4 text-sm font-bold text-white uppercase tracking-widest bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none"
@@ -161,7 +160,7 @@ export class JoinLobbyModal extends BaseModal {
             `
           : html`
               <div
-                class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0"
+                class="p-6 lg:p-6 border-t border-white/10 bg-black/20 shrink-0"
               >
                 <div
                   class="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-3"
@@ -216,9 +215,7 @@ export class JoinLobbyModal extends BaseModal {
 
   private renderJoinForm() {
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden select-none"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("private_lobby.title"),
           onBack: () => this.closeAndLeave(),
@@ -280,15 +277,12 @@ export class JoinLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "", isPublic: boolean = false) {
+  public open(lobbyId: string = "", lobbyInfo?: PublicGameInfo) {
     super.open();
     if (lobbyId) {
       this.startTrackingLobby(lobbyId);
-      // If opened with lobbyInfo (public lobby case), auto-join the lobby
-      if (isPublic) {
-        this.joinPublicLobby(lobbyId);
-      } else {
-        // If opened with lobbyId but no lobbyInfo (URL join case), check if active and join
+      // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
+      if (!lobbyInfo) {
         this.handleUrlJoin(lobbyId);
       }
     }
@@ -326,21 +320,7 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private joinPublicLobby(lobbyId: string) {
-    // Dispatch join-lobby event to actually connect to the lobby
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: lobbyId,
-          source: "public",
-        } as JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
+  private startTrackingLobby(lobbyId: string) {
     this.currentLobbyId = lobbyId;
     // clientID will be assigned by server via lobby_info message
     this.currentClientID = "";
@@ -352,13 +332,6 @@ export class JoinLobbyModal extends BaseModal {
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
-    if (lobbyInfo) {
-      this.updateFromLobby(lobbyInfo);
-      // Only stop showing spinner when we have player info
-      if (lobbyInfo.clients) {
-        this.isConnecting = false;
-      }
-    }
   }
 
   private resetTrackingState() {
