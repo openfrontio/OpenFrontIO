@@ -4,6 +4,7 @@ import {
   PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
+  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
@@ -164,6 +165,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    unit?: UnitType,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -185,9 +187,10 @@ export class WorkerClient {
       this.worker.postMessage({
         type: "player_actions",
         id: messageId,
-        playerID: playerID,
-        x: x,
-        y: y,
+        playerID,
+        x,
+        y,
+        unit,
       });
     });
   }
