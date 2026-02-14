@@ -12,7 +12,7 @@ const CARD_LABEL_CLASS =
   "text-xs uppercase font-bold tracking-wider leading-tight break-words hyphens-auto";
 
 function cardClass(active: boolean, extra = ""): string {
-  return `w-full rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 ${extra} ${active ? ACTIVE_CARD : INACTIVE_CARD}`;
+  return `w-full h-full rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 ${extra} ${active ? ACTIVE_CARD : INACTIVE_CARD}`;
 }
 
 @customElement("toggle-input-card")
