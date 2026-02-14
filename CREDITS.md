@@ -44,6 +44,11 @@ Licensed under [Open Data Commons Open Database License (ODbL)](https://opendata
 Copernicus Global Digital Elevation Models distributed by OpenTopography.
 Copyright © opentopography.org. All Rights Reserved. [Terms of Use](https://opentopography.org/usageterms)
 
+### Hawaii Relief Map
+
+[USA Hawaii relief location map](https://commons.wikimedia.org/wiki/File:USA_Hawaii_relief_location_map.svg) by NordNordWest
+Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/de/deed.en)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
