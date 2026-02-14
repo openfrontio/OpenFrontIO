@@ -161,6 +161,7 @@ export class TerritoryPatternsModal extends BaseModal {
             .requiresPurchase=${rel === "purchasable" ||
             rel === "purchasable_no_trial"}
             .allowTrial=${rel === "purchasable"}
+            .hasLinkedAccount=${hasLinkedAccount(this.userMeResponse)}
             .trialCooldown=${this.userMeResponse !== false &&
             this.userMeResponse.player.tempFlaresCooldown}
             .trialTimeRemaining=${isTrial

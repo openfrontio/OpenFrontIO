@@ -38,6 +38,9 @@ export class PatternButton extends LitElement {
   @property({ type: Boolean })
   trialCooldown: boolean = false;
 
+  @property({ type: Boolean })
+  hasLinkedAccount: boolean = false;
+
   @property({ type: Function })
   onSelect?: (pattern: PlayerPattern | null) => void;
 
@@ -170,6 +173,11 @@ export class PatternButton extends LitElement {
   private async handleTryMe(e: Event) {
     e.stopPropagation();
     if (this.pattern === null || this._adLoading) return;
+
+    if (!this.hasLinkedAccount) {
+      alert(translateText("territory_patterns.trial_login_required"));
+      return;
+    }
 
     if (this.trialCooldown) {
       alert(translateText("territory_patterns.trial_cooldown"));
