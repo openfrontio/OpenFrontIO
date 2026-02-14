@@ -359,6 +359,55 @@ export class RadialMenu implements Layer {
       )
       .attr("data-id", (d) => d.data.id);
 
+    // Timer gradient for items with timerFraction
+    arcs.each((d) => {
+      if (d.data.timerFraction && this.params) {
+        const fraction = d.data.timerFraction(this.params);
+        const disabled = this.params === null || d.data.disabled(this.params);
+        const baseColor = disabled
+          ? this.config.disabledColor
+          : (resolveColor(d.data, this.params) ?? "#333333");
+        const opacity = disabled ? 0.5 : 0.7;
+
+        const normalColor =
+          d3.color(baseColor)?.copy({ opacity: opacity })?.toString() ??
+          baseColor;
+        const interpolated = d3.color(
+          d3.interpolateRgb(baseColor, "white")(0.4),
+        );
+        const fadedColor =
+          interpolated?.copy({ opacity })?.toString() ?? normalColor;
+
+        const gradientId = `timer-gradient-${d.data.id}`;
+        const defs = this.menuElement.select("defs");
+        defs.select(`#${gradientId}`).remove();
+
+        const offset = 1 - fraction;
+        const gradient = defs
+          .append("linearGradient")
+          .attr("id", gradientId)
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 0)
+          .attr("y2", 1);
+
+        gradient
+          .append("stop")
+          .attr("class", "timer-stop-faded")
+          .attr("offset", offset)
+          .attr("stop-color", fadedColor);
+
+        gradient
+          .append("stop")
+          .attr("class", "timer-stop-normal")
+          .attr("offset", offset)
+          .attr("stop-color", normalColor);
+
+        const path = d3.select(`path[data-id="${d.data.id}"]`);
+        path.attr("fill", `url(#${gradientId})`);
+      }
+    });
+
     arcs.each((d) => {
       const pathId = d.data.id;
       const path = d3.select(`path[data-id="${pathId}"]`);
@@ -443,10 +492,15 @@ export class RadialMenu implements Layer {
         ? this.config.disabledColor
         : (resolveColor(d.data, this.params) ?? "#333333");
       const opacity = disabled ? 0.5 : 0.7;
-      path.attr(
-        "fill",
-        d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
-      );
+
+      if (d.data.timerFraction) {
+        path.attr("fill", `url(#timer-gradient-${d.data.id})`);
+      } else {
+        path.attr(
+          "fill",
+          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+        );
+      }
     };
 
     const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
@@ -539,12 +593,33 @@ export class RadialMenu implements Layer {
       .attr("class", "menu-item-content")
       .style("pointer-events", "none")
       .attr("data-id", (d) => d.data.id)
+      .attr("data-cx", (d) => arc.centroid(d)[0].toString())
+      .attr("data-cy", (d) => arc.centroid(d)[1].toString())
       .each((d) => {
         const contentId = d.data.id;
         const content = d3.select(`g[data-id="${contentId}"]`);
         const disabled = this.isItemDisabled(d.data);
 
-        if (d.data.text) {
+        if (d.data.renderType && this.params) {
+          const stateKey = this.getStateKeyByType(
+            d.data.renderType,
+            disabled,
+            this.params,
+          );
+          if (stateKey) {
+            content.attr("data-prev-state", stateKey);
+          }
+          this.renderByType(
+            d.data.renderType,
+            content.node()! as SVGGElement,
+            arc.centroid(d)[0],
+            arc.centroid(d)[1],
+            this.config.iconSize,
+            disabled,
+            this.params,
+            d.data.icon,
+          );
+        } else if (d.data.text) {
           content
             .append("text")
             .attr("text-anchor", "middle")
@@ -1053,37 +1128,110 @@ export class RadialMenu implements Layer {
           : (resolveColor(item, this.params) ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
-        // Update path appearance
-        path.attr(
-          "fill",
-          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
-        );
+        // Update path appearance (skip fill for timer items — gradient handles it)
+        if (!item.timerFraction) {
+          path.attr(
+            "fill",
+            d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+          );
+        }
         path.style("opacity", disabled ? 0.5 : 1);
         path.style("cursor", disabled ? "not-allowed" : "pointer");
 
         // Update icon/text appearance using the same logic as renderIconsAndText
         const icon = this.menuIcons.get(itemId);
         if (icon) {
-          // Update text opacity
-          const textElement = icon.select("text");
-          if (!textElement.empty()) {
-            textElement.style("opacity", disabled ? 0.5 : 1);
-          }
-
-          // Update image opacity
-          const imageElement = icon.select("image");
-          if (!imageElement.empty()) {
-            imageElement.attr("opacity", disabled ? 0.5 : 1);
-          }
-
-          // Update cooldown text if applicable
-          const cooldownElement = icon.select(".cooldown-text");
-          if (this.params && !cooldownElement.empty() && item.cooldown) {
-            const cooldown = Math.ceil(item.cooldown(this.params));
-            if (cooldown <= 0) {
-              cooldownElement.remove();
+          if (item.renderType && this.params) {
+            const stateKey = this.getStateKeyByType(
+              item.renderType,
+              disabled,
+              this.params,
+            );
+            if (stateKey) {
+              const prevState = icon.attr("data-prev-state");
+              if (stateKey === prevState) {
+                // State unchanged, skip re-render to preserve animations
+              } else {
+                icon.attr("data-prev-state", stateKey);
+                const cx = parseFloat(icon.attr("data-cx") || "0");
+                const cy = parseFloat(icon.attr("data-cy") || "0");
+                this.renderByType(
+                  item.renderType,
+                  icon.node()! as SVGGElement,
+                  cx,
+                  cy,
+                  this.config.iconSize,
+                  disabled,
+                  this.params,
+                  item.icon,
+                  true,
+                );
+              }
             } else {
-              cooldownElement.text(cooldown + "s");
+              const cx = parseFloat(icon.attr("data-cx") || "0");
+              const cy = parseFloat(icon.attr("data-cy") || "0");
+              icon.selectAll("*").remove();
+              this.renderByType(
+                item.renderType,
+                icon.node()! as SVGGElement,
+                cx,
+                cy,
+                this.config.iconSize,
+                disabled,
+                this.params,
+                item.icon,
+              );
+            }
+          } else {
+            // Update text opacity
+            const textElement = icon.select("text");
+            if (!textElement.empty()) {
+              textElement.style("opacity", disabled ? 0.5 : 1);
+            }
+
+            // Update image opacity
+            const imageElement = icon.select("image");
+            if (!imageElement.empty()) {
+              imageElement.attr("opacity", disabled ? 0.5 : 1);
+            }
+
+            // Update cooldown text if applicable
+            const cooldownElement = icon.select(".cooldown-text");
+            if (this.params && !cooldownElement.empty() && item.cooldown) {
+              const cooldown = Math.ceil(item.cooldown(this.params));
+              if (cooldown <= 0) {
+                cooldownElement.remove();
+              } else {
+                cooldownElement.text(cooldown + "s");
+              }
+            }
+          }
+
+          // Update timer gradient
+          if (item.timerFraction && this.params) {
+            const fraction = item.timerFraction(this.params);
+            const gradient = this.menuElement.select(
+              `#timer-gradient-${item.id}`,
+            );
+            if (!gradient.empty()) {
+              const offset = 1 - fraction;
+              const normalColor =
+                d3.color(color)?.copy({ opacity: opacity })?.toString() ??
+                color;
+              const interpolated = d3.color(
+                d3.interpolateRgb(color, "white")(0.4),
+              );
+              const fadedColor =
+                interpolated?.copy({ opacity })?.toString() ?? normalColor;
+
+              gradient
+                .select(".timer-stop-faded")
+                .attr("offset", offset)
+                .attr("stop-color", fadedColor);
+              gradient
+                .select(".timer-stop-normal")
+                .attr("offset", offset)
+                .attr("stop-color", normalColor);
             }
           }
         }
@@ -1092,6 +1240,128 @@ export class RadialMenu implements Layer {
 
     // Refresh center button state
     this.updateCenterButtonState(this.centerButtonState);
+  }
+
+  private renderByType(
+    type: string,
+    content: SVGGElement,
+    cx: number,
+    cy: number,
+    iconSize: number,
+    disabled: boolean,
+    params: MenuElementParams,
+    icon?: string,
+    update?: boolean,
+  ): void {
+    switch (type) {
+      case "allyExtend":
+        this.renderAllyExtendIcon(
+          content,
+          cx,
+          cy,
+          iconSize,
+          disabled,
+          params,
+          icon,
+          update,
+        );
+        break;
+    }
+  }
+
+  private getStateKeyByType(
+    type: string,
+    disabled: boolean,
+    params: MenuElementParams,
+  ): string | null {
+    switch (type) {
+      case "allyExtend":
+        return this.getAllyExtendStateKey(disabled, params);
+      default:
+        return null;
+    }
+  }
+
+  private getAllyExtendStateKey(
+    disabled: boolean,
+    params: MenuElementParams,
+  ): string {
+    const interaction = params.playerActions?.interaction;
+    const myAgreed = interaction?.allianceInfo?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
+    return `${disabled}:${myAgreed}:${otherAgreed}`;
+  }
+
+  private renderAllyExtendIcon(
+    content: SVGGElement,
+    cx: number,
+    cy: number,
+    iconSize: number,
+    disabled: boolean,
+    params: MenuElementParams,
+    icon?: string,
+    update?: boolean,
+  ): void {
+    if (update) {
+      while (content.firstChild) content.removeChild(content.firstChild);
+    }
+
+    const interaction = params.playerActions?.interaction;
+    const myAgreed = interaction?.allianceInfo?.myPlayerAgreedToExtend ?? false;
+    const otherAgreed = interaction?.allianceInfo?.otherAgreedToExtend ?? false;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const smallSize = iconSize * 0.8;
+    const iconUrl = icon ?? "";
+
+    getSvgAspectRatio(iconUrl).then((ratio) => {
+      const width = smallSize * (ratio ?? 1);
+      const gap = 2;
+      const totalWidth = width * 2 + gap;
+
+      // Left handshake = me
+      const leftImg = document.createElementNS(ns, "image");
+      leftImg.setAttribute("href", iconUrl);
+      leftImg.setAttribute("width", width.toString());
+      leftImg.setAttribute("height", smallSize.toString());
+      leftImg.setAttribute("x", (cx - totalWidth / 2).toString());
+      leftImg.setAttribute("y", (cy - smallSize / 2).toString());
+      leftImg.setAttribute("opacity", disabled ? "0.5" : "1");
+
+      if (!myAgreed) {
+        const animLeft = document.createElementNS(ns, "animate");
+        animLeft.setAttribute("attributeName", "opacity");
+        animLeft.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
+        animLeft.setAttribute("dur", "1.5s");
+        animLeft.setAttribute("repeatCount", "indefinite");
+        leftImg.appendChild(animLeft);
+      }
+
+      content.appendChild(leftImg);
+
+      // Right handshake = them
+      const rightImg = document.createElementNS(ns, "image");
+      rightImg.setAttribute("href", iconUrl);
+      rightImg.setAttribute("width", width.toString());
+      rightImg.setAttribute("height", smallSize.toString());
+      rightImg.setAttribute(
+        "x",
+        (cx - totalWidth / 2 + width + gap).toString(),
+      );
+      rightImg.setAttribute("y", (cy - smallSize / 2).toString());
+      rightImg.setAttribute("opacity", disabled ? "0.5" : "1");
+
+      if (!otherAgreed) {
+        const animRight = document.createElementNS(ns, "animate");
+        animRight.setAttribute("attributeName", "opacity");
+        animRight.setAttribute("values", disabled ? "0.5;0.1;0.5" : "1;0.2;1");
+        animRight.setAttribute("dur", "1.5s");
+        animRight.setAttribute("repeatCount", "indefinite");
+        rightImg.appendChild(animRight);
+      }
+
+      content.appendChild(rightImg);
+    });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
