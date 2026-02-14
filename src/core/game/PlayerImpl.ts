@@ -16,6 +16,7 @@ import {
   AllPlayers,
   Attack,
   BuildableUnit,
+  BuildableUnitsTransportShip,
   Cell,
   ColoredTeams,
   Embargo,
@@ -965,10 +966,21 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
+  public buildableUnits(
+    tile: TileRef | null,
+    transportShip: BuildableUnitsTransportShip = BuildableUnitsTransportShip.Exclude,
+  ): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
 
-    return PlayerBuildableTypes.map((u) => {
+    return PlayerBuildableTypes.filter((u) => {
+      if (transportShip === BuildableUnitsTransportShip.Exclude) {
+        return u !== UnitType.TransportShip;
+      }
+      if (transportShip === BuildableUnitsTransportShip.Only) {
+        return u === UnitType.TransportShip;
+      }
+      return true; // Include TransportShip
+    }).map((u) => {
       const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;

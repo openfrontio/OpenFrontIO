@@ -1,4 +1,5 @@
 import {
+  BuildableUnitsTransportShip,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
@@ -62,6 +63,7 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
+  transportShip?: BuildableUnitsTransportShip;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {

@@ -7,6 +7,7 @@ import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
+  BuildableUnitsTransportShip,
   Cell,
   EmojiMessage,
   GameUpdates,
@@ -403,11 +404,15 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    transportShip?: BuildableUnitsTransportShip,
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
+      transportShip,
     );
   }
 

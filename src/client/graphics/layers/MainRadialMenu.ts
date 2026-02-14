@@ -1,7 +1,10 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
+import {
+  BuildableUnitsTransportShip,
+  PlayerActions,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -162,7 +165,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
     this.game
       .myPlayer()!
-      .actions(this.clickedTile)
+      .actions(this.clickedTile, BuildableUnitsTransportShip.Include)
       .then((actions) => {
         this.updatePlayerActions(
           this.game.myPlayer()!,

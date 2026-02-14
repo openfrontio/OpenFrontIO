@@ -1,4 +1,5 @@
 import {
+  BuildableUnitsTransportShip,
   Cell,
   PlayerActions,
   PlayerBorderTiles,
@@ -164,6 +165,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    transportShip?: BuildableUnitsTransportShip,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -185,9 +187,10 @@ export class WorkerClient {
       this.worker.postMessage({
         type: "player_actions",
         id: messageId,
-        playerID: playerID,
+        playerID,
         x: x,
         y: y,
+        ...(transportShip !== undefined ? { transportShip } : {}),
       });
     });
   }

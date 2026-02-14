@@ -641,7 +641,10 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
+  buildableUnits(
+    tile: TileRef | null,
+    transportShip?: BuildableUnitsTransportShip,
+  ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
@@ -856,6 +859,12 @@ export interface PlayerActions {
   canSendEmojiAllPlayers: boolean;
   canEmbargoAll?: boolean;
   interaction?: PlayerInteraction;
+}
+
+export enum BuildableUnitsTransportShip {
+  Exclude = "e", // default when undefined to save data between threads
+  Include = "i",
+  Only = "o",
 }
 
 export interface BuildableUnit {
