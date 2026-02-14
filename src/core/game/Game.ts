@@ -225,14 +225,10 @@ export interface PublicGameModifiers {
 
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
-  // Determines if its owner changes when its tile is conquered.
-  territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
-  canBuildTrainStation?: boolean;
-  experimental?: boolean;
 }
 
 export enum UnitType {
@@ -274,6 +270,24 @@ export const StructureTypes: readonly UnitType[] = [..._structureTypes];
 export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
 }
+
+const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.TransportShip,
+  UnitType.Warship,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+]);
+
+export const PlayerBuildableTypes: readonly UnitType[] = [
+  ..._playerBuildableTypes,
+];
 
 export interface OwnerComp {
   owner: Player;
@@ -627,7 +641,10 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
+  buildableUnits(
+    tile: TileRef | null,
+    transportShip?: BuildableUnitsTransportShip,
+  ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
@@ -792,7 +809,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
@@ -842,6 +859,12 @@ export interface PlayerActions {
   canSendEmojiAllPlayers: boolean;
   canEmbargoAll?: boolean;
   interaction?: PlayerInteraction;
+}
+
+export enum BuildableUnitsTransportShip {
+  Exclude = "e", // default when undefined to save data between threads
+  Include = "i",
+  Only = "o",
 }
 
 export interface BuildableUnit {

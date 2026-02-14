@@ -119,7 +119,7 @@ export function listNukeBreakAlliance(
 
   // Also check if any allied structures would be destroyed
   game
-    .nearbyUnits(targetTile, magnitude.outer, [...StructureTypes])
+    .nearbyUnits(targetTile, magnitude.outer, StructureTypes)
     .forEach(({ unit }) =>
       playersToBreakAllianceWith.add(unit.owner().smallID()),
     );

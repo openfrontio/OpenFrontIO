@@ -13,7 +13,11 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import {
+  BuildableUnitsTransportShip,
+  PlayerActions,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -557,19 +561,20 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      } else if (this.canAutoBoat(actions, tile)) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .actions(tile, BuildableUnitsTransportShip.Include)
+      .then((actions) => {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        } else if (this.canAutoBoat(actions, tile)) {
+          this.sendBoatAttackIntent(tile);
+        }
+      });
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {
@@ -654,11 +659,13 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .actions(tile, BuildableUnitsTransportShip.Only)
+      .then((actions) => {
+        if (this.canBoatAttack(actions) !== false) {
+          this.sendBoatAttackIntent(tile);
+        }
+      });
   }
 
   private doGroundAttackUnderCursor(): void {
@@ -674,12 +681,11 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       }
