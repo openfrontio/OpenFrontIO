@@ -1,0 +1,31 @@
+{
+  "name": "lobbystatistics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
+    "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\"",
+    "start:client": "vite",
+    "start:server": "tsx src/ingest/server.ts",
+    "start:server-dev": "cross-env NODE_ENV=development tsx src/ingest/server.ts",
+    "dev": "cross-env NODE_ENV=development concurrently --restart-tries 999 --restart-after 2000 \"npm run start:client\" \"npm run start:server-dev\"",
+    "test:types": "tsc --noEmit",
+    "probe:prod": "node scripts/probe-production-api.mjs"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "ws": "^8.18.0",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.23",
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.11",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "tsx": "^4.17.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.0"
+  }
+}

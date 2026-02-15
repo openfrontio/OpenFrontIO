@@ -1,0 +1,8 @@
+node_modules/
+static/
+dist/
+.env
+.env.local
+*.log
+data/db.json
+data/db.backup.json
