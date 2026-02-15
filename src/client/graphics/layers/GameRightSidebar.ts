@@ -6,9 +6,11 @@ import { GameView } from "../../../core/game/GameView";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
+import { SpawnBarVisibleEvent } from "./SpawnTimer";
 import exitIcon from "/images/ExitIconWhite.svg?url";
 import FastForwardIconSolid from "/images/FastForwardIconSolidWhite.svg?url";
 import pauseIcon from "/images/PauseIconWhite.svg?url";
@@ -38,6 +40,8 @@ export class GameRightSidebar extends LitElement implements Layer {
   private hasWinner = false;
   private isLobbyCreator = false;
   private singleplayerStartTick: number | null = null;
+  private spawnBarVisible = false;
+  private immunityBarVisible = false;
 
   createRenderRoot() {
     return this;
@@ -49,6 +53,15 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
+
+    this.eventBus.on(SpawnBarVisibleEvent, (e) => {
+      this.spawnBarVisible = e.visible;
+      this.updateParentOffset();
+    });
+    this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
+      this.immunityBarVisible = e.visible;
+      this.updateParentOffset();
+    });
 
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
@@ -99,6 +112,15 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.timer = Math.max(0, maxTimerValue * 60 - elapsedSeconds);
     } else {
       this.timer = elapsedSeconds;
+    }
+  }
+
+  private updateParentOffset(): void {
+    const offset =
+      (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
+    const parent = this.parentElement as HTMLElement;
+    if (parent) {
+      parent.style.marginTop = `${offset}px`;
     }
   }
 
@@ -164,7 +186,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-xs shadow-xs rounded-lg transition-transform duration-300 ease-out transform text-white ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
