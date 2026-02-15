@@ -201,7 +201,7 @@ export class GameRunner {
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: tile !== null && units === undefined && player.canAttack(tile),
+      canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
       canEmbargoAll: player.canEmbargoAll(),
