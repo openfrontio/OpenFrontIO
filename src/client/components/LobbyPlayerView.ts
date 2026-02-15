@@ -71,21 +71,21 @@ export class LobbyTeamView extends LitElement {
           >
             ${this.clients.length}
             ${this.clients.length === 1
-        ? translateText("host_modal.player")
-        : translateText("host_modal.players")}
+              ? translateText("host_modal.player")
+              : translateText("host_modal.players")}
             <span style="margin: 0 8px;">•</span>
             ${this.isRandomMap ? "?" : this.getEffectiveNationCount()}
             ${this.isRandomMap || this.getEffectiveNationCount() !== 1
-        ? translateText("host_modal.nation_players")
-        : translateText("host_modal.nation_player")}
+              ? translateText("host_modal.nation_players")
+              : translateText("host_modal.nation_player")}
           </div>
         </div>
         <div
           class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
         >
           ${this.gameMode === GameMode.Team
-        ? this.renderTeamMode()
-        : this.renderFreeForAll()}
+            ? this.renderTeamMode()
+            : this.renderFreeForAll()}
         </div>
       </div>
     `;
@@ -112,17 +112,17 @@ export class LobbyTeamView extends LitElement {
           ${translateText("host_modal.players")}
         </div>
         ${repeat(
-      this.clients,
-      (c) => c.clientID ?? c.username,
-      (client) => {
-        const displayName = this.displayUsername(client);
-        return html`<div
+          this.clients,
+          (c) => c.clientID ?? c.username,
+          (client) => {
+            const displayName = this.displayUsername(client);
+            return html`<div
               class="px-2 py-1 rounded-sm bg-gray-700/70 mb-1 text-xs text-white"
             >
               ${displayName}
             </div>`;
-      },
-    )}
+          },
+        )}
       </div>
       <div class="flex-1 flex flex-col gap-3 md:gap-4 md:pr-1">
         <div>
@@ -131,24 +131,24 @@ export class LobbyTeamView extends LitElement {
           </div>
           <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
             ${repeat(
-      active,
-      (p) => p.team,
-      (preview) => this.renderTeamCard(preview, false),
-    )}
+              active,
+              (p) => p.team,
+              (preview) => this.renderTeamCard(preview, false),
+            )}
           </div>
         </div>
         <div>
           ${empty.length > 0
-        ? html`<div class="font-semibold text-gray-200 mb-1 text-sm">
+            ? html`<div class="font-semibold text-gray-200 mb-1 text-sm">
                 ${translateText("host_modal.empty_teams")}
               </div>`
-        : ""}
+            : ""}
           <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
             ${repeat(
-          empty,
-          (p) => p.team,
-          (preview) => this.renderTeamCard(preview, true),
-        )}
+              empty,
+              (p) => p.team,
+              (preview) => this.renderTeamCard(preview, true),
+            )}
           </div>
         </div>
       </div>
@@ -172,8 +172,8 @@ export class LobbyTeamView extends LitElement {
                   class="remove-player-btn"
                   @click=${() => this.onKickPlayer?.(client.clientID)}
                   aria-label=${translateText("host_modal.remove_player", {
-                username: displayName,
-              })}
+                    username: displayName,
+                  })}
                 >
                   ×
                 </button>`
@@ -205,49 +205,49 @@ export class LobbyTeamView extends LitElement {
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
           ${this.showTeamColors
-        ? html` <span
+            ? html` <span
                 class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg)"
                 style="--bg:${this.teamHeaderColor(preview.team)};"
               ></span>`
-        : null}
+            : null}
           <span class="truncate">${preview.team}</span>
           <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
-        ? html`<div class="text-[11px] italic text-gray-400">
+            ? html`<div class="text-[11px] italic text-gray-400">
                 ${translateText("host_modal.empty_team")}
               </div>`
-        : repeat(
-          preview.players,
-          (p) => p.clientID ?? p.username,
-          (p) => {
-            const displayName = this.displayUsername(p);
-            return html` <div
+            : repeat(
+                preview.players,
+                (p) => p.clientID ?? p.username,
+                (p) => {
+                  const displayName = this.displayUsername(p);
+                  return html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded-sm text-xs flex items-center justify-between"
                   >
                     <span class="truncate text-white">${displayName}</span>
                     ${p.clientID === this.lobbyCreatorClientID
-                ? html`<span class="ml-2 text-[11px] text-green-300"
+                      ? html`<span class="ml-2 text-[11px] text-green-300"
                           >(${translateText("host_modal.host_badge")})</span
                         >`
-                : this.onKickPlayer
-                  ? html`<button
+                      : this.onKickPlayer
+                        ? html`<button
                             class="remove-player-btn ml-2"
                             @click=${() => this.onKickPlayer?.(p.clientID)}
                             aria-label=${translateText(
-                    "host_modal.remove_player",
-                    {
-                      username: displayName,
-                    },
-                  )}
+                              "host_modal.remove_player",
+                              {
+                                username: displayName,
+                              },
+                            )}
                           >
                             ×
                           </button>`
-                  : html``}
+                        : html``}
                   </div>`;
-          },
-        )}
+                },
+              )}
         </div>
       </div>
     `;

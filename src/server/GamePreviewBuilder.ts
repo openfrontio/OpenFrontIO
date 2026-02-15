@@ -162,9 +162,9 @@ export function buildPreview(
   const teamBreakdownLabel = numericTeamCount
     ? isFinished
       ? `${numericTeamCount} teams of ${Math.max(
-        1,
-        Math.ceil(activePlayers / numericTeamCount),
-      )}`
+          1,
+          Math.ceil(activePlayers / numericTeamCount),
+        )}`
       : `${numericTeamCount} teams`
     : undefined;
 

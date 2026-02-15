@@ -175,7 +175,7 @@ export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
     public myClientID: ClientID,
-  ) { }
+  ) {}
 }
 
 export interface ClientInfo {
