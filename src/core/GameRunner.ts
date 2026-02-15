@@ -218,7 +218,7 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
-        allianceInfo: player.allianceInfo(other as Player) ?? undefined,
+        allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }
 

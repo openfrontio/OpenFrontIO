@@ -228,7 +228,7 @@ const allyExtendElement: MenuElement = {
     params.playerActionHandler.handleExtendAlliance(params.selected!);
     params.closeMenu();
   },
-  timerFraction: (params: MenuElementParams) => {
+  timerFraction: (params: MenuElementParams): number => {
     const interaction = params.playerActions?.interaction;
     if (!interaction?.allianceInfo?.expiresAt) return 1;
     const remaining = Math.max(

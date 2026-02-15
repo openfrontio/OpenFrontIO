@@ -609,16 +609,17 @@ export class RadialMenu implements Layer {
           if (stateKey) {
             content.attr("data-prev-state", stateKey);
           }
-          this.renderByType(
-            d.data.renderType,
-            content.node()! as SVGGElement,
-            arc.centroid(d)[0],
-            arc.centroid(d)[1],
-            this.config.iconSize,
-            disabled,
-            this.params,
-            d.data.icon,
-          );
+          if (d.data.renderType === "allyExtend") {
+            this.renderAllyExtendIcon(
+              content.node()! as SVGGElement,
+              arc.centroid(d)[0],
+              arc.centroid(d)[1],
+              this.config.iconSize,
+              disabled,
+              this.params,
+              d.data.icon,
+            );
+          }
         } else if (d.data.text) {
           content
             .append("text")
@@ -1141,47 +1142,8 @@ export class RadialMenu implements Layer {
         // Update icon/text appearance using the same logic as renderIconsAndText
         const icon = this.menuIcons.get(itemId);
         if (icon) {
-          if (item.renderType && this.params) {
-            const stateKey = this.getStateKeyByType(
-              item.renderType,
-              disabled,
-              this.params,
-            );
-            if (stateKey) {
-              const prevState = icon.attr("data-prev-state");
-              if (stateKey === prevState) {
-                // State unchanged, skip re-render to preserve animations
-              } else {
-                icon.attr("data-prev-state", stateKey);
-                const cx = parseFloat(icon.attr("data-cx") || "0");
-                const cy = parseFloat(icon.attr("data-cy") || "0");
-                this.renderByType(
-                  item.renderType,
-                  icon.node()! as SVGGElement,
-                  cx,
-                  cy,
-                  this.config.iconSize,
-                  disabled,
-                  this.params,
-                  item.icon,
-                  true,
-                );
-              }
-            } else {
-              const cx = parseFloat(icon.attr("data-cx") || "0");
-              const cy = parseFloat(icon.attr("data-cy") || "0");
-              icon.selectAll("*").remove();
-              this.renderByType(
-                item.renderType,
-                icon.node()! as SVGGElement,
-                cx,
-                cy,
-                this.config.iconSize,
-                disabled,
-                this.params,
-                item.icon,
-              );
-            }
+          if (item.renderType === "allyExtend" && this.params) {
+            this.refreshAllyExtendIcon(item, disabled, icon);
           } else {
             // Update text opacity
             const textElement = icon.select("text");
@@ -1208,32 +1170,7 @@ export class RadialMenu implements Layer {
           }
 
           // Update timer gradient
-          if (item.timerFraction && this.params) {
-            const fraction = item.timerFraction(this.params);
-            const gradient = this.menuElement.select(
-              `#timer-gradient-${item.id}`,
-            );
-            if (!gradient.empty()) {
-              const offset = 1 - fraction;
-              const normalColor =
-                d3.color(color)?.copy({ opacity: opacity })?.toString() ??
-                color;
-              const interpolated = d3.color(
-                d3.interpolateRgb(color, "white")(0.4),
-              );
-              const fadedColor =
-                interpolated?.copy({ opacity })?.toString() ?? normalColor;
-
-              gradient
-                .select(".timer-stop-faded")
-                .attr("offset", offset)
-                .attr("stop-color", fadedColor);
-              gradient
-                .select(".timer-stop-normal")
-                .attr("offset", offset)
-                .attr("stop-color", normalColor);
-            }
-          }
+          this.maybeUpdateTimerGradient(item, color, opacity);
         }
       }
     });
@@ -1242,30 +1179,74 @@ export class RadialMenu implements Layer {
     this.updateCenterButtonState(this.centerButtonState);
   }
 
-  private renderByType(
-    type: string,
-    content: SVGGElement,
-    cx: number,
-    cy: number,
-    iconSize: number,
+  private refreshAllyExtendIcon(
+    item: MenuElement,
     disabled: boolean,
-    params: MenuElementParams,
-    icon?: string,
-    update?: boolean,
+    icon: d3.Selection<SVGImageElement, unknown, null, undefined>,
   ): void {
-    switch (type) {
-      case "allyExtend":
-        this.renderAllyExtendIcon(
-          content,
-          cx,
-          cy,
-          iconSize,
-          disabled,
-          params,
-          icon,
-          update,
-        );
-        break;
+    if (item.renderType !== "allyExtend" || !this.params) {
+      return;
+    }
+
+    const stateKey = this.getStateKeyByType(
+      item.renderType,
+      disabled,
+      this.params,
+    );
+    const prevState = icon.attr("data-prev-state");
+
+    if (stateKey && stateKey === prevState) {
+      // State unchanged, skip re-render to preserve animations
+    } else {
+      const cx = parseFloat(icon.attr("data-cx") || "0");
+      const cy = parseFloat(icon.attr("data-cy") || "0");
+
+      if (stateKey) {
+        icon.attr("data-prev-state", stateKey);
+      } else {
+        icon.selectAll("*").remove();
+      }
+
+      this.renderAllyExtendIcon(
+        icon.node()! as SVGGElement,
+        cx,
+        cy,
+        this.config.iconSize,
+        disabled,
+        this.params,
+        item.icon,
+        true,
+      );
+    }
+  }
+
+  private maybeUpdateTimerGradient(
+    item: MenuElement,
+    color: string,
+    opacity: number,
+  ): void {
+    if (!item.timerFraction || !this.params) {
+      return;
+    }
+
+    const fraction = item.timerFraction(this.params);
+    const gradient = this.menuElement.select(`#timer-gradient-${item.id}`);
+    if (!gradient.empty()) {
+      const offset = 1 - fraction;
+      const normalColor =
+        d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color;
+      const interpolated = d3.color(d3.interpolateRgb(color, "white")(0.4));
+      const fadedColor =
+        interpolated?.copy({ opacity })?.toString() ?? normalColor;
+
+      gradient
+        .select(".timer-stop-faded")
+        .attr("offset", offset)
+        .attr("stop-color", fadedColor);
+      gradient
+        .select(".timer-stop-normal")
+        .attr("offset", offset)
+        .attr("stop-color", normalColor);
     }
   }
 
