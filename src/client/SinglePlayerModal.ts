@@ -38,7 +38,7 @@ import {
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
-  selectedDifficulty: Difficulty.Medium,
+  selectedDifficulty: Difficulty.Easy,
   disableNations: false,
   bots: 400,
   infiniteGold: false,
