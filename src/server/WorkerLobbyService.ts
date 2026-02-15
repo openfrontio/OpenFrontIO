@@ -52,6 +52,7 @@ export class WorkerLobbyService {
             msg.gameConfig,
             undefined,
             msg.startsAt,
+            msg.publicGameType,
           );
           break;
       }
@@ -73,6 +74,7 @@ export class WorkerLobbyService {
           numClients: gi.clients?.length ?? 0,
           startsAt: gi.startsAt!,
           gameConfig: gi.gameConfig,
+          publicGameType: gi.publicGameType!,
         } satisfies PublicGameInfo;
       });
     process.send?.({ type: "lobbyList", lobbies } satisfies WorkerLobbyList);

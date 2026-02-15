@@ -137,6 +137,9 @@ export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
+export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
+
+export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
 
 const ClientInfoSchema = z.object({
   clientID: z.string(),
@@ -150,6 +153,7 @@ export const GameInfoSchema = z.object({
   startsAt: z.number().optional(),
   serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
+  publicGameType: PublicGameTypeSchema.optional(),
 });
 
 export const PublicGameInfoSchema = z.object({
@@ -157,11 +161,12 @@ export const PublicGameInfoSchema = z.object({
   numClients: z.number(),
   startsAt: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
+  publicGameType: PublicGameTypeSchema,
 });
 
 export const PublicGamesSchema = z.object({
   serverTime: z.number(),
-  games: PublicGameInfoSchema.array(),
+  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 export class LobbyInfoEvent implements GameEvent {
