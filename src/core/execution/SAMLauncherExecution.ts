@@ -26,10 +26,8 @@ type InterceptionTile = {
  */
 class SAMTargetingSystem {
   // Interception tiles are computed a single time, but it may not be reachable yet.
-  // Store the result so it can be intercepted at the proper time, rather than recomputing each ticks
-  // Null interception tile means there are no interception tiles in range. Store it to
-  private readonly precomputedNukes: Map<number, InterceptionTile | null> =
-    new Map();
+  // Store the result so it can be intercepted at the proper time, rather than recomputing each tick.
+  private readonly precomputedNukes: Map<number, InterceptionTile> = new Map();
   private readonly missileSpeed: number;
 
   constructor(
@@ -104,10 +102,6 @@ class SAMTargetingSystem {
       const nukeId = nuke.unit.id();
       const cached = this.precomputedNukes.get(nukeId);
       if (cached !== undefined) {
-        if (cached === null) {
-          // Known unreachable, skip.
-          continue;
-        }
         if (cached.tick === ticks) {
           // Time to shoot!
           targets.push({ tile: cached.tile, unit: nuke.unit });
@@ -134,14 +128,16 @@ class SAMTargetingSystem {
             tile: interceptionTile.tile,
           });
         }
-      } else {
-        // Store unreachable nukes in order to prevent useless interception computation
-        this.precomputedNukes.set(nukeId, null);
       }
+      // Don't permanently cache unreachable nukes, the nuke moves each tick
+      // and may become interceptable from a different angle on a future tick
     }
 
+    // Filter out nukes already being targeted by another SAM
+    const available = targets.filter((t) => !t.unit.targetedBySAM());
+
     return (
-      targets.sort((a: Target, b: Target) => {
+      available.sort((a: Target, b: Target) => {
         // Prioritize Hydrogen Bombs
         if (
           a.unit.type() === UnitType.HydrogenBomb &&
@@ -259,8 +255,8 @@ export class SAMLauncherExecution implements Execution {
       }
     }
 
-    const isSingleTarget = target && !target.unit.targetedBySAM();
-    if (isSingleTarget || mirvWarheadTargets.length > 0) {
+    // target is already filtered to exclude nukes targeted by other SAMs
+    if (target || mirvWarheadTargets.length > 0) {
       this.sam.launch();
       const type =
         mirvWarheadTargets.length > 0
