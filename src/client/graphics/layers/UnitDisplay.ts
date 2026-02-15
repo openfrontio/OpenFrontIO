@@ -68,17 +68,7 @@ export class UnitDisplay extends LitElement implements Layer {
       }
     }
 
-    this.allDisabled =
-      config.isUnitDisabled(UnitType.City) &&
-      config.isUnitDisabled(UnitType.Factory) &&
-      config.isUnitDisabled(UnitType.Port) &&
-      config.isUnitDisabled(UnitType.DefensePost) &&
-      config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher) &&
-      config.isUnitDisabled(UnitType.Warship) &&
-      config.isUnitDisabled(UnitType.AtomBomb) &&
-      config.isUnitDisabled(UnitType.HydrogenBomb) &&
-      config.isUnitDisabled(UnitType.MIRV);
+    this.allDisabled = BUILDABLE_UNITS.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
   }
 
