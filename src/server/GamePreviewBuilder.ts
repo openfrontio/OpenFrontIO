@@ -19,6 +19,7 @@ export const ExternalGameInfoSchema = z.object({
           gameMode: z.string().optional(),
           gameType: z.string().optional(),
           maxPlayers: z.number().optional(),
+          useRandomMap: z.boolean().optional(),
           playerTeams: z.union([z.number(), z.string()]).optional(),
         })
         .optional(),
@@ -161,9 +162,9 @@ export function buildPreview(
   const teamBreakdownLabel = numericTeamCount
     ? isFinished
       ? `${numericTeamCount} teams of ${Math.max(
-          1,
-          Math.ceil(activePlayers / numericTeamCount),
-        )}`
+        1,
+        Math.ceil(activePlayers / numericTeamCount),
+      )}`
       : `${numericTeamCount} teams`
     : undefined;
 
@@ -181,11 +182,19 @@ export function buildPreview(
 
   // Normalize map name to match filesystem (lowercase, no spaces or special chars)
   const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
+  const useRandomMap =
+    lobby?.gameConfig?.useRandomMap ?? config.useRandomMap ?? false;
 
-  const mapThumbnail = normalizedMap
-    ? `${origin}/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`
-    : null;
-  const image = mapThumbnail ?? `${origin}/images/GameplayScreenshot.png`;
+  const mapThumbnail =
+    normalizedMap && !useRandomMap
+      ? `${origin}/maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`
+      : null;
+  // display the RandomMap icon in embed and displays if selected
+  const image =
+    mapThumbnail ??
+    (useRandomMap
+      ? `${origin}/images/RandomMap.webp`
+      : `${origin}/images/GameplayScreenshot.png`);
 
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
   const gameTypeLabel = gameType ? ` (${gameType})` : "";
