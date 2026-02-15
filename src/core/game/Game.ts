@@ -446,7 +446,6 @@ export interface Alliance {
   createdAt(): Tick;
   expiresAt(): Tick;
   other(player: Player): Player;
-  onCreate(): void;
 }
 
 export interface MutableAlliance extends Alliance {

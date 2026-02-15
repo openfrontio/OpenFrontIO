@@ -332,8 +332,6 @@ export class GameImpl implements Game {
       request,
     );
 
-    alliance.onCreate();
-
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
