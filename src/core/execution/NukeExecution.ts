@@ -255,10 +255,6 @@ export class NukeExecution implements Execution {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
 
-    const maxTroops = this.target().isPlayer()
-      ? this.mg.config().maxTroops(this.target() as Player)
-      : 1;
-
     // Retrieve all impacted players and the number of tiles
     const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
@@ -278,6 +274,9 @@ export class NukeExecution implements Execution {
       const config = this.mg.config();
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
       const transportShips = player.units(UnitType.TransportShip);
+      const maxTroops = player.isPlayer()
+        ? this.mg.config().maxTroops(player as Player)
+        : 1;
       // nukeDeathFactor could compute the complete fallout in a single call instead
       for (let i = 0; i < numImpactedTiles; i++) {
         // Diminishing effect as each affected tile has been nuked
