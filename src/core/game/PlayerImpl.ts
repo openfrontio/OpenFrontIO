@@ -22,6 +22,7 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
+  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
@@ -960,36 +961,44 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
-      let canUpgrade: number | false = false;
-      let canBuild: TileRef | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
+  public buildableUnits(
+    tile: TileRef | null,
+    units?: UnitType[],
+  ): BuildableUnit[] {
+    const validTiles =
+      tile !== null &&
+      (units === undefined || units.some((u) => isStructureType(u)))
+        ? this.validStructureSpawnTiles(tile)
+        : [];
+    return Object.values(UnitType)
+      .filter((u) => units === undefined || units.includes(u))
+      .map((u) => {
+        let canUpgrade: number | false = false;
+        let canBuild: TileRef | false = false;
+        if (!this.mg.inSpawnPhase()) {
+          const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+          if (existingUnit !== false) {
+            canUpgrade = existingUnit.id();
+          }
+          if (tile !== null) {
+            canBuild = this.canBuild(u, tile, validTiles);
+          }
         }
-        if (tile !== null) {
-          canBuild = this.canBuild(u, tile, validTiles);
-        }
-      }
-
-      return {
-        type: u,
-        canBuild,
-        canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
-        overlappingRailroads:
-          canBuild !== false
-            ? this.mg.railNetwork().overlappingRailroads(canBuild)
-            : [],
-        ghostRailPaths:
-          canBuild !== false
-            ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
-            : [],
-      } as BuildableUnit;
-    });
+        return {
+          type: u,
+          canBuild,
+          canUpgrade,
+          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+          overlappingRailroads:
+            canBuild !== false
+              ? this.mg.railNetwork().overlappingRailroads(canBuild)
+              : [],
+          ghostRailPaths:
+            canBuild !== false
+              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
+              : [],
+        } as BuildableUnit;
+      });
   }
 
   canBuild(
