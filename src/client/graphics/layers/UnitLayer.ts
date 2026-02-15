@@ -1,27 +1,31 @@
 import { colord, Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   ContextMenuEvent,
+  MouseMoveEvent,
   MouseUpEvent,
   TouchEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
 import { MoveWarshipIntentEvent } from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
   getColoredSprite,
   isSpriteReady,
   loadAllSprites,
 } from "../SpriteLoader";
+import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
+import { Layer } from "./Layer";
+
+import allianceIconPath from "/images/AllianceIconWhite.svg?url";
+import traitorIconPath from "/images/TraitorIconWhite.svg?url";
 
 enum Relationship {
   Self,
@@ -51,13 +55,63 @@ export class UnitLayer implements Layer {
   // Configuration for unit selection
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
+  private fKeyHeld = false;
+  private gKeyHeld = false;
+  private mouseX = 0;
+  private mouseY = 0;
+
+  private allianceIcon: HTMLCanvasElement | null = null;
+  private traitorIcon: HTMLCanvasElement | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     transformHandler: TransformHandler,
+    private uiState: UIState,
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
+
+    this.loadIcons();
+  }
+
+  private loadIcons() {
+    this.loadAndTintIcon(allianceIconPath, "#53ac75", (icon) => {
+      this.allianceIcon = icon;
+    });
+    this.loadAndTintIcon(traitorIconPath, "#c74848", (icon) => {
+      this.traitorIcon = icon;
+    });
+  }
+
+  private loadAndTintIcon(
+    path: string,
+    color: string,
+    callback: (icon: HTMLCanvasElement) => void,
+  ) {
+    const img = new Image();
+    img.src = path;
+    img.onload = () => {
+      callback(this.tintIcon(img, color));
+    };
+  }
+
+  private tintIcon(image: HTMLImageElement, color: string): HTMLCanvasElement {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return canvas;
+
+    // Draw the color
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Mask with image
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(image, 0, 0);
+
+    return canvas;
   }
 
   shouldTransform(): boolean {
@@ -77,10 +131,27 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
+    this.eventBus.on(MouseMoveEvent, (e) => {
+      this.mouseX = e.x;
+      this.mouseY = e.y;
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyF") this.fKeyHeld = true;
+      if (e.code === "KeyG") this.gKeyHeld = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "KeyF") this.fKeyHeld = false;
+      if (e.code === "KeyG") this.gKeyHeld = false;
+    });
+
     this.redraw();
 
     loadAllSprites();
   }
+
+  // ... rest of the file ...
 
   /**
    * Find player-owned warships near the given cell within a configurable radius
@@ -214,6 +285,63 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+
+    this.drawCursorIcon(context);
+  }
+
+  private drawCursorIcon(context: CanvasRenderingContext2D) {
+    if (!this.fKeyHeld && !this.gKeyHeld) return;
+
+    // Determine target under cursor
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      this.mouseX,
+      this.mouseY,
+    );
+    if (!this.game.isValidCoord(cell.x, cell.y)) return;
+
+    const clickRef = this.game.ref(cell.x, cell.y);
+    const owner = this.game.owner(clickRef);
+    const myPlayer = this.game.myPlayer();
+
+    if (!myPlayer || !owner.isPlayer() || owner === myPlayer) {
+      return;
+    }
+
+    const targetPlayer = owner as PlayerView;
+    const isAllied = targetPlayer.isAlliedWith(myPlayer);
+
+    let iconToDraw: HTMLCanvasElement | null = null;
+
+    if (this.fKeyHeld && !isAllied) {
+      // Check if we can actually request? (e.g. not enemy?)
+      // For now, show icon if F is held and not allied.
+      iconToDraw = this.allianceIcon;
+    } else if (this.gKeyHeld && isAllied) {
+      iconToDraw = this.traitorIcon;
+    }
+
+    if (iconToDraw) {
+      const x = cell.x - this.game.width() / 2;
+      const y = cell.y - this.game.height() / 2;
+
+      // Draw icon centered at x,y
+      const drawSize = 32; // size in world units (cells)
+
+      // console.log("DrawIcon", { f: this.fKeyHeld, g: this.gKeyHeld, x, y, drawSize, icon: !!iconToDraw });
+
+      context.save();
+      context.globalAlpha = 0.8;
+
+      context.drawImage(
+        iconToDraw,
+        x - drawSize / 2,
+        y - drawSize / 2,
+        drawSize,
+        drawSize,
+      );
+
+      context.restore();
+    }
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {

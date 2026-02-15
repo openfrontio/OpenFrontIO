@@ -22,7 +22,11 @@ import {
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import swordIcon from "/images/SwordIconWhite.svg?url";
 
-import { ContextMenuEvent } from "../../InputHandler";
+import {
+  AllianceRequestEvent,
+  BreakAllianceEvent,
+  ContextMenuEvent,
+} from "../../InputHandler";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -102,6 +106,54 @@ export class MainRadialMenu extends LitElement implements Layer {
             event.y,
           );
         });
+    });
+
+    this.eventBus.on(AllianceRequestEvent, (event) => {
+      const worldCoords = this.transformHandler.screenToWorldCoordinates(
+        event.x,
+        event.y,
+      );
+      if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+        return;
+      }
+      const myPlayer = this.game.myPlayer();
+      if (!myPlayer) {
+        return;
+      }
+
+      const tile = this.game.ref(worldCoords.x, worldCoords.y);
+      const owner = this.game.owner(tile);
+      if (owner.isPlayer() && owner !== myPlayer) {
+        // Send alliance request
+        this.playerActionHandler.handleAllianceRequest(
+          myPlayer,
+          owner as PlayerView,
+        );
+      }
+    });
+
+    this.eventBus.on(BreakAllianceEvent, (event) => {
+      const worldCoords = this.transformHandler.screenToWorldCoordinates(
+        event.x,
+        event.y,
+      );
+      if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+        return;
+      }
+      const myPlayer = this.game.myPlayer();
+      if (!myPlayer) {
+        return;
+      }
+
+      const tile = this.game.ref(worldCoords.x, worldCoords.y);
+      const owner = this.game.owner(tile);
+      if (owner.isPlayer() && owner !== myPlayer) {
+        // Break alliance
+        this.playerActionHandler.handleBreakAlliance(
+          myPlayer,
+          owner as PlayerView,
+        );
+      }
     });
   }
 

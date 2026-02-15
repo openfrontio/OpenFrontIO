@@ -279,7 +279,7 @@ export function createRenderer(
     new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
-    new UnitLayer(game, eventBus, transformHandler),
+    new UnitLayer(game, eventBus, transformHandler, uiState),
     new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),

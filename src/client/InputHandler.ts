@@ -136,6 +136,20 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+export class AllianceRequestEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class BreakAllianceEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -225,6 +239,8 @@ export class InputHandler {
       buildAtomBomb: "Digit8",
       buildHydrogenBomb: "Digit9",
       buildMIRV: "Digit0",
+      alliance: "KeyF",
+      breakAlliance: "KeyG",
       ...saved,
     };
 
@@ -343,6 +359,8 @@ export class InputHandler {
           "ControlRight",
           "ShiftLeft",
           "ShiftRight",
+          "KeyF",
+          "KeyG",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -504,6 +522,18 @@ export class InputHandler {
     }
     if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
+      return;
+    }
+
+    if (this.activeKeys.has(this.keybinds.alliance)) {
+      this.eventBus.emit(
+        new AllianceRequestEvent(event.clientX, event.clientY),
+      );
+      return;
+    }
+
+    if (this.activeKeys.has(this.keybinds.breakAlliance)) {
+      this.eventBus.emit(new BreakAllianceEvent(event.clientX, event.clientY));
       return;
     }
 
