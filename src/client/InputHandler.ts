@@ -359,8 +359,8 @@ export class InputHandler {
           "ControlRight",
           "ShiftLeft",
           "ShiftRight",
-          "KeyF",
-          "KeyG",
+          this.keybinds.alliance,
+          this.keybinds.breakAlliance,
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
