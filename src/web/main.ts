@@ -275,9 +275,7 @@ function renderOrder(payload: AnalyticsPayload): void {
   const height = Math.max(220, rows.length * rowHeight + 30);
 
   const minAt = Math.min(...rows.map((row) => row.openedAt));
-  const maxAt = Math.max(
-    ...rows.map((row) => row.closedAt ?? row.startDetectedAt ?? row.openedAt),
-  );
+  const maxAt = Math.max(...rows.map((row) => orderRowMaxAt(row, payload.now)));
   const pad = 16;
   const x = (v: number) =>
     pad + ((v - minAt) / Math.max(1, maxAt - minAt)) * (width - pad * 2);
@@ -286,9 +284,11 @@ function renderOrder(payload: AnalyticsPayload): void {
     .map((row, i) => {
       const y = 20 + i * rowHeight;
       const startX = x(row.openedAt);
-      const endAt = row.closedAt ?? row.startDetectedAt ?? row.openedAt;
-      const endX = Math.max(startX + 2, x(endAt));
-      const color = colorForBucket(row.bucket, row.status);
+      const lobbyEndAt = orderRowLobbyEndAt(row);
+      const lobbyEndX = Math.max(startX + 2, x(lobbyEndAt));
+      const lobbyColor = colorForBucketPhase(row.bucket, "lobby", row.status);
+      const gameStartAt = orderRowGameStartAt(row);
+      const gameEndAt = orderRowGameEndAt(row, payload.now);
       const statusStroke =
         row.status === "started"
           ? "#9fff7a"
@@ -299,10 +299,24 @@ function renderOrder(payload: AnalyticsPayload): void {
             : "#ffd166";
       const openDurationText = formatDurationMs(row.openDurationMs);
       const gameDurationText = formatGameDuration(row, payload.now);
+      const gameRect =
+        gameStartAt !== undefined && gameEndAt !== undefined && gameEndAt > gameStartAt
+          ? (() => {
+              const gameStartX = Math.max(startX + 1, x(gameStartAt));
+              const gameEndX = Math.max(gameStartX + 2, x(gameEndAt));
+              const gameColor = colorForBucketPhase(row.bucket, "game", row.status);
+              return `
+                <rect x="${gameStartX.toFixed(1)}" y="${y}" width="${(gameEndX - gameStartX).toFixed(1)}" height="10" fill="${gameColor}" stroke="${statusStroke}" stroke-width="0.6" opacity="0.95">
+                  <title>${row.gameID} | ${row.bucket} | status ${row.status} | open ${openDurationText} | game ${gameDurationText}</title>
+                </rect>
+              `;
+            })()
+          : "";
       return `
-        <rect x="${startX.toFixed(1)}" y="${y}" width="${(endX - startX).toFixed(1)}" height="10" fill="${color}" stroke="${statusStroke}" stroke-width="0.7" opacity="0.9">
+        <rect x="${startX.toFixed(1)}" y="${y}" width="${(lobbyEndX - startX).toFixed(1)}" height="10" fill="${lobbyColor}" stroke="${statusStroke}" stroke-width="0.7" opacity="0.95">
           <title>${row.gameID} | ${row.bucket} | status ${row.status} | open ${openDurationText} | game ${gameDurationText}</title>
         </rect>
+        ${gameRect}
       `;
     })
     .join("");
@@ -326,6 +340,7 @@ function renderOrder(payload: AnalyticsPayload): void {
     <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">
       <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
       ${legend}
+      <text x="14" y="${height - 10}" fill="#9db1c5" font-size="10">Saturated segment = lobby open time, muted segment = game runtime</text>
       ${bars}
     </svg>
   `;
@@ -484,10 +499,57 @@ function hashString(value: string): number {
 }
 
 function colorForBucket(bucket: string, status?: string): string {
+  return colorForBucketPhase(bucket, "lobby", status);
+}
+
+function colorForBucketPhase(
+  bucket: string,
+  phase: "lobby" | "game",
+  status?: string,
+): string {
   const hue = hashString(bucket) % 360;
+  if (phase === "game") {
+    return `hsl(${hue} 40% 44%)`;
+  }
   if (status === "started") {
     // In-progress games keep bucket hue but are less saturated.
     return `hsl(${hue} 40% 58%)`;
   }
   return `hsl(${hue} 75% 58%)`;
+}
+
+function orderRowLobbyEndAt(row: AnalyticsPayload["order"][number]): number {
+  return row.actualStartAt ?? row.startDetectedAt ?? row.closedAt ?? row.openedAt;
+}
+
+function orderRowGameStartAt(
+  row: AnalyticsPayload["order"][number],
+): number | undefined {
+  const start = row.actualStartAt ?? row.startDetectedAt;
+  if (start === undefined) return undefined;
+  return Math.max(orderRowLobbyEndAt(row), start);
+}
+
+function orderRowGameEndAt(
+  row: AnalyticsPayload["order"][number],
+  now: number,
+): number | undefined {
+  const start = orderRowGameStartAt(row);
+  if (start === undefined) return undefined;
+
+  if (row.actualEndAt !== undefined && row.actualEndAt >= start) {
+    return row.actualEndAt;
+  }
+  if (row.archiveDurationSec !== undefined && row.archiveDurationSec > 0) {
+    return start + row.archiveDurationSec * 1000;
+  }
+  if (row.status === "started" && now >= start) {
+    return now;
+  }
+
+  return undefined;
+}
+
+function orderRowMaxAt(row: AnalyticsPayload["order"][number], now: number): number {
+  return orderRowGameEndAt(row, now) ?? orderRowLobbyEndAt(row);
 }
