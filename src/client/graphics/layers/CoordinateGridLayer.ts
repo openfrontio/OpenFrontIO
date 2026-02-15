@@ -1,7 +1,10 @@
 import { EventBus } from "../../../core/EventBus";
 import { Cell } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { ToggleCoordinateGridEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  ToggleCoordinateGridEvent,
+} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -66,6 +69,7 @@ const computeGrid = (width: number, height: number) => {
 
 export class CoordinateGridLayer implements Layer {
   private isVisible = false;
+  private alternateView = false;
 
   constructor(
     private game: GameView,
@@ -77,6 +81,9 @@ export class CoordinateGridLayer implements Layer {
     this.eventBus.on(ToggleCoordinateGridEvent, (event) => {
       this.isVisible = event.enabled;
     });
+    this.eventBus.on(AlternateViewEvent, (event) => {
+      this.alternateView = event.alternateView;
+    });
   }
 
   shouldTransform(): boolean {
@@ -84,7 +91,7 @@ export class CoordinateGridLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (!this.isVisible) return;
+    if (!this.isVisible && !this.alternateView) return;
 
     const width = this.game.width();
     const height = this.game.height();
