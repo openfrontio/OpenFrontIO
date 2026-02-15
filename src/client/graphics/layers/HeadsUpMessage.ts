@@ -170,10 +170,10 @@ export class HeadsUpMessage extends LitElement implements Layer {
           ? html`
               <div
                 class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[11000]
-                            inline-flex items-center justify-center h-8 lg:h-10
+                            inline-flex items-center justify-center min-h-8 lg:min-h-10
                             w-fit max-w-[90vw]
-                            bg-gray-900/60 rounded-md lg:rounded-lg
-                            backdrop-blur-md text-white text-md lg:text-xl px-3 lg:px-4
+                            bg-gray-800/70 rounded-md lg:rounded-lg
+                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-1
                             text-center break-words"
                 style="word-wrap: break-word; hyphens: auto;"
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}

@@ -36,7 +36,7 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
-const playlist = new MapPlaylist(true);
+const playlist = new MapPlaylist();
 
 // Worker setup
 export async function startWorker() {
