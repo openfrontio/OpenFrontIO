@@ -584,6 +584,7 @@ export class PlayerView {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
+  private singleplayerStartTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
   private _players = new Map<PlayerID, PlayerView>();
   private _units = new Map<number, UnitView>();
@@ -818,7 +819,35 @@ export class GameView implements GameMap {
     }
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
+
+  private updateSingleplayerStartTick(): void {
+    if (this._config.gameConfig().gameType !== GameType.Singleplayer) {
+      return;
+    }
+
+    const humanPlayers = this.players().filter(
+      (player) => player.type() === PlayerType.Human,
+    );
+    const hasSpawnedHuman = humanPlayers.some((player) => player.hasSpawned());
+
+    if (this.inSpawnPhase() || !hasSpawnedHuman) {
+      this.singleplayerStartTick = null;
+      return;
+    }
+
+    this.singleplayerStartTick ??= this.ticks();
+  }
+
   isSpawnImmunityActive(): boolean {
+    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return startTick + this._config.spawnImmunityDuration() > this.ticks();
+    }
+
     return (
       this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
       this.ticks()

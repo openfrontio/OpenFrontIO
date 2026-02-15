@@ -1,6 +1,7 @@
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -19,6 +20,7 @@ describe("NukeExecution", () => {
     game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
       },

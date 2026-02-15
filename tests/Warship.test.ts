@@ -2,6 +2,7 @@ import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -20,6 +21,7 @@ describe("Warship", () => {
     game = await setup(
       "half_land_half_ocean",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
       },

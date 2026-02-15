@@ -1,7 +1,13 @@
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
-import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  GameType,
+  MessageType,
+  Player,
+  PlayerType,
+} from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -14,6 +20,7 @@ describe("AllianceExtensionExecution", () => {
     game = await setup(
       "ocean_and_land",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         infiniteTroops: true,

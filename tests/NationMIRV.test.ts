@@ -3,6 +3,7 @@ import { NationExecution } from "../src/core/execution/NationExecution";
 import {
   Cell,
   GameMode,
+  GameType,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -14,6 +15,7 @@ import { executeTicks } from "./util/utils";
 describe("Nation MIRV Retaliation", () => {
   test("nation retaliates with MIRV when attacked by MIRV", async () => {
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -137,6 +139,7 @@ describe("Nation MIRV Retaliation", () => {
   test("nation launches MIRV to prevent victory when player approaches win condition", async () => {
     // Setup game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -298,6 +301,7 @@ describe("Nation MIRV Retaliation", () => {
   test("nation launches MIRV to stop steamrolling player with excessive cities", async () => {
     // Setup game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -451,6 +455,7 @@ describe("Nation MIRV Retaliation", () => {
   test("nation does not launch MIRV for steamroll when leader has <= 10 cities", async () => {
     // Setup game
     const game = await setup("big_plains", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
     });
@@ -600,6 +605,7 @@ describe("Nation MIRV Retaliation", () => {
     const game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         gameMode: GameMode.Team,

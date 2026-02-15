@@ -3,6 +3,7 @@ import {
   Cell,
   Difficulty,
   GameMode,
+  GameType,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -18,6 +19,7 @@ import { setup } from "./util/Setup";
 describe("Counter Warship Infestation", () => {
   test("rich nation sends counter-warship in FFA when enemy has too many warships", async () => {
     const game = await setup("half_land_half_ocean", {
+      gameType: GameType.Public,
       infiniteGold: true,
       instantBuild: true,
       difficulty: Difficulty.Hard, // Required for counter-warship logic
@@ -168,6 +170,7 @@ describe("Counter Warship Infestation", () => {
     const game = await setup(
       "half_land_half_ocean",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         difficulty: Difficulty.Hard, // Required for counter-warship logic

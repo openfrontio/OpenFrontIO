@@ -1,6 +1,7 @@
 import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
 import {
   Game,
+  GameType,
   MessageType,
   Player,
   PlayerInfo,
@@ -19,6 +20,7 @@ describe("MIRVExecution", () => {
     game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
       },

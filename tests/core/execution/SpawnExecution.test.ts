@@ -1,5 +1,5 @@
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import { GameType, PlayerInfo, PlayerType } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
 
 describe("Spawn execution", () => {
@@ -27,7 +27,7 @@ describe("Spawn execution", () => {
         spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
       }
 
-      const game = await setup(mapName, undefined, players);
+      const game = await setup(mapName, { gameType: GameType.Public }, players);
 
       game.addExecution(...spawnExecutions);
 
@@ -73,7 +73,11 @@ describe("Spawn execution", () => {
       spawnExecutions.push(new SpawnExecution("game_id", playerInfo));
     }
 
-    const game = await setup("half_land_half_ocean", undefined, players);
+    const game = await setup(
+      "half_land_half_ocean",
+      { gameType: GameType.Public },
+      players,
+    );
 
     game.addExecution(...spawnExecutions);
 
@@ -96,7 +100,11 @@ describe("Spawn execution", () => {
       `player_id`,
     );
 
-    const game = await setup("half_land_half_ocean", undefined, [playerInfo]);
+    const game = await setup(
+      "half_land_half_ocean",
+      { gameType: GameType.Public },
+      [playerInfo],
+    );
 
     game.addExecution(new SpawnExecution("game_id", playerInfo, 50));
     game.addExecution(new SpawnExecution("game_id", playerInfo, 60));

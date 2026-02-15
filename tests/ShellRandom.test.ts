@@ -3,6 +3,7 @@ import { ShellExecution } from "../src/core/execution/ShellExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -20,6 +21,7 @@ describe("Shell Random Damage", () => {
     game = await setup(
       "half_land_half_ocean",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
       },

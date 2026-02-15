@@ -6,6 +6,7 @@ import { AllianceRequestExecution } from "../../../src/core/execution/alliance/A
 import { AllianceRequestReplyExecution } from "../../../src/core/execution/alliance/AllianceRequestReplyExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -142,5 +143,36 @@ describe("GameImpl", () => {
 
     expect(attacker.isTraitor()).toBe(true);
     expect(attacker.allianceWith(defender)).toBeFalsy();
+  });
+
+  test("Singleplayer late human spawn gets spawn immunity", async () => {
+    const singleplayerGame = await setup("plains", {
+      gameType: GameType.Singleplayer,
+    });
+    (singleplayerGame.config() as any).setSpawnImmunityDuration(100);
+
+    const pastSpawnCountdown =
+      singleplayerGame.config().numSpawnPhaseTurns() + 20;
+    for (let i = 0; i < pastSpawnCountdown; i++) {
+      singleplayerGame.executeNextTick();
+    }
+
+    const lateHumanInfo = new PlayerInfo(
+      "late human",
+      PlayerType.Human,
+      "late_client_id",
+      "late_player_id",
+    );
+
+    singleplayerGame.addExecution(
+      new SpawnExecution(gameID, lateHumanInfo, singleplayerGame.ref(5, 5)),
+    );
+
+    // First tick initializes the execution, second tick applies the spawn.
+    singleplayerGame.executeNextTick();
+    singleplayerGame.executeNextTick();
+
+    expect(singleplayerGame.player(lateHumanInfo.id).hasSpawned()).toBe(true);
+    expect(singleplayerGame.isSpawnImmunityActive()).toBe(true);
   });
 });

@@ -1,7 +1,13 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { Game, Player, PlayerType, UnitType } from "../src/core/game/Game";
+import {
+  Game,
+  GameType,
+  Player,
+  PlayerType,
+  UnitType,
+} from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 
@@ -14,6 +20,7 @@ describe("AllianceRequestExecution", () => {
     game = await setup(
       "plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
         infiniteTroops: true,

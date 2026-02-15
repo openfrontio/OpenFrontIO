@@ -66,6 +66,9 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  private singleplayerStartTick: number | null = null;
+  private singleplayerSpawnPhaseCompleted = false;
+  private spawnPhaseLockedValue: boolean | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -376,12 +379,47 @@ export class GameImpl implements Game {
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
-  inSpawnPhase(): boolean {
+  private computeInSpawnPhase(): boolean {
     if (this.config().gameConfig().gameType === GameType.Singleplayer) {
-      // Singleplayer has no fixed spawn countdown; game starts once the human spawns.
-      return !this._humans.every((human) => this.player(human.id).hasSpawned());
+      if (this.singleplayerSpawnPhaseCompleted) {
+        return false;
+      }
+      // Singleplayer has no fixed spawn countdown; game starts once all current human
+      // players in the game have spawned. This supports tests that add players after
+      // game construction.
+      const humanPlayers = this.allPlayers().filter(
+        (player) => player.type() === PlayerType.Human,
+      );
+      if (humanPlayers.length > 0) {
+        return humanPlayers.some((player) => !player.hasSpawned());
+      }
     }
     return this._ticks <= this.config().numSpawnPhaseTurns();
+  }
+
+  inSpawnPhase(): boolean {
+    if (this.spawnPhaseLockedValue !== null) {
+      return this.spawnPhaseLockedValue;
+    }
+    return this.computeInSpawnPhase();
+  }
+
+  private updateSingleplayerStartTick(): void {
+    if (this.config().gameConfig().gameType !== GameType.Singleplayer) {
+      return;
+    }
+
+    const humanPlayers = this.allPlayers().filter(
+      (player) => player.type() === PlayerType.Human,
+    );
+    const hasSpawnedHuman = humanPlayers.some((player) => player.hasSpawned());
+
+    if (this.inSpawnPhase() || !hasSpawnedHuman) {
+      this.singleplayerStartTick = null;
+      return;
+    }
+
+    this.singleplayerStartTick ??= this.ticks();
   }
 
   ticks(): number {
@@ -389,6 +427,15 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
+    this.spawnPhaseLockedValue = this.computeInSpawnPhase();
+    if (
+      this.config().gameConfig().gameType === GameType.Singleplayer &&
+      !this.spawnPhaseLockedValue
+    ) {
+      this.singleplayerSpawnPhaseCompleted = true;
+    }
+    this.updateSingleplayerStartTick();
+
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
@@ -424,6 +471,10 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+
+    this.spawnPhaseLockedValue = null;
+    this.updateSingleplayerStartTick();
+
     this._ticks++;
     return this.updates;
   }
@@ -731,6 +782,15 @@ export class GameImpl implements Game {
   }
 
   public isSpawnImmunityActive(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return startTick + this.config().spawnImmunityDuration() > this.ticks();
+    }
+
     return (
       this.config().numSpawnPhaseTurns() +
         this.config().spawnImmunityDuration() >

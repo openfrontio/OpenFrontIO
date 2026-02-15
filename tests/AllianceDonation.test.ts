@@ -1,7 +1,7 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { Game, GameType, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -13,6 +13,7 @@ describe("Alliance Donation", () => {
     game = await setup(
       "plains",
       {
+        gameType: GameType.Public,
         infiniteGold: false,
         instantBuild: true,
         infiniteTroops: false,

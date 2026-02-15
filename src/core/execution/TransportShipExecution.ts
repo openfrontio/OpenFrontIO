@@ -156,15 +156,14 @@ export class TransportShipExecution implements Execution {
     }
 
     if (this.boat.retreating()) {
-      // Ensure retreat source is still valid for (new) owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
-        }
+      // Recompute retreat source for current owner each tick. This guarantees
+      // we don't retreat to a stale source when ownership/shore availability changes.
+      // Use bestTransportShipSpawn, not canBuild because of its max boats check etc.
+      const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
+      if (newSrc === false) {
+        this.src = null;
+      } else {
+        this.src = newSrc;
       }
 
       if (this.src === null) {

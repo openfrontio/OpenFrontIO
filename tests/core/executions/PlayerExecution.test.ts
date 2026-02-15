@@ -1,6 +1,7 @@
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
   Game,
+  GameType,
   Player,
   PlayerInfo,
   PlayerType,
@@ -18,6 +19,7 @@ describe("PlayerExecution", () => {
     game = await setup(
       "big_plains",
       {
+        gameType: GameType.Public,
         infiniteGold: true,
         instantBuild: true,
       },
