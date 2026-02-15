@@ -120,6 +120,7 @@ export enum GameMapType {
   AmazonRiver = "Amazon River",
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
+  Hawaii = "Hawaii",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -168,6 +169,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfHormuz,
     GameMapType.AmazonRiver,
     GameMapType.Yenisei,
+    GameMapType.Hawaii,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -627,7 +629,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
+  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

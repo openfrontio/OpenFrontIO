@@ -8,7 +8,7 @@ import {
   GameMode,
   GameType,
 } from "../core/game/Game";
-import { GameConfig, GameID } from "../core/Schemas";
+import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 
@@ -57,6 +57,7 @@ export class GameManager {
     gameConfig: GameConfig | undefined,
     creatorPersistentID?: string,
     startsAt?: number,
+    publicGameType?: PublicGameType,
   ) {
     const game = new GameServer(
       id,
@@ -83,6 +84,7 @@ export class GameManager {
       },
       creatorPersistentID,
       startsAt,
+      publicGameType,
     );
     this.games.set(id, game);
     return game;
