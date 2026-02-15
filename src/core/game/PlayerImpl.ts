@@ -967,8 +967,7 @@ export class PlayerImpl implements Player {
   ): BuildableUnit[] {
     const validTiles =
       tile !== null &&
-      units !== undefined &&
-      units.some((u) => isStructureType(u))
+      (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
     return Object.values(UnitType)
