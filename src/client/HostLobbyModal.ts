@@ -322,6 +322,7 @@ export class HostLobbyModal extends BaseModal {
             .nationCount=${this.nationCount}
             .disableNations=${this.disableNations}
             .isCompactMap=${this.compactMap}
+            .isRandomMap=${this.useRandomMap}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-player-view>
         </div>
