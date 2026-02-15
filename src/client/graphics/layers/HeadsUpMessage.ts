@@ -21,6 +21,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
 
   @state()
   private isCatchingUp = false;
+  private catchingUpTicks = 0;
+
+  private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
 
   @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
@@ -95,8 +98,17 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
-    this.isCatchingUp =
+    const currentlyCatchingUp =
       !this.game.config().isReplay() && this.game.isCatchingUp();
+
+    if (currentlyCatchingUp) {
+      this.catchingUpTicks++;
+    } else {
+      this.catchingUpTicks = 0;
+    }
+
+    this.isCatchingUp =
+      this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
 
     this.isVisible =
       this.game.inSpawnPhase() ||
