@@ -94,6 +94,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.playerID,
           message.x,
           message.y,
+          message.units,
         );
         sendMessage({
           type: "player_actions_result",

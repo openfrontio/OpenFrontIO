@@ -328,7 +328,8 @@
     "didier": "Didier",
     "didierfrance": "Didier (France)",
     "amazonriver": "Amazon River",
-    "tradersdream": "Traders Dream"
+    "tradersdream": "Traders Dream",
+    "hawaii": "Hawaii"
   },
   "map_categories": {
     "featured": "Featured",
@@ -720,6 +721,7 @@
     "show_units": "Show Units"
   },
   "events_display": {
+    "events": "Events",
     "retreating": "retreating",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
@@ -866,6 +868,13 @@
     "pattern": {
       "default": "Default"
     },
+    "try_me": "Try me!",
+    "trial_remaining": "remaining",
+    "trial_granted": "Skin trial granted!",
+    "trial_cooldown": "Only one trial per 24 hours. Please try again later.",
+    "trial_login_required": "Must be logged in to trial a skin",
+    "reward_countdown": "Reward in {seconds} seconds...",
+    "steam_wishlist_prompt": "Support OpenFront by adding it to your Steam wishlist",
     "select_skin": "Select Skin",
     "selected": "selected"
   },

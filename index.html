@@ -249,7 +249,7 @@
         <control-panel></control-panel>
       </div>
       <div
-        class="order-1 sm:order-none w-full sm:w-1/2 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
+        class="order-1 sm:order-none w-full sm:flex-1 min-[1200px]:w-auto min-[1200px]:fixed min-[1200px]:right-0 min-[1200px]:bottom-0 flex flex-col sm:items-end pointer-events-none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
@@ -263,7 +263,9 @@
     <skin-test-win-modal></skin-test-win-modal>
     <game-starting-modal></game-starting-modal>
     <unit-display></unit-display>
-    <div class="flex flex-col items-end fixed top-4 right-4 z-1000 gap-2">
+    <div
+      class="flex flex-col items-end fixed top-0 right-0 min-[1200px]:top-4 min-[1200px]:right-4 z-1000 gap-2"
+    >
       <game-right-sidebar></game-right-sidebar>
       <replay-panel></replay-panel>
     </div>

@@ -49,7 +49,8 @@ export class PublicLobby extends LitElement {
     if (this.publicGames) {
       this.serverTimeOffset = this.publicGames.serverTime - Date.now();
     }
-    this.publicGames.games.forEach((l) => {
+    // TODO: thihs is just a temporary scaffolding until PR #3191 is merged.
+    this.publicGames.games["ffa"]?.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
         // Convert server's startsAt to client time by subtracting offset
         const startsAt = l.startsAt ?? Date.now();
@@ -77,7 +78,7 @@ export class PublicLobby extends LitElement {
   render() {
     if (!this.publicGames) return html``;
 
-    const lobby = this.publicGames.games[0];
+    const lobby = this.publicGames.games["ffa"]?.[0];
     if (!lobby?.gameConfig) return html``;
 
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;

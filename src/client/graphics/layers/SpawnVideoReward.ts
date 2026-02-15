@@ -4,7 +4,7 @@ import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
 import { getGamesPlayed } from "src/client/Utils";
 import { GameType } from "src/core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import "../../components/VideoReward";
+import "../../components/VideoPromo";
 import { Layer } from "./Layer";
 
 @customElement("spawn-video-ad")

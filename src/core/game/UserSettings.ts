@@ -192,6 +192,12 @@ export class UserSettings {
     }
   }
 
+  getFlag(): string | undefined {
+    const flag = localStorage.getItem("flag");
+    if (!flag || flag === "xx") return undefined;
+    return flag;
+  }
+
   backgroundMusicVolume(): number {
     return this.getFloat("settings.backgroundMusicVolume", 0);
   }
