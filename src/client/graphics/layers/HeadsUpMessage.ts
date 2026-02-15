@@ -17,6 +17,9 @@ export class HeadsUpMessage extends LitElement implements Layer {
   private isPaused = false;
 
   @state()
+  private isImmunityActive = false;
+
+  @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
   @state()
   private toastColor: "green" | "red" = "green";
@@ -79,7 +82,18 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.isPaused = pauseUpdate.paused;
     }
 
-    this.isVisible = this.game.inSpawnPhase() || this.isPaused;
+    const showImmunityHudDuration = 10 * 10;
+    const spawnEnd = this.game.config().numSpawnPhaseTurns();
+    const ticksSinceSpawnEnd = this.game.ticks() - spawnEnd;
+
+    this.isImmunityActive =
+      this.game.config().hasExtendedSpawnImmunity() &&
+      !this.game.inSpawnPhase() &&
+      this.game.isSpawnImmunityActive() &&
+      ticksSinceSpawnEnd < showImmunityHudDuration;
+
+    this.isVisible =
+      this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
     this.requestUpdate();
   }
 
@@ -90,6 +104,11 @@ export class HeadsUpMessage extends LitElement implements Layer {
       } else {
         return translateText("heads_up_message.multiplayer_game_paused");
       }
+    }
+    if (this.isImmunityActive) {
+      return translateText("heads_up_message.pvp_immunity_active", {
+        seconds: Math.round(this.game.config().spawnImmunityDuration() / 10),
+      });
     }
     return this.game.config().isRandomSpawn()
       ? translateText("heads_up_message.random_spawn")
@@ -126,11 +145,11 @@ export class HeadsUpMessage extends LitElement implements Layer {
         ${this.isVisible
           ? html`
               <div
-                class="fixed top-[10%] left-1/2 -translate-x-1/2 z-[11000]
-                            inline-flex items-center justify-center h-8 lg:h-10
+                class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[11000]
+                            inline-flex items-center justify-center min-h-8 lg:min-h-10
                             w-fit max-w-[90vw]
-                            bg-gray-900/60 rounded-md lg:rounded-lg
-                            backdrop-blur-md text-white text-md lg:text-xl px-3 lg:px-4
+                            bg-gray-800/70 rounded-md lg:rounded-lg
+                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-1
                             text-center break-words"
                 style="word-wrap: break-word; hyphens: auto;"
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}

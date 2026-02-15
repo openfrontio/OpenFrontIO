@@ -285,7 +285,7 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef)
+      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((actions) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
@@ -333,10 +333,15 @@ export class StructureIconsLayer implements Layer {
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
           }
+          // No overlapping when a structure is upgradable
+          this.uiState.overlappingRailroads = [];
         } else if (unit.canBuild === false) {
           this.ghostUnit.container.filters = [
             new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
+          this.uiState.overlappingRailroads = [];
+        } else {
+          this.uiState.overlappingRailroads = unit.overlappingRailroads;
         }
 
         const scale = this.transformHandler.scale;
@@ -450,7 +455,13 @@ export class StructureIconsLayer implements Layer {
       priceGroup: ghost.priceGroup,
       priceBox: ghost.priceBox,
       range: null,
-      buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
+      buildableUnit: {
+        type,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 0n,
+        overlappingRailroads: [],
+      },
     };
     const showPrice = this.game.config().userSettings().cursorCostLabel();
     this.updateGhostPrice(0, showPrice);

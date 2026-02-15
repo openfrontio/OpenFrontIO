@@ -14,6 +14,7 @@ export class MapDisplay extends LitElement {
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
+  @state() private hasNations = true;
 
   createRenderRoot() {
     return this;
@@ -32,7 +33,10 @@ export class MapDisplay extends LitElement {
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
-      this.mapName = (await data.manifest()).name;
+      const manifest = await data.manifest();
+      this.mapName = manifest.name;
+      this.hasNations =
+        Array.isArray(manifest.nations) && manifest.nations.length > 0;
     } catch (error) {
       console.error("Failed to load map data:", error);
     } finally {
@@ -49,6 +53,10 @@ export class MapDisplay extends LitElement {
     }
   }
 
+  private preventImageDrag(event: DragEvent) {
+    event.preventDefault();
+  }
+
   render() {
     return html`
       <div
@@ -57,10 +65,10 @@ export class MapDisplay extends LitElement {
         aria-selected="${this.selected}"
         aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
         @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 gap-3 group ${this
+        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${this
           .selected
           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 active:scale-95"}"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"}"
       >
         ${this.isLoading
           ? html`<div
@@ -75,6 +83,8 @@ export class MapDisplay extends LitElement {
                 <img
                   src="${this.mapWebpPath}"
                   alt="${this.translation || this.mapName}"
+                  draggable="false"
+                  @dragstart=${this.preventImageDrag}
                   class="w-full h-full object-cover ${this.selected
                     ? "opacity-100"
                     : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
@@ -85,7 +95,7 @@ export class MapDisplay extends LitElement {
               >
                 ${translateText("map_component.error")}
               </div>`}
-        ${this.showMedals
+        ${this.showMedals && this.hasNations
           ? html`<div class="flex gap-1 justify-center w-full">
               ${this.renderMedals()}
             </div>`

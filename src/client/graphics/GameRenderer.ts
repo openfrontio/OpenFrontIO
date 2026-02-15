@@ -6,8 +6,8 @@ import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
-import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -20,6 +20,7 @@ import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
+import { InGameHeaderAd } from "./layers/InGameHeaderAd";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
@@ -34,6 +35,7 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { SpawnVideoAd } from "./layers/SpawnVideoReward";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -96,6 +98,7 @@ export function createRenderer(
     console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
+  gameLeftSidebar.eventBus = eventBus;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!teamStats || !(teamStats instanceof TeamStats)) {
@@ -121,6 +124,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const attacksDisplay = document.querySelector(
+    "attacks-display",
+  ) as AttacksDisplay;
+  if (!(attacksDisplay instanceof AttacksDisplay)) {
+    console.error("attacks display not found");
+  }
+  attacksDisplay.eventBus = eventBus;
+  attacksDisplay.game = game;
+  attacksDisplay.uiState = uiState;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -234,6 +247,7 @@ export function createRenderer(
     console.error("spawn timer not found");
   }
   spawnTimer.game = game;
+  spawnTimer.eventBus = eventBus;
   spawnTimer.transformHandler = transformHandler;
 
   const immunityTimer = document.querySelector(
@@ -243,6 +257,21 @@ export function createRenderer(
     console.error("immunity timer not found");
   }
   immunityTimer.game = game;
+  immunityTimer.eventBus = eventBus;
+
+  const inGameHeaderAd = document.querySelector(
+    "in-game-header-ad",
+  ) as InGameHeaderAd;
+  if (!(inGameHeaderAd instanceof InGameHeaderAd)) {
+    console.error("in-game header ad not found");
+  }
+  inGameHeaderAd.game = game;
+
+  const spawnVideoAd = document.querySelector("spawn-video-ad") as SpawnVideoAd;
+  if (!(spawnVideoAd instanceof SpawnVideoAd)) {
+    console.error("spawn video ad not found");
+  }
+  spawnVideoAd.game = game;
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
@@ -250,17 +279,18 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game, eventBus, transformHandler),
+    new RailroadLayer(game, eventBus, transformHandler, uiState),
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus, transformHandler),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler, uiState),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
+    attacksDisplay,
     chatDisplay,
     buildMenu,
     new MainRadialMenu(
@@ -287,7 +317,8 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    new AdTimer(game),
+    inGameHeaderAd,
+    spawnVideoAd,
     alertFrame,
     performanceOverlay,
   ];

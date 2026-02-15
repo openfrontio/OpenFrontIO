@@ -1,25 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Cosmetics } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { renderPatternPreview } from "./components/PatternButton";
-import { fetchCosmetics } from "./Cosmetics";
+import { getPlayerCosmetics } from "./Cosmetics";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { translateText } from "./Utils";
-
-// Module-level cosmetics cache to avoid refetching on every component mount
-let cosmeticsCache: Promise<Cosmetics | null> | null = null;
-
-function getCachedCosmetics(): Promise<Cosmetics | null> {
-  if (!cosmeticsCache) {
-    const fetchPromise = fetchCosmetics();
-    cosmeticsCache = fetchPromise.catch((err) => {
-      cosmeticsCache = null;
-      throw err;
-    });
-  }
-  return cosmeticsCache;
-}
 
 @customElement("pattern-input")
 export class PatternInput extends LitElement {
@@ -30,23 +15,13 @@ export class PatternInput extends LitElement {
   @property({ type: Boolean, attribute: "show-select-label" })
   public showSelectLabel: boolean = false;
 
-  private userSettings = new UserSettings();
-  private cosmetics: Cosmetics | null = null;
   private _abortController: AbortController | null = null;
 
-  private _onPatternSelected = () => {
-    this.updateFromSettings();
+  private _onPatternSelected = async () => {
+    const cosmetics = await getPlayerCosmetics();
+    this.selectedColor = cosmetics.color?.color ?? null;
+    this.pattern = cosmetics.pattern ?? null;
   };
-
-  private updateFromSettings() {
-    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
-
-    if (this.cosmetics) {
-      this.pattern = this.userSettings.getSelectedPatternName(this.cosmetics);
-    } else {
-      this.pattern = null;
-    }
-  }
 
   private onInputClick(e: Event) {
     e.preventDefault();
@@ -63,10 +38,9 @@ export class PatternInput extends LitElement {
     super.connectedCallback();
     this._abortController = new AbortController();
     this.isLoading = true;
-    const cosmetics = await getCachedCosmetics();
-    if (!this.isConnected) return;
-    this.cosmetics = cosmetics;
-    this.updateFromSettings();
+    const cosmetics = await getPlayerCosmetics();
+    this.selectedColor = cosmetics.color?.color ?? null;
+    this.pattern = cosmetics.pattern ?? null;
     if (!this.isConnected) return;
     this.isLoading = false;
     window.addEventListener("pattern-selected", this._onPatternSelected, {
@@ -87,6 +61,10 @@ export class PatternInput extends LitElement {
   }
 
   render() {
+    if (crazyGamesSDK.isOnCrazyGames()) {
+      return html``;
+    }
+
     const isDefault = this.pattern === null && this.selectedColor === null;
     const showSelect = this.showSelectLabel && isDefault;
     const buttonTitle = translateText("territory_patterns.title");

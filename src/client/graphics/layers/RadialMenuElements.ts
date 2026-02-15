@@ -17,7 +17,6 @@ import allianceIcon from "/images/AllianceIconWhite.svg?url";
 import boatIcon from "/images/BoatIconWhite.svg?url";
 import buildIcon from "/images/BuildIconWhite.svg?url";
 import chatIcon from "/images/ChatIconWhite.svg?url";
-import checkmarkIcon from "/images/CheckmarkIconWhite.svg?url";
 import donateGoldIcon from "/images/DonateGoldIconWhite.svg?url";
 import donateTroopIcon from "/images/DonateTroopIconWhite.svg?url";
 import emojiIcon from "/images/EmojiIconWhite.svg?url";
@@ -47,7 +46,7 @@ export interface MenuElement {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
-  color?: string;
+  color?: string | ((params: MenuElementParams) => string);
   icon?: string;
   text?: string;
   fontSize?: string;
@@ -77,6 +76,7 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  breakAllyNoDebuff: "#d4882b",
   delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
@@ -217,33 +217,16 @@ const allyBreakElement: MenuElement = {
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
     !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
+  color: (params: MenuElementParams) =>
+    params.selected?.isTraitor() || params.selected?.isDisconnected()
+      ? COLORS.breakAllyNoDebuff
+      : COLORS.breakAlly,
   icon: traitorIcon,
-  subMenu: () => [allyBreakCancelElement, allyBreakConfirmElement],
-};
-
-const allyBreakConfirmElement: MenuElement = {
-  id: "ally_break_confirm",
-  name: "confirm",
-  disabled: () => false,
-  color: COLORS.breakAlly,
-  icon: checkmarkIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
       params.myPlayer,
       params.selected!,
     );
-    params.closeMenu();
-  },
-};
-
-const allyBreakCancelElement: MenuElement = {
-  id: "ally_break_cancel",
-  name: "cancel",
-  disabled: () => false,
-  color: COLORS.info,
-  icon: xIcon,
-  action: (params: MenuElementParams) => {
     params.closeMenu();
   },
 };
@@ -638,10 +621,8 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
-    let ally = allyRequestElement;
-    if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
-    }
+    const isAllied = params.selected?.isAlliedWith(params.myPlayer);
+    const isDisconnected = isDisconnectedTarget(params);
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -651,11 +632,11 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [deleteUnitElement, allyRequestElement, buildMenuElement]
         : [
-            boatMenuElement,
-            ally,
-            isFriendlyTarget(params) && !isDisconnectedTarget(params)
+            isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
+            allyRequestElement,
+            isFriendlyTarget(params) && !isDisconnected
               ? donateGoldRadialElement
               : attackMenuElement,
           ]),

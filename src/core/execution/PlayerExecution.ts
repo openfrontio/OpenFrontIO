@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Cell, Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -60,19 +60,7 @@ export class PlayerExecution implements Execution {
     }
 
     if (!this.player.isAlive()) {
-      // Player has no tiles, delete any remaining units and gold
-      const gold = this.player.gold();
-      this.player.removeGold(gold);
-      this.player.units().forEach((u) => {
-        if (
-          u.type() !== UnitType.AtomBomb &&
-          u.type() !== UnitType.HydrogenBomb &&
-          u.type() !== UnitType.MIRVWarhead &&
-          u.type() !== UnitType.MIRV
-        ) {
-          u.delete();
-        }
-      });
+      this.removeOnDeath();
       this.active = false;
       this.mg.stats().playerKilled(this.player, ticks);
       return;
@@ -139,11 +127,12 @@ export class PlayerExecution implements Execution {
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
-    this.player.largestClusterBoundingBox = calculateBoundingBox(
-      this.mg,
+    const largestClusterBox = calculateBoundingBox(this.mg, largestCluster);
+    this.player.largestClusterBoundingBox = largestClusterBox;
+    const surroundedBy = this.surroundedBySamePlayer(
       largestCluster,
+      largestClusterBox,
     );
-    const surroundedBy = this.surroundedBySamePlayer(largestCluster);
     if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(largestCluster);
     }
@@ -158,7 +147,10 @@ export class PlayerExecution implements Execution {
     }
   }
 
-  private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
+  private surroundedBySamePlayer(
+    cluster: Set<TileRef>,
+    clusterBox: { min: Cell; max: Cell },
+  ): false | Player {
     const enemies = new Set<number>();
     for (const tile of cluster) {
       let hasUnownedNeighbor = false;
@@ -187,7 +179,6 @@ export class PlayerExecution implements Execution {
     }
     const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
     const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
     if (inscribed(enemyBox, clusterBox)) {
       return enemy;
     }
@@ -195,7 +186,11 @@ export class PlayerExecution implements Execution {
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {
-    const enemyTiles = new Set<TileRef>();
+    let hasEnemy = false;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const tr of cluster) {
       if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
         return false;
@@ -203,27 +198,31 @@ export class PlayerExecution implements Execution {
       this.mg.forEachNeighbor(tr, (n) => {
         const owner = this.mg.owner(n);
         if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
-          enemyTiles.add(n);
+          hasEnemy = true;
+          const x = this.mg.x(n);
+          const y = this.mg.y(n);
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
         }
       });
     }
-    if (enemyTiles.size === 0) {
+    if (!hasEnemy) {
       return false;
     }
-    const enemyBox = calculateBoundingBox(this.mg, enemyTiles);
     const clusterBox = calculateBoundingBox(this.mg, cluster);
+    const enemyBox = { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
     return inscribed(enemyBox, clusterBox);
   }
 
   private removeCluster(cluster: Set<TileRef>) {
-    if (
-      Array.from(cluster).some(
-        (t) => this.mg?.ownerID(t) !== this.player?.smallID(),
-      )
-    ) {
-      // Other removeCluster operations could change tile owners,
-      // so double check.
-      return;
+    for (const t of cluster) {
+      if (this.mg?.ownerID(t) !== this.player?.smallID()) {
+        // Other removeCluster operations could change tile owners,
+        // so double check.
+        return;
+      }
     }
 
     const capturing = this.getCapturingPlayer(cluster);
@@ -388,5 +387,25 @@ export class PlayerExecution implements Execution {
     }
 
     return result;
+  }
+
+  private removeOnDeath(): void {
+    // Player (bot, human, nation) has no tiles
+    // Delete any remaining gold, non-nuke units and alliances
+    const gold = this.player.gold();
+    this.player.removeGold(gold);
+
+    this.player.units().forEach((u) => {
+      if (
+        u.type() !== UnitType.AtomBomb &&
+        u.type() !== UnitType.HydrogenBomb &&
+        u.type() !== UnitType.MIRVWarhead &&
+        u.type() !== UnitType.MIRV
+      ) {
+        u.delete();
+      }
+    });
+
+    this.player.removeAllAlliances();
   }
 }

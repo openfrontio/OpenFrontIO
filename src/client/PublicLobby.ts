@@ -1,35 +1,31 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { renderDuration, translateText } from "../client/Utils";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  HumansVsNations,
-  PublicGameModifiers,
-  Quads,
-  Trios,
-} from "../core/game/Game";
-import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { GameMapType } from "../core/game/Game";
+import { GameID, PublicGameInfo, PublicGames } from "../core/Schemas";
 import { PublicLobbySocket } from "./LobbySocket";
-import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  getGameModeLabel,
+  getModifierLabels,
+  normaliseMapKey,
+  renderDuration,
+  translateText,
+} from "./Utils";
+
+export interface ShowPublicLobbyModalEvent {
+  lobby: PublicGameInfo;
+}
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
-  @state() private lobbies: GameInfo[] = [];
+  @state() private publicGames: PublicGames | null = null;
   @state() public isLobbyHighlighted: boolean = false;
-  @state() private isButtonDebounced: boolean = false;
   @state() private mapImages: Map<GameID, string> = new Map();
-  @state() private joiningDotIndex: number = 0;
 
-  private joiningInterval: number | null = null;
-  private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 150;
   private lobbyIDToStart = new Map<GameID, number>();
-  private lobbySocket = new PublicLobbySocket((lobbies) =>
-    this.handleLobbiesUpdate(lobbies),
+  private serverTimeOffset = 0;
+  private lobbySocket = new PublicLobbySocket((data) =>
+    this.handleLobbiesUpdate(data),
   );
 
   createRenderRoot() {
@@ -44,15 +40,21 @@ export class PublicLobby extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.lobbySocket.stop();
-    this.stopJoiningAnimation();
   }
 
-  private handleLobbiesUpdate(lobbies: GameInfo[]) {
-    this.lobbies = lobbies;
-    this.lobbies.forEach((l) => {
+  private handleLobbiesUpdate(publicGames: PublicGames) {
+    this.publicGames = publicGames;
+
+    // Calculate offset between server time and client time
+    if (this.publicGames) {
+      this.serverTimeOffset = this.publicGames.serverTime - Date.now();
+    }
+    // TODO: thihs is just a temporary scaffolding until PR #3191 is merged.
+    this.publicGames.games["ffa"]?.forEach((l) => {
       if (!this.lobbyIDToStart.has(l.gameID)) {
-        const msUntilStart = l.msUntilStart ?? 0;
-        this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
+        // Convert server's startsAt to client time by subtracting offset
+        const startsAt = l.startsAt ?? Date.now();
+        this.lobbyIDToStart.set(l.gameID, startsAt - this.serverTimeOffset);
       }
 
       if (l.gameConfig && !this.mapImages.has(l.gameID)) {
@@ -74,9 +76,9 @@ export class PublicLobby extends LitElement {
   }
 
   render() {
-    if (this.lobbies.length === 0) return html``;
+    if (!this.publicGames) return html``;
 
-    const lobby = this.lobbies[0];
+    const lobby = this.publicGames.games["ffa"]?.[0];
     if (!lobby?.gameConfig) return html``;
 
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
@@ -84,52 +86,16 @@ export class PublicLobby extends LitElement {
     const isStarting = timeRemaining <= 2;
     const timeDisplay = renderDuration(timeRemaining);
 
-    const teamCount =
-      lobby.gameConfig.gameMode === GameMode.Team
-        ? (lobby.gameConfig.playerTeams ?? 0)
-        : null;
-
-    const maxPlayers = lobby.gameConfig.maxPlayers ?? 0;
-    const teamSize = this.getTeamSize(teamCount, maxPlayers);
-    const teamTotal = this.getTeamTotal(teamCount, teamSize, maxPlayers);
-    const modeLabel = this.getModeLabel(
-      lobby.gameConfig.gameMode,
-      teamCount,
-      teamTotal,
-      teamSize,
-    );
-    // True when the detail label already includes the full mode text.
-    const { label: teamDetailLabel, isFullLabel: isTeamDetailFullLabel } =
-      this.getTeamDetailLabel(
-        lobby.gameConfig.gameMode,
-        teamCount,
-        teamTotal,
-        teamSize,
-      );
-
-    let fullModeLabel = modeLabel;
-    if (teamDetailLabel) {
-      fullModeLabel = isTeamDetailFullLabel
-        ? teamDetailLabel
-        : `${modeLabel} ${teamDetailLabel}`;
-    }
-
-    const modifierLabel = this.getModifierLabels(
+    const modeLabel = getGameModeLabel(lobby.gameConfig);
+    const modifierLabels = getModifierLabels(
       lobby.gameConfig.publicGameModifiers,
     );
-
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
-        ?disabled=${this.isButtonDebounced}
-        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] ${this
-          .isLobbyHighlighted
-          ? "ring-2 ring-blue-600 scale-[1.01] opacity-70"
-          : "hover:scale-[1.01]"} active:scale-[0.98] ${this.isButtonDebounced
-          ? "cursor-not-allowed"
-          : ""}"
+        class="group relative isolate flex flex-col w-full h-80 lg:h-96 overflow-hidden rounded-2xl transition-all duration-200 bg-[#3d7bab] hover:scale-[1.01] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
       >
         <div class="font-sans w-full h-full flex flex-col">
           <!-- Main card gradient - stops before text -->
@@ -149,11 +115,11 @@ export class PublicLobby extends LitElement {
           </div>
 
           <!-- Mode Badge in top left -->
-          ${fullModeLabel
+          ${modeLabel
             ? html`<span
                 class="absolute top-4 left-4 px-4 py-1 rounded font-bold text-sm lg:text-base uppercase tracking-widest z-30 bg-slate-800 text-white ring-1 ring-white/10 shadow-sm"
               >
-                ${fullModeLabel}
+                ${modeLabel}
               </span>`
             : ""}
 
@@ -175,11 +141,11 @@ export class PublicLobby extends LitElement {
           <!-- Content Banner -->
           <div class="absolute bottom-0 left-0 right-0 z-20">
             <!-- Modifier badges placed just above the gradient overlay -->
-            ${modifierLabel.length > 0
+            ${modifierLabels.length > 0
               ? html`<div
                   class="absolute -top-8 left-4 z-30 flex gap-2 flex-wrap"
                 >
-                  ${modifierLabel.map(
+                  ${modifierLabels.map(
                     (label) => html`
                       <span
                         class="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide bg-purple-600 text-white"
@@ -200,19 +166,10 @@ export class PublicLobby extends LitElement {
               <!-- Header row: Status/Join on left, Player Count on right -->
               <div class="flex items-center justify-between w-full">
                 <div class="text-base uppercase tracking-widest text-white">
-                  ${this.currLobby
-                    ? isStarting
-                      ? html`<span class="text-green-400 animate-pulse"
-                          >${translateText("public_lobby.starting_game")}</span
-                        >`
-                      : html`<span class="text-orange-400"
-                          >${translateText("public_lobby.waiting_for_players")}
-                          ${[0, 1, 2]
-                            .map((i) =>
-                              i === this.joiningDotIndex ? "•" : "·",
-                            )
-                            .join("")}</span
-                        >`
+                  ${isStarting
+                    ? html`<span class="text-green-400 animate-pulse"
+                        >${translateText("public_lobby.starting_game")}</span
+                      >`
                     : html`${translateText("public_lobby.join")}`}
                 </div>
 
@@ -237,7 +194,7 @@ export class PublicLobby extends LitElement {
                 class="text-2xl lg:text-3xl font-bold text-white leading-none uppercase tracking-widest w-full"
               >
                 ${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
+                  `map.${normaliseMapKey(lobby.gameConfig.gameMap)}`,
                 )}
               </div>
 
@@ -249,190 +206,36 @@ export class PublicLobby extends LitElement {
     `;
   }
 
-  leaveLobby() {
-    this.isLobbyHighlighted = false;
-    this.currLobby = null;
-    this.stopJoiningAnimation();
-  }
-
   public stop() {
     this.lobbySocket.stop();
-    this.isLobbyHighlighted = false;
-    this.currLobby = null;
-    this.stopJoiningAnimation();
   }
 
-  private startJoiningAnimation() {
-    if (this.joiningInterval !== null) return;
-
-    this.joiningDotIndex = 0;
-    this.joiningInterval = window.setInterval(() => {
-      this.joiningDotIndex = (this.joiningDotIndex + 1) % 3;
-    }, 500);
-  }
-
-  private stopJoiningAnimation() {
-    if (this.joiningInterval !== null) {
-      clearInterval(this.joiningInterval);
-      this.joiningInterval = null;
-    }
-    this.joiningDotIndex = 0;
-  }
-
-  private getTeamSize(
-    teamCount: number | string | null,
-    maxPlayers: number,
-  ): number | undefined {
-    if (typeof teamCount === "string") {
-      if (teamCount === Duos) return 2;
-      if (teamCount === Trios) return 3;
-      if (teamCount === Quads) return 4;
-      if (teamCount === HumansVsNations) return maxPlayers;
-      return undefined;
-    }
-    if (typeof teamCount === "number" && teamCount > 0) {
-      return Math.floor(maxPlayers / teamCount);
-    }
-    return undefined;
-  }
-
-  private getTeamTotal(
-    teamCount: number | string | null,
-    teamSize: number | undefined,
-    maxPlayers: number,
-  ): number | undefined {
-    if (typeof teamCount === "number") return teamCount;
-    if (teamCount === HumansVsNations) return 2;
-    if (teamSize && teamSize > 0) return Math.floor(maxPlayers / teamSize);
-    return undefined;
-  }
-
-  private getModeLabel(
-    gameMode: GameMode,
-    teamCount: number | string | null,
-    teamTotal: number | undefined,
-    teamSize: number | undefined,
-  ): string {
-    if (gameMode !== GameMode.Team) return translateText("game_mode.ffa");
-    if (teamCount === HumansVsNations && teamSize !== undefined)
-      return translateText("public_lobby.teams_hvn_detailed", {
-        num: teamSize,
-      });
-    const totalTeams =
-      teamTotal ?? (typeof teamCount === "number" ? teamCount : 0);
-    return translateText("public_lobby.teams", { num: totalTeams });
-  }
-
-  private getTeamDetailLabel(
-    gameMode: GameMode,
-    teamCount: number | string | null,
-    teamTotal: number | undefined,
-    teamSize: number | undefined,
-  ): { label: string | null; isFullLabel: boolean } {
-    if (gameMode !== GameMode.Team) {
-      return { label: null, isFullLabel: false };
-    }
-
-    if (typeof teamCount === "string" && teamCount === HumansVsNations) {
-      return { label: null, isFullLabel: false };
-    }
-
-    if (typeof teamCount === "string") {
-      const teamKey = `public_lobby.teams_${teamCount}`;
-      // translateText returns the key when a translation is missing.
-      const maybeTranslated = translateText(teamKey, {
-        team_count: teamTotal ?? 0,
-      });
-      if (maybeTranslated !== teamKey) {
-        return { label: maybeTranslated, isFullLabel: true };
-      }
-    }
-
-    if (teamTotal !== undefined && teamSize !== undefined) {
-      // Fallback when there's no specific team label translation.
-      return {
-        label: translateText("public_lobby.players_per_team", {
-          num: teamSize,
-        }),
-        isFullLabel: false,
-      };
-    }
-
-    return { label: null, isFullLabel: false };
-  }
-
-  private getModifierLabels(
-    publicGameModifiers: PublicGameModifiers | undefined,
-  ): string[] {
-    if (!publicGameModifiers) {
-      return [];
-    }
-    const labels: string[] = [];
-    if (publicGameModifiers.isRandomSpawn) {
-      labels.push(translateText("public_game_modifier.random_spawn"));
-    }
-    if (publicGameModifiers.isCompact) {
-      labels.push(translateText("public_game_modifier.compact_map"));
-    }
-    if (publicGameModifiers.isCrowded) {
-      labels.push(translateText("public_game_modifier.crowded"));
-    }
-    if (publicGameModifiers.startingGold) {
-      labels.push(translateText("public_game_modifier.starting_gold"));
-    }
-    return labels;
-  }
-
-  private lobbyClicked(lobby: GameInfo) {
-    if (this.isButtonDebounced) return;
-
-    this.isButtonDebounced = true;
-    setTimeout(() => {
-      this.isButtonDebounced = false;
-    }, this.debounceDelay);
-
-    if (this.currLobby === null) {
-      // Validate username only when joining a new lobby
-      const usernameInput = document.querySelector("username-input") as any;
-      if (
-        usernameInput &&
-        typeof usernameInput.isValid === "function" &&
-        !usernameInput.isValid()
-      ) {
-        window.dispatchEvent(
-          new CustomEvent("show-message", {
-            detail: {
-              message: usernameInput.validationError,
-              color: "red",
-              duration: 3000,
-            },
-          }),
-        );
-        return;
-      }
-
-      this.isLobbyHighlighted = true;
-      this.currLobby = lobby;
-      this.startJoiningAnimation();
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
+  private lobbyClicked(lobby: PublicGameInfo) {
+    // Validate username before opening the modal
+    const usernameInput = document.querySelector("username-input") as any;
+    if (
+      usernameInput &&
+      typeof usernameInput.isValid === "function" &&
+      !usernameInput.isValid()
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
           detail: {
-            gameID: lobby.gameID,
-            clientID: generateID(),
-          } as JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
+            message: usernameInput.validationError,
+            color: "red",
+            duration: 3000,
+          },
         }),
       );
-    } else {
-      this.dispatchEvent(
-        new CustomEvent("leave-lobby", {
-          detail: { lobby: this.currLobby },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this.leaveLobby();
+      return;
     }
+
+    this.dispatchEvent(
+      new CustomEvent("show-public-lobby-modal", {
+        detail: { lobby } as ShowPublicLobbyModalEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }

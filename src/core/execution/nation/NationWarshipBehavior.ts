@@ -99,7 +99,11 @@ export class NationWarshipBehavior {
       if (!ship.isActive()) {
         // Distinguish between arrival/retreat and enemy destruction
         if (ship.wasDestroyedByEnemy() && ship.destroyer() !== undefined) {
-          this.maybeRetaliateWithWarship(ship.tile(), ship.destroyer()!);
+          this.maybeRetaliateWithWarship(
+            ship.tile(),
+            ship.destroyer()!,
+            "transport",
+          );
         }
         this.trackedTransportShips.delete(ship);
       }
@@ -121,13 +125,17 @@ export class NationWarshipBehavior {
       }
       if (ship.owner().id() !== this.player.id()) {
         // Ship was ours and is now owned by someone else -> captured
-        this.maybeRetaliateWithWarship(ship.tile(), ship.owner());
+        this.maybeRetaliateWithWarship(ship.tile(), ship.owner(), "trade");
         this.trackedTradeShips.delete(ship);
       }
     }
   }
 
-  private maybeRetaliateWithWarship(tile: TileRef, enemy: Player): void {
+  private maybeRetaliateWithWarship(
+    tile: TileRef,
+    enemy: Player,
+    reason: "trade" | "transport",
+  ): void {
     // Don't send too many warships
     if (this.player.units(UnitType.Warship).length >= 10) {
       return;
@@ -148,6 +156,7 @@ export class NationWarshipBehavior {
         new ConstructionExecution(this.player, UnitType.Warship, tile),
       );
       this.emojiBehavior.maybeSendEmoji(enemy, EMOJI_WARSHIP_RETALIATION);
+      this.player.updateRelation(enemy, reason === "trade" ? -7.5 : -15);
     }
   }
 

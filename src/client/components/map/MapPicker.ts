@@ -43,6 +43,10 @@ export class MapPicker extends LitElement {
     this.onSelectRandom?.();
   };
 
+  private preventImageDrag(event: DragEvent) {
+    event.preventDefault();
+  }
+
   private getWins(mapValue: GameMapType): Set<Difficulty> {
     return this.mapWins?.get(mapValue) ?? new Set();
   }
@@ -54,7 +58,7 @@ export class MapPicker extends LitElement {
     return html`
       <div
         @click=${() => this.handleMapSelection(mapValue)}
-        class="cursor-pointer transition-transform duration-200 active:scale-95"
+        class="cursor-pointer"
       >
         <map-display
           .mapKey=${mapKey}
@@ -117,7 +121,7 @@ export class MapPicker extends LitElement {
               type="button"
               role="tab"
               aria-selected=${!this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${this
+              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${this
                 .showAllMaps
                 ? "text-white/60 hover:text-white"
                 : "bg-blue-500/20 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.2)]"}"
@@ -129,7 +133,7 @@ export class MapPicker extends LitElement {
               type="button"
               role="tab"
               aria-selected=${this.showAllMaps}
-              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${this
+              class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${this
                 .showAllMaps
                 ? "bg-blue-500/20 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.2)]"
                 : "text-white/60 hover:text-white"}"
@@ -152,27 +156,30 @@ export class MapPicker extends LitElement {
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button
-              class="relative group rounded-xl border transition-all duration-200 overflow-hidden flex flex-col items-stretch ${this
+              type="button"
+              class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${this
                 .useRandomMap
                 ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"}"
               @click=${this.handleSelectRandomMap}
             >
               <div
-                class="aspect-[2/1] w-full relative overflow-hidden bg-black/20"
+                class="w-full aspect-[2/1] relative overflow-hidden rounded-lg bg-black/20"
               >
                 <img
                   src=${randomMap}
                   alt=${translateText("map.random")}
-                  class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                  draggable="false"
+                  @dragstart=${this.preventImageDrag}
+                  class="w-full h-full object-cover ${this.useRandomMap
+                    ? "opacity-100"
+                    : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
                 />
               </div>
-              <div class="p-3 text-center border-t border-white/5">
-                <div
-                  class="text-xs font-bold text-white uppercase tracking-wider break-words hyphens-auto"
-                >
-                  ${translateText("map.random")}
-                </div>
+              <div
+                class="text-xs font-bold text-white uppercase tracking-wider text-center leading-tight break-words hyphens-auto"
+              >
+                ${translateText("map.random")}
               </div>
             </button>
           </div>
