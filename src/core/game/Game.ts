@@ -260,6 +260,13 @@ export enum TrainType {
   Carriage = "Carriage",
 }
 
+export const nukeTypes = [
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.MIRV,
+] satisfies UnitType[];
+
 const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.City,
   UnitType.DefensePost,
@@ -275,22 +282,17 @@ export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
 }
 
+const _buildableNukeTypes: readonly UnitType[] = nukeTypes.filter(
+  (type) => type !== UnitType.MIRVWarhead,
+);
+
 const _buildMenuTypes: ReadonlySet<UnitType> = new Set([
-  UnitType.City,
-  UnitType.DefensePost,
-  UnitType.SAMLauncher,
-  UnitType.MissileSilo,
-  UnitType.Port,
-  UnitType.Factory,
+  ..._structureTypes,
+  ..._buildableNukeTypes,
   UnitType.Warship,
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRV,
 ]);
 
-export const BuildMenuTypes: readonly UnitType[] = [
-  ..._buildMenuTypes,
-];
+export const BuildMenuTypes: readonly UnitType[] = [..._buildMenuTypes];
 
 const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
   ..._buildMenuTypes,
@@ -300,6 +302,11 @@ const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
 export const PlayerBuildableTypes: readonly UnitType[] = [
   ..._playerBuildableTypes,
 ];
+
+export function isPlayerBuildableType(type: UnitType): boolean {
+  return _playerBuildableTypes.has(type);
+}
+
 export interface OwnerComp {
   owner: Player;
 }
@@ -368,13 +375,6 @@ export interface UnitParamsMap {
 export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
-
-export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
-] satisfies UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -652,7 +652,10 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, units?: readonly UnitType[]): BuildableUnit[];
+  buildableUnits(
+    tile: TileRef | null,
+    units?: readonly UnitType[],
+  ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
@@ -817,7 +820,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;

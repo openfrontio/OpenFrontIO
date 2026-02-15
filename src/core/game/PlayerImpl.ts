@@ -917,6 +917,10 @@ export class PlayerImpl implements Player {
   }
 
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    if (!this.mg.config().unitInfo(type).upgradable) {
+      return false;
+    }
+
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type, undefined, true)
@@ -971,43 +975,43 @@ export class PlayerImpl implements Player {
       (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
-    return PlayerBuildableTypes
-      .filter((u) => units === undefined || units.includes(u))
-      .map((u) => {
-        let canUpgrade: number | false = false;
-        let canBuild: TileRef | false = false;
-        if (!this.mg.inSpawnPhase()) {
-          const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-          if (existingUnit !== false) {
-            canUpgrade = existingUnit.id();
-          }
-          if (tile !== null) {
-            canBuild = this.canBuild(u, tile, validTiles);
-          }
+    return PlayerBuildableTypes.filter(
+      (u) => units === undefined || units.includes(u),
+    ).map((u) => {
+      const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
+      let canUpgrade: number | false = false;
+      let canBuild: TileRef | false = false;
+      if (tile !== null && !this.mg.inSpawnPhase()) {
+        const existingUnit = this.findUnitToUpgrade(u, tile);
+        if (existingUnit !== false) {
+          canUpgrade = existingUnit.id();
         }
-        return {
-          type: u,
-          canBuild,
-          canUpgrade,
-          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
-          overlappingRailroads:
-            canBuild !== false
-              ? this.mg.railNetwork().overlappingRailroads(canBuild)
-              : [],
-        } as BuildableUnit;
-      });
+        canBuild = this.canBuild(u, tile, validTiles, cost);
+      }
+      return {
+        type: u,
+        canBuild,
+        canUpgrade,
+        cost,
+        overlappingRailroads:
+          canBuild !== false
+            ? this.mg.railNetwork().overlappingRailroads(canBuild)
+            : [],
+      } as BuildableUnit;
+    });
   }
 
   canBuild(
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
+    knownCost: Gold | null = null,
   ): TileRef | false {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this.mg, this);
+    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
     if (
       unitType !== UnitType.MIRVWarhead &&
       (!this.isAlive() || this.gold() < cost)
@@ -1148,14 +1152,11 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
-    });
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      types,
+      StructureTypes,
       undefined,
       true,
     );

@@ -403,7 +403,10 @@ export class PlayerView {
     return { hasEmbargo, hasFriendly };
   }
 
-  async actions(tile?: TileRef, units?: readonly UnitType[]): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    units?: readonly UnitType[],
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
@@ -707,7 +710,7 @@ export class GameView implements GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(

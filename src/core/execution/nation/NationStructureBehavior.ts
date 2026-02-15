@@ -228,7 +228,7 @@ export class NationStructureBehavior {
     const structures = this.player.units(type);
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      type !== UnitType.DefensePost
+      this.game.config().unitInfo(type).upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -330,10 +330,8 @@ export class NationStructureBehavior {
       return false;
     }
     const structureToUpgrade = this.findBestStructureToUpgrade(structures);
-    if (
-      structureToUpgrade !== null &&
-      this.player.canUpgradeUnit(structureToUpgrade)
-    ) {
+    if (structureToUpgrade !== null) {
+      //canUpgradeUnit already checked in findBestStructureToUpgrade and again in UpgradeStructureExecution
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
@@ -346,12 +344,10 @@ export class NationStructureBehavior {
    * Calculates total structure density across player's territory.
    */
   private getTotalStructureDensity(): number {
-    let totalStructures = 0;
-    for (const type of StructureTypes) {
-      totalStructures += this.player.units(type).length; // ignoring levels
-    }
     const tilesOwned = this.player.numTilesOwned();
-    return tilesOwned > 0 ? totalStructures / tilesOwned : 0;
+    return tilesOwned > 0
+      ? this.player.units(...StructureTypes).length / tilesOwned
+      : 0; //ignoring levels for structures
   }
 
   /**
