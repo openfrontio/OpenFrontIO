@@ -1,6 +1,7 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
+import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -16,6 +17,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  UnitType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -105,6 +107,11 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.nationExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
+    if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
+      this.game.addExecution(
+        new RecomputeRailClusterExecution(this.game.railNetwork()),
+      );
+    }
   }
 
   public addTurn(turn: Turn): void {
@@ -188,13 +195,14 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    units?: UnitType[],
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: tile !== null && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile),
+      canAttack: tile !== null && units === undefined && player.canAttack(tile),
+      buildableUnits: player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
       canEmbargoAll: player.canEmbargoAll(),
     } as PlayerActions;

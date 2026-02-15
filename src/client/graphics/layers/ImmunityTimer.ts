@@ -1,14 +1,21 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
+export class ImmunityBarVisibleEvent implements GameEvent {
+  constructor(public readonly visible: boolean) {}
+}
+
 @customElement("immunity-timer")
 export class ImmunityTimer extends LitElement implements Layer {
   public game: GameView;
+  public eventBus: EventBus;
 
   private isVisible = false;
+  private _barVisible = false;
   private isActive = false;
   private progressRatio = 0;
 
@@ -41,32 +48,43 @@ export class ImmunityTimer extends LitElement implements Layer {
     const immunityDuration = this.game.config().spawnImmunityDuration();
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
 
-    if (immunityDuration <= 5 * 10 || this.game.inSpawnPhase()) {
+    if (
+      !this.game.config().hasExtendedSpawnImmunity() ||
+      this.game.inSpawnPhase()
+    ) {
       this.setInactive();
-      return;
+    } else {
+      const immunityEnd = spawnPhaseTurns + immunityDuration;
+      const ticks = this.game.ticks();
+
+      if (ticks >= immunityEnd || ticks < spawnPhaseTurns) {
+        this.setInactive();
+      } else {
+        const elapsedTicks = Math.max(0, ticks - spawnPhaseTurns);
+        this.progressRatio = Math.min(
+          1,
+          Math.max(0, elapsedTicks / immunityDuration),
+        );
+        this.isActive = true;
+        this.requestUpdate();
+      }
     }
 
-    const immunityEnd = spawnPhaseTurns + immunityDuration;
-    const ticks = this.game.ticks();
-
-    if (ticks >= immunityEnd || ticks < spawnPhaseTurns) {
-      this.setInactive();
-      return;
-    }
-
-    const elapsedTicks = Math.max(0, ticks - spawnPhaseTurns);
-    this.progressRatio = Math.min(
-      1,
-      Math.max(0, elapsedTicks / immunityDuration),
-    );
-    this.isActive = true;
-    this.requestUpdate();
+    this.emitBarVisibility();
   }
 
   private setInactive() {
     if (this.isActive) {
       this.isActive = false;
       this.requestUpdate();
+    }
+  }
+
+  private emitBarVisibility() {
+    const nowVisible = this.isVisible && this.isActive;
+    if (nowVisible !== this._barVisible) {
+      this._barVisible = nowVisible;
+      this.eventBus?.emit(new ImmunityBarVisibleEvent(this._barVisible));
     }
   }
 
