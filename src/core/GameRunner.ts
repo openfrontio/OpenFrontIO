@@ -187,10 +187,6 @@ export class GameRunner {
     return true;
   }
 
-  public pendingTurns(): number {
-    return Math.max(0, this.turns.length - this.currTurn);
-  }
-
   public playerActions(
     playerID: PlayerID,
     x?: number,
