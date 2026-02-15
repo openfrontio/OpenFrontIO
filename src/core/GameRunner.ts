@@ -195,7 +195,7 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: UnitType[],
+    units?: readonly UnitType[],
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =

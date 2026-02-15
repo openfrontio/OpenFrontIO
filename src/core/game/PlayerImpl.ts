@@ -26,6 +26,7 @@ import {
   MessageType,
   MutableAlliance,
   Player,
+  PlayerBuildableTypes,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -963,14 +964,14 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units?: UnitType[],
+    units?: readonly UnitType[],
   ): BuildableUnit[] {
     const validTiles =
       tile !== null &&
       (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
-    return Object.values(UnitType)
+    return PlayerBuildableTypes
       .filter((u) => units === undefined || units.includes(u))
       .map((u) => {
         let canUpgrade: number | false = false;

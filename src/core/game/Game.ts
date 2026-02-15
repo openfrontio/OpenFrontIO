@@ -275,6 +275,31 @@ export function isStructureType(type: UnitType): boolean {
   return _structureTypes.has(type);
 }
 
+const _buildMenuTypes: ReadonlySet<UnitType> = new Set([
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.Warship,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+]);
+
+export const BuildMenuTypes: readonly UnitType[] = [
+  ..._buildMenuTypes,
+];
+
+const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
+  ..._buildMenuTypes,
+  UnitType.TransportShip,
+]);
+
+export const PlayerBuildableTypes: readonly UnitType[] = [
+  ..._playerBuildableTypes,
+];
 export interface OwnerComp {
   owner: Player;
 }
@@ -349,7 +374,7 @@ export const nukeTypes = [
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
-] as UnitType[];
+] satisfies UnitType[];
 
 export enum Relation {
   Hostile = 0,
@@ -627,7 +652,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
+  buildableUnits(tile: TileRef | null, units?: readonly UnitType[]): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

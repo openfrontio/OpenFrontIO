@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
+import { BuildMenuTypes, Gold, PlayerActions, PlayerBuildableTypes, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,
@@ -21,19 +21,6 @@ import atomBombIcon from "/images/NukeIconWhite.svg?url";
 import portIcon from "/images/PortIcon.svg?url";
 import samLauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import defensePostIcon from "/images/ShieldIconWhite.svg?url";
-
-const BUILDABLE_UNITS: UnitType[] = [
-  UnitType.City,
-  UnitType.Factory,
-  UnitType.Port,
-  UnitType.DefensePost,
-  UnitType.MissileSilo,
-  UnitType.SAMLauncher,
-  UnitType.Warship,
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRV,
-];
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
@@ -68,7 +55,7 @@ export class UnitDisplay extends LitElement implements Layer {
       }
     }
 
-    this.allDisabled = BUILDABLE_UNITS.every((u) => config.isUnitDisabled(u));
+    this.allDisabled = BuildMenuTypes.every((u) => config.isUnitDisabled(u));
     this.requestUpdate();
   }
 
@@ -104,7 +91,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player?.actions(undefined, BUILDABLE_UNITS).then((actions) => {
+    player?.actions(undefined, BuildMenuTypes).then((actions) => {
       this.playerActions = actions;
     });
     if (!player) return;
