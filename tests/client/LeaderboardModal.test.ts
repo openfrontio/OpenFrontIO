@@ -17,6 +17,7 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.title": "Leaderboard",
       "leaderboard_modal.ranked_tab": "Ranked",
       "leaderboard_modal.clans_tab": "Clans",
+      "leaderboard_modal.refresh_time": "Refreshed every 1 hour",
       "leaderboard_modal.error": "Something went wrong",
       "leaderboard_modal.rank": "Rank",
       "leaderboard_modal.clan": "Clan",

@@ -144,6 +144,7 @@ export class NationExecution implements Execution {
     }
 
     if (!this.player.isAlive()) {
+      //removeOnDeath is called from nation's PlayerExecution
       this.active = false;
       return;
     }

@@ -8,15 +8,12 @@ import {
   getMessageCategory,
   MessageCategory,
   MessageType,
-  PlayerType,
   Tick,
-  UnitType,
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
-  AttackUpdate,
   BrokeAllianceUpdate,
   DisplayChatMessageUpdate,
   DisplayMessageUpdate,
@@ -26,22 +23,15 @@ import {
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
 import {
-  CancelAttackIntentEvent,
-  CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
-  SendAttackIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
-import {
-  GoToPlayerEvent,
-  GoToPositionEvent,
-  GoToUnitEvent,
-} from "./Leaderboard";
+import { renderNumber } from "../../Utils";
+import { GoToPlayerEvent, GoToUnitEvent } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { UIState } from "../UIState";
@@ -84,10 +74,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
   // allianceID -> last checked at tick
   private alliancesCheckedAt = new Map<number, Tick>();
-  @state() private incomingAttacks: AttackUpdate[] = [];
-  @state() private outgoingAttacks: AttackUpdate[] = [];
-  @state() private outgoingLandAttacks: AttackUpdate[] = [];
-  @state() private outgoingBoats: UnitView[] = [];
   @state() private _hidden: boolean = false;
   @state() private _isVisible: boolean = false;
   @state() private newEvents: number = 0;
@@ -194,9 +180,6 @@ export class EventsDisplay extends LitElement implements Layer {
   constructor() {
     super();
     this.events = [];
-    this.incomingAttacks = [];
-    this.outgoingAttacks = [];
-    this.outgoingBoats = [];
   }
 
   init() {}
@@ -254,24 +237,6 @@ export class EventsDisplay extends LitElement implements Layer {
       this.requestUpdate();
     }
 
-    // Update attacks
-    this.incomingAttacks = myPlayer.incomingAttacks().filter((a) => {
-      const t = (this.game.playerBySmallID(a.attackerID) as PlayerView).type();
-      return t !== PlayerType.Bot;
-    });
-
-    this.outgoingAttacks = myPlayer
-      .outgoingAttacks()
-      .filter((a) => a.targetID !== 0);
-
-    this.outgoingLandAttacks = myPlayer
-      .outgoingAttacks()
-      .filter((a) => a.targetID === 0);
-
-    this.outgoingBoats = myPlayer
-      .units()
-      .filter((u) => u.type() === UnitType.TransportShip);
-
     this.requestUpdate();
   }
 
@@ -286,7 +251,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer?.isAlive()) return;
 
+    const currentAllianceIds = new Set<number>();
+
     for (const alliance of myPlayer.alliances()) {
+      currentAllianceIds.add(alliance.id);
+
       if (
         alliance.expiresAt >
         this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
@@ -305,7 +274,6 @@ export class EventsDisplay extends LitElement implements Layer {
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
       const other = this.game.player(alliance.other) as PlayerView;
-      if (!other.isAlive()) continue;
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
@@ -339,6 +307,13 @@ export class EventsDisplay extends LitElement implements Layer {
         focusID: other.smallID(),
         allianceID: alliance.id,
       });
+    }
+
+    for (const [allianceId] of this.alliancesCheckedAt) {
+      if (!currentAllianceIds.has(allianceId)) {
+        this.removeAllianceRenewalEvents(allianceId);
+        this.alliancesCheckedAt.delete(allianceId);
+      }
     }
   }
 
@@ -565,6 +540,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!myPlayer) return;
 
     this.removeAllianceRenewalEvents(update.allianceID);
+    this.alliancesCheckedAt.delete(update.allianceID);
     this.requestUpdate();
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
@@ -664,26 +640,10 @@ export class EventsDisplay extends LitElement implements Layer {
     });
   }
 
-  emitCancelAttackIntent(id: string) {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
-    this.eventBus.emit(new CancelAttackIntentEvent(id));
-  }
-
-  emitBoatCancelIntent(id: number) {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
-    this.eventBus.emit(new CancelBoatIntentEvent(id));
-  }
-
   emitGoToPlayerEvent(attackerID: number) {
     const attacker = this.game.playerBySmallID(attackerID) as PlayerView;
     if (!attacker) return;
     this.eventBus.emit(new GoToPlayerEvent(attacker));
-  }
-
-  emitGoToPositionEvent(x: number, y: number) {
-    this.eventBus.emit(new GoToPositionEvent(x, y));
   }
 
   emitGoToUnitEvent(unit: UnitView) {
@@ -751,196 +711,6 @@ export class EventsDisplay extends LitElement implements Layer {
     return event.unsafeDescription
       ? unsafeHTML(onlyImages(event.description))
       : event.description;
-  }
-
-  private async attackWarningOnClick(attack: AttackUpdate) {
-    const playerView = this.game.playerBySmallID(attack.attackerID);
-    if (playerView !== undefined) {
-      if (playerView instanceof PlayerView) {
-        const averagePosition = await playerView.attackAveragePosition(
-          attack.attackerID,
-          attack.id,
-        );
-
-        if (averagePosition === null) {
-          this.emitGoToPlayerEvent(attack.attackerID);
-        } else {
-          this.emitGoToPositionEvent(averagePosition.x, averagePosition.y);
-        }
-      }
-    } else {
-      this.emitGoToPlayerEvent(attack.attackerID);
-    }
-  }
-
-  private handleRetaliate(attack: AttackUpdate) {
-    const attacker = this.game.playerBySmallID(attack.attackerID) as PlayerView;
-    if (!attacker) return;
-
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
-
-    const counterTroops = Math.min(
-      attack.troops,
-      this.uiState.attackRatio * myPlayer.troops(),
-    );
-    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
-  }
-
-  private renderIncomingAttacks() {
-    return html`
-      ${this.incomingAttacks.length > 0
-        ? html`
-            <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.incomingAttacks.map(
-                (attack) => html`
-                  <div class="inline-flex items-center gap-1">
-                    ${this.renderButton({
-                      content: html`
-                        ${renderTroops(attack.troops)}
-                        ${(
-                          this.game.playerBySmallID(
-                            attack.attackerID,
-                          ) as PlayerView
-                        )?.name()}
-                        ${attack.retreating
-                          ? `(${translateText("events_display.retreating")}...)`
-                          : ""}
-                      `,
-                      onClick: () => this.attackWarningOnClick(attack),
-                      className: "text-left text-red-400",
-                      translate: false,
-                    })}
-                    ${!attack.retreating
-                      ? this.renderButton({
-                          content: translateText("events_display.retaliate"),
-                          onClick: () => this.handleRetaliate(attack),
-                          className:
-                            "inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
-                          translate: true,
-                        })
-                      : ""}
-                  </div>
-                `,
-              )}
-            </div>
-          `
-        : ""}
-    `;
-  }
-
-  private renderOutgoingAttacks() {
-    return html`
-      ${this.outgoingAttacks.length > 0
-        ? html`
-            <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingAttacks.map(
-                (attack) => html`
-                  <div class="inline-flex items-center gap-1">
-                    ${this.renderButton({
-                      content: html`
-                        ${renderTroops(attack.troops)}
-                        ${(
-                          this.game.playerBySmallID(
-                            attack.targetID,
-                          ) as PlayerView
-                        )?.name()}
-                      `,
-                      onClick: async () => this.attackWarningOnClick(attack),
-                      className: "text-left text-blue-400",
-                      translate: false,
-                    })}
-                    ${!attack.retreating
-                      ? this.renderButton({
-                          content: "❌",
-                          onClick: () => this.emitCancelAttackIntent(attack.id),
-                          className: "text-left shrink-0",
-                          disabled: attack.retreating,
-                        })
-                      : html`<span class="shrink-0 text-blue-400"
-                          >(${translateText(
-                            "events_display.retreating",
-                          )}...)</span
-                        >`}
-                  </div>
-                `,
-              )}
-            </div>
-          `
-        : ""}
-    `;
-  }
-
-  private renderOutgoingLandAttacks() {
-    return html`
-      ${this.outgoingLandAttacks.length > 0
-        ? html`
-            <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingLandAttacks.map(
-                (landAttack) => html`
-                  <div class="inline-flex items-center gap-1">
-                    ${this.renderButton({
-                      content: html`${renderTroops(landAttack.troops)}
-                      ${translateText("help_modal.ui_wilderness")}`,
-                      className: "text-left text-gray-400",
-                      translate: false,
-                    })}
-                    ${!landAttack.retreating
-                      ? this.renderButton({
-                          content: "❌",
-                          onClick: () =>
-                            this.emitCancelAttackIntent(landAttack.id),
-                          className: "text-left shrink-0",
-                          disabled: landAttack.retreating,
-                        })
-                      : html`<span class="shrink-0 text-blue-400"
-                          >(${translateText(
-                            "events_display.retreating",
-                          )}...)</span
-                        >`}
-                  </div>
-                `,
-              )}
-            </div>
-          `
-        : ""}
-    `;
-  }
-
-  private renderBoats() {
-    return html`
-      ${this.outgoingBoats.length > 0
-        ? html`
-            <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingBoats.map(
-                (boat) => html`
-                  <div class="inline-flex items-center gap-1">
-                    ${this.renderButton({
-                      content: html`${translateText("events_display.boat")}:
-                      ${renderTroops(boat.troops())}`,
-                      onClick: () => this.emitGoToUnitEvent(boat),
-                      className: "text-left text-blue-400",
-                      translate: false,
-                    })}
-                    ${!boat.retreating()
-                      ? this.renderButton({
-                          content: "❌",
-                          onClick: () => this.emitBoatCancelIntent(boat.id()),
-                          className: "text-left shrink-0",
-                          disabled: boat.retreating(),
-                        })
-                      : html`<span class="shrink-0 text-blue-400"
-                          >(${translateText(
-                            "events_display.retreating",
-                          )}...)</span
-                        >`}
-                  </div>
-                `,
-              )}
-            </div>
-          `
-        : ""}
-    `;
   }
 
   private renderBetrayalDebuffTimer() {
@@ -1018,17 +788,19 @@ export class EventsDisplay extends LitElement implements Layer {
             >
               ${this.renderButton({
                 content: html`
-                  Events
-                  <span
-                    class="${this.newEvents
-                      ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-lg text-sm"
-                    >${this.newEvents}</span
-                  >
+                  <span class="flex items-center gap-2">
+                    ${translateText("events_display.events")}
+                    ${this.newEvents > 0
+                      ? html`<span
+                          class="inline-block px-2 bg-red-500 rounded-lg text-sm"
+                          >${this.newEvents}</span
+                        >`
+                      : ""}
+                  </span>
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur-sm",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
               })}
             </div>
           `
@@ -1039,9 +811,9 @@ export class EventsDisplay extends LitElement implements Layer {
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg lg:rounded-tl-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
               >
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
                       swordIcon,
@@ -1087,7 +859,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div>
                   <table
-                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
+                    class="w-full max-h-none border-collapse text-white shadow-lg text-xs lg:text-sm pointer-events-auto"
                   >
                     <tbody>
                       ${filteredEvents.map(
@@ -1126,7 +898,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                               ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(
@@ -1161,17 +933,6 @@ export class EventsDisplay extends LitElement implements Layer {
                           </tr>
                         `,
                       )}
-                      <!--- Incoming attacks row -->
-                      ${this.incomingAttacks.length > 0
-                        ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderIncomingAttacks()}
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-
                       <!--- Betrayal debuff timer row -->
                       ${(() => {
                         const myPlayer = this.game.myPlayer();
@@ -1190,45 +951,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           `
                         : ""}
 
-                      <!--- Outgoing attacks row -->
-                      ${this.outgoingAttacks.length > 0
-                        ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderOutgoingAttacks()}
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-
-                      <!--- Outgoing land attacks row -->
-                      ${this.outgoingLandAttacks.length > 0
-                        ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderOutgoingLandAttacks()}
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-
-                      <!--- Boats row -->
-                      ${this.outgoingBoats.length > 0
-                        ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                ${this.renderBoats()}
-                              </td>
-                            </tr>
-                          `
-                        : ""}
-
-                      <!--- Empty row when no events or attacks -->
+                      <!--- Empty row when no events -->
                       ${filteredEvents.length === 0 &&
-                      this.incomingAttacks.length === 0 &&
-                      this.outgoingAttacks.length === 0 &&
-                      this.outgoingLandAttacks.length === 0 &&
-                      this.outgoingBoats.length === 0 &&
                       !(() => {
                         const myPlayer = this.game.myPlayer();
                         return (

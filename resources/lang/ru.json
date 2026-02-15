@@ -790,15 +790,15 @@
     "title_with_name": "Отправить войска игроку {name}",
     "available_tooltip": "Ваши доступные в данный момент войска",
     "min_keep": "Минимальный остаток",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Ползунок войск",
-    "capacity_note": "Получатель в данный момент может принять только {{amount}}."
+    "capacity_note": "Получатель в данный момент может принять только {amount}."
   },
   "send_gold_modal": {
     "title_with_name": "Отправить золото игроку {name}",
     "available_tooltip": "Ваше доступное в данный момент золото",
     "aria_slider": "Ползунок количества",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Скорость повтора",

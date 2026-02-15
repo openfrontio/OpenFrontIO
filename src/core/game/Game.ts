@@ -120,6 +120,8 @@ export enum GameMapType {
   AmazonRiver = "Amazon River",
   BosphorusStraits = "Bosphorus Straits",
   Yenisei = "Yenisei",
+  TradersDream = "Traders Dream",
+  Hawaii = "Hawaii",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -169,6 +171,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.AmazonRiver,
     GameMapType.BosphorusStraits,
     GameMapType.Yenisei,
+    GameMapType.Hawaii,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -180,6 +183,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FourIslands,
     GameMapType.Svalmel,
     GameMapType.Surrounded,
+    GameMapType.TradersDream,
   ],
   arcade: [
     GameMapType.TheBox,
@@ -625,7 +629,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
+  buildableUnits(tile: TileRef | null, units?: UnitType[]): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
@@ -663,6 +667,7 @@ export interface Player {
   allianceWith(other: Player): MutableAlliance | null;
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
+  removeAllAlliances(): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
   betrayals(): number;
 
