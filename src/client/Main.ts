@@ -744,16 +744,11 @@ class Client {
     if (lobby.source === "public") {
       this.joinModal?.open(lobby.gameID, lobby.publicLobbyInfo);
     }
-    const [config, cosmetics] = await Promise.all([
-      getServerConfigFromClient(),
-      fetchCosmetics(),
-    ]);
+    const config = await getServerConfigFromClient();
     // Only update URL immediately for private lobbies, not public ones
     if (lobby.source !== "public") {
       this.updateJoinUrlForShare(lobby.gameID, config);
     }
-    const pattern = this.userSettings.getSelectedPatternName(cosmetics);
-
     this.gameStop = joinLobby(
       this.eventBus,
       {

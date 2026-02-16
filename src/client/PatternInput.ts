@@ -18,8 +18,6 @@ export class PatternInput extends LitElement {
   @property({ type: Boolean, attribute: "adaptive-size" })
   public adaptiveSize: boolean = false;
 
-  private userSettings = new UserSettings();
-  private cosmetics: Cosmetics | null = null;
   private _abortController: AbortController | null = null;
 
   private _onPatternSelected = async () => {
