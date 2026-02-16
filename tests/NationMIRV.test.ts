@@ -65,6 +65,11 @@ describe("Nation MIRV Retaliation", () => {
       }
     }
     nation.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    // Register MissileSiloExecution so the silo can reload after firing
+    const nationSilo = nation.units(UnitType.MissileSilo)[0];
+    if (nationSilo) {
+      game.addExecution(new MissileSiloExecution(nationSilo));
+    }
 
     // Give both players enough gold for MIRVs
     attacker.addGold(1_000_000_000n);
@@ -355,6 +360,11 @@ describe("Nation MIRV Retaliation", () => {
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
       nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      // Register MissileSiloExecution so the silo can reload after firing
+      const silo = nation.units(UnitType.MissileSilo)[0];
+      if (silo) {
+        game.addExecution(new MissileSiloExecution(silo));
+      }
     }
 
     // Give second player some territory and cities
