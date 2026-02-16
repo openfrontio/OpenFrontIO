@@ -206,8 +206,6 @@ export class PublicLobby extends LitElement {
     if (!this.validateUsername()) return;
     (document.querySelector("single-player-modal") as any)?.open();
   };
-    const lobby = this.publicGames.games["ffa"]?.[0];
-    if (!lobby?.gameConfig) return html``;
 
   private openHostLobby = () => {
     if (!this.validateUsername()) return;
