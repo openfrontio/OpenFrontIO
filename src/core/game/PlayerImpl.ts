@@ -999,7 +999,7 @@ export class PlayerImpl implements Player {
           canBuild !== false
             ? this.mg.railNetwork().overlappingRailroads(canBuild)
             : [],
-      } as BuildableUnit;
+      };
     });
   }
 

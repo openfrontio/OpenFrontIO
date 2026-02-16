@@ -97,10 +97,10 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player?.actions(undefined, BuildMenuTypes).then((actions) => {
+    if (!player) return;
+    player.actions(undefined, BuildMenuTypes).then((actions) => {
       this.playerActions = actions;
     });
-    if (!player) return;
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);

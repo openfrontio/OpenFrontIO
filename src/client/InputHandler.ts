@@ -86,7 +86,7 @@ export class ToggleStructureEvent implements GameEvent {
 }
 
 export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: UnitType | null) {}
+  constructor(public readonly ghostStructure: PlayerBuildableUnitType | null) {}
 }
 
 export class SwapRocketDirectionEvent implements GameEvent {
