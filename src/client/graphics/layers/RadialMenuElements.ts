@@ -420,11 +420,14 @@ function createMenuElements(
           (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
         ),
         action: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (buildableUnit === undefined) {
+            return;
+          }
           if (canBuildOrUpgrade) {
-            const buildableUnit = params.playerActions.buildableUnits.find(
-              (bu) => bu.type === item.unitType,
-            );
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit!, params.tile);
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
           }
           params.closeMenu();
         },
