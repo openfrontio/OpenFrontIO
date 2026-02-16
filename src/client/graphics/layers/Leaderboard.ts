@@ -191,7 +191,7 @@ export class Leaderboard extends LitElement implements Layer {
       >
         <div
           class="grid bg-gray-800/85 w-full text-xs md:text-xs lg:text-sm rounded-lg overflow-hidden"
-          style="grid-template-columns: 30px 100px 70px 55px 105px;"
+          style="grid-template-columns: minmax(24px, 30px) minmax(60px, 100px) minmax(45px, 70px) minmax(40px, 55px) minmax(55px, 105px);"
         >
           <div class="contents font-bold bg-gray-700/60">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
