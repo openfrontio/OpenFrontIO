@@ -93,6 +93,7 @@ export interface LobbyRecord {
   archivePlayers?: number;
   archiveConnectedPlayers?: number;
   archiveActivePlayers?: number;
+  archiveSpawnedPlayers?: number;
   archiveDurationSec?: number;
   archiveWinner?: string;
   actualLobbyCreatedAt?: number;
@@ -166,6 +167,7 @@ export interface AnalyticsPayload {
     archiveDurationSec?: number;
     archiveConnectedPlayers?: number;
     archiveActivePlayers?: number;
+    archiveSpawnedPlayers?: number;
     scheduledStartAt: number;
     peakClients: number;
     maxPlayers?: number;
@@ -206,8 +208,19 @@ export function safeMaxPlayers(record: Pick<LobbyRecord, "maxPlayers">): number 
   return Math.max(1, record.maxPlayers ?? 1);
 }
 
-export function peakFillRatio(record: Pick<LobbyRecord, "peakClients" | "maxPlayers">): number {
-  return record.peakClients / safeMaxPlayers(record as Pick<LobbyRecord, "maxPlayers">);
+export function peakFillClients(
+  record: Pick<LobbyRecord, "peakClients" | "archiveConnectedPlayers" | "archivePlayers">,
+): number {
+  return record.archiveConnectedPlayers ?? record.archivePlayers ?? record.peakClients;
+}
+
+export function peakFillRatio(
+  record: Pick<
+    LobbyRecord,
+    "peakClients" | "maxPlayers" | "archiveConnectedPlayers" | "archivePlayers"
+  >,
+): number {
+  return peakFillClients(record) / safeMaxPlayers(record as Pick<LobbyRecord, "maxPlayers">);
 }
 
 export function bucketForConfig(

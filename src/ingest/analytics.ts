@@ -106,6 +106,7 @@ export function buildAnalytics(
       archiveDurationSec: lobby.archiveDurationSec,
       archiveConnectedPlayers: lobby.archiveConnectedPlayers,
       archiveActivePlayers: lobby.archiveActivePlayers,
+      archiveSpawnedPlayers: lobby.archiveSpawnedPlayers,
       scheduledStartAt: lobby.scheduledStartAt,
       peakClients: lobby.peakClients,
       maxPlayers: lobby.maxPlayers,

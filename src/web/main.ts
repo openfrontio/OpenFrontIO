@@ -3,6 +3,7 @@ import {
   BucketMode,
   LobbyRecord,
   TimelineBucket,
+  peakFillClients,
 } from "../shared/types";
 import * as d3 from "d3";
 import "./styles.css";
@@ -617,7 +618,7 @@ function renderOrder(payload: AnalyticsPayload): void {
           <th>Status</th>
           <th>Lobby + Game</th>
           <th>Peak Fill</th>
-          <th>Connected / Active</th>
+          <th>Connected / Active / Spawned</th>
           <th>Join/min</th>
           <th>Opened</th>
         </tr>
@@ -635,7 +636,7 @@ function renderOrder(payload: AnalyticsPayload): void {
               </td>
               <td class="status-${row.status}">${row.status}</td>
               <td>${formatDurationMs(row.openDurationMs)} + ${formatGameDuration(row, payload.now)}</td>
-              <td>${row.maxPlayers ? `${row.peakClients}/${row.maxPlayers}` : row.peakClients}</td>
+              <td>${formatPeakFill(row)}</td>
               <td>${formatReplayParticipation(row)}</td>
               <td>${row.joinRatePerMin.toFixed(2)}</td>
               <td>${new Date(row.openedAt).toLocaleString()}</td>
@@ -684,7 +685,7 @@ function renderInteresting(target: "neverStarted" | "lowFill", rows: LobbyRecord
               <td class="mono">${row.gameID}</td>
               <td>${row.gameConfig?.gameMode ?? "-"}</td>
               <td>${row.gameConfig?.gameMap ?? "-"}</td>
-              <td>${row.maxPlayers ? `${row.peakClients}/${row.maxPlayers}` : row.peakClients}</td>
+              <td>${formatPeakFill(row)}</td>
               <td>${row.fillRatioAtStart !== undefined ? `${(row.fillRatioAtStart * 100).toFixed(1)}%` : "-"}</td>
               <td>${formatDurationMs(row.openDurationMs)}</td>
             </tr>
@@ -723,20 +724,37 @@ function formatDurationSec(durationSec: number | undefined): string {
 function formatReplayParticipation(
   row: Pick<
     AnalyticsPayload["order"][number],
-    "archivePlayers" | "archiveConnectedPlayers" | "archiveActivePlayers"
+    | "archivePlayers"
+    | "archiveConnectedPlayers"
+    | "archiveActivePlayers"
+    | "archiveSpawnedPlayers"
   >,
 ): string {
   const connected = row.archiveConnectedPlayers;
   const active = row.archiveActivePlayers;
+  const spawned = row.archiveSpawnedPlayers;
   const total = row.archivePlayers;
 
-  if (connected === undefined && active === undefined) {
+  if (connected === undefined && active === undefined && spawned === undefined) {
     return "-";
   }
 
-  const pair = `${connected ?? "-"} / ${active ?? "-"}`;
-  if (total === undefined) return pair;
-  return `${pair} of ${total}`;
+  const triplet = `${connected ?? "-"} / ${active ?? "-"} / ${spawned ?? "-"}`;
+  if (total === undefined) return triplet;
+  return `${triplet} of ${total}`;
+}
+
+function formatPeakFill(
+  row: Pick<
+    AnalyticsPayload["order"][number],
+    "peakClients" | "maxPlayers" | "archiveConnectedPlayers" | "archivePlayers"
+  >,
+): string {
+  const peak = peakFillClients(row);
+  if (row.maxPlayers && row.maxPlayers > 0) {
+    return `${peak}/${row.maxPlayers}`;
+  }
+  return String(peak);
 }
 
 function formatGameDuration(

@@ -327,6 +327,7 @@ export class JsonStore {
       players?: number;
       connectedPlayers?: number;
       activePlayers?: number;
+      spawnedPlayers?: number;
       durationSec?: number;
       winner?: string;
       lobbyCreatedAt?: number;
@@ -340,6 +341,7 @@ export class JsonStore {
     lobby.archivePlayers = payload.players;
     lobby.archiveConnectedPlayers = payload.connectedPlayers;
     lobby.archiveActivePlayers = payload.activePlayers;
+    lobby.archiveSpawnedPlayers = payload.spawnedPlayers;
     lobby.archiveDurationSec = payload.durationSec;
     lobby.archiveWinner = payload.winner;
     lobby.actualLobbyCreatedAt = payload.lobbyCreatedAt;

@@ -38,6 +38,7 @@ function isBuildIntentType(type: string): boolean {
 function deriveReplayParticipationMetrics(archivePayload: unknown): {
   connectedPlayers?: number;
   activePlayers?: number;
+  spawnedPlayers?: number;
 } {
   const root = asRecord(archivePayload);
   if (!root) return {};
@@ -47,6 +48,7 @@ function deriveReplayParticipationMetrics(archivePayload: unknown): {
 
   const connectedClientIds = new Set<string>();
   const activeClientIds = new Set<string>();
+  const spawnedClientIds = new Set<string>();
   let sawDisconnectedMarker = false;
 
   for (const turnEntry of turns) {
@@ -74,12 +76,16 @@ function deriveReplayParticipationMetrics(archivePayload: unknown): {
       if (isBuildIntentType(type)) {
         activeClientIds.add(clientID);
       }
+      if (type === "spawn") {
+        spawnedClientIds.add(clientID);
+      }
     }
   }
 
   return {
     connectedPlayers: sawDisconnectedMarker ? connectedClientIds.size : undefined,
     activePlayers: activeClientIds.size,
+    spawnedPlayers: spawnedClientIds.size,
   };
 }
 
@@ -418,6 +424,7 @@ export class LobbyIngestService {
         (record) =>
           record.status !== "active" &&
           (!record.archiveFound ||
+            record.archiveSpawnedPlayers === undefined ||
             (record.archiveConnectedPlayers === undefined &&
               record.archiveActivePlayers === undefined)) &&
           !!record.closedAt &&
@@ -579,6 +586,7 @@ export class LobbyIngestService {
       players: info?.players?.length,
       connectedPlayers: replayMetrics.connectedPlayers,
       activePlayers: replayMetrics.activePlayers,
+      spawnedPlayers: replayMetrics.spawnedPlayers,
       durationSec:
         typeof info?.duration === "number" ? Math.round(info.duration) : undefined,
       winner: winnerLabel,
