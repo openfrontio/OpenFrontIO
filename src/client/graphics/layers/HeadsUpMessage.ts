@@ -20,6 +20,12 @@ export class HeadsUpMessage extends LitElement implements Layer {
   private isImmunityActive = false;
 
   @state()
+  private isCatchingUp = false;
+  private catchingUpTicks = 0;
+
+  private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
+
+  @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
   @state()
   private toastColor: "green" | "red" = "green";
@@ -92,12 +98,30 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
+    const currentlyCatchingUp =
+      !this.game.config().isReplay() && this.game.isCatchingUp();
+
+    if (currentlyCatchingUp) {
+      this.catchingUpTicks++;
+    } else {
+      this.catchingUpTicks = 0;
+    }
+
+    this.isCatchingUp =
+      this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
+
     this.isVisible =
-      this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
+      this.game.inSpawnPhase() ||
+      this.isPaused ||
+      this.isImmunityActive ||
+      this.isCatchingUp;
     this.requestUpdate();
   }
 
   private getMessage(): string {
+    if (this.isCatchingUp) {
+      return translateText("heads_up_message.catching_up");
+    }
     if (this.isPaused) {
       if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
         return translateText("heads_up_message.singleplayer_game_paused");
