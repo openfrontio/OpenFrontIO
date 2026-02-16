@@ -43,7 +43,7 @@ export class UnitDisplay extends LitElement implements Layer {
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
-  private _hoveredUnit: UnitType | null = null;
+  private _hoveredUnit: PlayerBuildableUnitType | null = null;
 
   createRenderRoot() {
     return this;
