@@ -3,6 +3,7 @@ import {
   Game,
   GameMode,
   HumansVsNations,
+  isStructureType,
   Player,
   PlayerID,
   PlayerType,
@@ -199,6 +200,13 @@ export class AiAttackBehavior {
     borderingFriends: Player[],
     borderingEnemies: Player[],
   ) {
+    // In games with high starting gold, nations will quickly build a lot of cities
+    // This causes them to expand slowly (cities increase max troops), and bots will steal their structures
+    // In this case: Attack bots before ratio checks
+    if (this.hasNeighboringBotWithStructures()) {
+      if (this.attackBots()) return;
+    }
+
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
 
@@ -345,6 +353,18 @@ export class AiAttackBehavior {
     }
   }
 
+  private hasNeighboringBotWithStructures(): boolean {
+    return this.player
+      .neighbors()
+      .some(
+        (n) =>
+          n.isPlayer() &&
+          n.type() === PlayerType.Bot &&
+          !this.player.isFriendly(n) &&
+          n.units().some((u) => isStructureType(u.type())),
+      );
+  }
+
   private hasReserveRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
     const ratio = this.player.troops() / maxTroops;
@@ -380,6 +400,7 @@ export class AiAttackBehavior {
 
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
   // sendAttack will do nothing if we don't have enough reserve troops left
+  // Bots that own structures are prioritized as targets (they might have stolen our structures and they will delete them!)
   private attackBots(): boolean {
     const bots = this.player
       .neighbors()
@@ -397,7 +418,16 @@ export class AiAttackBehavior {
     this.botAttackTroopsSent = 0;
 
     const density = (p: Player) => p.troops() / p.numTilesOwned();
-    const sortedBots = bots.slice().sort((a, b) => density(a) - density(b));
+    const ownsStructures = (p: Player) =>
+      p.units().some((u) => isStructureType(u.type()));
+    const sortedBots = bots.slice().sort((a, b) => {
+      const aHasStructures = ownsStructures(a);
+      const bHasStructures = ownsStructures(b);
+      if (aHasStructures !== bHasStructures) {
+        return aHasStructures ? -1 : 1;
+      }
+      return density(a) - density(b);
+    });
     const reducedBots = sortedBots.slice(0, this.getBotAttackMaxParallelism());
 
     for (const bot of reducedBots) {
@@ -700,9 +730,14 @@ export class AiAttackBehavior {
 
   private sendLandAttack(target: Player | TerraNullius) {
     const maxTroops = this.game.config().maxTroops(this.player);
-    const reserveRatio = target.isPlayer()
-      ? this.reserveRatio
-      : this.expandRatio;
+    const botWithStructures =
+      target.isPlayer() &&
+      target.type() === PlayerType.Bot &&
+      target.units().some((u) => isStructureType(u.type()));
+    // Use the expand ratio when attacking a bot that owns structures — we need to
+    // recapture those structures ASAP, even before reaching the normal reserve.
+    const useReserve = target.isPlayer() && !botWithStructures;
+    const reserveRatio = useReserve ? this.reserveRatio : this.expandRatio;
     const targetTroops = maxTroops * reserveRatio;
 
     let troops;
