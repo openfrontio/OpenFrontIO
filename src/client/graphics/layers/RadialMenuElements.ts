@@ -359,13 +359,9 @@ function getAllEnabledUnits(
   };
 
   if (myPlayer) {
-    StructureTypes.forEach((unitType) => {
-      addIfEnabled(unitType);
-    });
+    StructureTypes.forEach(addIfEnabled);
   } else {
-    BuildableAttackTypes.forEach((unitType) => {
-      addIfEnabled(unitType);
-    });
+    BuildableAttackTypes.forEach(addIfEnabled);
   }
 
   return units;
