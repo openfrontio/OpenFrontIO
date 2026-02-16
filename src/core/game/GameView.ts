@@ -406,7 +406,7 @@ export class PlayerView {
 
   async actions(
     tile?: TileRef,
-    units?: PlayerBuildableUnitType[] | null,
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
