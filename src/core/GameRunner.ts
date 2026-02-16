@@ -118,7 +118,7 @@ export class GameRunner {
     this.turns.push(turn);
   }
 
-  public executeNextTick(): boolean {
+  public executeNextTick(pendingTurns?: number): boolean {
     if (this.isExecuting) {
       return false;
     }
@@ -182,6 +182,7 @@ export class GameRunner {
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,
+      pendingTurns: pendingTurns ?? 0,
     });
     this.isExecuting = false;
     return true;

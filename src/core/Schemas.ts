@@ -34,7 +34,7 @@ export type Intent =
   | BoatAttackIntent
   | CancelBoatIntent
   | AllianceRequestIntent
-  | AllianceRequestReplyIntent
+  | AllianceRejectIntent
   | AllianceExtensionIntent
   | BreakAllianceIntent
   | TargetPlayerIntent
@@ -60,9 +60,7 @@ export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
 export type EmbargoAllIntent = z.infer<typeof EmbargoAllIntentSchema>;
 export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
-export type AllianceRequestReplyIntent = z.infer<
-  typeof AllianceRequestReplyIntentSchema
->;
+export type AllianceRejectIntent = z.infer<typeof AllianceRejectIntentSchema>;
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
@@ -316,10 +314,9 @@ export const AllianceRequestIntentSchema = z.object({
   recipient: ID,
 });
 
-export const AllianceRequestReplyIntentSchema = z.object({
-  type: z.literal("allianceRequestReply"),
-  requestor: ID, // The one who made the original alliance request
-  accept: z.boolean(),
+export const AllianceRejectIntentSchema = z.object({
+  type: z.literal("allianceReject"),
+  requestor: ID,
 });
 
 export const BreakAllianceIntentSchema = z.object({
@@ -431,7 +428,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
   AllianceRequestIntentSchema,
-  AllianceRequestReplyIntentSchema,
+  AllianceRejectIntentSchema,
   BreakAllianceIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
