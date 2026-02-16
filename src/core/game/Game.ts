@@ -263,13 +263,6 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as const satisfies readonly UnitType[];
 
-const attackTypes = [
-  ...nukeTypes,
-  UnitType.Shell,
-  UnitType.SAMMissile,
-  UnitType.Warship,
-] as const satisfies readonly UnitType[];
-
 const _buildableAttackTypes = [
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
