@@ -129,7 +129,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private clickedTile: TileRef;
-  public playerBuildables: BuildableUnit[] | null;
+  public playerBuildables: BuildableUnit[] | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
