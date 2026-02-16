@@ -141,7 +141,7 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
-        <game-mode-selector></game-mode-selector>
+        <public-lobby></public-lobby>
       </div>
     `;
   }

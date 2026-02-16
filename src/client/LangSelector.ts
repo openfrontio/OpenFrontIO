@@ -232,7 +232,7 @@ export class LangSelector extends LitElement {
       "flag-input",
       "matchmaking-button",
       "token-login",
-      "game-mode-selector",
+      "public-lobby",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

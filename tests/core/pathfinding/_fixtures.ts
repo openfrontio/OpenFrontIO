@@ -146,7 +146,6 @@ export function createGame(data: TestMapData): Game {
     instantBuild: false,
     disableNavMesh: false,
     randomSpawn: false,
-    lobbyStartDelayMs: 60000,
   };
   const config = new TestConfig(
     serverConfig,

@@ -35,7 +35,6 @@ describe("Ranking class", () => {
     maxPlayers: 40,
     disabledUnits: [],
     randomSpawn: false,
-    lobbyStartDelayMs: 60000,
   };
 
   const gameTickDuration = 1000;

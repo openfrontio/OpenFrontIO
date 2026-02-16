@@ -139,6 +139,9 @@ export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 export type PublicGames = z.infer<typeof PublicGamesSchema>;
 export type PublicGameInfo = z.infer<typeof PublicGameInfoSchema>;
+export type PublicGameType = z.infer<typeof PublicGameTypeSchema>;
+
+export const PublicGameTypeSchema = z.enum(["ffa", "team", "special"]);
 
 const ClientInfoSchema = z.object({
   clientID: z.string(),
@@ -148,27 +151,24 @@ const ClientInfoSchema = z.object({
 export const GameInfoSchema = z.object({
   gameID: z.string(),
   clients: z.array(ClientInfoSchema).optional(),
-  numClients: z.number().optional(),
-  msUntilStart: z.number().optional(),
   lobbyCreatorClientID: z.string().optional(),
   startsAt: z.number().optional(),
-  serverTime: z.number().optional(),
+  serverTime: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
-  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
+  publicGameType: PublicGameTypeSchema.optional(),
 });
 
 export const PublicGameInfoSchema = z.object({
   gameID: z.string(),
   numClients: z.number(),
-  startsAt: z.number().optional(),
-  msUntilStart: z.number().optional(),
+  startsAt: z.number(),
   gameConfig: z.lazy(() => GameConfigSchema).optional(),
-  publicLobbyCategory: z.enum(["ffa", "teams", "hvn", "special"]).optional(),
+  publicGameType: PublicGameTypeSchema,
 });
 
 export const PublicGamesSchema = z.object({
   serverTime: z.number(),
-  games: PublicGameInfoSchema.array(),
+  games: z.record(PublicGameTypeSchema, z.array(PublicGameInfoSchema)),
 });
 
 export class LobbyInfoEvent implements GameEvent {
@@ -177,6 +177,7 @@ export class LobbyInfoEvent implements GameEvent {
     public myClientID: ClientID,
   ) {}
 }
+
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
@@ -233,7 +234,6 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
-  lobbyStartDelayMs: z.number().int().min(0),
 });
 
 export const TeamSchema = z.string();
