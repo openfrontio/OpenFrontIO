@@ -381,10 +381,10 @@ export class MapPlaylist {
     teams: TeamCountConfig | undefined,
   ): number {
     if (teams === undefined) return p;
-    if (teams === HumansVsNations) return Math.floor(p / 2);
+    if (teams === HumansVsNations) return Math.max(1, Math.floor(p / 2));
     const divisor =
       typeof teams === "number" ? teams : GROUPED_TEAM_SIZES[teams];
-    return p - (p % divisor);
+    return Math.max(divisor, p - (p % divisor));
   }
 
   // --- Map player counts ---
