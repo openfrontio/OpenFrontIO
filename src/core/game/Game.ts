@@ -263,6 +263,10 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] satisfies readonly UnitType[];
 
+const _buildableNukeTypes = nukeTypes.filter(
+  (type) => type !== UnitType.MIRVWarhead,
+) satisfies readonly UnitType[];
+
 const _structureTypesList = [
   UnitType.City,
   UnitType.DefensePost,
@@ -279,10 +283,6 @@ export const StructureTypes = _structureTypesList;
 export function isStructureType(type: UnitType): boolean {
   return _structureTypesSet.has(type);
 }
-
-const _buildableNukeTypes = nukeTypes.filter(
-  (type) => type !== UnitType.MIRVWarhead,
-) satisfies readonly UnitType[];
 
 const _buildMenuTypesList = [
   ..._structureTypesList,
