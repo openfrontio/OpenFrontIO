@@ -11,7 +11,7 @@ export class MobileNavBar extends LitElement {
     super.connectedCallback();
     window.addEventListener("showPage", this._onShowPage);
 
-    const current = (window as any).currentPageId;
+    const current = window.currentPageId;
     if (current) {
       this.updateComplete.then(() => {
         this._updateActiveState(current);
@@ -40,10 +40,8 @@ export class MobileNavBar extends LitElement {
   }
 
   render() {
-    const currentPage = (window as any).currentPageId ?? "page-play";
-    if (!(window as any).currentPageId) {
-      (window as any).currentPageId = currentPage;
-    }
+    window.currentPageId ??= "page-play";
+    const currentPage = window.currentPageId;
 
     return html`
       <!-- Border Segments (Custom right border with gap for button) -->

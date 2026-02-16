@@ -19,7 +19,7 @@ export class DesktopNavBar extends LitElement {
     super.connectedCallback();
     window.addEventListener("showPage", this._onShowPage);
 
-    const current = (window as any).currentPageId;
+    const current = window.currentPageId;
     if (current) {
       // Wait for render
       this.updateComplete.then(() => {
@@ -79,10 +79,8 @@ export class DesktopNavBar extends LitElement {
   };
 
   render() {
-    const currentPage = (window as any).currentPageId ?? "page-play";
-    if (!(window as any).currentPageId) {
-      (window as any).currentPageId = currentPage;
-    }
+    window.currentPageId ??= "page-play";
+    const currentPage = window.currentPageId;
 
     return html`
       <nav

@@ -14,7 +14,7 @@ export function initNavigation() {
   };
 
   const showPage = (pageId: string) => {
-    (window as any).currentPageId = pageId;
+    window.currentPageId = pageId;
 
     // Close mobile sidebar if a nav item was clicked
     closeMobileSidebar();

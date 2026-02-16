@@ -203,6 +203,7 @@ declare global {
       BOLT_AD_CLICKED: string;
       SHOW_HIDDEN_CONTAINER: string;
     };
+    currentPageId?: string;
     showPage?: (pageId: string) => void;
   }
 
