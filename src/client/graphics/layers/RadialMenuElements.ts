@@ -349,12 +349,12 @@ function getAllEnabledUnits(
   myPlayer: boolean,
   config: Config,
 ): Set<PlayerBuildableUnitType> {
-  const Units: Set<PlayerBuildableUnitType> =
+  const units: Set<PlayerBuildableUnitType> =
     new Set<PlayerBuildableUnitType>();
 
   const addIfEnabled = (unitType: PlayerBuildableUnitType) => {
     if (!config.isUnitDisabled(unitType)) {
-      Units.add(unitType);
+      units.add(unitType);
     }
   };
 
@@ -368,7 +368,7 @@ function getAllEnabledUnits(
     });
   }
 
-  return Units;
+  return units;
 }
 
 function createMenuElements(
