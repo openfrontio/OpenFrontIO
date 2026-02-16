@@ -1,4 +1,5 @@
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
+import { MissileSiloExecution } from "../src/core/execution/MissileSiloExecution";
 import { NationExecution } from "../src/core/execution/NationExecution";
 import {
   Cell,
@@ -197,6 +198,11 @@ describe("Nation MIRV Retaliation", () => {
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
       nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      // Register MissileSiloExecution so the silo can reload after firing
+      const silo = nation.units(UnitType.MissileSilo)[0];
+      if (silo) {
+        game.addExecution(new MissileSiloExecution(silo));
+      }
     }
 
     // Then give dominant player a large amount of territory
@@ -253,6 +259,8 @@ describe("Nation MIRV Retaliation", () => {
     let victoryDenialSuccessful = false;
 
     for (const gameId of gameIds) {
+      // Advance game to clear any silo cooldowns from previous iteration
+      executeTicks(game, 100);
       const testExecution = new NationExecution(gameId, testExecutionNation);
       testExecution.init(game);
 
@@ -631,6 +639,11 @@ describe("Nation MIRV Retaliation", () => {
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
       nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      // Register MissileSiloExecution so the silo can reload after firing
+      const silo = nation.units(UnitType.MissileSilo)[0];
+      if (silo) {
+        game.addExecution(new MissileSiloExecution(silo));
+      }
     }
 
     // Give team players a large amount of territory to exceed team threshold,
@@ -691,6 +704,8 @@ describe("Nation MIRV Retaliation", () => {
     let teamVictoryDenialSuccessful = false;
 
     for (const gameId of gameIds) {
+      // Advance game to clear any silo cooldowns from previous iteration
+      executeTicks(game, 100);
       const testExecution = new NationExecution(gameId, testExecutionNation);
       testExecution.init(game);
 
