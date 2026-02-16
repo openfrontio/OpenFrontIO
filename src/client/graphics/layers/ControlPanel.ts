@@ -324,7 +324,7 @@ export class ControlPanel extends LitElement implements Layer {
         ${this._touchDragging
           ? html`
               <div
-                class="absolute bottom-full right-0 flex flex-col items-center pointer-events-auto z-[10000] bg-gray-800/80 backdrop-blur-sm rounded-l-lg sm:rounded-lg p-2 w-12"
+                class="absolute bottom-full right-0 flex flex-col items-center pointer-events-auto z-[10000] bg-gray-800/70 backdrop-blur-xs rounded-tl-lg sm:rounded-lg p-2 w-12"
                 style="height: 50vh;"
                 @touchstart=${(e: TouchEvent) => this.handleBarTouch(e)}
               >
