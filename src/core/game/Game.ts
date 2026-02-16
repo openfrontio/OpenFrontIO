@@ -261,21 +261,21 @@ export const nukeTypes = [
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
-] satisfies readonly UnitType[];
+] as const satisfies readonly UnitType[];
 
 const attackTypes = [
   ...nukeTypes,
   UnitType.Shell,
   UnitType.SAMMissile,
   UnitType.Warship,
-] satisfies readonly UnitType[];
+] as const satisfies readonly UnitType[];
 
-const _buildableAttackTypes = attackTypes.filter(
-  (type) =>
-    type !== UnitType.MIRVWarhead &&
-    type !== UnitType.Shell &&
-    type !== UnitType.SAMMissile,
-) satisfies readonly UnitType[];
+const _buildableAttackTypes = [
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.Warship,
+] as const satisfies readonly UnitType[];
 
 export const BuildableAttackTypes = _buildableAttackTypes;
 
