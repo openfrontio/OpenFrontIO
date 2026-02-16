@@ -8,6 +8,7 @@ import {
   MainThreadMessage,
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
+  PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
@@ -101,6 +102,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           id: message.id,
           result: actions,
         } as PlayerActionsResultMessage);
+      } catch (error) {
+        console.error("Failed to check borders:", error);
+        throw error;
+      }
+      break;
+    case "player_buildables":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const actions = (await gameRunner).playerBuildables(
+          message.playerID,
+          message.x,
+          message.y,
+          message.units,
+        );
+        sendMessage({
+          type: "player_buildables_result",
+          id: message.id,
+          result: actions,
+        } as PlayerBuildablesResultMessage);
       } catch (error) {
         console.error("Failed to check borders:", error);
         throw error;

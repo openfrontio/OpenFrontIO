@@ -1,4 +1,5 @@
 import {
+  BuildableUnit,
   Cell,
   PlayerActions,
   PlayerBorderTiles,
@@ -186,6 +187,40 @@ export class WorkerClient {
 
       this.worker.postMessage({
         type: "player_actions",
+        id: messageId,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[] | null,
+  ): Promise<BuildableUnit[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_buildables_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "player_buildables",
         id: messageId,
         playerID,
         x,

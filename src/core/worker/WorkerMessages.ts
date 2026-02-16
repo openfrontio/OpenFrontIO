@@ -1,4 +1,5 @@
 import {
+  BuildableUnit,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -17,6 +18,8 @@ export type WorkerMessageType =
   | "game_update"
   | "player_actions"
   | "player_actions_result"
+  | "player_buildables"
+  | "player_buildables_result"
   | "player_profile"
   | "player_profile_result"
   | "player_border_tiles"
@@ -71,6 +74,19 @@ export interface PlayerActionsResultMessage extends BaseWorkerMessage {
   result: PlayerActions;
 }
 
+export interface PlayerBuildablesMessage extends BaseWorkerMessage {
+  type: "player_buildables";
+  playerID: PlayerID;
+  x?: number;
+  y?: number;
+  units?: readonly PlayerBuildableUnitType[];
+}
+
+export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
+  type: "player_buildables_result";
+  result: BuildableUnit[];
+}
+
 export interface PlayerProfileMessage extends BaseWorkerMessage {
   type: "player_profile";
   playerID: number;
@@ -120,6 +136,7 @@ export type MainThreadMessage =
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
+  | PlayerBuildablesMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage
   | AttackAveragePositionMessage
@@ -130,6 +147,7 @@ export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
   | PlayerActionsResultMessage
+  | PlayerBuildablesResultMessage
   | PlayerProfileResultMessage
   | PlayerBorderTilesResultMessage
   | AttackAveragePositionResultMessage

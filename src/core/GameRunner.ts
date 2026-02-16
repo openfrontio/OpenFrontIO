@@ -6,6 +6,7 @@ import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
+  BuildableUnit,
   Cell,
   Game,
   GameUpdates,
@@ -190,6 +191,18 @@ export class GameRunner {
 
   public pendingTurns(): number {
     return Math.max(0, this.turns.length - this.currTurn);
+  }
+
+  public playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): BuildableUnit[] {
+    const player = this.game.player(playerID);
+    const tile =
+      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
+    return player.buildableUnits(tile, units);
   }
 
   public playerActions(

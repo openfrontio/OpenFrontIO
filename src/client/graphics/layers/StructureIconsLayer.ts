@@ -286,8 +286,8 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef, [this.ghostUnit?.buildableUnit.type])
-      .then((actions) => {
+      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
+      .then((buildables) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
@@ -298,7 +298,7 @@ export class StructureIconsLayer implements Layer {
 
         if (!this.ghostUnit) return;
 
-        const unit = actions.buildableUnits.find(
+        const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
         const showPrice = this.game.config().userSettings().cursorCostLabel();
