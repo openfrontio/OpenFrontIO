@@ -8,7 +8,6 @@ import { wouldNukeBreakAlliance } from "../../../core/execution/Util";
 import {
   BuildableUnit,
   Cell,
-  PlayerActions,
   PlayerBuildableUnitType,
   PlayerID,
   UnitType,
@@ -75,7 +74,6 @@ export class StructureIconsLayer implements Layer {
   private ghostStage: PIXI.Container;
   private levelsStage: PIXI.Container;
   private rootStage: PIXI.Container = new PIXI.Container();
-  public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
   private readonly theme: Theme;
   private renderer: PIXI.Renderer | null = null;
