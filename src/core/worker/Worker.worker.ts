@@ -103,7 +103,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: actions,
         } as PlayerActionsResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get actions:", error);
         throw error;
       }
       break;
@@ -113,7 +113,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       }
 
       try {
-        const actions = (await gameRunner).playerBuildables(
+        const buildables = (await gameRunner).playerBuildables(
           message.playerID,
           message.x,
           message.y,
@@ -122,10 +122,10 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         sendMessage({
           type: "player_buildables_result",
           id: message.id,
-          result: actions,
+          result: buildables,
         } as PlayerBuildablesResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get buildables:", error);
         throw error;
       }
       break;
@@ -142,7 +142,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: profile,
         } as PlayerProfileResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get player profile:", error);
         throw error;
       }
       break;
