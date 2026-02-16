@@ -223,7 +223,7 @@ export class MapPlaylist {
       maxPlayers: 2,
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
-      difficulty: Difficulty.Medium,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.OneVOne,
       infiniteGold: false,
       infiniteTroops: false,
