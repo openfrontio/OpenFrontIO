@@ -368,7 +368,7 @@ export class MapPlaylist {
     return (Object.keys(GameMapType) as GameMapName[]).flatMap((key) => {
       const map = GameMapType[key];
       if (type !== "special" && ARCADE_MAPS.has(map)) return [];
-      return Array(frequency[key] ?? 0).fill(map) as GameMapType[];
+      return Array(frequency[key] ?? 1).fill(map) as GameMapType[];
     });
   }
 
@@ -403,14 +403,17 @@ export class MapPlaylist {
     playerTeams: TeamCountConfig | undefined,
     isCompact?: boolean,
   ): Promise<number> {
-    const [l, m, s] = await this.getMapPlayerCounts(map);
-    const r = Math.random();
-    const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    const [highCount, midCount, lowCount] = await this.getMapPlayerCounts(map);
+    const rand = Math.random();
+    const baseCount = rand < 0.3 ? highCount : rand < 0.6 ? midCount : lowCount;
+    let players = Math.min(
+      mode === GameMode.Team ? Math.ceil(baseCount * 1.5) : baseCount,
+      highCount,
+    );
     if (isCompact) {
-      p = Math.max(3, Math.floor(p * 0.25));
+      players = Math.max(3, Math.floor(players * 0.25));
     }
-    return this.adjustForTeams(p, playerTeams);
+    return this.adjustForTeams(players, playerTeams);
   }
 
   /**
