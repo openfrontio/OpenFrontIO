@@ -99,6 +99,7 @@ export function createRenderer(
     console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
+  gameLeftSidebar.eventBus = eventBus;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!teamStats || !(teamStats instanceof TeamStats)) {
@@ -247,6 +248,7 @@ export function createRenderer(
     console.error("spawn timer not found");
   }
   spawnTimer.game = game;
+  spawnTimer.eventBus = eventBus;
   spawnTimer.transformHandler = transformHandler;
 
   const immunityTimer = document.querySelector(
@@ -256,6 +258,7 @@ export function createRenderer(
     console.error("immunity timer not found");
   }
   immunityTimer.game = game;
+  immunityTimer.eventBus = eventBus;
 
   const inGameHeaderAd = document.querySelector(
     "in-game-header-ad",

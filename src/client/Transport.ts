@@ -55,13 +55,8 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendAllianceReplyIntentEvent implements GameEvent {
-  constructor(
-    // The original alliance requestor
-    public readonly requestor: PlayerView,
-    public readonly recipient: PlayerView,
-    public readonly accepted: boolean,
-  ) {}
+export class SendAllianceRejectIntentEvent implements GameEvent {
+  constructor(public readonly requestor: PlayerView) {}
 }
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
@@ -205,8 +200,8 @@ export class Transport {
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
     );
-    this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
-      this.onAllianceRequestReplyUIEvent(e),
+    this.eventBus.on(SendAllianceRejectIntentEvent, (e) =>
+      this.onAllianceRejectUIEvent(e),
     );
     this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
@@ -448,11 +443,10 @@ export class Transport {
     });
   }
 
-  private onAllianceRequestReplyUIEvent(event: SendAllianceReplyIntentEvent) {
+  private onAllianceRejectUIEvent(event: SendAllianceRejectIntentEvent) {
     this.sendIntent({
-      type: "allianceRequestReply",
+      type: "allianceReject",
       requestor: event.requestor.id(),
-      accept: event.accepted,
     });
   }
 

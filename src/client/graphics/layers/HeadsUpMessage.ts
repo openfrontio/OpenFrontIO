@@ -20,6 +20,12 @@ export class HeadsUpMessage extends LitElement implements Layer {
   private isImmunityActive = false;
 
   @state()
+  private isCatchingUp = false;
+  private catchingUpTicks = 0;
+
+  private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
+
+  @state()
   private toastMessage: string | import("lit").TemplateResult | null = null;
   @state()
   private toastColor: "green" | "red" = "green";
@@ -92,12 +98,30 @@ export class HeadsUpMessage extends LitElement implements Layer {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
+    const currentlyCatchingUp =
+      !this.game.config().isReplay() && this.game.isCatchingUp();
+
+    if (currentlyCatchingUp) {
+      this.catchingUpTicks++;
+    } else {
+      this.catchingUpTicks = 0;
+    }
+
+    this.isCatchingUp =
+      this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
+
     this.isVisible =
-      this.game.inSpawnPhase() || this.isPaused || this.isImmunityActive;
+      this.game.inSpawnPhase() ||
+      this.isPaused ||
+      this.isImmunityActive ||
+      this.isCatchingUp;
     this.requestUpdate();
   }
 
   private getMessage(): string {
+    if (this.isCatchingUp) {
+      return translateText("heads_up_message.catching_up");
+    }
     if (this.isPaused) {
       if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
         return translateText("heads_up_message.singleplayer_game_paused");
@@ -146,10 +170,10 @@ export class HeadsUpMessage extends LitElement implements Layer {
           ? html`
               <div
                 class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[11000]
-                            inline-flex items-center justify-center h-8 lg:h-10
+                            inline-flex items-center justify-center min-h-8 lg:min-h-10
                             w-fit max-w-[90vw]
-                            bg-gray-900/60 rounded-md lg:rounded-lg
-                            backdrop-blur-md text-white text-md lg:text-xl px-3 lg:px-4
+                            bg-gray-800/70 rounded-md lg:rounded-lg
+                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-1
                             text-center break-words"
                 style="word-wrap: break-word; hyphens: auto;"
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}

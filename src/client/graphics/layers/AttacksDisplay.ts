@@ -221,7 +221,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.incomingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs rounded px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
@@ -232,7 +232,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(attack.troops)}</span
               >
-              <span class="truncate"
+              <span class="truncate ml-1"
                 >${(
                   this.game.playerBySmallID(attack.attackerID) as PlayerView
                 )?.name()}</span
@@ -254,7 +254,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 />`,
                 onClick: () => this.handleRetaliate(attack),
                 className:
-                  "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 rounded px-1.5 py-1 border border-red-700/50",
+                  "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 rounded-lg px-1.5 py-1 border border-red-700/50",
                 translate: false,
               })
             : ""}
@@ -269,7 +269,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingAttacks.map(
       (attack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs rounded px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
@@ -280,7 +280,7 @@ export class AttacksDisplay extends LitElement implements Layer {
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(attack.troops)}</span
               >
-              <span class="truncate"
+              <span class="truncate ml-1"
                 >${(
                   this.game.playerBySmallID(attack.targetID) as PlayerView
                 )?.name()}</span
@@ -297,7 +297,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: attack.retreating,
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -311,7 +311,7 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingLandAttacks.map(
       (landAttack) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs rounded px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`<img
@@ -334,7 +334,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: landAttack.retreating,
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -367,14 +367,14 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.outgoingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs rounded px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
-              <span class="truncate text-xs"
+              <span class="truncate text-xs ml-1"
                 >${this.getBoatTargetName(boat)}</span
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
@@ -389,7 +389,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: boat.retreating(),
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -403,14 +403,16 @@ export class AttacksDisplay extends LitElement implements Layer {
     return this.incomingBoats.map(
       (boat) => html`
         <div
-          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs rounded px-1.5 py-0.5 overflow-hidden"
+          class="flex items-center gap-0.5 w-full bg-gray-800/70 backdrop-blur-xs min-[1200px]:rounded-lg sm:rounded-r-lg px-1.5 py-0.5 overflow-hidden"
         >
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
               <span class="inline-block min-w-[3rem] text-right"
                 >${renderTroops(boat.troops())}</span
               >
-              <span class="truncate text-xs">${boat.owner()?.name()}</span>`,
+              <span class="truncate text-xs ml-1"
+                >${boat.owner()?.name()}</span
+              >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
               "text-left text-red-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
@@ -439,7 +441,7 @@ export class AttacksDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mb-1 pointer-events-auto grid grid-cols-2 lg:grid-cols-1 gap-1 text-white text-sm lg:text-base"
+        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 sm:grid-cols-1 gap-1 text-white text-sm lg:text-base"
       >
         ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
         ${this.renderBoats()} ${this.renderIncomingAttacks()}

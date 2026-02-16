@@ -13,6 +13,7 @@ import {
   GameStartInfo,
   GameStartInfoSchema,
   PlayerRecord,
+  PublicGameType,
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerLobbyInfoMessage,
@@ -90,6 +91,7 @@ export class GameServer {
     public gameConfig: GameConfig,
     private creatorPersistentID?: string,
     private startsAt?: number,
+    private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
   }
@@ -824,6 +826,7 @@ export class GameServer {
       gameConfig: this.gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
+      publicGameType: this.publicGameType,
     };
   }
 

@@ -260,8 +260,8 @@ export class ControlPanel extends LitElement implements Layer {
   render() {
     return html`
       <div
-        class="pointer-events-auto ${this._isVisible
-          ? "relative z-[60] w-full lg:max-w-[400px] text-sm lg:text-base bg-gray-800/70 p-1.5 pr-2 lg:p-5 shadow-lg lg:rounded-tr-xl min-[1200px]:rounded-xl backdrop-blur-sm"
+        class="relative pointer-events-auto ${this._isVisible
+          ? "relative z-[60] w-full lg:max-w-[400px] text-sm lg:text-base bg-gray-800/70 p-1.5 pr-2 lg:p-5 shadow-lg sm:rounded-tr-lg min-[1200px]:rounded-lg backdrop-blur-xs"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
@@ -309,7 +309,7 @@ export class ControlPanel extends LitElement implements Layer {
               </div>
             </div>
             <!-- Small red vertical bar indicator -->
-            <div class="relative shrink-0">
+            <div class="shrink-0">
               <div
                 class="w-1.5 h-8 bg-white/20 rounded-full relative overflow-hidden"
               >
@@ -318,32 +318,30 @@ export class ControlPanel extends LitElement implements Layer {
                   style="height: ${this.attackRatio * 100}%"
                 ></div>
               </div>
-              ${this._touchDragging
-                ? html`
-                    <div
-                      class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex flex-col items-center pointer-events-auto z-[10000] bg-gray-800/80 backdrop-blur-sm rounded-lg p-2 w-12"
-                      style="height: 50vh;"
-                      @touchstart=${(e: TouchEvent) => this.handleBarTouch(e)}
-                    >
-                      <span
-                        class="text-red-400 text-sm font-bold mb-1"
-                        translate="no"
-                        >${(this.attackRatio * 100).toFixed(0)}%</span
-                      >
-                      <div
-                        class="attack-drag-bar flex-1 w-3 bg-white/20 rounded-full relative overflow-hidden"
-                      >
-                        <div
-                          class="absolute bottom-0 w-full bg-red-500 rounded-full"
-                          style="height: ${this.attackRatio * 100}%"
-                        ></div>
-                      </div>
-                    </div>
-                  `
-                : ""}
             </div>
           </div>
         </div>
+        ${this._touchDragging
+          ? html`
+              <div
+                class="absolute bottom-full right-0 flex flex-col items-center pointer-events-auto z-[10000] bg-gray-800/70 backdrop-blur-xs rounded-tl-lg sm:rounded-lg p-2 w-12"
+                style="height: 50vh;"
+                @touchstart=${(e: TouchEvent) => this.handleBarTouch(e)}
+              >
+                <span class="text-red-400 text-sm font-bold mb-1" translate="no"
+                  >${(this.attackRatio * 100).toFixed(0)}%</span
+                >
+                <div
+                  class="attack-drag-bar flex-1 w-3 bg-white/20 rounded-full relative overflow-hidden"
+                >
+                  <div
+                    class="absolute bottom-0 w-full bg-red-500 rounded-full"
+                    style="height: ${this.attackRatio * 100}%"
+                  ></div>
+                </div>
+              </div>
+            `
+          : ""}
         <!-- Attack ratio bar (desktop, always visible) -->
         <div class="hidden lg:block mt-2">
           <div

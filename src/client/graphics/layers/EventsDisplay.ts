@@ -24,7 +24,8 @@ import {
 } from "../../../core/game/GameUpdates";
 import {
   SendAllianceExtensionIntentEvent,
-  SendAllianceReplyIntentEvent,
+  SendAllianceRejectIntentEvent,
+  SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -468,16 +469,14 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, true),
+              new SendAllianceRequestIntentEvent(recipient, requestor),
             ),
         },
         {
           text: translateText("events_display.reject_alliance"),
           className: "btn-info",
           action: () =>
-            this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, false),
-            ),
+            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
         },
       ],
       highlight: true,
@@ -788,17 +787,19 @@ export class EventsDisplay extends LitElement implements Layer {
             >
               ${this.renderButton({
                 content: html`
-                  Events
-                  <span
-                    class="${this.newEvents
-                      ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-lg text-sm"
-                    >${this.newEvents}</span
-                  >
+                  <span class="flex items-center gap-2">
+                    ${translateText("events_display.events")}
+                    ${this.newEvents > 0
+                      ? html`<span
+                          class="inline-block px-2 bg-red-500 rounded-lg text-sm"
+                          >${this.newEvents}</span
+                        >`
+                      : ""}
+                  </span>
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur-sm",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 min-[1200px]:rounded-lg max-sm:rounded-tr-lg sm:rounded-tl-lg bg-gray-800/70 backdrop-blur-xs",
               })}
             </div>
           `
@@ -809,9 +810,9 @@ export class EventsDisplay extends LitElement implements Layer {
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg lg:rounded-tl-lg"
+                class="w-full p-2 lg:p-3 bg-gray-800/70 min-[1200px]:rounded-t-lg sm:rounded-tl-lg"
               >
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center gap-3">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
                       swordIcon,
@@ -857,7 +858,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div>
                   <table
-                    class="w-full max-h-none border-collapse text-white shadow-lg lg:text-base text-md md:text-xs pointer-events-auto"
+                    class="w-full max-h-none border-collapse text-white shadow-lg text-xs lg:text-sm pointer-events-auto"
                   >
                     <tbody>
                       ${filteredEvents.map(
@@ -896,7 +897,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded-sm text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                               ? "bg-blue-500 hover:bg-blue-600"
                                               : btn.className.includes(
