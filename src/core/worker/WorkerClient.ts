@@ -2,6 +2,7 @@ import {
   Cell,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
   UnitType,
@@ -165,7 +166,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: readonly UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {

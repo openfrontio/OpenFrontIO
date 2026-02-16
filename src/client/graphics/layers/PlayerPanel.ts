@@ -121,7 +121,7 @@ export class PlayerPanel extends LitElement implements Layer {
       // Refresh actions & alliance expiry
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile);
+        this.actions = await myPlayer.actions(this.tile, null);
         if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceExpiresAt;
           const remainingTicks = expiresAt - this.g.ticks();

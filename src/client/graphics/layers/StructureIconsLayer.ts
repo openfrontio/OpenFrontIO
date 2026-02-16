@@ -9,6 +9,7 @@ import {
   BuildableUnit,
   Cell,
   PlayerActions,
+  PlayerBuildableUnitType,
   PlayerID,
   UnitType,
 } from "../../../core/game/Game";
@@ -433,7 +434,7 @@ export class StructureIconsLayer implements Layer {
     this.ghostUnit.range?.position.set(localX, localY);
   }
 
-  private createGhostStructure(type: UnitType | null) {
+  private createGhostStructure(type: PlayerBuildableUnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
     if (type === null) {

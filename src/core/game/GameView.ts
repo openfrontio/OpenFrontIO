@@ -14,6 +14,7 @@ import {
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
   PlayerType,
@@ -405,7 +406,7 @@ export class PlayerView {
 
   async actions(
     tile?: TileRef,
-    units?: readonly UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),

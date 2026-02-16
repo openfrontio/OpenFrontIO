@@ -13,6 +13,7 @@ import {
   Player,
   PlayerActions,
   PlayerBorderTiles,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -195,14 +196,15 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: readonly UnitType[],
+    units?: readonly PlayerBuildableUnitType[] | null,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
       canAttack: tile !== null && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile, units),
+      buildableUnits:
+        units === null ? [] : player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
       canEmbargoAll: player.canEmbargoAll(),
     } as PlayerActions;

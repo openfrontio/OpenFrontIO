@@ -261,47 +261,53 @@ export const nukeTypes = [
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
-] satisfies UnitType[];
+] satisfies readonly UnitType[];
 
-const _structureTypes: ReadonlySet<UnitType> = new Set([
+const _structureTypesList = [
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
-]);
+] as const satisfies readonly UnitType[];
 
-export const StructureTypes: readonly UnitType[] = [..._structureTypes];
+const _structureTypesSet: ReadonlySet<UnitType> = new Set(_structureTypesList);
+
+export const StructureTypes = _structureTypesList;
 
 export function isStructureType(type: UnitType): boolean {
-  return _structureTypes.has(type);
+  return _structureTypesSet.has(type);
 }
 
-const _buildableNukeTypes: readonly UnitType[] = nukeTypes.filter(
+const _buildableNukeTypes = nukeTypes.filter(
   (type) => type !== UnitType.MIRVWarhead,
-);
+) satisfies readonly UnitType[];
 
-const _buildMenuTypes: ReadonlySet<UnitType> = new Set([
-  ..._structureTypes,
+const _buildMenuTypesList = [
+  ..._structureTypesList,
   ..._buildableNukeTypes,
   UnitType.Warship,
-]);
+] as const satisfies readonly UnitType[];
 
-export const BuildMenuTypes: readonly UnitType[] = [..._buildMenuTypes];
+export const BuildMenuTypes = _buildMenuTypesList;
 
-const _playerBuildableTypes: ReadonlySet<UnitType> = new Set([
-  ..._buildMenuTypes,
+const _playerBuildableTypesList = [
+  ..._buildMenuTypesList,
   UnitType.TransportShip,
-]);
+] as const satisfies readonly UnitType[];
 
-export const PlayerBuildableTypes: readonly UnitType[] = [
-  ..._playerBuildableTypes,
-];
+const _playerBuildableTypesSet: ReadonlySet<UnitType> = new Set(
+  _playerBuildableTypesList,
+);
 
 export function isPlayerBuildableType(type: UnitType): boolean {
-  return _playerBuildableTypes.has(type);
+  return _playerBuildableTypesSet.has(type);
 }
+
+export const PlayerBuildableTypes = _playerBuildableTypesList;
+
+export type PlayerBuildableUnitType = (typeof PlayerBuildableTypes)[number];
 
 export interface OwnerComp {
   owner: Player;
@@ -650,7 +656,7 @@ export interface Player {
   unitsOwned(type: UnitType): number;
   buildableUnits(
     tile: TileRef | null,
-    units?: readonly UnitType[],
+    units?: readonly PlayerBuildableUnitType[],
   ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
@@ -872,7 +878,7 @@ export interface BuildableUnit {
   canBuild: TileRef | false;
   // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
   canUpgrade: number | false;
-  type: UnitType;
+  type: PlayerBuildableUnitType;
   cost: Gold;
   overlappingRailroads: number[];
 }

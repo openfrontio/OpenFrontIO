@@ -27,6 +27,7 @@ import {
   MutableAlliance,
   Player,
   PlayerBuildableTypes,
+  PlayerBuildableUnitType,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -968,13 +969,14 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units?: readonly UnitType[],
+    units?: PlayerBuildableUnitType[],
   ): BuildableUnit[] {
     const validTiles =
       tile !== null &&
       (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
+
     return PlayerBuildableTypes.filter(
       (u) => units === undefined || units.includes(u),
     ).map((u) => {

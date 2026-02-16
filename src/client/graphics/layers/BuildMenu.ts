@@ -4,6 +4,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
+  BuildMenuTypes,
   Gold,
   PlayerActions,
   UnitType,
@@ -492,7 +493,7 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      ?.actions(this.clickedTile)
+      ?.actions(this.clickedTile, BuildMenuTypes)
       .then((actions) => {
         this.playerActions = actions;
         this.requestUpdate();

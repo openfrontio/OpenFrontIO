@@ -13,7 +13,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { PlayerActions, StructureTypes, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -557,13 +557,12 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
+    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
@@ -601,7 +600,7 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer!.actions(clickedTile, StructureTypes).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -654,7 +653,7 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
       if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
       }
@@ -673,13 +672,12 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
+    this.myPlayer.actions(tile, null).then((actions) => {
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       }
