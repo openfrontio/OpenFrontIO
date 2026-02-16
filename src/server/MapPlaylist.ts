@@ -17,10 +17,18 @@ import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
-import { isSpecialModifiers } from "./SpecialModifiers";
 
 const log = logger.child({});
 const ARCADE_MAPS = new Set(mapCategories.arcade);
+
+function isSpecialModifiers(m: PublicGameModifiers): boolean {
+  return (
+    m.isCompact ||
+    m.isRandomSpawn ||
+    m.isCrowded ||
+    m.startingGold !== undefined
+  );
+}
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
