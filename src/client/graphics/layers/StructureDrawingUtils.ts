@@ -1,6 +1,10 @@
 import * as PIXI from "pixi.js";
 import { Theme } from "../../../core/configuration/Config";
-import { Cell, PlayerBuildableUnitType, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "/images/AnchorIcon.png?url";
