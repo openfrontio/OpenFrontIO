@@ -1,4 +1,4 @@
-import { PlayerBuildableUnitType, UnitType } from "../../core/game/Game";
+import { PlayerBuildableUnitType } from "../../core/game/Game";
 
 export interface UIState {
   attackRatio: number;

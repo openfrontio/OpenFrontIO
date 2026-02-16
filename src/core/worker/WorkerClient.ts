@@ -5,7 +5,6 @@ import {
   PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
