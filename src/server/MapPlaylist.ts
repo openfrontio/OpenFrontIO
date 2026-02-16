@@ -126,68 +126,31 @@ export class MapPlaylist {
   >();
 
   public async gameConfig(type: PublicGameType): Promise<GameConfig> {
-    if (type === "special") return this.getSpecialConfig();
-
-    const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
+    const isSpecial = type === "special";
+    const mode = isSpecial
+      ? Math.random() < 0.5
+        ? GameMode.FFA
+        : GameMode.Team
+      : type === "ffa"
+        ? GameMode.FFA
+        : GameMode.Team;
     const map = this.getNextMap(type);
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    const rolled = this.rollModifiers("normal");
-    const { modifiers, crowdedMaxPlayers } = await this.applyConstraints(
-      rolled,
-      map,
-      mode,
-      playerTeams,
-    );
-    const maxPlayers =
-      crowdedMaxPlayers ??
-      (await this.lobbyMaxPlayers(map, mode, playerTeams, modifiers.isCompact));
-
-    return this.buildGameConfig({
-      mode,
-      map,
-      maxPlayers,
-      modifiers,
-      playerTeams,
-    });
-  }
-
-  private async getSpecialConfig(): Promise<GameConfig> {
-    const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap("special");
-    const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
-
-    // Keep rerolling until a special modifier survives rule constraints.
-    let modifiers!: PublicGameModifiers;
-    let crowdedMaxPlayers: number | undefined;
-    let found = false;
-    for (let i = 0; i < 10; i++) {
-      const rolled = this.rollModifiers("special", true);
-      ({ modifiers, crowdedMaxPlayers } = await this.applyConstraints(
-        rolled,
-        map,
-        mode,
-        playerTeams,
-      ));
-      if (isSpecialModifiers(modifiers)) {
-        found = true;
-        break;
-      }
-    }
-    if (!found) modifiers.startingGold = 5_000_000;
-
-    const maxPlayers = Math.max(
-      2,
-      crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(
+    const { modifiers, crowdedMaxPlayers } = isSpecial
+      ? await this.rollSpecialWithConstraints(map, mode, playerTeams)
+      : await this.applyConstraints(
+          this.rollModifiers("normal"),
           map,
           mode,
           playerTeams,
-          modifiers.isCompact,
-        )),
-    );
+        );
+
+    let maxPlayers =
+      crowdedMaxPlayers ??
+      (await this.lobbyMaxPlayers(map, mode, playerTeams, modifiers.isCompact));
+    if (isSpecial) maxPlayers = Math.max(2, maxPlayers);
 
     return this.buildGameConfig({
       mode,
@@ -288,6 +251,29 @@ export class MapPlaylist {
     return modifiers;
   }
 
+  // Roll special modifiers and apply constraints, retrying until one survives.
+  private async rollSpecialWithConstraints(
+    map: GameMapType,
+    mode: GameMode,
+    playerTeams: TeamCountConfig | undefined,
+  ): Promise<{ modifiers: PublicGameModifiers; crowdedMaxPlayers?: number }> {
+    let result!: {
+      modifiers: PublicGameModifiers;
+      crowdedMaxPlayers?: number;
+    };
+    for (let i = 0; i < 10; i++) {
+      result = await this.applyConstraints(
+        this.rollModifiers("special", true),
+        map,
+        mode,
+        playerTeams,
+      );
+      if (isSpecialModifiers(result.modifiers)) return result;
+    }
+    result.modifiers.startingGold = 5_000_000;
+    return result;
+  }
+
   private async applyConstraints(
     modifiers: PublicGameModifiers,
     map: GameMapType,
@@ -345,24 +331,21 @@ export class MapPlaylist {
   private generateNewPlaylist(type: PublicGameType): GameMapType[] {
     const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
-    const shuffledSource = rand.shuffleArray([...maps]);
-    const playlist: GameMapType[] = [];
-
     const numAttempts = 10000;
-    for (let attempt = 0; attempt < numAttempts; attempt++) {
-      playlist.length = 0;
-      const source = [...shuffledSource];
 
-      let success = true;
+    for (let attempt = 0; attempt < numAttempts; attempt++) {
+      const source = rand.shuffleArray(maps);
+      const playlist: GameMapType[] = [];
+
       while (source.length > 0) {
-        if (!this.addNextMapNonConsecutive(playlist, source)) {
-          success = false;
-          break;
-        }
+        const recent = playlist.slice(-5);
+        const idx = source.findIndex((m) => !recent.includes(m));
+        if (idx === -1) break;
+        playlist.push(source.splice(idx, 1)[0]);
       }
 
-      if (success) {
-        log.info(`Generated map playlist in ${attempt} attempts`);
+      if (source.length === 0) {
+        log.info(`Generated map playlist in ${attempt + 1} attempts`);
         return playlist;
       }
     }
@@ -370,21 +353,7 @@ export class MapPlaylist {
     log.warn(
       `Failed to generate non-consecutive playlist after ${numAttempts} attempts, falling back to shuffle`,
     );
-    return rand.shuffleArray([...maps]);
-  }
-
-  private addNextMapNonConsecutive(
-    playlist: GameMapType[],
-    source: GameMapType[],
-  ): boolean {
-    const lastMaps = playlist.slice(-5);
-    for (let i = 0; i < source.length; i++) {
-      if (!lastMaps.includes(source[i])) {
-        playlist.push(source.splice(i, 1)[0]);
-        return true;
-      }
-    }
-    return false;
+    return rand.shuffleArray(maps);
   }
 
   private buildMapsList(type: PublicGameType): GameMapType[] {
