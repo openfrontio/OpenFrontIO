@@ -1,5 +1,11 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  isBuildableAttackType,
+  PlayerActions,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -337,10 +343,14 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
-function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const Units: Set<UnitType> = new Set<UnitType>();
+function getAllEnabledUnits(
+  myPlayer: boolean,
+  config: Config,
+): Set<PlayerBuildableUnitType> {
+  const Units: Set<PlayerBuildableUnitType> =
+    new Set<PlayerBuildableUnitType>();
 
-  const addStructureIfEnabled = (unitType: UnitType) => {
+  const addStructureIfEnabled = (unitType: PlayerBuildableUnitType) => {
     if (!config.isUnitDisabled(unitType)) {
       Units.add(unitType);
     }
@@ -363,19 +373,12 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   return Units;
 }
 
-const ATTACK_UNIT_TYPES: UnitType[] = [
-  UnitType.AtomBomb,
-  UnitType.MIRV,
-  UnitType.HydrogenBomb,
-  UnitType.Warship,
-];
-
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
   elementIdPrefix: string,
 ): MenuElement[] {
-  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+  const unitTypes: Set<PlayerBuildableUnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
     params.game.config(),
   );
@@ -385,8 +388,8 @@ function createMenuElements(
       (item) =>
         unitTypes.has(item.unitType) &&
         (filterType === "attack"
-          ? ATTACK_UNIT_TYPES.includes(item.unitType)
-          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+          ? isBuildableAttackType(item.unitType)
+          : !isBuildableAttackType(item.unitType)),
     )
     .map((item: BuildItemDisplay) => ({
       id: `${elementIdPrefix}_${item.unitType}`,

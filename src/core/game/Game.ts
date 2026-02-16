@@ -263,9 +263,29 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] satisfies readonly UnitType[];
 
-const _buildableNukeTypes = nukeTypes.filter(
-  (type) => type !== UnitType.MIRVWarhead,
+const attackTypes = [
+  ...nukeTypes,
+  UnitType.Shell,
+  UnitType.SAMMissile,
+  UnitType.Warship,
+] satisfies readonly UnitType[];
+
+const _buildableAttackTypes = attackTypes.filter(
+  (type) =>
+    type !== UnitType.MIRVWarhead &&
+    type !== UnitType.Shell &&
+    type !== UnitType.SAMMissile,
 ) satisfies readonly UnitType[];
+
+export const BuildableAttackTypes = _buildableAttackTypes;
+
+const _buildableAttackTypesSet: ReadonlySet<UnitType> = new Set(
+  _buildableAttackTypes,
+);
+
+export function isBuildableAttackType(type: UnitType): boolean {
+  return _buildableAttackTypesSet.has(type);
+}
 
 const _structureTypesList = [
   UnitType.City,
@@ -286,8 +306,7 @@ export function isStructureType(type: UnitType): boolean {
 
 const _buildMenuTypesList = [
   ..._structureTypesList,
-  ..._buildableNukeTypes,
-  UnitType.Warship,
+  ..._buildableAttackTypes,
 ] as const satisfies readonly UnitType[];
 
 export const BuildMenuTypes = _buildMenuTypesList;
@@ -301,11 +320,11 @@ const _playerBuildableTypesSet: ReadonlySet<UnitType> = new Set(
   _playerBuildableTypesList,
 );
 
+export const PlayerBuildableTypes = _playerBuildableTypesList;
+
 export function isPlayerBuildableType(type: UnitType): boolean {
   return _playerBuildableTypesSet.has(type);
 }
-
-export const PlayerBuildableTypes = _playerBuildableTypesList;
 
 export type PlayerBuildableUnitType = (typeof PlayerBuildableTypes)[number];
 

@@ -6,6 +6,7 @@ import {
   BuildableUnit,
   BuildMenuTypes,
   Gold,
+  PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -37,7 +38,7 @@ import samlauncherIcon from "/images/SamLauncherIconWhite.svg?url";
 import shieldIcon from "/images/ShieldIconWhite.svg?url";
 
 export interface BuildItemDisplay {
-  unitType: UnitType;
+  unitType: PlayerBuildableUnitType;
   icon: string;
   description?: string;
   key?: string;
