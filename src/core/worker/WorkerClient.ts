@@ -165,7 +165,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    units?: readonly PlayerBuildableUnitType[] | null,
+    units?: PlayerBuildableUnitType[] | null,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {

@@ -63,7 +63,7 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
-  units?: readonly PlayerBuildableUnitType[];
+  units?: PlayerBuildableUnitType[] | null;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {

@@ -1,5 +1,12 @@
 import { Config } from "../configuration/Config";
-import { Cell, Execution, Game, isStructureType, Player, UnitType } from "../game/Game";
+import {
+  Cell,
+  Execution,
+  Game,
+  isStructureType,
+  Player,
+  UnitType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -35,7 +42,7 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     this.player.decayRelations();
     for (const u of this.player.units()) {
-      if (!isStructureType(u.type())){
+      if (!isStructureType(u.type())) {
         continue;
       }
 

@@ -656,7 +656,7 @@ export interface Player {
   unitsOwned(type: UnitType): number;
   buildableUnits(
     tile: TileRef | null,
-    units?: readonly PlayerBuildableUnitType[],
+    units?: PlayerBuildableUnitType[],
   ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
