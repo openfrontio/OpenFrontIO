@@ -25,6 +25,64 @@ const compactPayload = (value: string): string =>
     ? value
     : `${value.slice(0, MAX_LOG_PAYLOAD)}...[truncated ${value.length - MAX_LOG_PAYLOAD} chars]`;
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function isBuildIntentType(type: string): boolean {
+  const normalized = type.toLowerCase();
+  return normalized.startsWith("build_") || normalized === "upgrade_structure";
+}
+
+function deriveReplayParticipationMetrics(archivePayload: unknown): {
+  connectedPlayers?: number;
+  activePlayers?: number;
+} {
+  const root = asRecord(archivePayload);
+  if (!root) return {};
+
+  const turns = Array.isArray(root.turns) ? root.turns : [];
+  if (turns.length === 0) return {};
+
+  const connectedClientIds = new Set<string>();
+  const activeClientIds = new Set<string>();
+  let sawDisconnectedMarker = false;
+
+  for (const turnEntry of turns) {
+    const turn = asRecord(turnEntry);
+    if (!turn) continue;
+    const intents = Array.isArray(turn.intents) ? turn.intents : [];
+    for (const intentEntry of intents) {
+      const intent = asRecord(intentEntry);
+      if (!intent) continue;
+      const type = typeof intent.type === "string" ? intent.type : "";
+      const clientID =
+        typeof intent.clientID === "string" && intent.clientID.length > 0
+          ? intent.clientID
+          : undefined;
+
+      if (!clientID) continue;
+
+      if (type === "mark_disconnected") {
+        sawDisconnectedMarker = true;
+        if (intent.isDisconnected === false) {
+          connectedClientIds.add(clientID);
+        }
+      }
+
+      if (isBuildIntentType(type)) {
+        activeClientIds.add(clientID);
+      }
+    }
+  }
+
+  return {
+    connectedPlayers: sawDisconnectedMarker ? connectedClientIds.size : undefined,
+    activePlayers: activeClientIds.size,
+  };
+}
+
 export class LobbyIngestService {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -359,7 +417,9 @@ export class LobbyIngestService {
       .filter(
         (record) =>
           record.status !== "active" &&
-          !record.archiveFound &&
+          (!record.archiveFound ||
+            (record.archiveConnectedPlayers === undefined &&
+              record.archiveActivePlayers === undefined)) &&
           !!record.closedAt &&
           Date.now() - record.closedAt > 120_000,
       )
@@ -476,6 +536,7 @@ export class LobbyIngestService {
     if (!parsed.success) return;
 
     const info = parsed.data.info;
+    const replayMetrics = deriveReplayParticipationMetrics(response.json);
     const normalizeTimestamp = (timestamp: number | undefined): number | undefined => {
       if (timestamp === undefined || !Number.isFinite(timestamp)) return undefined;
       return timestamp < 1e12 ? Math.round(timestamp * 1000) : Math.round(timestamp);
@@ -516,6 +577,8 @@ export class LobbyIngestService {
     this.store.setArchiveSummary(gameID, {
       found: true,
       players: info?.players?.length,
+      connectedPlayers: replayMetrics.connectedPlayers,
+      activePlayers: replayMetrics.activePlayers,
       durationSec:
         typeof info?.duration === "number" ? Math.round(info.duration) : undefined,
       winner: winnerLabel,

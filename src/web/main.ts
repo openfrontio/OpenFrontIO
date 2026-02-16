@@ -4,10 +4,12 @@ import {
   LobbyRecord,
   TimelineBucket,
 } from "../shared/types";
+import * as d3 from "d3";
 import "./styles.css";
 
 const DEFAULT_BUCKET_MODE: BucketMode = "game_mode_team";
 const DEFAULT_LOOKBACK_HOURS = 24;
+const DEFAULT_ORDER_COUNT = 40;
 
 const app = document.getElementById("app");
 if (!app) {
@@ -33,6 +35,15 @@ app.innerHTML = `
       <label>Lookback (h)
         <input id="lookbackHours" type="number" min="1" max="720" value="${DEFAULT_LOOKBACK_HOURS}" />
       </label>
+      <label>Order Count
+        <select id="orderCount">
+          <option value="20">20</option>
+          <option value="40" selected>40</option>
+          <option value="80">80</option>
+          <option value="120">120</option>
+          <option value="200">200</option>
+        </select>
+      </label>
       <button id="refreshBtn">Refresh</button>
       <button id="autoBtn">Auto: on</button>
     </div>
@@ -47,6 +58,10 @@ app.innerHTML = `
     <article class="card">
       <h3>Timeline (Open/Close/Start)</h3>
       <div id="timelineChart" class="chart"></div>
+    </article>
+    <article class="card">
+      <h3>Join Rate Trend</h3>
+      <div id="joinRateChart" class="chart"></div>
     </article>
     <article class="card wide">
       <h3>Lobby Order Analysis</h3>
@@ -67,6 +82,7 @@ app.innerHTML = `
 const controls = {
   bucketMode: document.getElementById("bucketMode") as HTMLSelectElement,
   lookbackHours: document.getElementById("lookbackHours") as HTMLInputElement,
+  orderCount: document.getElementById("orderCount") as HTMLSelectElement,
   refreshBtn: document.getElementById("refreshBtn") as HTMLButtonElement,
   autoBtn: document.getElementById("autoBtn") as HTMLButtonElement,
 };
@@ -76,6 +92,7 @@ const containers = {
   summary: document.getElementById("summary") as HTMLDivElement,
   bucketTable: document.getElementById("bucketTable") as HTMLDivElement,
   timelineChart: document.getElementById("timelineChart") as HTMLDivElement,
+  joinRateChart: document.getElementById("joinRateChart") as HTMLDivElement,
   orderChart: document.getElementById("orderChart") as HTMLDivElement,
   orderTable: document.getElementById("orderTable") as HTMLDivElement,
   neverStarted: document.getElementById("neverStarted") as HTMLDivElement,
@@ -84,6 +101,7 @@ const containers = {
 
 let autoRefresh = true;
 let refreshTimer: number | null = null;
+let latestAnalytics: AnalyticsPayload | null = null;
 
 controls.refreshBtn.onclick = () => {
   void loadData();
@@ -100,6 +118,13 @@ controls.autoBtn.onclick = () => {
 
 controls.bucketMode.onchange = () => void loadData();
 controls.lookbackHours.onchange = () => void loadData();
+controls.orderCount.onchange = () => {
+  if (latestAnalytics) {
+    renderOrder(latestAnalytics);
+    return;
+  }
+  void loadData();
+};
 
 void loadData();
 
@@ -116,7 +141,8 @@ async function loadData(): Promise<void> {
   ]);
 
   renderHealth(health);
-  renderAnalytics(analytics as AnalyticsPayload);
+  latestAnalytics = analytics as AnalyticsPayload;
+  renderAnalytics(latestAnalytics);
   scheduleRefresh();
 }
 
@@ -160,6 +186,7 @@ function renderAnalytics(payload: AnalyticsPayload): void {
   renderSummary(payload);
   renderBucketTable(payload);
   renderTimeline(payload.timeline);
+  renderJoinRate(payload);
   renderOrder(payload);
   renderInteresting("neverStarted", payload.interesting.neverStarted);
   renderInteresting("lowFill", payload.interesting.lowFillStarted);
@@ -232,6 +259,8 @@ function renderTimeline(timeline: TimelineBucket[]): void {
     containers.timelineChart.innerHTML = "<p>No data yet.</p>";
     return;
   }
+
+  containers.timelineChart.innerHTML = "";
   const width = 760;
   const height = 250;
   const pad = 26;
@@ -241,30 +270,220 @@ function renderTimeline(timeline: TimelineBucket[]): void {
   );
   const minX = timeline[0].minute;
   const maxX = timeline[timeline.length - 1].minute;
-  const x = (v: number) =>
-    pad + ((v - minX) / Math.max(1, maxX - minX)) * (width - pad * 2);
-  const y = (v: number) => height - pad - (v / maxY) * (height - pad * 2);
+  const x = d3
+    .scaleLinear()
+    .domain([minX, Math.max(minX + 1, maxX)])
+    .range([pad, width - pad]);
+  const y = d3.scaleLinear().domain([0, maxY]).range([height - pad, pad]);
 
-  const poly = (key: "opened" | "closed" | "started", color: string) => {
-    const points = timeline.map((row) => `${x(row.minute)},${y(row[key])}`).join(" ");
-    return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${points}" />`;
-  };
+  const svg = d3
+    .select(containers.timelineChart)
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("width", "100%")
+    .attr("height", "100%");
 
-  containers.timelineChart.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
-      ${poly("opened", "#4fa3ff")}
-      ${poly("closed", "#ffd166")}
-      ${poly("started", "#9fff7a")}
-      <text x="${pad}" y="${pad - 8}" fill="#9db1c5" font-size="11">opened</text>
-      <text x="${pad + 70}" y="${pad - 8}" fill="#9db1c5" font-size="11">closed</text>
-      <text x="${pad + 130}" y="${pad - 8}" fill="#9db1c5" font-size="11">started</text>
-    </svg>
-  `;
+  const lineFor = (key: "opened" | "closed" | "started") =>
+    d3
+      .line<TimelineBucket>()
+      .x((row) => x(row.minute))
+      .y((row) => y(row[key]));
+
+  svg
+    .append("path")
+    .datum(timeline)
+    .attr("fill", "none")
+    .attr("stroke", "#4fa3ff")
+    .attr("stroke-width", 2)
+    .attr("d", lineFor("opened"));
+
+  svg
+    .append("path")
+    .datum(timeline)
+    .attr("fill", "none")
+    .attr("stroke", "#ffd166")
+    .attr("stroke-width", 2)
+    .attr("d", lineFor("closed"));
+
+  svg
+    .append("path")
+    .datum(timeline)
+    .attr("fill", "none")
+    .attr("stroke", "#9fff7a")
+    .attr("stroke-width", 2)
+    .attr("d", lineFor("started"));
+
+  svg
+    .append("text")
+    .attr("x", pad)
+    .attr("y", pad - 8)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 11)
+    .text("opened");
+  svg
+    .append("text")
+    .attr("x", pad + 70)
+    .attr("y", pad - 8)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 11)
+    .text("closed");
+  svg
+    .append("text")
+    .attr("x", pad + 130)
+    .attr("y", pad - 8)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 11)
+    .text("started");
+}
+
+function renderJoinRate(payload: AnalyticsPayload): void {
+  const rows = payload.order
+    .map((row) => ({
+      at: row.openedAt,
+      joinRate: Math.max(0, row.joinRatePerMin),
+      status: row.status,
+      bucket: row.bucket,
+      gameID: row.gameID,
+    }))
+    .filter((row) => Number.isFinite(row.joinRate))
+    .sort((a, b) => a.at - b.at);
+
+  if (rows.length === 0) {
+    containers.joinRateChart.innerHTML = "<p>No data yet.</p>";
+    return;
+  }
+
+  containers.joinRateChart.innerHTML = "";
+  const width = 760;
+  const height = 250;
+  const pad = 30;
+  const minX = rows[0].at;
+  const maxX = rows[rows.length - 1].at;
+  const maxY = niceJoinRateMax(Math.max(0.5, ...rows.map((row) => row.joinRate)));
+  const x = d3
+    .scaleLinear()
+    .domain([minX, Math.max(minX + 1, maxX)])
+    .range([pad, width - pad]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, Math.max(0.001, maxY)])
+    .range([height - pad, pad]);
+
+  const trendWindow = Math.max(3, Math.min(15, Math.floor(rows.length / 10)));
+  const trend = rows.map((row, index) => {
+    const start = Math.max(0, index - trendWindow + 1);
+    const slice = rows.slice(start, index + 1);
+    const avg = slice.reduce((acc, entry) => acc + entry.joinRate, 0) / slice.length;
+    return { at: row.at, value: avg };
+  });
+
+  const line = d3
+    .line<(typeof rows)[number]>()
+    .x((row) => x(row.at))
+    .y((row) => y(row.joinRate));
+  const trendLine = d3
+    .line<(typeof trend)[number]>()
+    .x((point) => x(point.at))
+    .y((point) => y(point.value));
+
+  const svg = d3
+    .select(containers.joinRateChart)
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("width", "100%")
+    .attr("height", "100%");
+
+  const yTicks = 4;
+  const grid = Array.from({ length: yTicks + 1 }, (_, i) => {
+    const value = (maxY * i) / yTicks;
+    const yPos = y(value);
+    return { value, yPos };
+  });
+
+  svg
+    .selectAll("line.grid")
+    .data(grid)
+    .enter()
+    .append("line")
+    .attr("class", "grid")
+    .attr("x1", pad)
+    .attr("y1", (d) => d.yPos)
+    .attr("x2", width - pad)
+    .attr("y2", (d) => d.yPos)
+    .attr("stroke", "#264056")
+    .attr("stroke-width", 0.7)
+    .attr("stroke-dasharray", "3 4");
+
+  svg
+    .selectAll("text.grid-label")
+    .data(grid)
+    .enter()
+    .append("text")
+    .attr("class", "grid-label")
+    .attr("x", 6)
+    .attr("y", (d) => d.yPos + 4)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 10)
+    .text((d) => d.value.toFixed(1));
+
+  svg
+    .append("line")
+    .attr("x1", pad)
+    .attr("y1", height - pad)
+    .attr("x2", width - pad)
+    .attr("y2", height - pad)
+    .attr("stroke", "#3c5b78")
+    .attr("stroke-width", 1);
+
+  svg
+    .append("path")
+    .datum(rows)
+    .attr("fill", "none")
+    .attr("stroke", "#4fa3ff")
+    .attr("stroke-width", 1.2)
+    .attr("opacity", 0.55)
+    .attr("d", line);
+
+  svg
+    .append("path")
+    .datum(trend)
+    .attr("fill", "none")
+    .attr("stroke", "#9fff7a")
+    .attr("stroke-width", 2)
+    .attr("d", trendLine);
+
+  const points = svg
+    .selectAll("circle.join-rate-point")
+    .data(rows)
+    .enter()
+    .append("circle")
+    .attr("class", "join-rate-point")
+    .attr("cx", (row) => x(row.at))
+    .attr("cy", (row) => y(row.joinRate))
+    .attr("r", 2.8)
+    .attr("fill", (row) => colorForStatus(row.status))
+    .attr("opacity", 0.9);
+
+  points
+    .append("title")
+    .text(
+      (row) =>
+        `${row.gameID} | ${row.bucket} | join/min ${row.joinRate.toFixed(2)} | ${new Date(
+          row.at,
+        ).toLocaleString()}`,
+    );
+
+  svg
+    .append("text")
+    .attr("x", pad)
+    .attr("y", pad - 10)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 10)
+    .text("join/min raw (blue) + moving avg (green)");
 }
 
 function renderOrder(payload: AnalyticsPayload): void {
-  const rows = payload.order.slice(-40);
+  const rows = payload.order.slice(-resolveOrderCount());
   if (rows.length === 0) {
     containers.orderChart.innerHTML = "<p>No data yet.</p>";
     containers.orderTable.innerHTML = "";
@@ -277,73 +496,117 @@ function renderOrder(payload: AnalyticsPayload): void {
   const minAt = Math.min(...rows.map((row) => row.openedAt));
   const maxAt = Math.max(...rows.map((row) => orderRowMaxAt(row, payload.now)));
   const pad = 16;
-  const x = (v: number) =>
-    pad + ((v - minAt) / Math.max(1, maxAt - minAt)) * (width - pad * 2);
+  const x = d3
+    .scaleLinear()
+    .domain([minAt, Math.max(minAt + 1, maxAt)])
+    .range([pad, width - pad]);
 
-  const bars = rows
-    .map((row, i) => {
-      const y = 20 + i * rowHeight;
-      const startX = x(row.openedAt);
-      const lobbyEndAt = orderRowLobbyEndAt(row);
-      const lobbyEndX = Math.max(startX + 2, x(lobbyEndAt));
-      const lobbyColor = colorForBucketPhase(row.bucket, "lobby", row.status);
-      const gameStartAt = orderRowGameStartAt(row);
-      const gameEndAt = orderRowGameEndAt(row, payload.now);
-      const statusStroke =
-        row.status === "started"
-          ? "#9fff7a"
-          : row.status === "completed"
-            ? "#7fd3ff"
-          : row.status === "did_not_start"
-            ? "#ff6b6b"
-            : "#ffd166";
-      const openDurationText = formatDurationMs(row.openDurationMs);
-      const gameDurationText = formatGameDuration(row, payload.now);
-      const gameRect =
-        gameStartAt !== undefined && gameEndAt !== undefined && gameEndAt > gameStartAt
-          ? (() => {
-              const gameStartX = Math.max(startX + 1, x(gameStartAt));
-              const gameEndX = Math.max(gameStartX + 2, x(gameEndAt));
-              const gameColor = colorForBucketPhase(row.bucket, "game", row.status);
-              return `
-                <rect x="${gameStartX.toFixed(1)}" y="${y}" width="${(gameEndX - gameStartX).toFixed(1)}" height="10" fill="${gameColor}" stroke="${statusStroke}" stroke-width="0.6" opacity="0.95">
-                  <title>${row.gameID} | ${row.bucket} | status ${row.status} | open ${openDurationText} | game ${gameDurationText}</title>
-                </rect>
-              `;
-            })()
-          : "";
-      return `
-        <rect x="${startX.toFixed(1)}" y="${y}" width="${(lobbyEndX - startX).toFixed(1)}" height="10" fill="${lobbyColor}" stroke="${statusStroke}" stroke-width="0.7" opacity="0.95">
-          <title>${row.gameID} | ${row.bucket} | status ${row.status} | open ${openDurationText} | game ${gameDurationText}</title>
-        </rect>
-        ${gameRect}
-      `;
-    })
-    .join("");
+  const statusStrokeFor = (status: string): string =>
+    status === "started"
+      ? "#9fff7a"
+      : status === "completed"
+        ? "#7fd3ff"
+      : status === "did_not_start"
+        ? "#ff6b6b"
+        : "#ffd166";
+
+  containers.orderChart.innerHTML = "";
+  const svg = d3
+    .select(containers.orderChart)
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("width", "100%")
+    .attr("height", "100%");
 
   const legendBuckets = Array.from(new Set(rows.map((row) => row.bucket))).slice(0, 12);
-  const legend = legendBuckets
-    .map((bucket, index) => {
-      const color = colorForBucket(bucket);
-      const xPos = 14 + (index % 4) * 300;
-      const yPos = 12 + Math.floor(index / 4) * 14;
-      return `
-        <rect x="${xPos}" y="${yPos}" width="10" height="10" fill="${color}" opacity="0.95"></rect>
-        <text x="${xPos + 14}" y="${yPos + 9}" fill="#d3e2ef" font-size="10">${escapeHtml(
-          bucket.length > 36 ? `${bucket.slice(0, 36)}...` : bucket,
-        )}</text>
-      `;
-    })
-    .join("");
+  const legend = svg.append("g").attr("class", "order-legend");
+  legendBuckets.forEach((bucket, index) => {
+    const color = colorForBucket(bucket);
+    const xPos = 14 + (index % 4) * 300;
+    const yPos = 12 + Math.floor(index / 4) * 14;
+    legend
+      .append("rect")
+      .attr("x", xPos)
+      .attr("y", yPos)
+      .attr("width", 10)
+      .attr("height", 10)
+      .attr("fill", color)
+      .attr("opacity", 0.95);
+    legend
+      .append("text")
+      .attr("x", xPos + 14)
+      .attr("y", yPos + 9)
+      .attr("fill", "#d3e2ef")
+      .attr("font-size", 10)
+      .text(bucket.length > 36 ? `${bucket.slice(0, 36)}...` : bucket);
+  });
 
-  containers.orderChart.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
-      ${legend}
-      <text x="14" y="${height - 10}" fill="#9db1c5" font-size="10">Saturated segment = lobby open time, muted segment = game runtime</text>
-      ${bars}
-    </svg>
-  `;
+  const rowGroups = svg
+    .append("g")
+    .attr("class", "order-bars")
+    .selectAll("g.order-row")
+    .data(rows)
+    .enter()
+    .append("g")
+    .attr("class", "order-row");
+
+  rowGroups.each(function eachRow(
+    this: SVGGElement,
+    row: AnalyticsPayload["order"][number],
+    index: number,
+  ): void {
+    const group = d3.select(this);
+    const y = 20 + index * rowHeight;
+    const startX = x(row.openedAt);
+    const lobbyEndAt = orderRowLobbyEndAt(row);
+    const lobbyEndX = Math.max(startX + 2, x(lobbyEndAt));
+    const lobbyColor = colorForBucketPhase(row.bucket, "lobby", row.status);
+    const gameStartAt = orderRowGameStartAt(row);
+    const gameEndAt = orderRowGameEndAt(row, payload.now);
+    const statusStroke = statusStrokeFor(row.status);
+    const openDurationText = formatDurationMs(row.openDurationMs);
+    const gameDurationText = formatGameDuration(row, payload.now);
+    const titleText = `${row.gameID} | ${row.bucket} | status ${row.status} | open ${openDurationText} | game ${gameDurationText}`;
+
+    group
+      .append("rect")
+      .attr("x", startX)
+      .attr("y", y)
+      .attr("width", lobbyEndX - startX)
+      .attr("height", 10)
+      .attr("fill", lobbyColor)
+      .attr("stroke", statusStroke)
+      .attr("stroke-width", 0.7)
+      .attr("opacity", 0.95)
+      .append("title")
+      .text(titleText);
+
+    if (gameStartAt !== undefined && gameEndAt !== undefined && gameEndAt > gameStartAt) {
+      const gameStartX = Math.max(startX + 1, x(gameStartAt));
+      const gameEndX = Math.max(gameStartX + 2, x(gameEndAt));
+      const gameColor = colorForBucketPhase(row.bucket, "game", row.status);
+      group
+        .append("rect")
+        .attr("x", gameStartX)
+        .attr("y", y)
+        .attr("width", gameEndX - gameStartX)
+        .attr("height", 10)
+        .attr("fill", gameColor)
+        .attr("stroke", statusStroke)
+        .attr("stroke-width", 0.6)
+        .attr("opacity", 0.95)
+        .append("title")
+        .text(titleText);
+    }
+  });
+
+  svg
+    .append("text")
+    .attr("x", 14)
+    .attr("y", height - 10)
+    .attr("fill", "#9db1c5")
+    .attr("font-size", 10)
+    .text("Saturated segment = lobby open time, muted segment = game runtime");
 
   containers.orderTable.innerHTML = `
     <table>
@@ -354,6 +617,7 @@ function renderOrder(payload: AnalyticsPayload): void {
           <th>Status</th>
           <th>Lobby + Game</th>
           <th>Peak Fill</th>
+          <th>Connected / Active</th>
           <th>Join/min</th>
           <th>Opened</th>
         </tr>
@@ -372,6 +636,7 @@ function renderOrder(payload: AnalyticsPayload): void {
               <td class="status-${row.status}">${row.status}</td>
               <td>${formatDurationMs(row.openDurationMs)} + ${formatGameDuration(row, payload.now)}</td>
               <td>${row.maxPlayers ? `${row.peakClients}/${row.maxPlayers}` : row.peakClients}</td>
+              <td>${formatReplayParticipation(row)}</td>
               <td>${row.joinRatePerMin.toFixed(2)}</td>
               <td>${new Date(row.openedAt).toLocaleString()}</td>
             </tr>
@@ -381,6 +646,12 @@ function renderOrder(payload: AnalyticsPayload): void {
       </tbody>
     </table>
   `;
+}
+
+function resolveOrderCount(): number {
+  const parsed = Number(controls.orderCount.value || DEFAULT_ORDER_COUNT);
+  if (!Number.isFinite(parsed)) return DEFAULT_ORDER_COUNT;
+  return Math.max(10, Math.min(500, Math.floor(parsed)));
 }
 
 function renderInteresting(target: "neverStarted" | "lowFill", rows: LobbyRecord[]): void {
@@ -434,9 +705,38 @@ function formatDurationMs(durationMs: number | undefined): string {
   return `${min}m ${rem}s`;
 }
 
+function niceJoinRateMax(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 1) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / magnitude;
+  if (normalized <= 1) return magnitude;
+  if (normalized <= 2) return 2 * magnitude;
+  if (normalized <= 5) return 5 * magnitude;
+  return 10 * magnitude;
+}
+
 function formatDurationSec(durationSec: number | undefined): string {
   if (durationSec === undefined) return "-";
   return formatDurationMs(durationSec * 1000);
+}
+
+function formatReplayParticipation(
+  row: Pick<
+    AnalyticsPayload["order"][number],
+    "archivePlayers" | "archiveConnectedPlayers" | "archiveActivePlayers"
+  >,
+): string {
+  const connected = row.archiveConnectedPlayers;
+  const active = row.archiveActivePlayers;
+  const total = row.archivePlayers;
+
+  if (connected === undefined && active === undefined) {
+    return "-";
+  }
+
+  const pair = `${connected ?? "-"} / ${active ?? "-"}`;
+  if (total === undefined) return pair;
+  return `${pair} of ${total}`;
 }
 
 function formatGameDuration(
@@ -500,6 +800,19 @@ function hashString(value: string): number {
 
 function colorForBucket(bucket: string, status?: string): string {
   return colorForBucketPhase(bucket, "lobby", status);
+}
+
+function colorForStatus(status: string): string {
+  switch (status) {
+    case "started":
+      return "#9fff7a";
+    case "completed":
+      return "#7fd3ff";
+    case "did_not_start":
+      return "#ff6b6b";
+    default:
+      return "#ffd166";
+  }
 }
 
 function colorForBucketPhase(

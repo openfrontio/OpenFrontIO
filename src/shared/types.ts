@@ -91,6 +91,8 @@ export interface LobbyRecord {
   completionReason?: string;
   archiveFound: boolean;
   archivePlayers?: number;
+  archiveConnectedPlayers?: number;
+  archiveActivePlayers?: number;
   archiveDurationSec?: number;
   archiveWinner?: string;
   actualLobbyCreatedAt?: number;
@@ -160,7 +162,10 @@ export interface AnalyticsPayload {
     startDetectedAt?: number;
     actualStartAt?: number;
     actualEndAt?: number;
+    archivePlayers?: number;
     archiveDurationSec?: number;
+    archiveConnectedPlayers?: number;
+    archiveActivePlayers?: number;
     scheduledStartAt: number;
     peakClients: number;
     maxPlayers?: number;

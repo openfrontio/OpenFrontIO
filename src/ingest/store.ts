@@ -325,6 +325,8 @@ export class JsonStore {
     payload: {
       found: boolean;
       players?: number;
+      connectedPlayers?: number;
+      activePlayers?: number;
       durationSec?: number;
       winner?: string;
       lobbyCreatedAt?: number;
@@ -336,6 +338,8 @@ export class JsonStore {
     if (!lobby) return;
     lobby.archiveFound = payload.found;
     lobby.archivePlayers = payload.players;
+    lobby.archiveConnectedPlayers = payload.connectedPlayers;
+    lobby.archiveActivePlayers = payload.activePlayers;
     lobby.archiveDurationSec = payload.durationSec;
     lobby.archiveWinner = payload.winner;
     lobby.actualLobbyCreatedAt = payload.lobbyCreatedAt;
