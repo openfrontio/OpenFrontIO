@@ -71,6 +71,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   TheBox: 3,
   Yenisei: 6,
   TradersDream: 4,
+  Hawaii: 4,
 };
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [

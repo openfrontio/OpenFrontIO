@@ -15,7 +15,7 @@ import "./AccountModal";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
-import { fetchCosmetics } from "./Cosmetics";
+import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
@@ -188,6 +188,12 @@ declare global {
       onPlayerReady: (() => void) | null;
       addUnits: (units: Array<{ type: string }>) => Promise<void>;
       displayUnits: () => void;
+      // Rewarded video ad methods
+      manuallyCreateRewardUi?: (options: {
+        skipConfirmation?: boolean;
+        watchAdId?: string;
+        closeId?: string;
+      }) => Promise<void> | void;
     };
     Bolt: {
       on: (unitType: string, event: string, callback: () => void) => void;
@@ -753,15 +759,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        cosmetics: {
-          color: this.userSettings.getSelectedColor() ?? undefined,
-          patternName: pattern?.name ?? undefined,
-          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
-          flag:
-            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-              ? ""
-              : this.flagInput.getCurrentFlag(),
-        },
+        cosmetics: await getPlayerCosmeticsRefs(),
         turnstileToken: await this.getTurnstileToken(lobby),
         playerName:
           this.usernameInput?.getCurrentUsername() ?? genAnonUsername(),
