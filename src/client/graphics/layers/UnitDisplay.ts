@@ -1,10 +1,10 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
+  BuildableUnit,
   BuildMenuTypes,
   Gold,
-  PlayerActions,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
@@ -33,7 +33,7 @@ export class UnitDisplay extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
-  private playerActions: PlayerActions | null = null;
+  private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
   private _cities = 0;
   private _warships = 0;
@@ -66,7 +66,7 @@ export class UnitDisplay extends LitElement implements Layer {
   }
 
   private cost(item: UnitType): Gold {
-    for (const bu of this.playerActions?.buildableUnits ?? []) {
+    for (const bu of this.playerBuildables ?? []) {
       if (bu.type === item) {
         return bu.cost;
       }
@@ -98,8 +98,8 @@ export class UnitDisplay extends LitElement implements Layer {
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
-    player.actions(undefined, BuildMenuTypes).then((actions) => {
-      this.playerActions = actions;
+    player.buildables(undefined, BuildMenuTypes).then((buildables) => {
+      this.playerBuildables = buildables;
     });
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
