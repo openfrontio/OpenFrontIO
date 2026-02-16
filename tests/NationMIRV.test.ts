@@ -91,6 +91,8 @@ describe("Nation MIRV Retaliation", () => {
     let retaliationAttempted = false;
 
     for (const gameId of gameIds) {
+      // Advance game to clear any silo cooldowns from previous iteration
+      executeTicks(game, 100);
       const testExecution = new NationExecution(gameId, testExecutionNation);
       testExecution.init(game);
 
@@ -424,6 +426,8 @@ describe("Nation MIRV Retaliation", () => {
     let steamrollStopSuccessful = false;
 
     for (const gameId of gameIds) {
+      // Advance game to clear any silo cooldowns from previous iteration
+      executeTicks(game, 100);
       const testExecution = new NationExecution(gameId, testExecutionNation);
       testExecution.init(game);
 
