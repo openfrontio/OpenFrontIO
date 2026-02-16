@@ -22,8 +22,10 @@ import {
 } from "../../Utils";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
+import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import { SpawnBarVisibleEvent } from "./SpawnTimer";
 import allianceIcon from "/images/AllianceIcon.svg?url";
 import warshipIcon from "/images/BattleshipIconWhite.svg?url";
 import cityIcon from "/images/CityIconWhite.svg?url";
@@ -77,7 +79,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @state()
   private _isInfoVisible: boolean = false;
 
+  @state()
+  private spawnBarVisible = false;
+  @state()
+  private immunityBarVisible = false;
+
   private _isActive = false;
+
+  private get barOffset(): number {
+    return (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
+  }
 
   private lastMouseUpdate = 0;
 
@@ -89,6 +100,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.maybeShow(e.x, e.y),
     );
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
+    this.eventBus.on(SpawnBarVisibleEvent, (e) => {
+      this.spawnBarVisible = e.visible;
+    });
+    this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
+      this.immunityBarVisible = e.visible;
+    });
     this._isActive = true;
   }
 
@@ -153,6 +170,24 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   setVisible(visible: boolean) {
     this._isInfoVisible = visible;
     this.requestUpdate();
+  }
+
+  private getPlayerNameColor(
+    player: PlayerView,
+    myPlayer: PlayerView | null | undefined,
+    isFriendly: boolean,
+  ): string {
+    if (isFriendly) return "text-green-500";
+    if (
+      myPlayer &&
+      myPlayer !== player &&
+      player.type() === PlayerType.Nation
+    ) {
+      const relation =
+        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
+      return this.getRelationClass(relation);
+    }
+    return "text-white";
   }
 
   private getRelationClass(relation: Relation): string {
@@ -255,7 +290,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         .find((alliance) => alliance.other === player.id());
       if (alliance !== undefined) {
         allianceHtml = html` <div
-          class="flex flex-col items-center ml-auto mr-0 text-sm font-bold leading-tight"
+          class="flex items-center ml-auto mr-0 gap-1 text-sm font-bold leading-tight"
         >
           <img src=${allianceIcon} width="20" height="20" />
           ${this.allianceExpirationText(alliance)}
@@ -293,9 +328,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         <!-- Right: Player identity + Units below -->
         <div class="flex flex-col justify-between self-stretch">
           <div
-            class="flex items-center gap-2 font-bold text-sm lg:text-lg ${isFriendly
-              ? "text-green-500"
-              : "text-white"}"
+            class="flex items-center gap-2 font-bold text-sm lg:text-lg ${this.getPlayerNameColor(
+              player,
+              myPlayer,
+              isFriendly ?? false,
+            )}"
           >
             ${player.cosmetics.flag
               ? player.cosmetics.flag!.startsWith("!")
@@ -452,11 +489,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed top-0 lg:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="fixed top-0 min-[1200px]:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        style="margin-top: ${this.barOffset}px;"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs lg:rounded-lg shadow-lg transition-all duration-300 text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg transition-all duration-300 text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
