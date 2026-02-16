@@ -6,7 +6,6 @@ import {
   BuildableUnit,
   BuildMenuTypes,
   Gold,
-  PlayerActions,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -129,7 +128,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private clickedTile: TileRef;
-  public playerActions: PlayerActions | null;
+  public playerBuildables: BuildableUnit[] | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
@@ -360,10 +359,10 @@ export class BuildMenu extends LitElement implements Layer {
   private _hidden = true;
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
-    if (this.game?.myPlayer() === null || this.playerActions === null) {
+    if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
-    const buildableUnits = this.playerActions?.buildableUnits ?? [];
+    const buildableUnits = this.playerBuildables ?? [];
     const unit = buildableUnits.filter((u) => u.type === item.unitType);
     if (unit.length === 0) {
       return false;
@@ -372,7 +371,7 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public cost(item: BuildItemDisplay): Gold {
-    for (const bu of this.playerActions?.buildableUnits ?? []) {
+    for (const bu of this.playerBuildables ?? []) {
       if (bu.type === item.unitType) {
         return bu.cost;
       }
@@ -420,7 +419,7 @@ export class BuildMenu extends LitElement implements Layer {
           (row) => html`
             <div class="build-row">
               ${row.map((item) => {
-                const buildableUnit = this.playerActions?.buildableUnits.find(
+                const buildableUnit = this.playerBuildables?.find(
                   (bu) => bu.type === item.unitType,
                 );
                 if (buildableUnit === undefined) {
@@ -493,9 +492,9 @@ export class BuildMenu extends LitElement implements Layer {
   private refresh() {
     this.game
       .myPlayer()
-      ?.actions(this.clickedTile, BuildMenuTypes)
-      .then((actions) => {
-        this.playerActions = actions;
+      ?.buildables(this.clickedTile, BuildMenuTypes)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
         this.requestUpdate();
       });
 
