@@ -24,7 +24,8 @@ import {
 } from "../../../core/game/GameUpdates";
 import {
   SendAllianceExtensionIntentEvent,
-  SendAllianceReplyIntentEvent,
+  SendAllianceRejectIntentEvent,
+  SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -468,16 +469,14 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, true),
+              new SendAllianceRequestIntentEvent(recipient, requestor),
             ),
         },
         {
           text: translateText("events_display.reject_alliance"),
           className: "btn-info",
           action: () =>
-            this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, false),
-            ),
+            this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor)),
         },
       ],
       highlight: true,
