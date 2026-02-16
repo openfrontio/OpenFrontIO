@@ -7,6 +7,7 @@ import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AllianceDisplay } from "./layers/AllianceDisplay";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -124,6 +125,16 @@ export function createRenderer(
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
   eventsDisplay.uiState = uiState;
+
+  const allianceDisplay = document.querySelector(
+    "alliance-display",
+  ) as AllianceDisplay;
+  if (!(allianceDisplay instanceof AllianceDisplay)) {
+    console.error("alliance display not found");
+  }
+  allianceDisplay.eventBus = eventBus;
+  allianceDisplay.game = game;
+  allianceDisplay.uiState = uiState;
 
   const attacksDisplay = document.querySelector(
     "attacks-display",
@@ -290,6 +301,7 @@ export function createRenderer(
     new DynamicUILayer(game, transformHandler, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
+    allianceDisplay,
     attacksDisplay,
     chatDisplay,
     buildMenu,
