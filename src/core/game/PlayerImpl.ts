@@ -969,7 +969,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    units?: PlayerBuildableUnitType[],
+    units?: readonly PlayerBuildableUnitType[],
   ): BuildableUnit[] {
     const validTiles =
       tile !== null &&
