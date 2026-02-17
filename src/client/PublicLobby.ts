@@ -1,5 +1,6 @@
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { until } from "lit/directives/until.js";
 import {
   Duos,
   GameMapType,
@@ -9,13 +10,7 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import {
-  GameID,
-  GameInfo,
-  PublicGameInfo,
-  PublicGames,
-  PublicGameType,
-} from "../core/Schemas";
+import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -25,20 +20,22 @@ const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
-  @state() private lobbies: PublicGameInfo[] = [];
-  @state() private mapImages: Map<GameID, string> = new Map();
+  @state() private lobbies: PublicGames | null = null;
+  private timeOffset: number = 0;
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
   );
-  private lobbyIDToStart = new Map<GameID, number>();
-  private serverTimeOffset = 0;
   private updateIntervalId: number | null = null;
 
   createRenderRoot() {
     return this;
   }
 
+  /**
+   * Validates username input and shows error message if invalid.
+   * Returns true if valid, false otherwise.
+   */
   private validateUsername(): boolean {
     const usernameInput = document.querySelector("username-input") as any;
     if (usernameInput?.isValid?.() === false) {
@@ -59,6 +56,7 @@ export class PublicLobby extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
+    // Update time remaining every second
     this.updateIntervalId = window.setInterval(
       () => this.requestUpdate(),
       1000,
@@ -78,74 +76,39 @@ export class PublicLobby extends LitElement {
     }
   }
 
-  private handleLobbiesUpdate(payload: PublicGames) {
-    this.serverTimeOffset = payload.serverTime - Date.now();
-    const lobbies = (Object.keys(payload.games) as PublicGameType[]).flatMap(
-      (type) => payload.games[type] ?? [],
-    );
+  private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
-
-    const currentLobbyIDs = new Set(lobbies.map((l) => l.gameID));
-    for (const gameID of this.lobbyIDToStart.keys()) {
-      if (!currentLobbyIDs.has(gameID)) {
-        this.lobbyIDToStart.delete(gameID);
-        this.mapImages.delete(gameID);
-      }
-    }
-
-    this.lobbies.forEach((l) => {
-      if (!this.lobbyIDToStart.has(l.gameID)) {
-        const startsAt = l.startsAt ?? payload.serverTime;
-        this.lobbyIDToStart.set(l.gameID, startsAt - this.serverTimeOffset);
-      }
-      if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-        this.loadMapImage(l.gameID, l.gameConfig.gameMap);
-      }
-    });
+    // TODO: plus or minus?
+    this.timeOffset = Date.now() - lobbies.serverTime;
+    document.dispatchEvent(
+      new CustomEvent("public-lobbies-update", {
+        detail: { payload: lobbies },
+      }),
+    );
     this.requestUpdate();
   }
 
-  private async loadMapImage(gameID: GameID, gameMap: string) {
-    try {
-      const mapType = gameMap as GameMapType;
-      const data = terrainMapFileLoader.getMapData(mapType);
-      this.mapImages.set(gameID, await data.webpPath());
-      this.requestUpdate();
-    } catch (error) {
-      console.error("Failed to load map image:", error);
-    }
-  }
-
-  private getSoonestLobby(
-    filter: (l: PublicGameInfo) => boolean,
-  ): PublicGameInfo | null {
-    const lobbies = this.lobbies.filter(filter);
-    if (lobbies.length === 0) return null;
-    return lobbies.reduce((a, b) => {
-      const aStart = this.lobbyIDToStart.get(a.gameID) ?? Infinity;
-      const bStart = this.lobbyIDToStart.get(b.gameID) ?? Infinity;
-      return aStart < bStart ? a : b;
-    });
-  }
-
   render() {
-    const ffaLobby = this.getSoonestLobby((l) => l.publicGameType === "ffa");
-    const teamsLobby = this.getSoonestLobby((l) => l.publicGameType === "team");
-    const specialLobby = this.getSoonestLobby(
-      (l) => l.publicGameType === "special",
-    );
+    const ffa = this.lobbies?.games?.["ffa"]?.[0];
+    const teams = this.lobbies?.games?.["team"]?.[0];
+    const special = this.lobbies?.games?.["special"]?.[0];
 
     return html`
       <div
         class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
       >
-        ${ffaLobby
-          ? this.renderLobbyCard(ffaLobby, this.getLobbyTitle(ffaLobby))
-          : ""}
-        ${teamsLobby
-          ? this.renderLobbyCard(teamsLobby, this.getLobbyTitle(teamsLobby))
-          : ""}
-        ${specialLobby ? this.renderSpecialLobbyCard(specialLobby) : ""}
+        ${ffa
+          ? until(this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)), nothing)
+          : nothing}
+        ${teams
+          ? until(
+              this.renderLobbyCard(teams, this.getLobbyTitle(teams)),
+              nothing,
+            )
+          : nothing}
+        ${special
+          ? until(this.renderSpecialLobbyCard(special), nothing)
+          : nothing}
         ${this.renderQuickActionsSection()}
       </div>
     `;
@@ -228,12 +191,15 @@ export class PublicLobby extends LitElement {
     `;
   }
 
-  private renderLobbyCard(
+  private async renderLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
   ) {
-    const mapImageSrc = this.mapImages.get(lobby.gameID);
-    const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
+    const mapType = lobby.gameConfig!.gameMap as GameMapType;
+    const data = terrainMapFileLoader.getMapData(mapType);
+    const mapImageSrc = await data.webpPath();
+    // TODO: plus or minus
+    const start = lobby.startsAt - this.timeOffset;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
     const timeDisplay = renderDuration(timeRemaining);
     const gameMap = lobby.gameConfig?.gameMap;
@@ -244,6 +210,7 @@ export class PublicLobby extends LitElement {
     const modifierLabels = this.getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
     );
+    // Sort by length for visual consistency (shorter labels first)
     if (modifierLabels.length > 1) {
       modifierLabels.sort((a, b) => a.length - b.length);
     }
@@ -317,20 +284,12 @@ export class PublicLobby extends LitElement {
   private validateAndJoin(lobby: PublicGameInfo) {
     if (!this.validateUsername()) return;
 
-    const lobbyInfo: GameInfo = {
-      gameID: lobby.gameID,
-      startsAt: lobby.startsAt,
-      serverTime: Date.now(),
-      gameConfig: lobby.gameConfig,
-      publicGameType: lobby.publicGameType,
-    };
-
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
           gameID: lobby.gameID,
           source: "public",
-          publicLobbyInfo: lobbyInfo,
+          publicLobbyInfo: lobby,
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
@@ -339,9 +298,7 @@ export class PublicLobby extends LitElement {
   }
 
   private getLobbyTitle(lobby: PublicGameInfo): string {
-    const config = lobby.gameConfig;
-    if (!config) return "";
-    return this.getBaseModeTitle(config, lobby);
+    return this.getBaseModeTitle(lobby);
   }
 
   private getModifierLabels(mods: PublicGameModifiers | undefined): string[] {
@@ -354,11 +311,9 @@ export class PublicLobby extends LitElement {
     ].filter((x): x is string => !!x);
   }
 
-  private getBaseModeTitle(
-    config: PublicGameInfo["gameConfig"],
-    lobby: PublicGameInfo,
-  ): string {
-    if (config?.gameMode === GameMode.FFA) {
+  private getBaseModeTitle(lobby: PublicGameInfo): string {
+    const config = lobby.gameConfig!;
+    if (config.gameMode === GameMode.FFA) {
       return translateText("game_mode.ffa");
     }
 

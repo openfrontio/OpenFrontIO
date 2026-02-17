@@ -6,6 +6,7 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  PublicGameInfo,
 } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -230,7 +231,7 @@ export interface JoinLobbyEvent {
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
-  publicLobbyInfo?: GameInfo;
+  publicLobbyInfo?: GameInfo | PublicGameInfo;
 }
 
 class Client {

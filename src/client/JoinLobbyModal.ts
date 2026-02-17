@@ -16,6 +16,7 @@ import {
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
+  PublicGameInfo,
 } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
@@ -276,7 +277,7 @@ export class JoinLobbyModal extends BaseModal {
     `;
   }
 
-  public open(lobbyId: string = "", lobbyInfo?: GameInfo) {
+  public open(lobbyId: string = "", lobbyInfo?: GameInfo | PublicGameInfo) {
     super.open();
     if (lobbyId) {
       this.startTrackingLobby(lobbyId, lobbyInfo);
@@ -319,7 +320,10 @@ export class JoinLobbyModal extends BaseModal {
     }
   }
 
-  private startTrackingLobby(lobbyId: string, lobbyInfo?: GameInfo) {
+  private startTrackingLobby(
+    lobbyId: string,
+    lobbyInfo?: GameInfo | PublicGameInfo,
+  ) {
     this.currentLobbyId = lobbyId;
     // clientID will be assigned by server via lobby_info message
     this.currentClientID = "";
@@ -334,7 +338,7 @@ export class JoinLobbyModal extends BaseModal {
     if (lobbyInfo) {
       this.updateFromLobby(lobbyInfo);
       // Only stop showing spinner when we have player info
-      if (lobbyInfo.clients) {
+      if ("clients" in lobbyInfo && lobbyInfo.clients) {
         this.isConnecting = false;
       }
     }
@@ -509,8 +513,8 @@ export class JoinLobbyModal extends BaseModal {
 
   // --- Lobby event handling ---
 
-  private updateFromLobby(lobby: GameInfo) {
-    this.players = lobby.clients ?? [];
+  private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
+    this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
     this.lobbyStartAt = lobby.startsAt ?? null;
     this.syncCountdownTimer();
     if (lobby.gameConfig) {
@@ -521,7 +525,10 @@ export class JoinLobbyModal extends BaseModal {
       }
     }
 
-    this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? null;
+    this.lobbyCreatorClientID =
+      "lobbyCreatorClientID" in lobby
+        ? (lobby.lobbyCreatorClientID ?? null)
+        : null;
   }
 
   private startLobbyUpdates() {
