@@ -121,6 +121,7 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   TradersDream = "Traders Dream",
   Hawaii = "Hawaii",
+  Alps = "Alps",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -170,6 +171,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.AmazonRiver,
     GameMapType.Yenisei,
     GameMapType.Hawaii,
+    GameMapType.Alps,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -759,6 +761,7 @@ export interface Game extends GameMap {
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
+  isNationSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
