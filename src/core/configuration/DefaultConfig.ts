@@ -652,15 +652,23 @@ export class DefaultConfig implements Config {
         largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
       }
 
+      const defenderTroopLoss = defender.troops() / defender.numTilesOwned();
+      const traitorMod = defender.isTraitor() ? this.traitorDefenseDebuff() : 1;
+      const currentAttackerLoss =
+        within(defender.troops() / attackTroops, 0.6, 2) *
+        mag *
+        0.8 *
+        largeDefenderAttackDebuff *
+        largeAttackBonus *
+        traitorMod;
+      const altAttackerLoss =
+        1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
+      const attackerTroopLoss =
+        0.5 * currentAttackerLoss + 0.5 * altAttackerLoss;
+
       return {
-        attackerTroopLoss:
-          within(defender.troops() / attackTroops, 0.6, 2) *
-          mag *
-          0.8 *
-          largeDefenderAttackDebuff *
-          largeAttackBonus *
-          (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
-        defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        attackerTroopLoss,
+        defenderTroopLoss,
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
