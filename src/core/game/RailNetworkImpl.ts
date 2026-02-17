@@ -228,14 +228,18 @@ export class RailNetworkImpl implements RailNetwork {
     );
   }
 
+  private canSnapToExistingRailway(tile: TileRef): boolean {
+    return this.railGrid.query(tile, this.stationRadius).size > 0;
+  }
+
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
+    // Factories already show their radius, so we'll exclude from ghost rails
+    // in order not to clutter the interface too much.
     if (![UnitType.City, UnitType.Port].includes(unitType)) {
       return [];
     }
 
-    // Skip if can snap to existing railway
-    const snappableRails = this.railGrid.query(tile, this.stationRadius);
-    if (snappableRails.size > 0) {
+    if (this.canSnapToExistingRailway(tile)) {
       return [];
     }
 
@@ -258,6 +262,7 @@ export class RailNetworkImpl implements RailNetwork {
     const paths: TileRef[][] = [];
     const connectedStations: TrainStation[] = [];
     for (const neighbor of neighbors) {
+      // Limit to the closest 5 stations to avoid running too many pathfinding calls.
       if (paths.length >= 5) break;
       if (neighbor.distSquared <= minRangeSquared) continue;
 

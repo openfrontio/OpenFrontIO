@@ -225,9 +225,12 @@ export class RailroadLayer implements Layer {
 
     context.save();
     context.globalAlpha = alpha;
-    this.highlightOverlappingRailroads(context);
+
     this.renderGhostRailroads(context);
+
     if (this.existingRailroads.size > 0) {
+      this.highlightOverlappingRailroads(context);
+
       context.drawImage(
         this.canvas,
         srcX,
@@ -240,6 +243,7 @@ export class RailroadLayer implements Layer {
         visHeight,
       );
     }
+
     context.restore();
   }
 
