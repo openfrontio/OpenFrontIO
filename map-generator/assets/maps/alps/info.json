@@ -3,7 +3,7 @@
   "nations": [
     {
       "coordinates": [740, 620],
-      "name": "France (Savoy)",
+      "name": "Savoy",
       "flag": "fr"
     },
     {
@@ -13,7 +13,7 @@
     },
     {
       "coordinates": [1220, 560],
-      "name": "Austria (Tyrol)",
+      "name": "Tyrol",
       "flag": "at"
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "coordinates": [1320, 690],
-      "name": "Germany (Bavaria)",
+      "name": "Bavaria",
       "flag": "de"
     },
     {

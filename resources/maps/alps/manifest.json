@@ -22,7 +22,7 @@
         620
       ],
       "flag": "fr",
-      "name": "France (Savoy)"
+      "name": "Savoy"
     },
     {
       "coordinates": [
@@ -38,7 +38,7 @@
         560
       ],
       "flag": "at",
-      "name": "Austria (Tyrol)"
+      "name": "Tyrol"
     },
     {
       "coordinates": [
@@ -46,7 +46,7 @@
         820
       ],
       "flag": "it",
-      "name": "Italy (Lombardy)"
+      "name": "Lombardy"
     },
     {
       "coordinates": [
@@ -54,7 +54,7 @@
         820
       ],
       "flag": "it",
-      "name": "Italy (Veneto)"
+      "name": "Veneto"
     },
     {
       "coordinates": [
@@ -62,7 +62,7 @@
         690
       ],
       "flag": "de",
-      "name": "Germany (Bavaria)"
+      "name": "Bavaria"
     },
     {
       "coordinates": [
