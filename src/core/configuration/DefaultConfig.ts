@@ -28,6 +28,7 @@ import { PastelThemeDark } from "./PastelThemeDark";
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
+const DEFAULT_SPAWN_IMMUNITY_TICKS = 5 * 10;
 
 const JwksSchema = z.object({
   keys: z
@@ -163,7 +164,15 @@ export class DefaultConfig implements Config {
     return 30 * 10; // 30 seconds
   }
   spawnImmunityDuration(): Tick {
-    return this._gameConfig.spawnImmunityDuration ?? 5 * 10; // default to 5 seconds
+    return (
+      this._gameConfig.spawnImmunityDuration ?? DEFAULT_SPAWN_IMMUNITY_TICKS
+    );
+  }
+  nationSpawnImmunityDuration(): Tick {
+    return DEFAULT_SPAWN_IMMUNITY_TICKS;
+  }
+  hasExtendedSpawnImmunity(): boolean {
+    return this.spawnImmunityDuration() > DEFAULT_SPAWN_IMMUNITY_TICKS;
   }
 
   gameConfig(): GameConfig {
@@ -727,9 +736,9 @@ export class DefaultConfig implements Config {
         case Difficulty.Easy:
           return 12_500;
         case Difficulty.Medium:
-          return 25_000; // Like humans
+          return 18_750;
         case Difficulty.Hard:
-          return 28_125;
+          return 25_000; // Like humans
         case Difficulty.Impossible:
           return 31_250;
         default:
@@ -762,9 +771,9 @@ export class DefaultConfig implements Config {
       case Difficulty.Easy:
         return maxTroops * 0.5;
       case Difficulty.Medium:
-        return maxTroops * 1; // Like humans
+        return maxTroops * 0.75;
       case Difficulty.Hard:
-        return maxTroops * 1.125;
+        return maxTroops * 1; // Like humans
       case Difficulty.Impossible:
         return maxTroops * 1.25;
       default:
@@ -790,10 +799,10 @@ export class DefaultConfig implements Config {
           toAdd *= 0.9;
           break;
         case Difficulty.Medium:
-          toAdd *= 1; // Like humans
+          toAdd *= 0.95;
           break;
         case Difficulty.Hard:
-          toAdd *= 1.025;
+          toAdd *= 1; // Like humans
           break;
         case Difficulty.Impossible:
           toAdd *= 1.05;

@@ -36,7 +36,7 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
-const playlist = new MapPlaylist(true);
+const playlist = new MapPlaylist();
 
 // Worker setup
 export async function startWorker() {
@@ -67,6 +67,8 @@ export async function startWorker() {
 
   const privilegeRefresher = new PrivilegeRefresher(
     config.jwtIssuer() + "/cosmetics.json",
+    config.jwtIssuer() + "/profane_words_game_server",
+    config.apiKey(),
     log,
   );
   privilegeRefresher.start();
@@ -436,6 +438,11 @@ export async function startWorker() {
           }
         }
 
+        // Censor profane usernames server-side (don't reject, just rename)
+        const censoredUsername = privilegeRefresher
+          .get()
+          .censorUsername(clientMsg.username);
+
         // Create client and add to game
         const client = new Client(
           generateID(),
@@ -444,6 +451,7 @@ export async function startWorker() {
           roles,
           flares,
           ip,
+          censoredUsername,
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,

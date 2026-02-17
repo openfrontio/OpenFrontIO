@@ -332,12 +332,6 @@ export class GameImpl implements Game {
       request,
     );
 
-    // Automatically remove embargoes only if they were automatically created
-    if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient);
-    if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor);
-
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -719,10 +713,24 @@ export class GameImpl implements Game {
     });
   }
 
+  public removeAlliancesByPlayerSilently(player: Player): void {
+    this.alliances_ = this.alliances_.filter(
+      (a) => a.requestor() !== player && a.recipient() !== player,
+    );
+  }
+
   public isSpawnImmunityActive(): boolean {
     return (
       this.config().numSpawnPhaseTurns() +
-        this.config().spawnImmunityDuration() >=
+        this.config().spawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+
+  public isNationSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().nationSpawnImmunityDuration() >
       this.ticks()
     );
   }

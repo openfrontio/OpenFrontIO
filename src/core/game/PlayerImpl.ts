@@ -22,6 +22,7 @@ import {
   EmojiMessage,
   GameMode,
   Gold,
+  isStructureType,
   MessageType,
   MutableAlliance,
   Player,
@@ -448,6 +449,10 @@ export class PlayerImpl implements Player {
 
   breakAlliance(alliance: MutableAlliance): void {
     this.mg.breakAlliance(this, alliance);
+  }
+
+  removeAllAlliances(): void {
+    this.mg.removeAlliancesByPlayerSilently(this);
   }
 
   isTraitor(): boolean {
@@ -956,31 +961,40 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
-      let canUpgrade: number | false = false;
-      let canBuild: TileRef | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
+  public buildableUnits(
+    tile: TileRef | null,
+    units?: UnitType[],
+  ): BuildableUnit[] {
+    const validTiles =
+      tile !== null &&
+      (units === undefined || units.some((u) => isStructureType(u)))
+        ? this.validStructureSpawnTiles(tile)
+        : [];
+    return Object.values(UnitType)
+      .filter((u) => units === undefined || units.includes(u))
+      .map((u) => {
+        let canUpgrade: number | false = false;
+        let canBuild: TileRef | false = false;
+        if (!this.mg.inSpawnPhase()) {
+          const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+          if (existingUnit !== false) {
+            canUpgrade = existingUnit.id();
+          }
+          if (tile !== null) {
+            canBuild = this.canBuild(u, tile, validTiles);
+          }
         }
-        if (tile !== null) {
-          canBuild = this.canBuild(u, tile, validTiles);
-        }
-      }
-      return {
-        type: u,
-        canBuild,
-        canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this.mg, this),
-        overlappingRailroads:
-          canBuild !== false
-            ? this.mg.railNetwork().overlappingRailroads(canBuild)
-            : [],
-      } as BuildableUnit;
-    });
+        return {
+          type: u,
+          canBuild,
+          canUpgrade,
+          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+          overlappingRailroads:
+            canBuild !== false
+              ? this.mg.railNetwork().overlappingRailroads(canBuild)
+              : [],
+        } as BuildableUnit;
+      });
   }
 
   canBuild(
@@ -1247,18 +1261,25 @@ export class PlayerImpl implements Player {
   }
 
   public isImmune(): boolean {
-    return this.type() === PlayerType.Human && this.mg.isSpawnImmunityActive();
+    if (this.type() === PlayerType.Human) {
+      return this.mg.isSpawnImmunityActive();
+    }
+    if (this.type() === PlayerType.Nation) {
+      return this.mg.isNationSpawnImmunityActive();
+    }
+    return false;
   }
 
   public canAttackPlayer(
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Human) {
-      return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    if (this.type() === PlayerType.Bot) {
+      // Bots are not affected by immunity
+      return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Only humans are affected by immunity, bots and nations should be able to attack freely
-    return !this.isFriendly(player, treatAFKFriendly);
+    // Humans and Nations respect immunity
+    return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 
   public canAttack(tile: TileRef): boolean {

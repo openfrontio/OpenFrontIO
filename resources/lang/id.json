@@ -790,15 +790,15 @@
     "title_with_name": "Kirim Pasukan ke {name}",
     "available_tooltip": "Pasukan Anda yang tersedia saat ini",
     "min_keep": "Minimal yang ditinggalkan",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "aria_slider": "Penggeser pasukan",
-    "capacity_note": "Penerima hanya dapat menerima {{amount}} saat ini."
+    "capacity_note": "Penerima hanya dapat menerima {amount} saat ini."
   },
   "send_gold_modal": {
     "title_with_name": "Kirim Emas ke {name}",
     "available_tooltip": "Emas yang Anda miliki saat ini",
     "aria_slider": "Penggeser jumlah",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Kecepatan tanyangan ulang",

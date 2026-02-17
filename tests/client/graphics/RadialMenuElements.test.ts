@@ -92,6 +92,8 @@ describe("RadialMenuElements", () => {
       id: () => 1,
       isAlliedWith: vi.fn(() => false),
       isPlayer: vi.fn(() => true),
+      isTraitor: vi.fn(() => false),
+      isDisconnected: vi.fn(() => false),
     } as unknown as PlayerView;
 
     mockGame = {
@@ -339,6 +341,8 @@ describe("RadialMenuElements", () => {
         id: () => 2,
         isAlliedWith: vi.fn(() => true),
         isPlayer: vi.fn(() => true),
+        isTraitor: vi.fn(() => false),
+        isDisconnected: vi.fn(() => false),
       } as unknown as PlayerView;
       mockParams.selected = allyPlayer;
       mockGame.owner = vi.fn(() => allyPlayer);

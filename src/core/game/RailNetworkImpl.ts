@@ -86,6 +86,7 @@ export class RailNetworkImpl implements RailNetwork {
   private gridCellSize: number = 4;
   private railGrid: RailSpatialGrid;
   private nextId: number = 0;
+  private dirtyClusters = new Set<Cluster>();
 
   constructor(
     private game: Game,
@@ -106,26 +107,48 @@ export class RailNetworkImpl implements RailNetwork {
     }
   }
 
+  recomputeClusters() {
+    if (this.dirtyClusters.size === 0) return;
+
+    for (const cluster of this.dirtyClusters) {
+      const allOriginalStations = new Set(cluster.stations);
+      while (allOriginalStations.size > 0) {
+        const nextStation = allOriginalStations.values().next().value;
+        const allConnectedStations = this.computeCluster(nextStation);
+        // Filter stations that are connected to the current cluster
+        for (const connectedStation of allConnectedStations) {
+          allOriginalStations.delete(connectedStation);
+        }
+        // Those stations were disconnected: new cluster
+        if (allOriginalStations.size > 0) {
+          const newCluster = new Cluster();
+          // Switching their cluster will automatically remove them from their current cluster
+          newCluster.addStations(allConnectedStations);
+        }
+      }
+    }
+    this.dirtyClusters.clear();
+  }
+
   removeStation(unit: Unit): void {
     const station = this._stationManager.findStation(unit);
     if (!station) return;
 
-    const neighbors = station.neighbors();
     this.disconnectFromNetwork(station);
     this._stationManager.removeStation(station);
+    station.unit.setTrainStation(false);
 
     const cluster = station.getCluster();
     if (!cluster) return;
-    if (neighbors.length === 1) {
-      cluster.removeStation(station);
-    } else if (neighbors.length > 1) {
-      for (const neighbor of neighbors) {
-        const stations = this.computeCluster(neighbor);
-        const newCluster = new Cluster();
-        newCluster.addStations(stations);
-      }
+
+    cluster.removeStation(station);
+    if (cluster.size() === 0) {
+      this.deleteCluster(cluster);
+      this.dirtyClusters.delete(cluster);
+      return;
     }
-    station.unit.setTrainStation(false);
+
+    this.dirtyClusters.add(cluster);
   }
 
   /**
@@ -258,10 +281,6 @@ export class RailNetworkImpl implements RailNetwork {
       this.railGrid.unregister(rail);
     }
     station.clearRailroads();
-    const cluster = station.getCluster();
-    if (cluster !== null && cluster.size() === 1) {
-      this.deleteCluster(cluster);
-    }
   }
 
   private deleteCluster(cluster: Cluster) {
