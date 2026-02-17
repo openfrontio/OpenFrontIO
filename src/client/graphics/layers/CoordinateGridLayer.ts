@@ -70,6 +70,9 @@ const computeGrid = (width: number, height: number) => {
 export class CoordinateGridLayer implements Layer {
   private isVisible = false;
   private alternateView = false;
+  private cachedGridCanvas: HTMLCanvasElement | null = null;
+  private cachedGridContext: CanvasRenderingContext2D | null = null;
+  private cachedGridKey = "";
 
   constructor(
     private game: GameView,
@@ -96,7 +99,78 @@ export class CoordinateGridLayer implements Layer {
     const width = this.game.width();
     const height = this.game.height();
     if (width <= 0 || height <= 0) return;
+    const canvasWidth = context.canvas.width;
+    const canvasHeight = context.canvas.height;
 
+    const cacheKey = this.buildCacheKey(
+      width,
+      height,
+      canvasWidth,
+      canvasHeight,
+    );
+    const cacheContext = this.ensureCacheContext(canvasWidth, canvasHeight);
+    if (cacheContext === null || this.cachedGridCanvas === null) return;
+
+    if (this.cachedGridKey !== cacheKey) {
+      cacheContext.clearRect(0, 0, canvasWidth, canvasHeight);
+      this.drawGrid(cacheContext, width, height);
+      this.cachedGridKey = cacheKey;
+    }
+
+    context.drawImage(this.cachedGridCanvas, 0, 0);
+  }
+
+  private ensureCacheContext(
+    canvasWidth: number,
+    canvasHeight: number,
+  ): CanvasRenderingContext2D | null {
+    this.cachedGridCanvas ??= document.createElement("canvas");
+
+    if (
+      this.cachedGridCanvas.width !== canvasWidth ||
+      this.cachedGridCanvas.height !== canvasHeight
+    ) {
+      this.cachedGridCanvas.width = canvasWidth;
+      this.cachedGridCanvas.height = canvasHeight;
+      this.cachedGridContext = null;
+      this.cachedGridKey = "";
+    }
+
+    this.cachedGridContext ??= this.cachedGridCanvas.getContext("2d");
+
+    return this.cachedGridContext;
+  }
+
+  private buildCacheKey(
+    width: number,
+    height: number,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): string {
+    const topLeft = this.transformHandler.worldToScreenCoordinates(
+      new Cell(0, 0),
+    );
+    const bottomRight = this.transformHandler.worldToScreenCoordinates(
+      new Cell(width, height),
+    );
+    return [
+      width,
+      height,
+      canvasWidth,
+      canvasHeight,
+      this.transformHandler.scale.toFixed(4),
+      topLeft.x.toFixed(2),
+      topLeft.y.toFixed(2),
+      bottomRight.x.toFixed(2),
+      bottomRight.y.toFixed(2),
+    ].join("|");
+  }
+
+  private drawGrid(
+    context: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+  ) {
     const {
       cellSize,
       rows,
