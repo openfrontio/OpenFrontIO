@@ -23,6 +23,8 @@ import { FlagInput } from "./FlagInput";
 import "./FlagInputModal";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameInfoModal } from "./GameInfoModal";
+import "./GameModeSelector";
+import { GameModeSelector } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
@@ -38,8 +40,6 @@ import { MatchmakingModal } from "./Matchmaking";
 import { initNavigation } from "./Navigation";
 import "./NewsModal";
 import "./PatternInput";
-import "./PublicLobby";
-import { PublicLobby } from "./PublicLobby";
 import "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
@@ -245,7 +245,7 @@ class Client {
 
   private hostModal: HostPrivateLobbyModal;
   private joinModal: JoinLobbyModal;
-  private publicLobby: PublicLobby;
+  private gameModeSelector: GameModeSelector;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
@@ -299,7 +299,9 @@ class Client {
       console.warn("Username input element not found");
     }
 
-    this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    this.gameModeSelector = document.querySelector(
+      "game-mode-selector",
+    ) as GameModeSelector;
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
@@ -802,7 +804,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby.stop();
+        this.gameModeSelector.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -819,7 +821,7 @@ class Client {
       },
       () => {
         this.joinModal?.closeWithoutLeaving();
-        this.publicLobby.stop();
+        this.gameModeSelector.stop();
         incrementGamesPlayed();
 
         document.querySelectorAll(".ad").forEach((ad) => {

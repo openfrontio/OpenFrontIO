@@ -17,8 +17,8 @@ import { renderDuration, translateText } from "./Utils";
 
 const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 
-@customElement("public-lobby")
-export class PublicLobby extends LitElement {
+@customElement("game-mode-selector")
+export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
   private timeOffset: number = 0;
 
