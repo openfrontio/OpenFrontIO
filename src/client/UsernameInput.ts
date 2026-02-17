@@ -151,18 +151,16 @@ export class UsernameInput extends LitElement {
     const trimmedBase = this.baseUsername.trim();
     if (!trimmedBase || trimmedBase.length < MIN_USERNAME_LENGTH) {
       this._isValid = false;
-      const msg = translateText("username.too_short", {
+      this.validationError = translateText("username.too_short", {
         min: MIN_USERNAME_LENGTH,
       });
-      this.validationError = msg;
       return;
     }
 
     // Validate clan tag if present
     if (this.clanTag.length > 0 && this.clanTag.length < 2) {
       this._isValid = false;
-      const msg = translateText("username.tag_too_short");
-      this.validationError = msg;
+      this.validationError = translateText("username.tag_too_short");
       return;
     }
 
