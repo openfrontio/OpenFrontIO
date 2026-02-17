@@ -793,6 +793,17 @@ export class GameImpl implements Game {
   }
 
   public isNationSpawnImmunityActive(): boolean {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return (
+        startTick + this.config().nationSpawnImmunityDuration() > this.ticks()
+      );
+    }
+
     return (
       this.config().numSpawnPhaseTurns() +
         this.config().nationSpawnImmunityDuration() >

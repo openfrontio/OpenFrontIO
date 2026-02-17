@@ -859,6 +859,17 @@ export class GameView implements GameMap {
     );
   }
   isNationSpawnImmunityActive(): boolean {
+    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return true;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return (
+        startTick + this._config.nationSpawnImmunityDuration() > this.ticks()
+      );
+    }
+
     return (
       this._config.numSpawnPhaseTurns() +
         this._config.nationSpawnImmunityDuration() >
