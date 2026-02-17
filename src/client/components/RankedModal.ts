@@ -174,24 +174,6 @@ export class RankedModal extends BaseModal {
       return;
     }
 
-    const usernameInput = document.querySelector("username-input") as any;
-    if (
-      usernameInput &&
-      typeof usernameInput.isValid === "function" &&
-      !usernameInput.isValid()
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-      return;
-    }
-
     document.dispatchEvent(new CustomEvent("open-matchmaking"));
   }
 }

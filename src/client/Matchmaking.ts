@@ -274,21 +274,7 @@ export class MatchmakingButton extends LitElement {
   }
 
   private handleLoggedInClick() {
-    const usernameInput = document.querySelector("username-input") as any;
-
-    if (usernameInput?.isValid()) {
-      document.dispatchEvent(new CustomEvent("open-matchmaking"));
-    } else {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: usernameInput?.validationError,
-            color: "red",
-            duration: 3000,
-          },
-        }),
-      );
-    }
+    document.dispatchEvent(new CustomEvent("open-matchmaking"));
   }
 
   private handleLoggedOutClick() {

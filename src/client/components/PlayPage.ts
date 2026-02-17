@@ -105,26 +105,20 @@ export class PlayPage extends LitElement {
           <!-- Mobile: spacer for fixed top bar -->
           <div class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)]"></div>
 
-          <!-- Mobile: profile/setup controls -->
           <div
-            class="lg:hidden px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 flex flex-col gap-2 overflow-visible"
+            class="px-2 py-2 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] border-y border-white/10 overflow-visible lg:col-span-9 lg:flex lg:items-center lg:gap-x-2 lg:h-[60px] lg:p-3 lg:relative lg:z-20 lg:border-y-0 lg:rounded-xl"
           >
-            <div class="flex items-center gap-2 min-w-0">
-              <username-input class="flex-1 min-w-0 h-10"></username-input>
+            <div class="flex items-center gap-2 min-w-0 w-full">
+              <username-input
+                class="flex-1 min-w-0 h-10 lg:h-[50px]"
+              ></username-input>
               <pattern-input
                 id="pattern-input-mobile"
                 show-select-label
                 adaptive-size
-                class="shrink-0"
+                class="shrink-0 lg:hidden"
               ></pattern-input>
             </div>
-          </div>
-
-          <!-- Desktop: Original layout -->
-          <div
-            class="hidden lg:flex lg:col-span-9 gap-x-2 h-[60px] items-center p-3 relative z-20 bg-[color-mix(in_oklab,var(--frenchBlue)_75%,black)] lg:rounded-xl"
-          >
-            <username-input class="flex-1 min-w-0 h-[50px]"></username-input>
           </div>
 
           <div class="hidden lg:flex lg:col-span-3 h-[60px] gap-2">

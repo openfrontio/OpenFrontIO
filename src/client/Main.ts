@@ -719,8 +719,7 @@ class Client {
         (searchParams.toString() ? "?" + searchParams.toString() : "") +
         window.location.hash;
       history.replaceState(null, "", newUrl);
-      // Wait for matchmaking button to be defined, then trigger its click handler
-      // This goes through username validation instead of bypassing it
+      // Wait for matchmaking button to be defined, then trigger its click handler.
       customElements.whenDefined("matchmaking-button").then(() => {
         const matchmakingButton = document.querySelector(
           "matchmaking-button button",
