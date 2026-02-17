@@ -1,6 +1,5 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { until } from "lit/directives/until.js";
 import {
   Duos,
   GameMapType,
@@ -97,18 +96,11 @@ export class PublicLobby extends LitElement {
       <div
         class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
       >
-        ${ffa
-          ? until(this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)), nothing)
-          : nothing}
+        ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
         ${teams
-          ? until(
-              this.renderLobbyCard(teams, this.getLobbyTitle(teams)),
-              nothing,
-            )
+          ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
           : nothing}
-        ${special
-          ? until(this.renderSpecialLobbyCard(special), nothing)
-          : nothing}
+        ${special ? this.renderSpecialLobbyCard(special) : nothing}
         ${this.renderQuickActionsSection()}
       </div>
     `;
@@ -191,13 +183,12 @@ export class PublicLobby extends LitElement {
     `;
   }
 
-  private async renderLobbyCard(
+  private renderLobbyCard(
     lobby: PublicGameInfo,
     titleContent: string | TemplateResult,
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
-    const data = terrainMapFileLoader.getMapData(mapType);
-    const mapImageSrc = await data.webpPath();
+    const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPathSync();
     // TODO: plus or minus
     const start = lobby.startsAt - this.timeOffset;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
