@@ -1,6 +1,5 @@
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import {
   Game,
   GameType,
@@ -43,17 +42,14 @@ describe("AllianceExtensionExecution", () => {
 
   test("Successfully extends existing alliance between Humans", () => {
     vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "canSendAllianceRequest").mockReturnValue(true);
     vi.spyOn(player2, "isAlive").mockReturnValue(true);
     vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
-    game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player1.allianceWith(player2)).toBeTruthy();
@@ -90,17 +86,14 @@ describe("AllianceExtensionExecution", () => {
 
   test("Successfully extends existing alliance between Human and non-Human", () => {
     vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player3, "canSendAllianceRequest").mockReturnValue(true);
     vi.spyOn(player3, "isAlive").mockReturnValue(true);
     vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     game.addExecution(new AllianceRequestExecution(player1, player3.id()));
     game.executeNextTick();
-    game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player3, true),
-    );
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player3, player1.id()));
     game.executeNextTick();
 
     expect(player1.allianceWith(player3)).toBeTruthy();
@@ -128,18 +121,15 @@ describe("AllianceExtensionExecution", () => {
 
   test("Sends message to other player when one player requests renewal", () => {
     vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "canSendAllianceRequest").mockReturnValue(true);
     vi.spyOn(player2, "isAlive").mockReturnValue(true);
     vi.spyOn(player1, "isAlive").mockReturnValue(true);
 
     // Create alliance between player1 and player2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
-    game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player1.allianceWith(player2)).toBeTruthy();

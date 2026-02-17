@@ -3,7 +3,6 @@ import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 //import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../../../src/core/execution/alliance/AllianceRequestReplyExecution";
 import {
   Game,
   GameType,
@@ -69,16 +68,11 @@ describe("GameImpl", () => {
 
   test("Don't become traitor when betraying inactive player", async () => {
     vi.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(defender, "canSendAllianceRequest").mockReturnValue(true);
     game.addExecution(new AllianceRequestExecution(attacker, defender.id()));
-
-    game.executeNextTick();
     game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(attacker.id(), defender, true),
-    );
-
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(defender, attacker.id()));
     game.executeNextTick();
 
     expect(attacker.allianceWith(defender)).toBeTruthy();
@@ -108,16 +102,11 @@ describe("GameImpl", () => {
 
   test("Do become traitor when betraying active player", async () => {
     vi.spyOn(attacker, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(defender, "canSendAllianceRequest").mockReturnValue(true);
     game.addExecution(new AllianceRequestExecution(attacker, defender.id()));
-
-    game.executeNextTick();
     game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(attacker.id(), defender, true),
-    );
-
-    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(defender, attacker.id()));
     game.executeNextTick();
 
     expect(attacker.allianceWith(defender)).toBeTruthy();

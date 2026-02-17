@@ -1,5 +1,5 @@
+import { AllianceRejectExecution } from "../src/core/execution/alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import {
   Game,
@@ -43,21 +43,7 @@ describe("AllianceRequestExecution", () => {
     }
   });
 
-  test("Can create alliance by replying", () => {
-    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
-
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
-    game.executeNextTick();
-    game.executeNextTick();
-
-    expect(player1.isAlliedWith(player2)).toBeTruthy();
-    expect(player2.isAlliedWith(player1)).toBeTruthy();
-  });
-
-  test("Can create alliance by sending alliance request back", () => {
+  test("Can create alliance by counter-request", () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
@@ -66,6 +52,18 @@ describe("AllianceRequestExecution", () => {
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
+  });
+
+  test("Can reject alliance request", () => {
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+
+    game.addExecution(new AllianceRejectExecution(player1.id(), player2));
+    game.executeNextTick();
+
+    expect(player1.isAlliedWith(player2)).toBeFalsy();
+    expect(player2.isAlliedWith(player1)).toBeFalsy();
+    expect(player1.outgoingAllianceRequests().length).toBe(0);
   });
 
   test("Alliance request expires", () => {

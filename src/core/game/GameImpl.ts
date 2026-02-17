@@ -336,12 +336,6 @@ export class GameImpl implements Game {
       request,
     );
 
-    // Automatically remove embargoes only if they were automatically created
-    if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient);
-    if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor);
-
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -794,6 +788,14 @@ export class GameImpl implements Game {
     return (
       this.config().numSpawnPhaseTurns() +
         this.config().spawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+
+  public isNationSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().nationSpawnImmunityDuration() >
       this.ticks()
     );
   }

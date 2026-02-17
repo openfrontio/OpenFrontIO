@@ -1,5 +1,4 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
 import { Game, GameType, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
@@ -45,9 +44,7 @@ describe("Alliance Donation", () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
@@ -66,9 +63,7 @@ describe("Alliance Donation", () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
@@ -122,9 +117,7 @@ describe("Alliance Donation", () => {
     game.executeNextTick();
 
     const goldBefore = player2.gold();
-    game.addExecution(
-      new AllianceRequestReplyExecution(player1.id(), player2, true),
-    );
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.addExecution(new DonateGoldExecution(player1, player2.id(), 100));
 
     game.executeNextTick();

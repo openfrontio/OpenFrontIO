@@ -13,6 +13,7 @@ export class TestConfig extends DefaultConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
+  private _nationSpawnImmunityDuration: number = 0;
 
   disableNavMesh(): boolean {
     return this.gameConfig().disableNavMesh ?? true;
@@ -65,6 +66,14 @@ export class TestConfig extends DefaultConfig {
 
   spawnImmunityDuration(): Tick {
     return this._spawnImmunityDuration;
+  }
+
+  setNationSpawnImmunityDuration(duration: Tick) {
+    this._nationSpawnImmunityDuration = duration;
+  }
+
+  nationSpawnImmunityDuration(): Tick {
+    return this._nationSpawnImmunityDuration;
   }
 
   attackLogic(

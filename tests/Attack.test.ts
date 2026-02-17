@@ -426,11 +426,29 @@ describe("Attack immunity", () => {
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
   });
 
-  test("Should be able to attack nations during immunity phase", async () => {
+  test("Should not be able to attack nations during nation immunity phase", async () => {
+    (game.config() as TestConfig).setNationSpawnImmunityDuration(
+      immunityPhaseTicks,
+    );
     const nationId = "nation_id";
     const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
     game.addPlayer(nation);
-    // Player A attacks the nation
+    // Player A attacks the nation during nation immunity
+    const attackExecution = new AttackExecution(null, playerA, nationId, null);
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+  });
+
+  test("Should be able to attack nations after nation immunity phase", async () => {
+    (game.config() as TestConfig).setNationSpawnImmunityDuration(
+      immunityPhaseTicks,
+    );
+    const nationId = "nation_id";
+    const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
+    game.addPlayer(nation);
+    waitForImmunityToEnd();
+    // Player A attacks the nation after immunity
     const attackExecution = new AttackExecution(null, playerA, nationId, null);
     game.addExecution(attackExecution);
     game.executeNextTick();

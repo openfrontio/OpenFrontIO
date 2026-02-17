@@ -168,6 +168,9 @@ export class DefaultConfig implements Config {
       this._gameConfig.spawnImmunityDuration ?? DEFAULT_SPAWN_IMMUNITY_TICKS
     );
   }
+  nationSpawnImmunityDuration(): Tick {
+    return DEFAULT_SPAWN_IMMUNITY_TICKS;
+  }
   hasExtendedSpawnImmunity(): boolean {
     return this.spawnImmunityDuration() > DEFAULT_SPAWN_IMMUNITY_TICKS;
   }
