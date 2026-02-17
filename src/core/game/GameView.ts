@@ -654,6 +654,10 @@ export class GameView implements GameMap {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public isCatchingUp(): boolean {
+    return (this.lastUpdate?.pendingTurns ?? 0) > 1;
+  }
+
   public update(gu: GameUpdateViewData) {
     this.toDelete.forEach((id) => this._units.delete(id));
     this.toDelete.clear();
@@ -834,6 +838,13 @@ export class GameView implements GameMap {
   isSpawnImmunityActive(): boolean {
     return (
       this._config.numSpawnPhaseTurns() + this._config.spawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+  isNationSpawnImmunityActive(): boolean {
+    return (
+      this._config.numSpawnPhaseTurns() +
+        this._config.nationSpawnImmunityDuration() >
       this.ticks()
     );
   }

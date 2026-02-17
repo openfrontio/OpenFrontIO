@@ -801,6 +801,7 @@ export interface Game extends GameMap {
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
+  isNationSpawnImmunityActive(): boolean;
 
   // Game State
   ticks(): Tick;
