@@ -145,7 +145,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
         ${this.toastMessage
           ? html`
               <div
-                class="fixed top-6 left-1/2 -translate-x-1/2 z-[11001] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
+                class="fixed top-6 left-1/2 -translate-x-1/2 z-[800] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
                 style="max-width: 90vw; min-width: 200px; text-align: center;
                   background: ${this.toastColor === "red"
                   ? "rgba(239,68,68,0.1)"
@@ -169,7 +169,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
         ${this.isVisible
           ? html`
               <div
-                class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[11000]
+                class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[799]
                             inline-flex items-center justify-center min-h-8 lg:min-h-10
                             w-fit max-w-[90vw]
                             bg-gray-800/70 rounded-md lg:rounded-lg
