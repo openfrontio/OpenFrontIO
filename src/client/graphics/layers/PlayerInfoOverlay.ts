@@ -13,7 +13,11 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import {
+  ContextMenuEvent,
+  MouseMoveEvent,
+  TouchEvent,
+} from "../../InputHandler";
 import {
   renderDuration,
   renderNumber,
@@ -99,6 +103,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
     );
+    this.eventBus.on(TouchEvent, (e: TouchEvent) => this.maybeShow(e.x, e.y));
     this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -491,10 +496,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       <div
         class="fixed top-0 min-[1200px]:top-4 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
         style="margin-top: ${this.barOffset}px;"
+        @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg transition-all duration-300 text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-xs shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-auto sm:min-w-[400px] overflow-hidden ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
