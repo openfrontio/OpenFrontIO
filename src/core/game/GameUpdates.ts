@@ -141,6 +141,7 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  veterancyLevel?: number; // Only for warships
 }
 
 export interface AttackUpdate {

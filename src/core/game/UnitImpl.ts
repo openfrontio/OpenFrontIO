@@ -38,6 +38,7 @@ export class UnitImpl implements Unit {
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
+  private _veterancyLevel = 0;
   // Nuke only
   private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
@@ -142,6 +143,8 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      veterancyLevel:
+        this._type === UnitType.Warship ? this._veterancyLevel : undefined,
     };
   }
 
@@ -221,14 +224,14 @@ export class UnitImpl implements Unit {
     );
   }
 
-  modifyHealth(delta: number, attacker?: Player): void {
+  modifyHealth(delta: number, attacker?: Player, attackerUnit?: Unit): void {
     this._health = withinInt(
       this._health + toInt(delta),
       0n,
       toInt(this.info().maxHealth ?? 1),
     );
     if (this._health === 0n) {
-      this.delete(true, attacker);
+      this.delete(true, attacker, attackerUnit);
     }
   }
 
@@ -256,7 +259,11 @@ export class UnitImpl implements Unit {
     return this._deletionAt !== null && this.mg.ticks() - this._deletionAt > 0;
   }
 
-  delete(displayMessage?: boolean, destroyer?: Player): void {
+  delete(
+    displayMessage?: boolean,
+    destroyer?: Player,
+    destroyerUnit?: Unit,
+  ): void {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
@@ -275,6 +282,15 @@ export class UnitImpl implements Unit {
     }
 
     if (destroyer !== undefined) {
+      if (
+        this._type === UnitType.Warship &&
+        destroyerUnit !== undefined &&
+        destroyerUnit.type() === UnitType.Warship &&
+        destroyerUnit.owner() === destroyer &&
+        destroyerUnit.isActive()
+      ) {
+        destroyerUnit.gainVeterancy();
+      }
       switch (this._type) {
         case UnitType.TransportShip:
           this.mg
@@ -482,5 +498,21 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  veterancyLevel(): number {
+    return this._veterancyLevel;
+  }
+
+  gainVeterancy(): void {
+    if (this._type !== UnitType.Warship) {
+      return;
+    }
+    const updated = Math.min(3, this._veterancyLevel + 1);
+    if (updated === this._veterancyLevel) {
+      return;
+    }
+    this._veterancyLevel = updated;
+    this.mg.addUpdate(this.toUpdate());
   }
 }

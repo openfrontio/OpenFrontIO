@@ -52,7 +52,11 @@ export class ShellExecution implements Execution {
       );
       if (result.status === PathStatus.COMPLETE) {
         this.active = false;
-        this.target.modifyHealth(-this.effectOnTarget(), this._owner);
+        this.target.modifyHealth(
+          -this.effectOnTarget(),
+          this._owner,
+          this.ownerUnit,
+        );
         this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
@@ -64,7 +68,8 @@ export class ShellExecution implements Execution {
 
   private effectOnTarget(): number {
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
-    const baseDamage = damage ?? 250;
+    const veterancyBonus = this.ownerUnit.veterancyLevel() * 25;
+    const baseDamage = (damage ?? 250) + veterancyBonus;
 
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;

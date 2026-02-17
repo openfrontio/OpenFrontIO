@@ -19,6 +19,10 @@ const COLOR_PROGRESSION = [
 const HEALTHBAR_WIDTH = 11; // Width of the health bar
 const LOADINGBAR_WIDTH = 14; // Width of the loading bar
 const PROGRESSBAR_HEIGHT = 3; // Height of a bar
+const VETERANCY_DOT_RADIUS = 1.4;
+const VETERANCY_DOT_SPACING = 5;
+const VETERANCY_DOT_Y_OFFSET = 10;
+const VETERANCY_DOT_CLEAR_PADDING = 2;
 
 /**
  * Layer responsible for drawing UI elements that overlay the game
@@ -35,6 +39,10 @@ export class UILayer implements Layer {
     { unit: UnitView; progressBar: ProgressBar }
   > = new Map();
   private allHealthBars: Map<number, ProgressBar> = new Map();
+  private allVeterancyDots: Map<
+    number,
+    { x: number; y: number; bars: number }
+  > = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -103,6 +111,10 @@ export class UILayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      this.clearVeterancyDots(unit.id());
+      return;
+    }
     const underConst = unit.isUnderConstruction();
     if (underConst) {
       this.createLoadingBar(unit);
@@ -111,6 +123,7 @@ export class UILayer implements Layer {
     switch (unit.type()) {
       case UnitType.Warship: {
         this.drawHealthBar(unit);
+        this.drawVeterancyDots(unit);
         break;
       }
       case UnitType.City:
@@ -295,6 +308,58 @@ export class UILayer implements Layer {
       // keep track of units that have health bars for clearing purposes
       this.allHealthBars.set(unit.id(), healthBar);
     }
+  }
+
+  private clearVeterancyDots(unitID: number): void {
+    const previous = this.allVeterancyDots.get(unitID);
+    if (previous === undefined || this.context === null) {
+      return;
+    }
+    const width =
+      previous.bars <= 0
+        ? 0
+        : (previous.bars - 1) * VETERANCY_DOT_SPACING +
+          VETERANCY_DOT_RADIUS * 2;
+    const startX =
+      previous.x -
+      width / 2 -
+      VETERANCY_DOT_RADIUS -
+      VETERANCY_DOT_CLEAR_PADDING;
+    const startY =
+      previous.y - VETERANCY_DOT_RADIUS - VETERANCY_DOT_CLEAR_PADDING;
+    const clearWidth =
+      width + (VETERANCY_DOT_RADIUS + VETERANCY_DOT_CLEAR_PADDING) * 2;
+    const clearHeight =
+      (VETERANCY_DOT_RADIUS + VETERANCY_DOT_CLEAR_PADDING) * 2;
+    this.context.clearRect(startX, startY, clearWidth, clearHeight);
+    this.allVeterancyDots.delete(unitID);
+  }
+
+  private drawVeterancyDots(unit: UnitView): void {
+    if (this.context === null) {
+      return;
+    }
+    this.clearVeterancyDots(unit.id());
+    const bars = Math.min(3, Math.max(0, unit.veterancyLevel()));
+    if (bars === 0) {
+      return;
+    }
+
+    const centerX = this.game.x(unit.tile());
+    const y = this.game.y(unit.tile()) - VETERANCY_DOT_Y_OFFSET;
+    const totalWidth =
+      (bars - 1) * VETERANCY_DOT_SPACING + VETERANCY_DOT_RADIUS * 2;
+    const startX = centerX - totalWidth / 2 + VETERANCY_DOT_RADIUS;
+
+    this.context.fillStyle = "#d4af37";
+    for (let i = 0; i < bars; i++) {
+      const x = startX + i * VETERANCY_DOT_SPACING;
+      this.context.beginPath();
+      this.context.arc(x, y, VETERANCY_DOT_RADIUS, 0, Math.PI * 2);
+      this.context.fill();
+    }
+
+    this.allVeterancyDots.set(unit.id(), { x: centerX, y, bars });
   }
 
   private updateProgressBars() {

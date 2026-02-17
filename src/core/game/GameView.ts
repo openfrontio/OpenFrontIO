@@ -180,6 +180,9 @@ export class UnitView {
   isLoaded(): boolean | undefined {
     return this.data.loaded;
   }
+  veterancyLevel(): number {
+    return this.data.veterancyLevel ?? 0;
+  }
 }
 
 export class PlayerView {

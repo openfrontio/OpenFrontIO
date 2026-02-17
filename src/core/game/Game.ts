@@ -495,7 +495,11 @@ export interface Unit {
   isMarkedForDeletion(): boolean;
   markForDeletion(): void;
   isOverdueDeletion(): boolean;
-  delete(displayMessage?: boolean, destroyer?: Player): void;
+  delete(
+    displayMessage?: boolean,
+    destroyer?: Player,
+    destroyerUnit?: Unit,
+  ): void;
   tile(): TileRef;
   lastTile(): TileRef;
   move(tile: TileRef): void;
@@ -534,7 +538,7 @@ export interface Unit {
   retreating(): boolean;
   orderBoatRetreat(): void;
   health(): number;
-  modifyHealth(delta: number, attacker?: Player): void;
+  modifyHealth(delta: number, attacker?: Player, attackerUnit?: Unit): void;
 
   // Troops
   setTroops(troops: number): void;
@@ -564,6 +568,8 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
+  veterancyLevel(): number;
+  gainVeterancy(): void;
 }
 
 export interface TerraNullius {
