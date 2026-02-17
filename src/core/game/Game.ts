@@ -263,17 +263,17 @@ export const nukeTypes = [
   UnitType.MIRV,
 ] as const satisfies readonly UnitType[];
 
-const _buildableAttackTypes = [
+const _buildableAttackTypesList = [
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
   UnitType.Warship,
 ] as const satisfies readonly UnitType[];
 
-export const BuildableAttackTypes = _buildableAttackTypes;
+export const BuildableAttackTypes = _buildableAttackTypesList;
 
 const _buildableAttackTypesSet: ReadonlySet<UnitType> = new Set(
-  _buildableAttackTypes,
+  _buildableAttackTypesList,
 );
 
 export function isBuildableAttackType(type: UnitType): boolean {
@@ -299,7 +299,7 @@ export function isStructureType(type: UnitType): boolean {
 
 const _buildMenuTypesList = [
   ..._structureTypesList,
-  ..._buildableAttackTypes,
+  ..._buildableAttackTypesList,
 ] as const satisfies readonly UnitType[];
 
 export const BuildMenuTypes = _buildMenuTypesList;
