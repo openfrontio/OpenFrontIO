@@ -252,28 +252,31 @@ export class NukeExecution implements Execution {
       throw new Error("Not initialized");
     }
 
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const mg = this.mg;
+    const config = mg.config();
+
+    const magnitude = config.nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
 
     // Retrieve all impacted players and the number of tiles
     const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
-      const owner = this.mg.owner(tile);
+      const owner = mg.owner(tile);
       if (owner.isPlayer()) {
         owner.relinquish(tile);
-        const numTiles = tilesPerPlayers.get(owner);
-        tilesPerPlayers.set(owner, numTiles === undefined ? 1 : numTiles + 1);
+        tilesPerPlayers.set(owner, (tilesPerPlayers.get(owner) ?? 0) + 1);
       }
-      if (this.mg.isLand(tile)) {
-        this.mg.setFallout(tile, true);
+
+      if (mg.isLand(tile)) {
+        mg.setFallout(tile, true);
       }
     }
 
     // Then compute the explosion effect on each player
     for (const [player, numImpactedTiles] of tilesPerPlayers) {
-      const config = this.mg.config();
       const tilesBeforeNuke = player.numTilesOwned() + numImpactedTiles;
       const transportShips = player.units(UnitType.TransportShip);
+      const outgoingAttacks = player.outgoingAttacks();
       const maxTroops = config.maxTroops(player);
       // nukeDeathFactor could compute the complete fallout in a single call instead
       for (let i = 0; i < numImpactedTiles; i++) {
@@ -287,39 +290,45 @@ export class NukeExecution implements Execution {
             maxTroops,
           ),
         );
-        player.outgoingAttacks().forEach((attack) => {
+        for (const attack of outgoingAttacks) {
+          const attackTroops = attack.troops();
           const deaths = config.nukeDeathFactor(
             this.nukeType,
-            attack.troops(),
+            attackTroops,
             numTilesLeft,
             maxTroops,
           );
-          attack.setTroops(attack.troops() - deaths);
-        });
-        transportShips.forEach((unit) => {
+          attack.setTroops(attackTroops - deaths);
+        }
+        for (const unit of transportShips) {
+          const unitTroops = unit.troops();
           const deaths = config.nukeDeathFactor(
             this.nukeType,
-            unit.troops(),
+            unitTroops,
             numTilesLeft,
             maxTroops,
           );
-          unit.setTroops(unit.troops() - deaths);
-        });
+          unit.setTroops(unitTroops - deaths);
+        }
       }
     }
 
     const outer2 = magnitude.outer * magnitude.outer;
-    for (const unit of this.mg.units()) {
+    const dst = this.dst;
+    const destroyer = this.player;
+    for (const unit of mg.units()) {
+      const type = unit.type();
       if (
-        unit.type() !== UnitType.AtomBomb &&
-        unit.type() !== UnitType.HydrogenBomb &&
-        unit.type() !== UnitType.MIRVWarhead &&
-        unit.type() !== UnitType.MIRV &&
-        unit.type() !== UnitType.SAMMissile
+        type === UnitType.AtomBomb ||
+        type === UnitType.HydrogenBomb ||
+        type === UnitType.MIRVWarhead ||
+        type === UnitType.MIRV ||
+        type === UnitType.SAMMissile
       ) {
-        if (this.mg.euclideanDistSquared(this.dst, unit.tile()) < outer2) {
-          unit.delete(true, this.player);
-        }
+        continue;
+      }
+      if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
+        unit.delete(true, destroyer);
       }
     }
 
