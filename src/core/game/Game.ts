@@ -793,7 +793,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
