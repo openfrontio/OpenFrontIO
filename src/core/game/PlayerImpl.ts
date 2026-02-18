@@ -214,11 +214,58 @@ export class PlayerImpl implements Player {
   }
 
   units(...types: UnitType[]): Unit[] {
-    if (types.length === 0) {
+    const len = types.length;
+    if (len === 0) {
       return this._units;
     }
+
+    // Fast paths for common small arity calls to avoid Set allocation.
+    if (len === 1) {
+      const t0 = types[0]!;
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        if (u.type() === t0) out.push(u);
+      }
+      return out;
+    }
+
+    if (len === 2) {
+      const t0 = types[0]!;
+      const t1 = types[1]!;
+      if (t0 === t1) {
+        const out: Unit[] = [];
+        for (const u of this._units) {
+          if (u.type() === t0) out.push(u);
+        }
+        return out;
+      }
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === t0 || t === t1) out.push(u);
+      }
+      return out;
+    }
+
+    if (len === 3) {
+      const t0 = types[0]!;
+      const t1 = types[1]!;
+      const t2 = types[2]!;
+      // Keep semantics identical for duplicates in types by using direct comparisons.
+      const out: Unit[] = [];
+      for (const u of this._units) {
+        const t = u.type();
+        if (t === t0 || t === t1 || t === t2) out.push(u);
+      }
+      return out;
+    }
+
     const ts = new Set(types);
-    return this._units.filter((u) => ts.has(u.type()));
+    const out: Unit[] = [];
+    for (const u of this._units) {
+      if (ts.has(u.type())) out.push(u);
+    }
+    return out;
   }
 
   private numUnitsConstructed: Partial<Record<UnitType, number>> = {};
