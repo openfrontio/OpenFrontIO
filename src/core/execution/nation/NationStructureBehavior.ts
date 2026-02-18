@@ -173,7 +173,8 @@ export class NationStructureBehavior {
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
-    const { difficulty } = this.game.config().gameConfig();
+    const gameConfig = this.game.config();
+    const { difficulty } = gameConfig.gameConfig();
     const ratios = getStructureRatios(difficulty);
     const config = ratios[type];
     if (config === undefined) {
@@ -186,7 +187,7 @@ export class NationStructureBehavior {
     if (
       type === UnitType.Factory &&
       hasCoastalTiles &&
-      !this.game.config().isUnitDisabled(UnitType.Port)
+      !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
       ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
     }
@@ -219,6 +220,7 @@ export class NationStructureBehavior {
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
+    const game = this.game;
     const perceivedCost = this.getPerceivedCost(type);
     if (this.player.gold() < perceivedCost) {
       return false;
@@ -228,7 +230,7 @@ export class NationStructureBehavior {
     const structures = this.player.units(type);
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      this.game.config().unitInfo(type).upgradable
+      game.config().unitInfo(type).upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -249,7 +251,7 @@ export class NationStructureBehavior {
     if (canBuild === false) {
       return false;
     }
-    this.game.addExecution(new ConstructionExecution(this.player, type, tile));
+    game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
 
@@ -355,6 +357,7 @@ export class NationStructureBehavior {
    * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
+    const game = this.game;
     if (structures.length === 0) {
       return null;
     }
@@ -366,7 +369,7 @@ export class NationStructureBehavior {
     }
 
     // Based on difficulty, chance to just pick a random structure
-    const { difficulty } = this.game.config().gameConfig();
+    const { difficulty } = game.config().gameConfig();
     let randomChance: number;
     switch (difficulty) {
       case Difficulty.Easy:
@@ -399,9 +402,9 @@ export class NationStructureBehavior {
 
       // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
-        const samRange = this.game.config().samRange(sam.level());
+        const samRange = game.config().samRange(sam.level());
         const samRangeSquared = samRange * samRange;
-        const distSquared = this.game.euclideanDistSquared(
+        const distSquared = game.euclideanDistSquared(
           structure.tile(),
           sam.tile(),
         );

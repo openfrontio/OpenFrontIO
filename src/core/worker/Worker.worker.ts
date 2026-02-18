@@ -143,7 +143,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: profile,
         } as PlayerProfileResultMessage);
       } catch (error) {
-        console.error("Failed to get player profile:", error);
+        console.error("Failed to get profile:", error);
         throw error;
       }
       break;
