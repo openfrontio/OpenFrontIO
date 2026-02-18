@@ -223,7 +223,7 @@ export class GameServer {
           c.clientID !== client.clientID,
       );
       if (conflicting !== undefined) {
-        this.log.error("client ids do not match", {
+        this.log.warn("client ids do not match", {
           clientID: client.clientID,
           clientIP: ipAnonymize(client.ip),
           clientPersistentID: client.persistentID,

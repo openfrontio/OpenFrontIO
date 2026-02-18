@@ -574,6 +574,10 @@ async function startMatchmakingPolling(gm: GameManager) {
           }, 7000);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Abort is expected if no game is scheduled on this worker.
+          return;
+        }
         log.error(`Error polling lobby:`, error);
       }
     },
