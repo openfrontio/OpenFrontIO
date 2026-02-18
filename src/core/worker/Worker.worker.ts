@@ -103,7 +103,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: actions,
         } as PlayerActionsResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get actions:", error);
         throw error;
       }
       break;
@@ -120,7 +120,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: profile,
         } as PlayerProfileResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get profile:", error);
         throw error;
       }
       break;
