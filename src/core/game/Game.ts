@@ -233,8 +233,6 @@ export interface UnitInfo {
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
-  canBuildTrainStation?: boolean;
-  experimental?: boolean;
 }
 
 export enum UnitType {
@@ -795,7 +793,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
@@ -854,6 +852,7 @@ export interface BuildableUnit {
   type: UnitType;
   cost: Gold;
   overlappingRailroads: number[];
+  ghostRailPaths: TileRef[][];
 }
 
 export interface PlayerProfile {

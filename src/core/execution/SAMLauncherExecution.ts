@@ -26,8 +26,8 @@ type InterceptionTile = {
  */
 class SAMTargetingSystem {
   // Interception tiles are computed a single time, but it may not be reachable yet.
-  // Store the result so it can be intercepted at the proper time, rather than recomputing each ticks
-  // Null interception tile means there are no interception tiles in range. Store it to
+  // Store the result so it can be intercepted at the proper time, rather than recomputing each tick.
+  // Null interception tile means there are no interception tiles in range. Store it to avoid recomputing.
   private readonly precomputedNukes: Map<number, InterceptionTile | null> =
     new Map();
   private readonly missileSpeed: number;
@@ -91,7 +91,8 @@ class SAMTargetingSystem {
         return (
           isUnit(unit) &&
           unit.owner() !== this.sam.owner() &&
-          !this.sam.owner().isFriendly(unit.owner())
+          !this.sam.owner().isFriendly(unit.owner()) &&
+          !unit.targetedBySAM()
         );
       },
     );
@@ -105,7 +106,7 @@ class SAMTargetingSystem {
       const cached = this.precomputedNukes.get(nukeId);
       if (cached !== undefined) {
         if (cached === null) {
-          // Known unreachable, skip.
+          // Already computed as unreachable, skip
           continue;
         }
         if (cached.tick === ticks) {
@@ -259,8 +260,8 @@ export class SAMLauncherExecution implements Execution {
       }
     }
 
-    const isSingleTarget = target && !target.unit.targetedBySAM();
-    if (isSingleTarget || mirvWarheadTargets.length > 0) {
+    // target is already filtered to exclude nukes targeted by other SAMs
+    if (target || mirvWarheadTargets.length > 0) {
       this.sam.launch();
       const type =
         mirvWarheadTargets.length > 0
