@@ -46,6 +46,7 @@ export async function startWorker() {
   const __dirname = path.dirname(__filename);
 
   const app = express();
+  app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
 
