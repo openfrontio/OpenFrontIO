@@ -360,7 +360,6 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
       case UnitType.AtomBomb:
         return {
@@ -429,7 +428,6 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
       case UnitType.Factory:
         return {
@@ -441,15 +439,12 @@ export class DefaultConfig implements Config {
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
-          canBuildTrainStation: true,
-          experimental: true,
           upgradable: true,
         };
       case UnitType.Train:
         return {
           cost: () => 0n,
           territoryBound: false,
-          experimental: true,
         };
       default:
         assertNever(type);
