@@ -227,8 +227,6 @@ export interface PublicGameModifiers {
 
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
-  // Determines if its owner changes when its tile is conquered.
-  territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
