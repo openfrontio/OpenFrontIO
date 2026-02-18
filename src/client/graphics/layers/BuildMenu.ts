@@ -88,7 +88,6 @@ export const buildTable: BuildItemDisplay[][] = [
       key: "unit_type.missile_silo",
       countable: true,
     },
-    // needs new icon
     {
       unitType: UnitType.SAMLauncher,
       icon: samlauncherIcon,
@@ -498,7 +497,7 @@ export class BuildMenu extends LitElement implements Layer {
         this.requestUpdate();
       });
 
-    // removed disabled buildings from the buildtable
+    // remove disabled buildings from the buildtable
     this.filteredBuildTable = this.getBuildableUnits();
   }
 
