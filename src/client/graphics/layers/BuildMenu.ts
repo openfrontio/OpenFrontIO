@@ -128,7 +128,7 @@ export class BuildMenu extends LitElement implements Layer {
   public eventBus: EventBus;
   public uiState: UIState;
   private clickedTile: TileRef;
-  public playerActions: PlayerActions | null;
+  public playerActions: PlayerActions | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
@@ -362,8 +362,9 @@ export class BuildMenu extends LitElement implements Layer {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
     }
-    const buildableUnits = this.playerActions?.buildableUnits ?? [];
-    const unit = buildableUnits.filter((u) => u.type === item.unitType);
+    const unit = this.playerActions.buildableUnits.filter(
+      (u) => u.type === item.unitType,
+    );
     if (unit.length === 0) {
       return false;
     }
