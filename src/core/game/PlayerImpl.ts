@@ -993,6 +993,10 @@ export class PlayerImpl implements Player {
             canBuild !== false
               ? this.mg.railNetwork().overlappingRailroads(canBuild)
               : [],
+          ghostRailPaths:
+            canBuild !== false
+              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
+              : [],
         } as BuildableUnit;
       });
   }
