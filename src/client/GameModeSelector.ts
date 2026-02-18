@@ -23,12 +23,11 @@ const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 @customElement("game-mode-selector")
 export class GameModeSelector extends LitElement {
   @state() private lobbies: PublicGames | null = null;
-  private timeOffset: number = 0;
+  private serverTimeOffset: number = 0;
 
   private lobbySocket = new PublicLobbySocket((lobbies) =>
     this.handleLobbiesUpdate(lobbies),
   );
-  private updateIntervalId: number | null = null;
 
   createRenderRoot() {
     return this;
@@ -58,11 +57,6 @@ export class GameModeSelector extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.lobbySocket.start();
-    // Update time remaining every second
-    this.updateIntervalId = window.setInterval(
-      () => this.requestUpdate(),
-      1000,
-    );
   }
 
   disconnectedCallback() {
@@ -72,16 +66,11 @@ export class GameModeSelector extends LitElement {
 
   public stop() {
     this.lobbySocket.stop();
-    if (this.updateIntervalId !== null) {
-      clearInterval(this.updateIntervalId);
-      this.updateIntervalId = null;
-    }
   }
 
   private handleLobbiesUpdate(lobbies: PublicGames) {
     this.lobbies = lobbies;
-    // TODO: plus or minus?
-    this.timeOffset = Date.now() - lobbies.serverTime;
+    this.serverTimeOffset = lobbies.serverTime - Date.now();
     document.dispatchEvent(
       new CustomEvent("public-lobbies-update", {
         detail: { payload: lobbies },
@@ -185,8 +174,10 @@ export class GameModeSelector extends LitElement {
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
     const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
-    const start = lobby.startsAt - this.timeOffset;
-    const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
+    const timeRemaining = Math.max(
+      0,
+      Math.floor((lobby.startsAt - this.serverTimeOffset - Date.now()) / 1000),
+    );
     const timeDisplay = renderDuration(timeRemaining);
     const mapName = getMapName(lobby.gameConfig?.gameMap);
 
