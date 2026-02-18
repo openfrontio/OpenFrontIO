@@ -10,10 +10,13 @@ import {
   Trios,
 } from "../core/game/Game";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { HostLobbyModal } from "./HostLobbyModal";
+import { JoinLobbyModal } from "./JoinLobbyModal";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
+import { SinglePlayerModal } from "./SinglePlayerModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { renderDuration, translateText } from "./Utils";
+import { getMapName, renderDuration, translateText } from "./Utils";
 
 const CARD_BG = "bg-[color-mix(in_oklab,var(--frenchBlue)_70%,black)]";
 
@@ -145,31 +148,24 @@ export class GameModeSelector extends LitElement {
 
   private openRankedMenu = () => {
     if (!this.validateUsername()) return;
-
-    const modal = document.getElementById("page-ranked") as any;
-    if (window.showPage) {
-      window.showPage("page-ranked");
-    } else if (modal) {
-      document.getElementById("page-play")?.classList.add("hidden");
-      modal.classList.remove("hidden");
-      modal.classList.add("block");
-    }
-    modal?.open?.();
+    window.showPage?.("page-ranked");
   };
 
   private openSinglePlayerModal = () => {
     if (!this.validateUsername()) return;
-    (document.querySelector("single-player-modal") as any)?.open();
+    (
+      document.querySelector("single-player-modal") as SinglePlayerModal
+    )?.open();
   };
 
   private openHostLobby = () => {
     if (!this.validateUsername()) return;
-    (document.querySelector("host-lobby-modal") as any)?.open();
+    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
   };
 
   private openJoinLobby = () => {
     if (!this.validateUsername()) return;
-    (document.querySelector("join-lobby-modal") as any)?.open();
+    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
   };
 
   private renderSmallActionCard(title: string, onClick: () => void) {
@@ -188,15 +184,11 @@ export class GameModeSelector extends LitElement {
     titleContent: string | TemplateResult,
   ) {
     const mapType = lobby.gameConfig!.gameMap as GameMapType;
-    const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPathSync();
-    // TODO: plus or minus
+    const mapImageSrc = terrainMapFileLoader.getMapData(mapType).webpPath;
     const start = lobby.startsAt - this.timeOffset;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
     const timeDisplay = renderDuration(timeRemaining);
-    const gameMap = lobby.gameConfig?.gameMap;
-    const mapName = gameMap
-      ? translateText(`map.${gameMap.toLowerCase().replace(/[\s.]+/g, "")}`)
-      : null;
+    const mapName = getMapName(lobby.gameConfig?.gameMap);
 
     const modifierLabels = this.getModifierLabels(
       lobby.gameConfig?.publicGameModifiers,
@@ -215,7 +207,7 @@ export class GameModeSelector extends LitElement {
           ${mapImageSrc
             ? html`<img
                 src="${mapImageSrc}"
-                alt="${mapName ?? gameMap ?? "map"}"
+                alt="${mapName ?? lobby.gameConfig?.gameMap ?? "map"}"
                 draggable="false"
                 class="absolute inset-0 w-full h-full object-contain object-center scale-[1.05] pointer-events-none"
               />`
@@ -288,10 +280,6 @@ export class GameModeSelector extends LitElement {
     );
   }
 
-  private getLobbyTitle(lobby: PublicGameInfo): string {
-    return this.getBaseModeTitle(lobby);
-  }
-
   private getModifierLabels(mods: PublicGameModifiers | undefined): string[] {
     if (!mods) return [];
     return [
@@ -302,7 +290,7 @@ export class GameModeSelector extends LitElement {
     ].filter((x): x is string => !!x);
   }
 
-  private getBaseModeTitle(lobby: PublicGameInfo): string {
+  private getLobbyTitle(lobby: PublicGameInfo): string {
     const config = lobby.gameConfig!;
     if (config.gameMode === GameMode.FFA) {
       return translateText("game_mode.ffa");

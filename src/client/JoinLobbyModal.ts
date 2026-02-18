@@ -3,7 +3,7 @@ import { customElement, property, query, state } from "lit/decorators.js";
 import {
   getActiveModifiers,
   getGameModeLabel,
-  normaliseMapKey,
+  getMapName,
   renderDuration,
   renderNumber,
   translateText,
@@ -419,7 +419,7 @@ export class JoinLobbyModal extends BaseModal {
     if (!this.gameConfig) return html``;
 
     const c = this.gameConfig;
-    const mapName = translateText("map." + normaliseMapKey(c.gameMap));
+    const mapName = getMapName(c.gameMap);
     const modeName = getGameModeLabel(c);
     const modifiers = getActiveModifiers(c.publicGameModifiers);
 

@@ -10,6 +10,5 @@ export interface MapData {
   map4xBin: () => Promise<Uint8Array>;
   map16xBin: () => Promise<Uint8Array>;
   manifest: () => Promise<MapManifest>;
-  webpPathSync: () => string;
-  webpPath: () => Promise<string>;
+  webpPath: string;
 }
