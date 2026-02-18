@@ -1,5 +1,4 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
@@ -23,13 +22,6 @@ export class PlayerActionHandler {
     private eventBus: EventBus,
     private uiState: UIState,
   ) {}
-
-  async getPlayerActions(
-    player: PlayerView,
-    tile: TileRef,
-  ): Promise<PlayerActions> {
-    return await player.actions(tile);
-  }
 
   handleAttack(player: PlayerView, targetId: string | null) {
     this.eventBus.emit(
