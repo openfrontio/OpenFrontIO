@@ -11,6 +11,7 @@ import {
   Quads,
   RankedType,
   Trios,
+  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
@@ -18,6 +19,7 @@ import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
+const ARCADE_MAPS = new Set(mapCategories.arcade);
 
 function isSpecialModifiers(modifiers: PublicGameModifiers): boolean {
   return Boolean(
@@ -312,13 +314,13 @@ export class MapPlaylist {
   private getNextMap(type: PublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist());
+      playlist.push(...this.generateNewPlaylist(type));
     }
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(): GameMapType[] {
-    const maps = this.buildMapsList();
+  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
+    const maps = this.buildMapsList(type);
     const rand = new PseudoRandom(Date.now());
     const shuffledSource = rand.shuffleArray([...maps]);
     const playlist: GameMapType[] = [];
@@ -366,11 +368,15 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(): GameMapType[] {
+  private buildMapsList(type: PublicGameType): GameMapType[] {
     const maps: GameMapType[] = [];
     (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      const map = GameMapType[key];
+      if (type !== "special" && ARCADE_MAPS.has(map)) {
+        return;
+      }
       for (let i = 0; i < (frequency[key] ?? 0); i++) {
-        maps.push(GameMapType[key]);
+        maps.push(map);
       }
     });
     return maps;
