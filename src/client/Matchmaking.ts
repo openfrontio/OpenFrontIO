@@ -152,6 +152,7 @@ export class MatchmakingModal extends BaseModal {
         }),
       );
       this.close();
+      window.showPage?.("page-account");
       return;
     }
 
