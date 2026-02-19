@@ -86,6 +86,10 @@ export class SpawnExecution implements Execution {
     }
 
     player.setSpawnTile(this.tile);
+
+    if (isSingleplayerInitialHumanSpawn) {
+      this.mg.endSpawnPhase();
+    }
   }
 
   isActive(): boolean {

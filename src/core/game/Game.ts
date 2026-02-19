@@ -760,10 +760,12 @@ export interface Game extends GameMap {
   // Immunity timer
   isSpawnImmunityActive(): boolean;
   isNationSpawnImmunityActive(): boolean;
+  elapsedGameSeconds(): number;
 
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
+  endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   getWinner(): Player | Team | null;

@@ -378,14 +378,13 @@ export class GameImpl implements Game {
       if (this.singleplayerSpawnPhaseCompleted) {
         return false;
       }
-      // Singleplayer has no fixed spawn countdown; game starts once all current human
-      // players in the game have spawned. This supports tests that add players after
-      // game construction.
-      const humanPlayers = this.allPlayers().filter(
+      // Singleplayer spawn phase stays active until the first human spawn completes.
+      // When no humans exist yet, fall back to tick-based spawn phase for compatibility.
+      const hasHumans = this.allPlayers().some(
         (player) => player.type() === PlayerType.Human,
       );
-      if (humanPlayers.length > 0) {
-        return humanPlayers.some((player) => !player.hasSpawned());
+      if (hasHumans) {
+        return true;
       }
     }
     return this._ticks <= this.config().numSpawnPhaseTurns();
@@ -396,6 +395,13 @@ export class GameImpl implements Game {
       return this.spawnPhaseLockedValue;
     }
     return this.computeInSpawnPhase();
+  }
+
+  endSpawnPhase(): void {
+    if (this.config().gameConfig().gameType !== GameType.Singleplayer) {
+      return;
+    }
+    this.singleplayerSpawnPhaseCompleted = true;
   }
 
   private updateSingleplayerStartTick(): void {
@@ -422,12 +428,6 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.spawnPhaseLockedValue = this.computeInSpawnPhase();
-    if (
-      this.config().gameConfig().gameType === GameType.Singleplayer &&
-      !this.spawnPhaseLockedValue
-    ) {
-      this.singleplayerSpawnPhaseCompleted = true;
-    }
     this.updateSingleplayerStartTick();
 
     this.updates = createGameUpdatesMap();
@@ -790,6 +790,19 @@ export class GameImpl implements Game {
         this.config().spawnImmunityDuration() >
       this.ticks()
     );
+  }
+
+  public elapsedGameSeconds(): number {
+    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
+      this.updateSingleplayerStartTick();
+      if (this.inSpawnPhase()) {
+        return 0;
+      }
+      const startTick = this.singleplayerStartTick ?? this.ticks();
+      return Math.max(0, this.ticks() - startTick) / 10;
+    }
+
+    return Math.max(0, this.ticks() - this.config().numSpawnPhaseTurns()) / 10;
   }
 
   public isNationSpawnImmunityActive(): boolean {
