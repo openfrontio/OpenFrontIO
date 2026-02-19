@@ -587,7 +587,7 @@ export class NationStructureBehavior {
     }
 
     // Normalize weights against the highest possible trade gold (ally).
-    const maxTradeGold = Number(game.config().trainGold("ally"));
+    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
 
     // Precompute registered station structures with cluster membership and
     // trade-gold weight. Weight is in [0, 1], normalized to ally = 1.0.
