@@ -813,7 +813,8 @@
   },
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
-    "lobby_creator": "Kicked by lobby creator"
+    "lobby_creator": "Kicked by lobby creator",
+    "discord_not_allowed": "Kicked from game (your Discord account is not on this lobby's allowlist)"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",

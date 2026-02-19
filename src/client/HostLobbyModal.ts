@@ -13,9 +13,11 @@ import {
 } from "../core/game/Game";
 import {
   ClientInfo,
+  DISCORD_ID_REGEX,
   GameConfig,
   GameInfo,
   LobbyInfoEvent,
+  MAX_ALLOWED_DISCORD_IDS,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
@@ -94,6 +96,15 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
+    }
+    const incomingAllowedIds = lobby.gameConfig?.allowedDiscordIds ?? [];
+    if (
+      incomingAllowedIds.length !== this.allowedDiscordIds.length ||
+      incomingAllowedIds.some(
+        (id, index) => id !== this.allowedDiscordIds[index],
+      )
+    ) {
+      this.allowedDiscordIds = incomingAllowedIds;
     }
   };
 
@@ -348,6 +359,9 @@ export class HostLobbyModal extends BaseModal {
               .value=${this.discordIdInput}
               @input=${this.handleDiscordIdInputChange}
               @keydown=${this.handleDiscordIdKeyDown}
+              @blur=${this.handleDiscordIdBlur}
+              inputmode="numeric"
+              autocomplete="off"
               placeholder=${translateText(
                 "host_modal.discord_allowlist_placeholder",
               )}
@@ -735,18 +749,48 @@ export class HostLobbyModal extends BaseModal {
     this.discordIdInput = (e.target as HTMLInputElement).value;
   };
 
-  private handleDiscordIdKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const id = this.discordIdInput.trim();
-    if (id && !this.allowedDiscordIds.includes(id)) {
-      this.allowedDiscordIds = [...this.allowedDiscordIds, id];
+  private commitDiscordIdInput = () => {
+    if (!this.discordIdInput.trim()) {
+      this.discordIdInput = "";
+      return;
+    }
+
+    const nextIds = new Set(this.allowedDiscordIds);
+    let changed = false;
+
+    for (const token of this.discordIdInput.split(/[\s,]+/g)) {
+      const id = token.trim();
+      if (!id || !DISCORD_ID_REGEX.test(id)) {
+        continue;
+      }
+      if (nextIds.has(id) || nextIds.size >= MAX_ALLOWED_DISCORD_IDS) {
+        continue;
+      }
+      nextIds.add(id);
+      changed = true;
+    }
+
+    if (changed) {
+      this.allowedDiscordIds = Array.from(nextIds);
       this.putGameConfig();
     }
     this.discordIdInput = "";
   };
 
+  private handleDiscordIdKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    this.commitDiscordIdInput();
+  };
+
+  private handleDiscordIdBlur = () => {
+    this.commitDiscordIdInput();
+  };
+
   private removeDiscordId = (id: string) => {
+    if (!this.allowedDiscordIds.includes(id)) {
+      return;
+    }
     this.allowedDiscordIds = this.allowedDiscordIds.filter((d) => d !== id);
     this.putGameConfig();
   };

@@ -369,6 +369,8 @@ export async function startWorker() {
         const gameServer = gm.game(clientMsg.gameID);
         const allowedDiscordIds =
           gameServer?.gameConfig?.allowedDiscordIds ?? [];
+        const allowedDiscordIdSet =
+          allowedDiscordIds.length > 0 ? new Set(allowedDiscordIds) : null;
 
         const allowedFlares = config.allowedFlares();
         if (claims === null) {
@@ -377,7 +379,7 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized");
             return;
           }
-          if (allowedDiscordIds.length > 0) {
+          if (allowedDiscordIdSet !== null) {
             log.warn(
               "Unauthorized: Anonymous user attempted to join Discord-restricted game",
               { gameID: clientMsg.gameID },
@@ -413,8 +415,7 @@ export async function startWorker() {
             }
           }
 
-          if (allowedDiscordIds.length > 0) {
-            const discordId = result.response.user.discord?.id;
+          if (allowedDiscordIdSet !== null) {
             if (!discordId) {
               log.warn(
                 "Unauthorized: user without linked Discord attempted to join Discord-restricted game",
@@ -423,7 +424,7 @@ export async function startWorker() {
               ws.close(1002, "Unauthorized: Discord account required");
               return;
             }
-            if (!allowedDiscordIds.includes(discordId)) {
+            if (!allowedDiscordIdSet.has(discordId)) {
               log.warn("Unauthorized: Discord ID not in allowlist", {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,

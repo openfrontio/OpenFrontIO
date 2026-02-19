@@ -83,6 +83,7 @@ export class GameServer {
   public desyncCount = 0;
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
+  private allowedDiscordIdsSet: Set<string> | null = null;
 
   constructor(
     public readonly id: string,
@@ -95,12 +96,67 @@ export class GameServer {
     private publicGameType?: PublicGameType,
   ) {
     this.log = log_.child({ gameID: id });
+    this.setAllowedDiscordIds(gameConfig.allowedDiscordIds);
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
     return this.creatorPersistentID
       ? this.persistentIdToClientId.get(this.creatorPersistentID)
       : undefined;
+  }
+
+  private setAllowedDiscordIds(allowedDiscordIds: string[] | undefined): void {
+    if (allowedDiscordIds === undefined || allowedDiscordIds.length === 0) {
+      this.allowedDiscordIdsSet = null;
+      this.gameConfig.allowedDiscordIds = undefined;
+      return;
+    }
+
+    const deduped = new Set<string>();
+    for (const rawId of allowedDiscordIds) {
+      const id = rawId.trim();
+      if (id) {
+        deduped.add(id);
+      }
+    }
+
+    if (deduped.size === 0) {
+      this.allowedDiscordIdsSet = null;
+      this.gameConfig.allowedDiscordIds = undefined;
+      return;
+    }
+
+    const normalizedIds = Array.from(deduped);
+    this.allowedDiscordIdsSet = new Set(normalizedIds);
+    this.gameConfig.allowedDiscordIds = normalizedIds;
+  }
+
+  private isLobbyCreatorPersistentId(persistentID: string): boolean {
+    return persistentID === this.creatorPersistentID;
+  }
+
+  private isDiscordAllowed(
+    persistentID: string,
+    discordId: string | undefined,
+  ): boolean {
+    if (this.isLobbyCreatorPersistentId(persistentID)) {
+      return true;
+    }
+    if (!this.allowedDiscordIdsSet || this.allowedDiscordIdsSet.size === 0) {
+      return true;
+    }
+    return discordId !== undefined && this.allowedDiscordIdsSet.has(discordId);
+  }
+
+  private enforceDiscordAllowlist(): void {
+    if (!this.allowedDiscordIdsSet || this.allowedDiscordIdsSet.size === 0) {
+      return;
+    }
+    for (const client of this.allClients.values()) {
+      if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
+        this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
+      }
+    }
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -159,22 +215,8 @@ export class GameServer {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
     if (gameConfig.allowedDiscordIds !== undefined) {
-      this.gameConfig.allowedDiscordIds =
-        gameConfig.allowedDiscordIds.length > 0
-          ? gameConfig.allowedDiscordIds
-          : undefined;
-      // Enforce the new allowlist on already-connected clients
-      if (this.gameConfig.allowedDiscordIds?.length) {
-        for (const client of [...this.activeClients]) {
-          if (client.persistentID === this.creatorPersistentID) continue;
-          if (
-            !client.discordId ||
-            !this.gameConfig.allowedDiscordIds.includes(client.discordId)
-          ) {
-            this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
-          }
-        }
-      }
+      this.setAllowedDiscordIds(gameConfig.allowedDiscordIds);
+      this.enforceDiscordAllowlist();
     }
   }
 
@@ -195,6 +237,20 @@ export class GameServer {
 
   public joinClient(client: Client): "joined" | "kicked" | "rejected" {
     if (this.kickedPersistentIds.has(client.persistentID)) {
+      return "kicked";
+    }
+
+    if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
+      this.log.warn("cannot add client, discord id not allowed", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+      });
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: KICK_REASON_DISCORD_NOT_ALLOWED,
+        } satisfies ServerErrorMessage),
+      );
       return "kicked";
     }
 
@@ -285,6 +341,21 @@ export class GameServer {
     if (!clientID) return false;
     const client = this.allClients.get(clientID);
     if (!client) return false;
+    if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
+      this.log.warn("cannot rejoin client, discord id not allowed", {
+        clientID,
+        persistentID,
+      });
+      this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          error: KICK_REASON_DISCORD_NOT_ALLOWED,
+        } satisfies ServerErrorMessage),
+      );
+      ws.close(1000, KICK_REASON_DISCORD_NOT_ALLOWED);
+      return true;
+    }
 
     this.websockets.add(ws);
     this.log.info("client rejoining", { clientID, lastTurn });
@@ -600,11 +671,22 @@ export class GameServer {
 
   private broadcastLobbyInfo() {
     const lobbyInfo = this.gameInfo();
+    const sanitizedLobbyInfo =
+      lobbyInfo.gameConfig?.allowedDiscordIds === undefined
+        ? lobbyInfo
+        : {
+            ...lobbyInfo,
+            gameConfig: {
+              ...lobbyInfo.gameConfig,
+              allowedDiscordIds: undefined,
+            },
+          };
     this.activeClients.forEach((c) => {
       if (c.ws.readyState === WebSocket.OPEN) {
         const msg = JSON.stringify({
           type: "lobby_info",
-          lobby: lobbyInfo,
+          lobby:
+            c.clientID === this.lobbyCreatorID ? lobbyInfo : sanitizedLobbyInfo,
           myClientID: c.clientID,
         } satisfies ServerLobbyInfoMessage);
         c.ws.send(msg);
