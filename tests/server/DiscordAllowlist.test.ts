@@ -179,6 +179,7 @@ describe("Discord allowlist", () => {
       ALLOWED_DISCORD_ID,
     );
     expect(game.joinClient(guestClient)).toBe("joined");
+    vi.advanceTimersByTime(1000);
 
     const creatorLobbyInfo = creatorWs.sentMessages
       .map((msg) => JSON.parse(msg))
@@ -189,6 +190,7 @@ describe("Discord allowlist", () => {
       .reverse()
       .find((msg) => msg.type === "lobby_info");
 
+    expect(guestLobbyInfo).toBeDefined();
     expect(creatorLobbyInfo?.lobby?.gameConfig?.allowedDiscordIds).toEqual([
       ALLOWED_DISCORD_ID,
     ]);
