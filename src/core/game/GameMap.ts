@@ -48,7 +48,19 @@ export interface GameMap {
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
 
+  /**
+   * Returns the packed per-tile state as an unsigned 16-bit value (`0..65535`).
+   *
+   * Backed by a `Uint16Array` in `GameMapImpl`, so callers must treat this as `uint16`.
+   */
   tileState(tile: TileRef): number;
+
+  /**
+   * Applies a packed per-tile state value.
+   *
+   * `state` must be an unsigned 16-bit value (`0..65535`). Implementations may
+   * store this in a `Uint16Array` and will truncate higher bits if provided.
+   */
   updateTile(tile: TileRef, state: number): void;
 
   numTilesWithFallout(): number;

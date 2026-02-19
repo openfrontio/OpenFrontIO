@@ -17,6 +17,12 @@ import { TileRef } from "./GameMap";
 export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
+  /**
+   * Packed tile updates as `[tileRef, state]` uint32 pairs.
+   *
+   * `tileRef` is a `TileRef` (fits in uint32), and `state` is the packed per-tile
+   * state as a `uint16` stored in a `uint32` lane.
+   */
   packedTileUpdates: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
@@ -115,6 +121,7 @@ export interface ConquestUpdate {
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
   tile: TileRef;
+  /** Packed per-tile state value (`uint16`, `0..65535`). */
   state: number;
 }
 
