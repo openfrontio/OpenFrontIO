@@ -67,7 +67,16 @@ export class AccountModal extends BaseModal {
       : this.renderInner();
 
     if (this.inline) {
-      return content;
+      return this.isLoadingUser
+        ? html`<div class="${this.modalContainerClass}">
+            ${modalHeader({
+              title: translateText("account_modal.title"),
+              onBack: () => this.close(),
+              ariaLabel: translateText("common.back"),
+            })}
+            ${content}
+          </div>`
+        : content;
     }
 
     return html`
