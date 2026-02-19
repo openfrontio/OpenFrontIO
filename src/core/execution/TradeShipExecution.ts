@@ -70,6 +70,15 @@ export class TradeShipExecution implements Execution {
     }
 
     if (
+      !this.wasCaptured &&
+      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
+    ) {
+      this.tradeShip.delete(false);
+      this.active = false;
+      return;
+    }
+
+    if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
