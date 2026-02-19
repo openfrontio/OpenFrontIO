@@ -1,8 +1,8 @@
 import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { RankedType } from "src/core/game/Game";
 import { PlayerLeaderboardEntry } from "../../../core/ApiSchemas";
+import { RankedType } from "../../../core/game/Game";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
 
