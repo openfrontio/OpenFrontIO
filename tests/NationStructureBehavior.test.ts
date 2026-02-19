@@ -1,8 +1,8 @@
 import { vi } from "vitest";
 import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
-import { Difficulty, PlayerType, UnitType } from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+import { Difficulty, PlayerType } from "../src/core/game/Game";
 import { Cluster } from "../src/core/game/TrainStation";
+import { PseudoRandom } from "../src/core/PseudoRandom";
 
 // ── Fixed trade-gold values matching DefaultConfig ──────────────────────────
 
@@ -54,11 +54,13 @@ function makePlayer(
   };
 }
 
-function makeNeighbor(opts: {
-  isPlayer?: boolean;
-  type?: PlayerType;
-  units?: any[];
-} = {}): any {
+function makeNeighbor(
+  opts: {
+    isPlayer?: boolean;
+    type?: PlayerType;
+    units?: any[];
+  } = {},
+): any {
   return {
     isPlayer: () => opts.isPlayer ?? true,
     type: () => opts.type ?? PlayerType.Human,
@@ -117,16 +119,16 @@ describe("NationStructureBehavior.shouldUseConnectivityScore", () => {
 
   it("returns true for Hard when nextInt < 75", () => {
     const { behavior } = behaviorWithNextInt(74);
-    expect(
-      (behavior as any).shouldUseConnectivityScore(Difficulty.Hard),
-    ).toBe(true);
+    expect((behavior as any).shouldUseConnectivityScore(Difficulty.Hard)).toBe(
+      true,
+    );
   });
 
   it("returns false for Hard when nextInt === 75 (boundary)", () => {
     const { behavior } = behaviorWithNextInt(75);
-    expect(
-      (behavior as any).shouldUseConnectivityScore(Difficulty.Hard),
-    ).toBe(false);
+    expect((behavior as any).shouldUseConnectivityScore(Difficulty.Hard)).toBe(
+      false,
+    );
   });
 
   it("always returns true for Impossible (randomChance = 100)", () => {
