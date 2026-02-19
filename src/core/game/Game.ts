@@ -227,14 +227,10 @@ export interface PublicGameModifiers {
 
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
-  // Determines if its owner changes when its tile is conquered.
-  territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
   constructionDuration?: number;
   upgradable?: boolean;
-  canBuildTrainStation?: boolean;
-  experimental?: boolean;
 }
 
 export enum UnitType {
@@ -795,7 +791,7 @@ export interface Game extends GameMap {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
@@ -854,6 +850,7 @@ export interface BuildableUnit {
   type: UnitType;
   cost: Gold;
   overlappingRailroads: number[];
+  ghostRailPaths: TileRef[][];
 }
 
 export interface PlayerProfile {
