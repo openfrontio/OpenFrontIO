@@ -200,15 +200,12 @@ export class ChatModal extends LitElement {
       this.selectedCategory!,
       phrase.key,
     );
-    this.selectedPhraseTemplate = translateText(
+    const translated = translateText(
       `chat.${this.selectedCategory}.${phrase.key}`,
     );
-    this.selectedPhraseText = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.previewText = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
+    this.selectedPhraseTemplate = translated;
+    this.selectedPhraseText = translated;
+    this.previewText = translated;
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.requiresPlayer2Selection = phrase.requiresPlayer2 ?? false;
     this.selectedPlayer = null;
@@ -243,11 +240,6 @@ export class ChatModal extends LitElement {
   }
 
   private sendChatMessage() {
-    console.log("Sent message:", this.previewText);
-    console.log("Sender:", this.sender);
-    console.log("Recipient:", this.recipient);
-    console.log("Key:", this.selectedQuickChatKey);
-
     if (this.sender && this.recipient && this.selectedQuickChatKey) {
       this.eventBus.emit(
         new SendQuickChatEvent(
