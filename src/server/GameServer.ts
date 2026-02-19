@@ -34,6 +34,7 @@ export enum GamePhase {
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
+const KICK_REASON_DISCORD_NOT_ALLOWED = "kick_reason.discord_not_allowed";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -156,6 +157,24 @@ export class GameServer {
     }
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
+    }
+    if (gameConfig.allowedDiscordIds !== undefined) {
+      this.gameConfig.allowedDiscordIds =
+        gameConfig.allowedDiscordIds.length > 0
+          ? gameConfig.allowedDiscordIds
+          : undefined;
+      // Enforce the new allowlist on already-connected clients
+      if (this.gameConfig.allowedDiscordIds?.length) {
+        for (const client of [...this.activeClients]) {
+          if (client.persistentID === this.creatorPersistentID) continue;
+          if (
+            !client.discordId ||
+            !this.gameConfig.allowedDiscordIds.includes(client.discordId)
+          ) {
+            this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
+          }
+        }
+      }
     }
   }
 

@@ -76,7 +76,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
-  @state() private allowedDiscordIds: string = "";
+  @state() private allowedDiscordIds: string[] = [];
+  @state() private discordIdInput: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Add a new timer for debouncing bot changes
@@ -321,14 +322,36 @@ export class HostLobbyModal extends BaseModal {
             <p class="text-xs text-white/50">
               ${translateText("host_modal.discord_allowlist_help")}
             </p>
+            ${this.allowedDiscordIds.length > 0
+              ? html`
+                  <div class="flex flex-wrap gap-1">
+                    ${this.allowedDiscordIds.map(
+                      (id) => html`
+                        <span
+                          class="flex items-center gap-1 px-2 py-1 bg-blue-600/30 border border-blue-500/40 rounded-lg text-blue-200 text-xs font-mono"
+                        >
+                          ${id}
+                          <button
+                            @click=${() => this.removeDiscordId(id)}
+                            class="text-blue-300 hover:text-white transition-colors leading-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      `,
+                    )}
+                  </div>
+                `
+              : ""}
             <input
               type="text"
-              .value=${this.allowedDiscordIds}
-              @input=${this.handleDiscordAllowlistChange}
+              .value=${this.discordIdInput}
+              @input=${this.handleDiscordIdInputChange}
+              @keydown=${this.handleDiscordIdKeyDown}
               placeholder=${translateText(
                 "host_modal.discord_allowlist_placeholder",
               )}
-              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm"
+              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm appearance-none"
             />
           </div>
 
@@ -470,7 +493,8 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
-    this.allowedDiscordIds = "";
+    this.allowedDiscordIds = [];
+    this.discordIdInput = "";
 
     this.leaveLobbyOnClose = true;
   }
@@ -707,8 +731,23 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
-  private handleDiscordAllowlistChange = (e: Event) => {
-    this.allowedDiscordIds = (e.target as HTMLInputElement).value;
+  private handleDiscordIdInputChange = (e: Event) => {
+    this.discordIdInput = (e.target as HTMLInputElement).value;
+  };
+
+  private handleDiscordIdKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const id = this.discordIdInput.trim();
+    if (id && !this.allowedDiscordIds.includes(id)) {
+      this.allowedDiscordIds = [...this.allowedDiscordIds, id];
+      this.putGameConfig();
+    }
+    this.discordIdInput = "";
+  };
+
+  private removeDiscordId = (id: string) => {
+    this.allowedDiscordIds = this.allowedDiscordIds.filter((d) => d !== id);
     this.putGameConfig();
   };
 
@@ -798,12 +837,7 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
-            allowedDiscordIds: this.allowedDiscordIds
-              ? this.allowedDiscordIds
-                  .split(",")
-                  .map((id) => id.trim())
-                  .filter((id) => id.length > 0)
-              : undefined,
+            allowedDiscordIds: this.allowedDiscordIds,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

@@ -21,5 +21,6 @@ export class Client {
     public readonly uncensoredUsername: string,
     public ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
+    public readonly discordId: string | undefined,
   ) {}
 }

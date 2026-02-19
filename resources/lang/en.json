@@ -429,7 +429,7 @@
     "starting_gold": "Starting gold",
     "crowded": "Crowded modifier",
     "discord_allowlist": "Discord Allowlist (Optional)",
-    "discord_allowlist_placeholder": "Enter Discord IDs, comma-separated",
+    "discord_allowlist_placeholder": "Paste Discord ID and press Enter",
     "discord_allowlist_help": "Only players with these Discord IDs can join"
   },
   "team_colors": {

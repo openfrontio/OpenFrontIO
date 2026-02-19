@@ -363,6 +363,7 @@ export async function startWorker() {
 
         let roles: string[] | undefined;
         let flares: string[] | undefined;
+        let discordId: string | undefined;
 
         // Get the game's Discord allowlist before auth checks
         const gameServer = gm.game(clientMsg.gameID);
@@ -397,6 +398,7 @@ export async function startWorker() {
           }
           roles = result.response.player.roles;
           flares = result.response.player.flares;
+          discordId = result.response.user.discord?.id;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -489,6 +491,7 @@ export async function startWorker() {
           clientMsg.username,
           ws,
           cosmeticResult.cosmetics,
+          discordId,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
