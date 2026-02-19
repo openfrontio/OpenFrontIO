@@ -93,7 +93,7 @@ export class GameModeSelector extends LitElement {
           ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
           : nothing}
         ${special ? this.renderSpecialLobbyCard(special) : nothing}
-        ${this.renderActionsSection()}
+        ${this.renderQuickActionsSection()}
       </div>
     `;
   }
@@ -112,7 +112,7 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, titleContent);
   }
 
-  private renderActionsSection() {
+  private renderQuickActionsSection() {
     return html`
       <div class="contents lg:flex lg:flex-col lg:gap-2 lg:h-56">
         <div class="max-lg:order-first grid grid-cols-2 gap-2 h-20 lg:flex-1">
