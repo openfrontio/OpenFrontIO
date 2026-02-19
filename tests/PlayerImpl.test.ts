@@ -29,8 +29,11 @@ describe("PlayerImpl", () => {
     }
 
     player = game.player("player_id");
-    player.addGold(BigInt(1000000));
     other = game.player("other_id");
+
+    player.conquer(game.ref(0, 0));
+    other.conquer(game.ref(50, 50));
+    player.addGold(BigInt(1000000));
 
     game.config().structureMinDist = () => 10;
   });
