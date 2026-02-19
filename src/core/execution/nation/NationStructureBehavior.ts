@@ -563,11 +563,12 @@ export class NationStructureBehavior {
 
   /**
    * Value function for factories.
-   * Prefers high elevation, spacing from other factories, and distance from
-   * border. Scores connectivity by the number of distinct rail clusters within
-   * train-station range, weighted by trade gold: ally (1.0) > team/neutral
-   * (~0.71) > self (~0.29). Embargoed and bot neighbors are excluded. Per
-   * cluster, the best reachable trade relationship determines the weight.
+   * Prefers high elevation, spacing from other factories, and distance from border.
+   * Based on difficulty, scores connectivity by the number of distinct rail
+   * clusters within train-station range, weighted by trade gold:
+   * ally (1.0) > team/neutral (~0.71) > self (~0.29).
+   * Embargoed and bot neighbors are excluded. Per cluster, the best reachable
+   * trade relationship determines the weight.
    */
   private factoryValue(): (tile: TileRef) => number {
     const game = this.game;
@@ -578,16 +579,27 @@ export class NationStructureBehavior {
     const stationRange = game.config().trainStationMaxRange();
     const stationRangeSquared = stationRange * stationRange;
 
-    // Build unit → cluster lookup in one O(total_stations) pass, avoiding
-    // repeated O(n) findStation() calls for each own/neighbor structure.
-    const stationManager = game.railNetwork().stationManager();
-    const unitToCluster = new Map<Unit, Cluster | null>();
-    for (const station of stationManager.getAll()) {
-      unitToCluster.set(station.unit, station.getCluster());
+    // Based on difficulty, chance to use connectivity score
+    const { difficulty } = game.config().gameConfig();
+    let randomChance: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        randomChance = 0;
+        break;
+      case Difficulty.Medium:
+        randomChance = 60;
+        break;
+      case Difficulty.Hard:
+        randomChance = 75;
+        break;
+      case Difficulty.Impossible:
+        randomChance = 90;
+        break;
+      default:
+        assertNever(difficulty);
     }
 
-    // Normalize weights against the highest possible trade gold (ally).
-    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+    const useConnectionScore = difficulty !== Difficulty.Easy && this.random.chance(randomChance);
 
     // Precompute registered station structures with cluster membership and
     // trade-gold weight. Weight is in [0, 1], normalized to ally = 1.0.
@@ -597,34 +609,21 @@ export class NationStructureBehavior {
       weight: number;
     }> = [];
 
-    // Own structures — always included, weighted by "self" trade gold.
-    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
-    for (const unit of player.units(
-      UnitType.City,
-      UnitType.Port,
-      UnitType.Factory,
-    )) {
-      if (unitToCluster.has(unit)) {
-        reachableStations.push({
-          tile: unit.tile(),
-          cluster: unitToCluster.get(unit)!,
-          weight: selfWeight,
-        });
+    if (useConnectionScore) {
+      // Build unit → cluster lookup in one O(total_stations) pass, avoiding
+      // repeated O(n) findStation() calls for each own/neighbor structure.
+      const stationManager = game.railNetwork().stationManager();
+      const unitToCluster = new Map<Unit, Cluster | null>();
+      for (const station of stationManager.getAll()) {
+        unitToCluster.set(station.unit, station.getCluster());
       }
-    }
 
-    // Neighbor structures — all non-embargoed non-bot neighbors.
-    for (const neighbor of player.neighbors()) {
-      if (!neighbor.isPlayer()) continue;
-      if (neighbor.type() === PlayerType.Bot) continue;
-      if (!player.canTrade(neighbor)) continue;
-      const relType = player.isOnSameTeam(neighbor)
-        ? "team"
-        : player.isAlliedWith(neighbor)
-          ? "ally"
-          : "other";
-      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
-      for (const unit of neighbor.units(
+      // Normalize weights against the highest possible trade gold (ally).
+      const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+
+      // Own structures — always included, weighted by "self" trade gold.
+      const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+      for (const unit of player.units(
         UnitType.City,
         UnitType.Port,
         UnitType.Factory,
@@ -633,8 +632,34 @@ export class NationStructureBehavior {
           reachableStations.push({
             tile: unit.tile(),
             cluster: unitToCluster.get(unit)!,
-            weight,
+            weight: selfWeight,
           });
+        }
+      }
+
+      // Neighbor structures — all non-embargoed non-bot neighbors.
+      for (const neighbor of player.neighbors()) {
+        if (!neighbor.isPlayer()) continue;
+        if (neighbor.type() === PlayerType.Bot) continue;
+        if (!player.canTrade(neighbor)) continue;
+        const relType = player.isOnSameTeam(neighbor)
+          ? "team"
+          : player.isAlliedWith(neighbor)
+            ? "ally"
+            : "other";
+        const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+        for (const unit of neighbor.units(
+          UnitType.City,
+          UnitType.Port,
+          UnitType.Factory,
+        )) {
+          if (unitToCluster.has(unit)) {
+            reachableStations.push({
+              tile: unit.tile(),
+              cluster: unitToCluster.get(unit)!,
+              weight,
+            });
+          }
         }
       }
     }
@@ -656,6 +681,10 @@ export class NationStructureBehavior {
       if (closestOther !== null) {
         const d = game.manhattanDist(closestOther.x, tile);
         w += Math.min(d, structureSpacing);
+      }
+
+      if (!useConnectionScore) {
+        return w;
       }
 
       // Score by distinct cluster connections weighted by trade gold.
