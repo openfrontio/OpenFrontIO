@@ -88,12 +88,14 @@ export class GameModeSelector extends LitElement {
       <div
         class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-[70%] lg:w-full mx-auto"
       >
+        ${this.renderMobilePrimaryActionsSection()}
         ${ffa ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa)) : nothing}
         ${teams
           ? this.renderLobbyCard(teams, this.getLobbyTitle(teams))
           : nothing}
         ${special ? this.renderSpecialLobbyCard(special) : nothing}
-        ${this.renderQuickActionsSection()}
+        ${this.renderDesktopQuickActionsSection()}
+        ${this.renderMobileSecondaryActionsSection()}
       </div>
     `;
   }
@@ -112,9 +114,9 @@ export class GameModeSelector extends LitElement {
     return this.renderLobbyCard(lobby, titleContent);
   }
 
-  private renderQuickActionsSection() {
+  private renderDesktopQuickActionsSection() {
     return html`
-      <div class="grid grid-cols-2 gap-2 h-40 lg:h-56">
+      <div class="hidden lg:grid grid-cols-2 gap-2 h-40 lg:h-56">
         ${this.renderSmallActionCard(
           translateText("main.solo"),
           this.openSinglePlayerModal,
@@ -123,6 +125,36 @@ export class GameModeSelector extends LitElement {
           translateText("mode_selector.ranked_title"),
           this.openRankedMenu,
         )}
+        ${this.renderSmallActionCard(
+          translateText("main.create"),
+          this.openHostLobby,
+        )}
+        ${this.renderSmallActionCard(
+          translateText("main.join"),
+          this.openJoinLobby,
+        )}
+      </div>
+    `;
+  }
+
+  private renderMobilePrimaryActionsSection() {
+    return html`
+      <div class="grid lg:hidden grid-cols-2 gap-2 h-20">
+        ${this.renderSmallActionCard(
+          translateText("main.solo"),
+          this.openSinglePlayerModal,
+        )}
+        ${this.renderSmallActionCard(
+          translateText("mode_selector.ranked_title"),
+          this.openRankedMenu,
+        )}
+      </div>
+    `;
+  }
+
+  private renderMobileSecondaryActionsSection() {
+    return html`
+      <div class="grid lg:hidden grid-cols-2 gap-2 h-20">
         ${this.renderSmallActionCard(
           translateText("main.create"),
           this.openHostLobby,
