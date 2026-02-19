@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  PlayerActions,
+  StructureTypes,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -338,29 +343,24 @@ export const infoMenuElement: MenuElement = {
 };
 
 function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const Units: Set<UnitType> = new Set<UnitType>();
+  const units: Set<UnitType> = new Set<UnitType>();
 
-  const addStructureIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: UnitType) => {
     if (!config.isUnitDisabled(unitType)) {
-      Units.add(unitType);
+      units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    addStructureIfEnabled(UnitType.City);
-    addStructureIfEnabled(UnitType.DefensePost);
-    addStructureIfEnabled(UnitType.Port);
-    addStructureIfEnabled(UnitType.MissileSilo);
-    addStructureIfEnabled(UnitType.SAMLauncher);
-    addStructureIfEnabled(UnitType.Factory);
+    StructureTypes.forEach(addIfEnabled);
   } else {
-    addStructureIfEnabled(UnitType.Warship);
-    addStructureIfEnabled(UnitType.HydrogenBomb);
-    addStructureIfEnabled(UnitType.MIRV);
-    addStructureIfEnabled(UnitType.AtomBomb);
+    addIfEnabled(UnitType.Warship);
+    addIfEnabled(UnitType.HydrogenBomb);
+    addIfEnabled(UnitType.MIRV);
+    addIfEnabled(UnitType.AtomBomb);
   }
 
-  return Units;
+  return units;
 }
 
 const ATTACK_UNIT_TYPES: UnitType[] = [
@@ -388,48 +388,50 @@ function createMenuElements(
           ? ATTACK_UNIT_TYPES.includes(item.unitType)
           : !ATTACK_UNIT_TYPES.includes(item.unitType)),
     )
-    .map((item: BuildItemDisplay) => ({
-      id: `${elementIdPrefix}_${item.unitType}`,
-      name: item.key
-        ? item.key.replace("unit_type.", "")
-        : item.unitType.toString(),
-      disabled: (params: MenuElementParams) =>
-        !params.buildMenu.canBuildOrUpgrade(item),
-      color: params.buildMenu.canBuildOrUpgrade(item)
-        ? filterType === "attack"
-          ? COLORS.attack
-          : COLORS.building
-        : undefined,
-      icon: item.icon,
-      tooltipItems: [
-        { text: translateText(item.key ?? ""), className: "title" },
-        {
-          text: translateText(item.description ?? ""),
-          className: "description",
+    .map((item: BuildItemDisplay) => {
+      const canBuildOrUpgrade = params.buildMenu.canBuildOrUpgrade(item);
+      return {
+        id: `${elementIdPrefix}_${item.unitType}`,
+        name: item.key
+          ? item.key.replace("unit_type.", "")
+          : item.unitType.toString(),
+        disabled: () => !canBuildOrUpgrade,
+        color: canBuildOrUpgrade
+          ? filterType === "attack"
+            ? COLORS.attack
+            : COLORS.building
+          : undefined,
+        icon: item.icon,
+        tooltipItems: [
+          { text: translateText(item.key ?? ""), className: "title" },
+          {
+            text: translateText(item.description ?? ""),
+            className: "description",
+          },
+          {
+            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+            className: "cost",
+          },
+          item.countable
+            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+            : null,
+        ].filter(
+          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+        ),
+        action: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (buildableUnit === undefined) {
+            return;
+          }
+          if (canBuildOrUpgrade) {
+            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+          }
+          params.closeMenu();
         },
-        {
-          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-          className: "cost",
-        },
-        item.countable
-          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-          : null,
-      ].filter(
-        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-      ),
-      action: (params: MenuElementParams) => {
-        const buildableUnit = params.playerActions.buildableUnits.find(
-          (bu) => bu.type === item.unitType,
-        );
-        if (buildableUnit === undefined) {
-          return;
-        }
-        if (params.buildMenu.canBuildOrUpgrade(item)) {
-          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
-        }
-        params.closeMenu();
-      },
-    }));
+      };
+    });
 }
 
 export const attackMenuElement: MenuElement = {
