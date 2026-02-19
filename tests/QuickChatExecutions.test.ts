@@ -40,7 +40,7 @@ describe("QuickChatExecution", () => {
     const exec = new QuickChatExecution(
       player1,
       player2.id(),
-      "chat.warnings.teaming_with",
+      "warnings.teaming_with",
       player2.id(),
       player3.id(),
     );
@@ -49,14 +49,14 @@ describe("QuickChatExecution", () => {
     game.executeNextTick(); // init
     const updates = game.executeNextTick(); // tick
 
-    const chatEvents = updates[GameUpdateType.DisplayChatEvent] ?? [];
+    const chatEvents = updates[GameUpdateType.DisplayChatEvent];
     expect(chatEvents.length).toBe(2);
 
     // Recipient's update (isFrom = true)
     const recipientUpdate = chatEvents.find((e) => e.isFrom === true);
     expect(recipientUpdate).toBeDefined();
-    expect(recipientUpdate!.key).toBe("warnings");
-    expect(recipientUpdate!.category).toBe("chat");
+    expect(recipientUpdate!.key).toBe("teaming_with");
+    expect(recipientUpdate!.category).toBe("warnings");
     expect(recipientUpdate!.target).toBe(player2.id());
     expect(recipientUpdate!.target2).toBe(player3.id());
     expect(recipientUpdate!.playerID).toBe(player2.smallID());
@@ -65,8 +65,8 @@ describe("QuickChatExecution", () => {
     // Sender's update (isFrom = false)
     const senderUpdate = chatEvents.find((e) => e.isFrom === false);
     expect(senderUpdate).toBeDefined();
-    expect(senderUpdate!.key).toBe("warnings");
-    expect(senderUpdate!.category).toBe("chat");
+    expect(senderUpdate!.key).toBe("teaming_with");
+    expect(senderUpdate!.category).toBe("warnings");
     expect(senderUpdate!.target).toBe(player2.id());
     expect(senderUpdate!.target2).toBe(player3.id());
     expect(senderUpdate!.playerID).toBe(player1.smallID());
@@ -86,7 +86,7 @@ describe("QuickChatExecution", () => {
     game.executeNextTick(); // init
     const updates = game.executeNextTick(); // tick
 
-    const chatEvents = updates[GameUpdateType.DisplayChatEvent] ?? [];
+    const chatEvents = updates[GameUpdateType.DisplayChatEvent];
     expect(chatEvents.length).toBe(2);
 
     for (const event of chatEvents) {
@@ -108,7 +108,7 @@ describe("QuickChatExecution", () => {
     game.executeNextTick(); // init
     const updates = game.executeNextTick(); // tick
 
-    const chatEvents = updates[GameUpdateType.DisplayChatEvent] ?? [];
+    const chatEvents = updates[GameUpdateType.DisplayChatEvent];
     expect(chatEvents.length).toBe(2);
 
     for (const event of chatEvents) {
@@ -121,7 +121,7 @@ describe("QuickChatExecution", () => {
     const exec = new QuickChatExecution(
       player1,
       "nonexistent_player_id",
-      "chat.warnings.teaming_with",
+      "warnings.teaming_with",
       player2.id(),
       player3.id(),
     );
@@ -129,10 +129,10 @@ describe("QuickChatExecution", () => {
     game.addExecution(exec);
 
     const initUpdates = game.executeNextTick();
-    expect(initUpdates[GameUpdateType.DisplayChatEvent]?.length ?? 0).toBe(0);
+    expect(initUpdates[GameUpdateType.DisplayChatEvent].length).toBe(0);
 
     const tickUpdates = game.executeNextTick();
-    expect(tickUpdates[GameUpdateType.DisplayChatEvent]?.length ?? 0).toBe(0);
+    expect(tickUpdates[GameUpdateType.DisplayChatEvent].length).toBe(0);
 
     expect(exec.isActive()).toBe(false);
   });
@@ -171,34 +171,12 @@ describe("QuickChatExecution", () => {
     game.executeNextTick(); // init
     const updates = game.executeNextTick(); // tick
 
-    const chatEvents = updates[GameUpdateType.DisplayChatEvent] ?? [];
+    const chatEvents = updates[GameUpdateType.DisplayChatEvent];
     expect(chatEvents.length).toBe(2);
 
     for (const event of chatEvents) {
       expect(event.category).toBe("alerts");
       expect(event.key).toBe("danger");
-    }
-  });
-
-  test("three-segment key uses first two segments as category and key", () => {
-    const exec = new QuickChatExecution(
-      player1,
-      player2.id(),
-      "chat.warnings.teaming_with",
-      undefined,
-      undefined,
-    );
-
-    game.addExecution(exec);
-    game.executeNextTick(); // init
-    const updates = game.executeNextTick(); // tick
-
-    const chatEvents = updates[GameUpdateType.DisplayChatEvent] ?? [];
-    expect(chatEvents.length).toBe(2);
-
-    for (const event of chatEvents) {
-      expect(event.category).toBe("chat");
-      expect(event.key).toBe("warnings");
     }
   });
 });
