@@ -988,6 +988,7 @@ export class PlayerImpl implements Player {
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
+<<<<<<< some-leftovers
         canBuild = this.canBuild(u, tile, validTiles, cost);
       }
       return {
@@ -1005,6 +1006,23 @@ export class PlayerImpl implements Player {
             : [],
       };
     });
+=======
+        return {
+          type: u,
+          canBuild,
+          canUpgrade,
+          cost: this.mg.config().unitInfo(u).cost(this.mg, this),
+          overlappingRailroads:
+            canBuild !== false
+              ? this.mg.railNetwork().overlappingRailroads(canBuild)
+              : [],
+          ghostRailPaths:
+            canBuild !== false
+              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
+              : [],
+        };
+      });
+>>>>>>> main
   }
 
   canBuild(

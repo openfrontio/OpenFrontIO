@@ -1,10 +1,14 @@
 import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
+<<<<<<< some-leftovers
   BuildableAttackTypes,
   isBuildableAttackType,
   PlayerActions,
   PlayerBuildableUnitType,
+=======
+  PlayerActions,
+>>>>>>> main
   StructureTypes,
   UnitType,
 } from "../../../core/game/Game";
@@ -345,6 +349,7 @@ export const infoMenuElement: MenuElement = {
   },
 };
 
+<<<<<<< some-leftovers
 function getAllEnabledUnits(
   myPlayer: boolean,
   config: Config,
@@ -353,6 +358,12 @@ function getAllEnabledUnits(
     new Set<PlayerBuildableUnitType>();
 
   const addIfEnabled = (unitType: PlayerBuildableUnitType) => {
+=======
+function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
+  const units: Set<UnitType> = new Set<UnitType>();
+
+  const addIfEnabled = (unitType: UnitType) => {
+>>>>>>> main
     if (!config.isUnitDisabled(unitType)) {
       units.add(unitType);
     }
@@ -361,7 +372,14 @@ function getAllEnabledUnits(
   if (myPlayer) {
     StructureTypes.forEach(addIfEnabled);
   } else {
+<<<<<<< some-leftovers
     BuildableAttackTypes.forEach(addIfEnabled);
+=======
+    addIfEnabled(UnitType.Warship);
+    addIfEnabled(UnitType.HydrogenBomb);
+    addIfEnabled(UnitType.MIRV);
+    addIfEnabled(UnitType.AtomBomb);
+>>>>>>> main
   }
 
   return units;
