@@ -230,7 +230,7 @@ const allyExtendElement: MenuElement = {
   },
   timerFraction: (params: MenuElementParams): number => {
     const interaction = params.playerActions?.interaction;
-    if (!interaction?.allianceInfo?.expiresAt) return 1;
+    if (!interaction?.allianceInfo) return 1;
     const remaining = Math.max(
       0,
       interaction.allianceInfo.expiresAt - params.game.ticks(),
