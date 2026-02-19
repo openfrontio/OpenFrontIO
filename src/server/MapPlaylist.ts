@@ -197,7 +197,7 @@ export class MapPlaylist {
     let crowdedMaxPlayers: number | undefined;
 
     // Reroll until a special modifier survives constraints.
-    for (let attempts = 0; attempts < 10; attempts++) {
+    while (true) {
       const rolled = this.getRandomPublicGameModifiers({
         ensureSpecial: true,
         specialRates: true,
@@ -240,10 +240,6 @@ export class MapPlaylist {
       if (isSpecialModifiers(modifiers)) {
         break;
       }
-    }
-
-    if (!isSpecialModifiers(modifiers)) {
-      modifiers.startingGold = 5_000_000;
     }
 
     const { isCompact, isRandomSpawn, isCrowded, startingGold } = modifiers;
