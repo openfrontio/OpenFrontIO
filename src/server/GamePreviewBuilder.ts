@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ServerConfig } from "../core/configuration/Config";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameMode, GameType, isGameType } from "../core/game/Game";
 import { GameInfo } from "../core/Schemas";
 
 export const PlayerInfoSchema = z.object({
@@ -136,7 +136,7 @@ export function buildPreview(
   serverConfig: ServerConfig,
 ): PreviewMeta {
   const isFinished = !!publicInfo?.info?.end;
-  const isPrivate = lobby?.gameConfig?.gameType === "Private";
+  const isPrivate = lobby?.gameConfig?.gameType === GameType.Private;
 
   // route directly to the correct worker.
   const joinUrl = `${origin}/${workerPath}/game/${gameID}`;
@@ -181,16 +181,15 @@ export function buildPreview(
   const winner = parseWinner(publicInfo?.info?.winner, players);
   const duration = publicInfo?.info?.duration;
   const gameType = lobby?.gameConfig?.gameType ?? config.gameType;
+  const parsedGameType = isGameType(gameType) ? gameType : undefined;
   const adjustedDuration =
     typeof duration === "number"
       ? Math.max(
           0,
           duration -
-            serverConfig.spawnPhaseSeconds(
-              gameType === GameType.Singleplayer
-                ? GameType.Singleplayer
-                : GameType.Public,
-            ),
+            (parsedGameType
+              ? serverConfig.spawnPhaseSeconds(parsedGameType)
+              : 0),
         )
       : undefined;
 
