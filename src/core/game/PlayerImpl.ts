@@ -917,7 +917,7 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+  public findUnitToUpgrade(type: UnitType, targetTile: TileRef, knownCost: Gold | null = null): Unit | false {
     if (!this.mg.config().unitInfo(type).upgradable) {
       return false;
     }
@@ -930,13 +930,13 @@ export class PlayerImpl implements Player {
       return false;
     }
     const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit)) {
+    if (!this.canUpgradeUnit(unit, knownCost)) {
       return false;
     }
     return unit;
   }
 
-  public canUpgradeUnit(unit: Unit): boolean {
+  public canUpgradeUnit(unit: Unit, knownCost: Gold | null = null): boolean {
     if (unit.isMarkedForDeletion()) {
       return false;
     }
@@ -950,7 +950,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (
-      this._gold < this.mg.config().unitInfo(unit.type()).cost(this.mg, this)
+      this._gold < (knownCost ?? this.mg.config().unitInfo(unit.type()).cost(this.mg, this))
     ) {
       return false;
     }
@@ -998,7 +998,7 @@ export class PlayerImpl implements Player {
       let canBuild: TileRef | false = false;
 
       if (tile !== null && !inSpawnPhase) {
-        const existingUnit = this.findUnitToUpgrade(u, tile);
+        const existingUnit = this.findUnitToUpgrade(u, tile, cost);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }

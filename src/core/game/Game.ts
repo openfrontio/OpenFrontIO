@@ -672,7 +672,12 @@ export interface Player {
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
   ): BuildableUnit[];
-  canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
+  canBuild(
+    type: UnitType,
+    targetTile: TileRef,
+    validTiles?: TileRef[] | null,
+    knownCost?: Gold | null,
+  ): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
@@ -683,8 +688,12 @@ export interface Player {
   // or false if it cannot be upgraded.
   // New units of the same type can upgrade existing units.
   // e.g. if a place a new city here, can it upgrade an existing city?
-  findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
-  canUpgradeUnit(unit: Unit): boolean;
+  findUnitToUpgrade(
+    type: UnitType,
+    targetTile: TileRef,
+    knownCost?: Gold | null,
+  ): Unit | false;
+  canUpgradeUnit(unit: Unit, knownCost?: Gold | null): boolean;
   upgradeUnit(unit: Unit): void;
   captureUnit(unit: Unit): void;
 
