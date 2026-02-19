@@ -352,9 +352,7 @@
     "error": "An error occurred. Please try again or contact support.",
     "joined_waiting": "Lobby joined! Waiting for host to start...",
     "version_mismatch": "This game was created with a different version. Cannot join.",
-    "disabled_units": "Disabled Units",
-    "discord_required": "You must be logged in with Discord to join this lobby.",
-    "discord_not_allowed": "Your Discord account is not allowed to join this lobby."
+    "disabled_units": "Disabled Units"
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
