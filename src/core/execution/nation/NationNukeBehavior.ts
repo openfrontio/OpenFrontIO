@@ -737,7 +737,6 @@ export class NationNukeBehavior {
     // Try each enemy SAM as a target, easiest (lowest level) first
     const sortedSams = enemySams.slice().sort((a, b) => a.level() - b.level());
     let needsMoreSilos = false;
-    let needsMoreGold = false;
 
     for (const targetSam of sortedSams) {
       const targetTile = targetSam.tile();
@@ -753,27 +752,27 @@ export class NationNukeBehavior {
       );
       const bombsNeeded = totalInterceptions + 1;
 
-      // Gather valid silos with their available slots and flight time to target
-      // Only use silos whose trajectory isn't intercepted by non-target SAMs
+      // NukeExecution always picks the closest non-cooldown silo by Manhattan
+      // distance to target (via nukeSpawn). Our planning must mirror that order.
+      // Silos with interceptable trajectories will still be picked first by
+      // NukeExecution — their bombs launch but get intercepted, "wasting" slots.
       const nukeSpeed = this.game.config().defaultNukeSpeed();
-      const validSilos: {
+      const allAvailableSilos: {
         silo: Unit;
         slots: number;
         flightTicks: number;
+        interceptable: boolean;
       }[] = [];
       for (const silo of ourSilos) {
         const availableSlots = silo.level() - silo.missileTimerQueue().length;
         if (availableSlots <= 0) {
           continue;
         }
-        const intercepted = this.isTrajectoryInterceptableBySam(
+        const interceptable = this.isTrajectoryInterceptableBySam(
           silo.tile(),
           targetTile,
           coveringSamIds,
         );
-        if (intercepted) {
-          continue;
-        }
         // Compute actual parabolic flight time in ticks
         const pathFinder = UniversalPathFinding.Parabola(this.game, {
           increment: nukeSpeed,
@@ -782,16 +781,37 @@ export class NationNukeBehavior {
         });
         const trajectory = pathFinder.findPath(silo.tile(), targetTile) ?? [];
         if (trajectory.length === 0) continue;
-        const flightTicks = trajectory.length;
-        validSilos.push({ silo, slots: availableSlots, flightTicks });
+        allAvailableSilos.push({
+          silo,
+          slots: availableSlots,
+          flightTicks: trajectory.length,
+          interceptable,
+        });
       }
 
-      // Sort by flight time (fastest arrival first)
-      validSilos.sort((a, b) => a.flightTicks - b.flightTicks);
+      // Sort by Manhattan distance to target (matching nukeSpawn's pick order)
+      allAvailableSilos.sort(
+        (a, b) =>
+          this.game.manhattanDist(a.silo.tile(), targetTile) -
+          this.game.manhattanDist(b.silo.tile(), targetTile),
+      );
 
-      // Only use silos whose nukes arrive close enough together that the SAM can't reload.
-      // We stagger launches so they don't all fire in the same tick.
-      // Total arrival spread = (flight time spread) + (stagger delay).
+      // Flatten into a per-bomb launch sequence matching NukeExecution's order.
+      // Each silo contributes `slots` consecutive bombs before NukeExecution
+      // moves to the next silo.
+      const launchSequence: {
+        flightTicks: number;
+        interceptable: boolean;
+      }[] = [];
+      for (const entry of allAvailableSilos) {
+        for (let s = 0; s < entry.slots; s++) {
+          launchSequence.push({
+            flightTicks: entry.flightTicks,
+            interceptable: entry.interceptable,
+          });
+        }
+      }
+
       // Use half the SAM cooldown as the max total arrival spread to be safe.
       const samCooldown = this.game.config().SAMCooldown();
       const maxTotalArrivalSpread = Math.floor(samCooldown / 2);
@@ -801,69 +821,108 @@ export class NationNukeBehavior {
       const extraBombs = Math.floor(bombsNeeded / 5);
       const totalBombs = bombsNeeded + extraBombs;
 
-      // Compute stagger interval: spread bombs evenly across the arrival window
-      const staggerInterval = Math.max(
-        1,
-        Math.floor(maxTotalArrivalSpread / totalBombs),
-      );
-
-      // Try building a cluster anchored at each silo and pick the one with the most slots.
-      // This ensures a single high-level silo is preferred
-      // over a cluster of small fast silos that don't have enough capacity.
-      let clusteredSlots = 0;
-      let clusteredSilos: {
-        silo: Unit;
-        slots: number;
-        flightTicks: number;
-      }[] = [];
-      for (let anchorIdx = 0; anchorIdx < validSilos.length; anchorIdx++) {
-        const anchorFlight = validSilos[anchorIdx].flightTicks;
-        let candidateSlots = 0;
-        const candidateSilos: typeof clusteredSilos = [];
-        for (let i = anchorIdx; i < validSilos.length; i++) {
-          const entry = validSilos[i];
-          const staggerDelay = candidateSlots * staggerInterval;
-          const flightSpread = entry.flightTicks - anchorFlight;
-          if (flightSpread + staggerDelay > maxTotalArrivalSpread) {
-            break; // sorted by flight time, later entries only worse
-          }
-          candidateSilos.push(entry);
-          candidateSlots += entry.slots;
-        }
-        if (candidateSlots > clusteredSlots) {
-          clusteredSlots = candidateSlots;
-          clusteredSilos = candidateSilos;
+      // Collect non-interceptable bombs with their launch-sequence index
+      const nonInterceptable: { index: number; flightTicks: number }[] = [];
+      for (let i = 0; i < launchSequence.length; i++) {
+        if (!launchSequence[i].interceptable) {
+          nonInterceptable.push({
+            index: i,
+            flightTicks: launchSequence[i].flightTicks,
+          });
         }
       }
 
-      if (clusteredSlots < totalBombs) {
-        // Not enough silo capacity — need to upgrade regardless of gold
+      if (nonInterceptable.length < totalBombs) {
         needsMoreSilos = true;
         continue;
       }
 
-      // Check gold only when we actually have enough silos to fire
-      const totalCost = atomCost * BigInt(totalBombs);
-      if (this.player.gold() < totalCost) {
-        needsMoreGold = true;
+      // Sort non-interceptable bombs by flight time to find a sliding window
+      // of maxTotalArrivalSpread that captures the most bombs.
+      const sortedByFlight = [...nonInterceptable].sort(
+        (a, b) => a.flightTicks - b.flightTicks,
+      );
+
+      let bestWindowStart = 0;
+      let bestWindowCount = 0;
+      for (let start = 0; start < sortedByFlight.length; start++) {
+        let end = start;
+        while (
+          end < sortedByFlight.length &&
+          sortedByFlight[end].flightTicks - sortedByFlight[start].flightTicks <=
+            maxTotalArrivalSpread
+        ) {
+          end++;
+        }
+        if (end - start > bestWindowCount) {
+          bestWindowCount = end - start;
+          bestWindowStart = start;
+        }
+      }
+
+      if (bestWindowCount < totalBombs) {
+        needsMoreSilos = true;
         continue;
       }
 
-      // Stagger the launches so nukes from leveled silos don't all fire in the same tick.
-      let bombsSent = 0;
-      for (const entry of clusteredSilos) {
-        for (let s = 0; s < entry.slots && bombsSent < totalBombs; s++) {
-          const waitTicks = bombsSent * staggerInterval;
-          this.sendNuke(targetTile, UnitType.AtomBomb, nukeTarget, waitTicks);
-          bombsSent++;
+      // From the window, pick totalBombs with the lowest launch-sequence
+      // indices to minimise how many bombs we need to fire (minimise gold cost).
+      const windowBombs = sortedByFlight.slice(
+        bestWindowStart,
+        bestWindowStart + bestWindowCount,
+      );
+      const windowByIndex = [...windowBombs].sort((a, b) => a.index - b.index);
+      const selected = windowByIndex.slice(0, totalBombs);
+      const selectedSet = new Set(selected.map((b) => b.index));
+      const lastSelectedIndex = selected[selected.length - 1].index;
+      const bombsToFire = lastSelectedIndex + 1;
+
+      // Compute per-bomb waitTicks so all selected bombs arrive in the window.
+      // Target: spread arrivals evenly, anchored at the earliest flight time
+      // in the selected set.
+      const selectedFlightMin = Math.min(...selected.map((b) => b.flightTicks));
+      const staggerInterval = Math.max(
+        1,
+        Math.floor(maxTotalArrivalSpread / totalBombs),
+      );
+      let selectedIdx = 0;
+      const waitTicksPerBomb: number[] = [];
+      for (let i = 0; i < bombsToFire; i++) {
+        if (selectedSet.has(i)) {
+          const targetArrival =
+            selectedFlightMin + selectedIdx * staggerInterval;
+          waitTicksPerBomb.push(
+            Math.max(0, targetArrival - launchSequence[i].flightTicks),
+          );
+          selectedIdx++;
+        } else {
+          // Wasted bomb (interceptable or out-of-window) — launch immediately
+          waitTicksPerBomb.push(0);
         }
+      }
+
+      // Check gold for all fired bombs (including wasted ones)
+      const totalCost = atomCost * BigInt(bombsToFire);
+      if (this.player.gold() < totalCost) {
+        continue;
+      }
+
+      // Fire the salvo — NukeExecution will pick silos in the same
+      // Manhattan distance order we planned.
+      for (let i = 0; i < bombsToFire; i++) {
+        this.sendNuke(
+          targetTile,
+          UnitType.AtomBomb,
+          nukeTarget,
+          waitTicksPerBomb[i],
+        );
       }
       return;
     }
 
-    // Couldn't destroy any SAM — upgrade silos if that was the bottleneck,
-    // or even if we just need more gold (more silo levels = more capacity ready for when gold arrives)
-    if (needsMoreSilos || needsMoreGold) {
+    // Couldn't destroy any SAM — upgrade silos only if capacity was the bottleneck.
+    // If we only lack gold, don't waste it upgrading silos — just wait and save.
+    if (needsMoreSilos) {
       this.maybeUpgradeBestProtectedSilo();
     }
   }
