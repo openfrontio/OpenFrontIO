@@ -85,6 +85,12 @@ const DEFENSE_POST_DENSITY_THRESHOLD = 1 / 5000;
 const TILES_PER_CITY_EQUIVALENT = 2000;
 
 export class NationStructureBehavior {
+  private reachableStationsCache: Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> | null = null;
+
   constructor(
     private random: PseudoRandom,
     private game: Game,
@@ -92,6 +98,7 @@ export class NationStructureBehavior {
   ) {}
 
   handleStructures(): boolean {
+    this.reachableStationsCache = null;
     const config = this.game.config();
     const citiesDisabled = config.isUnitDisabled(UnitType.City);
     const cityCount = citiesDisabled
@@ -493,7 +500,7 @@ export class NationStructureBehavior {
       case UnitType.City:
         return this.cityValue();
       case UnitType.MissileSilo:
-        return this.missileSiloValue(type);
+        return this.missileSiloValue();
       case UnitType.Factory:
         return this.factoryValue();
       case UnitType.Port:
@@ -511,10 +518,10 @@ export class NationStructureBehavior {
    * Value function for MissileSilo.
    * Prefers high elevation, distance from border, and spacing from same-type structures.
    */
-  private missileSiloValue(type: UnitType): (tile: TileRef) => number {
+  private missileSiloValue(): (tile: TileRef) => number {
     const game = this.game;
     const borderTiles = this.player.borderTiles();
-    const otherUnits = this.player.units(type);
+    const otherUnits = this.player.units(UnitType.MissileSilo);
     const { borderSpacing, structureSpacing } = this.spacingConstants();
 
     return (tile) => {
@@ -583,7 +590,7 @@ export class NationStructureBehavior {
     const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
 
     const reachableStations = useConnectionScore
-      ? this.buildReachableStations()
+      ? this.getOrBuildReachableStations()
       : [];
     const minRangeSquared = game.config().trainStationMinRange() ** 2;
 
@@ -622,28 +629,13 @@ export class NationStructureBehavior {
         return w;
       }
 
-      // Score by distinct cluster connections weighted by trade gold.
-      // Per cluster, take the max weight of any station in range (best
-      // trade relationship reachable through that cluster).
-      // Stations within minRange cannot form a railroad; exclude them.
-      // Isolated stations (no cluster yet) accumulate their weights individually.
-      const clustersInRange = new Map<Cluster, number>();
-      let isolatedWeight = 0;
-      for (const { tile: stationTile, cluster, weight } of reachableStations) {
-        const dist = game.euclideanDistSquared(tile, stationTile);
-        if (dist < minRangeSquared || dist > stationRangeSquared) continue;
-        if (cluster !== null) {
-          clustersInRange.set(
-            cluster,
-            Math.max(clustersInRange.get(cluster) ?? 0, weight),
-          );
-        } else {
-          isolatedWeight += weight;
-        }
-      }
-      let connectionScore = isolatedWeight;
-      for (const cw of clustersInRange.values()) connectionScore += cw;
-      w += connectionScore * structureSpacing;
+      w +=
+        this.computeConnectivityScore(
+          tile,
+          reachableStations,
+          minRangeSquared,
+          stationRangeSquared,
+        ) * structureSpacing;
 
       return w;
     };
@@ -673,6 +665,17 @@ export class NationStructureBehavior {
     }
 
     return this.random.nextInt(0, 100) < randomChance;
+  }
+
+  private getOrBuildReachableStations(): Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> {
+    if (this.reachableStationsCache === null) {
+      this.reachableStationsCache = this.buildReachableStations();
+    }
+    return this.reachableStationsCache;
   }
 
   /**
@@ -749,6 +752,41 @@ export class NationStructureBehavior {
   }
 
   /**
+   * Returns the summed cluster-deduplicated connectivity weight for a candidate
+   * tile. Stations outside [minRangeSquared, stationRangeSquared] are ignored.
+   * Per cluster the max weight of any station in range is taken; isolated
+   * stations (no cluster) contribute their individual weights.
+   */
+  private computeConnectivityScore(
+    tile: TileRef,
+    reachableStations: Array<{
+      tile: TileRef;
+      cluster: Cluster | null;
+      weight: number;
+    }>,
+    minRangeSquared: number,
+    stationRangeSquared: number,
+  ): number {
+    const clustersInRange = new Map<Cluster, number>();
+    let isolatedWeight = 0;
+    for (const { tile: stationTile, cluster, weight } of reachableStations) {
+      const dist = this.game.euclideanDistSquared(tile, stationTile);
+      if (dist < minRangeSquared || dist > stationRangeSquared) continue;
+      if (cluster !== null) {
+        clustersInRange.set(
+          cluster,
+          Math.max(clustersInRange.get(cluster) ?? 0, weight),
+        );
+      } else {
+        isolatedWeight += weight;
+      }
+    }
+    let score = isolatedWeight;
+    for (const cw of clustersInRange.values()) score += cw;
+    return score;
+  }
+
+  /**
    * Value function for cities.
    * Inherits interior placement criteria (elevation, border distance, spacing)
    * and adds cluster-connectivity scoring so cities prefer positions that extend
@@ -766,7 +804,7 @@ export class NationStructureBehavior {
     const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
 
     const reachableStations = useConnectionScore
-      ? this.buildReachableStations()
+      ? this.getOrBuildReachableStations()
       : [];
     const minRangeSquared = game.config().trainStationMinRange() ** 2;
 
@@ -802,24 +840,13 @@ export class NationStructureBehavior {
         return w;
       }
 
-      // Stations within minRange cannot form a railroad; exclude them.
-      const clustersInRange = new Map<Cluster, number>();
-      let isolatedWeight = 0;
-      for (const { tile: stationTile, cluster, weight } of reachableStations) {
-        const dist = game.euclideanDistSquared(tile, stationTile);
-        if (dist < minRangeSquared || dist > stationRangeSquared) continue;
-        if (cluster !== null) {
-          clustersInRange.set(
-            cluster,
-            Math.max(clustersInRange.get(cluster) ?? 0, weight),
-          );
-        } else {
-          isolatedWeight += weight;
-        }
-      }
-      let connectionScore = isolatedWeight;
-      for (const cw of clustersInRange.values()) connectionScore += cw;
-      w += connectionScore * structureSpacing;
+      w +=
+        this.computeConnectivityScore(
+          tile,
+          reachableStations,
+          minRangeSquared,
+          stationRangeSquared,
+        ) * structureSpacing;
 
       return w;
     };
