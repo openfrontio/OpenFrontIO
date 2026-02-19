@@ -46,7 +46,7 @@ export class LobbyTeamView extends LitElement {
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
-    // clients is 'changed' every 1s from pollPlayers, chose to not compare for actual change
+    // clients is updated from WebSocket lobby_info events
     if (
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||

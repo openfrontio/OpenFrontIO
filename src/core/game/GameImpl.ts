@@ -332,12 +332,6 @@ export class GameImpl implements Game {
       request,
     );
 
-    // Automatically remove embargoes only if they were automatically created
-    if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient);
-    if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor);
-
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -733,6 +727,14 @@ export class GameImpl implements Game {
     );
   }
 
+  public isNationSpawnImmunityActive(): boolean {
+    return (
+      this.config().numSpawnPhaseTurns() +
+        this.config().nationSpawnImmunityDuration() >
+      this.ticks()
+    );
+  }
+
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
       type: GameUpdateType.Emoji,
@@ -893,7 +895,7 @@ export class GameImpl implements Game {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
+    types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
     includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }> {

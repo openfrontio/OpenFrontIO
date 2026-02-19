@@ -146,6 +146,10 @@ export class UnitLayer implements Layer {
       event.y,
     );
 
+    if (!this.game.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
     const clickRef = this.game.ref(cell.x, cell.y);
     if (!this.game.isOcean(clickRef)) {
       // No isValidCoord/Ref check yet, that is done for ContextMenuEvent later

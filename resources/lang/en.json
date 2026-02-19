@@ -329,7 +329,8 @@
     "didierfrance": "Didier (France)",
     "amazonriver": "Amazon River",
     "tradersdream": "Traders Dream",
-    "hawaii": "Hawaii"
+    "hawaii": "Hawaii",
+    "alps": "Alps"
   },
   "map_categories": {
     "featured": "Featured",
@@ -355,7 +356,6 @@
   },
   "public_lobby": {
     "title": "Waiting for Game Start...",
-    "join": "Join next Game",
     "teams_Duos": "{team_count} teams of 2 (Duos)",
     "teams_Trios": "{team_count} teams of 3 (Trios)",
     "teams_Quads": "{team_count} teams of 4 (Quads)",
@@ -376,7 +376,8 @@
     "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start...",
-    "elo": "Your ELO: {elo}"
+    "elo": "Your ELO: {elo}",
+    "no_elo": "No ELO yet"
   },
   "username": {
     "enter_username": "Enter your username",
@@ -390,7 +391,6 @@
   },
   "host_modal": {
     "title": "Create Private Lobby",
-    "label": "Private",
     "mode": "Mode",
     "team_count": "Number of Teams",
     "team_type": "Team Type",
@@ -452,6 +452,16 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "mode_selector": {
+    "special_title": "Special Mix",
+    "teams_title": "Teams",
+    "teams_count": "{teamCount} teams",
+    "teams_of": "{teamCount} teams of {playersPerTeam}",
+    "ranked_title": "Ranked",
+    "ranked_1v1_title": "1v1",
+    "ranked_2v2_title": "2v2",
+    "coming_soon": "Coming Soon"
   },
   "public_game_modifier": {
     "random_spawn": "Random Spawn",
@@ -849,7 +859,8 @@
     "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
     "singleplayer_game_paused": "Game paused",
     "multiplayer_game_paused": "Game paused by Lobby Creator",
-    "pvp_immunity_active": "PVP immunity active for {seconds}s"
+    "pvp_immunity_active": "PVP immunity active for {seconds}s",
+    "catching_up": "Catching up..."
   },
   "territory_patterns": {
     "title": "Skins",
@@ -929,8 +940,6 @@
     "recent_games": "Recent Games",
     "game_id": "Game ID",
     "mode": "Mode",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "replay": "Replay",
     "details": "Details",
     "ranking": "Ranking",
@@ -947,8 +956,6 @@
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
     "stats_games_played": "Games Played",
-    "mode_ffa": "Free-for-All",
-    "mode_team": "Team",
     "no_stats": "No stats recorded for this selection."
   },
   "matchmaking_button": {

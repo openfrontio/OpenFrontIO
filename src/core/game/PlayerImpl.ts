@@ -993,7 +993,11 @@ export class PlayerImpl implements Player {
             canBuild !== false
               ? this.mg.railNetwork().overlappingRailroads(canBuild)
               : [],
-        } as BuildableUnit;
+          ghostRailPaths:
+            canBuild !== false
+              ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
+              : [],
+        };
       });
   }
 
@@ -1147,14 +1151,11 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
-    });
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      types,
+      StructureTypes,
       undefined,
       true,
     );
@@ -1261,18 +1262,25 @@ export class PlayerImpl implements Player {
   }
 
   public isImmune(): boolean {
-    return this.type() === PlayerType.Human && this.mg.isSpawnImmunityActive();
+    if (this.type() === PlayerType.Human) {
+      return this.mg.isSpawnImmunityActive();
+    }
+    if (this.type() === PlayerType.Nation) {
+      return this.mg.isNationSpawnImmunityActive();
+    }
+    return false;
   }
 
   public canAttackPlayer(
     player: Player,
     treatAFKFriendly: boolean = false,
   ): boolean {
-    if (this.type() === PlayerType.Human) {
-      return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
+    if (this.type() === PlayerType.Bot) {
+      // Bots are not affected by immunity
+      return !this.isFriendly(player, treatAFKFriendly);
     }
-    // Only humans are affected by immunity, bots and nations should be able to attack freely
-    return !this.isFriendly(player, treatAFKFriendly);
+    // Humans and Nations respect immunity
+    return !player.isImmune() && !this.isFriendly(player, treatAFKFriendly);
   }
 
   public canAttack(tile: TileRef): boolean {
