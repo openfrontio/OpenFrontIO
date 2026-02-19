@@ -33,7 +33,7 @@ export class AttackImpl implements Attack {
     return this._troops;
   }
   setTroops(troops: number) {
-    this._troops = troops;
+    this._troops = Math.max(0, troops);
   }
 
   isActive() {

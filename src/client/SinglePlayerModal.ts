@@ -217,13 +217,11 @@ export class SinglePlayerModal extends BaseModal {
     ];
 
     const content = html`
-      <div
-        class="h-full flex flex-col bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden"
-      >
+      <div class="${this.modalContainerClass}">
         <!-- Header -->
         ${modalHeader({
           title: translateText("main.solo") || "Solo",
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent: hasLinkedAccount(this.userMeResponse)
             ? html`<button

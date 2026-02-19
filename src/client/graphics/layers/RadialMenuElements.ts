@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  PlayerActions,
+  StructureTypes,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -372,29 +377,24 @@ export const infoMenuElement: MenuElement = {
 };
 
 function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
-  const Units: Set<UnitType> = new Set<UnitType>();
+  const units: Set<UnitType> = new Set<UnitType>();
 
-  const addStructureIfEnabled = (unitType: UnitType) => {
+  const addIfEnabled = (unitType: UnitType) => {
     if (!config.isUnitDisabled(unitType)) {
-      Units.add(unitType);
+      units.add(unitType);
     }
   };
 
   if (myPlayer) {
-    addStructureIfEnabled(UnitType.City);
-    addStructureIfEnabled(UnitType.DefensePost);
-    addStructureIfEnabled(UnitType.Port);
-    addStructureIfEnabled(UnitType.MissileSilo);
-    addStructureIfEnabled(UnitType.SAMLauncher);
-    addStructureIfEnabled(UnitType.Factory);
+    StructureTypes.forEach(addIfEnabled);
   } else {
-    addStructureIfEnabled(UnitType.Warship);
-    addStructureIfEnabled(UnitType.HydrogenBomb);
-    addStructureIfEnabled(UnitType.MIRV);
-    addStructureIfEnabled(UnitType.AtomBomb);
+    addIfEnabled(UnitType.Warship);
+    addIfEnabled(UnitType.HydrogenBomb);
+    addIfEnabled(UnitType.MIRV);
+    addIfEnabled(UnitType.AtomBomb);
   }
 
-  return Units;
+  return units;
 }
 
 const ATTACK_UNIT_TYPES: UnitType[] = [

@@ -1022,7 +1022,7 @@ export class PlayerImpl implements Player {
             canBuild !== false
               ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
               : [],
-        } as BuildableUnit;
+        };
       });
   }
 
@@ -1176,14 +1176,11 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
-      return this.mg.config().unitInfo(unitTypeValue).territoryBound;
-    });
 
     const nearbyUnits = this.mg.nearbyUnits(
       tile,
       searchRadius * 2,
-      types,
+      StructureTypes,
       undefined,
       true,
     );

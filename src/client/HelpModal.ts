@@ -99,14 +99,10 @@ export class HelpModal extends BaseModal {
     const keybinds = this.keybinds;
 
     const content = html`
-      <div
-        class="h-full flex flex-col ${this.inline
-          ? "bg-black/60 backdrop-blur-md rounded-2xl border border-white/10"
-          : ""}"
-      >
+      <div class="${this.modalContainerClass}">
         ${modalHeader({
           title: translateText("main.help"),
-          onBack: this.close,
+          onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
         })}
 
