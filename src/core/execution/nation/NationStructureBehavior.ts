@@ -493,7 +493,7 @@ export class NationStructureBehavior {
       case UnitType.City:
         return this.cityValue();
       case UnitType.MissileSilo:
-        return this.interiorStructureValue(type);
+        return this.missileSiloValue(type);
       case UnitType.Factory:
         return this.factoryValue();
       case UnitType.Port:
@@ -508,10 +508,10 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Value function for interior structures (City, MissileSilo).
+   * Value function for MissileSilo.
    * Prefers high elevation, distance from border, and spacing from same-type structures.
    */
-  private interiorStructureValue(type: UnitType): (tile: TileRef) => number {
+  private missileSiloValue(type: UnitType): (tile: TileRef) => number {
     const game = this.game;
     const borderTiles = this.player.borderTiles();
     const otherUnits = this.player.units(type);
