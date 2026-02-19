@@ -977,12 +977,20 @@ export class PlayerImpl implements Player {
         ? this.validStructureSpawnTiles(tile)
         : [];
 
-    return PlayerBuildableTypes.filter(
-      (u) => units === undefined || units.includes(u),
-    ).map((u) => {
+    const selectedTypes =
+      units === undefined ? null : new Set<PlayerBuildableUnitType>(units);
+
+    const result: BuildableUnit[] = [];
+
+    for (const u of PlayerBuildableTypes) {
+      if (selectedTypes !== null && !selectedTypes.has(u)) {
+        continue;
+      }
+
       const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
+
       if (tile !== null && !this.mg.inSpawnPhase()) {
         const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
@@ -990,7 +998,8 @@ export class PlayerImpl implements Player {
         }
         canBuild = this.canBuild(u, tile, validTiles, cost);
       }
-      return {
+
+      result.push({
         type: u,
         canBuild,
         canUpgrade,
@@ -1003,8 +1012,10 @@ export class PlayerImpl implements Player {
           canBuild !== false
             ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
             : [],
-      };
-    });
+      });
+    }
+
+    return result;
   }
 
   canBuild(
