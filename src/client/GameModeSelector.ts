@@ -114,23 +114,27 @@ export class GameModeSelector extends LitElement {
 
   private renderQuickActionsSection() {
     return html`
-      <div class="grid grid-cols-2 gap-2 h-40 lg:h-56">
-        ${this.renderSmallActionCard(
-          translateText("main.solo"),
-          this.openSinglePlayerModal,
-        )}
-        ${this.renderSmallActionCard(
-          translateText("mode_selector.ranked_title"),
-          this.openRankedMenu,
-        )}
-        ${this.renderSmallActionCard(
-          translateText("main.create"),
-          this.openHostLobby,
-        )}
-        ${this.renderSmallActionCard(
-          translateText("main.join"),
-          this.openJoinLobby,
-        )}
+      <div class="contents lg:flex lg:flex-col lg:gap-2 lg:h-56">
+        <div class="max-lg:order-first grid grid-cols-2 gap-2 h-20 lg:flex-1">
+          ${this.renderSmallActionCard(
+            translateText("main.solo"),
+            this.openSinglePlayerModal,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("mode_selector.ranked_title"),
+            this.openRankedMenu,
+          )}
+        </div>
+        <div class="grid grid-cols-2 gap-2 h-20 lg:flex-1">
+          ${this.renderSmallActionCard(
+            translateText("main.create"),
+            this.openHostLobby,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.join"),
+            this.openJoinLobby,
+          )}
+        </div>
       </div>
     `;
   }
