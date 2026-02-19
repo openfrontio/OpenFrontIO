@@ -917,11 +917,18 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  public findUnitToUpgrade(type: UnitType, targetTile: TileRef, knownCost: Gold | null = null): Unit | false {
-    if (!this.mg.config().unitInfo(type).upgradable) {
+  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+    const unit = this.findExistingUnitToUpgrade(type, targetTile);
+    if (unit === false || !this.canUpgradeUnit(unit)) {
       return false;
     }
+    return unit;
+  }
 
+  private findExistingUnitToUpgrade(
+    type: UnitType,
+    targetTile: TileRef,
+  ): Unit | false {
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type, undefined, true)
@@ -929,32 +936,54 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
-    const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit, knownCost)) {
-      return false;
-    }
-    return unit;
+    return existing[0].unit;
   }
 
-  public canUpgradeUnit(unit: Unit, knownCost: Gold | null = null): boolean {
-    if (unit.isMarkedForDeletion()) {
+  private canBuildUnitType(
+    unitType: UnitType,
+    knownCost: Gold | null = null,
+  ): boolean {
+    if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
+    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
+    if (this._gold < cost) {
+      return false;
+    }
+    if (unitType !== UnitType.MIRVWarhead && !this.isAlive()) {
+      return false;
+    }
+    return true;
+  }
+
+  private canUpgradeUnitType(unitType: UnitType): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    return true;
+  }
+
+  private isUnitValidToUpgrade(unit: Unit): boolean {
     if (unit.isUnderConstruction()) {
       return false;
     }
-    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
-      return false;
-    }
-    if (this.mg.config().isUnitDisabled(unit.type())) {
-      return false;
-    }
-    if (
-      this._gold < (knownCost ?? this.mg.config().unitInfo(unit.type()).cost(this.mg, this))
-    ) {
+    if (unit.isMarkedForDeletion()) {
       return false;
     }
     if (unit.owner() !== this) {
+      return false;
+    }
+    return true;
+  }
+
+  public canUpgradeUnit(unit: Unit): boolean {
+    if (!this.canUpgradeUnitType(unit.type())) {
+      return false;
+    }
+    if (!this.canBuildUnitType(unit.type())) {
+      return false;
+    }
+    if (!this.isUnitValidToUpgrade(unit)) {
       return false;
     }
     return true;
@@ -978,14 +1007,12 @@ export class PlayerImpl implements Player {
 
     const validTiles =
       tile !== null &&
-      (units === undefined || units.some((u) => isStructureType(u))) &&
-      !inSpawnPhase
+      (units === undefined || units.some((u) => isStructureType(u)))
         ? this.validStructureSpawnTiles(tile)
         : [];
 
     const selectedTypes =
       units === undefined ? null : new Set<PlayerBuildableUnitType>(units);
-
     const result: BuildableUnit[] = [];
 
     for (const u of PlayerBuildableTypes) {
@@ -997,12 +1024,17 @@ export class PlayerImpl implements Player {
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
 
-      if (tile !== null && !inSpawnPhase) {
-        const existingUnit = this.findUnitToUpgrade(u, tile, cost);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
+      if (tile !== null && this.canBuildUnitType(u, cost) && !inSpawnPhase) {
+        if (this.canUpgradeUnitType(u)) {
+          const existingUnit = this.findExistingUnitToUpgrade(u, tile);
+          if (
+            existingUnit !== false &&
+            this.isUnitValidToUpgrade(existingUnit)
+          ) {
+            canUpgrade = existingUnit.id();
+          }
         }
-        canBuild = this.canBuild(u, tile, validTiles, cost);
+        canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
 
       result.push({
@@ -1024,19 +1056,19 @@ export class PlayerImpl implements Player {
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
-    knownCost: Gold | null = null,
   ): TileRef | false {
-    if (this.mg.config().isUnitDisabled(unitType)) {
+    if (!this.canBuildUnitType(unitType)) {
       return false;
     }
 
-    const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
-    if (
-      unitType !== UnitType.MIRVWarhead &&
-      (!this.isAlive() || this.gold() < cost)
-    ) {
-      return false;
-    }
+    return this.canSpawnUnitType(unitType, targetTile, validTiles);
+  }
+
+  private canSpawnUnitType(
+    unitType: UnitType,
+    targetTile: TileRef,
+    validTiles: TileRef[] | null,
+  ): TileRef | false {
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {
