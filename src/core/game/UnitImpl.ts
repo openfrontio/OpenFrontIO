@@ -164,7 +164,7 @@ export class UnitImpl implements Unit {
   }
 
   setTroops(troops: number): void {
-    this._troops = troops;
+    this._troops = Math.max(0, troops);
   }
   troops(): number {
     return this._troops;

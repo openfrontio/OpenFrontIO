@@ -558,12 +558,11 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
@@ -674,12 +673,11 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
       if (actions.canAttack) {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       }

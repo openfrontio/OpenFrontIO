@@ -173,7 +173,8 @@ export class NationStructureBehavior {
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
-    const { difficulty } = this.game.config().gameConfig();
+    const gameConfig = this.game.config();
+    const { difficulty } = gameConfig.gameConfig();
     const ratios = getStructureRatios(difficulty);
     const config = ratios[type];
     if (config === undefined) {
@@ -186,7 +187,7 @@ export class NationStructureBehavior {
     if (
       type === UnitType.Factory &&
       hasCoastalTiles &&
-      !this.game.config().isUnitDisabled(UnitType.Port)
+      !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
       ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
     }
@@ -219,6 +220,7 @@ export class NationStructureBehavior {
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
+    const game = this.game;
     const perceivedCost = this.getPerceivedCost(type);
     if (this.player.gold() < perceivedCost) {
       return false;
@@ -228,7 +230,7 @@ export class NationStructureBehavior {
     const structures = this.player.units(type);
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      type !== UnitType.DefensePost
+      game.config().unitInfo(type).upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -249,7 +251,7 @@ export class NationStructureBehavior {
     if (canBuild === false) {
       return false;
     }
-    this.game.addExecution(new ConstructionExecution(this.player, type, tile));
+    game.addExecution(new ConstructionExecution(this.player, type, tile));
     return true;
   }
 
@@ -330,10 +332,8 @@ export class NationStructureBehavior {
       return false;
     }
     const structureToUpgrade = this.findBestStructureToUpgrade(structures);
-    if (
-      structureToUpgrade !== null &&
-      this.player.canUpgradeUnit(structureToUpgrade)
-    ) {
+    if (structureToUpgrade !== null) {
+      //canUpgradeUnit already checked in findBestStructureToUpgrade and again in UpgradeStructureExecution
       this.game.addExecution(
         new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
       );
@@ -346,12 +346,10 @@ export class NationStructureBehavior {
    * Calculates total structure density across player's territory.
    */
   private getTotalStructureDensity(): number {
-    let totalStructures = 0;
-    for (const type of StructureTypes) {
-      totalStructures += this.player.units(type).length; // ignoring levels
-    }
     const tilesOwned = this.player.numTilesOwned();
-    return tilesOwned > 0 ? totalStructures / tilesOwned : 0;
+    return tilesOwned > 0
+      ? this.player.units(...StructureTypes).length / tilesOwned
+      : 0; //ignoring levels for structures
   }
 
   /**
@@ -359,6 +357,7 @@ export class NationStructureBehavior {
    * In 50% of cases, picks the second or third best to add variety.
    */
   private findBestStructureToUpgrade(structures: Unit[]): Unit | null {
+    const game = this.game;
     if (structures.length === 0) {
       return null;
     }
@@ -370,7 +369,7 @@ export class NationStructureBehavior {
     }
 
     // Based on difficulty, chance to just pick a random structure
-    const { difficulty } = this.game.config().gameConfig();
+    const { difficulty } = game.config().gameConfig();
     let randomChance: number;
     switch (difficulty) {
       case Difficulty.Easy:
@@ -403,9 +402,9 @@ export class NationStructureBehavior {
 
       // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
-        const samRange = this.game.config().samRange(sam.level());
+        const samRange = game.config().samRange(sam.level());
         const samRangeSquared = samRange * samRange;
-        const distSquared = this.game.euclideanDistSquared(
+        const distSquared = game.euclideanDistSquared(
           structure.tile(),
           sam.tile(),
         );
