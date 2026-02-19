@@ -1,11 +1,6 @@
-import { QuickChatExecution } from "../src/core/execution/QuickChatExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../src/core/game/Game";
 import { GameUpdateType } from "src/core/game/GameUpdates";
+import { QuickChatExecution } from "../src/core/execution/QuickChatExecution";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;
