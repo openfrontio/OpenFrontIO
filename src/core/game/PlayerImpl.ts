@@ -971,6 +971,11 @@ export class PlayerImpl implements Player {
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
   ): BuildableUnit[] {
+    const mg = this.mg;
+    const config = mg.config();
+    const rail = mg.railNetwork();
+    const inSpawnPhase = mg.inSpawnPhase();
+
     const validTiles =
       tile !== null &&
       (units === undefined || units.some((u) => isStructureType(u)))
@@ -987,11 +992,11 @@ export class PlayerImpl implements Player {
         continue;
       }
 
-      const cost = this.mg.config().unitInfo(u).cost(this.mg, this);
+      const cost = config.unitInfo(u).cost(mg, this);
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
 
-      if (tile !== null && !this.mg.inSpawnPhase()) {
+      if (tile !== null && !inSpawnPhase) {
         const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
@@ -1005,13 +1010,9 @@ export class PlayerImpl implements Player {
         canUpgrade,
         cost,
         overlappingRailroads:
-          canBuild !== false
-            ? this.mg.railNetwork().overlappingRailroads(canBuild)
-            : [],
+          canBuild !== false ? rail.overlappingRailroads(canBuild) : [],
         ghostRailPaths:
-          canBuild !== false
-            ? this.mg.railNetwork().computeGhostRailPaths(u, canBuild)
-            : [],
+          canBuild !== false ? rail.computeGhostRailPaths(u, canBuild) : [],
       });
     }
 
