@@ -491,6 +491,7 @@ export class NationStructureBehavior {
   ): ((tile: TileRef) => number) | null {
     switch (type) {
       case UnitType.City:
+        return this.cityValue();
       case UnitType.MissileSilo:
         return this.interiorStructureValue(type);
       case UnitType.Factory:
@@ -578,9 +579,81 @@ export class NationStructureBehavior {
     const { borderSpacing, structureSpacing } = this.spacingConstants();
     const stationRange = game.config().trainStationMaxRange();
     const stationRangeSquared = stationRange * stationRange;
-
-    // Based on difficulty, chance to use connectivity score
     const { difficulty } = game.config().gameConfig();
+    const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
+
+    const reachableStations = useConnectionScore
+      ? this.buildReachableStations()
+      : [];
+    const minRangeSquared = game.config().trainStationMinRange() ** 2;
+
+    // Cross-type spacing: prefer to be away from cities.
+    const cityTiles: Set<TileRef> = new Set(
+      player.units(UnitType.City).map((u) => u.tile()),
+    );
+
+    return (tile) => {
+      let w = 0;
+
+      // Prefer higher elevations
+      w += game.magnitude(tile);
+
+      // Prefer to be away from the border
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      w += Math.min(closestBorderDist, borderSpacing);
+
+      // Prefer to be away from other factories
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = game.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, stationRange);
+      }
+
+      // Prefer to be away from cities (cross-type spacing)
+      const closestCity = closestTwoTiles(game, cityTiles, [tile]);
+      if (closestCity !== null) {
+        const d = game.manhattanDist(closestCity.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
+      if (!useConnectionScore) {
+        return w;
+      }
+
+      // Score by distinct cluster connections weighted by trade gold.
+      // Per cluster, take the max weight of any station in range (best
+      // trade relationship reachable through that cluster).
+      // Stations within minRange cannot form a railroad; exclude them.
+      // Isolated stations (no cluster yet) accumulate their weights individually.
+      const clustersInRange = new Map<Cluster, number>();
+      let isolatedWeight = 0;
+      for (const { tile: stationTile, cluster, weight } of reachableStations) {
+        const dist = game.euclideanDistSquared(tile, stationTile);
+        if (dist < minRangeSquared || dist > stationRangeSquared) continue;
+        if (cluster !== null) {
+          clustersInRange.set(
+            cluster,
+            Math.max(clustersInRange.get(cluster) ?? 0, weight),
+          );
+        } else {
+          isolatedWeight += weight;
+        }
+      }
+      let connectionScore = isolatedWeight;
+      for (const cw of clustersInRange.values()) connectionScore += cw;
+      w += connectionScore * structureSpacing;
+
+      return w;
+    };
+  }
+
+  /**
+   * Given the game difficulty, decide if we should use connectivity scoring
+   * to determine the best placement for factories and cities.
+   */
+  private shouldUseConnectivityScore(difficulty: Difficulty): boolean {
     let randomChance: number;
     switch (difficulty) {
       case Difficulty.Easy:
@@ -599,82 +672,117 @@ export class NationStructureBehavior {
         assertNever(difficulty);
     }
 
-    const useConnectionScore = this.random.nextInt(0, 100) < randomChance;
+    return this.random.nextInt(0, 100) < randomChance;
+  }
 
-    // Precompute registered station structures with cluster membership and
-    // trade-gold weight. Weight is in [0, 1], normalized to ally = 1.0.
-    const reachableStations: Array<{
+  /**
+   * Precomputes trade-weighted station entries for connectivity scoring.
+   * Iterates all stations once (O(total_stations)) to build a unit→cluster map,
+   * then collects own and non-embargoed non-bot neighbor structures with a
+   * normalized weight derived from config.trainGold().
+   */
+  private buildReachableStations(): Array<{
+    tile: TileRef;
+    cluster: Cluster | null;
+    weight: number;
+  }> {
+    const game = this.game;
+    const player = this.player;
+
+    // Build unit → cluster lookup in one O(total_stations) pass.
+    const stationManager = game.railNetwork().stationManager();
+    const unitToCluster = new Map<Unit, Cluster | null>();
+    for (const station of stationManager.getAll()) {
+      unitToCluster.set(station.unit, station.getCluster());
+    }
+
+    const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
+    const result: Array<{
       tile: TileRef;
       cluster: Cluster | null;
       weight: number;
     }> = [];
 
-    if (useConnectionScore) {
-      // Build unit → cluster lookup in one O(total_stations) pass, avoiding
-      // repeated O(n) findStation() calls for each own/neighbor structure.
-      const stationManager = game.railNetwork().stationManager();
-      const unitToCluster = new Map<Unit, Cluster | null>();
-      for (const station of stationManager.getAll()) {
-        unitToCluster.set(station.unit, station.getCluster());
+    // Own structures — weighted by "self" trade gold.
+    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+    for (const unit of player.units(
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+    )) {
+      if (unitToCluster.has(unit)) {
+        result.push({
+          tile: unit.tile(),
+          cluster: unitToCluster.get(unit)!,
+          weight: selfWeight,
+        });
       }
+    }
 
-      // Normalize weights against the highest possible trade gold (ally).
-      const maxTradeGold = Math.max(Number(game.config().trainGold("ally")), 1);
-
-      // Own structures — always included, weighted by "self" trade gold.
-      const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
-      for (const unit of player.units(
+    // Neighbor structures — all non-embargoed non-bot neighbors.
+    for (const neighbor of player.neighbors()) {
+      if (!neighbor.isPlayer()) continue;
+      if (neighbor.type() === PlayerType.Bot) continue;
+      if (!player.canTrade(neighbor)) continue;
+      const relType = player.isOnSameTeam(neighbor)
+        ? "team"
+        : player.isAlliedWith(neighbor)
+          ? "ally"
+          : "other";
+      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+      for (const unit of neighbor.units(
         UnitType.City,
         UnitType.Port,
         UnitType.Factory,
       )) {
         if (unitToCluster.has(unit)) {
-          reachableStations.push({
+          result.push({
             tile: unit.tile(),
             cluster: unitToCluster.get(unit)!,
-            weight: selfWeight,
+            weight,
           });
-        }
-      }
-
-      // Neighbor structures — all non-embargoed non-bot neighbors.
-      for (const neighbor of player.neighbors()) {
-        if (!neighbor.isPlayer()) continue;
-        if (neighbor.type() === PlayerType.Bot) continue;
-        if (!player.canTrade(neighbor)) continue;
-        const relType = player.isOnSameTeam(neighbor)
-          ? "team"
-          : player.isAlliedWith(neighbor)
-            ? "ally"
-            : "other";
-        const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
-        for (const unit of neighbor.units(
-          UnitType.City,
-          UnitType.Port,
-          UnitType.Factory,
-        )) {
-          if (unitToCluster.has(unit)) {
-            reachableStations.push({
-              tile: unit.tile(),
-              cluster: unitToCluster.get(unit)!,
-              weight,
-            });
-          }
         }
       }
     }
 
+    return result;
+  }
+
+  /**
+   * Value function for cities.
+   * Inherits interior placement criteria (elevation, border distance, spacing)
+   * and adds cluster-connectivity scoring so cities prefer positions that extend
+   * or bridge the existing rail network. Connectivity is difficulty-gated.
+   */
+  private cityValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const player = this.player;
+    const borderTiles = player.borderTiles();
+    const otherUnits = player.units(UnitType.City);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+    const stationRange = game.config().trainStationMaxRange();
+    const stationRangeSquared = stationRange * stationRange;
+    const { difficulty } = game.config().gameConfig();
+    const useConnectionScore = this.shouldUseConnectivityScore(difficulty);
+
+    const reachableStations = useConnectionScore
+      ? this.buildReachableStations()
+      : [];
+    const minRangeSquared = game.config().trainStationMinRange() ** 2;
+
+    // Cross-type spacing: prefer to be away from factories.
+    const factoryTiles: Set<TileRef> = new Set(
+      player.units(UnitType.Factory).map((u) => u.tile()),
+    );
+
     return (tile) => {
       let w = 0;
 
-      // Prefer higher elevations
       w += game.magnitude(tile);
 
-      // Prefer to be away from the border
       const [, closestBorderDist] = closestTile(game, borderTiles, tile);
       w += Math.min(closestBorderDist, borderSpacing);
 
-      // Prefer to be away from other factories
       const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
       otherTiles.delete(tile);
       const closestOther = closestTwoTiles(game, otherTiles, [tile]);
@@ -683,19 +791,23 @@ export class NationStructureBehavior {
         w += Math.min(d, structureSpacing);
       }
 
+      // Prefer to be away from factories (cross-type spacing)
+      const closestFactory = closestTwoTiles(game, factoryTiles, [tile]);
+      if (closestFactory !== null) {
+        const d = game.manhattanDist(closestFactory.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
       if (!useConnectionScore) {
         return w;
       }
 
-      // Score by distinct cluster connections weighted by trade gold.
-      // Per cluster, take the max weight of any station in range (best
-      // trade relationship reachable through that cluster).
-      // Isolated stations (no cluster yet) accumulate their weights individually.
+      // Stations within minRange cannot form a railroad; exclude them.
       const clustersInRange = new Map<Cluster, number>();
       let isolatedWeight = 0;
       for (const { tile: stationTile, cluster, weight } of reachableStations) {
-        if (game.euclideanDistSquared(tile, stationTile) > stationRangeSquared)
-          continue;
+        const dist = game.euclideanDistSquared(tile, stationTile);
+        if (dist < minRangeSquared || dist > stationRangeSquared) continue;
         if (cluster !== null) {
           clustersInRange.set(
             cluster,
