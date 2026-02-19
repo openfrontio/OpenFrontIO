@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { Cluster } from "../../game/TrainStation";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
@@ -490,9 +491,10 @@ export class NationStructureBehavior {
   ): ((tile: TileRef) => number) | null {
     switch (type) {
       case UnitType.City:
-      case UnitType.Factory:
       case UnitType.MissileSilo:
         return this.interiorStructureValue(type);
+      case UnitType.Factory:
+        return this.factoryValue();
       case UnitType.Port:
         return this.portValue();
       case UnitType.DefensePost:
@@ -554,6 +556,129 @@ export class NationStructureBehavior {
       otherTiles.delete(tile);
       const [, closestOtherDist] = closestTile(game, otherTiles, tile);
       w += Math.min(closestOtherDist, structureSpacing);
+
+      return w;
+    };
+  }
+
+  /**
+   * Value function for factories.
+   * Prefers high elevation, spacing from other factories, and distance from
+   * border. Scores connectivity by the number of distinct rail clusters within
+   * train-station range, weighted by trade gold: ally (1.0) > team/neutral
+   * (~0.71) > self (~0.29). Embargoed and bot neighbors are excluded. Per
+   * cluster, the best reachable trade relationship determines the weight.
+   */
+  private factoryValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const player = this.player;
+    const borderTiles = this.player.borderTiles();
+    const otherUnits = player.units(UnitType.Factory);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+    const stationRange = game.config().trainStationMaxRange();
+    const stationRangeSquared = stationRange * stationRange;
+
+    // Build unit → cluster lookup in one O(total_stations) pass, avoiding
+    // repeated O(n) findStation() calls for each own/neighbor structure.
+    const stationManager = game.railNetwork().stationManager();
+    const unitToCluster = new Map<Unit, Cluster | null>();
+    for (const station of stationManager.getAll()) {
+      unitToCluster.set(station.unit, station.getCluster());
+    }
+
+    // Normalize weights against the highest possible trade gold (ally).
+    const maxTradeGold = Number(game.config().trainGold("ally"));
+
+    // Precompute registered station structures with cluster membership and
+    // trade-gold weight. Weight is in [0, 1], normalized to ally = 1.0.
+    const reachableStations: Array<{
+      tile: TileRef;
+      cluster: Cluster | null;
+      weight: number;
+    }> = [];
+
+    // Own structures — always included, weighted by "self" trade gold.
+    const selfWeight = Number(game.config().trainGold("self")) / maxTradeGold;
+    for (const unit of player.units(
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+    )) {
+      if (unitToCluster.has(unit)) {
+        reachableStations.push({
+          tile: unit.tile(),
+          cluster: unitToCluster.get(unit)!,
+          weight: selfWeight,
+        });
+      }
+    }
+
+    // Neighbor structures — all non-embargoed non-bot neighbors.
+    for (const neighbor of player.neighbors()) {
+      if (!neighbor.isPlayer()) continue;
+      if (neighbor.type() === PlayerType.Bot) continue;
+      if (!player.canTrade(neighbor)) continue;
+      const relType = player.isOnSameTeam(neighbor)
+        ? "team"
+        : player.isAlliedWith(neighbor)
+          ? "ally"
+          : "other";
+      const weight = Number(game.config().trainGold(relType)) / maxTradeGold;
+      for (const unit of neighbor.units(
+        UnitType.City,
+        UnitType.Port,
+        UnitType.Factory,
+      )) {
+        if (unitToCluster.has(unit)) {
+          reachableStations.push({
+            tile: unit.tile(),
+            cluster: unitToCluster.get(unit)!,
+            weight,
+          });
+        }
+      }
+    }
+
+    return (tile) => {
+      let w = 0;
+
+      // Prefer higher elevations
+      w += game.magnitude(tile);
+
+      // Prefer to be away from the border
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      w += Math.min(closestBorderDist, borderSpacing);
+
+      // Prefer to be away from other factories
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = game.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+
+      // Score by distinct cluster connections weighted by trade gold.
+      // Per cluster, take the max weight of any station in range (best
+      // trade relationship reachable through that cluster).
+      // Isolated stations (no cluster yet) accumulate their weights individually.
+      const clustersInRange = new Map<Cluster, number>();
+      let isolatedWeight = 0;
+      for (const { tile: stationTile, cluster, weight } of reachableStations) {
+        if (game.euclideanDistSquared(tile, stationTile) > stationRangeSquared)
+          continue;
+        if (cluster !== null) {
+          clustersInRange.set(
+            cluster,
+            Math.max(clustersInRange.get(cluster) ?? 0, weight),
+          );
+        } else {
+          isolatedWeight += weight;
+        }
+      }
+      let connectionScore = isolatedWeight;
+      for (const cw of clustersInRange.values()) connectionScore += cw;
+      w += connectionScore * structureSpacing;
 
       return w;
     };
