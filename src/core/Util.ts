@@ -291,7 +291,7 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
 
 export function createRandomName(
   name: string,
-  playerType: string,
+  playerType: PlayerType,
 ): string | null {
   let randomName: string | null = null;
   if (playerType === PlayerType.Human) {
