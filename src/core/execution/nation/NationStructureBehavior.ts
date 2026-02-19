@@ -672,9 +672,7 @@ export class NationStructureBehavior {
     cluster: Cluster | null;
     weight: number;
   }> {
-    if (this.reachableStationsCache === null) {
-      this.reachableStationsCache = this.buildReachableStations();
-    }
+    this.reachableStationsCache ??= this.buildReachableStations();
     return this.reachableStationsCache;
   }
 
