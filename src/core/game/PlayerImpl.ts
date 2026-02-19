@@ -978,7 +978,8 @@ export class PlayerImpl implements Player {
 
     const validTiles =
       tile !== null &&
-      (units === undefined || units.some((u) => isStructureType(u)))
+      (units === undefined || units.some((u) => isStructureType(u))) &&
+      !inSpawnPhase
         ? this.validStructureSpawnTiles(tile)
         : [];
 
