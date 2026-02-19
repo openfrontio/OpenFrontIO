@@ -26,6 +26,7 @@ import {
   HumansVsNations,
 } from "../core/game/Game";
 import { getApiBase } from "./Api";
+import { userAuth } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -54,6 +55,7 @@ export class JoinLobbyModal extends BaseModal {
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
+  private discordAllowlistChecked = false;
 
   private isPrivateLobby(): boolean {
     return this.gameConfig?.gameType === GameType.Private;
@@ -70,6 +72,13 @@ export class JoinLobbyModal extends BaseModal {
       ...lobby,
       startsAt: lobby.startsAt ?? undefined,
     });
+    if (
+      !this.discordAllowlistChecked &&
+      this.gameConfig?.allowedDiscordIds?.length
+    ) {
+      this.discordAllowlistChecked = true;
+      void this.checkDiscordAllowlist(this.gameConfig.allowedDiscordIds);
+    }
   };
 
   render() {
@@ -349,6 +358,7 @@ export class JoinLobbyModal extends BaseModal {
     this.currentLobbyId = "";
     this.currentClientID = "";
     this.isConnecting = false;
+    this.discordAllowlistChecked = false;
   }
 
   private leaveLobby() {
@@ -382,6 +392,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.lobbyCreatorClientID = null;
     this.isConnecting = true;
+    this.discordAllowlistChecked = false;
     this.leaveLobbyOnClose = true;
   }
 
@@ -544,6 +555,34 @@ export class JoinLobbyModal extends BaseModal {
 
   private stopLobbyUpdates() {
     this.eventBus?.off(LobbyInfoEvent, this.handleLobbyInfo);
+  }
+
+  private async checkDiscordAllowlist(
+    allowedDiscordIds: string[],
+  ): Promise<void> {
+    const auth = await userAuth(false);
+    if (!auth) {
+      this.showMessage(translateText("private_lobby.discord_required"), "red");
+      this.closeAndLeave();
+      return;
+    }
+    const response = await fetch(`${getApiBase()}/users/@me`, {
+      headers: { Authorization: `Bearer ${auth.jwt}` },
+    });
+    if (!response.ok) {
+      this.showMessage(translateText("private_lobby.discord_required"), "red");
+      this.closeAndLeave();
+      return;
+    }
+    const data = await response.json();
+    const discordId = data?.user?.discord?.id;
+    if (!discordId || !allowedDiscordIds.includes(discordId)) {
+      this.showMessage(
+        translateText("private_lobby.discord_not_allowed"),
+        "red",
+      );
+      this.closeAndLeave();
+    }
   }
 
   // --- Countdown timer ---

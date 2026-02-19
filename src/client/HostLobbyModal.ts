@@ -76,6 +76,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private nationCount: number = 0;
+  @state() private allowedDiscordIds: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Add a new timer for debouncing bot changes
@@ -311,6 +312,26 @@ export class HostLobbyModal extends BaseModal {
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
+          <div class="space-y-2 pb-6">
+            <label
+              class="text-sm font-bold text-white/70 uppercase tracking-widest"
+            >
+              ${translateText("host_modal.discord_allowlist")}
+            </label>
+            <p class="text-xs text-white/50">
+              ${translateText("host_modal.discord_allowlist_help")}
+            </p>
+            <input
+              type="text"
+              .value=${this.allowedDiscordIds}
+              @input=${this.handleDiscordAllowlistChange}
+              placeholder=${translateText(
+                "host_modal.discord_allowlist_placeholder",
+              )}
+              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm"
+            />
+          </div>
+
           <lobby-player-view
             class="mt-10"
             .gameMode=${this.gameMode}
@@ -449,6 +470,7 @@ export class HostLobbyModal extends BaseModal {
     this.goldMultiplierValue = undefined;
     this.startingGold = false;
     this.startingGoldValue = undefined;
+    this.allowedDiscordIds = "";
 
     this.leaveLobbyOnClose = true;
   }
@@ -685,6 +707,11 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleDiscordAllowlistChange = (e: Event) => {
+    this.allowedDiscordIds = (e.target as HTMLInputElement).value;
+    this.putGameConfig();
+  };
+
   private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
     preventDisallowedKeys(e, ["-", "+", "e"]);
   };
@@ -771,6 +798,12 @@ export class HostLobbyModal extends BaseModal {
                 : undefined,
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
+            allowedDiscordIds: this.allowedDiscordIds
+              ? this.allowedDiscordIds
+                  .split(",")
+                  .map((id) => id.trim())
+                  .filter((id) => id.length > 0)
+              : undefined,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

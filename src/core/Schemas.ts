@@ -232,6 +232,7 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
+  allowedDiscordIds: z.string().array().optional(),
 });
 
 export const TeamSchema = z.string();

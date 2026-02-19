@@ -364,11 +364,24 @@ export async function startWorker() {
         let roles: string[] | undefined;
         let flares: string[] | undefined;
 
+        // Get the game's Discord allowlist before auth checks
+        const gameServer = gm.game(clientMsg.gameID);
+        const allowedDiscordIds =
+          gameServer?.gameConfig?.allowedDiscordIds ?? [];
+
         const allowedFlares = config.allowedFlares();
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
             ws.close(1002, "Unauthorized");
+            return;
+          }
+          if (allowedDiscordIds.length > 0) {
+            log.warn(
+              "Unauthorized: Anonymous user attempted to join Discord-restricted game",
+              { gameID: clientMsg.gameID },
+            );
+            ws.close(1002, "Unauthorized: Discord login required");
             return;
           }
         } else {
@@ -394,6 +407,26 @@ export async function startWorker() {
                 "Forbidden: player without an allowed flare attempted to join game",
               );
               ws.close(1002, "Forbidden");
+              return;
+            }
+          }
+
+          if (allowedDiscordIds.length > 0) {
+            const discordId = result.response.user.discord?.id;
+            if (!discordId) {
+              log.warn(
+                "Unauthorized: user without linked Discord attempted to join Discord-restricted game",
+                { persistentID: persistentId, gameID: clientMsg.gameID },
+              );
+              ws.close(1002, "Unauthorized: Discord account required");
+              return;
+            }
+            if (!allowedDiscordIds.includes(discordId)) {
+              log.warn("Unauthorized: Discord ID not in allowlist", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+              });
+              ws.close(1002, "Unauthorized: Discord ID not allowed");
               return;
             }
           }
