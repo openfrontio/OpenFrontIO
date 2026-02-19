@@ -478,6 +478,7 @@ export class NationNukeBehavior {
   private isTrajectoryInterceptableBySam(
     spawnTile: TileRef,
     targetTile: TileRef,
+    excludedSamIds?: Set<number>,
   ): boolean {
     const speed = this.game.config().defaultNukeSpeed();
     const pathFinder = UniversalPathFinding.Parabola(this.game, {
@@ -541,6 +542,10 @@ export class NationNukeBehavior {
       for (const sam of nearbySams) {
         const owner = sam.unit.owner();
         if (owner === this.player || this.player.isFriendly(owner)) {
+          continue;
+        }
+        // Skip SAMs we're intentionally overwhelming
+        if (excludedSamIds?.has(sam.unit.id())) {
           continue;
         }
         const rangeSquared = this.game.config().samRange(sam.unit.level()) ** 2;
@@ -761,7 +766,7 @@ export class NationNukeBehavior {
         if (availableSlots <= 0) {
           continue;
         }
-        const intercepted = this.isTrajectoryInterceptableBySamExcluding(
+        const intercepted = this.isTrajectoryInterceptableBySam(
           silo.tile(),
           targetTile,
           coveringSamIds,
@@ -885,92 +890,6 @@ export class NationNukeBehavior {
       }
     }
     return result;
-  }
-
-  /**
-   * Like isTrajectoryInterceptableBySam, but excludes certain SAMs by ID.
-   * Used when we intentionally want our nukes to be intercepted by specific SAMs
-   * (the ones we're overwhelming), but not by other SAMs along the path.
-   */
-  private isTrajectoryInterceptableBySamExcluding(
-    spawnTile: TileRef,
-    targetTile: TileRef,
-    excludedSamIds: Set<number>,
-  ): boolean {
-    const speed = this.game.config().defaultNukeSpeed();
-    const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: speed,
-      distanceBasedHeight: true,
-      directionUp: true,
-    });
-
-    const trajectory = pathFinder.findPath(spawnTile, targetTile) ?? [];
-    if (trajectory.length === 0) {
-      return false;
-    }
-
-    const targetRangeSquared =
-      this.game.config().defaultNukeTargetableRange() ** 2;
-
-    let untargetableStart = -1;
-    let untargetableEnd = -1;
-    for (let i = 0; i < trajectory.length; i++) {
-      const tile = trajectory[i];
-      if (untargetableStart === -1) {
-        if (
-          this.game.euclideanDistSquared(tile, spawnTile) > targetRangeSquared
-        ) {
-          if (
-            this.game.euclideanDistSquared(tile, targetTile) <
-            targetRangeSquared
-          ) {
-            break;
-          } else {
-            untargetableStart = i;
-          }
-        }
-      } else if (
-        this.game.euclideanDistSquared(tile, targetTile) < targetRangeSquared
-      ) {
-        untargetableEnd = i;
-        break;
-      }
-    }
-
-    for (let i = 0; i < trajectory.length; i++) {
-      if (
-        untargetableStart !== -1 &&
-        untargetableEnd !== -1 &&
-        i === untargetableStart
-      ) {
-        i = untargetableEnd - 1;
-        continue;
-      }
-
-      const tile = trajectory[i];
-      const nearbySams = this.game.nearbyUnits(
-        tile,
-        this.game.config().maxSamRange(),
-        UnitType.SAMLauncher,
-      );
-
-      for (const sam of nearbySams) {
-        const owner = sam.unit.owner();
-        if (owner === this.player || this.player.isFriendly(owner)) {
-          continue;
-        }
-        // Skip SAMs we're intentionally overwhelming
-        if (excludedSamIds.has(sam.unit.id())) {
-          continue;
-        }
-        const rangeSquared = this.game.config().samRange(sam.unit.level()) ** 2;
-        if (sam.distSquared <= rangeSquared) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 
   /**
