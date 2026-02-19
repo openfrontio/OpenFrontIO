@@ -600,7 +600,8 @@ export class NationStructureBehavior {
     }
 
     const useConnectionScore =
-      difficulty !== Difficulty.Easy && this.random.chance(randomChance);
+      difficulty !== Difficulty.Easy &&
+      this.random.nextInt(0, 100) < randomChance;
 
     // Precompute registered station structures with cluster membership and
     // trade-gold weight. Weight is in [0, 1], normalized to ally = 1.0.
