@@ -22,5 +22,8 @@ export class Client {
     public ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
     public readonly discordId: string | undefined,
+    public readonly discordGuildRoles:
+      | Readonly<Record<string, string[]>>
+      | undefined,
   ) {}
 }

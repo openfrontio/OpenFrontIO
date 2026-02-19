@@ -20,6 +20,9 @@ import { GameServer } from "../../src/server/GameServer";
 
 const ALLOWED_DISCORD_ID = "12345678901234567";
 const BLOCKED_DISCORD_ID = "76543210987654321";
+const REQUIRED_GUILD_ID = "1474121677725241406";
+const REQUIRED_ROLE_ID = "422545450919526411";
+const REQUIRED_ROLE_ID_2 = "422545450919526412";
 
 class MockWebSocket {
   public readyState: number = WebSocket.OPEN;
@@ -80,6 +83,7 @@ describe("Discord allowlist", () => {
     clientID: string,
     persistentID: string,
     discordId: string | undefined,
+    discordGuildRoles?: Record<string, string[]>,
   ) => {
     const ws = new MockWebSocket();
     const client = new Client(
@@ -94,6 +98,7 @@ describe("Discord allowlist", () => {
       ws as unknown as WebSocket,
       undefined,
       discordId,
+      discordGuildRoles,
     );
     return { client, ws };
   };
@@ -193,5 +198,105 @@ describe("Discord allowlist", () => {
         "allowedDiscordIds",
       ),
     ).toBe(false);
+  });
+
+  it("rejects joins when required discord role is missing", () => {
+    const game = new GameServer(
+      "testgame4",
+      mockLogger,
+      Date.now(),
+      mockConfig,
+      {
+        gameType: GameType.Private,
+        requiredDiscordGuildId: REQUIRED_GUILD_ID,
+        requiredDiscordRoleId: REQUIRED_ROLE_ID,
+      } as any,
+      "creator-pid",
+    );
+
+    const { client, ws } = createClient(
+      "blocked-client",
+      "blocked-pid",
+      BLOCKED_DISCORD_ID,
+    );
+    const result = game.joinClient(client);
+
+    expect(result).toBe("kicked");
+    const errorMsg = JSON.parse(ws.sentMessages[0] ?? "{}");
+    expect(errorMsg.error).toBe("kick_reason.discord_role_not_allowed");
+  });
+
+  it("allows joins when required discord role is present in guild roles", () => {
+    const game = new GameServer(
+      "testgame5",
+      mockLogger,
+      Date.now(),
+      mockConfig,
+      {
+        gameType: GameType.Private,
+        requiredDiscordGuildId: REQUIRED_GUILD_ID,
+        requiredDiscordRoleId: REQUIRED_ROLE_ID,
+      } as any,
+      "creator-pid",
+    );
+
+    const ws = new MockWebSocket();
+    const client = new Client(
+      "allowed-client" as any,
+      "allowed-pid",
+      null,
+      undefined,
+      undefined,
+      "127.0.0.1",
+      "allowed-client",
+      "allowed-client",
+      ws as unknown as WebSocket,
+      undefined,
+      ALLOWED_DISCORD_ID,
+      {
+        [REQUIRED_GUILD_ID]: [REQUIRED_ROLE_ID],
+      },
+    );
+
+    expect(game.joinClient(client)).toBe("joined");
+  });
+
+  it("allows joins when any configured required role pair matches", () => {
+    const game = new GameServer(
+      "testgame6",
+      mockLogger,
+      Date.now(),
+      mockConfig,
+      {
+        gameType: GameType.Private,
+        requiredDiscordRoles: [
+          { guildId: REQUIRED_GUILD_ID, roleId: REQUIRED_ROLE_ID },
+          { guildId: REQUIRED_GUILD_ID, roleId: REQUIRED_ROLE_ID_2 },
+        ],
+      } as any,
+      "creator-pid",
+    );
+
+    const { client: blockedClient, ws: blockedWs } = createClient(
+      "blocked-client",
+      "blocked-pid",
+      ALLOWED_DISCORD_ID,
+      {
+        [REQUIRED_GUILD_ID]: [],
+      },
+    );
+    expect(game.joinClient(blockedClient)).toBe("kicked");
+    const blockedError = JSON.parse(blockedWs.sentMessages[0] ?? "{}");
+    expect(blockedError.error).toBe("kick_reason.discord_role_not_allowed");
+
+    const { client: allowedClient } = createClient(
+      "allowed-client",
+      "allowed-pid",
+      ALLOWED_DISCORD_ID,
+      {
+        [REQUIRED_GUILD_ID]: [REQUIRED_ROLE_ID_2],
+      },
+    );
+    expect(game.joinClient(allowedClient)).toBe("joined");
   });
 });

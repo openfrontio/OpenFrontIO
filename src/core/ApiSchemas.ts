@@ -42,6 +42,11 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
+const DiscordGuildRolesByGuildSchema = z.record(
+  z.string(),
+  z.array(z.string()),
+);
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -49,7 +54,12 @@ const SingleplayerMapAchievementSchema = z.object({
 
 export const UserMeResponseSchema = z.object({
   user: z.object({
-    discord: DiscordUserSchema.optional(),
+    discord: DiscordUserSchema.extend({
+      guildRoles: DiscordGuildRolesByGuildSchema.optional(),
+      guild_roles: DiscordGuildRolesByGuildSchema.optional(),
+    }).optional(),
+    discordGuildRoles: DiscordGuildRolesByGuildSchema.optional(),
+    discord_guild_roles: DiscordGuildRolesByGuildSchema.optional(),
     email: z.string().optional(),
   }),
   player: z.object({

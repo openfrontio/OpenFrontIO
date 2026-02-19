@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
@@ -37,6 +38,90 @@ const config = getServerConfigFromServer();
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
+
+type DiscordRoleRequirement = {
+  guildId: string;
+  roleId: string;
+};
+
+function getDiscordGuildRolesFromUserMe(
+  userMe: UserMeResponse,
+): Record<string, string[]> | undefined {
+  const fromUserObject =
+    userMe.user.discordGuildRoles ?? userMe.user.discord_guild_roles;
+  if (fromUserObject !== undefined) {
+    return fromUserObject;
+  }
+  return userMe.user.discord?.guildRoles ?? userMe.user.discord?.guild_roles;
+}
+
+function normalizeRequiredDiscordRoles(
+  requiredDiscordRoles: Array<{ guildId: string; roleId: string }> | undefined,
+  legacyGuildId: string | undefined,
+  legacyRoleId: string | undefined,
+): DiscordRoleRequirement[] {
+  const normalizedRequirements: DiscordRoleRequirement[] = [];
+  const uniqueRequirementKeys = new Set<string>();
+
+  for (const requirement of requiredDiscordRoles ?? []) {
+    const guildId = requirement.guildId.trim();
+    const roleId = requirement.roleId.trim();
+    if (!guildId || !roleId) {
+      continue;
+    }
+    const key = `${guildId}:${roleId}`;
+    if (uniqueRequirementKeys.has(key)) {
+      continue;
+    }
+    uniqueRequirementKeys.add(key);
+    normalizedRequirements.push({ guildId, roleId });
+  }
+
+  const normalizedLegacyGuildId = legacyGuildId?.trim();
+  const normalizedLegacyRoleId = legacyRoleId?.trim();
+  if (normalizedLegacyGuildId && normalizedLegacyRoleId) {
+    const key = `${normalizedLegacyGuildId}:${normalizedLegacyRoleId}`;
+    if (!uniqueRequirementKeys.has(key)) {
+      uniqueRequirementKeys.add(key);
+      normalizedRequirements.push({
+        guildId: normalizedLegacyGuildId,
+        roleId: normalizedLegacyRoleId,
+      });
+    }
+  }
+
+  return normalizedRequirements;
+}
+
+function hasAnyRequiredDiscordRole(
+  userMe: UserMeResponse,
+  requiredDiscordRoles: DiscordRoleRequirement[],
+): boolean {
+  if (requiredDiscordRoles.length === 0) {
+    return true;
+  }
+
+  const discordGuildRoles = getDiscordGuildRolesFromUserMe(userMe);
+  for (const requirement of requiredDiscordRoles) {
+    if (
+      discordGuildRoles?.[requirement.guildId]?.includes(requirement.roleId)
+    ) {
+      return true;
+    }
+  }
+
+  const roles = userMe.player.roles ?? [];
+  for (const requirement of requiredDiscordRoles) {
+    if (
+      roles.includes(requirement.roleId) ||
+      roles.includes(`${requirement.guildId}:${requirement.roleId}`) ||
+      roles.includes(`discord:${requirement.guildId}:${requirement.roleId}`)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // Worker setup
 export async function startWorker() {
@@ -364,6 +449,7 @@ export async function startWorker() {
         let roles: string[] | undefined;
         let flares: string[] | undefined;
         let discordId: string | undefined;
+        let discordGuildRoles: Record<string, string[]> | undefined;
 
         // Get the game's Discord allowlist before auth checks
         const gameServer = gm.game(clientMsg.gameID);
@@ -371,6 +457,12 @@ export async function startWorker() {
           gameServer?.gameConfig?.allowedDiscordIds ?? [];
         const allowedDiscordIdSet =
           allowedDiscordIds.length > 0 ? new Set(allowedDiscordIds) : null;
+        const requiredDiscordRoles = normalizeRequiredDiscordRoles(
+          gameServer?.gameConfig?.requiredDiscordRoles,
+          gameServer?.gameConfig?.requiredDiscordGuildId,
+          gameServer?.gameConfig?.requiredDiscordRoleId,
+        );
+        const hasRequiredDiscordRoleGate = requiredDiscordRoles.length > 0;
 
         const allowedFlares = config.allowedFlares();
         if (claims === null) {
@@ -387,6 +479,14 @@ export async function startWorker() {
             ws.close(1002, "Unauthorized: Discord login required");
             return;
           }
+          if (hasRequiredDiscordRoleGate) {
+            log.warn(
+              "Unauthorized: Anonymous user attempted to join role-restricted game",
+              { gameID: clientMsg.gameID },
+            );
+            ws.close(1002, "Unauthorized: Discord role required");
+            return;
+          }
         } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token, config);
@@ -401,6 +501,7 @@ export async function startWorker() {
           roles = result.response.player.roles;
           flares = result.response.player.flares;
           discordId = result.response.user.discord?.id;
+          discordGuildRoles = getDiscordGuildRolesFromUserMe(result.response);
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -430,6 +531,27 @@ export async function startWorker() {
                 gameID: clientMsg.gameID,
               });
               ws.close(1002, "Unauthorized: Discord ID not allowed");
+              return;
+            }
+          }
+
+          if (hasRequiredDiscordRoleGate) {
+            if (!discordId) {
+              log.warn(
+                "Unauthorized: user without linked Discord attempted to join role-restricted game",
+                { persistentID: persistentId, gameID: clientMsg.gameID },
+              );
+              ws.close(1002, "Unauthorized: Discord account required");
+              return;
+            }
+            if (
+              !hasAnyRequiredDiscordRole(result.response, requiredDiscordRoles)
+            ) {
+              log.warn(
+                "Unauthorized: user without required Discord role attempted to join game",
+                { persistentID: persistentId, gameID: clientMsg.gameID },
+              );
+              ws.close(1002, "Unauthorized: required Discord role missing");
               return;
             }
           }
@@ -493,6 +615,7 @@ export async function startWorker() {
           ws,
           cosmeticResult.cosmetics,
           discordId,
+          discordGuildRoles,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

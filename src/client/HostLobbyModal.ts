@@ -79,6 +79,12 @@ export class HostLobbyModal extends BaseModal {
   @state() private nationCount: number = 0;
   @state() private allowedDiscordIds: string[] = [];
   @state() private discordIdInput: string = "";
+  @state() private requiredDiscordRoles: Array<{
+    guildId: string;
+    roleId: string;
+  }> = [];
+  @state() private requiredDiscordGuildIdInput: string = "";
+  @state() private requiredDiscordRoleIdInput: string = "";
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Add a new timer for debouncing bot changes
@@ -96,14 +102,37 @@ export class HostLobbyModal extends BaseModal {
     if (lobby.clients) {
       this.clients = lobby.clients;
     }
-    const incomingAllowedIds = lobby.gameConfig?.allowedDiscordIds ?? [];
+    const incomingAllowedIds = lobby.gameConfig?.allowedDiscordIds;
     if (
-      incomingAllowedIds.length !== this.allowedDiscordIds.length ||
-      incomingAllowedIds.some(
-        (id, index) => id !== this.allowedDiscordIds[index],
-      )
+      incomingAllowedIds !== undefined &&
+      (incomingAllowedIds.length !== this.allowedDiscordIds.length ||
+        incomingAllowedIds.some(
+          (id, index) => id !== this.allowedDiscordIds[index],
+        ))
     ) {
       this.allowedDiscordIds = incomingAllowedIds;
+    }
+
+    const hasIncomingRoleRequirements =
+      lobby.gameConfig?.requiredDiscordRoles !== undefined ||
+      lobby.gameConfig?.requiredDiscordGuildId !== undefined ||
+      lobby.gameConfig?.requiredDiscordRoleId !== undefined;
+    if (hasIncomingRoleRequirements) {
+      const incomingRoleRequirements = this.normalizeRequiredDiscordRoles(
+        lobby.gameConfig?.requiredDiscordRoles,
+        lobby.gameConfig?.requiredDiscordGuildId,
+        lobby.gameConfig?.requiredDiscordRoleId,
+      );
+      if (
+        incomingRoleRequirements.length !== this.requiredDiscordRoles.length ||
+        incomingRoleRequirements.some(
+          (requirement, index) =>
+            requirement.guildId !== this.requiredDiscordRoles[index]?.guildId ||
+            requirement.roleId !== this.requiredDiscordRoles[index]?.roleId,
+        )
+      ) {
+        this.requiredDiscordRoles = incomingRoleRequirements;
+      }
     }
   };
 
@@ -220,6 +249,19 @@ export class HostLobbyModal extends BaseModal {
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
     ];
+
+    const hasValidRequiredDiscordGuildId = DISCORD_ID_REGEX.test(
+      this.requiredDiscordGuildIdInput,
+    );
+    const hasValidRequiredDiscordRoleId = DISCORD_ID_REGEX.test(
+      this.requiredDiscordRoleIdInput,
+    );
+    const canAddRequiredDiscordRole =
+      hasValidRequiredDiscordGuildId && hasValidRequiredDiscordRoleId;
+    const hasPartialRequiredDiscordRoleGate =
+      !canAddRequiredDiscordRole &&
+      (this.requiredDiscordGuildIdInput.length > 0 ||
+        this.requiredDiscordRoleIdInput.length > 0);
 
     const content = html`
       <div class="${this.modalContainerClass}">
@@ -366,6 +408,120 @@ export class HostLobbyModal extends BaseModal {
               )}
               class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm appearance-none"
             />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+              <div class="space-y-1">
+                <label
+                  class="text-[10px] font-bold text-white/50 uppercase tracking-widest"
+                >
+                  ${translateText("host_modal.discord_required_guild_label")}
+                </label>
+                <input
+                  type="text"
+                  .value=${this.requiredDiscordGuildIdInput}
+                  @input=${this.handleRequiredDiscordGuildIdInputChange}
+                  @keydown=${this.handleRequiredDiscordMembershipKeyDown}
+                  @blur=${this.handleRequiredDiscordMembershipBlur}
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder=${translateText(
+                    "host_modal.discord_required_guild_placeholder",
+                  )}
+                  class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm appearance-none"
+                />
+              </div>
+              <div class="space-y-1">
+                <label
+                  class="text-[10px] font-bold text-white/50 uppercase tracking-widest"
+                >
+                  ${translateText("host_modal.discord_required_role_label")}
+                </label>
+                <input
+                  type="text"
+                  .value=${this.requiredDiscordRoleIdInput}
+                  @input=${this.handleRequiredDiscordRoleIdInputChange}
+                  @keydown=${this.handleRequiredDiscordMembershipKeyDown}
+                  @blur=${this.handleRequiredDiscordMembershipBlur}
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder=${translateText(
+                    "host_modal.discord_required_role_placeholder",
+                  )}
+                  class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-sm appearance-none"
+                />
+              </div>
+            </div>
+            <p class="text-xs text-white/50">
+              ${translateText("host_modal.discord_required_role_help")}
+            </p>
+            ${canAddRequiredDiscordRole
+              ? html`
+                  <button
+                    @click=${this.addRequiredDiscordRoleRequirement}
+                    class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest bg-white/10 hover:bg-white/15 border border-white/15 text-white transition-colors"
+                  >
+                    ${translateText("host_modal.discord_required_add")}
+                  </button>
+                `
+              : ""}
+            ${this.requiredDiscordRoles.length > 0
+              ? html`
+                  <div class="space-y-2">
+                    <div
+                      class="text-[10px] font-bold text-emerald-200/80 uppercase tracking-widest"
+                    >
+                      ${translateText(
+                        "host_modal.discord_required_roles_title",
+                      )}
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                      ${this.requiredDiscordRoles.map(
+                        (requirement) => html`
+                          <span
+                            class="flex items-center gap-2 px-2 py-1 bg-emerald-600/20 border border-emerald-500/40 rounded-lg text-emerald-100 text-xs font-mono"
+                          >
+                            ${translateText(
+                              "host_modal.discord_required_role_active",
+                              {
+                                guild: requirement.guildId,
+                                role: requirement.roleId,
+                              },
+                            )}
+                            <button
+                              @click=${() =>
+                                this.removeRequiredDiscordRoleRequirement(
+                                  requirement,
+                                )}
+                              class="text-emerald-200/80 hover:text-white transition-colors leading-none"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        `,
+                      )}
+                    </div>
+                    <button
+                      @click=${this.clearRequiredDiscordRoleRequirements}
+                      class="text-xs text-emerald-100/80 hover:text-white transition-colors"
+                    >
+                      ${translateText("host_modal.discord_required_clear")}
+                    </button>
+                  </div>
+                `
+              : hasPartialRequiredDiscordRoleGate
+                ? html`
+                    <p class="text-xs text-yellow-200/80">
+                      ${translateText(
+                        "host_modal.discord_required_role_incomplete",
+                      )}
+                    </p>
+                  `
+                : html`
+                    <p class="text-xs text-white/45">
+                      ${translateText(
+                        "host_modal.discord_required_roles_empty",
+                      )}
+                    </p>
+                  `}
           </div>
 
           <lobby-player-view
@@ -508,6 +664,9 @@ export class HostLobbyModal extends BaseModal {
     this.startingGoldValue = undefined;
     this.allowedDiscordIds = [];
     this.discordIdInput = "";
+    this.requiredDiscordRoles = [];
+    this.requiredDiscordGuildIdInput = "";
+    this.requiredDiscordRoleIdInput = "";
 
     this.leaveLobbyOnClose = true;
   }
@@ -748,6 +907,50 @@ export class HostLobbyModal extends BaseModal {
     this.discordIdInput = (e.target as HTMLInputElement).value;
   };
 
+  private normalizeSnowflakeInput(value: string): string {
+    return value.replace(/[^\d]/g, "");
+  }
+
+  private normalizeRequiredDiscordRoles(
+    requiredDiscordRoles:
+      | Array<{ guildId: string; roleId: string }>
+      | undefined,
+    legacyGuildId: string | undefined,
+    legacyRoleId: string | undefined,
+  ): Array<{ guildId: string; roleId: string }> {
+    const normalizedRequirements: Array<{ guildId: string; roleId: string }> =
+      [];
+    const uniqueRequirementKeys = new Set<string>();
+
+    for (const requirement of requiredDiscordRoles ?? []) {
+      const guildId = requirement.guildId.trim();
+      const roleId = requirement.roleId.trim();
+      if (!guildId || !roleId) {
+        continue;
+      }
+      const key = `${guildId}:${roleId}`;
+      if (uniqueRequirementKeys.has(key)) {
+        continue;
+      }
+      uniqueRequirementKeys.add(key);
+      normalizedRequirements.push({ guildId, roleId });
+    }
+
+    const normalizedLegacyGuildId = legacyGuildId?.trim();
+    const normalizedLegacyRoleId = legacyRoleId?.trim();
+    if (normalizedLegacyGuildId && normalizedLegacyRoleId) {
+      const key = `${normalizedLegacyGuildId}:${normalizedLegacyRoleId}`;
+      if (!uniqueRequirementKeys.has(key)) {
+        normalizedRequirements.push({
+          guildId: normalizedLegacyGuildId,
+          roleId: normalizedLegacyRoleId,
+        });
+      }
+    }
+
+    return normalizedRequirements;
+  }
+
   private commitDiscordIdInput = () => {
     if (!this.discordIdInput.trim()) {
       this.discordIdInput = "";
@@ -784,6 +987,85 @@ export class HostLobbyModal extends BaseModal {
 
   private handleDiscordIdBlur = () => {
     this.commitDiscordIdInput();
+  };
+
+  private handleRequiredDiscordGuildIdInputChange = (e: Event) => {
+    this.requiredDiscordGuildIdInput = this.normalizeSnowflakeInput(
+      (e.target as HTMLInputElement).value,
+    );
+  };
+
+  private handleRequiredDiscordRoleIdInputChange = (e: Event) => {
+    this.requiredDiscordRoleIdInput = this.normalizeSnowflakeInput(
+      (e.target as HTMLInputElement).value,
+    );
+  };
+
+  private handleRequiredDiscordMembershipKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    this.addRequiredDiscordRoleRequirement();
+  };
+
+  private handleRequiredDiscordMembershipBlur = () => {
+    this.requiredDiscordGuildIdInput = this.normalizeSnowflakeInput(
+      this.requiredDiscordGuildIdInput,
+    );
+    this.requiredDiscordRoleIdInput = this.normalizeSnowflakeInput(
+      this.requiredDiscordRoleIdInput,
+    );
+  };
+
+  private addRequiredDiscordRoleRequirement = () => {
+    if (
+      !DISCORD_ID_REGEX.test(this.requiredDiscordGuildIdInput) ||
+      !DISCORD_ID_REGEX.test(this.requiredDiscordRoleIdInput)
+    ) {
+      return;
+    }
+    const requirement = {
+      guildId: this.requiredDiscordGuildIdInput,
+      roleId: this.requiredDiscordRoleIdInput,
+    };
+    if (
+      this.requiredDiscordRoles.some(
+        (existing) =>
+          existing.guildId === requirement.guildId &&
+          existing.roleId === requirement.roleId,
+      )
+    ) {
+      this.requiredDiscordGuildIdInput = "";
+      this.requiredDiscordRoleIdInput = "";
+      return;
+    }
+    this.requiredDiscordRoles = [...this.requiredDiscordRoles, requirement];
+    this.requiredDiscordGuildIdInput = "";
+    this.requiredDiscordRoleIdInput = "";
+    this.putGameConfig();
+  };
+
+  private removeRequiredDiscordRoleRequirement = (requirement: {
+    guildId: string;
+    roleId: string;
+  }) => {
+    const nextRequiredDiscordRoles = this.requiredDiscordRoles.filter(
+      (existing) =>
+        existing.guildId !== requirement.guildId ||
+        existing.roleId !== requirement.roleId,
+    );
+    if (nextRequiredDiscordRoles.length === this.requiredDiscordRoles.length) {
+      return;
+    }
+    this.requiredDiscordRoles = nextRequiredDiscordRoles;
+    this.putGameConfig();
+  };
+
+  private clearRequiredDiscordRoleRequirements = () => {
+    if (this.requiredDiscordRoles.length === 0) {
+      return;
+    }
+    this.requiredDiscordRoles = [];
+    this.putGameConfig();
   };
 
   private removeDiscordId = (id: string) => {
@@ -840,6 +1122,10 @@ export class HostLobbyModal extends BaseModal {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes
       ? this.spawnImmunityDurationMinutes * 60 * 10
       : 0;
+    const requiredDiscordRoles = this.requiredDiscordRoles;
+    const firstRequiredDiscordRole = requiredDiscordRoles[0];
+    const requiredDiscordGuildId = firstRequiredDiscordRole?.guildId ?? "";
+    const requiredDiscordRoleId = firstRequiredDiscordRole?.roleId ?? "";
     const url = await this.constructUrl();
     this.updateHistory(url);
     this.dispatchEvent(
@@ -881,6 +1167,9 @@ export class HostLobbyModal extends BaseModal {
             startingGold:
               this.startingGold === true ? this.startingGoldValue : undefined,
             allowedDiscordIds: this.allowedDiscordIds,
+            requiredDiscordRoles,
+            requiredDiscordGuildId,
+            requiredDiscordRoleId,
           } satisfies Partial<GameConfig>,
         },
         bubbles: true,

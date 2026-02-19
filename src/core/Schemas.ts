@@ -203,6 +203,11 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const DISCORD_ID_REGEX = /^\d{17,20}$/;
 const DiscordIDSchema = z.string().regex(DISCORD_ID_REGEX);
+const DiscordIDOrEmptySchema = z.union([DiscordIDSchema, z.literal("")]);
+const DiscordRoleRequirementSchema = z.object({
+  guildId: DiscordIDSchema,
+  roleId: DiscordIDSchema,
+});
 
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
@@ -236,6 +241,10 @@ export const GameConfigSchema = z.object({
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
   allowedDiscordIds: z.array(DiscordIDSchema).optional(),
+  requiredDiscordRoles: z.array(DiscordRoleRequirementSchema).optional(),
+  // Legacy single-role fields kept for compatibility.
+  requiredDiscordGuildId: DiscordIDOrEmptySchema.optional(),
+  requiredDiscordRoleId: DiscordIDOrEmptySchema.optional(),
 });
 
 export const TeamSchema = z.string();

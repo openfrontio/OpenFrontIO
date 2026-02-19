@@ -35,6 +35,8 @@ export enum GamePhase {
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_DISCORD_NOT_ALLOWED = "kick_reason.discord_not_allowed";
+const KICK_REASON_DISCORD_ROLE_NOT_ALLOWED =
+  "kick_reason.discord_role_not_allowed";
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
@@ -84,6 +86,8 @@ export class GameServer {
 
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
   private allowedDiscordIdsSet: Set<string> | null = null;
+  private requiredDiscordRoles: Array<{ guildId: string; roleId: string }> = [];
+  private requiredDiscordRoleByGuild: Map<string, Set<string>> = new Map();
 
   constructor(
     public readonly id: string,
@@ -97,6 +101,11 @@ export class GameServer {
   ) {
     this.log = log_.child({ gameID: id });
     this.setAllowedDiscordIds(gameConfig.allowedDiscordIds);
+    this.setRequiredDiscordRoleRequirements(
+      gameConfig.requiredDiscordRoles,
+      gameConfig.requiredDiscordGuildId,
+      gameConfig.requiredDiscordRoleId,
+    );
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -131,30 +140,121 @@ export class GameServer {
     this.gameConfig.allowedDiscordIds = normalizedIds;
   }
 
+  private setRequiredDiscordRoleRequirements(
+    requiredDiscordRoles:
+      | Array<{ guildId: string; roleId: string }>
+      | undefined,
+    legacyGuildId: string | undefined,
+    legacyRoleId: string | undefined,
+  ): void {
+    const normalizedRequirements: Array<{ guildId: string; roleId: string }> =
+      [];
+    const uniqueRequirementKeys = new Set<string>();
+
+    for (const requirement of requiredDiscordRoles ?? []) {
+      const guildId = requirement.guildId.trim();
+      const roleId = requirement.roleId.trim();
+      if (!guildId || !roleId) {
+        continue;
+      }
+      const key = `${guildId}:${roleId}`;
+      if (uniqueRequirementKeys.has(key)) {
+        continue;
+      }
+      uniqueRequirementKeys.add(key);
+      normalizedRequirements.push({ guildId, roleId });
+    }
+
+    const normalizedLegacyGuildId = legacyGuildId?.trim();
+    const normalizedLegacyRoleId = legacyRoleId?.trim();
+    if (normalizedLegacyGuildId && normalizedLegacyRoleId) {
+      const key = `${normalizedLegacyGuildId}:${normalizedLegacyRoleId}`;
+      if (!uniqueRequirementKeys.has(key)) {
+        uniqueRequirementKeys.add(key);
+        normalizedRequirements.push({
+          guildId: normalizedLegacyGuildId,
+          roleId: normalizedLegacyRoleId,
+        });
+      }
+    }
+
+    this.requiredDiscordRoles = normalizedRequirements;
+    this.requiredDiscordRoleByGuild.clear();
+    for (const requirement of normalizedRequirements) {
+      const guildRoles =
+        this.requiredDiscordRoleByGuild.get(requirement.guildId) ??
+        new Set<string>();
+      guildRoles.add(requirement.roleId);
+      this.requiredDiscordRoleByGuild.set(requirement.guildId, guildRoles);
+    }
+
+    if (normalizedRequirements.length === 0) {
+      this.gameConfig.requiredDiscordRoles = undefined;
+      this.gameConfig.requiredDiscordGuildId = undefined;
+      this.gameConfig.requiredDiscordRoleId = undefined;
+      return;
+    }
+
+    this.gameConfig.requiredDiscordRoles = normalizedRequirements;
+    // Keep legacy fields populated with the first pair for compatibility.
+    this.gameConfig.requiredDiscordGuildId = normalizedRequirements[0].guildId;
+    this.gameConfig.requiredDiscordRoleId = normalizedRequirements[0].roleId;
+  }
+
   private isLobbyCreatorPersistentId(persistentID: string): boolean {
     return persistentID === this.creatorPersistentID;
   }
 
-  private isDiscordAllowed(
-    persistentID: string,
-    discordId: string | undefined,
-  ): boolean {
-    if (this.isLobbyCreatorPersistentId(persistentID)) {
+  private hasRequiredDiscordRole(client: Client): boolean {
+    if (this.requiredDiscordRoles.length === 0) {
       return true;
     }
-    if (!this.allowedDiscordIdsSet || this.allowedDiscordIdsSet.size === 0) {
-      return true;
+    if (!client.discordId) {
+      return false;
     }
-    return discordId !== undefined && this.allowedDiscordIdsSet.has(discordId);
+
+    for (const [guildId, requiredRoleIds] of this.requiredDiscordRoleByGuild) {
+      const guildRoleIds = client.discordGuildRoles?.[guildId];
+      if (guildRoleIds?.some((roleId) => requiredRoleIds.has(roleId))) {
+        return true;
+      }
+    }
+
+    const roles = client.roles ?? [];
+    for (const requirement of this.requiredDiscordRoles) {
+      if (
+        roles.includes(requirement.roleId) ||
+        roles.includes(`${requirement.guildId}:${requirement.roleId}`) ||
+        roles.includes(`discord:${requirement.guildId}:${requirement.roleId}`)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  private enforceDiscordAllowlist(): void {
-    if (!this.allowedDiscordIdsSet || this.allowedDiscordIdsSet.size === 0) {
-      return;
+  private getDiscordRejectionReason(client: Client): string | undefined {
+    if (this.isLobbyCreatorPersistentId(client.persistentID)) {
+      return undefined;
     }
+    if (
+      this.allowedDiscordIdsSet &&
+      (client.discordId === undefined ||
+        !this.allowedDiscordIdsSet.has(client.discordId))
+    ) {
+      return KICK_REASON_DISCORD_NOT_ALLOWED;
+    }
+    if (!this.hasRequiredDiscordRole(client)) {
+      return KICK_REASON_DISCORD_ROLE_NOT_ALLOWED;
+    }
+    return undefined;
+  }
+
+  private enforceDiscordRestrictions(): void {
     for (const client of this.allClients.values()) {
-      if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
-        this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
+      const reason = this.getDiscordRejectionReason(client);
+      if (reason !== undefined) {
+        this.kickClient(client.clientID, reason);
       }
     }
   }
@@ -214,9 +314,27 @@ export class GameServer {
     if (gameConfig.startingGold !== undefined) {
       this.gameConfig.startingGold = gameConfig.startingGold;
     }
+    const hasRoleRequirementUpdate =
+      gameConfig.requiredDiscordRoles !== undefined ||
+      gameConfig.requiredDiscordGuildId !== undefined ||
+      gameConfig.requiredDiscordRoleId !== undefined;
+    if (hasRoleRequirementUpdate) {
+      this.setRequiredDiscordRoleRequirements(
+        gameConfig.requiredDiscordRoles ?? this.gameConfig.requiredDiscordRoles,
+        gameConfig.requiredDiscordGuildId ??
+          this.gameConfig.requiredDiscordGuildId,
+        gameConfig.requiredDiscordRoleId ??
+          this.gameConfig.requiredDiscordRoleId,
+      );
+    }
     if (gameConfig.allowedDiscordIds !== undefined) {
       this.setAllowedDiscordIds(gameConfig.allowedDiscordIds);
-      this.enforceDiscordAllowlist();
+    }
+    if (
+      gameConfig.allowedDiscordIds !== undefined ||
+      hasRoleRequirementUpdate
+    ) {
+      this.enforceDiscordRestrictions();
     }
   }
 
@@ -240,15 +358,17 @@ export class GameServer {
       return "kicked";
     }
 
-    if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
-      this.log.warn("cannot add client, discord id not allowed", {
+    const discordRejectionReason = this.getDiscordRejectionReason(client);
+    if (discordRejectionReason !== undefined) {
+      this.log.warn("cannot add client, discord restriction failed", {
         clientID: client.clientID,
         persistentID: client.persistentID,
+        reasonKey: discordRejectionReason,
       });
       client.ws.send(
         JSON.stringify({
           type: "error",
-          error: KICK_REASON_DISCORD_NOT_ALLOWED,
+          error: discordRejectionReason,
         } satisfies ServerErrorMessage),
       );
       return "kicked";
@@ -341,19 +461,21 @@ export class GameServer {
     if (!clientID) return false;
     const client = this.allClients.get(clientID);
     if (!client) return false;
-    if (!this.isDiscordAllowed(client.persistentID, client.discordId)) {
-      this.log.warn("cannot rejoin client, discord id not allowed", {
+    const discordRejectionReason = this.getDiscordRejectionReason(client);
+    if (discordRejectionReason !== undefined) {
+      this.log.warn("cannot rejoin client, discord restriction failed", {
         clientID,
         persistentID,
+        reasonKey: discordRejectionReason,
       });
-      this.kickClient(client.clientID, KICK_REASON_DISCORD_NOT_ALLOWED);
+      this.kickClient(client.clientID, discordRejectionReason);
       ws.send(
         JSON.stringify({
           type: "error",
-          error: KICK_REASON_DISCORD_NOT_ALLOWED,
+          error: discordRejectionReason,
         } satisfies ServerErrorMessage),
       );
-      ws.close(1000, KICK_REASON_DISCORD_NOT_ALLOWED);
+      ws.close(1000, discordRejectionReason);
       return true;
     }
 
@@ -672,13 +794,19 @@ export class GameServer {
   private broadcastLobbyInfo() {
     const lobbyInfo = this.gameInfo();
     const sanitizedLobbyInfo =
-      lobbyInfo.gameConfig?.allowedDiscordIds === undefined
+      lobbyInfo.gameConfig?.allowedDiscordIds === undefined &&
+      lobbyInfo.gameConfig?.requiredDiscordRoles === undefined &&
+      lobbyInfo.gameConfig?.requiredDiscordGuildId === undefined &&
+      lobbyInfo.gameConfig?.requiredDiscordRoleId === undefined
         ? lobbyInfo
         : {
             ...lobbyInfo,
             gameConfig: {
               ...lobbyInfo.gameConfig,
               allowedDiscordIds: undefined,
+              requiredDiscordRoles: undefined,
+              requiredDiscordGuildId: undefined,
+              requiredDiscordRoleId: undefined,
             },
           };
     this.activeClients.forEach((c) => {

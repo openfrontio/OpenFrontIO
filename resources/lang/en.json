@@ -428,7 +428,18 @@
     "crowded": "Crowded modifier",
     "discord_allowlist": "Discord Allowlist (Optional)",
     "discord_allowlist_placeholder": "Paste Discord ID and press Enter",
-    "discord_allowlist_help": "Only players with these Discord IDs can join"
+    "discord_allowlist_help": "Only players with these Discord IDs can join",
+    "discord_required_guild_label": "Required Guild",
+    "discord_required_guild_placeholder": "Required Discord Guild ID (optional)",
+    "discord_required_role_label": "Required Role",
+    "discord_required_role_placeholder": "Required Discord Role ID (optional)",
+    "discord_required_role_help": "Add one or more guild + role pairs. Players must match at least one pair.",
+    "discord_required_add": "Add Role Rule",
+    "discord_required_roles_title": "Required Roles (Any Match)",
+    "discord_required_roles_empty": "No role requirements configured.",
+    "discord_required_role_active": "Active: guild {guild} + role {role}",
+    "discord_required_clear": "Clear",
+    "discord_required_role_incomplete": "Set both Guild ID and Role ID to enable the role requirement."
   },
   "team_colors": {
     "red": "Red",
@@ -812,7 +823,8 @@
   "kick_reason": {
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
     "lobby_creator": "Kicked by lobby creator",
-    "discord_not_allowed": "Kicked from game (your Discord account is not on this lobby's allowlist)"
+    "discord_not_allowed": "Kicked from game (your Discord account is not on this lobby's allowlist)",
+    "discord_role_not_allowed": "Kicked from game (your Discord account is missing the required server role)"
   },
   "send_troops_modal": {
     "title_with_name": "Send Troops to {name}",
