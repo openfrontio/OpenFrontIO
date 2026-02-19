@@ -504,6 +504,9 @@ export class DefaultConfig implements Config {
     return 80;
   }
   boatMaxNumber(): number {
+    if (this.isUnitDisabled(UnitType.TransportShip)) {
+      return 0;
+    }
     return 3;
   }
   numSpawnPhaseTurns(): number {
