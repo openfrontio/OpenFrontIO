@@ -17,7 +17,6 @@ import {
   GameConfig,
   GameInfo,
   LobbyInfoEvent,
-  MAX_ALLOWED_DISCORD_IDS,
   TeamCountConfig,
   isValidGameID,
 } from "../core/Schemas";
@@ -763,7 +762,7 @@ export class HostLobbyModal extends BaseModal {
       if (!id || !DISCORD_ID_REGEX.test(id)) {
         continue;
       }
-      if (nextIds.has(id) || nextIds.size >= MAX_ALLOWED_DISCORD_IDS) {
+      if (nextIds.has(id)) {
         continue;
       }
       nextIds.add(id);

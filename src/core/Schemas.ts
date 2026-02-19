@@ -202,7 +202,6 @@ const TeamCountConfigSchema = z.union([
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const DISCORD_ID_REGEX = /^\d{17,20}$/;
-export const MAX_ALLOWED_DISCORD_IDS = 100;
 const DiscordIDSchema = z.string().regex(DISCORD_ID_REGEX);
 
 export const GameConfigSchema = z.object({
@@ -236,10 +235,7 @@ export const GameConfigSchema = z.object({
   playerTeams: TeamCountConfigSchema.optional(),
   goldMultiplier: z.number().min(0.1).max(1000).optional(),
   startingGold: z.number().int().min(0).max(1000000000).optional(),
-  allowedDiscordIds: z
-    .array(DiscordIDSchema)
-    .max(MAX_ALLOWED_DISCORD_IDS)
-    .optional(),
+  allowedDiscordIds: z.array(DiscordIDSchema).optional(),
 });
 
 export const TeamSchema = z.string();
