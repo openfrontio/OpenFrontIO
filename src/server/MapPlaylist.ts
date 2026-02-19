@@ -11,7 +11,6 @@ import {
   Quads,
   RankedType,
   Trios,
-  mapCategories,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, PublicGameType, TeamCountConfig } from "../core/Schemas";
@@ -19,14 +18,13 @@ import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
-const ARCADE_MAPS = new Set(mapCategories.arcade);
 
-function isSpecialModifiers(m: PublicGameModifiers): boolean {
-  return (
-    m.isCompact ||
-    m.isRandomSpawn ||
-    m.isCrowded ||
-    m.startingGold !== undefined
+function isSpecialModifiers(modifiers: PublicGameModifiers): boolean {
+  return Boolean(
+    modifiers.isCompact ||
+      modifiers.isRandomSpawn ||
+      modifiers.isCrowded ||
+      modifiers.startingGold !== undefined,
   );
 }
 
@@ -95,33 +93,6 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: Quads, weight: 7.5 },
   { config: HumansVsNations, weight: 20 },
 ];
-const TEAM_TOTAL_WEIGHT = TEAM_WEIGHTS.reduce(
-  (sum, { weight }) => sum + weight,
-  0,
-);
-
-const MODIFIER_RATES = {
-  normal: {
-    isRandomSpawn: 0.1,
-    isCompact: 0.05,
-    isCrowded: 0.05,
-    startingGold: 0.05,
-  },
-  special: {
-    isRandomSpawn: 0.2,
-    isCompact: 0.3,
-    isCrowded: 0.2,
-    startingGold: 0.2,
-  },
-} as const;
-
-const GROUPED_TEAM_SIZES: Record<string, number> = {
-  [Duos]: 2,
-  [Trios]: 3,
-  [Quads]: 4,
-};
-
-type MapPlayerCounts = [number, number, number];
 
 export class MapPlaylist {
   private playlists: Record<PublicGameType, GameMapType[]> = {
@@ -129,61 +100,159 @@ export class MapPlaylist {
     special: [],
     team: [],
   };
-  private readonly mapPlayerCountsCache = new Map<
-    GameMapType,
-    MapPlayerCounts
-  >();
 
   public async gameConfig(type: PublicGameType): Promise<GameConfig> {
-    const isSpecial = type === "special";
-    const mode = isSpecial
-      ? Math.random() < 0.5
-        ? GameMode.FFA
-        : GameMode.Team
-      : type === "ffa"
-        ? GameMode.FFA
-        : GameMode.Team;
+    if (type === "special") {
+      return this.getSpecialConfig();
+    }
+
+    // TODO: consider moving modifier to special lobby.
+
+    const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap(type);
+
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
-    const { modifiers, crowdedMaxPlayers } = isSpecial
-      ? await this.rollSpecialWithConstraints(map, mode, playerTeams)
-      : await this.applyConstraints(
-          this.rollModifiers("normal"),
-          map,
-          mode,
-          playerTeams,
-        );
+    const modifiers = this.getRandomPublicGameModifiers();
+    const { startingGold } = modifiers;
+    let { isCompact, isRandomSpawn, isCrowded } = modifiers;
 
-    let maxPlayers =
-      crowdedMaxPlayers ??
-      (await this.lobbyMaxPlayers(map, mode, playerTeams, modifiers.isCompact));
-    if (isSpecial) maxPlayers = Math.max(2, maxPlayers);
+    // Duos, Trios, and Quads should not get random spawn (as it defeats the purpose)
+    if (
+      playerTeams === Duos ||
+      playerTeams === Trios ||
+      playerTeams === Quads
+    ) {
+      isRandomSpawn = false;
+    }
 
-    return this.buildGameConfig({
-      mode,
-      map,
-      maxPlayers,
-      modifiers,
+    // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
+    // (not enough players after 75% player reduction for compact maps)
+    if (
+      mode === GameMode.Team &&
+      !(await this.supportsCompactMapForTeams(map))
+    ) {
+      isCompact = false;
+    }
+
+    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // set player count to 125 (or 60 if compact map is also enabled)
+    let crowdedMaxPlayers: number | undefined;
+    if (isCrowded) {
+      crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+      if (crowdedMaxPlayers === undefined) {
+        isCrowded = false;
+      } else {
+        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
+      }
+    }
+
+    // Create the default public game config (from your GameManager)
+    return {
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
+      gameMap: map,
+      maxPlayers:
+        crowdedMaxPlayers ??
+        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      gameType: GameType.Public,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
+      publicGameModifiers: {
+        isCompact,
+        isRandomSpawn,
+        isCrowded,
+        startingGold,
+      },
+      startingGold,
+      difficulty: Difficulty.Medium,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: undefined,
+      instantBuild: false,
+      randomSpawn: isRandomSpawn,
+      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      gameMode: mode,
       playerTeams,
-    });
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: startingGold ? 30 * 10 : 5 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
   }
 
-  private buildGameConfig({
-    mode,
-    map,
-    maxPlayers,
-    modifiers,
-    playerTeams,
-  }: {
-    mode: GameMode;
-    map: GameMapType;
-    maxPlayers: number;
-    modifiers: PublicGameModifiers;
-    playerTeams?: TeamCountConfig;
-  }): GameConfig {
-    const { isCompact, isRandomSpawn, startingGold } = modifiers;
+  private async getSpecialConfig(): Promise<GameConfig> {
+    const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
+    const map = this.getNextMap("special");
+    const playerTeams =
+      mode === GameMode.Team ? this.getTeamCount() : undefined;
+    const supportsCompact =
+      mode !== GameMode.Team || (await this.supportsCompactMapForTeams(map));
+
+    let modifiers: PublicGameModifiers = {
+      isCompact: false,
+      isRandomSpawn: false,
+      isCrowded: false,
+      startingGold: undefined,
+    };
+    let crowdedMaxPlayers: number | undefined;
+
+    // Reroll until a special modifier survives constraints.
+    for (let attempts = 0; attempts < 10; attempts++) {
+      const rolled = this.getRandomPublicGameModifiers({
+        ensureSpecial: true,
+        specialRates: true,
+      });
+      let { isCompact, isRandomSpawn, isCrowded } = rolled;
+      const { startingGold } = rolled;
+
+      if (!supportsCompact) {
+        isCompact = false;
+      }
+
+      if (
+        playerTeams === Duos ||
+        playerTeams === Trios ||
+        playerTeams === Quads
+      ) {
+        isRandomSpawn = false;
+      }
+
+      crowdedMaxPlayers = undefined;
+      if (isCrowded) {
+        crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, isCompact);
+        if (crowdedMaxPlayers === undefined) {
+          isCrowded = false;
+        } else {
+          crowdedMaxPlayers = this.adjustForTeams(
+            crowdedMaxPlayers,
+            playerTeams,
+          );
+        }
+      }
+
+      modifiers = {
+        isCompact,
+        isRandomSpawn,
+        isCrowded,
+        startingGold,
+      };
+
+      if (isSpecialModifiers(modifiers)) {
+        break;
+      }
+    }
+
+    if (!isSpecialModifiers(modifiers)) {
+      modifiers.startingGold = 5_000_000;
+    }
+
+    const { isCompact, isRandomSpawn, isCrowded, startingGold } = modifiers;
+    const maxPlayers = Math.max(
+      2,
+      crowdedMaxPlayers ??
+        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+    );
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
@@ -191,7 +260,12 @@ export class MapPlaylist {
       maxPlayers,
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
-      publicGameModifiers: modifiers,
+      publicGameModifiers: {
+        isCompact,
+        isRandomSpawn,
+        isCrowded,
+        startingGold,
+      },
       startingGold,
       difficulty: Difficulty.Medium,
       infiniteGold: false,
@@ -239,122 +313,35 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
-  // --- Modifier logic ---
-
-  private rollModifiers(
-    rateKey: keyof typeof MODIFIER_RATES,
-    ensureSpecial = false,
-  ): PublicGameModifiers {
-    const rates = MODIFIER_RATES[rateKey];
-    const roll = (): PublicGameModifiers => ({
-      isRandomSpawn: Math.random() < rates.isRandomSpawn,
-      isCompact: Math.random() < rates.isCompact,
-      isCrowded: Math.random() < rates.isCrowded,
-      startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
-    });
-
-    let modifiers = roll();
-    while (ensureSpecial && !isSpecialModifiers(modifiers)) {
-      modifiers = roll();
-    }
-    return modifiers;
-  }
-
-  // Roll special modifiers and apply constraints, retrying until one survives.
-  private async rollSpecialWithConstraints(
-    map: GameMapType,
-    mode: GameMode,
-    playerTeams: TeamCountConfig | undefined,
-  ): Promise<{ modifiers: PublicGameModifiers; crowdedMaxPlayers?: number }> {
-    let result!: {
-      modifiers: PublicGameModifiers;
-      crowdedMaxPlayers?: number;
-    };
-    for (let i = 0; i < 10; i++) {
-      result = await this.applyConstraints(
-        this.rollModifiers("special", true),
-        map,
-        mode,
-        playerTeams,
-      );
-      if (isSpecialModifiers(result.modifiers)) return result;
-    }
-    result.modifiers.startingGold = 5_000_000;
-    return result;
-  }
-
-  private async applyConstraints(
-    modifiers: PublicGameModifiers,
-    map: GameMapType,
-    mode: GameMode,
-    playerTeams: TeamCountConfig | undefined,
-  ): Promise<{ modifiers: PublicGameModifiers; crowdedMaxPlayers?: number }> {
-    let { isCompact, isRandomSpawn, isCrowded } = modifiers;
-    const { startingGold } = modifiers;
-
-    // Duos/Trios/Quads should not get random spawn (defeats the purpose)
-    if (
-      playerTeams === Duos ||
-      playerTeams === Trios ||
-      playerTeams === Quads
-    ) {
-      isRandomSpawn = false;
-    }
-
-    const [largest, , smallest] = await this.getMapPlayerCounts(map);
-
-    // Small maps don't support compact in team games (not enough players after 75% reduction)
-    if (mode === GameMode.Team && isCompact && smallest < 50) {
-      isCompact = false;
-    }
-
-    // Crowded: only applies to small maps (largest player count <= 60)
-    let crowdedMaxPlayers: number | undefined;
-    if (isCrowded) {
-      if (largest <= 60) {
-        crowdedMaxPlayers = this.adjustForTeams(
-          isCompact ? 60 : 125,
-          playerTeams,
-        );
-      } else {
-        isCrowded = false;
-      }
-    }
-
-    return {
-      modifiers: { isCompact, isRandomSpawn, isCrowded, startingGold },
-      crowdedMaxPlayers,
-    };
-  }
-
-  // --- Map selection ---
-
   private getNextMap(type: PublicGameType): GameMapType {
     const playlist = this.playlists[type];
     if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type));
+      playlist.push(...this.generateNewPlaylist());
     }
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: PublicGameType): GameMapType[] {
-    const maps = this.buildMapsList(type);
+  private generateNewPlaylist(): GameMapType[] {
+    const maps = this.buildMapsList();
     const rand = new PseudoRandom(Date.now());
+    const shuffledSource = rand.shuffleArray([...maps]);
+    const playlist: GameMapType[] = [];
+
     const numAttempts = 10000;
-
     for (let attempt = 0; attempt < numAttempts; attempt++) {
-      const source = rand.shuffleArray(maps);
-      const playlist: GameMapType[] = [];
+      playlist.length = 0;
+      const source = [...shuffledSource];
 
+      let success = true;
       while (source.length > 0) {
-        const recent = playlist.slice(-5);
-        const idx = source.findIndex((m) => !recent.includes(m));
-        if (idx === -1) break;
-        playlist.push(source.splice(idx, 1)[0]);
+        if (!this.addNextMapNonConsecutive(playlist, source)) {
+          success = false;
+          break;
+        }
       }
 
-      if (source.length === 0) {
-        log.info(`Generated map playlist in ${attempt + 1} attempts`);
+      if (success) {
+        log.info(`Generated map playlist in ${attempt} attempts`);
         return playlist;
       }
     }
@@ -362,82 +349,166 @@ export class MapPlaylist {
     log.warn(
       `Failed to generate non-consecutive playlist after ${numAttempts} attempts, falling back to shuffle`,
     );
-    return rand.shuffleArray(maps);
+    return rand.shuffleArray([...maps]);
   }
 
-  private buildMapsList(type: PublicGameType): GameMapType[] {
-    return (Object.keys(GameMapType) as GameMapName[]).flatMap((key) => {
-      const map = GameMapType[key];
-      if (type !== "special" && ARCADE_MAPS.has(map)) return [];
-      return Array(frequency[key] ?? 1).fill(map) as GameMapType[];
+  private addNextMapNonConsecutive(
+    playlist: GameMapType[],
+    source: GameMapType[],
+  ): boolean {
+    const nonConsecutiveNum = 5;
+    const lastMaps = playlist.slice(-nonConsecutiveNum);
+
+    for (let i = 0; i < source.length; i++) {
+      const map = source[i];
+      if (!lastMaps.includes(map)) {
+        source.splice(i, 1);
+        playlist.push(map);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private buildMapsList(): GameMapType[] {
+    const maps: GameMapType[] = [];
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
+        maps.push(GameMapType[key]);
+      }
     });
+    return maps;
   }
-
-  // --- Team helpers ---
 
   private getTeamCount(): TeamCountConfig {
-    const roll = Math.random() * TEAM_TOTAL_WEIGHT;
-    let cumulative = 0;
+    const totalWeight = TEAM_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
+    const roll = Math.random() * totalWeight;
+
+    let cumulativeWeight = 0;
     for (const { config, weight } of TEAM_WEIGHTS) {
-      cumulative += weight;
-      if (roll < cumulative) return config;
+      cumulativeWeight += weight;
+      if (roll < cumulativeWeight) {
+        return config;
+      }
     }
     return TEAM_WEIGHTS[0].config;
   }
 
-  private adjustForTeams(
-    p: number,
-    teams: TeamCountConfig | undefined,
-  ): number {
-    if (teams === undefined) return p;
-    if (teams === HumansVsNations) return Math.max(1, Math.floor(p / 2));
-    const divisor =
-      typeof teams === "number" ? teams : GROUPED_TEAM_SIZES[teams];
-    return Math.max(divisor, p - (p % divisor));
+  private getRandomPublicGameModifiers(options?: {
+    ensureSpecial?: boolean;
+    specialRates?: boolean;
+  }): PublicGameModifiers {
+    const rates = options?.specialRates
+      ? {
+          isRandomSpawn: 0.2,
+          isCompact: 0.3,
+          isCrowded: 0.2,
+          startingGold: 0.2,
+        }
+      : {
+          isRandomSpawn: 0.1,
+          isCompact: 0.05,
+          isCrowded: 0.05,
+          startingGold: 0.05,
+        };
+
+    const rollModifiers = (): PublicGameModifiers => ({
+      isRandomSpawn: Math.random() < rates.isRandomSpawn,
+      isCompact: Math.random() < rates.isCompact,
+      isCrowded: Math.random() < rates.isCrowded,
+      startingGold: Math.random() < rates.startingGold ? 5_000_000 : undefined,
+    });
+
+    let modifiers = rollModifiers();
+    while (options?.ensureSpecial && !isSpecialModifiers(modifiers)) {
+      modifiers = rollModifiers();
+    }
+    return modifiers;
   }
 
-  // --- Map player counts ---
+  // Maps with smallest player count (third number of calculateMapPlayerCounts) < 50 don't support compact map in team games
+  // (not enough players after 75% player reduction for compact maps)
+  private async supportsCompactMapForTeams(map: GameMapType): Promise<boolean> {
+    const landTiles = await getMapLandTiles(map);
+    const [, , smallest] = this.calculateMapPlayerCounts(landTiles);
+    return smallest >= 50;
+  }
+
+  private async getCrowdedMaxPlayers(
+    map: GameMapType,
+    isCompact: boolean,
+  ): Promise<number | undefined> {
+    const landTiles = await getMapLandTiles(map);
+    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    if (firstPlayerCount <= 60) {
+      return isCompact ? 60 : 125;
+    }
+    return undefined;
+  }
 
   private async lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    playerTeams: TeamCountConfig | undefined,
-    isCompact?: boolean,
+    numPlayerTeams: TeamCountConfig | undefined,
+    isCompactMap?: boolean,
   ): Promise<number> {
-    const [highCount, midCount, lowCount] = await this.getMapPlayerCounts(map);
-    const rand = Math.random();
-    const baseCount = rand < 0.3 ? highCount : rand < 0.6 ? midCount : lowCount;
-    let players = Math.min(
-      mode === GameMode.Team ? Math.ceil(baseCount * 1.5) : baseCount,
-      highCount,
-    );
-    if (isCompact) {
-      players = Math.max(3, Math.floor(players * 0.25));
+    const landTiles = await getMapLandTiles(map);
+    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
+    const r = Math.random();
+    const base = r < 0.3 ? l : r < 0.6 ? m : s;
+    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    // Apply compact map 75% player reduction
+    if (isCompactMap) {
+      p = Math.max(3, Math.floor(p * 0.25));
     }
-    return this.adjustForTeams(players, playerTeams);
+    return this.adjustForTeams(p, numPlayerTeams);
+  }
+
+  private adjustForTeams(
+    playerCount: number,
+    numPlayerTeams: TeamCountConfig | undefined,
+  ): number {
+    if (numPlayerTeams === undefined) return playerCount;
+    let p = playerCount;
+    switch (numPlayerTeams) {
+      case Duos:
+        p -= p % 2;
+        break;
+      case Trios:
+        p -= p % 3;
+        break;
+      case Quads:
+        p -= p % 4;
+        break;
+      case HumansVsNations:
+        // Half the slots are for humans, the other half will get filled with nations
+        p = Math.floor(p / 2);
+        break;
+      default:
+        p -= p % numPlayerTeams;
+        break;
+    }
+    return p;
   }
 
   /**
-   * Calculate player counts from land tiles.
-   * 50 players per 1M land tiles, capped at 125.
-   * Returns [100%, 75%, 50%], each rounded to nearest 5.
+   * Calculate player counts from land tiles
+   * For every 1,000,000 land tiles, take 50 players
+   * Limit to max 125 players for performance
+   * Second value is 75% of calculated value, third is 50%
+   * All values are rounded to the nearest 5
    */
-  private calculateMapPlayerCounts(landTiles: number): MapPlayerCounts {
-    const round5 = (n: number) => Math.round(n / 5) * 5;
-    const base = Math.min(
-      Math.max(round5((landTiles / 1_000_000) * 50), 5),
-      125,
-    );
-    return [base, round5(base * 0.75), round5(base * 0.5)];
-  }
+  private calculateMapPlayerCounts(
+    landTiles: number,
+  ): [number, number, number] {
+    const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
 
-  private async getMapPlayerCounts(map: GameMapType): Promise<MapPlayerCounts> {
-    const cached = this.mapPlayerCountsCache.get(map);
-    if (cached) return cached;
-
-    const landTiles = await getMapLandTiles(map);
-    const counts = this.calculateMapPlayerCounts(landTiles);
-    this.mapPlayerCountsCache.set(map, counts);
-    return counts;
+    const base = roundToNearest5((landTiles / 1_000_000) * 50);
+    const limitedBase = Math.min(Math.max(base, 5), 125);
+    return [
+      limitedBase,
+      roundToNearest5(limitedBase * 0.75),
+      roundToNearest5(limitedBase * 0.5),
+    ];
   }
 }
