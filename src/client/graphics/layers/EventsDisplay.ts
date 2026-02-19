@@ -383,7 +383,13 @@ export class EventsDisplay extends LitElement implements Layer {
 
     let description: string = event.message;
     if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, event.params ?? {});
+      const params = { ...(event.params ?? {}) };
+      if (typeof params.unit === "string") {
+        const unitKey =
+          "unit_type." + params.unit.toLowerCase().replace(/ /g, "_");
+        params.unit = translateText(unitKey);
+      }
+      description = translateText(event.message, params);
     }
 
     this.addEvent({
