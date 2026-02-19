@@ -7,7 +7,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
@@ -524,14 +524,11 @@ export const deleteUnitElement: MenuElement = {
           DELETE_SELECTION_RADIUS,
       );
 
-    if (myUnits.length > 0) {
-      myUnits.sort(
-        (a, b) =>
-          params.game.manhattanDist(a.tile(), params.tile) -
-          params.game.manhattanDist(b.tile(), params.tile),
-      );
-
-      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
+    const closestUnit = findClosestBy(myUnits, (unit) =>
+      params.game.manhattanDist(unit.tile(), params.tile),
+    );
+    if (closestUnit) {
+      params.playerActionHandler.handleDeleteUnit(closestUnit.id());
     }
 
     params.closeMenu();

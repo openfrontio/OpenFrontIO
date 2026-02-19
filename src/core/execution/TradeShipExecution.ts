@@ -10,7 +10,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PathFinding } from "../pathfinding/PathFinder";
 import { PathStatus, SteppingPathFinder } from "../pathfinding/types";
-import { distSortUnit } from "../Util";
+import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
   private active = true;
@@ -70,28 +70,19 @@ export class TradeShipExecution implements Execution {
     }
 
     if (
-      !this.wasCaptured &&
-      (!this._dstPort.isActive() || !tradeShipOwner.canTrade(dstPortOwner))
-    ) {
-      this.tradeShip.delete(false);
-      this.active = false;
-      return;
-    }
-
-    if (
       this.wasCaptured &&
       (tradeShipOwner !== dstPortOwner || !this._dstPort.isActive())
     ) {
-      const ports = this.tradeShip
-        .owner()
-        .units(UnitType.Port)
-        .sort(distSortUnit(this.mg, this.tradeShip));
-      if (ports.length === 0) {
+      const nearestPort = findClosestBy(
+        this.tradeShip.owner().units(UnitType.Port),
+        (port) => this.mg.manhattanDist(port.tile(), this.tradeShip!.tile()),
+      );
+      if (nearestPort === null) {
         this.tradeShip.delete(false);
         this.active = false;
         return;
       } else {
-        this._dstPort = ports[0];
+        this._dstPort = nearestPort;
         this.tradeShip.setTargetUnit(this._dstPort);
       }
     }

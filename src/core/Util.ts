@@ -61,6 +61,45 @@ export function distSortUnit(
   };
 }
 
+/**
+ * Finds minimum fast, by score, with single pass search
+ */
+export function findMinimumBy<T>(
+  values: Iterable<T>,
+  score: (value: T) => number,
+  isCandidate: (value: T) => boolean = () => true,
+): T | null {
+  let best: T | null = null;
+  let bestScore = Infinity;
+
+  for (const value of values) {
+    if (!isCandidate(value)) continue;
+    const currentScore = score(value);
+    if (currentScore < bestScore) {
+      bestScore = currentScore;
+      best = value;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Finds closest by fast. Example usage:
+ * findClosestBy(
+ *       this.units(UnitType.MissileSilo),
+ *       (silo) => mg.manhattanDist(silo.tile(), tile),
+ *       (silo) => !silo.isInCooldown() && !silo.isUnderConstruction(),
+ *     )
+ */
+export function findClosestBy<T>(
+  values: Iterable<T>,
+  distance: (value: T) => number,
+  isCandidate: (value: T) => boolean = () => true,
+): T | null {
+  return findMinimumBy(values, distance, isCandidate);
+}
+
 export function simpleHash(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
