@@ -174,9 +174,11 @@ export class GameRunner {
 
     // Many tiles are updated to pack it into an array
     const tileUpdates = updates[GameUpdateType.Tile];
-    const packedTileUpdates = new BigUint64Array(tileUpdates.length);
+    const packedTileUpdates = new Uint32Array(tileUpdates.length * 2);
     for (let i = 0; i < tileUpdates.length; i++) {
-      packedTileUpdates[i] = tileUpdates[i].update;
+      const update = tileUpdates[i];
+      packedTileUpdates[i * 2] = update.tile;
+      packedTileUpdates[i * 2 + 1] = update.state;
     }
     updates[GameUpdateType.Tile] = [];
 

@@ -39,7 +39,7 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameMap, TileRef, TileUpdate } from "./GameMap";
+import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -250,7 +250,8 @@ export class GameImpl implements Game {
     this._map.setFallout(tile, value);
     this.addUpdate({
       type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
+      tile,
+      state: this._map.tileState(tile),
     });
   }
 
@@ -590,7 +591,8 @@ export class GameImpl implements Game {
     this._map.setFallout(tile, false);
     this.addUpdate({
       type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
+      tile,
+      state: this._map.tileState(tile),
     });
   }
 
@@ -611,7 +613,8 @@ export class GameImpl implements Game {
     this.updateBorders(tile);
     this.addUpdate({
       type: GameUpdateType.Tile,
-      update: this.toTileUpdate(tile),
+      tile,
+      state: this._map.tileState(tile),
     });
   }
 
@@ -1017,11 +1020,11 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  tileState(tile: TileRef): number {
+    return this._map.tileState(tile);
   }
-  updateTile(tu: TileUpdate): TileRef {
-    return this._map.updateTile(tu);
+  updateTile(tile: TileRef, state: number): void {
+    this._map.updateTile(tile, state);
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();

@@ -12,12 +12,12 @@ import {
   TrainType,
   UnitType,
 } from "./Game";
-import { TileRef, TileUpdate } from "./GameMap";
+import { TileRef } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
-  packedTileUpdates: BigUint64Array;
+  packedTileUpdates: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
   tickExecutionDuration?: number;
   pendingTurns?: number;
@@ -114,7 +114,8 @@ export interface ConquestUpdate {
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
-  update: TileUpdate;
+  tile: TileRef;
+  state: number;
 }
 
 export interface UnitUpdate {
