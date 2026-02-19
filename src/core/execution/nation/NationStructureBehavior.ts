@@ -507,7 +507,7 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Value function for interior structures (City, Factory, MissileSilo).
+   * Value function for interior structures (City, MissileSilo).
    * Prefers high elevation, distance from border, and spacing from same-type structures.
    */
   private interiorStructureValue(type: UnitType): (tile: TileRef) => number {
