@@ -653,11 +653,13 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.buildables(tile, [UnitType.TransportShip]).then((buildables) => {
-      if (this.canBoatAttack(buildables) !== false) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .buildables(tile, [UnitType.TransportShip])
+      .then((buildables) => {
+        if (this.canBoatAttack(buildables) !== false) {
+          this.sendBoatAttackIntent(tile);
+        }
+      });
   }
 
   private doGroundAttackUnderCursor(): void {
