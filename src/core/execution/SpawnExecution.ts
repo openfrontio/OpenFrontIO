@@ -1,5 +1,6 @@
 import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { SpawnArea } from "../game/SpawnArea";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -120,9 +121,26 @@ export class SpawnExecution implements Execution {
   }
 
   private randTile(): TileRef {
+    const area = this.getTeamSpawnArea();
+    if (area) {
+      const x = this.random.nextInt(area.x, area.x + area.width);
+      const y = this.random.nextInt(area.y, area.y + area.height);
+      return this.mg.ref(x, y);
+    }
     const x = this.random.nextInt(0, this.mg.width());
     const y = this.random.nextInt(0, this.mg.height());
-
     return this.mg.ref(x, y);
+  }
+
+  private getTeamSpawnArea(): SpawnArea | undefined {
+    if (!this.mg.hasPlayer(this.playerInfo.id)) {
+      return undefined;
+    }
+    const player = this.mg.player(this.playerInfo.id);
+    const team = player.team();
+    if (team === null) {
+      return undefined;
+    }
+    return this.mg.teamSpawnArea(team);
   }
 }

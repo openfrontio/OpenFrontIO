@@ -11,6 +11,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
+import { SpawnArea } from "./SpawnArea";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
 
@@ -750,6 +751,7 @@ export interface Game extends GameMap {
   owner(ref: TileRef): Player | TerraNullius;
 
   teams(): Team[];
+  teamSpawnArea(team: Team): SpawnArea | undefined;
 
   // Alliances
   alliances(): MutableAlliance[];

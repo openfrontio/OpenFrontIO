@@ -1,11 +1,15 @@
 import { GameMapSize, GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
+import { SpawnArea, TeamGameSpawnAreas } from "./SpawnArea";
+
+export type { SpawnArea, TeamGameSpawnAreas };
 
 export type TerrainMapData = {
   nations: Nation[];
   gameMap: GameMap;
   miniGameMap: GameMap;
+  teamGameSpawnAreas?: TeamGameSpawnAreas;
 };
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
@@ -22,6 +26,7 @@ export interface MapManifest {
   map4x: MapMetadata;
   map16x: MapMetadata;
   nations: Nation[];
+  teamGameSpawnAreas?: TeamGameSpawnAreas;
 }
 
 export interface Nation {
@@ -62,10 +67,26 @@ export async function loadTerrainMap(
     });
   }
 
+  // Scale spawn areas for compact maps
+  let teamGameSpawnAreas = manifest.teamGameSpawnAreas;
+  if (mapSize === GameMapSize.Compact && teamGameSpawnAreas) {
+    const scaled: TeamGameSpawnAreas = {};
+    for (const [key, areas] of Object.entries(teamGameSpawnAreas)) {
+      scaled[key] = areas.map((a) => ({
+        x: Math.floor(a.x / 2),
+        y: Math.floor(a.y / 2),
+        width: Math.floor(a.width / 2),
+        height: Math.floor(a.height / 2),
+      }));
+    }
+    teamGameSpawnAreas = scaled;
+  }
+
   const result = {
     nations: manifest.nations,
     gameMap: gameMap,
     miniGameMap: miniMap,
+    teamGameSpawnAreas,
   };
   loadedMaps.set(map, result);
   return result;
