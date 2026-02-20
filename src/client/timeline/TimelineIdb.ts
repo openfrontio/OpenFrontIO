@@ -124,4 +124,48 @@ export class TimelineIdb {
       },
     );
   }
+
+  async deleteTickRecordsAfter(tick: number): Promise<void> {
+    if (!this.isAvailable) return;
+    const db = this.requireDb();
+    const range = IDBKeyRange.lowerBound(tick + 1);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(TICK_STORE, "readwrite");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () =>
+        reject(tx.error ?? new Error("tickRecords delete tx failed"));
+      const store = tx.objectStore(TICK_STORE);
+      const req = store.openCursor(range, "next");
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return;
+        cursor.delete();
+        cursor.continue();
+      };
+      req.onerror = () =>
+        reject(req.error ?? new Error("tickRecords delete cursor failed"));
+    });
+  }
+
+  async deleteCheckpointsAfter(tick: number): Promise<void> {
+    if (!this.isAvailable) return;
+    const db = this.requireDb();
+    const range = IDBKeyRange.lowerBound(tick + 1);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(CHECKPOINT_STORE, "readwrite");
+      tx.oncomplete = () => resolve();
+      tx.onerror = () =>
+        reject(tx.error ?? new Error("checkpoints delete tx failed"));
+      const store = tx.objectStore(CHECKPOINT_STORE);
+      const req = store.openCursor(range, "next");
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return;
+        cursor.delete();
+        cursor.continue();
+      };
+      req.onerror = () =>
+        reject(req.error ?? new Error("checkpoints delete cursor failed"));
+    });
+  }
 }

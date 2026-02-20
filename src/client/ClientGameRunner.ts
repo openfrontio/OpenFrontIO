@@ -52,6 +52,10 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 import { TimelineController } from "./timeline/TimelineController";
+import {
+  TimelineJumpEvent,
+  TimelineRewriteHistoryEvent,
+} from "./timeline/TimelineEvents";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -263,6 +267,8 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private rewriteInProgress = false;
+  private suppressWorkerUpdates = false;
 
   private turnsSeen = 0;
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -286,6 +292,15 @@ export class ClientGameRunner {
     private timeline: TimelineController,
   ) {
     this.lastMessageTime = Date.now();
+
+    this.eventBus.on(TimelineRewriteHistoryEvent, () => {
+      void this.rewriteHistoryFromDisplayTick();
+    });
+
+    this.eventBus.on(TimelineJumpEvent, () => {
+      // Time travel recreates PlayerView instances; drop cached references.
+      this.myPlayer = null;
+    });
   }
 
   /**
@@ -360,44 +375,17 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
-    this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
-      if (this.lobby.gameStartInfo === undefined) {
-        throw new Error("missing gameStartInfo");
-      }
-      if ("errMsg" in gu) {
-        showErrorModal(
-          gu.errMsg,
-          gu.stack ?? "missing",
-          this.lobby.gameStartInfo.gameID,
-          this.clientID,
-        );
-        console.error(gu.stack);
-        this.stop();
-        return;
-      }
-      this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
-      });
-      this.timeline.onWorkerUpdate(gu);
+    this.worker.start((gu: GameUpdateViewData | ErrorUpdate) =>
+      this.handleWorkerUpdate(gu),
+    );
 
-      // Emit tick metrics event for performance overlay
-      this.eventBus.emit(
-        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
-      );
-
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
-    });
-
-    const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
-        worker.sendHeartbeat();
+        try {
+          this.worker.sendHeartbeat();
+        } catch {
+          // ignore (worker may be restarting)
+        }
         requestAnimationFrame(keepWorkerAlive);
       }
     };
@@ -517,6 +505,85 @@ export class ClientGameRunner {
     console.log("sending join game");
     // Rejoin game from the start so we don't miss any turns.
     this.transport.rejoinGame(0);
+  }
+
+  private handleWorkerUpdate(gu: GameUpdateViewData | ErrorUpdate): void {
+    if (this.suppressWorkerUpdates) {
+      return;
+    }
+    if (this.lobby.gameStartInfo === undefined) {
+      throw new Error("missing gameStartInfo");
+    }
+    if ("errMsg" in gu) {
+      showErrorModal(
+        gu.errMsg,
+        gu.stack ?? "missing",
+        this.lobby.gameStartInfo.gameID,
+        this.clientID,
+      );
+      console.error(gu.stack);
+      this.stop();
+      return;
+    }
+    this.transport.turnComplete();
+    gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+      this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+    });
+    this.timeline.onWorkerUpdate(gu);
+
+    // Emit tick metrics event for performance overlay
+    this.eventBus.emit(
+      new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
+    );
+
+    // Reset tick delay for next measurement
+    this.currentTickDelay = undefined;
+
+    if (gu.updates[GameUpdateType.Win].length > 0) {
+      this.saveGame(gu.updates[GameUpdateType.Win][0]);
+    }
+  }
+
+  private async rewriteHistoryFromDisplayTick(): Promise<void> {
+    if (!this.isActive) return;
+    if (this.rewriteInProgress) return;
+    if (!this.transport.isLocal) return;
+    if (this.lobby.gameRecord !== undefined) return;
+    if (this.lobby.gameStartInfo === undefined) return;
+
+    this.rewriteInProgress = true;
+    this.suppressWorkerUpdates = true;
+
+    const targetTick = this.timeline.getDisplayTick();
+
+    const oldWorker = this.worker;
+    try {
+      this.transport.setRewriteFrozen(true);
+      await this.timeline.beginRewriteAtTick(targetTick);
+      this.transport.truncateLocalTurns(targetTick);
+
+      const worker = new WorkerClient(this.lobby.gameStartInfo, this.clientID);
+      await worker.initialize();
+      worker.start((gu: GameUpdateViewData | ErrorUpdate) =>
+        this.handleWorkerUpdate(gu),
+      );
+
+      this.worker = worker;
+      this.gameView.worker = worker;
+      this.timeline.replaceWorker(worker);
+      oldWorker.cleanup();
+
+      this.turnsSeen = 0;
+      this.suppressWorkerUpdates = false;
+      // Trigger a rejoin so the local server re-sends the truncated turn history.
+      this.transport.rejoinGame(0);
+    } catch (e) {
+      console.error("Failed to rewrite history:", e);
+    } finally {
+      this.transport.setRewriteFrozen(false);
+      this.suppressWorkerUpdates = false;
+      this.rewriteInProgress = false;
+    }
   }
 
   public stop() {

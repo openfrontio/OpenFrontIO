@@ -30,6 +30,7 @@ export class TimelineController {
   private isPaused = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
   private playbackTimer: number | null = null;
+  private syncingUntilTick: number | null = null;
 
   private pendingSeekTick: number | null = null;
   private seekScheduled = false;
@@ -39,7 +40,7 @@ export class TimelineController {
   private rewindCheckpointSnapshotQueued = false;
 
   constructor(
-    private readonly worker: WorkerClient,
+    private worker: WorkerClient,
     private readonly gameView: GameView,
     private readonly renderer: GameRenderer,
     private readonly eventBus: EventBus,
@@ -51,6 +52,56 @@ export class TimelineController {
       this.replaySpeedMultiplier = e.replaySpeedMultiplier;
       this.maybeSchedulePlayback();
     });
+  }
+
+  getDisplayTick(): number {
+    return this.displayTick;
+  }
+
+  replaceWorker(worker: WorkerClient): void {
+    this.worker = worker;
+  }
+
+  async beginRewriteAtTick(targetTick: number): Promise<void> {
+    const clamped = Math.max(0, Math.min(targetTick, this.liveTick));
+
+    // Cancel any in-flight seeks / replays.
+    this.seekToken++;
+    this.pendingSeekTick = null;
+    this.syncingUntilTick = clamped;
+
+    this.clearPlaybackTimer();
+    this.setLive(false);
+    this.isSeeking = true;
+
+    // This becomes the new "present" for this timeline branch.
+    this.liveTick = clamped;
+    this.displayTick = clamped;
+    this.emitRange();
+
+    // Persist a checkpoint at the rewrite point, then drop everything after it.
+    try {
+      const cp = this.gameView.exportCheckpoint();
+      this.archive.putCheckpoint({
+        tick: cp.tick,
+        mapStateBuffer: cp.mapState.buffer,
+        numTilesWithFallout: cp.numTilesWithFallout,
+        players: cp.players,
+        units: cp.units,
+        playerNameViewData: cp.playerNameViewData,
+        toDeleteUnitIds: cp.toDeleteUnitIds,
+        railroads: cp.railroads,
+      });
+    } catch {
+      // ignore
+    }
+
+    await this.archive.truncateAfterTick(clamped);
+
+    // Mop up any stale writes that were in-flight right before truncation.
+    window.setTimeout(() => void this.archive.truncateAfterTick(clamped), 1000);
+
+    this.emitRange();
   }
 
   async initialize(): Promise<void> {
@@ -106,6 +157,16 @@ export class TimelineController {
       playerNameViewData: gu.playerNameViewData,
     };
     this.archive.putTickRecord(tickRecord);
+
+    if (this.syncingUntilTick !== null) {
+      // During history rewrite we keep recording ticks, but avoid mutating the
+      // displayed GameView until the new worker has reached the rewrite point.
+      if (gu.tick >= this.syncingUntilTick) {
+        this.syncingUntilTick = null;
+        void this.goLive();
+      }
+      return;
+    }
 
     if (this.isLive) {
       const before = this.displayTick;
@@ -329,6 +390,7 @@ export class TimelineController {
       return;
     }
     if (this.isSeeking) return;
+    if (this.syncingUntilTick !== null) return;
     if (this.pendingSeekTick !== null) return;
     if (this.isPaused) return;
     if (this.playbackTimer !== null) return;

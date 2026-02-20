@@ -29,7 +29,10 @@ import { replacer } from "../core/Util";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
-import { TimelineModeChangedEvent } from "./timeline/TimelineEvents";
+import {
+  TimelineModeChangedEvent,
+  TimelineRewriteHistoryEvent,
+} from "./timeline/TimelineEvents";
 
 export class PauseGameIntentEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -187,6 +190,7 @@ export class Transport {
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
   private timelineIsLive = true;
+  private pendingRewriteIntent: Intent | null = null;
 
   constructor(
     private lobbyConfig: LobbyConfig,
@@ -267,6 +271,11 @@ export class Transport {
 
     this.eventBus.on(TimelineModeChangedEvent, (e) => {
       this.timelineIsLive = e.isLive;
+      if (this.timelineIsLive && this.pendingRewriteIntent) {
+        const intent = this.pendingRewriteIntent;
+        this.pendingRewriteIntent = null;
+        this.sendIntent(intent);
+      }
     });
   }
 
@@ -651,6 +660,19 @@ export class Transport {
 
   private sendIntent(intent: Intent) {
     if (!this.timelineIsLive && intent.type !== "toggle_pause") {
+      const canRewriteHistory =
+        this.isLocal &&
+        this.lobbyConfig.gameRecord === undefined &&
+        this.lobbyConfig.gameStartInfo?.config.gameType ===
+          GameType.Singleplayer;
+
+      if (canRewriteHistory) {
+        const ok = window.confirm("Discard the future and rewrite history?");
+        if (ok) {
+          this.pendingRewriteIntent = intent;
+          this.eventBus.emit(new TimelineRewriteHistoryEvent());
+        }
+      }
       return;
     }
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
@@ -666,6 +688,16 @@ export class Transport {
       );
       console.log("attempting reconnect");
     }
+  }
+
+  setRewriteFrozen(frozen: boolean): void {
+    if (!this.isLocal) return;
+    this.localServer?.setRewriteFrozen(frozen);
+  }
+
+  truncateLocalTurns(turnCount: number): void {
+    if (!this.isLocal) return;
+    this.localServer?.truncateToTurnCount(turnCount);
   }
 
   private sendMsg(msg: ClientMessage) {

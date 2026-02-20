@@ -28,3 +28,5 @@ export class TimelineRangeEvent implements GameEvent {
 }
 
 export class TimelineRangeRequestEvent implements GameEvent {}
+
+export class TimelineRewriteHistoryEvent implements GameEvent {}

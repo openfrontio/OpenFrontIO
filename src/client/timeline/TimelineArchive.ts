@@ -7,6 +7,7 @@ export class TimelineArchive {
   private readonly checkpointCache: LruCache<number, TimelineCheckpointRecord>;
   private readonly idb: TimelineIdb;
   private _storageError: string | null = null;
+  private readonly pendingWrites = new Set<Promise<void>>();
 
   constructor(
     opts: {
@@ -35,9 +36,11 @@ export class TimelineArchive {
   putTickRecord(record: TimelineTickRecord): void {
     this.tickCache.set(record.tick, record);
     if (!this.idb.isAvailable) return;
-    void this.idb.putTickRecord(record).catch((e) => {
+    const p = this.idb.putTickRecord(record).catch((e) => {
       this._storageError = `IndexedDB write failed: ${String(e)}`;
     });
+    this.pendingWrites.add(p);
+    void p.finally(() => this.pendingWrites.delete(p));
   }
 
   async getTickRecord(tick: number): Promise<TimelineTickRecord | null> {
@@ -87,9 +90,11 @@ export class TimelineArchive {
   putCheckpoint(record: TimelineCheckpointRecord): void {
     this.checkpointCache.set(record.tick, record);
     if (!this.idb.isAvailable) return;
-    void this.idb.putCheckpoint(record).catch((e) => {
+    const p = this.idb.putCheckpoint(record).catch((e) => {
       this._storageError = `IndexedDB checkpoint write failed: ${String(e)}`;
     });
+    this.pendingWrites.add(p);
+    void p.finally(() => this.pendingWrites.delete(p));
   }
 
   async getCheckpointAtOrBefore(
@@ -111,6 +116,27 @@ export class TimelineArchive {
     } catch (e) {
       this._storageError = `IndexedDB checkpoint read failed: ${String(e)}`;
       return null;
+    }
+  }
+
+  async truncateAfterTick(tick: number): Promise<void> {
+    // Ensure all outstanding IDB puts have completed so they don't re-introduce
+    // deleted records after truncation.
+    await Promise.allSettled(Array.from(this.pendingWrites.values()));
+
+    for (const k of Array.from(this.tickCache.keys())) {
+      if (k > tick) this.tickCache.delete(k);
+    }
+    for (const k of Array.from(this.checkpointCache.keys())) {
+      if (k > tick) this.checkpointCache.delete(k);
+    }
+
+    if (!this.idb.isAvailable) return;
+    try {
+      await this.idb.deleteTickRecordsAfter(tick);
+      await this.idb.deleteCheckpointsAfter(tick);
+    } catch (e) {
+      this._storageError = `IndexedDB truncate failed: ${String(e)}`;
     }
   }
 }

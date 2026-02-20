@@ -31,4 +31,16 @@ export class LruCache<K, V> {
   values(): IterableIterator<V> {
     return this.map.values();
   }
+
+  keys(): IterableIterator<K> {
+    return this.map.keys();
+  }
+
+  delete(key: K): void {
+    this.map.delete(key);
+  }
+
+  clear(): void {
+    this.map.clear();
+  }
 }

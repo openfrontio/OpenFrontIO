@@ -39,6 +39,7 @@ export class LocalServer {
   private startedAt: number;
 
   private paused = false;
+  private rewriteFrozen = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
 
   private clientID: ClientID | undefined;
@@ -208,7 +209,7 @@ export class LocalServer {
   // endTurn in this context means the server has collected all the intents
   // and will send the turn to the client.
   private endTurn() {
-    if (this.paused) {
+    if (this.paused || this.rewriteFrozen) {
       return;
     }
     if (this.replayTurns.length > 0) {
@@ -228,6 +229,21 @@ export class LocalServer {
       type: "turn",
       turn: pastTurn,
     });
+  }
+
+  setRewriteFrozen(frozen: boolean): void {
+    this.rewriteFrozen = frozen;
+  }
+
+  truncateToTurnCount(turnCount: number): void {
+    const clamped = Math.max(0, Math.min(turnCount, this.turns.length));
+    this.turns = this.turns.slice(0, clamped);
+    this.intents = [];
+
+    // After rewriting history, the client will re-send turns to a fresh worker,
+    // so turnsExecuted must start from 0 to keep the backlog logic correct.
+    this.turnsExecuted = 0;
+    this.turnStartTime = Date.now();
   }
 
   public endGame() {
