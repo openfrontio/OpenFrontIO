@@ -170,6 +170,7 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
+  setMap(map: GameMap): void;
 }
 
 export interface Theme {

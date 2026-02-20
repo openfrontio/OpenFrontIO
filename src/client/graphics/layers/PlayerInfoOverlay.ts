@@ -492,7 +492,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     const isCity = unit.type() === UnitType.City;
     const area = Math.PI * Math.pow(unit.areaRadius(), 2);
-    const population = Math.floor(area * 1500 * (1 + unit.density()));
+    const terrainMag = this.game.magnitude(unit.tile());
+    const terrainFactor = Math.max(0.4, 1.0 - terrainMag / 40.0);
+    const population = Math.floor(
+      area * 1500 * (1 + unit.density()) * terrainFactor,
+    );
 
     return html`
       <div class="p-2 border-t border-gray-700/50">

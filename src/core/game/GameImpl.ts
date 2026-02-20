@@ -107,6 +107,7 @@ export class GameImpl implements Game {
   ) {
     const constructorStart = performance.now();
 
+    this._config.setMap(this._map);
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();

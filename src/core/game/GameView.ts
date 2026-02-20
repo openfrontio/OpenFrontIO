@@ -674,6 +674,7 @@ export class GameView implements GameMap {
     private humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
+    this._config.setMap(this._map);
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     // Replace the local player's username with their own stored username.
@@ -1039,7 +1040,7 @@ export class GameView implements GameMap {
     const cached = this.urbanizationCache.get(tile);
     if (cached) return cached;
 
-    const nearby = this.nearbyUnits(tile, 60, UnitType.City);
+    const nearby = this.nearbyUnits(tile, 120, UnitType.City);
     if (nearby.length === 0) {
       const result = { density: 0 };
       this.urbanizationCache.set(tile, result);
@@ -1071,22 +1072,26 @@ export class GameView implements GameMap {
 
       const angle = Math.atan2(dy, dx);
       const uid = unit.id();
+      const age = unit.age();
 
-      // More complex noise to ensure irregular shapes even at high city levels
+      // Dynamic organic noise: shifts slowly over time (age)
       const noise =
         1 +
-        0.22 * Math.sin(angle * 3 + uid) +
-        0.15 * Math.sin(angle * 7 - uid * 1.3) +
+        0.25 * Math.sin(angle * 3 + uid + age / 500) +
+        0.15 * Math.sin(angle * 7 - uid * 1.3 + age / 800) +
         0.08 * Math.sin(angle * 13 + uid * 0.7);
 
-      // Terrain expansion logic: cities expand easily in plains, poorly in mountains.
-      // Magnitude 0-30 scale. We penalize distance based on terrain difficulty.
-      const terrainFactor = Math.max(0.2, 1.0 - Math.min(terrainMag, 25) / 35);
-      const irregularRadius = radius * noise * terrainFactor;
+      // "Expand to least resistant (flat) land 1st"
+      // Mountains (high magnitude) act as resistance, making the "effective distance" greater.
+      // Magnitude is typically 0-30.
+      const resistance = 1.0 + terrainMag / 12.0;
+      const effectiveDist = dist * resistance;
 
-      if (dist <= irregularRadius) {
-        // Linear fade is faster than Math.pow
-        const fade = 1 - dist / irregularRadius;
+      const irregularMaxRadius = radius * noise;
+
+      if (effectiveDist <= irregularMaxRadius) {
+        // Density fades out based on effective distance (terrain-aware)
+        const fade = 1 - effectiveDist / irregularMaxRadius;
         const d = unit.density() * fade;
 
         if (d > maxDensity) {

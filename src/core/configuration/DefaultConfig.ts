@@ -15,7 +15,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
@@ -139,12 +139,18 @@ export abstract class DefaultServerConfig implements ServerConfig {
 export class DefaultConfig implements Config {
   private pastelTheme: PastelTheme = new PastelTheme();
   private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private _map: GameMap | null = null;
+
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
   ) {}
+
+  setMap(map: GameMap): void {
+    this._map = map;
+  }
 
   stripePublishableKey(): string {
     return Env.STRIPE_PUBLISHABLE_KEY ?? "";
@@ -778,7 +784,10 @@ export class DefaultConfig implements Config {
             .reduce((acc, city) => {
               const area = Math.PI * Math.pow(city.areaRadius() || 1, 2);
               const density = city.density() || 0;
-              const population = area * 1500 * (1 + density);
+              // Population/power is based on area, density, and terrain resistance
+              const terrainMag = this._map?.magnitude(city.tile()) ?? 0;
+              const terrainFactor = Math.max(0.4, 1.0 - terrainMag / 40.0);
+              const population = area * 1500 * (1 + density) * terrainFactor;
               return acc + (isNaN(population) ? 0 : population);
             }, 0);
 
@@ -853,7 +862,9 @@ export class DefaultConfig implements Config {
       if (!city.isUnderConstruction()) {
         const area = Math.PI * Math.pow(city.areaRadius() || 1, 2);
         const density = city.density() || 0;
-        cityIncome += area * 0.1 * (1 + density);
+        const terrainMag = this._map?.magnitude(city.tile()) ?? 0;
+        const terrainFactor = Math.max(0.4, 1.0 - terrainMag / 40.0);
+        cityIncome += area * 0.1 * (1 + density) * terrainFactor;
       }
     }
 
