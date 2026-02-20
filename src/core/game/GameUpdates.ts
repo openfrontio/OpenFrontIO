@@ -21,7 +21,7 @@ export interface GameUpdateViewData {
    * Packed tile updates as `[tileRef, state]` uint32 pairs.
    *
    * `tileRef` is a `TileRef` (fits in uint32), and `state` is the packed per-tile
-   * state as a `uint16` stored in a `uint32` lane.
+   * state (`uint16`) stored in a `uint32` lane.
    */
   packedTileUpdates: Uint32Array;
   playerNameViewData: Record<string, NameViewData>;
@@ -35,6 +35,7 @@ export interface ErrorUpdate {
 }
 
 export enum GameUpdateType {
+  // Tile updates are delivered via `packedTileUpdates` on the outer GameUpdateViewData.
   Tile,
   Unit,
   Player,
@@ -60,7 +61,6 @@ export enum GameUpdateType {
 }
 
 export type GameUpdate =
-  | TileUpdateWrapper
   | UnitUpdate
   | PlayerUpdate
   | AllianceRequestUpdate
@@ -116,13 +116,6 @@ export interface ConquestUpdate {
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
-}
-
-export interface TileUpdateWrapper {
-  type: GameUpdateType.Tile;
-  tile: TileRef;
-  /** Packed per-tile state value (`uint16`, `0..65535`). */
-  state: number;
 }
 
 export interface UnitUpdate {
