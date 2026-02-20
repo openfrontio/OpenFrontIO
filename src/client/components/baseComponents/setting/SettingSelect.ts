@@ -12,7 +12,6 @@ export class SettingSelect extends LitElement {
   @property() description = "";
   @property({ type: Array }) options: SelectOption[] = [];
   @property({ type: String }) value = "";
-  @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
     return this;
@@ -36,13 +35,9 @@ export class SettingSelect extends LitElement {
   }
 
   render() {
-    const rainbowClass = this.easter
-      ? "bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)] bg-[length:1400%_1400%] animate-rainbow-bg text-white hover:bg-[linear-gradient(270deg,#990033,#996600,#336600,#008080,#1c3f99,#5e0099,#990033)]"
-      : "";
-
     return html`
       <div
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 ${rainbowClass}"
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4"
       >
         <div class="flex flex-col flex-1 min-w-0 mr-4">
           <label

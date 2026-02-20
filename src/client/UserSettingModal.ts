@@ -973,57 +973,6 @@ export class UserSettingModal extends BaseModal {
                 }
               }}
             ></setting-number>
-
-            <setting-select
-              label=${translateText(
-                "user_setting.easter_confidence_in_victory_label",
-              )}
-              description=${translateText(
-                "user_setting.easter_confidence_in_victory_desc",
-              )}
-              .options=${[
-                {
-                  value: 1,
-                  label: translateText(
-                    "user_setting.easter_confidence_in_victory.cautious",
-                  ),
-                },
-                {
-                  value: 2,
-                  label: translateText(
-                    "user_setting.easter_confidence_in_victory.careful",
-                  ),
-                },
-                {
-                  value: 3,
-                  label: translateText(
-                    "user_setting.easter_confidence_in_victory.confident",
-                  ),
-                },
-                {
-                  value: 4,
-                  label: translateText(
-                    "user_setting.easter_confidence_in_victory.bold",
-                  ),
-                },
-                {
-                  value: 5,
-                  label: translateText(
-                    "user_setting.easter_confidence_in_victory.overconfident",
-                  ),
-                },
-              ]}
-              .value=${String(3)}
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-select>
           `
         : null}
     `;
