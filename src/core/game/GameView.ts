@@ -227,6 +227,17 @@ export class PlayerView {
   private _urbanizationBuildingColor: Colord;
   private _urbanizationCoreColor: Colord;
 
+  // Optimized RGB values for urbanization shading
+  public readonly ruralR: number;
+  public readonly ruralG: number;
+  public readonly ruralB: number;
+  public readonly urbanR: number;
+  public readonly urbanG: number;
+  public readonly urbanB: number;
+  public readonly baseR: number;
+  public readonly baseG: number;
+  public readonly baseB: number;
+
   constructor(
     private game: GameView,
     public data: PlayerUpdate,
@@ -271,6 +282,21 @@ export class PlayerView {
     } else {
       this._territoryColor = defaultTerritoryColor;
     }
+
+    const rural = this._territoryColor.lighten(0.15).desaturate(0.05).rgba;
+    this.ruralR = rural.r;
+    this.ruralG = rural.g;
+    this.ruralB = rural.b;
+
+    const urban = this._territoryColor.darken(0.15).saturate(0.2).rgba;
+    this.urbanR = urban.r;
+    this.urbanG = urban.g;
+    this.urbanB = urban.b;
+
+    const base = this._territoryColor.rgba;
+    this.baseR = base.r;
+    this.baseG = base.g;
+    this.baseB = base.b;
 
     this._structureColors = this.game
       .config()
@@ -1013,7 +1039,7 @@ export class GameView implements GameMap {
     const cached = this.urbanizationCache.get(tile);
     if (cached) return cached;
 
-    const nearby = this.nearbyUnits(tile, 40, UnitType.City);
+    const nearby = this.nearbyUnits(tile, 60, UnitType.City);
     if (nearby.length === 0) {
       const result = { density: 0 };
       this.urbanizationCache.set(tile, result);
@@ -1026,6 +1052,7 @@ export class GameView implements GameMap {
     const tileOwnerID = this.ownerID(tile);
     const tx = this.x(tile);
     const ty = this.y(tile);
+    const terrainMag = this.magnitude(tile);
 
     for (let i = 0; i < nearby.length; i++) {
       const { unit, distSquared } = nearby[i];
@@ -1042,15 +1069,20 @@ export class GameView implements GameMap {
       const dx = tx - ux;
       const dy = ty - uy;
 
-      // Faster angle approximation or just use atan2 (it's called once per nearby city)
       const angle = Math.atan2(dy, dx);
       const uid = unit.id();
 
-      // Simplified noise with fewer sin calls
+      // More complex noise to ensure irregular shapes even at high city levels
       const noise =
-        1 + 0.18 * Math.sin(angle * 3 + uid) + 0.12 * Math.sin(angle * 5 - uid);
+        1 +
+        0.22 * Math.sin(angle * 3 + uid) +
+        0.15 * Math.sin(angle * 7 - uid * 1.3) +
+        0.08 * Math.sin(angle * 13 + uid * 0.7);
 
-      const irregularRadius = radius * noise;
+      // Terrain expansion logic: cities expand easily in plains, poorly in mountains.
+      // Magnitude 0-30 scale. We penalize distance based on terrain difficulty.
+      const terrainFactor = Math.max(0.2, 1.0 - Math.min(terrainMag, 25) / 35);
+      const irregularRadius = radius * noise * terrainFactor;
 
       if (dist <= irregularRadius) {
         // Linear fade is faster than Math.pow

@@ -37,6 +37,7 @@ export class TerritoryLayer implements Layer {
   private tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
     lastUpdate: number;
+    redrawNeighbors: boolean;
   }> = new PriorityQueue((a, b) => {
     return a.lastUpdate - b.lastUpdate;
   });
@@ -534,8 +535,10 @@ export class TerritoryLayer implements Layer {
 
       const tile = entry.tile;
       this.paintTerritory(tile);
-      for (const neighbor of this.game.neighbors(tile)) {
-        this.paintTerritory(neighbor, true);
+      if (entry.redrawNeighbors) {
+        for (const neighbor of this.game.neighbors(tile)) {
+          this.paintTerritory(neighbor, true);
+        }
       }
     }
   }
@@ -596,7 +599,9 @@ export class TerritoryLayer implements Layer {
       }
 
       const urbanization = this.game.getUrbanization(tile);
-      let color = owner.territoryColor(tile);
+      let r = owner.baseR;
+      let g = owner.baseG;
+      let b = owner.baseB;
       let alpha = 150;
 
       if (urbanization.density > 0.05) {
@@ -604,15 +609,22 @@ export class TerritoryLayer implements Layer {
         alpha = 160 + Math.min(85, urbanization.density * 70);
 
         // Lightness Gradient: Rural (Low density) is lighter, Urban (High density) is darker/richer.
-        // We interpolate between a "rural" shade and an "urban" shade of the player's color.
-        const ruralShade = color.lighten(0.15).desaturate(0.05);
-        const urbanShade = color.darken(0.15).saturate(0.2);
-
+        // Fast RGB interpolation using pre-calculated shades
         const mixRatio = Math.min(1, urbanization.density);
-        color = ruralShade.mix(urbanShade, mixRatio);
+        const invRatio = 1 - mixRatio;
+
+        r = (owner.ruralR * invRatio + owner.urbanR * mixRatio) | 0;
+        g = (owner.ruralG * invRatio + owner.urbanG * mixRatio) | 0;
+        b = (owner.ruralB * invRatio + owner.urbanB * mixRatio) | 0;
+      } else {
+        // Apply pattern if not in urban area
+        const color = owner.territoryColor(tile);
+        r = color.rgba.r;
+        g = color.rgba.g;
+        b = color.rgba.b;
       }
 
-      this.paintTile(this.imageData, tile, color, alpha);
+      this.paintTileRaw(this.imageData, tile, r, g, b, alpha);
     }
   }
 
@@ -639,13 +651,30 @@ export class TerritoryLayer implements Layer {
   }
 
   paintTile(imageData: ImageData, tile: TileRef, color: Colord, alpha: number) {
-    const offset = tile * 4;
-    imageData.data[offset] = color.rgba.r;
-    imageData.data[offset + 1] = color.rgba.g;
-    imageData.data[offset + 2] = color.rgba.b;
-    imageData.data[offset + 3] = alpha;
+    this.paintTileRaw(
+      imageData,
+      tile,
+      color.rgba.r,
+      color.rgba.g,
+      color.rgba.b,
+      alpha,
+    );
   }
 
+  paintTileRaw(
+    imageData: ImageData,
+    tile: TileRef,
+    r: number,
+    g: number,
+    b: number,
+    alpha: number,
+  ) {
+    const offset = tile * 4;
+    imageData.data[offset] = r;
+    imageData.data[offset + 1] = g;
+    imageData.data[offset + 2] = b;
+    imageData.data[offset + 3] = alpha;
+  }
   clearTile(tile: TileRef) {
     const offset = tile * 4;
     this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
@@ -657,15 +686,16 @@ export class TerritoryLayer implements Layer {
     this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
   }
 
-  enqueueTile(tile: TileRef) {
+  enqueueTile(tile: TileRef, redrawNeighbors: boolean = true) {
     this.tileToRenderQueue.push({
       tile: tile,
       lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
+      redrawNeighbors: redrawNeighbors,
     });
   }
 
   enqueueCityArea(city: UnitView) {
-    const radius = Math.ceil(city.areaRadius() * 1.4 + 2);
+    const radius = Math.ceil(city.areaRadius() * 1.6 + 2);
     const tile = city.tile();
     const cx = this.game.x(tile);
     const cy = this.game.y(tile);
@@ -673,7 +703,7 @@ export class TerritoryLayer implements Layer {
     for (let x = cx - radius; x <= cx + radius; x++) {
       for (let y = cy - radius; y <= cy + radius; y++) {
         if (this.game.isValidCoord(x, y)) {
-          this.enqueueTile(this.game.ref(x, y));
+          this.enqueueTile(this.game.ref(x, y), false);
         }
       }
     }
