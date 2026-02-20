@@ -714,9 +714,7 @@ export class NationNukeBehavior {
     }
 
     // Don't launch another salvo if we already have atom bombs in flight
-    const ourAtomBombs = this.game
-      .units(UnitType.AtomBomb)
-      .filter((u) => u.owner() === this.player);
+    const ourAtomBombs = this.player.units(UnitType.AtomBomb);
     if (ourAtomBombs.length > 0) {
       return;
     }
@@ -821,25 +819,26 @@ export class NationNukeBehavior {
       const extraBombs = Math.floor(bombsNeeded / 5);
       const totalBombs = bombsNeeded + extraBombs;
 
-      // Collect non-interceptable bombs with their launch-sequence index
-      const nonInterceptable: { index: number; flightTicks: number }[] = [];
+      // Collect bombs from silos whose trajectory to the target is NOT blocked
+      // by enemy SAMs other than the covering SAMs we're trying to overwhelm.
+      const unblockedBombs: { index: number; flightTicks: number }[] = [];
       for (let i = 0; i < launchSequence.length; i++) {
         if (!launchSequence[i].interceptable) {
-          nonInterceptable.push({
+          unblockedBombs.push({
             index: i,
             flightTicks: launchSequence[i].flightTicks,
           });
         }
       }
 
-      if (nonInterceptable.length < totalBombs) {
+      if (unblockedBombs.length < totalBombs) {
         needsMoreSilos = true;
         continue;
       }
 
-      // Sort non-interceptable bombs by flight time to find a sliding window
+      // Sort unblocked bombs by flight time to find a sliding window
       // of maxTotalArrivalSpread that captures the most bombs.
-      const sortedByFlight = [...nonInterceptable].sort(
+      const sortedByFlight = [...unblockedBombs].sort(
         (a, b) => a.flightTicks - b.flightTicks,
       );
 
