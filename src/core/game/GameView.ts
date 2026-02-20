@@ -441,8 +441,20 @@ export class PlayerView {
     b?: UnitType,
     c?: UnitType,
   ): UnitView[] {
-    const units = (this.game.units as any).apply(this.game, arguments as any);
-    return units.filter((u: UnitView) => u.owner().smallID() === this.smallID());
+    let units: UnitView[];
+    if (a === undefined) {
+      units = this.game.units();
+    } else if (Array.isArray(a)) {
+      units = this.game.units(a);
+    } else if (b === undefined) {
+      units = this.game.units(a);
+    } else if (c === undefined) {
+      units = this.game.units(a, b);
+    } else {
+      units = this.game.units(a, b, c);
+    }
+
+    return units.filter((u) => u.owner().smallID() === this.smallID());
   }
 
   nameLocation(): NameViewData {
