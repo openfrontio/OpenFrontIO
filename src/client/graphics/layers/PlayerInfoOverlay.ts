@@ -513,13 +513,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   ${translateText("player_panel.density")}:
                   ${Math.round(unit.density() * 100)}%
                 </div>
-                ${unit.owner().isMe() && !unit.isUnderConstruction()
-                  ? html`<div class="text-[10px] text-gray-400 mt-1 italic">
-                      ${translateText(
-                        "events_display.double_click_expand_hint",
-                      )}
-                    </div>`
-                  : ""}
               `
             : ""}
           ${unit.hasHealth()
