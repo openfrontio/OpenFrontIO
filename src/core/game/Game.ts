@@ -621,7 +621,11 @@ export interface Player {
   removeTroops(troops: number): number;
 
   // Units
-  units(...types: UnitType[]): Unit[];
+  units(): Unit[];
+  units(type: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): Unit[];
+  units(types: readonly UnitType[]): Unit[];
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
@@ -770,7 +774,11 @@ export interface Game extends GameMap {
   setPaused(paused: boolean): void;
 
   // Units
-  units(...types: UnitType[]): Unit[];
+  units(): Unit[];
+  units(type: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType): Unit[];
+  units(type0: UnitType, type1: UnitType, type2: UnitType): Unit[];
+  units(types: readonly UnitType[]): Unit[];
   unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
   hasUnitNearby(
