@@ -223,11 +223,8 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        allianceInfo: player.allianceInfo(other) ?? undefined,
       };
-      const alliance = player.allianceWith(other as Player);
-      if (alliance) {
-        actions.interaction.allianceExpiresAt = alliance.expiresAt();
-      }
     }
 
     return actions;

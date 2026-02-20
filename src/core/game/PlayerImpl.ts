@@ -12,6 +12,7 @@ import {
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
+  AllianceInfo,
   AllianceRequest,
   AllPlayers,
   Attack,
@@ -448,6 +449,30 @@ export class PlayerImpl implements Player {
         (a) => a.recipient() === other || a.requestor() === other,
       ) ?? null
     );
+  }
+
+  allianceInfo(other: Player): AllianceInfo | null {
+    const alliance = this.allianceWith(other);
+    if (!alliance) {
+      return null;
+    }
+    const inExtensionWindow =
+      alliance.expiresAt() <=
+      this.mg.ticks() + this.mg.config().allianceExtensionPromptOffset();
+    const canExtend =
+      !this.isDisconnected() &&
+      !other.isDisconnected() &&
+      this.isAlive() &&
+      other.isAlive() &&
+      inExtensionWindow &&
+      !alliance.agreedToExtend(this);
+    return {
+      expiresAt: alliance.expiresAt(),
+      inExtensionWindow,
+      myPlayerAgreedToExtend: alliance.agreedToExtend(this),
+      otherAgreedToExtend: alliance.agreedToExtend(other),
+      canExtend,
+    };
   }
 
   canSendAllianceRequest(other: Player): boolean {
