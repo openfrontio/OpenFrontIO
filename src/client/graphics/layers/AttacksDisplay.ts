@@ -297,7 +297,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: attack.retreating,
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -334,7 +334,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: landAttack.retreating,
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -389,7 +389,7 @@ export class AttacksDisplay extends LitElement implements Layer {
                 className: "ml-auto text-left shrink-0",
                 disabled: boat.retreating(),
               })
-            : html`<span class="ml-auto shrink-0 text-blue-400"
+            : html`<span class="ml-auto truncate text-blue-400"
                 >(${translateText("events_display.retreating")}...)</span
               >`}
         </div>
@@ -441,7 +441,7 @@ export class AttacksDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 lg:grid-cols-1 gap-1 text-white text-sm lg:text-base"
+        class="w-full mb-1 mt-1 sm:mt-0 pointer-events-auto grid grid-cols-2 sm:grid-cols-1 gap-1 text-white text-sm lg:text-base"
       >
         ${this.renderOutgoingAttacks()} ${this.renderOutgoingLandAttacks()}
         ${this.renderBoats()} ${this.renderIncomingAttacks()}

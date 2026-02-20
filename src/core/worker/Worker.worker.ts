@@ -30,6 +30,12 @@ function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
 }
 
 function sendMessage(message: WorkerMessage) {
+  if (message.type === "game_update") {
+    // Transfer the packed tile updates buffer to avoid structured-clone copies and
+    // reduce worker-side memory churn during long runs / catch-up.
+    ctx.postMessage(message, [message.gameUpdate.packedTileUpdates.buffer]);
+    return;
+  }
   ctx.postMessage(message);
 }
 
@@ -42,9 +48,10 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       if (!gr) {
         break;
       }
-      const ticksToRun = Math.min(gr.pendingTurns(), MAX_TICKS_PER_HEARTBEAT);
+      const pendingTurns = gr.pendingTurns();
+      const ticksToRun = Math.min(pendingTurns, MAX_TICKS_PER_HEARTBEAT);
       for (let i = 0; i < ticksToRun; i++) {
-        if (!gr.executeNextTick()) {
+        if (!gr.executeNextTick(gr.pendingTurns())) {
           break;
         }
       }
@@ -102,7 +109,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: actions,
         } as PlayerActionsResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get actions:", error);
         throw error;
       }
       break;
@@ -119,7 +126,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           result: profile,
         } as PlayerProfileResultMessage);
       } catch (error) {
-        console.error("Failed to check borders:", error);
+        console.error("Failed to get profile:", error);
         throw error;
       }
       break;

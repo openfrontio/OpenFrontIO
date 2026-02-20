@@ -46,6 +46,7 @@ export async function startWorker() {
   const __dirname = path.dirname(__filename);
 
   const app = express();
+  app.use(express.json({ limit: "5mb" }));
   const server = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
 
@@ -184,7 +185,7 @@ export async function startWorker() {
     const game = gm.createGame(id, gc, creatorPersistentID);
 
     log.info(
-      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
+      `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? GameType.Public : GameType.Private}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorPersistentID ? `, creator: ${creatorPersistentID.substring(0, 8)}...` : ""}`,
     );
     res.json(game.gameInfo());
   });
@@ -574,6 +575,10 @@ async function startMatchmakingPolling(gm: GameManager) {
           }, 7000);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // Abort is expected if no game is scheduled on this worker.
+          return;
+        }
         log.error(`Error polling lobby:`, error);
       }
     },

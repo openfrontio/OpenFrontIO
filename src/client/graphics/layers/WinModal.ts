@@ -61,7 +61,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175 animate-fadeIn"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 shrink-0 rounded-lg z-9999 shadow-2xl backdrop-blur-xs text-white w-87.5 max-w-[90%] md:w-175"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
@@ -93,29 +93,12 @@ export class WinModal extends LitElement implements Layer {
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded-sm transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${this.game.myPlayer()?.isAlive()
+            ${this.game?.myPlayer()?.isAlive()
               ? translateText("win_modal.keep")
               : translateText("win_modal.spectate")}
           </button>
         </div>
       </div>
-
-      <style>
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -48%);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      </style>
     `;
   }
 
