@@ -654,9 +654,14 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
-        this.sendBoatAttackIntent(tile);
+      const boatTile = this.canBoatAttack(actions);
+      if (boatTile === false) {
+        console.warn(
+          "boat attack triggered but can't send TransportShip to tile",
+        );
+        return;
       }
+      this.sendBoatAttackIntent(tile);
     });
   }
 
@@ -705,11 +710,7 @@ export class ClientGameRunner {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
-    if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
-      return false;
-    }
-    return bu.canBuild;
+    return bu !== undefined ? bu.canBuild : false;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
